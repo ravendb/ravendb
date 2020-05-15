@@ -48,8 +48,6 @@ namespace Raven.Client.Documents.Conventions
             MaxContextSizeToKeep = new Size(PlatformDetails.Is32Bits == false ? 8 : 2, SizeUnit.Megabytes)
         };
 
-        private readonly ConcurrentDictionary<Type, EntityConverter> _entityConverterCache = new ConcurrentDictionary<Type, EntityConverter>();
-
         private static Dictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
         private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
@@ -175,7 +173,7 @@ namespace Raven.Client.Documents.Conventions
 
             MaxNumberOfRequestsPerSession = 30;
 
-            JsonContractResolver = new DefaultRavenContractResolver();
+            JsonContractResolver = new DefaultRavenContractResolver(this);
             CustomizeJsonSerializer = serializer => { };
             CustomizeJsonDeserializer = serializer => { };
 
@@ -1200,20 +1198,6 @@ namespace Raven.Client.Documents.Conventions
             return _customQueryTranslators.TryGetValue(member, out var translator) == false
                 ? null
                 : translator.Invoke(provider, expression);
-        }
-
-        internal EntityConverter GetEntityConverter(object entity, JsonSerializer serializer)
-        {
-            var type = entity.GetType();
-            var contract = serializer.ContractResolver.ResolveContract(type) as JsonObjectContract;
-            if (contract == null)
-                return null;
-
-            return _entityConverterCache.GetOrAdd(type, _ =>
-            {
-                var isDynamicObject = entity is IDynamicMetaObjectProvider;
-                return new EntityConverter(type, isDynamicObject, this);
-            });
         }
 
         private static MemberInfo GetMemberInfoFromExpression(Expression expression)

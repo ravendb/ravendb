@@ -10,7 +10,6 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -133,36 +132,32 @@ namespace Raven.Client.Documents.Session
             BlittableJsonWriter writer,
             bool removeIdentityProperty = true)
         {
-            EntityConverter entityConverter = null;
+            var usesDefaultContractResolver = serializer.ContractResolver.GetType() == typeof(DefaultRavenContractResolver);
+            var type = entity.GetType();
+            var hasIdentityProperty = conventions.GetIdentityProperty(type) != null;
             try
             {
-                if (removeIdentityProperty)
+                if (usesDefaultContractResolver)
                 {
-                    entityConverter = conventions.GetEntityConverter(entity, serializer);
-                    if (entityConverter != null)
-                    {
-                        EntityConverter.Used = false;
-
-                        serializer.Converters.Add(entityConverter);
-                    }
+                    DefaultRavenContractResolver.RemoveIdentityProperty = removeIdentityProperty;
+                    DefaultRavenContractResolver.RemovedIdentityProperty = false;
                 }
 
                 serializer.Serialize(writer, entity);
             }
             finally
             {
-                if (removeIdentityProperty && entityConverter != null)
-                    serializer.Converters.RemoveAt(serializer.Converters.Count - 1);
+                if (usesDefaultContractResolver)
+                    DefaultRavenContractResolver.RemoveIdentityProperty = false;
             }
 
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
 
-            if (entityConverter == null || EntityConverter.Used == false)
+            if (usesDefaultContractResolver == false || (hasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false))
             {
-                //This is to handle the case when defined it's own converter so EntityConverter could not be used
+                //This is to handle the case when user defined it's own contract resolver
 
-                var type = entity.GetType();
                 var isDynamicObject = entity is IDynamicMetaObjectProvider;
 
                 var changes = removeIdentityProperty && TryRemoveIdentityProperty(reader, type, conventions, isDynamicObject);

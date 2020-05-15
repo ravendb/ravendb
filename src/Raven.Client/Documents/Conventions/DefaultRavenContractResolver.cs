@@ -23,13 +23,23 @@ namespace Raven.Client.Documents.Conventions
     {
         [ThreadStatic]
         private static ExtensionDataSetter _currentExtensionSetter;
+
         [ThreadStatic]
         private static ExtensionDataGetter _currentExtensionGetter;
 
         public static BindingFlags? MembersSearchFlag = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        private readonly DocumentConventions _conventions;
 
-        public DefaultRavenContractResolver()
+        [ThreadStatic]
+        internal static bool RemovedIdentityProperty;
+
+        [ThreadStatic]
+        internal static bool RemoveIdentityProperty;
+
+        public DefaultRavenContractResolver(DocumentConventions conventions)
         {
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+
             if (MembersSearchFlag == null)
             {
                 return; // use the JSON.Net default, primarily here because it allows user to turn this off if this is a compact issue.
@@ -41,14 +51,15 @@ namespace Raven.Client.Documents.Conventions
                 field.SetValue(this, MembersSearchFlag);
                 return;
             }
+
             var prop = typeof(DefaultContractResolver).GetProperty("DefaultMembersSearchFlags", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             if (prop != null)
             {
                 prop.SetValue(this, MembersSearchFlag);
                 return;
             }
-            throw new NotSupportedException("Cannot set DefaultMembersSearchFlags via reflection might have been removed. Set DefaultRavenContractResolver.MembersSearchFlag to null to work around this and please report it along with exact version of JSON.Net, please");
 
+            throw new NotSupportedException("Cannot set DefaultMembersSearchFlags via reflection might have been removed. Set DefaultRavenContractResolver.MembersSearchFlag to null to work around this and please report it along with exact version of JSON.Net, please");
         }
 
         public struct ClearExtensionData : IDisposable
@@ -73,7 +84,6 @@ namespace Raven.Client.Documents.Conventions
                 {
                     _currentExtensionGetter -= _getter;
                 }
-
             }
         }
 
@@ -82,7 +92,6 @@ namespace Raven.Client.Documents.Conventions
             _currentExtensionSetter += setter;
             return new ClearExtensionData(setter, null);
         }
-
 
         public static ClearExtensionData RegisterExtensionDataGetter(ExtensionDataGetter getter)
         {
@@ -106,7 +115,30 @@ namespace Raven.Client.Documents.Conventions
                 _currentExtensionSetter?.Invoke(o, key, value);
             };
             jsonObjectContract.ExtensionDataGetter += (o) => _currentExtensionGetter?.Invoke(o);
+
+            var identityProperty = _conventions.GetIdentityProperty(objectType);
+            if (identityProperty != null)
+            {
+                var jsonProperty = jsonObjectContract.Properties.GetProperty(identityProperty.Name, StringComparison.Ordinal);
+                if (jsonProperty != null)
+                    jsonProperty.ShouldSerialize = ShouldSerialize;
+            }
+
             return jsonObjectContract;
+        }
+
+        private static bool ShouldSerialize(object value)
+        {
+            if (RemoveIdentityProperty == false)
+                return true;
+
+            if (RemovedIdentityProperty == false)
+            {
+                RemovedIdentityProperty = true;
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>

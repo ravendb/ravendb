@@ -31,10 +31,11 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new JavaScriptIndexTests(testOutputHelper))
+                    using (var test = new BenchmarkTests.Storing.Session(testOutputHelper))
                     {
-                        test.CanIndexMapWithFanout();
+                        await test.Store_500k_Batch_Size_10();
                     }
+                    return;
                 }
                 catch (Exception e)
                 {
