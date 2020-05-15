@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
@@ -10,16 +11,16 @@ namespace Raven.Client.Json.Converters
     {
         public static JsonEnumerableConverter Instance = new JsonEnumerableConverter();
 
-        private Dictionary<Type, bool> _cache = new Dictionary<Type, bool>();
+        private readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
 
         public override bool CanRead => false;
 
         public override bool CanConvert(Type objectType)
         {
-            if (_cache.TryGetValue(objectType, out bool canConvert) == false)
-                _cache[objectType] = canConvert = CanConvertInternal(objectType);
+            if (objectType == null)
+                return false;
 
-            return canConvert;
+            return _cache.GetOrAdd(objectType, CanConvertInternal);
         }
 
         private bool CanConvertInternal(Type objectType)
@@ -30,8 +31,11 @@ namespace Raven.Client.Json.Converters
             if (objectType.IsGenericType == false)
                 return objectType == typeof(Enumerable);
 
+            if (typeof(IDictionary).IsAssignableFrom(objectType))
+                return false;
+
             var genericType = objectType.GetGenericTypeDefinition();
-            if (typeof(Dictionary<,>).IsAssignableFrom(genericType))
+            if (typeof(IDictionary<,>).IsAssignableFrom(genericType) || typeof(Dictionary<,>).IsAssignableFrom(genericType))
                 return false;
 
             var isEnumerable = typeof(IEnumerable).IsAssignableFrom(genericType);
