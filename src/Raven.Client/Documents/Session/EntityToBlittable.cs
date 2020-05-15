@@ -135,12 +135,14 @@ namespace Raven.Client.Documents.Session
             var usesDefaultContractResolver = serializer.ContractResolver.GetType() == typeof(DefaultRavenContractResolver);
             var type = entity.GetType();
             var isDynamicObject = entity is IDynamicMetaObjectProvider;
-            var maybeHasIdentityProperty = conventions.GetIdentityProperty(type) != null || isDynamicObject;
+            var willUseDefaultContractResolver = usesDefaultContractResolver && isDynamicObject == false;
+            var hasIdentityProperty = conventions.GetIdentityProperty(type) != null;
+
             try
             {
-                if (usesDefaultContractResolver)
+                if (willUseDefaultContractResolver)
                 {
-                    DefaultRavenContractResolver.RemoveIdentityProperty = isDynamicObject == false && removeIdentityProperty;
+                    DefaultRavenContractResolver.RemoveIdentityProperty = removeIdentityProperty && hasIdentityProperty;
                     DefaultRavenContractResolver.RemovedIdentityProperty = false;
                 }
 
@@ -148,14 +150,14 @@ namespace Raven.Client.Documents.Session
             }
             finally
             {
-                if (usesDefaultContractResolver)
+                if (willUseDefaultContractResolver)
                     DefaultRavenContractResolver.RemoveIdentityProperty = false;
             }
 
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
 
-            if (usesDefaultContractResolver == false || (maybeHasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false))
+            if (willUseDefaultContractResolver == false || (hasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false))
             {
                 //This is to handle the case when user defined it's own contract resolver
                 //or we are serializing dynamic object
