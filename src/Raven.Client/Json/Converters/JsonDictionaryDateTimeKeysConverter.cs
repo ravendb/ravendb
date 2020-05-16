@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Reflection;
@@ -12,6 +13,8 @@ namespace Raven.Client.Json.Converters
     {
         private readonly MethodInfo _genericWriteJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod(nameof(GenericWriteJson));
         private readonly MethodInfo _genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod(nameof(GenericReadJson));
+
+        private static readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
 
         public static readonly JsonDictionaryDateTimeKeysConverter Instance = new JsonDictionaryDateTimeKeysConverter();
 
@@ -96,7 +99,6 @@ namespace Raven.Client.Json.Converters
                         {
                             throw new InvalidOperationException("Could not parse date time offset from " + s);
                         }
-
                     }
                     else
                     {
@@ -121,7 +123,12 @@ namespace Raven.Client.Json.Converters
 
         public override bool CanConvert(Type objectType)
         {
-            if (objectType.GetTypeInfo().IsGenericType == false)
+            return _cache.GetOrAdd(objectType, CanConvertInternal);
+        }
+
+        private bool CanConvertInternal(Type objectType)
+        {
+            if (objectType.IsGenericType == false)
                 return false;
             if (objectType.GetGenericTypeDefinition() != typeof(Dictionary<,>))
                 return false;

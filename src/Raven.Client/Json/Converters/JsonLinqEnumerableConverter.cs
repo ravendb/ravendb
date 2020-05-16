@@ -2,19 +2,19 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Reflection;
 using Newtonsoft.Json;
 
 namespace Raven.Client.Json.Converters
 {
     /// <summary>
-    /// This converter is used when a property is a Linq-To-Entities query, enumerating and 
+    /// This converter is used when a property is a Linq-To-Entities query, enumerating and
     /// then serializing it as a json array.
     /// </summary>
     public sealed class JsonLinqEnumerableConverter : JsonConverter
     {
         public static readonly JsonLinqEnumerableConverter Instance = new JsonLinqEnumerableConverter();
-        private static readonly ConcurrentDictionary<Type, bool> _converterCache = new ConcurrentDictionary<Type, bool>();
+
+        private static readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
 
         private JsonLinqEnumerableConverter()
         {
@@ -43,7 +43,7 @@ namespace Raven.Client.Json.Converters
         /// </summary>
         /// <value><c>true</c> if this <see cref="JsonConverter"/> can read JSON; otherwise, <c>false</c>.</value>
         public override bool CanRead => false;
-        
+
         /// <summary>
         /// Reads the JSON representation of the object.
         /// </summary>
@@ -60,7 +60,7 @@ namespace Raven.Client.Json.Converters
         {
             //this converter will never be needed to deserialize from json - built-in converter is enough as
             //Json.Net serializes any collection - including IEnumerable<T> to json arrays.
-            throw new NotSupportedException($@"{nameof(JsonLinqEnumerableConverter)} should not be used to deserialize collections from json - if this exception gets thrown, it is probably a bug.");
+            throw new NotSupportedException($"{nameof(JsonLinqEnumerableConverter)} should not be used to deserialize collections from json - if this exception gets thrown, it is probably a bug.");
         }
 
         /// <summary>
@@ -72,40 +72,25 @@ namespace Raven.Client.Json.Converters
         /// </returns>
         public override bool CanConvert(Type objectType)
         {
-            if (_converterCache.TryGetValue(objectType, out var canConvert))
-                return canConvert;
+            return _cache.GetOrAdd(objectType, CanConvertInternal);
+        }
 
-            if (objectType.Namespace == null)
-            {
-                canConvert = false;
-            }
-            else if (objectType == typeof(string))
-            {
-                canConvert = false;
-            }
-            else if (objectType.GetTypeInfo().IsClass == false)
-            {
-                canConvert = false;
-            }
-            else
-            {
-                canConvert = false;
-                foreach (var interfaceType in objectType.GetInterfaces())
-                {
-                    if (interfaceType.GetTypeInfo().IsGenericType == false)
-                        continue;
+        private bool CanConvertInternal(Type objectType)
+        {
+            if (objectType.Namespace == null || objectType == typeof(string) || objectType.IsClass == false)
+                return false;
 
-                    var genericInterfaceType = interfaceType.GetGenericTypeDefinition();
-                    if (typeof(IEnumerable<>) == genericInterfaceType && objectType.Namespace.StartsWith("System.Linq"))
-                    {
-                        canConvert = true;
-                        break;
-                    }
-                }
+            foreach (var interfaceType in objectType.GetInterfaces())
+            {
+                if (interfaceType.IsGenericType == false)
+                    continue;
+
+                var genericInterfaceType = interfaceType.GetGenericTypeDefinition();
+                if (typeof(IEnumerable<>) == genericInterfaceType && objectType.Namespace.StartsWith("System.Linq"))
+                    return true;
             }
 
-            _converterCache.TryAdd(objectType, canConvert);
-            return canConvert;
+            return false;
         }
     }
 }
