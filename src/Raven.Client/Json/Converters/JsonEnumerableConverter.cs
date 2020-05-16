@@ -37,7 +37,14 @@ namespace Raven.Client.Json.Converters
             if (objectType == typeof(BlittableJsonReaderArray))
                 return false;
 
-            return _conventions.JsonContractResolver.ResolveContract(objectType) is JsonArrayContract;
+            var jsonArrayContract = _conventions.JsonContractResolver.ResolveContract(objectType) as JsonArrayContract;
+            if (jsonArrayContract == null)
+                return false;
+
+            if (jsonArrayContract.IsMultidimensionalArray)
+                return false;
+
+            return jsonArrayContract.CollectionItemType != typeof(object);
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
