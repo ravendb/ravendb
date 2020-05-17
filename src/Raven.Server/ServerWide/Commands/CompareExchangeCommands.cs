@@ -288,7 +288,7 @@ namespace Raven.Server.ServerWide.Commands
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
         internal const int MaxNumberOfCompareExchangeKeyBytes = 512;
-        public long? Ticks;
+        public long? ExpirationTicks;
 
         public BlittableJsonReaderObject Value;
 
@@ -300,7 +300,7 @@ namespace Raven.Server.ServerWide.Commands
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
             if (CompareExchangeExpirationStorage.HasExpiredMetadata(value, out long ticks, Slices.Empty, ActualKey))
-                Ticks = ticks;
+                ExpirationTicks = ticks;
 
             Value = value;
         }
@@ -329,8 +329,8 @@ namespace Raven.Server.ServerWide.Commands
                     var itemIndex = *(long*)reader.Read((int)ClusterStateMachine.CompareExchangeTable.Index, out var _);
                     if (Index == itemIndex || (FromBackup && Index == 0))
                     {
-                        if (Ticks != null)
-                            CompareExchangeExpirationStorage.Put(context, keySlice, Ticks.Value);
+                        if (ExpirationTicks != null)
+                            CompareExchangeExpirationStorage.Put(context, keySlice, ExpirationTicks.Value);
 
                         items.Update(reader.Id, tvb);
                     }
@@ -346,8 +346,8 @@ namespace Raven.Server.ServerWide.Commands
                 }
                 else
                 {
-                    if (Ticks != null)
-                        CompareExchangeExpirationStorage.Put(context, keySlice, Ticks.Value);
+                    if (ExpirationTicks != null)
+                        CompareExchangeExpirationStorage.Put(context, keySlice, ExpirationTicks.Value);
 
                     items.Set(tvb);
                 }
@@ -363,7 +363,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             var json = base.ToJson(context);
             json[nameof(Value)] = Value;
-            json[nameof(Ticks)] = Ticks;
+            json[nameof(ExpirationTicks)] = ExpirationTicks;
             return json;
         }
 

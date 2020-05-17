@@ -457,10 +457,8 @@ namespace Raven.Client.Documents.Session
 
             internal static BlittableJsonReaderObject PrepareMetadataForPut(string key, IMetadataDictionary metadataDictionary, JsonOperationContext context)
             {
-                if (metadataDictionary.ContainsKey(Constants.Documents.Metadata.Expires))
+                if (metadataDictionary.TryGetValue(Constants.Documents.Metadata.Expires, out object obj))
                 {
-                    if (metadataDictionary.TryGetValue(Constants.Documents.Metadata.Expires, out object obj) == false)
-                        ThrowInvalidExpiresMetadata($"The {Constants.Documents.Metadata.Expires} key of metadata for compare exchange '{key}' should have value.");
                     if (obj == null)
                         ThrowInvalidExpiresMetadata($"The value of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is null.");
                     if (obj is DateTime == false && obj is string == false)

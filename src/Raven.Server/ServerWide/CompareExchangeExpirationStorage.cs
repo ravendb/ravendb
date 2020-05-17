@@ -110,6 +110,7 @@ namespace Raven.Server.ServerWide
 
         public static unsafe bool DeleteExpiredCompareExchange(ClusterOperationContext context, Table items, long ticks, long take = long.MaxValue)
         {
+            // we have to use a dictionary to remove from expired multi tree, because there is a chance that not all keys for certain ticks will be returned in single delete iteration
             var expired = new Dictionary<Slice, List<Slice>>();
 
             foreach ((Slice keySlice, long expiredTicks, Slice ticksSlice) in GetExpiredValues(context, ticks))

@@ -402,150 +402,139 @@ namespace SlowTests.Client
         [Fact]
         public async Task CanAddMetadataToCompareExchangeAndWaitForExpiration()
         {
-            try
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options
             {
-                using (var store = GetDocumentStore())
+                Server = server
+            }))
+            {
+                var user = new User
                 {
-                    var user = new User
-                    {
-                        Name = "EGOR"
-                    };
+                    Name = "EGOR"
+                };
 
-                    var dateTime = DateTime.Now.AddMinutes(2);
-                    var str = "Test";
-                    var num = 123.456;
-                    var key = "egr/test/cmp/x/change";
-                    using (var session = store.OpenAsyncSession(new SessionOptions
-                    {
-                        TransactionMode = TransactionMode.ClusterWide
-                    }))
-                    {
-                        var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
-                        result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
-                        result.Metadata["TestString"] = str;
-                        result.Metadata["TestNumber"] = num;
-                        await session.SaveChangesAsync();
-                    }
-
-                    var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>(key));
-                    Assert.Equal(user.Name, res.Value.Name);
-                    Assert.NotNull(res.Metadata);
-                    Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
-                    Assert.Equal(str, res.Metadata["TestString"]);
-                    Assert.Equal(num, res.Metadata["TestNumber"]);
-
-                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
-
-                    var val = await WaitForValueAsync(async () =>
-                    {
-                        var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                        return stats.CountOfCompareExchange;
-                    }, 0);
-
-                    Assert.Equal(0, val);
+                var dateTime = DateTime.Now.AddMinutes(2);
+                var str = "Test";
+                var num = 123.456;
+                var key = "egr/test/cmp/x/change";
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, user);
+                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+                    result.Metadata["TestString"] = str;
+                    result.Metadata["TestNumber"] = num;
+                    await session.SaveChangesAsync();
                 }
-            }
-            finally
-            {
-                Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
-                Server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = 0;
+
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>(key));
+                Assert.Equal(user.Name, res.Value.Name);
+                Assert.NotNull(res.Metadata);
+                Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
+                Assert.Equal(str, res.Metadata["TestString"]);
+                Assert.Equal(num, res.Metadata["TestNumber"]);
+
+                server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
+
+                var val = await WaitForValueAsync(async () =>
+                {
+                    var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                    return stats.CountOfCompareExchange;
+                }, 0);
+
+                Assert.Equal(0, val);
             }
         }
 
         [Fact]
         public async Task CanAddMetadataToSimpleCompareExchangeAndWaitForExpiration()
         {
-            try
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options
             {
-                using (var store = GetDocumentStore())
+                Server = server
+            }))
+            {
+                var dateTime = DateTime.Now.AddMinutes(2);
+                var str = "Test";
+                var num = 123.456;
+                var key = "egr/test/cmp/x/change";
+                using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    var dateTime = DateTime.Now.AddMinutes(2);
-                    var str = "Test";
-                    var num = 123.456;
-                    var key = "egr/test/cmp/x/change";
-                    using (var session = store.OpenAsyncSession(new SessionOptions
-                    {
-                        TransactionMode = TransactionMode.ClusterWide
-                    }))
-                    {
-                        var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue<string>(key, "EGR");
-                        result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
-                        result.Metadata["TestString"] = str;
-                        result.Metadata["TestNumber"] = num;
-                        await session.SaveChangesAsync();
-                    }
-
-                    var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(key));
-                    Assert.Equal("EGR", res.Value);
-                    Assert.NotNull(res.Metadata);
-                    Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
-                    Assert.Equal(str, res.Metadata["TestString"]);
-                    Assert.Equal(num, res.Metadata["TestNumber"]);
-
-                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
-
-                    var val = await WaitForValueAsync(async () =>
-                    {
-                        var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                        return stats.CountOfCompareExchange;
-                    }, 0);
-
-                    Assert.Equal(0, val);
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue<string>(key, "EGR");
+                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+                    result.Metadata["TestString"] = str;
+                    result.Metadata["TestNumber"] = num;
+                    await session.SaveChangesAsync();
                 }
-            }
-            finally
-            {
-                Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
-                Server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = 0;
+
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>(key));
+                Assert.Equal("EGR", res.Value);
+                Assert.NotNull(res.Metadata);
+                Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
+                Assert.Equal(str, res.Metadata["TestString"]);
+                Assert.Equal(num, res.Metadata["TestNumber"]);
+
+                server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
+
+                var val = await WaitForValueAsync(async () =>
+                {
+                    var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                    return stats.CountOfCompareExchange;
+                }, 0);
+
+                Assert.Equal(0, val);
             }
         }
         [Fact]
         public async Task CanAddMetadataToIntCompareExchangeAndWaitForExpiration()
         {
-            try
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options
             {
-                using (var store = GetDocumentStore())
+                Server = server
+            }))
+            {
+                var dateTime = DateTime.Now.AddMinutes(2);
+                var str = "Test";
+                var num = 123.456;
+                var key = "egr/test/cmp/x/change";
+                using (var session = store.OpenAsyncSession(new SessionOptions
                 {
-                    var dateTime = DateTime.Now.AddMinutes(2);
-                    var str = "Test";
-                    var num = 123.456;
-                    var key = "egr/test/cmp/x/change";
-                    using (var session = store.OpenAsyncSession(new SessionOptions
-                    {
-                        TransactionMode = TransactionMode.ClusterWide
-                    }))
-                    {
-                        var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, 322);
-                        result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
-                        result.Metadata["TestString"] = str;
-                        result.Metadata["TestNumber"] = num;
-                        await session.SaveChangesAsync();
-                    }
-
-                    var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<int>(key));
-                    Assert.Equal(322, res.Value);
-                    Assert.NotNull(res.Metadata);
-                    Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
-                    Assert.Equal(str, res.Metadata["TestString"]);
-                    Assert.Equal(num, res.Metadata["TestNumber"]);
-
-                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
-
-                    var val = await WaitForValueAsync(async () =>
-                    {
-                        var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-                        return stats.CountOfCompareExchange;
-                    }, 0);
-
-                    Assert.Equal(0, val);
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var result = session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, 322);
+                    result.Metadata[Constants.Documents.Metadata.Expires] = dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff");
+                    result.Metadata["TestString"] = str;
+                    result.Metadata["TestNumber"] = num;
+                    await session.SaveChangesAsync();
                 }
-            }
-            finally
-            {
-                Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow;
-                Server.ServerStore.Observer._lastExpiredCompareExchangeCleanupTimeInTicks = 0;
+
+                var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<int>(key));
+                Assert.Equal(322, res.Value);
+                Assert.NotNull(res.Metadata);
+                Assert.Equal(dateTime.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff"), res.Metadata[Constants.Documents.Metadata.Expires]);
+                Assert.Equal(str, res.Metadata["TestString"]);
+                Assert.Equal(num, res.Metadata["TestNumber"]);
+
+                server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
+
+                var val = await WaitForValueAsync(async () =>
+                {
+                    var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
+                    return stats.CountOfCompareExchange;
+                }, 0);
+
+                Assert.Equal(0, val);
             }
         }
+
         [Fact]
         public async Task CanImportCompareExchangeWithoutMetadata()
         {
@@ -581,7 +570,7 @@ namespace SlowTests.Client
                 var stats = await store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
                 Assert.Equal(1, stats.CountOfCompareExchange);
 
-                using (var session = store.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {
                     var res = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<int>(key);
                     Assert.NotNull(res.Metadata);
