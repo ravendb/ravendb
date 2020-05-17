@@ -14,10 +14,12 @@ namespace Sparrow.Json
     {
         private readonly object _locker = new object();
 
-        private long _generation;
         private bool _disposed;
 
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
+        private bool _isExtremelyLow;
+        private long _generation;
+
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly long _maxContextSizeToKeepInBytes;
         private readonly long _maxNumberOfContextsToKeepInGlobalStack;
@@ -345,25 +347,37 @@ namespace Sparrow.Json
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
-                return;
-
+            var currentlyExtremelyLow = lowMemorySeverity == LowMemorySeverity.ExtremelyLow;
             if (LowMemoryFlag.Raise() == false)
+            {
+                if (currentlyExtremelyLow && _isExtremelyLow == false)
+                {
+                    _isExtremelyLow = true;
+                    ClearMemory();
+                }
+
                 return;
+            }
 
             Interlocked.Increment(ref _generation);
+            _isExtremelyLow = currentlyExtremelyLow;
+            if (_isExtremelyLow)
+                ClearMemory();
 
-            ClearStack(_globalStack);
-
-            foreach (var coreContext in _perCoreContexts)
+            void ClearMemory()
             {
-                for (int i = 0; i < coreContext.Length; i++)
+                ClearStack(_globalStack);
+
+                foreach (var coreContext in _perCoreContexts)
                 {
-                    var context = coreContext[i];
-                    if (context != null && context.InUse.Raise())
+                    for (int i = 0; i < coreContext.Length; i++)
                     {
-                        context.Dispose();
-                        Interlocked.CompareExchange(ref coreContext[i], null, context);
+                        var context = coreContext[i];
+                        if (context != null && context.InUse.Raise())
+                        {
+                            context.Dispose();
+                            Interlocked.CompareExchange(ref coreContext[i], null, context);
+                        }
                     }
                 }
             }
@@ -384,6 +398,7 @@ namespace Sparrow.Json
         public void LowMemoryOver()
         {
             LowMemoryFlag.Lower();
+            _isExtremelyLow = false;
         }
 
         private sealed class CountingConcurrentStack<TItem>
