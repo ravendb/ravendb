@@ -508,9 +508,7 @@ namespace Raven.Server.Config
             if (cfg == null || keyName == null)
                 return false;
 
-            var existingKeyNames = cfg.AsEnumerable().ToDictionary(x => x.Key, x => x.Value);
-            
-            return existingKeyNames.ContainsKey(keyName);
+            return cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName));
         }
 
     }
