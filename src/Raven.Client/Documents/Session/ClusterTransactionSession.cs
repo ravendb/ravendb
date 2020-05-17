@@ -356,7 +356,12 @@ namespace Raven.Client.Documents.Session
 
                         var entity = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value.Value, conventions, context, jsonSerializer, documentInfo: null, removeIdentityProperty: false);
                         var entityJson = entity as BlittableJsonReaderObject;
-                        var metadata = PrepareMetadata(_key, _value.Metadata, context);
+                        BlittableJsonReaderObject metadata = null;
+                        if (_value.Metadata.Count != 0)
+                        {
+                            metadata = PrepareMetadataForPut(_key, _value.Metadata, context);
+                        }
+
                         BlittableJsonReaderObject entityToInsert = null;
 
                         if (entityJson == null)
@@ -379,15 +384,19 @@ namespace Raven.Client.Documents.Session
                     case CompareExchangeValueState.Missing:
                         return null;
                     default:
-                        throw new NotSupportedException($"Not supprted state: '{_state}'");
+                        throw new NotSupportedException($"Not supported state: '{_state}'");
                 }
 
-                BlittableJsonReaderObject ConvertEntity(string key, object entity, BlittableJsonReaderObject metadata)
+                BlittableJsonReaderObject ConvertEntity(string key, object entity, BlittableJsonReaderObject metadata = null)
                 {
                     var djv = new DynamicJsonValue
                     {
                         [Constants.CompareExchange.ObjectFieldName] = entity
                     };
+
+                    if (metadata == null)
+                        return context.ReadObject(djv, key);
+
                     djv[Constants.Documents.Metadata.Key] = metadata;
                     return context.ReadObject(djv, key);
                 }
@@ -446,7 +455,7 @@ namespace Raven.Client.Documents.Session
                 }
             }
 
-            internal static BlittableJsonReaderObject PrepareMetadata(string key, IMetadataDictionary metadataDictionary, JsonOperationContext context)
+            internal static BlittableJsonReaderObject PrepareMetadataForPut(string key, IMetadataDictionary metadataDictionary, JsonOperationContext context)
             {
                 if (metadataDictionary.ContainsKey(Constants.Documents.Metadata.Expires))
                 {

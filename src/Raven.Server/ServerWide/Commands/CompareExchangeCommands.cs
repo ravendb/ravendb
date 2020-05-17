@@ -299,7 +299,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
-            if (CompareExchangeExpirationStorage.HasExpiredMetadata(ActualKey, value, out long ticks))
+            if (CompareExchangeExpirationStorage.HasExpiredMetadata(value, out long ticks, Slices.Empty, ActualKey))
                 Ticks = ticks;
 
             Value = value;

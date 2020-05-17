@@ -411,7 +411,7 @@ namespace SlowTests.Client
                         Name = "EGOR"
                     };
 
-                    var dateTime = DateTime.Now.AddSeconds(60);
+                    var dateTime = DateTime.Now.AddMinutes(2);
                     var str = "Test";
                     var num = 123.456;
                     var key = "egr/test/cmp/x/change";
@@ -434,7 +434,7 @@ namespace SlowTests.Client
                     Assert.Equal(str, res.Metadata["TestString"]);
                     Assert.Equal(num, res.Metadata["TestNumber"]);
 
-                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(61);
+                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
 
                     var val = await WaitForValueAsync(async () =>
                     {
@@ -459,7 +459,7 @@ namespace SlowTests.Client
             {
                 using (var store = GetDocumentStore())
                 {
-                    var dateTime = DateTime.Now.AddSeconds(60);
+                    var dateTime = DateTime.Now.AddMinutes(2);
                     var str = "Test";
                     var num = 123.456;
                     var key = "egr/test/cmp/x/change";
@@ -482,7 +482,7 @@ namespace SlowTests.Client
                     Assert.Equal(str, res.Metadata["TestString"]);
                     Assert.Equal(num, res.Metadata["TestNumber"]);
 
-                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(61);
+                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
 
                     var val = await WaitForValueAsync(async () =>
                     {
@@ -506,7 +506,7 @@ namespace SlowTests.Client
             {
                 using (var store = GetDocumentStore())
                 {
-                    var dateTime = DateTime.Now.AddSeconds(60);
+                    var dateTime = DateTime.Now.AddMinutes(2);
                     var str = "Test";
                     var num = 123.456;
                     var key = "egr/test/cmp/x/change";
@@ -529,7 +529,7 @@ namespace SlowTests.Client
                     Assert.Equal(str, res.Metadata["TestString"]);
                     Assert.Equal(num, res.Metadata["TestNumber"]);
 
-                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddSeconds(61);
+                    Server.ServerStore.Observer.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(3);
 
                     var val = await WaitForValueAsync(async () =>
                     {
