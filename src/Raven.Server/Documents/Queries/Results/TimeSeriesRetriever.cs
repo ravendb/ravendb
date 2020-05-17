@@ -43,12 +43,13 @@ namespace Raven.Server.Documents.Queries.Results
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
+
             var source = GetSourceAndId();
-
-            var (min, max) = GetMinAndMax(declaredFunction, documentId, args, timeSeriesFunction, source);
-
+            var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
+            var (min, max) = GetMinAndMax(declaredFunction, documentId, args, timeSeriesFunction, source, offset);
             var collection = GetCollection(documentId);
-            var reader = new MultiReader(_context, documentId, source, collection, _min, _max, offset);
+
+            var reader = new MultiReader(_context, documentId, source, collection, min, max, offset);
 
             long count = 0;
             var array = new DynamicJsonArray();
@@ -690,23 +691,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private TimeSpan GetOffset(ValueExpression offsetExpression, string name)
-        {
-            var val = offsetExpression.Value == ValueTokenType.String
-                ? offsetExpression.Token.Value
-                : offsetExpression.GetValue(_queryParameters);
-
-            if (val == null)
-                throw new InvalidOperationException("Unable to parse time series offset. Got null instead of a value");
-
-            if (!(val is LazyStringValue) && !(val is string) ||
-                TimeSpan.TryParse(val.ToString(), out var timeSpan) == false)
-                throw new InvalidOperationException($"Failed to parse object '{val}' as TimeSpan, in OFFSET clause of time series function '{name}'");
-
-            return timeSpan;
-        }
-
-        private (DateTime Min, DateTime Max) GetMinAndMax(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source)
+        private (DateTime Min, DateTime Max) GetMinAndMax(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
         {
             DateTime min, max;
             if (timeSeriesFunction.Last == null)
@@ -729,20 +714,39 @@ namespace Raven.Server.Documents.Queries.Results
                 min = stats.End.Add(-timeFromLast);
             }
 
-            TimeSpan? offset = null;
-            if (timeSeriesFunction.Offset != null)
+            if (offset.HasValue)
             {
-                var minWithOffset = min.Ticks + timeSeriesFunction.Offset.Value.Ticks;
-                var maxWithOffset = max.Ticks + timeSeriesFunction.Offset.Value.Ticks;
+
+                var minWithOffset = min.Ticks + offset.Value.Ticks;
+                var maxWithOffset = max.Ticks + offset.Value.Ticks;
 
                 if (minWithOffset >= 0 && minWithOffset <= DateTime.MaxValue.Ticks)
-                    min = min.Add(timeSeriesFunction.Offset.Value);
+                    min = min.Add(offset.Value);
                 if (maxWithOffset >= 0 && maxWithOffset <= DateTime.MaxValue.Ticks)
-                    max = max.Add(timeSeriesFunction.Offset.Value);
+                    max = max.Add(offset.Value);
+
             }
 
-
             return (min, max);
+        }
+
+        private TimeSpan? GetOffset(ValueExpression offsetExpression, string name)
+        {
+            if (offsetExpression == null)
+                return null;
+
+            var val = offsetExpression.Value == ValueTokenType.String
+                ? offsetExpression.Token.Value
+                : offsetExpression.GetValue(_queryParameters);
+
+            if (val == null)
+                throw new InvalidOperationException("Unable to parse time series offset. Got null instead of a value");
+
+            if (!(val is LazyStringValue) && !(val is string) ||
+                TimeSpan.TryParse(val.ToString(), out var timeSpan) == false)
+                throw new InvalidOperationException($"Failed to parse object '{val}' as TimeSpan, in OFFSET clause of time series function '{name}'");
+
+            return timeSpan;
         }
 
         private string GetCollection(string documentId)
