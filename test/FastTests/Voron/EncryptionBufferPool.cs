@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
@@ -16,7 +17,7 @@ namespace FastTests.Voron
         }
 
         [Fact]
-        public void dont_pool_buffer_larger_than_8Mb()
+        public void dont_pool_buffers_larger_than_8Mb()
         {
             var i = 1;
             var toFree = new List<(IntPtr, long)>();
@@ -51,8 +52,10 @@ namespace FastTests.Voron
             }
         }
 
-        [Fact]
-        public void clear_all_buffers_from_current_generation_on_low_memory()
+        [Theory]
+        [InlineData(LowMemorySeverity.Low)]
+        [InlineData(LowMemorySeverity.ExtremelyLow)]
+        public void clear_all_buffers_from_current_generation_on_low_memory(LowMemorySeverity lowMemorySeverity)
         {
             var i = 1;
             var toFree = new List<(IntPtr, long)>();
@@ -69,7 +72,7 @@ namespace FastTests.Voron
             var stats = EncryptionBuffersPool.Instance.GetStats();
             Assert.Equal(0, stats.TotalSize);
 
-            EncryptionBuffersPool.Instance.LowMemory(LowMemorySeverity.ExtremelyLow);
+            EncryptionBuffersPool.Instance.LowMemory(lowMemorySeverity);
             stats = EncryptionBuffersPool.Instance.GetStats();
             Assert.Equal(0, stats.TotalSize);
 
@@ -90,11 +93,81 @@ namespace FastTests.Voron
             Assert.Equal(size, stats.TotalSize);
 
             // will continue to cache the buffer
-            EncryptionBuffersPool.Instance.LowMemory(LowMemorySeverity.ExtremelyLow);
+            EncryptionBuffersPool.Instance.LowMemory(lowMemorySeverity);
             stats = EncryptionBuffersPool.Instance.GetStats();
             Assert.Equal(size, stats.TotalSize);
 
             // return to the original state
+            EncryptionBuffersPool.Instance.LowMemoryOver();
+        }
+
+        [Fact]
+        public void clear_all_buffers_on_extremely_low_memory()
+        {
+            var i = 1;
+            var toFree = new List<(IntPtr, long)>();
+
+            var generation = EncryptionBuffersPool.Instance.Generation;
+            while (i <= new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes))
+            {
+                var ptr = EncryptionBuffersPool.Instance.Get(i, out _);
+                toFree.Add(((IntPtr)ptr, i));
+
+                i *= 2;
+            }
+
+            var stats = EncryptionBuffersPool.Instance.GetStats();
+            Assert.Equal(0, stats.TotalSize);
+
+            foreach (var o in toFree)
+            {
+                EncryptionBuffersPool.Instance.Return((byte*)o.Item1, o.Item2, NativeMemory.ThreadAllocations.Value, generation);
+            }
+
+            stats = EncryptionBuffersPool.Instance.GetStats();
+            var allocated = toFree.Sum(x => x.Item2);
+            Assert.Equal(allocated, stats.TotalSize);
+
+            EncryptionBuffersPool.Instance.LowMemory(LowMemorySeverity.ExtremelyLow);
+            stats = EncryptionBuffersPool.Instance.GetStats();
+            Assert.Equal(0, stats.TotalSize);
+
+            // return to the original state
+            EncryptionBuffersPool.Instance.LowMemoryOver();
+        }
+
+        [Fact]
+        public void can_save_buffers_after_low_memory()
+        {
+            EncryptionBuffersPool.Instance.LowMemory(LowMemorySeverity.ExtremelyLow);
+            EncryptionBuffersPool.Instance.LowMemoryOver();
+
+            var i = 1;
+            var toFree = new List<(IntPtr, long)>();
+
+            var generation = EncryptionBuffersPool.Instance.Generation;
+            while (i <= new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes))
+            {
+                var ptr = EncryptionBuffersPool.Instance.Get(i, out _);
+                toFree.Add(((IntPtr)ptr, i));
+
+                i *= 2;
+            }
+
+            var stats = EncryptionBuffersPool.Instance.GetStats();
+            Assert.Equal(0, stats.TotalSize);
+
+            foreach (var o in toFree)
+            {
+                EncryptionBuffersPool.Instance.Return((byte*)o.Item1, o.Item2, NativeMemory.ThreadAllocations.Value, generation);
+            }
+
+            stats = EncryptionBuffersPool.Instance.GetStats();
+            var allocated = toFree.Sum(x => x.Item2);
+            Assert.Equal(allocated, stats.TotalSize);
+
+            // clear all buffers and restore low memory state
+            EncryptionBuffersPool.Instance.LowMemory(LowMemorySeverity.ExtremelyLow);
             EncryptionBuffersPool.Instance.LowMemoryOver();
         }
     }
