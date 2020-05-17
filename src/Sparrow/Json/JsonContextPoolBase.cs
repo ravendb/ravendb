@@ -17,7 +17,7 @@ namespace Sparrow.Json
         private bool _disposed;
 
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
-        private bool _isExtremelyLow;
+        private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
         private long _generation;
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
@@ -347,37 +347,29 @@ namespace Sparrow.Json
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            var currentlyExtremelyLow = lowMemorySeverity == LowMemorySeverity.ExtremelyLow;
-            if (LowMemoryFlag.Raise() == false)
+            if (LowMemoryFlag.Raise())
             {
-                if (currentlyExtremelyLow && _isExtremelyLow == false)
-                {
-                    _isExtremelyLow = true;
-                    ClearMemory();
-                }
+                Interlocked.Increment(ref _generation);
+            }
 
+            if (_isExtremelyLowMemory.Raise() == false || lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+            {
+                // - already in extremely low memory
+                // - new low memory severity isn't ExtremelyLow
                 return;
             }
 
-            Interlocked.Increment(ref _generation);
-            _isExtremelyLow = currentlyExtremelyLow;
-            if (_isExtremelyLow)
-                ClearMemory();
+            ClearStack(_globalStack);
 
-            void ClearMemory()
+            foreach (var coreContext in _perCoreContexts)
             {
-                ClearStack(_globalStack);
-
-                foreach (var coreContext in _perCoreContexts)
+                for (int i = 0; i < coreContext.Length; i++)
                 {
-                    for (int i = 0; i < coreContext.Length; i++)
+                    var context = coreContext[i];
+                    if (context != null && context.InUse.Raise())
                     {
-                        var context = coreContext[i];
-                        if (context != null && context.InUse.Raise())
-                        {
-                            context.Dispose();
-                            Interlocked.CompareExchange(ref coreContext[i], null, context);
-                        }
+                        context.Dispose();
+                        Interlocked.CompareExchange(ref coreContext[i], null, context);
                     }
                 }
             }
@@ -398,7 +390,7 @@ namespace Sparrow.Json
         public void LowMemoryOver()
         {
             LowMemoryFlag.Lower();
-            _isExtremelyLow = false;
+            _isExtremelyLowMemory.Lower();
         }
 
         private sealed class CountingConcurrentStack<TItem>
