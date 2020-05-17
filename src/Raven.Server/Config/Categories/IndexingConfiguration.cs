@@ -200,6 +200,8 @@ namespace Raven.Server.Config.Categories
 
         protected override void ValidateProperty(PropertyInfo property)
         {
+            base.ValidateProperty(property);
+            
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
             if (updateTypeAttribute == null)
                 throw new InvalidOperationException($"No {nameof(IndexUpdateTypeAttribute)} available for '{property.Name}' property.");

@@ -60,11 +60,7 @@ namespace Raven.Server.Config.Categories
                     return null;
 
                 // This check is needed because cfg.GetSection(keyName) returns null even if key does Not exist in configuration!
-                var keyNames = cfg.AsEnumerable().ToDictionary(x => x.Key, x => x.Value);
-                if (keyNames.ContainsKey(keyName))
-                {
-                    keyExistsInConfiguration = true;
-                }
+                keyExistsInConfiguration = cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName));
 
                 var val = GetValue(cfg, keyName);
                 if (val != null)
@@ -340,6 +336,9 @@ namespace Raven.Server.Config.Categories
 
         protected virtual void ValidateProperty(PropertyInfo property)
         {
+            var defaultValueAttribute = property.GetCustomAttribute<DefaultValueAttribute>();
+            if (defaultValueAttribute == null)
+                throw new InvalidOperationException($"The {nameof(DefaultValueAttribute)} is missing for '{property.Name}' property.");
         }
 
         protected IEnumerable<PropertyInfo> GetConfigurationProperties()
