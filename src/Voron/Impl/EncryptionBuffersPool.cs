@@ -9,6 +9,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Voron.Impl
@@ -18,7 +19,8 @@ namespace Voron.Impl
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
 
         private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
-        private LowMemorySeverity _lowMemorySeverity = LowMemorySeverity.None;
+        private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
+        private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
         private readonly ConcurrentStack<NativeAllocation>[] _items;
         private readonly Timer _cleanupTimer;
         private DateTime _lastAllocationsRebuild = DateTime.UtcNow;
@@ -74,8 +76,7 @@ namespace Voron.Impl
             size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (size > _maxBufferSizeToKeepInBytes ||
-                _lowMemorySeverity != LowMemorySeverity.None && generation < Generation)
+            if (size > _maxBufferSizeToKeepInBytes || (_isLowMemory.IsRaised() && generation < Generation))
             {
                 // - don't want to pool large buffers
                 // - release all the buffers that were created before we got the low memory event
@@ -97,49 +98,34 @@ namespace Voron.Impl
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
-            if (_lowMemorySeverity == LowMemorySeverity.ExtremelyLow)
+            if (_isLowMemory.Raise())
             {
-                // lowest memory severity
-                return;
-            }
-
-            if (_lowMemorySeverity == lowMemorySeverity)
-            {
-                // low memory severity that was already handled
-                return;
-            }
-
-            var isExtremelyLow = lowMemorySeverity == LowMemorySeverity.ExtremelyLow;
-            if (lowMemorySeverity == LowMemorySeverity.Low ||
-                _lowMemorySeverity == LowMemorySeverity.None && isExtremelyLow)
-            {
-                // None -> Low
-                // None -> ExtremelyLow
                 Interlocked.Increment(ref _generation);
             }
-            
-            if (isExtremelyLow)
-            {
-                // None -> ExtremelyLow
-                // Low -> ExtremelyLow
-                foreach (var stack in _items)
-                {
-                    while (stack.TryPop(out var allocation))
-                    {
-                        if (allocation.InUse.Raise() == false)
-                            continue;
 
-                        allocation.Dispose();
-                    }
-                }
+            if (_isExtremelyLowMemory.Raise() == false || lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+            {
+                // - already in extremely low memory
+                // - new low memory severity isn't ExtremelyLow
+                return;
             }
 
-            _lowMemorySeverity = lowMemorySeverity;
+            foreach (var stack in _items)
+            {
+                while (stack.TryPop(out var allocation))
+                {
+                    if (allocation.InUse.Raise() == false)
+                        continue;
+
+                    allocation.Dispose();
+                }
+            }
         }
 
         public void LowMemoryOver()
         {
-            _lowMemorySeverity = LowMemorySeverity.None;
+            _isLowMemory.Lower();
+            _isExtremelyLowMemory.Lower();
         }
 
         public EncryptionBufferStats GetStats()
