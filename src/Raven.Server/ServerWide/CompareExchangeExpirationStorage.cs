@@ -75,7 +75,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static bool HasExpiredMetadata(string storageKey, BlittableJsonReaderObject value, out long ticks)
+        public static bool HasExpiredMetadata(BlittableJsonReaderObject value, out long ticks, Slice keySlice, string storageKey = null)
         {
             if (value.TryGetMember(Constants.Documents.Metadata.Key, out var metadata))
             {
@@ -85,6 +85,8 @@ namespace Raven.Server.ServerWide
                     {
                         if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
                         {
+                            storageKey ??= keySlice.ToString();
+
                             var inner = new InvalidOperationException(
                                 $"The expiration date format for compare exchange '{CompareExchangeKey.SplitStorageKey(storageKey).Key}' is not valid: '{expirationDate}'. Use the following format: {DateTime.UtcNow:O}");
                             throw new RachisApplyException("Could not apply command.", inner);
@@ -95,6 +97,7 @@ namespace Raven.Server.ServerWide
                     }
                     else
                     {
+                        storageKey ??= keySlice.ToString();
                         var inner = new InvalidOperationException($"The type of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{CompareExchangeKey.SplitStorageKey(storageKey).Key}' is not valid. Use the following type: {nameof(DateTime)}");
                         throw new RachisApplyException("Could not apply command.", inner);
                     }
@@ -134,7 +137,7 @@ namespace Raven.Server.ServerWide
                 var storeValue = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Value, out var size);
                 using var result = new BlittableJsonReaderObject(storeValue, size, context);
 
-                if (HasExpiredMetadata(keySlice.ToString(), result, out long currentTicks) == false)
+                if (HasExpiredMetadata(result, out long currentTicks, keySlice, storageKey: null) == false)
                     continue;
 
                 if (currentTicks > expiredTicks)

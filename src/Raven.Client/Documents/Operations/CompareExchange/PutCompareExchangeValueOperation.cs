@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 _key = key;
                 _value = value;
                 _index = index;
-                _metadata = metadata ?? new MetadataAsDictionary();
+                _metadata = metadata;
                 _conventions = conventions ?? DocumentConventions.Default;
             }
 
@@ -63,8 +63,11 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                     [Constants.CompareExchange.ObjectFieldName] = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value, _conventions, ctx, _conventions.CreateSerializer(), documentInfo: null, removeIdentityProperty: false)
                 };
 
-                var metadata = ClusterTransactionOperationsBase.CompareExchangeSessionValue.PrepareMetadata(_key, _metadata, ctx);
-                djv[Constants.Documents.Metadata.Key] = metadata;
+                if (_metadata != null)
+                {
+                    var metadata = ClusterTransactionOperationsBase.CompareExchangeSessionValue.PrepareMetadataForPut(_key, _metadata, ctx);
+                    djv[Constants.Documents.Metadata.Key] = metadata;
+                }
                 var blittable = ctx.ReadObject(djv, _key);
 
                 var request = new HttpRequestMessage
