@@ -694,29 +694,30 @@ namespace Raven.Server.Documents.Queries.Results
         private (DateTime Min, DateTime Max) GetMinAndMax(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
         {
             DateTime min, max;
-            if (timeSeriesFunction.Last == null)
+            if (timeSeriesFunction.Last != null)
+            {
+                var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
+
+                max = DateTime.MaxValue;
+                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
+                min = stats.End.Add(-timeFromLast);
+            }
+            else if (timeSeriesFunction.First != null)
+            {
+                var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
+
+                min = DateTime.MinValue;
+                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
+                max = stats.Start.Add(timeFromFirst);
+            }
+            else
             {
                 min = GetDateValue(timeSeriesFunction.Between?.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
                 max = GetDateValue(timeSeriesFunction.Between?.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
             }
-            else
-            {
-                var last = timeSeriesFunction.Last.GetValue(_queryParameters)?.ToString();
-                if (last == null)
-                {
-                    throw new InvalidQueryException($"Time series function '{declaredFunction.Name}' on document '{documentId}' " +
-                                                    $"was unable to read 'Last' expression '{timeSeriesFunction.Last}'");
-                }
-
-                max = DateTime.MaxValue;
-                var timeFromLast = RangeGroup.ParseLastFromString(last);
-                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                min = stats.End.Add(-timeFromLast);
-            }
 
             if (offset.HasValue)
             {
-
                 var minWithOffset = min.Ticks + offset.Value.Ticks;
                 var maxWithOffset = max.Ticks + offset.Value.Ticks;
 
@@ -728,6 +729,18 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             return (min, max);
+        }
+
+        private TimeValue GetTimePeriodFromValueExpression(ValueExpression valueExpression, string methodName, string functionName, string documentId)
+        {
+            var timePeriod = valueExpression.GetValue(_queryParameters)?.ToString();
+            if (timePeriod == null)
+            {
+                throw new InvalidQueryException($"Time series function '{functionName}' on document '{documentId}' " +
+                                                $"was unable to read '{methodName}' expression '{valueExpression}'");
+            }
+
+            return RangeGroup.ParseLastFromString(timePeriod);
         }
 
         private TimeSpan? GetOffset(ValueExpression offsetExpression, string name)
