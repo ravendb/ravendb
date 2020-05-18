@@ -42,6 +42,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesAggregationQueryable.Offset):
                     Offset(mce.Arguments[0]);
                     break;
+                case nameof(ITimeSeriesQueryable.FromLast):
+                    Last(mce.Arguments[0]);
+                    break;
                 case nameof(ITimeSeriesQueryable.LoadTag):
                 case nameof(ITimeSeriesQueryable.ToList):
                     break;
@@ -80,7 +83,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void GroupBy(Expression expression)
         {
-
             string timePeriod;
 
             if (expression is ConstantExpression constantExpression)
@@ -90,12 +92,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             else if (expression is LambdaExpression lambda)
             {
-                if (!(lambda.Body is MethodCallExpression mce) ||
-                    mce.Method.DeclaringType != typeof(ITimeSeriesGroupByBuilder))
-                    throw new InvalidOperationException("Invalid GroupBy argument " + lambda);
-
-                var duration = ((ConstantExpression)mce.Arguments[0]).Value;
-                timePeriod = $"{duration} {mce.Method.Name}";
+                timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.GroupBy));
             }
 
             else
@@ -210,10 +207,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 if (mce.Arguments[1] is ParameterExpression == false)
                     _src = $"{sourceAlias}.{_src}";
 
-                if (mce.Arguments.Count == 3)
-                    Last(mce.Arguments[2]);
-                
-                else if (mce.Arguments.Count == 4)
+                if (mce.Arguments.Count == 4)
                     Between(mce);
             }
 
@@ -227,68 +221,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void Last(Expression expression)
         {
-            string timeUnit, duration;
-
-            if (expression is MethodCallExpression methodCall)
+            if (!(expression is LambdaExpression lambda))
             {
-                if (methodCall.Method.DeclaringType != typeof(TimeValue) ||
-                    methodCall.Arguments.Count != 1)
-                    ThrowInvalidLastArgument(methodCall);
-
-                duration = methodCall.Arguments[0].ToString();
-
-                switch (methodCall.Method.Name)
-                {
-                    /* TODO RavenDB-14988 : add milliseconds support to TimeValue
-                    case nameof(TimeValue.FromMilliseconds):
-                        timeUnit = "ms";
-                        break;*/
-
-                    case nameof(TimeValue.FromSeconds):
-                        timeUnit = "seconds";
-                        break;
-                    case nameof(TimeValue.FromMinutes):
-                        timeUnit = "minutes";
-                        break;
-                    case nameof(TimeValue.FromHours):
-                        timeUnit = "hours";
-                        break;
-                    case nameof(TimeValue.FromDays):
-                        timeUnit = "days";
-                        break;
-                    case nameof(TimeValue.FromMonths):
-                        timeUnit = "months";
-                        break;
-                    case nameof(TimeValue.FromYears):
-                        timeUnit = "years";
-                        break;
-                    default:
-                        throw new InvalidOperationException($"Invalid 'Last' argument, unsupported method : '{methodCall.Method.Name}'");
-                }
-            }
-
-            else if (expression is UnaryExpression && expression.NodeType == ExpressionType.Convert ||
-                     JavascriptConversionExtensions.IsWrappedConstantExpression(expression))
-            {
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
-
-                if (!(value is TimeValue tv))
-                {
-                    ThrowInvalidLastArgument(expression);
-                    return;
-                }
-
-                duration = tv.Value.ToString();
-                timeUnit = tv.Unit.ToString();
-            }
-
-            else
-            {
-                ThrowInvalidLastArgument(expression);
+                ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.FromLast));
                 return;
             }
 
-            _last = $" last {duration} {timeUnit}";
+            var timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.FromLast));
+
+            _last = $" last {timePeriod}";
         }
 
         private string GetNameFromArgument(Expression argument)
@@ -470,15 +411,28 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return d.EnsureUtc().GetDefaultRavenFormat();
         }
 
+        private static string GetTimePeriod(LambdaExpression lambda, string method)
+        {
+            if (!(lambda.Body is MethodCallExpression mce) ||
+                mce.Method.DeclaringType != typeof(ITimePeriodBuilder))
+            {
+                ThrowInvalidMethodArgument(lambda, method);
+                return null;
+            }
+
+            var duration = ((ConstantExpression)mce.Arguments[0]).Value;
+            return $"{duration} {mce.Method.Name}";
+        }
+
         private void AssertNoMissingSelect()
         {
             if (_groupBy != null && _selectFields == null)
                 throw new InvalidOperationException("Missing Select call. Cannot have GroupBy without Select in Time Series functions ");
         }
 
-        private static void ThrowInvalidLastArgument(Expression argument)
+        private static void ThrowInvalidMethodArgument(Expression argument, string method)
         {
-            throw new InvalidOperationException("Invalid 'Last' argument " + argument);
+            throw new InvalidOperationException($"Invalid '{method}' argument: '{argument}'");
         }
     }
 
