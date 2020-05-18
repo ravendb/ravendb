@@ -45,7 +45,8 @@ namespace Sparrow.Json
                     ? Expression.New(ctor)
                     : Expression.New(type);
 
-                if (type.GetInterfaces().Contains(typeof(IFillFromBlittableJson)))
+                var interfaces = type.GetInterfaces();
+                if (interfaces.Contains(typeof(IFillFromBlittableJson)))
                 {
                     var obj = Expression.Parameter(type, "obj");
                     var methodToCall = typeof(IFillFromBlittableJson).GetMethod(nameof(IFillFromBlittableJson.FillFromBlittableJson), BindingFlags.Public | BindingFlags.Instance);
@@ -84,7 +85,25 @@ namespace Sparrow.Json
                     propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, json, vars)));
                 }
 
-                var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(Expression.Block(vars.Values, Expression.MemberInit(instance, propInit)), json);
+                var conversionFuncBody = Expression.Block(vars.Values, Expression.MemberInit(instance, propInit));
+                if (interfaces.Contains(typeof(IPostDeserialization)))
+                {
+                    var obj = Expression.Parameter(type, "obj");
+                    var methodToCall = typeof(IPostDeserialization).GetMethod(nameof(IPostDeserialization.PostDeserialization), BindingFlags.Public | BindingFlags.Instance);
+                    var returnTarget = Expression.Label(type);
+
+                    var block = Expression.Block(
+                        new[] { obj },
+                        Expression.Assign(obj, conversionFuncBody),
+                        Expression.Call(obj, methodToCall),
+                        Expression.Return(returnTarget, obj, type),
+                        Expression.Label(returnTarget, Expression.Default(type))
+                    );
+                    var l = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(block, json);
+                    return l.Compile();
+                }
+
+                var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(conversionFuncBody, json);
                 return lambda.Compile();
             }
             catch (Exception e)

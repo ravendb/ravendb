@@ -358,7 +358,7 @@ namespace Raven.Client.Documents.Session
 
         void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(TValues entry)
         {
-            Append(entry.Timestamp, entry.Values, entry.Tag);
+            Append(entry);
         }
     }
 }
