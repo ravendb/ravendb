@@ -12,11 +12,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesAggregationQueryable GroupBy(string s);
 
-        ITimeSeriesAggregationQueryable GroupBy(Action<ITimeSeriesGroupByBuilder> timePeriod);
+        ITimeSeriesAggregationQueryable GroupBy(Action<ITimePeriodBuilder> timePeriod);
 
         ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
         ITimeSeriesQueryable Offset(TimeSpan offset);
+
+        ITimeSeriesQueryable FromLast(Action<ITimePeriodBuilder> timePeriod);
+
+        //ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod);
 
         TimeSeriesRawResult ToList();
 
@@ -57,7 +61,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     }
 
-    public interface ITimeSeriesGroupByBuilder
+    public interface ITimePeriodBuilder
     {
         void Milliseconds(int duration);
 
