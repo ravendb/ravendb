@@ -51,10 +51,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 if (_operation.Removals != null)
                 {
-                    foreach (var append in _operation.Removals)
+                    foreach (var removal in _operation.Removals)
                     {
-                        append.To = append.To.EnsureUtc();
-                        append.From = append.From.EnsureUtc();
+                        removal.To = removal.To?.EnsureUtc();
+                        removal.From = removal.From?.EnsureUtc();
                     }
                 }
             }

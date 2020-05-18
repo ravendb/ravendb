@@ -262,23 +262,18 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public class RemoveOperation
         {
-            public DateTime From, To;
+            public DateTime? From, To;
 
             internal static RemoveOperation Parse(BlittableJsonReaderObject input)
             {
-                if (input.TryGet(nameof(From), out DateTime from) == false)
-                    throw new InvalidDataException($"Missing '{nameof(From)}' property");
+                input.TryGet(nameof(From), out DateTime? from); // optional
+                input.TryGet(nameof(To), out DateTime? to); // optional
 
-                if (input.TryGet(nameof(To), out DateTime to) == false)
-                    throw new InvalidDataException($"Missing '{nameof(To)}' property");
-
-                var op = new RemoveOperation
+                return new RemoveOperation
                 {
                     From = from,
                     To = to
                 };
-
-                return op;
             }
 
             public DynamicJsonValue ToJson()
