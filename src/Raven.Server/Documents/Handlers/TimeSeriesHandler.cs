@@ -584,8 +584,8 @@ namespace Raven.Server.Documents.Handlers
                             DocumentId = _documentId,
                             Collection = docCollection,
                             Name = _operation.Name,
-                            From = removal.From,
-                            To = removal.To
+                            From = removal.From ?? DateTime.MinValue,
+                            To = removal.To ?? DateTime.MaxValue
                         };
 
                         LastChangeVector = tss.RemoveTimestampRange(context, deletionRange);
