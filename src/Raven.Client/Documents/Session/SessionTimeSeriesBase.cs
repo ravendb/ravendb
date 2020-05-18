@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Session
             Remove(at, at);
         }
 
-        public void Remove(DateTime from, DateTime to)
+        public void Remove(DateTime? from = null, DateTime? to = null)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
                 Session.DeletedEntities.Contains(documentInfo.Entity))
@@ -97,8 +97,8 @@ namespace Raven.Client.Documents.Session
 
             var op = new TimeSeriesOperation.RemoveOperation
             {
-                From = from.EnsureUtc(),
-                To = to.EnsureUtc()
+                From = from?.EnsureUtc(),
+                To = to?.EnsureUtc()
             };
 
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
