@@ -560,7 +560,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 _context = context;
                 _documentId = documentId;
-                _name = name;
+                _name = name.ToLowerInvariant();
                 _table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
                 _tag = new LazyStringValue(null, null, 0, context);
                 _offset = offset;

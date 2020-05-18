@@ -86,10 +86,10 @@ namespace Sparrow.Json
                 }
 
                 var conversionFuncBody = Expression.Block(vars.Values, Expression.MemberInit(instance, propInit));
-                if (interfaces.Contains(typeof(IPostDeserialization)))
+                if (interfaces.Contains(typeof(IPostJsonDeserialization)))
                 {
                     var obj = Expression.Parameter(type, "obj");
-                    var methodToCall = typeof(IPostDeserialization).GetMethod(nameof(IPostDeserialization.PostDeserialization), BindingFlags.Public | BindingFlags.Instance);
+                    var methodToCall = typeof(IPostJsonDeserialization).GetMethod(nameof(IPostJsonDeserialization.PostDeserialization), BindingFlags.Public | BindingFlags.Instance);
                     var returnTarget = Expression.Label(type);
 
                     var block = Expression.Block(

@@ -7,9 +7,10 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.TimeSeries
@@ -33,26 +34,21 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
     }
 
-    [AttributeUsage(AttributeTargets.Field)]
-    public class TimeSeriesValue : Attribute
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
+    public class TimeSeriesValueAttribute : Attribute
     {
-        public int Index;
-        public TimeSeriesValue(int index)
+        public readonly int Index;
+        public TimeSeriesValueAttribute(int index)
         {
             Index = index;
         }
     }
 
-    public abstract class TimeSeriesEntryValues : IPostDeserialization
+    public abstract class TimeSeriesEntryValues : IPostJsonDeserialization
     {
         public double[] Values { get; set; }
 
-        private static readonly ConcurrentDictionary<Type, TimeSeriesEntryMappingInfo> _cache = new ConcurrentDictionary<Type, TimeSeriesEntryMappingInfo>();
-
-        private class TimeSeriesEntryMappingInfo
-        {
-            public readonly SortedDictionary<int, FieldInfo> FieldsMapping = new SortedDictionary<int, FieldInfo>();
-        }
+        private static readonly ConcurrentDictionary<Type, SortedDictionary<int, MemberInfo>> _cache = new ConcurrentDictionary<Type, SortedDictionary<int, MemberInfo>>();
 
         internal void SetValuesFromFields()
         {
@@ -61,35 +57,13 @@ namespace Raven.Client.Documents.Session.TimeSeries
             if (mapping == null)
                 return;
 
-            var fields = mapping.FieldsMapping;
-            Values = new double[fields.Count];
-            foreach (var fieldInfo in fields)
+            Values = new double[mapping.Count];
+            foreach (var fieldInfo in mapping)
             {
                 var index = fieldInfo.Key;
                 var field = fieldInfo.Value;
                 Values[index] = (double)field.GetValue(this);
             }
-        }
-
-        private static TimeSeriesEntryMappingInfo GetFieldsMapping(Type t)
-        {
-            if (_cache.TryGetValue(t, out var mapping) == false)
-            {
-                foreach (var field in t.GetFields())
-                {
-                    var attribute = (TimeSeriesValue)field.GetCustomAttributes(false).SingleOrDefault(a => a is TimeSeriesValue);
-                    if (attribute == null)
-                        continue;
-
-                    var i = attribute.Index;
-                    mapping ??= new TimeSeriesEntryMappingInfo();
-                    mapping.FieldsMapping[i] = field;
-                }
-
-                mapping = _cache.GetOrAdd(t, mapping);
-            }
-
-            return mapping;
         }
 
         internal void SetFieldsFromValues()
@@ -99,12 +73,32 @@ namespace Raven.Client.Documents.Session.TimeSeries
             if (mapping == null)
                 return;
 
-            foreach (var fieldInfo in mapping.FieldsMapping)
+            foreach (var memberInfo in mapping)
             {
-                var index = fieldInfo.Key;
-                var field = fieldInfo.Value;
+                var index = memberInfo.Key;
+                var field = memberInfo.Value;
                 field.SetValue(this, Values[index]);
             }
+        }
+
+        internal static SortedDictionary<int, MemberInfo> GetFieldsMapping(Type type)
+        {
+            return _cache.GetOrAdd(type, (t) =>
+            {
+                SortedDictionary<int, MemberInfo> mapping = null;
+                foreach (var field in ReflectionUtil.GetPropertiesAndFieldsFor(t, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                {
+                    var attribute = field.GetCustomAttribute<TimeSeriesValueAttribute>(inherit: false);
+                    if (attribute == null)
+                        continue;
+
+                    var i = attribute.Index;
+                    mapping ??= new SortedDictionary<int, MemberInfo>();
+                    mapping[i] = field;
+                }
+
+                return mapping;
+            });
         }
 
         [OnDeserialized]
@@ -113,7 +107,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             SetFieldsFromValues();
         }
 
-        void IPostDeserialization.PostDeserialization()
+        void IPostJsonDeserialization.PostDeserialization()
         {
             SetFieldsFromValues();
         }
