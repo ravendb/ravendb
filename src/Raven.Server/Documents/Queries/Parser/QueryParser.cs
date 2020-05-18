@@ -1358,31 +1358,33 @@ namespace Raven.Server.Documents.Queries.Parser
                 tsf.Between = ReadTimeSeriesBetweenExpression(source);
             }
 
+            if (Scanner.TryScan("First"))
+            {
+                if (tsf.Between != null)
+                    ThrowCannotHaveBothClauses("First", "Between", name);
+
+                var timeFromFirst = GetTimePeriodValueExpression(name, "First");
+
+                if (Scanner.TryScan("BETWEEN"))
+                    ThrowCannotHaveBothClauses("First", "Between", name);
+
+                tsf.First = timeFromFirst;
+            }
+
             if (Scanner.TryScan("LAST"))
             {
                 if (tsf.Between != null)
-                    ThrowInvalidQueryException($"Cannot have both 'Last' and 'Between' in the same Time Series query function '{name}'");
+                    ThrowCannotHaveBothClauses("Last", "Between", name);
 
-                if (Value(out var lastTimePeriod) == false)
-                    ThrowParseException($"Could not parse LAST argument for '{name}'");
+                if (tsf.First != null)
+                    ThrowCannotHaveBothClauses("First", "Last", name);
 
-                if (lastTimePeriod.Value == ValueTokenType.Long)
-                {
-                    // we need to check 1h, 1d
-                    if (Scanner.Identifier())
-                    {
-                        lastTimePeriod.Token = new StringSegment(
-                            lastTimePeriod.Token.Buffer,
-                            lastTimePeriod.Token.Offset,
-                            Scanner.Token.Offset + Scanner.Token.Length - lastTimePeriod.Token.Offset);
-                        lastTimePeriod.Value = ValueTokenType.String;
-                    }
-                }
+                var timeFromLast = GetTimePeriodValueExpression(name, "Last");
 
                 if (Scanner.TryScan("BETWEEN"))
-                    ThrowInvalidQueryException($"Cannot have both 'Last' and 'Between' in the same Time Series query function '{name}'");
-                
-                tsf.Last = lastTimePeriod;
+                    ThrowCannotHaveBothClauses("Last", "Between", name);
+
+                tsf.Last = timeFromLast;
             }
 
             if (Scanner.TryScan("LOAD"))
@@ -1421,23 +1423,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
             {
-                if (Value(out var groupByExpr) == false)
-                    ThrowParseException($"Could not parse GROUP BY argument for {name}");
-
-                if (groupByExpr.Value == ValueTokenType.Long)
-                {
-                    // we need to check 1h, 1d
-                    if (Scanner.Identifier())
-                    {
-                        groupByExpr.Token = new StringSegment(
-                            groupByExpr.Token.Buffer,
-                            groupByExpr.Token.Offset,
-                            Scanner.Token.Offset + Scanner.Token.Length - groupByExpr.Token.Offset);
-                        groupByExpr.Value = ValueTokenType.String;
-                    }
-                }
-
-                tsf.GroupBy = groupByExpr;
+                tsf.GroupBy = GetTimePeriodValueExpression(name, "GROUP BY");
 
                 if (Scanner.TryScan("SELECT") == false)
                     ThrowParseException($"Expected select clause for {name}, but didn't find it");
@@ -1460,6 +1446,32 @@ namespace Raven.Server.Documents.Queries.Parser
             _insideTimeSeriesBody = false;
 
             return tsf;
+        }
+
+        private void ThrowCannotHaveBothClauses(string clause1, string clause2, string functionName)
+        {
+            ThrowInvalidQueryException($"Cannot have both '{clause1}' and '{clause2}' in the same Time Series query function '{functionName}'");
+        }
+
+        private ValueExpression GetTimePeriodValueExpression(string functionName, string clause)
+        {
+            if (Value(out var timePeriod) == false)
+                ThrowParseException($"Could not parse '{clause}' argument for '{functionName}'");
+
+            if (timePeriod.Value == ValueTokenType.Long)
+            {
+                // we need to check 1h, 1d
+                if (Scanner.Identifier())
+                {
+                    timePeriod.Token = new StringSegment(
+                        timePeriod.Token.Buffer,
+                        timePeriod.Token.Offset,
+                        Scanner.Token.Offset + Scanner.Token.Length - timePeriod.Token.Offset);
+                    timePeriod.Value = ValueTokenType.String;
+                }
+            }
+
+            return timePeriod;
         }
 
         private List<(QueryExpression Expression, StringSegment? Alias)> GroupBy()

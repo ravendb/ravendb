@@ -122,11 +122,9 @@ namespace Raven.Server.Documents.Queries.AST
         public TimeSeriesBetweenExpression Between;
         public FieldExpression Source;
         public QueryExpression Where;
-        public ValueExpression GroupBy;
         public List<(QueryExpression, StringSegment?)> Select;
         public StringSegment? LoadTagAs;
-        public ValueExpression Offset;
-        public ValueExpression Last;
+        public ValueExpression Last, First, GroupBy, Offset;
     }
 
     public unsafe struct RangeGroup
