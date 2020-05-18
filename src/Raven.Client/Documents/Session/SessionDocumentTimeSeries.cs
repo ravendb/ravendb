@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Session
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsyncInternal<TValues>(from, to, start, pageSize));
         }
 
-        public void Remove(DateTime from, DateTime to)
+        public void Remove(DateTime? from = null, DateTime? to = null)
         {
             _asyncSessionTimeSeries.Remove(from, to);
         }
