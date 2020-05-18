@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable FromLast(Action<ITimePeriodBuilder> timePeriod);
 
-        //ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod);
+        ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod);
 
         TimeSeriesRawResult ToList();
 

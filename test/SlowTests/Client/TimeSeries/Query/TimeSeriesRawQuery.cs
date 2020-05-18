@@ -6510,7 +6510,6 @@ select out(doc)
                     Assert.Equal(2, result.Count);
                     Assert.Equal(baseline, result.Results[0].Timestamp);
                     Assert.Equal(baseline.AddMilliseconds(100), result.Results[1].Timestamp);
-
                 }
             }
         }
@@ -6649,7 +6648,6 @@ select out(doc)
 
                     session.SaveChanges();
                 }
-
 
                 using (var session = store.OpenSession())
                 {
@@ -6795,7 +6793,6 @@ select out(doc)
 ")
                         .AddParameter("id", id)
                         .First();
-
 
                     Assert.Equal(TimeSpan.FromDays(1).TotalMinutes + 1, result.Count);
                     Assert.Equal(TimeSpan.FromDays(1).TotalHours + 1, result.Results.Length);
