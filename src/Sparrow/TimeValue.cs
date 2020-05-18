@@ -362,6 +362,9 @@ namespace Sparrow
 
         public override int GetHashCode()
         {
+            if (Value == 0 || Value == int.MinValue || Value == int.MaxValue)
+                return Hashing.Mix(Value);
+
             return Hashing.Combine(Value, (int)Unit);
         }
     }
