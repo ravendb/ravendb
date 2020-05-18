@@ -5943,7 +5943,7 @@ select out(p)")
             }
         }
 
-        [Fact]
+        [Fact (Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
             using (var store = GetDocumentStore())
@@ -5966,6 +5966,8 @@ select out(p)")
                         tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
                     }
 
+                    tsf.Append(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), ++totalMinutes, "watches/fitbit");
+
                     session.SaveChanges();
                 }
 
@@ -5984,8 +5986,10 @@ select out(doc)
                         .AddParameter("id", id)
                         .First();
 
-                    Assert.Equal(1, result.Count);
+                    Assert.Equal(2, result.Count);
                     Assert.Equal(baseline.AddMinutes(totalMinutes), result.Results[0].Timestamp);
+                    Assert.Equal(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), result.Results[1].Timestamp);
+
                 }
             }
         }
