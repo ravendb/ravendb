@@ -68,14 +68,14 @@ namespace SlowTests.Client.TimeSeries.Session
                         HeartRate = 59d,
                         Tag = "watches/fitbit"
                     };
-                    session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate").Append(measure);
+                    session.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(measure);
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var val = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate")
+                    var val = session.TimeSeriesFor<HeartRateMeasure>("users/ayende")
                         .Get().Single();
 
                     Assert.Equal(59d , val.HeartRate);
@@ -101,7 +101,7 @@ namespace SlowTests.Client.TimeSeries.Session
                         HeartRate = 59d,
                         Tag = "watches/fitbit"
                     };
-                    var ts = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate");
+                    var ts = session.TimeSeriesFor<HeartRateMeasure>("users/ayende");
                     ts.Append(measure);
 
                     await session.SaveChangesAsync();
@@ -109,7 +109,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var result = await session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate").GetAsync();
+                    var result = await session.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync();
                     var val = result.Single();
 
                     Assert.Equal(59d , val.HeartRate);
@@ -130,7 +130,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
 
-                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    var tsf = session.TimeSeriesFor("users/ayende", nameof(HeartRateMeasure));
 
                     tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
                     tsf.Append(baseline.AddMinutes(2), new[] { 60d }, "watches/fitbit");
@@ -141,7 +141,7 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var val = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate")
+                    var val = session.TimeSeriesFor<HeartRateMeasure>("users/ayende")
                         .Get()
                         .ToList();
                     Assert.Equal(2, val.Count);
@@ -168,13 +168,13 @@ namespace SlowTests.Client.TimeSeries.Session
 
                 using (var session = store.OpenSession())
                 {
-                    var vals = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate")
+                    var vals = session.TimeSeriesFor<HeartRateMeasure>("users/ayende")
                         .Get(baseline.AddMinutes(-10), baseline.AddMinutes(-5))?
                         .ToList();
 
                     Assert.Empty(vals);
 
-                    vals = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate")
+                    vals = session.TimeSeriesFor<HeartRateMeasure>("users/ayende")
                         .Get(baseline.AddMinutes(5), baseline.AddMinutes(9))?
                         .ToList();
 
@@ -191,7 +191,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/karmel");
-                    session.TimeSeriesFor<HeartRateMeasure>("users/karmel", "Heartrate")
+                    session.TimeSeriesFor<HeartRateMeasure>("users/karmel")
                         .Append(new HeartRateMeasure
                         {
                             HeartRate = 66,
@@ -199,7 +199,7 @@ namespace SlowTests.Client.TimeSeries.Session
                             Timestamp = DateTime.Now
                         });
 
-                    session.TimeSeriesFor<StockPrice>("users/karmel", "Nasdaq")
+                    session.TimeSeriesFor<StockPrice>("users/karmel")
                         .Append(new StockPrice
                         {
                             Open = 66,
@@ -220,13 +220,13 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(2, tsNames.Count);
 
                     // should be sorted
-                    Assert.Equal("Heartrate", tsNames[0]);
-                    Assert.Equal("Nasdaq", tsNames[1]);
+                    Assert.Equal(nameof(HeartRateMeasure), tsNames[0]);
+                    Assert.Equal(nameof(StockPrice), tsNames[1]);
 
-                    var heartRateMeasures = session.TimeSeriesFor<HeartRateMeasure>(user, "Heartrate").Get().Single();
+                    var heartRateMeasures = session.TimeSeriesFor<HeartRateMeasure>(user).Get().Single();
                     Assert.Equal(66, heartRateMeasures.HeartRate);
 
-                    var stockPrice = session.TimeSeriesFor<StockPrice>(user, "Nasdaq").Get().Single();
+                    var stockPrice = session.TimeSeriesFor<StockPrice>(user).Get().Single();
                     Assert.Equal(66, stockPrice.Open);
                     Assert.Equal(55, stockPrice.Close);
                     Assert.Equal(113.4, stockPrice.High);
@@ -249,7 +249,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
 
-                    var tsf = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate");
+                    var tsf = session.TimeSeriesFor<HeartRateMeasure>("users/ayende");
                     var m = new HeartRateMeasure
                     {
                         Timestamp = baseline.AddMinutes(61), 
@@ -274,7 +274,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<HeartRateMeasureAggregation>>(@"
     declare timeseries out(u) 
     {
-        from u.Heartrate between $start and $end
+        from u.HeartRateMeasure between $start and $end
         group by 1h
         select min(), max(), first(), last()
     }
@@ -293,7 +293,7 @@ namespace SlowTests.Client.TimeSeries.Session
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var reader = tss.GetReader(ctx, "users/ayende", "Heartrate", baseline, baseline.AddDays(1));
+                            var reader = tss.GetReader(ctx, "users/ayende", nameof(HeartRateMeasure), baseline, baseline.AddDays(1));
 
                             Assert.True(reader.Init());
 
@@ -304,8 +304,8 @@ namespace SlowTests.Client.TimeSeries.Session
                             TimeSeriesValuesSegment.ParseTimeSeriesKey(key, size, ctx, out var docId, out var name, out DateTime baseline2);
 
                             Assert.Equal("users/ayende", docId);
-                            Assert.Equal("Heartrate", name);
-                            Assert.Equal(baseline.AddMinutes(61), baseline2);
+                            Assert.Equal(nameof(HeartRateMeasure), name, StringComparer.InvariantCultureIgnoreCase);
+                            Assert.Equal(baseline.AddMinutes(61), baseline2, RavenTestHelper.DateTimeComparer.Instance);
 
                             Assert.Equal(1, reader.SegmentsOrValues().Count());
 
@@ -352,7 +352,7 @@ namespace SlowTests.Client.TimeSeries.Session
                         }, id);
 
 
-                        var tsf = session.TimeSeriesFor<HeartRateMeasure>(id, "Heartrate");
+                        var tsf = session.TimeSeriesFor<HeartRateMeasure>(id);
                         var m = new HeartRateMeasure
                         {
                             Timestamp = baseline.AddMinutes(61), 
@@ -394,7 +394,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult<HeartRateMeasure>>(@"
 declare timeseries out(x) 
 {
-    from x.HeartRate between $start and $end
+    from x.HeartRateMeasure between $start and $end
 }
 from Users as doc
 where doc.Age > 49
