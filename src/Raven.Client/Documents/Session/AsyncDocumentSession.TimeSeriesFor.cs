@@ -23,14 +23,14 @@ namespace Raven.Client.Documents.Session
             return new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
 
-        public IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name) where TValues : TimeSeriesEntry
+        public IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId) where TValues : TimeSeriesEntry
         {
-            return new AsyncSessionDocumentTimeSeries<TValues>(this, documentId, name);
+            return new AsyncSessionDocumentTimeSeries<TValues>(this, documentId, typeof(TValues).Name);
         }
 
-        public IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name) where TValues : TimeSeriesEntry
+        public IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity) where TValues : TimeSeriesEntry
         {
-            return new AsyncSessionDocumentTimeSeries<TValues>(this, entity, name);
+            return new AsyncSessionDocumentTimeSeries<TValues>(this, entity, typeof(TValues).Name);
         }
     }
 }

@@ -23,14 +23,14 @@ namespace Raven.Client.Documents.Session
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name) where TValues : TimeSeriesEntry
+        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId) where TValues : TimeSeriesEntry
         {
-            return new SessionDocumentTimeSeries<TValues>(this, documentId, name);
+            return new SessionDocumentTimeSeries<TValues>(this, documentId, typeof(TValues).Name);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name) where TValues : TimeSeriesEntry
+        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity) where TValues : TimeSeriesEntry
         {
-            return new SessionDocumentTimeSeries<TValues>(this, entity, name);
+            return new SessionDocumentTimeSeries<TValues>(this, entity, typeof(TValues).Name);
         }
     }
 }
