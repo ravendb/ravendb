@@ -2713,7 +2713,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
                         .Select(p => 
-                        RavenQuery.TimeSeries(p, "HeartRate", TimeSpan.FromMilliseconds(100))
+                        RavenQuery.TimeSeries(p, "HeartRate")
+                            .FromLast(g => g.Milliseconds(100))
                             .ToList())
                         .First();
 
@@ -2756,7 +2757,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
                         .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromSeconds(90))
+                            RavenQuery.TimeSeries(p, "HeartRate")
+                                .FromLast(g => g.Seconds(90))
                                 .GroupBy(g => g.Seconds(10))
                                 .Select(x => x.Average())
                                 .ToList())
@@ -2800,7 +2802,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
                         .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromMinutes(30))
+                            RavenQuery.TimeSeries(p, "HeartRate")
+                                .FromLast(g => g.Minutes(30))
                                 .GroupBy(g => g.Minutes(10))
                                 .Select(x => new
                                 {
@@ -2849,7 +2852,9 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
-                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromHours(12)).ToList())
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
+                            .FromLast(g => g.Hours(12))
+                            .ToList())
                         .First();
 
 
@@ -2899,7 +2904,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
                         .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromHours(12))
+                            RavenQuery.TimeSeries(p, "HeartRate")
+                                .FromLast(g => g.Hours(12))
                                 .GroupBy(g => g.Hours(1))
                                 .Select(x => new
                                 {
@@ -2976,7 +2982,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
                         .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromDays(1))
+                            RavenQuery.TimeSeries(p, "HeartRate")
+                                .FromLast(g => g.Days(1))
                                 .GroupBy(g => g.Hours(1))
                                 .Select(x => new
                                 {
@@ -3027,7 +3034,8 @@ namespace SlowTests.Client.TimeSeries.Query
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
                         .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromHours(12))
+                            RavenQuery.TimeSeries(p, "HeartRate")
+                                .FromLast(g => g.Hours(12))
                                 .Where(entry => entry.Tag == tag)
                                 .GroupBy(g => g.Hours(1))
                                 .Select(x => new
@@ -3041,234 +3049,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(360, result.Count);
                     Assert.Equal(12, result.Results.Length);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_UsingLast_WithTimeValueVariable()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
-                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
-
-                var id = "people/1";
-                var name = "HeartRate";
-                var tag = "watches/apple";
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Person
-                    {
-                        Name = "Oren",
-                    }, id);
-
-                    var tsf = session.TimeSeriesFor(id, name);
-
-                    for (int i = 0; i <= totalMinutes; i++)
-                    {
-                        var t = i % 2 == 0 ? "watches/fitbit" : "watches/apple";
-                        tsf.Append(baseline.AddMinutes(i), i, t);
-                    }
-
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var timePeriod = TimeValue.FromHours(12);
-
-                    var result = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, name, timePeriod)
-                                .Where(entry => entry.Tag == tag)
-                                .GroupBy(g => g.Hours(1))
-                                .Select(x => new
-                                {
-                                    Min = x.Min(),
-                                    Max = x.Max(),
-                                    Average = x.Average()
-                                })
-                                .ToList())
-                        .First();
-
-                    Assert.Equal(360, result.Count);
-                    Assert.Equal(12, result.Results.Length);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var timePeriod = TimeValue.FromHours(12) + TimeValue.FromMinutes(30);
-
-                    var result = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, name, timePeriod)
-                                .Where(entry => entry.Tag == tag)
-                                .GroupBy(g => g.Hours(1))
-                                .Select(x => new
-                                {
-                                    Min = x.Min(),
-                                    Max = x.Max(),
-                                    Average = x.Average()
-                                })
-                                .ToList())
-                        .First();
-
-                    Assert.Equal(375, result.Count);
-                    Assert.Equal(13, result.Results.Length);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_UsingLast_WithTimeSpanVariable()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var today = DateTime.Today;
-                var baseline = today.AddDays(-7);
-                var id = "people/1";
-                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Person
-                    {
-                        Name = "Oren",
-                    }, id);
-
-                    var tsf = session.TimeSeriesFor(id, "HeartRate");
-
-                    for (int i = 0; i <= totalMinutes; i++)
-                    {
-                        var tag = i % 2 == 0 ? "watches/fitbit" : "watches/apple";
-                        tsf.Append(baseline.AddMinutes(i), i, tag);
-                    }
-
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var tag = "watches/apple";
-
-                    var result = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", new TimeSpan(12, 0, 0))
-                                .Where(entry => entry.Tag == tag)
-                                .GroupBy(g => g.Hours(1))
-                                .Select(x => new
-                                {
-                                    Min = x.Min(),
-                                    Max = x.Max(),
-                                    Average = x.Average()
-                                })
-                                .ToList())
-                        .First();
-
-                    Assert.Equal(360, result.Count);
-                    Assert.Equal(12, result.Results.Length);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var timePeriod = new TimeSpan(1, 2, 3, 4);
-
-                    var query = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", timePeriod)
-                                .ToList());
-
-                    Assert.Contains($"Last {timePeriod.TotalSeconds} second", query.ToString(), StringComparison.InvariantCultureIgnoreCase);
-
-                    var result = query.First();
-
-                    var expected = Math.Ceiling(timePeriod.TotalMinutes);
-
-                    Assert.Equal(expected, result.Count);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var timePeriod = TimeSpan.FromMinutes(1).Add(TimeSpan.FromSeconds(30));
-
-                    var result = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", timePeriod)
-                                .GroupBy(g => g.Seconds(10))
-                                .Select(x => x.Average())
-                                .ToList())
-                        .First();
-
-                    Assert.Equal(2, result.Count);
-                    Assert.Equal(2, result.Results.Length);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var timePeriod = today - baseline.AddDays(5); // 2 days
-
-                    var result = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", timePeriod)
-                                .GroupBy(g => g.Days(1))
-                                .Select(x => x.Average())
-                                .ToList())
-                        .First();
-
-                    Assert.Equal(TimeSpan.FromDays(2).TotalMinutes + 1, result.Count);
-                    Assert.Equal(3, result.Results.Length);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var timePeriod = today.AddDays(1).AddHours(10).AddMinutes(20).AddSeconds(30) - today; // 1 day, 10 hours, 20 minutes, 30 seconds
-
-                    var query = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", timePeriod)
-                                .GroupBy(g => g.Days(1))
-                                .Select(x => x.Average())
-                                .ToList());
-
-                    Assert.Contains($"Last {timePeriod.TotalSeconds} second", query.ToString(), StringComparison.InvariantCultureIgnoreCase);
-
-                    var result = query.First();
-
-                    var expected = Math.Ceiling(timePeriod.TotalMinutes);
-
-                    Assert.Equal(expected, result.Count);
-                    Assert.Equal(2, result.Results.Length);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    TimeValue timePeriod = TimeValue.FromDays(3) - TimeSpan.FromHours(12.52); // 2.43 days
-
-                    var query = session.Query<Person>()
-                        .Where(p => p.Id == id)
-                        .Select(p =>
-                            RavenQuery.TimeSeries(p, "HeartRate", timePeriod)
-                                .GroupBy(g => g.Days(1))
-                                .Select(x => x.Average())
-                                .ToList());
-
-                    Assert.Contains($"Last {timePeriod.Value} {timePeriod.Unit}", query.ToString(), StringComparison.InvariantCultureIgnoreCase);
-
-                    var result = query.First();
-
-                    var expected = Math.Ceiling(((TimeSpan)timePeriod).TotalMinutes);
-
-                    Assert.Equal(expected, result.Count);
-                    Assert.Equal(3, result.Results.Length);
                 }
             }
         }
@@ -3306,7 +3086,8 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     var result = session.Query<Person>()
                         .Where(p => p.Id == id)
-                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", TimeValue.FromHours(12))
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
+                            .FromLast(g => g.Hours(12))
                             .Offset(offset)
                             .ToList())
                         .First();
