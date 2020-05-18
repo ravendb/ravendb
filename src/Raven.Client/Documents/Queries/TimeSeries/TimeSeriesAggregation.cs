@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session.TimeSeries;
 
@@ -57,6 +56,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     return _max;
 
                 _max.Values = base.Max;
+                _max.SetFieldsFromValues();
                 return _max;
             }
         }
@@ -72,6 +72,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     return _min;
 
                 _min.Values = base.Min;
+                _min.SetFieldsFromValues();
                 return _min;
             }
         }
@@ -87,6 +88,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     return _last;
 
                 _last.Values = base.Last;
+                _last.SetFieldsFromValues();
                 return _last;
             }
         }
@@ -102,6 +104,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     return _first;
 
                 _first.Values = base.First;
+                _first.SetFieldsFromValues();
                 return _first;
             }
         }
@@ -117,6 +120,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     return _average;
 
                 _average.Values = base.Average;
+                _average.SetFieldsFromValues();
                 return _average;
             }
         }
@@ -132,6 +136,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     return _count;
 
                 _count.Values = Array.ConvertAll<long, double>(base.Count, x => x);
+                _count.SetFieldsFromValues();
                 return _count;
             }
         }

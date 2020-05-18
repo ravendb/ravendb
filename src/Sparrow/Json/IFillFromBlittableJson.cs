@@ -4,4 +4,8 @@
     {
         void FillFromBlittableJson(BlittableJsonReaderObject json);
     }
+    internal interface IPostDeserialization
+    {
+        void PostDeserialization();
+    }
 }

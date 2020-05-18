@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Esprima.Ast;
 using FastTests;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
@@ -15,7 +11,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
@@ -31,40 +26,30 @@ namespace SlowTests.Client.TimeSeries.Session
 
         public class StockPriceAggregated : TimeSeriesAggregatedEntry
         {
-            public double Close { get => Values[0]; set => Values[0] = value; }
-            public double High { get => Values[1]; set => Values[1] = value; }
-            public double Low { get => Values[2]; set => Values[2] = value; }
-            public double Open { get => Values[3]; set => Values[3] = value; }
-            public double Volume { get => Values[4]; set => Values[4] = value; }
+            [TimeSeriesValue(0)] public double Close;
+            [TimeSeriesValue(1)] public double High;
+            [TimeSeriesValue(2)] public double Low;
+            [TimeSeriesValue(3)] public double Open;
+            [TimeSeriesValue(4)] public double Volume;
         }
 
         public class StockPrice : TimeSeriesEntry
         {
-            public double Close { get => Values[0]; set => Values[0] = value; }
-            public double High { get => Values[1]; set => Values[1] = value; }
-            public double Low { get => Values[2]; set => Values[2] = value; }
-            public double Open { get => Values[3]; set => Values[3] = value; }
-            public double Volume { get => Values[4]; set => Values[4] = value; }
-
-            public StockPrice()
-            {
-                Values = new double[5];
-            }
+            [TimeSeriesValue(0)] public double Close;
+            [TimeSeriesValue(1)] public double High;
+            [TimeSeriesValue(2)] public double Low;
+            [TimeSeriesValue(3)] public double Open;
+            [TimeSeriesValue(4)] public double Volume;
         }
 
         public class HeartRateMeasureAggregation : TimeSeriesAggregatedEntry
         {
-            public double HeartRate { get => Values[0]; set => Values[0] = value; }
+            [TimeSeriesValue(0)] public double HeartRate;
         }
 
         public class HeartRateMeasure : TimeSeriesEntry
         {
-            public double HeartRate { get => Values[0]; set => Values[0] = value; }
-
-            public HeartRateMeasure()
-            {
-                Values = new double[1];
-            }
+            [TimeSeriesValue(0)] public double HeartRate;
         }
 
         [Fact]
@@ -116,7 +101,8 @@ namespace SlowTests.Client.TimeSeries.Session
                         HeartRate = 59d,
                         Tag = "watches/fitbit"
                     };
-                    session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate").Append(measure);
+                    var ts = session.TimeSeriesFor<HeartRateMeasure>("users/ayende", "Heartrate");
+                    ts.Append(measure);
 
                     await session.SaveChangesAsync();
                 }
@@ -258,7 +244,7 @@ namespace SlowTests.Client.TimeSeries.Session
             using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today;
-
+                
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");

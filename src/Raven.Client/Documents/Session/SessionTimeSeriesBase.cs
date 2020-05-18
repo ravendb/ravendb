@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow;
 
 namespace Raven.Client.Documents.Session
@@ -54,6 +55,12 @@ namespace Raven.Client.Documents.Session
         public void Append(DateTime timestamp, double value, string tag = null)
         {
             Append(timestamp, new []{ value }, tag);
+        }
+
+        public void Append<TValue>(TValue value) where TValue : TimeSeriesEntry
+        {
+            value.SetValuesFromFields();
+            Append(value.Timestamp, value.Values, value.Tag);
         }
 
         public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
@@ -115,7 +122,6 @@ namespace Raven.Client.Documents.Session
                 Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, removals: new List<TimeSeriesOperation.RemoveOperation> { op }));
             }
         }
-
 
         private static void ThrowDocumentAlreadyDeletedInSession(string documentId, string timeseries)
         {

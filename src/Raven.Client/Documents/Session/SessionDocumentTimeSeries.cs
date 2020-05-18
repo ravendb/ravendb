@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
 
         public void Append(TValues value)
         {
-            _asyncSessionTimeSeries.Append(value.Timestamp, value.Values, value.Tag);
+            _asyncSessionTimeSeries.Append(value);
         }
 
         public IEnumerable<TimeSeriesEntry> Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue)
