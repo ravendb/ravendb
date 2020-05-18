@@ -6,6 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Extensions;
@@ -17,7 +18,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
         private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
-        private string _src, _between, _where, _groupBy, _last, _loadTag, _offset;
+        private string _src, _between, _where, _groupBy, _last, _first, _loadTag, _offset;
 
         public List<string> Parameters { get; internal set; }
 
@@ -44,6 +45,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     break;
                 case nameof(ITimeSeriesQueryable.FromLast):
                     Last(mce.Arguments[0]);
+                    break;
+                case nameof(ITimeSeriesQueryable.FromFirst):
+                    First(mce.Arguments[0]);
                     break;
                 case nameof(ITimeSeriesQueryable.LoadTag):
                 case nameof(ITimeSeriesQueryable.ToList):
@@ -221,6 +225,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void Last(Expression expression)
         {
+            if (_first != null)
+                throw new InvalidQueryException($"Cannot use both '{nameof(ITimeSeriesQueryable.FromFirst)}' and '{nameof(ITimeSeriesQueryable.FromLast)}' in the same Time Series query function ");
+
             if (!(expression is LambdaExpression lambda))
             {
                 ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.FromLast));
@@ -230,6 +237,22 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             var timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.FromLast));
 
             _last = $" last {timePeriod}";
+        }
+
+        private void First(Expression expression)
+        {
+            if (_last != null)
+                throw new InvalidQueryException($"Cannot use both '{nameof(ITimeSeriesQueryable.FromFirst)}' and '{nameof(ITimeSeriesQueryable.FromLast)}' in the same Time Series query function ");
+
+            if (!(expression is LambdaExpression lambda))
+            {
+                ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.FromFirst));
+                return;
+            }
+
+            var timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.FromFirst));
+
+            _first = $" first {timePeriod}";
         }
 
         private string GetNameFromArgument(Expression argument)
@@ -255,6 +278,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void Between(MethodCallExpression mce)
         {
+            if (_first != null)
+                throw new InvalidQueryException($"Cannot use '{nameof(ITimeSeriesQueryable.FromFirst)}' when From/To dates are provided to the Time Series query function ");
+            
+            if (_last != null)
+                throw new InvalidQueryException($"Cannot use '{nameof(ITimeSeriesQueryable.FromLast)}' when From/To dates are provided to the Time Series query function ");
+
             var from = GetDateValue(mce.Arguments[2]);
             var to = GetDateValue(mce.Arguments[3]);
 
@@ -352,7 +381,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             if (_between != null)
                 queryBuilder.Append(_between);
-            else if (_last != null)
+            if (_first != null)
+                queryBuilder.Append(_first);
+            if (_last != null)
                 queryBuilder.Append(_last);
             if (_loadTag != null)
                 queryBuilder.Append(_loadTag);
