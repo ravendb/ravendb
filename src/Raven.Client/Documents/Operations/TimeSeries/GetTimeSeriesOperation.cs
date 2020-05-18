@@ -117,12 +117,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 }
 
                 Result = (TimeSeriesRangeResult<TValues>)func(response);
-
-                if (response.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray entries) &&
-                    entries == null)
-                {
-                    Result.Entries = null;
-                }
             }
 
             public override bool IsReadRequest => true;

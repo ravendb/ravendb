@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
-            List<TimeSeriesEntry> values = default;
+            List<TimeSeriesEntry> values = new List<TimeSeriesEntry>();
             var reader = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetReader(context, docId, name, from, to);
 
             // init hash 
@@ -264,8 +264,6 @@ namespace Raven.Server.Documents.Handlers
 
                 foreach (var singleResult in enumerable)
                 {
-                    values ??= new List<TimeSeriesEntry>();
-
                     if (start-- > 0)
                         continue;
 
@@ -287,7 +285,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 From = from,
                 To = to,
-                Entries = values?.ToArray(),
+                Entries = values.ToArray(),
                 Hash = ComputeHttpEtags.FinalizeHash(size, state)
             };
         }
@@ -424,12 +422,6 @@ namespace Raven.Server.Documents.Handlers
 
         private static void WriteEntries(AbstractBlittableJsonTextWriter writer, TimeSeriesEntry[] entries)
         {
-            if (entries == null)
-            {
-                writer.WriteNull();
-                return;
-            }
-
             writer.WriteStartArray();
 
             for (var i = 0; i < entries.Length; i++)
