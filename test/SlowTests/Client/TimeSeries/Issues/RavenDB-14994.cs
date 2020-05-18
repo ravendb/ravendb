@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -69,6 +70,18 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Empty(entries);
                 }
             }
+        }
+
+        [Fact]
+        public void ConstantTimeValuesShouldReturnConstantHashCodes()
+        {
+            var zero = TimeValue.Zero;
+            var anotherZero = TimeValue.FromHours(5) - TimeValue.FromHours(5);
+
+            var h1 = zero.GetHashCode();
+            var h2 = anotherZero.GetHashCode();
+            Assert.Equal(h2, h1);
+            Assert.Equal(zero, anotherZero);
         }
     }
 }
