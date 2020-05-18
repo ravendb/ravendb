@@ -497,13 +497,13 @@ namespace SlowTests.Client.TimeSeries.Session
                         .Get(baseline.AddMinutes(-10), baseline.AddMinutes(-5))?
                         .ToList();
 
-                    Assert.Null(vals);
+                    Assert.Empty(vals);
 
                     vals = session.TimeSeriesFor("users/ayende", "Heartrate")
                         .Get(baseline.AddMinutes(5), baseline.AddMinutes(9))?
                         .ToList();
 
-                    Assert.Null(vals);
+                    Assert.Empty(vals);
                 }
             }
         }

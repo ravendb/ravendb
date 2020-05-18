@@ -601,7 +601,7 @@ namespace SlowTests.Client.TimeSeries.Session
                         .Get(baseline.AddHours(-2), baseline.AddHours(-1))?
                         .ToList();
 
-                    Assert.Null(vals);
+                    Assert.Empty(vals);
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     // should not go to server

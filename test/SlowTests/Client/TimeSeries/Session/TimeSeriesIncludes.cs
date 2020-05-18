@@ -573,7 +573,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Null(ranges[0].Entries);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(-30), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(-10), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
@@ -608,7 +608,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out cache));
                     Assert.True(cache.TryGetValue("BloodPressure", out ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Null(ranges[0].Entries);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(10), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(30), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
@@ -1463,7 +1463,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Null(ranges[0].Entries);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(-30), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(-10), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
 
@@ -1497,7 +1497,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(((InMemoryDocumentSessionOperations)session).TimeSeriesByDocId.TryGetValue("users/ayende", out cache));
                     Assert.True(cache.TryGetValue("BloodPressure", out ranges));
                     Assert.Equal(1, ranges.Count);
-                    Assert.Null(ranges[0].Entries);
+                    Assert.Empty(ranges[0].Entries);
                     Assert.Equal(baseline.AddMinutes(10), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(30), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
                 }

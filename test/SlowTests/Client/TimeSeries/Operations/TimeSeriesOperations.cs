@@ -108,7 +108,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 var timeSeriesRangeResult = store.Operations.Send(
                     new GetTimeSeriesOperation("users/ayende", "Heartrate", baseline.AddMonths(-2), baseline.AddMonths(-1)));
 
-                Assert.Null(timeSeriesRangeResult.Entries);
+                Assert.Empty(timeSeriesRangeResult.Entries);
 
                 using (var session = store.OpenSession())
                 {
