@@ -1121,5 +1121,97 @@ namespace SlowTests.Client.TimeSeries.Operations
 
             }
         }
+
+        [Fact]
+        public void CanDeleteWithoutProvidingFromAndToDates()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc();
+
+                var docId = "users/ayende";
+
+                using (var session = store.OpenSession())
+                {
+
+                    session.Store(new User(), docId);
+
+                    var tsf = session.TimeSeriesFor(docId, "HeartRate");
+                    var tsf2 = session.TimeSeriesFor(docId, "BloodPressure");
+                    var tsf3 = session.TimeSeriesFor(docId, "BodyTemperature");
+
+                    for (int j = 0; j < 100; j++)
+                    {
+                        tsf.Append(baseline.AddMinutes(j), j);
+                        tsf2.Append(baseline.AddMinutes(j), j);
+                        tsf3.Append(baseline.AddMinutes(j), j);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var get = store.Operations.Send(new GetTimeSeriesOperation(docId, "HeartRate"));
+                Assert.Equal(100, get.Entries.Length);
+
+                // null From, To
+                var deleteOp = new TimeSeriesOperation
+                {
+                    Name = "Heartrate",
+                    Removals = new List<TimeSeriesOperation.RemoveOperation>
+                    {
+                        new TimeSeriesOperation.RemoveOperation()
+                    }
+                };
+
+                store.Operations.Send(new TimeSeriesBatchOperation(docId, deleteOp));
+
+                get = store.Operations.Send(new GetTimeSeriesOperation(docId, "HeartRate"));
+                Assert.Null(get);
+
+                get = store.Operations.Send(new GetTimeSeriesOperation(docId, "BloodPressure"));
+                Assert.Equal(100, get.Entries.Length);
+
+                // null To
+                deleteOp = new TimeSeriesOperation
+                {
+                    Name = "BloodPressure",
+                    Removals = new List<TimeSeriesOperation.RemoveOperation>
+                    {
+                        new TimeSeriesOperation.RemoveOperation
+                        {
+                            From = baseline.AddMinutes(50),
+                            To = null
+                        }
+                    }
+                };
+
+                store.Operations.Send(new TimeSeriesBatchOperation(docId, deleteOp));
+
+                get = store.Operations.Send(new GetTimeSeriesOperation(docId, "BloodPressure"));
+                Assert.Equal(50, get.Entries.Length);
+
+                get = store.Operations.Send(new GetTimeSeriesOperation(docId, "BodyTemperature"));
+                Assert.Equal(100, get.Entries.Length);
+
+                // null From
+                deleteOp = new TimeSeriesOperation
+                {
+                    Name = "BodyTemperature",
+                    Removals = new List<TimeSeriesOperation.RemoveOperation>
+                    {
+                        new TimeSeriesOperation.RemoveOperation
+                        {
+                            To = baseline.AddMinutes(19)
+                        }
+                    }
+                };
+
+                store.Operations.Send(new TimeSeriesBatchOperation(docId, deleteOp));
+
+                get = store.Operations.Send(new GetTimeSeriesOperation(docId, "BodyTemperature"));
+                Assert.Equal(80, get.Entries.Length);
+
+            }
+        }
     }
 }
