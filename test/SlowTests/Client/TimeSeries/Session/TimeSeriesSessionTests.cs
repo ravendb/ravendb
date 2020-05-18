@@ -7,6 +7,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1042,6 +1043,89 @@ namespace SlowTests.Client.TimeSeries.Session
                     var user = session.Load<User>("users/karmel");
                     var ts = session.TimeSeriesFor(user, "unicorns").Get(DateTime.MinValue, DateTime.MaxValue);
                     Assert.Null(ts);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDeleteWithoutProvidingFromAndToDates()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc();
+
+                var docId = "users/ayende";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), docId);
+
+                    var tsf = session.TimeSeriesFor(docId, "HeartRate");
+                    var tsf2 = session.TimeSeriesFor(docId, "BloodPressure");
+                    var tsf3 = session.TimeSeriesFor(docId, "BodyTemperature");
+
+                    for (int j = 0; j < 100; j++)
+                    {
+                        tsf.Append(baseline.AddMinutes(j), j);
+                        tsf2.Append(baseline.AddMinutes(j), j);
+                        tsf3.Append(baseline.AddMinutes(j), j);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor(docId, "Heartrate");
+
+                    var entries = tsf.Get()?.ToList();
+                    Assert.Equal(100, entries?.Count);
+
+                    // null From, To
+                    tsf.Remove();
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entries = session.TimeSeriesFor(docId, "Heartrate").Get()?.ToList();
+                    Assert.Null(entries);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor(docId, "BloodPressure");
+
+                    var entries = tsf.Get()?.ToList();
+                    Assert.Equal(100, entries?.Count);
+
+                    // null To
+                    tsf.Remove(baseline.AddMinutes(50), null);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entries = session.TimeSeriesFor(docId, "BloodPressure").Get()?.ToList();
+                    Assert.Equal(50, entries?.Count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor(docId, "BodyTemperature");
+
+                    var entries = tsf.Get()?.ToList();
+                    Assert.Equal(100, entries?.Count);
+
+                    // null From
+                    tsf.Remove(null, baseline.AddMinutes(19));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entries = session.TimeSeriesFor(docId, "BodyTemperature").Get()?.ToList();
+                    Assert.Equal(80, entries?.Count);
                 }
             }
         }
