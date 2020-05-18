@@ -51,6 +51,8 @@ namespace FastTests.Voron
                 Assert.Equal(i, allocationInfo.AllocationSize);
                 i *= 2;
             }
+
+            ClearMemory(encryptionBuffersPool);
         }
 
         [Theory]
@@ -100,9 +102,7 @@ namespace FastTests.Voron
             Assert.Equal(size, stats.TotalSize);
 
             encryptionBuffersPool.LowMemoryOver();
-            encryptionBuffersPool.LowMemory(LowMemorySeverity.ExtremelyLow);
-            stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            ClearMemory(encryptionBuffersPool);
         }
 
         [Fact]
@@ -133,9 +133,7 @@ namespace FastTests.Voron
             var allocated = toFree.Sum(x => x.Item2);
             Assert.Equal(allocated, stats.TotalSize);
 
-            encryptionBuffersPool.LowMemory(LowMemorySeverity.ExtremelyLow);
-            stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(0, stats.TotalSize);
+            ClearMemory(encryptionBuffersPool);
         }
 
         [Fact]
@@ -169,10 +167,33 @@ namespace FastTests.Voron
             var allocated = toFree.Sum(x => x.Item2);
             Assert.Equal(allocated, stats.TotalSize);
 
-            // clear all buffers and restore low memory state
-            encryptionBuffersPool.LowMemory(LowMemorySeverity.ExtremelyLow);
+            ClearMemory(encryptionBuffersPool);
+        }
 
+        [Fact]
+        public void clear_buffers_only_when_in_extremely_low_memory()
+        {
+            var encryptionBuffersPool = new EncryptionBuffersPool();
+
+            var ptr = encryptionBuffersPool.Get(1, out _);
+            var stats = encryptionBuffersPool.GetStats();
+            Assert.Equal(0, stats.TotalSize);
+
+            encryptionBuffersPool.Return(ptr, 1, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
             stats = encryptionBuffersPool.GetStats();
+            Assert.Equal(1, stats.TotalSize);
+
+            encryptionBuffersPool.LowMemory(LowMemorySeverity.Low);
+            stats = encryptionBuffersPool.GetStats();
+            Assert.Equal(1, stats.TotalSize);
+
+            ClearMemory(encryptionBuffersPool);
+        }
+
+        private static void ClearMemory(EncryptionBuffersPool encryptionBuffersPool)
+        {
+            encryptionBuffersPool.LowMemory(LowMemorySeverity.ExtremelyLow);
+            var stats = encryptionBuffersPool.GetStats();
             Assert.Equal(0, stats.TotalSize);
         }
     }
