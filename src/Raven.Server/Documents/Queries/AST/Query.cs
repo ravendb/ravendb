@@ -413,8 +413,8 @@ namespace Raven.Server.Documents.Queries.AST
                     }
 
                     if (TryConsumeMatch(source, ref offset, "ms") ||
-                        TryConsumeMatch(source, ref offset, "milli") ||
-                        TryConsumeMatch(source, ref offset, "milliseconds"))
+                        TryConsumeMatch(source, ref offset, "milliseconds") ||
+                        TryConsumeMatch(source, ref offset, "milli"))
                     {
                         // TODO change to TimeValue.FromMilliseconds when RavenDB-14988 is fixed
                         result = TimeSpan.FromMilliseconds(duration);
