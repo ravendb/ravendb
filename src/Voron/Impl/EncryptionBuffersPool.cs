@@ -103,12 +103,11 @@ namespace Voron.Impl
                 Interlocked.Increment(ref _generation);
             }
 
-            if (_isExtremelyLowMemory.Raise() == false || lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
-            {
-                // - already in extremely low memory
-                // - new low memory severity isn't ExtremelyLow
+            if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
-            }
+
+            if (_isExtremelyLowMemory.Raise() == false)
+                return;
 
             foreach (var stack in _items)
             {
