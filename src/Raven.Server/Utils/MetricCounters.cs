@@ -70,7 +70,7 @@ namespace Raven.Server.Utils
             }
         }
 
-        public abstract class MetricsBase
+        public abstract class MetricsWritesBase : IDynamicJson
         {
             public MeterMetric PutsPerSec { get; internal set; }
 
@@ -81,21 +81,30 @@ namespace Raven.Server.Utils
                 PutsPerSec = new MeterMetric();
                 BytesPutsPerSec = new MeterMetric();
             }
+
+            public DynamicJsonValue ToJson()
+            {
+                return new DynamicJsonValue
+                {
+                    [nameof(PutsPerSec)] = PutsPerSec.CreateMeterData(),
+                    [nameof(BytesPutsPerSec)] = BytesPutsPerSec.CreateMeterData()
+                };
+            }
         }
 
-        public class DocCounters : MetricsBase
+        public class DocCounters : MetricsWritesBase
         {
         }
 
-        public class AttachmentCounters : MetricsBase
+        public class AttachmentCounters : MetricsWritesBase
         {
         }
 
-        public class CounterCounters : MetricsBase
+        public class CounterCounters : MetricsWritesBase
         {
         }
 
-        public class TimeSeriesCounters : MetricsBase
+        public class TimeSeriesCounters : MetricsWritesBase
         {
         }
 
@@ -125,26 +134,10 @@ namespace Raven.Server.Utils
                     [nameof(Requests.ConcurrentRequestsCount)] = Requests.ConcurrentRequestsCount,
                     [nameof(Requests.AverageDuration)] = Requests.AverageDuration.GetRate()
                 },
-                [nameof(Docs)] = new DynamicJsonValue
-                {
-                    [nameof(Docs.BytesPutsPerSec)] = Docs.BytesPutsPerSec.CreateMeterData(),
-                    [nameof(Docs.PutsPerSec)] = Docs.PutsPerSec.CreateMeterData()
-                },
-                [nameof(Attachments)] = new DynamicJsonValue
-                {
-                    [nameof(Attachments.BytesPutsPerSec)] = Attachments.BytesPutsPerSec.CreateMeterData(),
-                    [nameof(Attachments.PutsPerSec)] = Attachments.PutsPerSec.CreateMeterData()
-                },
-                [nameof(Counters)] = new DynamicJsonValue
-                {
-                    [nameof(Counters.BytesPutsPerSec)] = Counters.BytesPutsPerSec.CreateMeterData(),
-                    [nameof(Counters.PutsPerSec)] = Counters.PutsPerSec.CreateMeterData()
-                },
-                [nameof(TimeSeries)] = new DynamicJsonValue
-                {
-                    [nameof(TimeSeries.BytesPutsPerSec)] = TimeSeries.BytesPutsPerSec.CreateMeterData(),
-                    [nameof(TimeSeries.PutsPerSec)] = TimeSeries.PutsPerSec.CreateMeterData()
-                },
+                [nameof(Docs)] = Docs,
+                [nameof(Attachments)] = Attachments,
+                [nameof(Counters)] = Counters,
+                [nameof(TimeSeries)] = TimeSeries,
                 [nameof(MapIndexes)] = new DynamicJsonValue
                 {
                     [nameof(MapIndexes.IndexedPerSec)] = MapIndexes.IndexedPerSec.CreateMeterData()
