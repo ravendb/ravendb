@@ -15,8 +15,10 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.TimeSeries;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -166,6 +168,8 @@ namespace Raven.Client.Documents
         Task ExecuteIndexAsync(AbstractIndexCreationTask task, string database = null, CancellationToken token = default);
 
         Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default);
+
+        TimeSeriesOperations TimeSeries { get; }
 
         /// <summary>
         /// Gets the conventions.

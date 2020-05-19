@@ -43,6 +43,7 @@ using Raven.Server.Web.Studio;
 using Raven.Server.Web.System;
 using Raven.Server.ServerWide;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Documents.TimeSeries;
 
@@ -218,6 +219,8 @@ namespace Raven.Server.Json
             public static readonly Func<BlittableJsonReaderObject, AdminRevisionsHandler.Parameters> DeleteRevisionsParameters = GenerateJsonDeserializationRoutine<AdminRevisionsHandler.Parameters>();
 
             public static readonly Func<BlittableJsonReaderObject, UpdateUnusedDatabasesOperation.Parameters> UnusedDatabaseParameters = GenerateJsonDeserializationRoutine<UpdateUnusedDatabasesOperation.Parameters>();
+
+            public static readonly Func<BlittableJsonReaderObject, ConfigureTimeSeriesValueNamesOperation.Parameters> TimeSeriesValueNamesParameters = GenerateJsonDeserializationRoutine<ConfigureTimeSeriesValueNamesOperation.Parameters>();
         }
     }
 }
