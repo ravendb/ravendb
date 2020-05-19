@@ -5,6 +5,7 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -52,9 +53,15 @@ namespace SlowTests.Issues
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;
             using (var store = GetDocumentStore(options: new Options
             {
-                ModifyDocumentStore = x => x.Conventions.CustomizeJsonSerializer = c => c.NullValueHandling = NullValueHandling.Ignore
+                ModifyDocumentStore = x =>
+                {
+                    x.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = c => c.NullValueHandling = NullValueHandling.Ignore
+                    };
+                }
             }))
-            {                
+            {
                 using (var session = store.OpenSession())
                 {
                     var doc = new Document

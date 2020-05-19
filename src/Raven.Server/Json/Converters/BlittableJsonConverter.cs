@@ -1,16 +1,17 @@
 ﻿using System.Runtime.Serialization;
 using Newtonsoft.Json;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Sparrow.Json;
 
 namespace Raven.Server.Json.Converters
 {
-
     internal sealed class BlittableJsonConverter : RavenTypeJsonConverter<BlittableJsonReaderObject>
     {
         public static readonly BlittableJsonConverter Instance = new BlittableJsonConverter();
 
-        private BlittableJsonConverter() {}
+        private BlittableJsonConverter()
+        {
+        }
 
         protected override void WriteJson(BlittableJsonWriter writer, BlittableJsonReaderObject value, JsonSerializer serializer)
         {

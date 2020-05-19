@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Documents;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RDBC_328:RavenTestBase
+    public class RDBC_328 : RavenTestBase
     {
         public RDBC_328(ITestOutputHelper output) : base(output)
         {
@@ -22,9 +20,12 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = x =>
                 {
-                    x.Conventions.CustomizeJsonDeserializer = s =>
-                    {                     
-                        s.Converters.Add(new NeverNullStringConverter());
+                    x.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonDeserializer = s =>
+                        {
+                            s.Converters.Add(new NeverNullStringConverter());
+                        }
                     };
                 }
             }))
@@ -55,15 +56,17 @@ namespace SlowTests.Issues
                 ModifyDocumentStore = x =>
                 {
                     NeverNullStringConverter converter = new NeverNullStringConverter();
-                    x.Conventions.CustomizeJsonSerializer = s =>
-                    {
-                        
-                        s.Converters.Add(converter);
-                    };
 
-                    x.Conventions.CustomizeJsonDeserializer = s =>
+                    x.Conventions.Serialization = new JsonNetSerializationConventions
                     {
-                        s.Converters.Remove(converter);
+                        CustomizeJsonDeserializer = s =>
+                        {
+                            s.Converters.Add(converter);
+                        },
+                        CustomizeJsonSerializer = s =>
+                        {
+                            s.Converters.Add(converter);
+                        }
                     };
                 }
             }))
@@ -116,4 +119,3 @@ namespace SlowTests.Issues
         }
     }
 }
-

@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -48,7 +47,7 @@ namespace Raven.Client.ServerWide.Operations
                 url = $"{node.Url}/admin/databases?name={_databaseName}";
 
                 url += "&replicationFactor=" + _replicationFactor;
-                var databaseDocument = EntityToBlittable.ConvertCommandToBlittable(_databaseRecord, ctx);
+                var databaseDocument = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_databaseRecord, ctx);
 
                 var request = new HttpRequestMessage
                 {

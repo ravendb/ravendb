@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
-using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -30,7 +26,7 @@ namespace SlowTests.Issues
 
                 // this tests write to storage
                 database.HugeDocuments.AddIfDocIsHuge("orders/1-A", 10 * 1024 * 1024);
-                
+
                 // this tests merge with existing item
                 database.HugeDocuments.AddIfDocIsHuge("orders/2-A", 20 * 1024 * 1024);
                 database.HugeDocuments.AddIfDocIsHuge("orders/3-A", 30 * 1024 * 1024);
@@ -40,7 +36,7 @@ namespace SlowTests.Issues
 
                 Assert.True(database.ConfigurationStorage.NotificationsStorage.GetPerformanceHintCount() > 0);
 
-                // now read directly from storage and verify 
+                // now read directly from storage and verify
                 using (database.ConfigurationStorage.NotificationsStorage.Read(HugeDocuments.HugeDocumentsId, out var ntv))
                 {
                     if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
@@ -49,12 +45,11 @@ namespace SlowTests.Issues
                     }
                     else
                     {
-                        HugeDocumentsDetails details = (HugeDocumentsDetails)EntityToBlittable.ConvertToEntity(
+                        HugeDocumentsDetails details = (HugeDocumentsDetails)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(
                             typeof(HugeDocumentsDetails),
-                            HugeDocuments.HugeDocumentsId,
                             detailsJson,
-                            DocumentConventions.Default);
-                        
+                            HugeDocuments.HugeDocumentsId);
+
                         Assert.NotNull(details);
                         Assert.Equal(4, details.HugeDocuments.Count);
 

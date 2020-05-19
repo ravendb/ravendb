@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -12,7 +11,7 @@ namespace Raven.Client.Documents.Operations
 {
     public class PatchOperation<TEntity> : PatchOperation
     {
-        public PatchOperation(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfChangeVectorMismatch = false) 
+        public PatchOperation(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfChangeVectorMismatch = false)
             : base(id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch)
         {
         }
@@ -51,10 +50,10 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<PatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation:false, test: false);
+            return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation: false, test: false);
         }
 
-        public RavenCommand<PatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache, bool returnDebugInformation , bool test)
+        public RavenCommand<PatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache, bool returnDebugInformation, bool test)
         {
             return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfChangeVectorMismatch, returnDebugInformation, test);
         }
@@ -82,11 +81,11 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(context));
                 _id = id ?? throw new ArgumentNullException(nameof(id));
                 _changeVector = changeVector;
-                _patch = EntityToBlittable.ConvertCommandToBlittable(new
+                _patch = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new
                 {
                     Patch = patch,
                     PatchIfMissing = patchIfMissing
-                },context);
+                }, context);
                 _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
                 _returnDebugInformation = returnDebugInformation;
                 _test = test;

@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using NodaTime;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -44,7 +45,7 @@ namespace SlowTests.Issues
         public static class JsonExtensions
         {
             /// <summary>
-            /// 
+            ///
             /// </summary>
             public static T FromJson<T>(object value)
             {
@@ -74,6 +75,7 @@ namespace SlowTests.Issues
                 });
             }
         }
+
         public static bool InstantQueryValueConverter(string name, Instant instant, Boolean range, out string outputValue)
         {
             outputValue = JsonExtensions.ToJson(instant.ToDateTimeUtc());
@@ -85,8 +87,9 @@ namespace SlowTests.Issues
 
         public static void ModifyDocumentStore(IDocumentStore documentStore)
         {
-            Action<JsonSerializer> previousCustomSerializer = documentStore.Conventions.CustomizeJsonSerializer;
-            documentStore.Conventions.CustomizeJsonSerializer = (serializer =>
+            var serializationConventions = (JsonNetSerializationConventions)documentStore.Conventions.Serialization;
+            Action<JsonSerializer> previousCustomSerializer = serializationConventions.CustomizeJsonSerializer;
+            serializationConventions.CustomizeJsonSerializer = (serializer =>
             {
                 previousCustomSerializer?.Invoke(serializer);
 
@@ -115,7 +118,6 @@ namespace SlowTests.Issues
                     session.Advanced.Patch<User, Instant>("users/mark", x => x.UpdateTime, Time.GetCurrentTime());
                     await session.SaveChangesAsync();
                 }
-
             }
         }
 
@@ -139,6 +141,7 @@ namespace SlowTests.Issues
                 }
             }
         }
+
         private class User
         {
             private string id;
@@ -201,7 +204,6 @@ namespace SlowTests.Issues
                 }
             }
         }
-
 
         private static class Time
         {

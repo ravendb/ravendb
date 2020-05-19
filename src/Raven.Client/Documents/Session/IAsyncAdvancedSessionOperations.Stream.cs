@@ -4,16 +4,12 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-#if NETSTANDARD2_0 || NETCOREAPP2_1
-using Raven.Client.Util;
-#else
-using System.Collections.Generic;
-#endif
 
 namespace Raven.Client.Documents.Session
 {
@@ -98,14 +94,13 @@ namespace Raven.Client.Documents.Session
         Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, string startAfter = null, CancellationToken token = default);
 
         /// <summary>
-        ///     Returns the results of a query directly into stream 
+        ///     Returns the results of a query directly into stream
         /// </summary>
         Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default);
 
         /// <summary>
-        ///     Returns the results of a query directly into stream 
+        ///     Returns the results of a query directly into stream
         /// </summary>
         Task StreamIntoAsync<T>(IAsyncRawDocumentQuery<T> query, Stream output, CancellationToken token = default);
-
     }
 }

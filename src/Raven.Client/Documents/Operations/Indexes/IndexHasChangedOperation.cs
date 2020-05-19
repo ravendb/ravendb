@@ -2,7 +2,6 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -37,7 +36,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(definition.Name));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
-                _definition = EntityToBlittable.ConvertCommandToBlittable(definition, context);
+                _definition = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(definition, context);
             }
 
             public override bool IsReadRequest => false;

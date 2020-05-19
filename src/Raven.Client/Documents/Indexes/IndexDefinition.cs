@@ -218,20 +218,24 @@ namespace Raven.Client.Documents.Indexes
 
         [JsonIgnore]
         private byte[] _cachedHashCodeAsBytes;
+
         [JsonIgnore]
         private HashSet<string> _maps;
+
         [JsonIgnore]
         private Dictionary<string, IndexFieldOptions> _fields;
+
         [JsonIgnore]
         private Dictionary<string, string> _additionalSources;
+
         [JsonIgnore]
         private IndexConfiguration _configuration;
 
         /// <summary>
         /// Provide a cached version of the index hash code, which is used when generating
-        /// the index etag. 
+        /// the index etag.
         /// It isn't really useful for anything else, in particular, we cache that because
-        /// we want to avoid calculating the cost of doing this over and over again on each 
+        /// we want to avoid calculating the cost of doing this over and over again on each
         /// query.
         /// </summary>
         public byte[] GetIndexHash()
@@ -247,7 +251,7 @@ namespace Raven.Client.Documents.Indexes
         /// Returns a hash code for this instance.
         /// </summary>
         /// <returns>
-        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
         /// </returns>
         public override int GetHashCode()
         {
@@ -277,7 +281,6 @@ namespace Raven.Client.Documents.Indexes
             }
             internal set => _indexType = value;
         }
-
 
         /// <summary>
         /// Remove the default values that we don't actually need

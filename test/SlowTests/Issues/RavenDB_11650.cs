@@ -6,7 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;

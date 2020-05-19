@@ -11,6 +11,7 @@ using FastTests;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,9 +33,9 @@ namespace SlowTests.MailingList
 
         public class WhenUsingIdCopy : RavenTestBase
         {
-        public WhenUsingIdCopy(ITestOutputHelper output) : base(output)
-        {
-        }
+            public WhenUsingIdCopy(ITestOutputHelper output) : base(output)
+            {
+            }
 
             private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
@@ -82,7 +83,10 @@ namespace SlowTests.MailingList
                 {
                     ModifyDocumentStore = ss =>
                     {
-                        ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                        ss.Conventions.Serialization = new JsonNetSerializationConventions
+                        {
+                            CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); }
+                        };
                         ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                     }
                 }))
@@ -106,7 +110,6 @@ namespace SlowTests.MailingList
                 }
             }
 
-
             [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
@@ -122,7 +125,6 @@ namespace SlowTests.MailingList
                             .WaitForNonStaleResults()
                             .Search("Family_Dad_Id", "people Dad")
                             .ToArray();
-
 
                         Assert.Equal(1, results.Count());
                         Assert.Equal(Sally.Name, results.Single().Name);
@@ -151,7 +153,7 @@ namespace SlowTests.MailingList
             public When_using_Id(ITestOutputHelper output) : base(output)
             {
             }
-            
+
             private static void CreateData(IDocumentStore store)
             {
                 new Person_Id_Index().Execute(store);
@@ -189,7 +191,6 @@ namespace SlowTests.MailingList
                 }
             }
 
-
             [Fact]
             public void It_should_be_stored_be_able_to_be_searched()
             {
@@ -205,7 +206,6 @@ namespace SlowTests.MailingList
                             .WaitForNonStaleResults()
                             .Search("Family_Dad_Id", "people Dad")
                             .ToArray();
-
 
                         Assert.Equal(1, results.Count());
                         Assert.Equal(Sally.Name, results.Single().Name);
@@ -258,7 +258,6 @@ namespace SlowTests.MailingList
             public Dictionary<string, Person> Family { get; set; }
 
             public string Name { get; set; }
-
 
             public string Id
             {

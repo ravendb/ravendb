@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using Newtonsoft.Json;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Sparrow.Json;
 
 namespace Raven.Server.Json.Converters
@@ -9,7 +9,9 @@ namespace Raven.Server.Json.Converters
     {
         public static readonly LazyStringValueJsonConverter Instance = new LazyStringValueJsonConverter();
 
-        private LazyStringValueJsonConverter() {}
+        private LazyStringValueJsonConverter()
+        {
+        }
 
         protected override void WriteJson(BlittableJsonWriter writer, LazyStringValue value, JsonSerializer serializer)
         {
@@ -18,7 +20,7 @@ namespace Raven.Server.Json.Converters
 
         internal override LazyStringValue ReadJson(BlittableJsonReader reader)
         {
-            //Todo It will be better to change the reader to set the value as LazyStringValue 
+            //Todo It will be better to change the reader to set the value as LazyStringValue
             if (!(reader.Value is string strValue))
             {
                 throw new SerializationException($"Try to read {nameof(LazyStringValue)} from {reader.Value?.GetType()}. Should be string here");

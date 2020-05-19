@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Json;
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var sourceReplicationDocument = GetSourceReplicationInformation(context, GetRemoteServerInstanceId(), out _);
-                var blittable = EntityToBlittable.ConvertCommandToBlittable(sourceReplicationDocument, context);
+                var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(sourceReplicationDocument, context);
                 context.Write(writer, blittable);
                 writer.Flush();
             }
@@ -247,7 +248,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task SaveSourceReplicationInformation(LegacySourceReplicationInformation replicationSource, DocumentsOperationContext context, string documentId)
         {
-            var blittable = EntityToBlittable.ConvertCommandToBlittable(replicationSource, context);
+            var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(replicationSource, context);
             using (var cmd = new MergedPutCommand(blittable, documentId, null, Database))
             {
                 await Database.TxMerger.Enqueue(cmd);

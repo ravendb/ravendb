@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,8 +26,10 @@ namespace SlowTests.SlowTests.MailingList
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.CustomizeJsonSerializer = serializer =>
-                        serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer => serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    };
                 }
             }))
             {
@@ -93,7 +96,6 @@ namespace SlowTests.SlowTests.MailingList
                     var index = 0;
                     while (enumerator.MoveNext())
                     {
-
                         Assert.True(enumerator.Current.Document.CreatedDate == orderedList[index].CreatedDate,
                             "Failed at: " + index
                             + ", " + enumerator.Current.Document.CreatedDate.ToString("yyyy-MM-dd hh:mm:ss.sssssss")
@@ -105,6 +107,7 @@ namespace SlowTests.SlowTests.MailingList
                 }
             }
         }
+
         private class User
         {
             public string Id { get; set; }

@@ -1,4 +1,3 @@
-//-----------------------------------------------------------------------
 // <copyright file="DefaultRavenContractResolver.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -12,9 +11,11 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Conventions
+namespace Raven.Client.Json.Serialization.JsonNet
 {
     /// <summary>
     /// The default json contract will serialize all properties and all public fields

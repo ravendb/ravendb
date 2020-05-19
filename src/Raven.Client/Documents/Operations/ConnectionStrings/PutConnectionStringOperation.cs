@@ -1,10 +1,8 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -21,17 +19,15 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
         public RavenCommand<PutConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new PutConnectionStringCommand(conventions, _connectionString);
+            return new PutConnectionStringCommand(_connectionString);
         }
 
         private class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>, IRaftCommand
         {
-            private readonly DocumentConventions _conventions;
             private readonly T _connectionString;
 
-            public PutConnectionStringCommand(DocumentConventions conventions, T connectionString)
+            public PutConnectionStringCommand(T connectionString)
             {
-                _conventions = conventions;
                 _connectionString = connectionString;
             }
 
@@ -46,7 +42,7 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_connectionString, ctx);
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_connectionString, ctx);
                         ctx.Write(stream, config);
                     })
                 };

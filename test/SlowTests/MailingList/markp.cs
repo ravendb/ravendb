@@ -2,6 +2,7 @@
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,11 +24,14 @@ namespace SlowTests.MailingList
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = ds =>
+                ModifyDocumentStore = s =>
                 {
-                    ds.Conventions.CustomizeJsonSerializer = serializer =>
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
                     {
-                        serializer.PreserveReferencesHandling = PreserveReferencesHandling.All;
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.PreserveReferencesHandling = PreserveReferencesHandling.All;
+                        }
                     };
                 }
             }))

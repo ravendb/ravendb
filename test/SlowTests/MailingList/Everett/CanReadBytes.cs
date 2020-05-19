@@ -12,6 +12,7 @@ using System.Reflection;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,14 +29,20 @@ namespace SlowTests.MailingList.Everett
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s => s.Conventions.CustomizeJsonSerializer = serializer =>
+                ModifyDocumentStore = s =>
                 {
-                    serializer.TypeNameHandling = TypeNameHandling.All;
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.TypeNameHandling = TypeNameHandling.All;
+                        }
+                    };
                 }
             }))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = new DocumentConventions().CreateSerializer();
+                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -63,7 +70,7 @@ namespace SlowTests.MailingList.Everett
             using (var store = GetDocumentStore())
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = new DocumentConventions().CreateSerializer();
+                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -90,14 +97,20 @@ namespace SlowTests.MailingList.Everett
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s => s.Conventions.CustomizeJsonSerializer = serializer =>
+                ModifyDocumentStore = s =>
                 {
-                    serializer.TypeNameHandling = TypeNameHandling.All;
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.TypeNameHandling = TypeNameHandling.All;
+                        }
+                    };
                 }
             }))
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = new DocumentConventions().CreateSerializer();
+                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -119,7 +132,7 @@ namespace SlowTests.MailingList.Everett
             using (var store = GetDocumentStore())
             {
                 var json = GetResourceText("DocumentWithBytes.txt");
-                var jsonSerializer = new DocumentConventions().CreateSerializer();
+                var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
                 var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
 
                 using (var session = store.OpenSession())
@@ -141,7 +154,7 @@ namespace SlowTests.MailingList.Everett
         public void FromText()
         {
             var json = GetResourceText("DocumentWithBytes.txt");
-            var jsonSerializer = new DocumentConventions().CreateSerializer();
+            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
             var item = jsonSerializer.Deserialize<DesignResources>(new JsonTextReader(new StringReader(json)));
         }
 

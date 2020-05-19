@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -27,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations
             };
         }
 
-        public ToggleDatabasesStateOperation(string[] databaseNames, bool disable) 
+        public ToggleDatabasesStateOperation(string[] databaseNames, bool disable)
             : this(new Parameters { DatabaseNames = databaseNames }, disable)
         {
         }
@@ -46,7 +45,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new ToggleDatabaseStateCommand(conventions, context, _parameters, _disable);
+            return new ToggleDatabaseStateCommand(context, _parameters, _disable);
         }
 
         private class ToggleDatabaseStateCommand : RavenCommand<DisableDatabaseToggleResult>, IRaftCommand
@@ -54,17 +53,15 @@ namespace Raven.Client.ServerWide.Operations
             private readonly bool _disable;
             private readonly BlittableJsonReaderObject _parameters;
 
-            public ToggleDatabaseStateCommand(DocumentConventions conventions, JsonOperationContext context, Parameters parameters, bool disable)
+            public ToggleDatabaseStateCommand(JsonOperationContext context, Parameters parameters, bool disable)
             {
-                if (conventions == null)
-                    throw new ArgumentNullException(nameof(conventions));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
 
                 _disable = disable;
-                _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters,context);
+                _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

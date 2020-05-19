@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,10 +19,13 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s =>                
-                    s.Conventions.CustomizeJsonDeserializer = des =>                    
-                        des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
-                                    
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonDeserializer = des => des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                    };
+                }
             }))
             {
                 using (var s = store.OpenSession())
@@ -58,7 +62,6 @@ namespace SlowTests.Issues
                             ToDictionary = x.Tags.ToDictionary(t => t.Length),
                             Reverse = x.Tags.Reverse(),
                             Distinct = x.Tags.Distinct()
-
                         })
                         .SingleOrDefault();
 
@@ -74,7 +77,7 @@ namespace SlowTests.Issues
 
                     Assert.False(doc.Contains);
                     Assert.Empty(doc.ToList);
-                    Assert.Equal(new[]{"a"}, doc.Concat);
+                    Assert.Equal(new[] { "a" }, doc.Concat);
                     Assert.Equal(0, doc.Avg);
 
                     Assert.Equal(0, doc.Max);
@@ -145,7 +148,6 @@ namespace SlowTests.Issues
 
             public IEnumerable<string> Reverse { get; set; }
             public IEnumerable<string> Distinct { get; set; }
-
         }
 
         private class Document

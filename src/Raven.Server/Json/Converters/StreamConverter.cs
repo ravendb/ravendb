@@ -3,7 +3,7 @@ using System.IO;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Raven.Client.Extensions.Streams;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 
 namespace Raven.Server.Json.Converters
 {
@@ -11,7 +11,9 @@ namespace Raven.Server.Json.Converters
     {
         public static readonly StreamConverter Instance = new StreamConverter();
 
-        private StreamConverter() {}
+        private StreamConverter()
+        {
+        }
 
         protected override void WriteJson(BlittableJsonWriter writer, Stream value, JsonSerializer serializer)
         {

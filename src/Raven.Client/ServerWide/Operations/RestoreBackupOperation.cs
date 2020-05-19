@@ -1,12 +1,10 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
@@ -29,7 +27,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new RestoreBackupCommand(conventions, _restoreConfiguration, NodeTag);
+            return new RestoreBackupCommand(_restoreConfiguration, NodeTag);
         }
 
         private class RestoreBackupCommand : RavenCommand<OperationIdResult>
@@ -37,7 +35,7 @@ namespace Raven.Client.ServerWide.Operations
             public override bool IsReadRequest => false;
             private readonly RestoreBackupConfigurationBase _restoreConfiguration;
 
-            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
+            public RestoreBackupCommand(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
             {
                 _restoreConfiguration = restoreConfiguration;
                 SelectedNodeTag = nodeTag;
@@ -52,7 +50,7 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_restoreConfiguration, ctx);
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_restoreConfiguration, ctx);
                         ctx.Write(stream, config);
                     })
                 };

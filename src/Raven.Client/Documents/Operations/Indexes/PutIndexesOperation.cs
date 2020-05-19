@@ -2,10 +2,9 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -52,13 +51,13 @@ namespace Raven.Client.Documents.Operations.Indexes
 
                     if (indexesToAdd[i].Name == null)
                         throw new ArgumentNullException(nameof(IndexDefinition.Name));
-                    _indexToAdd[i] = EntityToBlittable.ConvertCommandToBlittable(indexesToAdd[i], context);
+                    _indexToAdd[i] = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(indexesToAdd[i], context);
                 }
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}" + (_allJavaScriptIndexes? "/indexes":"/admin/indexes");
+                url = $"{node.Url}/databases/{node.Database}" + (_allJavaScriptIndexes ? "/indexes" : "/admin/indexes");
 
                 var request = new HttpRequestMessage
                 {

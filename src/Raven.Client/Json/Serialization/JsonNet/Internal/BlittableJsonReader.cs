@@ -6,9 +6,9 @@ using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Json;
 
-namespace Raven.Client.Json
+namespace Raven.Client.Json.Serialization.JsonNet.Internal
 {
-    internal class BlittableJsonReader : JsonReader
+    internal class BlittableJsonReader : JsonReader, IJsonReader
     {
         private readonly Stack<CurrentItem> _items = new Stack<CurrentItem>();
 
@@ -28,7 +28,6 @@ namespace Raven.Client.Json
 
         public BlittableJsonReader()
         {
-
         }
 
         public BlittableJsonReader(JsonOperationContext context)
@@ -36,7 +35,7 @@ namespace Raven.Client.Json
             Context = context;
         }
 
-        public void Init(BlittableJsonReaderObject root)
+        public void Initialize(BlittableJsonReaderObject root)
         {
             _items.Clear();
 
@@ -196,7 +195,6 @@ namespace Raven.Client.Json
                         {
                             SetToken(JsonToken.Float, (double)lnv);
                         }
-
                     }
 
                     return true;
@@ -374,6 +372,10 @@ namespace Raven.Client.Json
         {
             SetToken(JsonToken.EndArray);
             _items.Pop();
+        }
+
+        void IDisposable.Dispose()
+        {
         }
     }
 }

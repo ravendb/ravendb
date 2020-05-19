@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
@@ -15,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
-    public class RavenDB_8831:RavenTestBase
+    public class RavenDB_8831 : RavenTestBase
     {
         public RavenDB_8831(ITestOutputHelper output) : base(output)
         {
@@ -52,8 +51,8 @@ namespace SlowTests.Client.Subscriptions
                     {
                         writer.WriteDocument(newContext, doc, metadataOnly: false);
                         writer.Flush();
-                        var bjro = GetReaderFromMemoryStream(ms,context);
-                        var desereializedDoc = (Doc)EntityToBlittable.ConvertToEntity(typeof(Doc), null, bjro, DocumentConventions.Default);
+                        var bjro = GetReaderFromMemoryStream(ms, context);
+                        var desereializedDoc = (Doc)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(Doc), bjro);
 
                         Assert.Equal(originalDoc.StrVal, desereializedDoc.StrVal);
                         Assert.Equal(originalDoc.LongByteArray, originalDoc.LongByteArray);
@@ -104,7 +103,7 @@ namespace SlowTests.Client.Subscriptions
                         writer.WriteDocument(newContext, doc, metadataOnly: false);
                         writer.Flush();
                         var bjro = GetReaderFromMemoryStream(ms, context);
-                        var desereializedDoc = (Doc)EntityToBlittable.ConvertToEntity(typeof(Doc), null, bjro, DocumentConventions.Default);
+                        var desereializedDoc = (Doc)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(Doc), bjro);
 
                         Assert.Equal(originalDoc.StrVal, desereializedDoc.StrVal);
                         Assert.Equal(originalDoc.LongByteArray, originalDoc.LongByteArray);
@@ -118,7 +117,8 @@ namespace SlowTests.Client.Subscriptions
 
                 var subsId = await documentStore.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 var amre = new AsyncManualResetEvent();
-                using (var subscription = documentStore.Subscriptions.GetSubscriptionWorker<Doc>(new SubscriptionWorkerOptions(subsId) {
+                using (var subscription = documentStore.Subscriptions.GetSubscriptionWorker<Doc>(new SubscriptionWorkerOptions(subsId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 }))
                 {
@@ -141,8 +141,6 @@ namespace SlowTests.Client.Subscriptions
                         throw;
                     }
                 }
-
-                
             }
         }
     }

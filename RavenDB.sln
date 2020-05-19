@@ -79,7 +79,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sparrow.Server", "src\Sparr
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Raven.Pal", "src\Raven.Pal\Raven.Pal.vcxproj", "{01D4353F-2BE9-4D98-B890-FA8364FFDEF1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeSeries.Benchmark", "bench\TimeSeries.Benchmark\TimeSeries.Benchmark.csproj", "{C5710444-1167-4DD3-B30E-28BDC0FBC10F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TimeSeries.Benchmark", "bench\TimeSeries.Benchmark\TimeSeries.Benchmark.csproj", "{C5710444-1167-4DD3-B30E-28BDC0FBC10F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

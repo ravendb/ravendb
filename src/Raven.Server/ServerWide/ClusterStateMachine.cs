@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
@@ -983,7 +984,7 @@ namespace Raven.Server.ServerWide
                             }
                         }
 
-                        var updated = EntityToBlittable.ConvertCommandToBlittable(record, context);
+                        var updated = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(record, context);
 
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
@@ -1167,7 +1168,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    var updated = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
+                    var updated = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
 
                     UpdateValue(index, items, lowerKey, key, updated);
                 }
@@ -1261,7 +1262,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
-                using (var currentDatabaseRecord = EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context))
+                using (var currentDatabaseRecord = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context))
                 {
                     if (addDatabaseCommand.RaftCommandIndex != null)
                     {
@@ -1374,7 +1375,7 @@ namespace Raven.Server.ServerWide
                             addDatabaseCommand.Record.PeriodicBackups.Add(backupConfiguration);
                         }
 
-                        return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
+                        return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(addDatabaseCommand.Record, context);
                     }
                 }
             }
@@ -1824,7 +1825,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     UpdateEtagForBackup(databaseRecord, type, index);
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(databaseRecord, context);
+                    var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
             }
@@ -2098,7 +2099,7 @@ namespace Raven.Server.ServerWide
                 using (Slice.From(context.Allocator, dbKey, out Slice valueName))
                 using (Slice.From(context.Allocator, dbKey.ToLowerInvariant(), out Slice valueNameLowered))
                 {
-                    var updatedDatabaseBlittable = EntityToBlittable.ConvertCommandToBlittable(record, context);
+                    var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(record, context);
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
 

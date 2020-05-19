@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                 if (field.Spatial == null)
                     writer.WriteNull();
                 else
-                    writer.WriteObject(EntityToBlittable.ConvertCommandToBlittable(field.Spatial, context));
+                    writer.WriteObject(DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(field.Spatial, context));
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(field.HasSuggestions));

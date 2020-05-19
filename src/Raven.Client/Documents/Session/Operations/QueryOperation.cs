@@ -210,8 +210,8 @@ namespace Raven.Client.Documents.Session.Operations
                     if (document.TryGetMember(projectionField, out object inner) == false)
                         return default;
 
-                    if (isTimeSeriesField || 
-                        fieldsToFetch.FieldsToFetch != null && 
+                    if (isTimeSeriesField ||
+                        fieldsToFetch.FieldsToFetch != null &&
                         fieldsToFetch.FieldsToFetch[0] == fieldsToFetch.Projections[0])
                     {
                         if (inner is BlittableJsonReaderObject innerJson)
@@ -236,7 +236,7 @@ namespace Raven.Client.Documents.Session.Operations
                 return (T)(object)document;
 
             session.OnBeforeConversionToEntityInvoke(id, typeof(T), ref document);
-            var result = (T)session.Conventions.DeserializeEntityFromBlittable(type, document);
+            var result = (T)session.Conventions.Serialization.DeserializeEntityFromBlittable(type, document);
             session.OnAfterConversionToEntityInvoke(id, document, result);
 
             return result;
@@ -265,10 +265,10 @@ namespace Raven.Client.Documents.Session.Operations
 
             document.Modifications.Remove(fieldToFetch);
 
-            _wrapperTypes = _wrapperTypes ?? new ConcurrentDictionary<Type, (Type, PropertyInfo)>();
+            _wrapperTypes ??= new ConcurrentDictionary<Type, (Type, PropertyInfo)>();
 
             var (wrapperType, property) = _wrapperTypes.GetOrAdd(typeof(T), AddWrapperTypeAndPropertyToCache<T>());
-            var deserialized = session.Conventions.DeserializeEntityFromBlittable(wrapperType, document);
+            var deserialized = session.Conventions.Serialization.DeserializeEntityFromBlittable(wrapperType, document);
 
             return (T)property.GetValue(deserialized);
         }

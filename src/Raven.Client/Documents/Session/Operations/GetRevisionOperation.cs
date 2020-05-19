@@ -21,7 +21,6 @@ namespace Raven.Client.Documents.Session.Operations
             _command = new GetRevisionsCommand(id, start, pageSize, metadataOnly);
         }
 
-
         public GetRevisionOperation(InMemoryDocumentSessionOperations session, string id, DateTime before)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
@@ -53,11 +52,11 @@ namespace Raven.Client.Documents.Session.Operations
         private T GetRevision<T>(BlittableJsonReaderObject document)
         {
             if (document == null)
-                return default(T);
+                return default;
 
             var metadata = document.GetMetadata();
             var id = metadata.GetId();
-            var entity = (T)_session.EntityToBlittable.ConvertToEntity(typeof(T), id, ref document, !this._session.NoTracking);
+            var entity = _session.JsonConverter.FromBlittable<T>(ref document, id, _session.NoTracking == false);
 
             _session.DocumentsByEntity[entity] = new DocumentInfo
             {

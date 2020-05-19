@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,10 +20,13 @@ namespace SlowTests.Issues
 
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = s =>                
-                    s.Conventions.CustomizeJsonDeserializer = cjd =>                    
-                        cjd.NullValueHandling = NullValueHandling.Ignore
-                                    
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonDeserializer = des => des.NullValueHandling = NullValueHandling.Ignore
+                    };
+                }
             }))
             {
                 using (var s = store.OpenSession())
@@ -33,7 +37,7 @@ namespace SlowTests.Issues
                     });
                     s.SaveChanges();
                 }
-                
+
                 using (var s = store.OpenSession())
                 {
                     var queryable = s.Query<Document>()

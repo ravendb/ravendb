@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
@@ -72,7 +73,7 @@ namespace FastTests.Utils
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var configurationJson = EntityToBlittable.ConvertCommandToBlittable(configuration, context);
+                var configurationJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context);
                 var (index, _) = await serverStore.ModifyDatabaseRevisions(context, database, configurationJson, Guid.NewGuid().ToString());
                 return index;
             }

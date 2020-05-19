@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,8 +26,10 @@ namespace SlowTests.SlowTests.MailingList
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.CustomizeJsonSerializer = serializer =>
-                        serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore;
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer => serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                    };
                 }
             }))
             {

@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Extensions;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 {
     internal sealed class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
     {
@@ -29,7 +29,7 @@ namespace Raven.Client.Json.Converters
             makeGenericMethod.Invoke(this, new[] { writer, value, serializer });
         }
 
-        public void GenericWriteJson<TKey, TValue>(JsonWriter writer, Dictionary<TKey, TValue> value, JsonSerializer serializer)
+        public void GenericWriteJson<TKey, TValue>(JsonWriter writer, Dictionary<TKey, TValue> value, JsonNetJsonSerializer serializer)
         {
             writer.WriteStartObject();
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Json.Converters
             writer.WriteEndObject();
         }
 
-        public Dictionary<TKey, TValue> GenericReadJson<TKey, TValue>(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        private Dictionary<TKey, TValue> GenericReadJson<TKey, TValue>(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var result = new Dictionary<TKey, TValue>();
             do

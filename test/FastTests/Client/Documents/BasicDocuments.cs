@@ -57,7 +57,6 @@ namespace FastTests.Client.Documents
             }
         }
 
-
         [Fact]
         public async Task GetAsync()
         {
@@ -104,8 +103,8 @@ namespace FastTests.Client.Documents
 
                     using (var session = (DocumentSession)store.OpenSession())
                     {
-                        var user1 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/1", ref doc1, trackEntity: true);
-                        var user2 = (User)session.EntityToBlittable.ConvertToEntity(typeof(User), "users/2", ref doc2, trackEntity: true);
+                        var user1 = (User)session.JsonConverter.FromBlittable(typeof(User), ref doc1, "users/1", trackEntity: true);
+                        var user2 = (User)session.JsonConverter.FromBlittable(typeof(User), ref doc2, "users/2", trackEntity: true);
 
                         Assert.Equal("Fitzchak", user1.Name);
                         Assert.Equal("Arek", user2.Name);

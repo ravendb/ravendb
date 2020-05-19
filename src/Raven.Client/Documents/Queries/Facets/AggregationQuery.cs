@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Queries.Facets
 
             _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
-            _session.RequestExecutor.Execute(command, _session.Context, sessionInfo:_session.SessionInfo);
+            _session.RequestExecutor.Execute(command, _session.Context, sessionInfo: _session.SessionInfo);
 
             return ProcessResults(command.Result, _session.Conventions);
         }
@@ -153,7 +153,7 @@ namespace Raven.Client.Documents.Queries.Facets
             var results = new Dictionary<string, FacetResult>();
             foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
-                var facetResult = (FacetResult)EntityToBlittable.ConvertToEntity(typeof(FacetResult), "facet/result", result, conventions);
+                var facetResult = conventions.Serialization.DefaultConverter.FromBlittable<FacetResult>(result, "facet/result");
                 results[facetResult.Name] = facetResult;
             }
 

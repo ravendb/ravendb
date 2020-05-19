@@ -2,7 +2,7 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks

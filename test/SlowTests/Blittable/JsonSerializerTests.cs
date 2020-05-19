@@ -2,14 +2,15 @@
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Raven.Server.Json.Converters;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using BlittableJsonConverter = Raven.Server.Json.Converters.BlittableJsonConverter;
 
 namespace SlowTests.Blittable
 {
@@ -61,7 +62,7 @@ namespace SlowTests.Blittable
 
                     using (var reader = new BlittableJsonReader(readContext))
                     {
-                        reader.Init(toDeseialize);
+                        reader.Initialize(toDeseialize);
                         actual = jsonSerializer.Deserialize<Command>(reader);
                     }
                 }
@@ -83,7 +84,7 @@ namespace SlowTests.Blittable
                 using (var writer = new BlittableJsonWriter(writeContext))
                 {
                     var data = new { Property = new[] { "Value1", "Value2" } };
-                    var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, readContext);
+                    var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, readContext);
                     readerObject.TryGet(nameof(data.Property), out expected);
 
                     var jsonSerializer = new JsonSerializer
@@ -102,7 +103,7 @@ namespace SlowTests.Blittable
 
                     using (var reader = new BlittableJsonReader(readContext))
                     {
-                        reader.Init(toDeseialize);
+                        reader.Initialize(toDeseialize);
                         actual = jsonSerializer.Deserialize<Command>(reader);
                     }
                 }
@@ -123,7 +124,7 @@ namespace SlowTests.Blittable
                 jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
 
                 var data = new { SomeProperty = "SomeValue" };
-                var expected = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var expected = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 var command = new Command { BlittableObject = expected };
 
                 //Serialize
@@ -168,7 +169,7 @@ namespace SlowTests.Blittable
                 BlittableJsonReaderObject actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
                     var deserialized = jsonSerializer.Deserialize<Command>(reader);
                     actual = deserialized.BlittableObject;
                 }
@@ -203,7 +204,7 @@ namespace SlowTests.Blittable
 
                     using (var reader = new BlittableJsonReader(readContext))
                     {
-                        reader.Init(toDeseialize);
+                        reader.Initialize(toDeseialize);
                         actual = jsonSerializer.Deserialize<Command>(reader);
                     }
                 }
@@ -223,7 +224,7 @@ namespace SlowTests.Blittable
                 using (var writer = new BlittableJsonWriter(writeContext))
                 {
                     var data = new { Property = "Value" };
-                    expected = EntityToBlittable.ConvertCommandToBlittable(data, readContext);
+                    expected = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, readContext);
                     var jsonSerializer = new JsonSerializer
                     {
                         ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default),
@@ -236,10 +237,9 @@ namespace SlowTests.Blittable
 
                     var toDeseialize = writer.CreateReader();
 
-
                     using (var reader = new BlittableJsonReader(readContext))
                     {
-                        reader.Init(toDeseialize);
+                        reader.Initialize(toDeseialize);
                         actual = jsonSerializer.Deserialize<Command>(reader);
                     }
                 }
@@ -281,7 +281,7 @@ namespace SlowTests.Blittable
             using (var writer = new BlittableJsonWriter(context))
             {
                 var data = new { Property = "Value" };
-                var expected = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var expected = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 var jsonSerializer = new JsonSerializer
                 {
                     ContractResolver = new DefaultRavenContractResolver(DocumentConventions.Default),
@@ -300,7 +300,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact (Skip = "To consider if should support direct serialize of LazyStringValue")]
+        [Fact(Skip = "To consider if should support direct serialize of LazyStringValue")]
         //Todo To consider if should support direct serialize of LazyStringValue
         public void JsonSerialize_WhenLazyStringValueIsTheRoot_ShouldSerialize()
         {
@@ -324,6 +324,7 @@ namespace SlowTests.Blittable
                 //                Assert.Equal(expected, actual);
             }
         }
+
         [Fact]
         public void JsonSerialize_WhenNestedBlittableObjectIsProperty_ShouldSerialize()
         {
@@ -333,7 +334,7 @@ namespace SlowTests.Blittable
             using (var writer = new BlittableJsonWriter(context2))
             {
                 var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
-                var parentBlittable = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var parentBlittable = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 parentBlittable.TryGet(nameof(data.ParentProperty), out BlittableJsonReaderObject expected);
                 var jsonSerializer = new JsonSerializer
                 {
@@ -353,7 +354,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact (Skip = "To consider if should support direct serialize of BlittableObject")]
+        [Fact(Skip = "To consider if should support direct serialize of BlittableObject")]
         //Todo To consider if should support direct serialize of BlittableObject
         public void JsonSerialize_WhenBlittableIsTheRoot_ShouldResultInCopy()
         {
@@ -364,7 +365,7 @@ namespace SlowTests.Blittable
                 {
                     ["Property"] = "Value"
                 };
-                var blittableData = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var blittableData = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
 
                 var jsonSerializer = new JsonSerializer
                 {

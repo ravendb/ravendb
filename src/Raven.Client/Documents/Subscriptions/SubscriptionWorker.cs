@@ -21,7 +21,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
@@ -109,7 +109,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (Exception)
                     {
-                        // just need to wait for it to end                        
+                        // just need to wait for it to end
                     }
                 }
 
@@ -187,7 +187,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (Exception)
                     {
-                        // if we failed to talk to a node, we'll forget about it and let the topology to 
+                        // if we failed to talk to a node, we'll forget about it and let the topology to
                         // redirect us to the current node
                         _redirectNode = null;
                         throw;
@@ -719,7 +719,7 @@ namespace Raven.Client.Documents.Subscriptions
                     return true;
                 case NodeIsPassiveException e:
                     {
-                        // if we failed to talk to a node, we'll forget about it and let the topology to 
+                        // if we failed to talk to a node, we'll forget about it and let the topology to
                         // redirect us to the current node
                         _redirectNode = null;
                         return true;

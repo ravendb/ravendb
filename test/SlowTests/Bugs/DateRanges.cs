@@ -6,11 +6,10 @@
 
 using System;
 using FastTests;
-using Xunit;
-using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization.JsonNet.Internal.Converters;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
@@ -28,7 +27,6 @@ namespace SlowTests.Bugs
             {
                 using (var session = store.OpenSession())
                 {
-
                     session.Store(new Record
                     {
                         Date = new DateTime(2001, 1, 1)
@@ -50,7 +48,6 @@ namespace SlowTests.Bugs
                 }
             }
         }
-
 
         [Fact]
         public void CanQueryByDateRange_LowerThan()
@@ -80,7 +77,6 @@ namespace SlowTests.Bugs
                 }
             }
         }
-
 
         [Fact]
         public void CanQueryByDateRange_GreaterThan()

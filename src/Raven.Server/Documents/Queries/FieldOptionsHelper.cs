@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Queries
             else
                 throw new InvalidOperationException($"Unknown options type '{optionsType}'.");
 
-            return (T)EntityToBlittable.ConvertToEntity(typeof(T), "options", optionsJson, DocumentConventions.DefaultForServer);
+            return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<T>(optionsJson, "options");
         }
 
         public static void ValidateOptions<T>(string optionsAsStringOrParameterName, ValueTokenType optionsType)

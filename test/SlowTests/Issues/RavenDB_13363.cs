@@ -4,6 +4,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,10 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = documentStore =>
                 {
-                    documentStore.Conventions.CustomizeJsonSerializer = serializer => serializer.Converters.Add(new NumberJsonConverter());
+                    documentStore.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer => serializer.Converters.Add(new NumberJsonConverter())
+                    };
                 }
             }))
             {

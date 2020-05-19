@@ -94,9 +94,9 @@ namespace Raven.Client.Json
                 return dja;
             }
 
-            using (var writer = new BlittableJsonWriter(context))
+            using (var writer = conventions.Serialization.CreateWriter(context))
             {
-                var serializer = conventions.CreateSerializer();
+                var serializer = conventions.Serialization.CreateSerializer();
 
                 writer.WriteStartObject();
                 writer.WritePropertyName("Value");

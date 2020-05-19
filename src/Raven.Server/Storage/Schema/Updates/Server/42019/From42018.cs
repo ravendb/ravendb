@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Voron;

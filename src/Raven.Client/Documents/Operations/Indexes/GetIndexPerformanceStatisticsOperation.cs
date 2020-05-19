@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 var stats = new IndexPerformanceStats[results.Length];
                 for (var i = 0; i < results.Length; i++)
                 {
-                    stats[i] = (IndexPerformanceStats)_conventions.DeserializeEntityFromBlittable(typeof(IndexPerformanceStats), (BlittableJsonReaderObject)results[i]);
+                    stats[i] = _conventions.Serialization.DeserializeEntityFromBlittable<IndexPerformanceStats>((BlittableJsonReaderObject)results[i]);
                 }
 
                 Result = stats;

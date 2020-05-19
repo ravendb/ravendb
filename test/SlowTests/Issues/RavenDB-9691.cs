@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Xunit;
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
             };
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var blittable = EntityToBlittable.ConvertCommandToBlittable(user, context);
+                var blittable = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(user, context);
                 Assert.Equal("{\"Name\":\"john\",\"Type\":0}", blittable.ToString());
             }
         }

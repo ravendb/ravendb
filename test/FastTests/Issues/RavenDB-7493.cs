@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;

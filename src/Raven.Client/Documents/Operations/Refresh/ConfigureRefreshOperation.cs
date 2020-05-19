@@ -1,9 +1,8 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -23,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Refresh
             return new ConfigureRefreshCommand(_configuration);
         }
 
-        private class ConfigureRefreshCommand: RavenCommand<ConfigureRefreshOperationResult>, IRaftCommand
+        private class ConfigureRefreshCommand : RavenCommand<ConfigureRefreshOperationResult>, IRaftCommand
         {
             private readonly RefreshConfiguration _configuration;
 
@@ -33,6 +32,7 @@ namespace Raven.Client.Documents.Operations.Refresh
             }
 
             public override bool IsReadRequest => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/refresh/config";
@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations.Refresh
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx);
                         ctx.Write(stream, config);
                     })
                 };

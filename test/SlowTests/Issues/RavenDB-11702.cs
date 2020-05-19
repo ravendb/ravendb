@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
+using Raven.Client.Newtonsoft.Json;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,9 +23,12 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options: new Options
             {
-                ModifyDocumentStore = ss => ss.Conventions.CustomizeJsonSerializer = s =>
+                ModifyDocumentStore = ss => ss.Conventions.Serialization = new JsonNetSerializationConventions
                 {
-                    s.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    CustomizeJsonSerializer = serializer =>
+                    {
+                        serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    }
                 }
             }))
             {

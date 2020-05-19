@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var requestExecuter = store.GetRequestExecutor();
-                var blitUser = EntityToBlittable.ConvertCommandToBlittable(user, context);
+                var blitUser = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(user, context);
                 requestExecuter.Execute(new PutDocumentCommand(id, null, blitUser), context);
 
                 //Action

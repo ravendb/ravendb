@@ -1,6 +1,5 @@
 ﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -39,8 +38,8 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var jsonReaderObject = EntityToBlittable.ConvertCommandToBlittable(
-                                new Parameters{ File = _filePath },
+                        var jsonReaderObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(
+                                new Parameters { File = _filePath },
                                 ctx
                             );
                         ctx.Write(stream, jsonReaderObject);

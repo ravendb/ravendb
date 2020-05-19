@@ -18,7 +18,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -140,7 +139,7 @@ namespace Raven.Server.Web.System
                     Server.ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
                 }
 
-                // the case where an explicit node was requested 
+                // the case where an explicit node was requested
                 if (string.IsNullOrEmpty(node) == false)
                 {
                     if (databaseRecord.Topology.RelevantFor(node))
@@ -202,7 +201,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (DatabaseLoadFailureException e)
                 {
-                    // the node was added successfully, but failed to start 
+                    // the node was added successfully, but failed to start
                     // in this case we don't want the request executor of the client to fail-over (so we wouldn't create an additional node)
                     throw new InvalidOperationException(e.Message, e);
                 }
@@ -231,7 +230,7 @@ namespace Raven.Server.Web.System
         public async Task Put()
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
-            
+
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -240,7 +239,7 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
-               
+
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     var clientCert = GetCurrentCertificate();
@@ -248,8 +247,8 @@ namespace Raven.Server.Web.System
                     var auditLog = LoggingSource.AuditLog.GetLogger("DbMgmt", "Audit");
                     auditLog.Info($"Database {databaseRecord.DatabaseName} PUT by {clientCert?.Subject} ({clientCert?.Thumbprint})");
                 }
-                
-                if(ServerStore.LicenseManager.GetLicenseStatus().HasDocumentsCompression &&
+
+                if (ServerStore.LicenseManager.GetLicenseStatus().HasDocumentsCompression &&
                    Server.Configuration.Core.FeaturesAvailability == FeaturesAvailability.Experimental &&
                    databaseRecord.DocumentsCompression == null)
                 {
@@ -269,12 +268,11 @@ namespace Raven.Server.Web.System
                         FeaturesAvailabilityException.Throw("Documents Compression");
                 }
 
-
                 // Validate Directory
-                var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ? 
+                var dataDirectoryThatWillBeUsed = databaseRecord.Settings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.DataDirectory), out var dir) == false ?
                                                   ServerStore.Configuration.Core.DataDirectory.FullPath :
                                                   new PathSetting(dir, ServerStore.Configuration.Core.DataDirectory.FullPath).FullPath;
-                
+
                 if (string.IsNullOrWhiteSpace(dir) == false)
                 {
                     if (ServerStore.Configuration.Core.EnforceDataDirectoryPath)
@@ -291,7 +289,7 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"Cannot access path '{dataDirectoryThatWillBeUsed}'. {error}");
                     }
                 }
-                
+
                 // Validate Name
                 databaseRecord.DatabaseName = databaseRecord.DatabaseName.Trim();
                 if (ResourceNameValidator.IsValidResourceName(databaseRecord.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
@@ -586,7 +584,7 @@ namespace Raven.Server.Web.System
                         {
                             await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
                         }
-                        break;  
+                        break;
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
                         using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(sortedList, context, googleCloudSettings))
@@ -604,7 +602,7 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var blittable = EntityToBlittable.ConvertCommandToBlittable(restorePoints, context);
+                    var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(restorePoints, context);
                     context.Write(writer, blittable);
                     writer.Flush();
                 }
@@ -656,16 +654,16 @@ namespace Raven.Server.Web.System
                         break;
                     case RestoreType.Azure:
                         var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask  = new RestoreFromAzure(
+                        restoreBackupTask = new RestoreFromAzure(
                             ServerStore,
                             azureConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
                         databaseName = await ValidateFreeSpace(azureConfiguration, restoreBackupTask);
-                        break;      
+                        break;
                     case RestoreType.GoogleCloud:
                         var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
-                        restoreBackupTask  = new RestoreFromGoogleCloud(
+                        restoreBackupTask = new RestoreFromGoogleCloud(
                             ServerStore,
                             googlCloudConfiguration,
                             ServerStore.NodeTag,
@@ -902,7 +900,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new []{name}, enable == false, $"{raftRequestId}");
+                var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.DynamicDatabaseDistribution, new[] { name }, enable == false, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
                 NoContentStatus();
@@ -1041,7 +1039,6 @@ namespace Raven.Server.Web.System
                     }
                     result = console.ApplyScript(adminJsScript);
                 }
-
                 else
                 {
                     throw new InvalidOperationException("'database' query string parameter not found, and 'serverScript' query string is not found. Don't know what to apply this script on");
@@ -1068,7 +1065,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
-                var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.DefaultForServer);
+                var conflictResolver = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<ConflictSolver>(json, "convert-conflict-resolver");
 
                 var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(index);
@@ -1144,7 +1141,7 @@ namespace Raven.Server.Web.System
                                 var before = (await CalculateStorageSize(compactSettings.DatabaseName)).GetValue(SizeUnit.Megabytes);
                                 var overallResult = new CompactionResult(compactSettings.DatabaseName);
 
-                                // first fill in data 
+                                // first fill in data
                                 foreach (var indexName in compactSettings.Indexes)
                                 {
                                     var indexCompactionResult = new CompactionResult(indexName);
@@ -1248,12 +1245,12 @@ namespace Raven.Server.Web.System
             }
 
             var dataDir = configuration.DataDirectory;
-            var dataDirectoryThatWillBeUsed =  string.IsNullOrWhiteSpace(dataDir) ? 
+            var dataDirectoryThatWillBeUsed = string.IsNullOrWhiteSpace(dataDir) ?
                                                ServerStore.Configuration.Core.DataDirectory.FullPath :
                                                new PathSetting(dataDir, ServerStore.Configuration.Core.DataDirectory.FullPath).FullPath;
-            
+
             OfflineMigrationConfiguration.ValidateDataDirectory(dataDirectoryThatWillBeUsed);
-            
+
             var dataExporter = OfflineMigrationConfiguration.EffectiveDataExporterFullPath(configuration.DataExporterFullPath);
             OfflineMigrationConfiguration.ValidateExporterPath(dataExporter);
 
@@ -1309,10 +1306,10 @@ namespace Raven.Server.Web.System
             var overallProgress = result.Progress as SmugglerResult.SmugglerProgress;
             var operationId = ServerStore.Operations.GetNextOperationId();
 
-            // send new line to avoid issue with read key 
+            // send new line to avoid issue with read key
             process.StandardInput.WriteLine();
 
-            // don't await here - this operation is async - all we return is operation id 
+            // don't await here - this operation is async - all we return is operation id
             var t = ServerStore.Operations.AddOperation(null, $"Migration of {dataDir} to {databaseName}",
                 Documents.Operations.Operations.OperationType.MigrationFromLegacyData,
                 onProgress =>
@@ -1323,7 +1320,7 @@ namespace Raven.Server.Web.System
                         {
                             using (database.PreventFromUnloading())
                             {
-                                // send some initial progress so studio can open details 
+                                // send some initial progress so studio can open details
                                 result.AddInfo("Starting migration");
                                 result.AddInfo($"Path of temporary export file: {tmpFile}");
                                 onProgress(overallProgress);

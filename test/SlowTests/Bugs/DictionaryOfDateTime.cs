@@ -23,7 +23,7 @@ namespace SlowTests.Bugs
         [Fact]
         public void CanBeSerializedProperly()
         {
-            var jsonSerializer = new DocumentConventions().CreateSerializer();
+            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
             using (var stringWriter = new StringWriter())
             {
                 var item = new WithDic
@@ -44,7 +44,7 @@ namespace SlowTests.Bugs
         [Fact]
         public void CanBeDeSerializedProperly()
         {
-            var jsonSerializer = new DocumentConventions().CreateSerializer();
+            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
             using (var stringWriter = new StringWriter())
             {
                 var item = new WithDic

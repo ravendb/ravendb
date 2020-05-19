@@ -8,7 +8,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy

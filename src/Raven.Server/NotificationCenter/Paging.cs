@@ -127,7 +127,7 @@ namespace Raven.Server.NotificationCenter
                 if (ntv == null || ntv.Json.TryGet(nameof(PerformanceHint.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                     details = new PagingPerformanceDetails();
                 else
-                    details = (PagingPerformanceDetails)EntityToBlittable.ConvertToEntity(typeof(PagingPerformanceDetails), id, detailsJson, DocumentConventions.DefaultForServer);
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<PagingPerformanceDetails>(detailsJson, id);
 
                 switch (type)
                 {

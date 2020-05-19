@@ -17,19 +17,17 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<DatabaseRecordWithEtag> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new GetDatabaseRecordCommand(conventions, _database);
+            return new GetDatabaseRecordCommand(_database);
         }
 
         private class GetDatabaseRecordCommand : RavenCommand<DatabaseRecordWithEtag>
         {
-            private readonly DocumentConventions _conventions;
             private readonly string _database;
 
             public override bool IsReadRequest => false;
 
-            public GetDatabaseRecordCommand(DocumentConventions conventions, string database)
+            public GetDatabaseRecordCommand(string database)
             {
-                _conventions = conventions;
                 _database = database;
             }
 
@@ -50,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations
                     return;
                 }
 
-                Result = (DatabaseRecordWithEtag)EntityToBlittable.ConvertToEntity(typeof(DatabaseRecordWithEtag), "database-record", response, _conventions);
+                Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<DatabaseRecordWithEtag>(response, "database/record");
             }
         }
     }

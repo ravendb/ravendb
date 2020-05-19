@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Allow to get to the metadata of the document
         /// </summary>
-        protected JsonObject.Metadata MetadataFor(object doc)
+        protected IJsonObject.IMetadata MetadataFor(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
         }
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Allow to access an entity as a document
         /// </summary>
-        protected JsonObject AsJson(object doc)
+        protected IJsonObject AsJson(object doc)
         {
             throw new NotSupportedException("This is here as a marker only");
         }

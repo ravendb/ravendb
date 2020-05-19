@@ -9,11 +9,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Lambda2Js;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Json;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
@@ -208,14 +206,14 @@ namespace Raven.Client.Documents.Session
             if (propertyType == typeOfValue || typeOfValue.IsClass == false)
                 return value;
 
-            using (var writer = new BlittableJsonWriter(Context))
+            using (var writer = Conventions.Serialization.CreateWriter(Context))
             {
-                // the type of the object that's being serialized 
+                // the type of the object that's being serialized
                 // is not the same as its declared type.
                 // so we need to include $type in json
 
-                var serializer = Conventions.CreateSerializer();
-                serializer.TypeNameHandling = TypeNameHandling.Objects;
+                var serializer = Conventions.Serialization.CreateSerializer();
+                //serializer.TypeNameHandling = TypeNameHandling.Objects; // TODO [ppekrol]
 
                 writer.WriteStartObject();
                 writer.WritePropertyName("Value");
@@ -230,7 +228,6 @@ namespace Raven.Client.Documents.Session
 
                 return reader["Value"];
             }
-
         }
 
         private static (object Key, object Value) GetKeyAndValue<TKey, TValue>(MethodCallExpression call)

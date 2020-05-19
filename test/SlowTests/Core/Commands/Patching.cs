@@ -293,7 +293,7 @@ this.Comments = this.Comments.filter(function (c) {
 
                     commands.RequestExecutor.Execute(command, commands.Context);
 
-                    var modified = (Post)store.Conventions.DeserializeEntityFromBlittable(typeof(Post), command.Result.ModifiedDocument);
+                    var modified = (Post)store.Conventions.Serialization.DeserializeEntityFromBlittable(typeof(Post), command.Result.ModifiedDocument);
 
                     Assert.Equal("abcd", modified.Title);
                 }

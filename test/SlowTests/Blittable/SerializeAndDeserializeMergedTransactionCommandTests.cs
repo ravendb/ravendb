@@ -5,16 +5,16 @@ using System.Linq;
 using System.Text;
 using FastTests;
 using FastTests.Voron.Util;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
-using Raven.Client.Json;
-using Raven.Server.Json.Converters;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Json.Converters;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -44,7 +44,7 @@ namespace SlowTests.Blittable
                             Id = context.GetLazyString("Some id"),
                             LowerId = context.GetLazyString("Some lower id"),
                             Collection = context.GetLazyString("Some collection"),
-                            Doc = EntityToBlittable.ConvertCommandToBlittable(new { SomeName = "Some Value" }, context)
+                            Doc = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new { SomeName = "Some Value" }, context)
                         }, 10)
                     };
 
@@ -68,12 +68,12 @@ namespace SlowTests.Blittable
                 //Deserialize
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var actualDto = jsonSerializer.Deserialize<PutResolvedConflictsCommandDto>(reader);
 
                     //Assert
-//                    Assert.Equal(expectedDto.)
+                    //                    Assert.Equal(expectedDto.)
                 }
             }
         }
@@ -110,7 +110,7 @@ namespace SlowTests.Blittable
                 AttachmentHandler.MergedDeleteAttachmentCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<MergedDeleteAttachmentCommandDto>(reader);
                     actual = dto.ToCommand(null, null);
@@ -165,7 +165,7 @@ namespace SlowTests.Blittable
                 AttachmentHandler.MergedPutAttachmentCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<MergedPutAttachmentCommandDto>(reader);
                     actual = dto.ToCommand(null, null);
@@ -173,7 +173,7 @@ namespace SlowTests.Blittable
 
                 //Assert
                 Assert.Equal(expected, actual,
-                    new CustomComparer<AttachmentHandler.MergedPutAttachmentCommand>(context, new []{typeof(Stream)}));
+                    new CustomComparer<AttachmentHandler.MergedPutAttachmentCommand>(context, new[] { typeof(Stream) }));
 
                 stream.Seek(0, SeekOrigin.Begin);
                 var expectedStream = expected.Stream.ReadData();
@@ -189,7 +189,7 @@ namespace SlowTests.Blittable
             {
                 //Arrange
                 var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
-                var document = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var document = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 var changeVector = context.GetLazyString("Some Lazy String");
                 var expected = new MergedPutCommand(document, "user/", changeVector, null);
 
@@ -208,7 +208,7 @@ namespace SlowTests.Blittable
                 MergedPutCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<MergedPutCommand.MergedPutCommandDto>(reader);
                     actual = dto.ToCommand(null, null);
@@ -227,7 +227,7 @@ namespace SlowTests.Blittable
             {
                 //Arrange
                 var data = new { ParentProperty = new { NestedProperty = "Some Value" } };
-                var arg = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var arg = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 var patchRequest = new PatchRequest("", PatchRequestType.None);
 
                 var expected = new PatchDocumentCommand(
@@ -255,7 +255,7 @@ namespace SlowTests.Blittable
                 PatchDocumentCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<PatchDocumentCommandDto>(reader);
                     actual = dto.ToCommand(context, database);
@@ -289,7 +289,7 @@ namespace SlowTests.Blittable
                 DeleteDocumentCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<DeleteDocumentCommandDto>(reader);
                     actual = dto.ToCommand(null, null);
@@ -313,7 +313,7 @@ namespace SlowTests.Blittable
                     {
                         Id = "Some Id",
                         ChangeVector = context.GetLazyString("Some Lazy String"),
-                        Document = EntityToBlittable.ConvertCommandToBlittable(data, context),
+                        Document = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context),
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
@@ -337,7 +337,7 @@ namespace SlowTests.Blittable
                 BatchHandler.MergedBatchCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<MergedBatchCommandDto>(reader);
                     actual = dto.ToCommand(null, null);
@@ -362,7 +362,7 @@ namespace SlowTests.Blittable
                     Document = new Document
                     {
                         ChangeVector = "Some Change Vector",
-                        Data = EntityToBlittable.ConvertCommandToBlittable(data, context),
+                        Data = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context),
                         Id = context.GetLazyString("Some Id")
                     }
                 };
@@ -383,7 +383,7 @@ namespace SlowTests.Blittable
                 DatabaseDestination.MergedBatchPutCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<DatabaseDestination.MergedBatchPutCommandDto>(reader);
                     actual = dto.ToCommand(context, database);
@@ -414,7 +414,7 @@ namespace SlowTests.Blittable
                         Type = CommandType.PUT,
                         Id = "Some Id",
                         ChangeVector = context.GetLazyString("Some Lazy String"),
-                        Document = EntityToBlittable.ConvertCommandToBlittable(data, context),
+                        Document = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context),
                         Patch = new PatchRequest("Some Script", PatchRequestType.None)
                     }
                 };
@@ -439,7 +439,7 @@ namespace SlowTests.Blittable
                 BulkInsertHandler.MergedInsertBulkCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(fromStream);
+                    reader.Initialize(fromStream);
 
                     var dto = jsonSerializer.Deserialize<MergedInsertBulkCommandDto>(reader);
                     actual = dto.ToCommand(context, database);
@@ -450,10 +450,10 @@ namespace SlowTests.Blittable
             }
         }
 
-        private static Newtonsoft.Json.JsonSerializer GetJsonSerializer()
+        private static JsonSerializer GetJsonSerializer()
         {
-            var jsonSerializer = DocumentConventions.Default.CreateSerializer();
-            jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
+            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+            jsonSerializer.Converters.Add(Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
             jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
             jsonSerializer.Converters.Add(StreamConverter.Instance);
             return jsonSerializer;
@@ -464,7 +464,9 @@ namespace SlowTests.Blittable
             private readonly IEnumerable<Type> _notCheckTypes;
             private readonly JsonOperationContext _context;
 
-            public CustomComparer(JsonOperationContext context): this(context, Array.Empty<Type>()) { }
+            public CustomComparer(JsonOperationContext context) : this(context, Array.Empty<Type>())
+            {
+            }
 
             public CustomComparer(JsonOperationContext context, IEnumerable<Type> notCheckTypes)
             {

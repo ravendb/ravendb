@@ -2,7 +2,6 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Sorting;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -47,7 +46,7 @@ namespace Raven.Client.Documents.Operations.Sorters
                     if (sortersToAdd[i].Name == null)
                         throw new ArgumentNullException(nameof(SorterDefinition.Name));
 
-                    _sortersToAdd[i] = EntityToBlittable.ConvertCommandToBlittable(sortersToAdd[i], context);
+                    _sortersToAdd[i] = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(sortersToAdd[i], context);
                 }
             }
 

@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -36,7 +36,6 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             Assert.Throws<InvalidOperationException>(() =>
             {
-
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (var writer = new BlittableJsonWriter(context))
                 using (var secondWriter = new BlittableJsonWriter(context))

@@ -4,21 +4,25 @@ using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Newtonsoft.Json;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 {
     internal class JsonEnumerableConverter : RavenJsonConverter
     {
         private readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
 
-        private readonly DocumentConventions _conventions;
+        private readonly JsonNetSerializationConventions _conventions;
 
         public override bool CanRead => false;
 
         public JsonEnumerableConverter(DocumentConventions conventions)
         {
-            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            if (conventions is null)
+                throw new ArgumentNullException(nameof(conventions));
+
+            _conventions = (JsonNetSerializationConventions)conventions.Serialization;
         }
 
         public override bool CanConvert(Type objectType)

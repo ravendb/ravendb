@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Security;
 using Raven.Server.Documents;
@@ -59,7 +60,7 @@ namespace Raven.Server.Smuggler.Migration
         {
             using (Parameters.Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var operationStateBlittable = EntityToBlittable.ConvertCommandToBlittable(lastEtagsInfo, context);
+                var operationStateBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(lastEtagsInfo, context);
                 await SaveLastOperationState(operationStateBlittable);
             }
         }

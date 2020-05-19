@@ -2,7 +2,6 @@
 using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TcpHandlers;
@@ -14,6 +13,7 @@ using Voron.Data.Tables;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Voron.Impl.Paging;
+using Raven.Client.Json.Serialization;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {

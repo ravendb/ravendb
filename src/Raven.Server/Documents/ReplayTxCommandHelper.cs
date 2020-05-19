@@ -4,13 +4,12 @@ using System.IO;
 using System.IO.Compression;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Raven.Client.Properties;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
-using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Revisions;
@@ -129,7 +128,7 @@ namespace Raven.Server.Documents
                 StartRecordingDetails startDetail;
                 using (var reader = new BlittableJsonReader(context))
                 {
-                    reader.Init(iterator.Current);
+                    reader.Initialize(iterator.Current);
                     startDetail = jsonSerializer.Deserialize<StartRecordingDetails>(reader);
                 }
 
@@ -153,8 +152,8 @@ namespace Raven.Server.Documents
         private static TransactionOperationsMerger.MergedTransactionCommand DeserializeCommand(
             DocumentsOperationContext context,
             DocumentDatabase database,
-            string type, 
-            BlittableJsonReaderObject wrapCmdReader, 
+            string type,
+            BlittableJsonReaderObject wrapCmdReader,
             PeepingTomStream peepingTomStream)
         {
             if (!wrapCmdReader.TryGet(nameof(RecordingCommandDetails.Command), out BlittableJsonReaderObject commandReader))
@@ -165,16 +164,16 @@ namespace Raven.Server.Documents
             var jsonSerializer = GetJsonSerializer();
             using (var reader = new BlittableJsonReader(context))
             {
-                reader.Init(commandReader);
+                reader.Initialize(commandReader);
                 var dto = DeserializeCommandDto(type, jsonSerializer, reader, peepingTomStream);
                 return dto.ToCommand(context, database);
             }
         }
 
         private static TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> DeserializeCommandDto(
-            string type, 
-            JsonSerializer jsonSerializer, 
-            BlittableJsonReader reader, 
+            string type,
+            JsonSerializer jsonSerializer,
+            BlittableJsonReader reader,
             PeepingTomStream peepingTomStream)
         {
             switch (type)
@@ -238,9 +237,9 @@ namespace Raven.Server.Documents
 
         internal static JsonSerializer GetJsonSerializer()
         {
-            var jsonSerializer = DocumentConventions.DefaultForServer.CreateSerializer();
+            var jsonSerializer = (JsonNetJsonSerializer)DocumentConventions.DefaultForServer.Serialization.CreateSerializer();
             jsonSerializer.Converters.Add(SliceJsonConverter.Instance);
-            jsonSerializer.Converters.Add(BlittableJsonConverter.Instance);
+            jsonSerializer.Converters.Add(Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
             jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);
             jsonSerializer.Converters.Add(StreamConverter.Instance);
             jsonSerializer.Converters.Add(BlittableJsonReaderArrayConverter.Instance);

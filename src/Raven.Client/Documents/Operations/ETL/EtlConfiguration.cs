@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -26,7 +27,7 @@ namespace Raven.Client.Documents.Operations.ETL
         internal bool TestMode { get; set; }
 
         [JsonDeserializationIgnore]
-        [Newtonsoft.Json.JsonIgnore]
+        [JsonIgnore]
         internal T Connection { get; set; }
 
         public void Initialize(T connectionString)

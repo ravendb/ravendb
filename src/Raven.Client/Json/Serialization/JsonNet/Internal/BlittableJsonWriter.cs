@@ -9,9 +9,9 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Json
+namespace Raven.Client.Json.Serialization.JsonNet.Internal
 {
-    internal class BlittableJsonWriter : JsonWriter
+    internal class BlittableJsonWriter : JsonWriter, IJsonWriter
     {
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _manualBlittableJsonDocumentBuilder;
         private bool _first;
@@ -40,7 +40,7 @@ namespace Raven.Client.Json
         {
             if (_documentInfo == null)
                 return;
-            if (_documentInfo.Metadata?.Modifications != null && (_documentInfo.Metadata.Modifications.Properties.Count > 0))
+            if (_documentInfo.Metadata?.Modifications != null && _documentInfo.Metadata.Modifications.Properties.Count > 0)
             {
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
                 _manualBlittableJsonDocumentBuilder.StartWriteObject();
@@ -49,7 +49,7 @@ namespace Raven.Client.Json
                 {
                     if (prop.Name.Length > 0 && prop.Name[0] == '@')
                     {
-                        if (prop.Name != Constants.Documents.Metadata.Collection && 
+                        if (prop.Name != Constants.Documents.Metadata.Collection &&
                             prop.Name != Constants.Documents.Metadata.Expires &&
                             prop.Name != Constants.Documents.Metadata.Refresh &&
                             prop.Name != Constants.Documents.Metadata.Edges)
@@ -269,7 +269,7 @@ namespace Raven.Client.Json
                 case DynamicJsonValue val:
                     foreach (var prop in val.Properties)
                     {
-                        WritePropertyValue(prop.Name,prop.Value);
+                        WritePropertyValue(prop.Name, prop.Value);
                     }
                     break;
                 case IEnumerable enumerable:
@@ -429,7 +429,6 @@ namespace Raven.Client.Json
         {
             if (value != null)
             {
-
                 _manualBlittableJsonDocumentBuilder.WriteValue(value.Value);
             }
             else
@@ -470,7 +469,6 @@ namespace Raven.Client.Json
             {
                 _manualBlittableJsonDocumentBuilder.WriteValueNull();
             }
-
         }
 
         public override void WriteValue(DateTime? value)

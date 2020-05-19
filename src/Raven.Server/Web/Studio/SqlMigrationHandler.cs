@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -45,10 +46,10 @@ namespace Raven.Server.Web.Studio
                     MigrationRequest migrationRequest;
                     
                     // we can't use JsonDeserializationServer here as it doesn't support recursive processing
-                    var serializer = DocumentConventions.DefaultForServer.CreateDeserializer();
+                    var serializer = DocumentConventions.DefaultForServer.Serialization.CreateDeserializer();
                     using (var blittableJsonReader = new BlittableJsonReader())
                     {
-                        blittableJsonReader.Init(sqlImportDoc);
+                        blittableJsonReader.Initialize(sqlImportDoc);
                         migrationRequest = serializer.Deserialize<MigrationRequest>(blittableJsonReader);
                     }
                     
@@ -108,10 +109,10 @@ namespace Raven.Server.Web.Studio
                     MigrationTestRequest testRequest;
                     
                     // we can't use JsonDeserializationServer here as it doesn't support recursive processing
-                    var serializer = DocumentConventions.DefaultForServer.CreateDeserializer();
+                    var serializer = DocumentConventions.DefaultForServer.Serialization.CreateDeserializer();
                     using (var blittableJsonReader = new BlittableJsonReader())
                     {
-                        blittableJsonReader.Init(sqlImportTestDoc);
+                        blittableJsonReader.Initialize(sqlImportTestDoc);
                         testRequest = serializer.Deserialize<MigrationTestRequest>(blittableJsonReader);
                     }
                     

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
@@ -56,7 +57,7 @@ namespace SlowTests.Client.Subscriptions
 
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertCommandToBlittable(configuration,
+                        DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration,
                             context), Guid.NewGuid().ToString());
                 }
 
@@ -136,7 +137,7 @@ namespace SlowTests.Client.Subscriptions
 
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertCommandToBlittable(configuration,
+                        DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration,
                             context), Guid.NewGuid().ToString());
                 }
 
@@ -235,7 +236,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
 
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertCommandToBlittable(configuration,
+                        DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration,
                             context), Guid.NewGuid().ToString());
                 }
 
@@ -325,7 +326,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
 
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertCommandToBlittable(configuration,
+                        DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration,
                             context), Guid.NewGuid().ToString());
                 }
 
@@ -420,7 +421,7 @@ select { Id: id(d.Current), Age: d.Current.Age }
 
                     await Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertCommandToBlittable(configuration,
+                        DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration,
                             context), Guid.NewGuid().ToString());
                 }
 

@@ -16,19 +16,19 @@ using Lucene.Net.Search;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -61,7 +61,6 @@ using Raven.Server.Storage;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
-using Raven.Server.Utils.Metrics;
 using Raven.Server.Web.System;
 using Sparrow;
 using Sparrow.Json;
@@ -99,7 +98,7 @@ namespace Raven.Server.ServerWide
 
         internal StorageEnvironment _env;
 
-        internal readonly SizeLimitedConcurrentDictionary<string, ConcurrentQueue<DateTime>> ClientCreationRate = 
+        internal readonly SizeLimitedConcurrentDictionary<string, ConcurrentQueue<DateTime>> ClientCreationRate =
             new SizeLimitedConcurrentDictionary<string, ConcurrentQueue<DateTime>>(50);
 
         private readonly NotificationsStorage _notificationsStorage;
@@ -450,6 +449,7 @@ namespace Raven.Server.ServerWide
                 return GetClusterTopology(context);
             }
         }
+
         public bool HasTopologyChanged(long topologyEtag)
         {
             return _lastClusterTopologyIndex != topologyEtag;
@@ -551,7 +551,6 @@ namespace Raven.Server.ServerWide
                     try
                     {
                         options.MasterKey = Secrets.Unprotect(buffer);
-
                     }
                     catch (Exception e)
                     {
@@ -699,7 +698,7 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 // warm-up the json convertor, it takes about 250ms at first conversion.
-                EntityToBlittable.ConvertCommandToBlittable(new DatabaseRecord(), ctx);
+                DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(new DatabaseRecord(), ctx);
             }
 
             _server.Statistics.Load(ContextPool, Logger);
@@ -1376,7 +1375,7 @@ namespace Raven.Server.ServerWide
                     if (ClusterCommandsVersionManager.CurrentClusterMinimalVersion < commandVersion)
                     {
                         // If some nodes run the old version of the command, this node (newer version) will finish here and delete 'server/cert'
-                        // because the last stage of the new version (ConfirmServerCertificateReplacedCommand where we delete 'server/cert') will not happen 
+                        // because the last stage of the new version (ConfirmServerCertificateReplacedCommand where we delete 'server/cert') will not happen
                         using (var tx = context.OpenWriteTransaction())
                         {
                             Cluster.DeleteItem(context, CertificateReplacement.CertificateReplacementDoc);
@@ -1416,12 +1415,9 @@ namespace Raven.Server.ServerWide
                     yield break;
                 do
                 {
-
                     yield return it.CurrentKey.ToString();
-
                 } while (it.MoveNext());
             }
-
         }
 
         public unsafe void PutSecretKey(string base64, string name, bool overwrite)
@@ -1471,7 +1467,6 @@ namespace Raven.Server.ServerWide
             else
                 key = secretKey;
 
-
             byte[] existingKey;
             try
             {
@@ -1505,7 +1500,7 @@ namespace Raven.Server.ServerWide
 
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(context, name))
             {
-                if (rawRecord != null && rawRecord.IsEncrypted== false)
+                if (rawRecord != null && rawRecord.IsEncrypted == false)
                     throw new InvalidOperationException($"Cannot modify key {name} where there is an existing database that is not encrypted");
             }
 
@@ -1538,7 +1533,6 @@ namespace Raven.Server.ServerWide
             readResult.Reader.Read(protectedData, 0, protectedData.Length);
 
             return Secrets.Unprotect(protectedData);
-
         }
 
         public void DeleteSecretKey(TransactionOperationContext context, string name)
@@ -1558,7 +1552,7 @@ namespace Raven.Server.ServerWide
                     if (rawRecord == null)
                         return true;
 
-                    if (rawRecord.IsEncrypted== false)
+                    if (rawRecord.IsEncrypted == false)
                         return true;
 
                     if (rawRecord.Topology.RelevantFor(NodeTag) == false)
@@ -2002,7 +1996,7 @@ namespace Raven.Server.ServerWide
 
                     _shutdownNotification.Cancel();
 
-                    if(ContextPool != null)
+                    if (ContextPool != null)
                     {
                         _server.Statistics.Persist(ContextPool, Logger);
                     }
@@ -2038,7 +2032,6 @@ namespace Raven.Server.ServerWide
                             }
                             catch (DatabaseDisabledException)
                             {
-
                             }
                         });
 
@@ -2083,7 +2076,6 @@ namespace Raven.Server.ServerWide
                         if (DatabaseNeedsToRunIdleOperations(database))
                             database.RunIdleOperations();
                     }
-
                     catch (Exception e)
                     {
                         if (Logger.IsInfoEnabled)
@@ -2104,7 +2096,6 @@ namespace Raven.Server.ServerWide
 
                     foreach (var db in databasesToCleanup)
                     {
-
                         if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) == false ||
                             resourceTask == null ||
                             resourceTask.Status != TaskStatus.RanToCompletion)
@@ -2210,7 +2201,6 @@ namespace Raven.Server.ServerWide
                     $"Database {record.DatabaseName} requires {topology.ReplicationFactor} node(s) but there are {clusterNodes.Count} nodes available in the cluster.");
             }
 
-
             var disconnectedNodes = new List<string>();
             foreach (var kvp in GetNodesStatuses())
             {
@@ -2284,7 +2274,7 @@ namespace Raven.Server.ServerWide
             LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure);
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
-            // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
+            // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we
             // create the cluster, we register those local certificates in the cluster.
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
@@ -2637,9 +2627,12 @@ namespace Raven.Server.ServerWide
             private readonly BlittableJsonReaderObject _command;
             private bool _reachedLeader;
             public override bool IsReadRequest => false;
+
             public bool HasReachLeader() => _reachedLeader;
+
             private readonly string _source;
             private readonly string _commandType;
+
             public PutRaftCommand(BlittableJsonReaderObject command, string source, string commandType)
             {
                 _command = command;
@@ -2712,7 +2705,7 @@ namespace Raven.Server.ServerWide
             }
             catch (IOException e)
             {
-                // expected exception on network failures. 
+                // expected exception on network failures.
                 if (Logger.IsInfoEnabled)
                 {
                     Logger.Info($"Failed to accept new RAFT connection via TCP from node {header.SourceNodeTag} ({remoteEndpoint}).", e);
