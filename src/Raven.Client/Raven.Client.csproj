@@ -9,6 +9,7 @@
     <AssemblyName>Raven.Client</AssemblyName>
     <PackageId>RavenDB.Client</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Product>RavenDB Client</Product>
     <Title>RavenDB Client</Title>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>

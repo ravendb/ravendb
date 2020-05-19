@@ -1,6 +1,11 @@
 function CopyLicenseFile ( $targetDir ) {
-    $licensePath = "LICENSE"
+    $licensePath = "LICENSE.txt"
     Copy-Item "$licensePath" -Destination "$targetDir"
+}
+
+function CopyIconFile ( $targetDir ) {
+    $iconPath = [io.path]::combine("scripts", "assets", "icon.png")
+    Copy-Item "$iconPath" -Destination "$targetDir"
 }
 
 function CopyAckFile ( $targetDir ) {

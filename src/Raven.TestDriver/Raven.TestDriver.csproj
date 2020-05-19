@@ -8,6 +8,7 @@
     <AssemblyName>Raven.TestDriver</AssemblyName>
     <PackageId>RavenDB.TestDriver</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   
@@ -25,6 +26,7 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\LICENSE.txt" Pack="true" Visible="false" PackagePath="" />
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
 

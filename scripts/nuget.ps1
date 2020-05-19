@@ -76,6 +76,9 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     $targetsDst = [io.path]::combine($EMBEDDED_BUILD_OUT_DIR, "RavenDB.Embedded.targets")
     Copy-Item "$targetsSrc" -Destination "$targetsDst"
     
+    CopyLicenseFile($EMBEDDED_OUT_DIR);
+    CopyIconFile($EMBEDDED_OUT_DIR);
+    
     try {
         Push-Location $EMBEDDED_OUT_DIR
         & ../../scripts/assets/bin/nuget.exe pack .\RavenDB.Embedded.nuspec
