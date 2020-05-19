@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.ServerWide;
 using Raven.Server.Config.Attributes;
 using Sparrow.Json.Parsing;
 
@@ -81,7 +82,7 @@ namespace Raven.Server.Config
 
     public class ConfigurationEntryDatabaseValue : ConfigurationEntryServerValue
     {
-        public ConfigurationEntryDatabaseValue(RavenConfiguration configuration, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
+        public ConfigurationEntryDatabaseValue(RavenConfiguration configuration, DatabaseRecord dbRecord, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
             : base(configuration, metadata, authenticationStatus)
         {
             if (Metadata.Scope == ConfigurationEntryScope.ServerWideOnly)
@@ -90,14 +91,35 @@ namespace Raven.Server.Config
             DatabaseValues = new Dictionary<string, ConfigurationEntrySingleValue>();
             foreach (var key in Metadata.Keys)
             {
+                var hasValueInRecord = dbRecord.Settings.TryGetValue(key, out var valueInDbRecord);
+
                 var value = configuration.GetSetting(key);
-                if (value == null)
-                    continue;
+                string pendingValue = null;
+
+                bool canShowValue = Metadata.IsSecured == false;
+
+                if (value != null)
+                {
+                    if (hasValueInRecord && string.Equals(value, valueInDbRecord) == false)
+                        pendingValue = valueInDbRecord;
+                }
+                else
+                {
+                    if (hasValueInRecord)
+                    {
+                        pendingValue = valueInDbRecord;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
 
                 DatabaseValues[key] = new ConfigurationEntrySingleValue
                 {
-                    Value = Metadata.IsSecured == false ? value : null,
-                    HasAccess = true
+                    Value = canShowValue ? value : null,
+                    HasAccess = true,
+                    PendingValue = canShowValue ? pendingValue : null
                 };
             }
         }
@@ -125,6 +147,7 @@ namespace Raven.Server.Config
     public class ConfigurationEntrySingleValue : IDynamicJson
     {
         public string Value { get; set; }
+        public string PendingValue { get; set; }
         public bool HasAccess { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -132,7 +155,8 @@ namespace Raven.Server.Config
             return new DynamicJsonValue
             {
                 [nameof(Value)] = Value,
-                [nameof(HasAccess)] = HasAccess
+                [nameof(HasAccess)] = HasAccess,
+                [nameof(PendingValue)] = PendingValue
             };
         }
     }
