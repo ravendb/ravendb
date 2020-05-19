@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using Raven.Client.Extensions;
@@ -50,55 +51,61 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
         private static readonly ConcurrentDictionary<Type, SortedDictionary<byte, MemberInfo>> _cache = new ConcurrentDictionary<Type, SortedDictionary<byte, MemberInfo>>();
 
-        internal void SetValuesFromFields()
+        internal void SetValuesFromMembers()
         {
             var t = GetType();
-            var mapping = GetFieldsMapping(t);
+            var mapping = GetMembersMapping(t);
             if (mapping == null)
                 return;
 
             Values = new double[mapping.Count];
-            foreach (var fieldInfo in mapping)
+            foreach (var memberInfo in mapping)
             {
-                var index = fieldInfo.Key;
-                var field = fieldInfo.Value;
-                Values[index] = (double)field.GetValue(this);
+                var index = memberInfo.Key;
+                var member = memberInfo.Value;
+                Values[index] = (double)member.GetValue(this);
             }
         }
 
-        internal void SetFieldsFromValues()
+        internal void SetMembersFromValues()
         {
             var t = GetType();
-            var mapping = GetFieldsMapping(t);
+            var mapping = GetMembersMapping(t);
             if (mapping == null)
                 return;
 
             foreach (var memberInfo in mapping)
             {
                 var index = memberInfo.Key;
-                var field = memberInfo.Value;
-                field.SetValue(this, Values[index]);
+                var member = memberInfo.Value;
+                member.SetValue(this, Values[index]);
             }
         }
 
-        internal static SortedDictionary<byte, MemberInfo> GetFieldsMapping(Type type)
+        internal static SortedDictionary<byte, MemberInfo> GetMembersMapping(Type type)
         {
             return _cache.GetOrAdd(type, (t) =>
             {
                 SortedDictionary<byte, MemberInfo> mapping = null;
-                foreach (var field in ReflectionUtil.GetPropertiesAndFieldsFor(t, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                foreach (var member in ReflectionUtil.GetPropertiesAndFieldsFor(t, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                 {
-                    var attribute = field.GetCustomAttribute<TimeSeriesValueAttribute>(inherit: false);
+                    var attribute = member.GetCustomAttribute<TimeSeriesValueAttribute>(inherit: false);
                     if (attribute == null)
                         continue;
 
                     var i = attribute.Index;
                     mapping ??= new SortedDictionary<byte, MemberInfo>();
                     if (mapping.ContainsKey(i))
-                        throw new InvalidOperationException($"Cannot map '{field.Name}' to '{i}', since '{mapping[i].Name}' already mapped to it.");
+                        throw new InvalidOperationException($"Cannot map '{member.Name}' to {i}, since '{mapping[i].Name}' already mapped to it.");
 
-                    mapping[i] = field;
+                    mapping[i] = member;
                 }
+
+                if (mapping == null)
+                    return null;
+
+                if (mapping.Count == mapping.Keys.Last())
+                    throw new InvalidOperationException($"The mapping of '{t}' must contain consecutive values starting from 0.");
 
                 return mapping;
             });
@@ -107,12 +114,12 @@ namespace Raven.Client.Documents.Session.TimeSeries
         [OnDeserialized]
         internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
         {
-            SetFieldsFromValues();
+            SetMembersFromValues();
         }
 
         void IPostJsonDeserialization.PostDeserialization()
         {
-            SetFieldsFromValues();
+            SetMembersFromValues();
         }
     }
 }

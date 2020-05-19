@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Session
 
         public void Append<TValue>(TValue value) where TValue : TimeSeriesEntry
         {
-            value.SetValuesFromFields();
+            value.SetValuesFromMembers();
             Append(value.Timestamp, value.Values, value.Tag);
         }
 

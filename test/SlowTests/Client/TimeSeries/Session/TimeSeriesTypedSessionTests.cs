@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -26,28 +27,19 @@ namespace SlowTests.Client.TimeSeries.Session
 
         public class StockPriceAggregated : TimeSeriesAggregatedEntry
         {
-            [TimeSeriesValue(0)] public double Close;
-            [TimeSeriesValue(1)] public double High;
-            [TimeSeriesValue(2)] public double Low;
-            [TimeSeriesValue(3)] public double Open;
+            [TimeSeriesValue(0)] public double Open;
+            [TimeSeriesValue(1)] public double Close;
+            [TimeSeriesValue(2)] public double High;
+            [TimeSeriesValue(3)] public double Low;
             [TimeSeriesValue(4)] public double Volume;
         }
 
         public class StockPrice : TimeSeriesEntry
         {
-            [TimeSeriesValue(0)] public double Close;
-            [TimeSeriesValue(1)] public double High;
-            [TimeSeriesValue(2)] public double Low;
-            [TimeSeriesValue(3)] public double Open;
-            [TimeSeriesValue(4)] public double Volume;
-        }
-
-        public class BadStockPrice : TimeSeriesEntry
-        {
-            [TimeSeriesValue(0)] public double Close;
-            [TimeSeriesValue(1)] public double High;
-            [TimeSeriesValue(2)] public double Low;
-            [TimeSeriesValue(3)] public double Open;
+            [TimeSeriesValue(0)] public double Open;
+            [TimeSeriesValue(1)] public double Close;
+            [TimeSeriesValue(2)] public double High;
+            [TimeSeriesValue(3)] public double Low;
             [TimeSeriesValue(4)] public double Volume;
         }
 
@@ -68,6 +60,19 @@ namespace SlowTests.Client.TimeSeries.Session
             {
                 await store.TimeSeries.Register<User, StockPrice>();
                 await store.TimeSeries.Register("Users", nameof(HeartRateMeasure), new[] {nameof(HeartRateMeasure.HeartRate)});
+
+                var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
+                var heartrate = updated.ValueNameMapper.GetNames("users",  nameof(HeartRateMeasure));
+                Assert.Equal(1, heartrate.Length);
+                Assert.Equal(nameof(HeartRateMeasure.HeartRate), heartrate[0]);
+
+                var stock = updated.ValueNameMapper.GetNames("users",  nameof(StockPrice));
+                Assert.Equal(5, stock.Length);
+                Assert.Equal(nameof(StockPrice.Open), stock[0]);
+                Assert.Equal(nameof(StockPrice.Close), stock[1]);
+                Assert.Equal(nameof(StockPrice.High), stock[2]);
+                Assert.Equal(nameof(StockPrice.Low), stock[3]);
+                Assert.Equal(nameof(StockPrice.Volume), stock[4]);
             }
         }
 
@@ -178,7 +183,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    var tsf = session.TimeSeriesFor("users/ayende", nameof(HeartRateMeasure));
                     tsf.Append(baseline, new[] { 58d }, "watches/fitbit");
                     tsf.Append(baseline.AddMinutes(10), new[] { 60d }, "watches/fitbit");
 
