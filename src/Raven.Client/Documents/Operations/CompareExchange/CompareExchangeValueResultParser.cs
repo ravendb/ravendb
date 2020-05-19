@@ -1,14 +1,41 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.CompareExchange
 {
+    internal static class CompareExchangeValueBlittableJsonConverter
+    {
+        public static object ConvertToBlittable(object value, DocumentConventions conventions, JsonOperationContext context)
+        {
+            return ConvertToBlittable(value, conventions, context, conventions.Serialization.CreateSerializer());
+        }
+
+        public static object ConvertToBlittable(object value, DocumentConventions conventions, JsonOperationContext context, IJsonSerializer jsonSerializer)
+        {
+            if (value == null)
+                return null;
+
+            if (value is ValueType ||
+                value is string ||
+                value is BlittableJsonReaderArray)
+                return value;
+
+            if (value is IEnumerable enumerable && !(enumerable is IDictionary))
+            {
+                return enumerable.Cast<object>()
+                    .Select(v => ConvertToBlittable(v, conventions, context, jsonSerializer));
+            }
+
+            return conventions.Serialization.DefaultConverter.ToBlittable(value, context);
+        }
+    }
+
     internal static class CompareExchangeValueResultParser<T>
     {
         public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, bool materializeMetadata, DocumentConventions conventions)

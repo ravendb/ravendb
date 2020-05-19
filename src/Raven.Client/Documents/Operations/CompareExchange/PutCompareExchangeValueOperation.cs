@@ -59,8 +59,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 url = $"{node.Url}/databases/{node.Database}/cmpxchg?key={Uri.EscapeDataString(_key)}&index={_index}";
                 var djv = new DynamicJsonValue
                 {
-                    //[Constants.CompareExchange.ObjectFieldName] = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value, _conventions, ctx, _conventions.Serialization.CreateSerializer(), documentInfo: null, removeIdentityProperty: false) // TODO [ppekrol]
-                    [Constants.CompareExchange.ObjectFieldName] = null
+                    [Constants.CompareExchange.ObjectFieldName] = CompareExchangeValueBlittableJsonConverter.ConvertToBlittable(_value, _conventions, ctx)
                 };
 
                 if (_metadata != null)
