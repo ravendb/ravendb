@@ -10,6 +10,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -33,6 +34,24 @@ namespace Raven.Server.Documents.Handlers.Admin
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
 
+            DatabaseRecord databaseRecord;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var dbId = Constants.Documents.Prefix + Database.Name;
+                using (context.OpenReadTransaction())
+                using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
+                {
+                    if (dbDoc == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return Task.CompletedTask;
+                    }
+
+                    databaseRecord = JsonDeserializationCluster.DatabaseRecord(dbDoc);
+                }
+            }
+
             var settingsResult = new SettingsResult();
 
             foreach (var configurationEntryMetadata in RavenConfiguration.AllConfigurationEntries.Value)
@@ -40,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                     continue;
 
-                var entry = new ConfigurationEntryDatabaseValue(Database.Configuration, configurationEntryMetadata, status);
+                var entry = new ConfigurationEntryDatabaseValue(Database.Configuration, databaseRecord, configurationEntryMetadata, status);
                 settingsResult.Settings.Add(entry);
             }
 
