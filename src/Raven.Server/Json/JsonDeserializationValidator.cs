@@ -14,10 +14,10 @@ namespace Raven.Server.Json
         public static void Validate()
         {
             var exceptions = new List<Exception>();
-            var assembly = typeof(JsonDeserializationValidator).GetTypeInfo().Assembly;
+            var assembly = typeof(JsonDeserializationValidator).Assembly;
             foreach (var type in assembly.GetTypes())
             {
-                var typeInfo = type.GetTypeInfo();
+                var typeInfo = type;
                 if (typeInfo.IsAbstract)
                     continue;
 

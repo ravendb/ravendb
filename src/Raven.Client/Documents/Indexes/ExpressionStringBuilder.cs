@@ -645,7 +645,7 @@ namespace Raven.Client.Documents.Indexes
                 case ExpressionType.Convert:
                     var leftWithoutConvert = ((UnaryExpression)left).Operand;
                     var enumType = Nullable.GetUnderlyingType(leftWithoutConvert.Type) ?? leftWithoutConvert.Type;
-                    if (enumType.GetTypeInfo().IsEnum == false)
+                    if (enumType.IsEnum == false)
                         return;
 
                     var rightWithoutConvert = SkipConvertExpressions(right);
@@ -671,7 +671,7 @@ namespace Raven.Client.Documents.Indexes
                         {
                             var rightType = Nullable.GetUnderlyingType(rightWithoutConvert.Type) ?? rightWithoutConvert.Type;
 
-                            if (rightType.GetTypeInfo().IsEnum)
+                            if (rightType.IsEnum)
                             {
                                 left = leftWithoutConvert;
                                 right = rightWithoutConvert;
@@ -897,7 +897,7 @@ namespace Raven.Client.Documents.Indexes
         private string ConvertTypeToCSharpKeyword(Type type, out bool isValueTypeOnTheServerSide)
         {
             isValueTypeOnTheServerSide = true;
-            if (type.GetTypeInfo().IsGenericType)
+            if (type.IsGenericType)
             {
                 if (TypeExistsOnServer(type) == false)
                     throw new InvalidOperationException("Cannot make use of type " + type + " because it is a generic type that doesn't exists on the server");
@@ -918,7 +918,7 @@ namespace Raven.Client.Documents.Indexes
                 }
 
                 sb.Append(">");
-                isValueTypeOnTheServerSide = type.GetTypeInfo().IsValueType;// KeyValuePair<K,V>
+                isValueTypeOnTheServerSide = type.IsValueType;// KeyValuePair<K,V>
                 return sb.ToString();
             }
 
@@ -998,7 +998,7 @@ namespace Raven.Client.Documents.Indexes
 
             isValueTypeOnTheServerSide = false;
 
-            if (type.GetTypeInfo().IsEnum)
+            if (type.IsEnum)
             {
                 return "string";
             }
@@ -1013,7 +1013,7 @@ namespace Raven.Client.Documents.Indexes
             const string knownNamespace = "System";
             if (_insideWellKnownType || knownNamespace == type.Namespace)
             {
-                isValueTypeOnTheServerSide = type.GetTypeInfo().IsValueType;
+                isValueTypeOnTheServerSide = type.IsValueType;
                 return type.Name;
             }
             return type.FullName;
@@ -1024,20 +1024,20 @@ namespace Raven.Client.Documents.Indexes
             if (_insideWellKnownType)
                 return true;
 
-            if (type.GetTypeInfo().Assembly == typeof(object).GetTypeInfo().Assembly) // mscorlib
+            if (type.Assembly == typeof(object).Assembly) // mscorlib
                 return true;
 
-            if (type.GetTypeInfo().Assembly == typeof(Uri).GetTypeInfo().Assembly) // System assembly
+            if (type.Assembly == typeof(Uri).Assembly) // System assembly
                 return true;
 
-            if (type.GetTypeInfo().Assembly == typeof(HashSet<>).GetTypeInfo().Assembly) // System.Core
+            if (type.Assembly == typeof(HashSet<>).Assembly) // System.Core
                 return true;
 
-            if (type.GetTypeInfo().Assembly == typeof(Regex).GetTypeInfo().Assembly) // System.Text.RegularExpressions
+            if (type.Assembly == typeof(Regex).Assembly) // System.Text.RegularExpressions
                 return true;
 
-            if (type.GetTypeInfo().Assembly.FullName.StartsWith("Lucene.Net") &&
-                type.GetTypeInfo().Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
+            if (type.Assembly.FullName.StartsWith("Lucene.Net") &&
+                type.Assembly.FullName.Contains("PublicKeyToken=85089178b9ac3181"))
                 return true;
 
             return _conventions.TypeIsKnownServerSide(type);
@@ -1781,7 +1781,7 @@ namespace Raven.Client.Documents.Indexes
 
             Out(IsIndexerCall(node) ? "]" : ")");
 
-            if (node.Type.GetTypeInfo().IsValueType &&
+            if (node.Type.IsValueType &&
                 TypeExistsOnServer(node.Type) &&
                 node.Type.Name != typeof(KeyValuePair<,>).Name)
             {
@@ -1978,7 +1978,7 @@ namespace Raven.Client.Documents.Indexes
 
         private void VisitType(Type type)
         {
-            if (type.GetTypeInfo().IsGenericType == false || CheckIfAnonymousType(type))
+            if (type.IsGenericType == false || CheckIfAnonymousType(type))
             {
                 if (type.IsArray)
                 {
@@ -2073,10 +2073,10 @@ namespace Raven.Client.Documents.Indexes
         private static bool CheckIfAnonymousType(Type type)
         {
             // hack: the only way to detect anonymous types right now
-            return type.GetTypeInfo().IsDefined(typeof(CompilerGeneratedAttribute), false)
-                && type.GetTypeInfo().IsGenericType && type.Name.Contains("AnonymousType")
+            return type.IsDefined(typeof(CompilerGeneratedAttribute), false)
+                && type.IsGenericType && type.Name.Contains("AnonymousType")
                 && (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
-                && type.GetTypeInfo().Attributes.HasFlag(TypeAttributes.NotPublic);
+                && type.Attributes.HasFlag(TypeAttributes.NotPublic);
         }
 
         public static readonly HashSet<string> KeywordsInCSharp = new HashSet<string>(new[]
@@ -2440,10 +2440,10 @@ namespace Raven.Client.Documents.Indexes
             if (_insideWellKnownType)
                 return false;
 
-            if (nonNullableType.GetTypeInfo().IsEnum)
+            if (nonNullableType.IsEnum)
                 return true;
 
-            return nonNullableType.GetTypeInfo().Assembly == typeof(string).GetTypeInfo().Assembly && (nonNullableType.GetTypeInfo().IsGenericType == false);
+            return nonNullableType.Assembly == typeof(string).Assembly && (nonNullableType.IsGenericType == false);
         }
     }
 }

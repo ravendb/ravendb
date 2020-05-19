@@ -32,7 +32,7 @@ namespace TypingsGenerator
 
         private Boolean IsFunctionProperty(PropertyInfo propertyInfo)
         {
-            return propertyInfo.PropertyType.GetTypeInfo().IsGenericType && typeof(Func<>).IsAssignableFrom(propertyInfo.PropertyType.GetGenericTypeDefinition());
+            return propertyInfo.PropertyType.IsGenericType && typeof(Func<>).IsAssignableFrom(propertyInfo.PropertyType.GetGenericTypeDefinition());
         }
 
         private bool IsDictionaryIndexer(PropertyInfo propertyInfo)

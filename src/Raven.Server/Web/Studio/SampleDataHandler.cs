@@ -49,7 +49,7 @@ namespace Raven.Server.Web.Studio
                 var (index, _) = await ServerStore.SendToLeaderAsync(editRevisions);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
 
-                using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly
+                using (var sampleData = typeof(SampleDataHandler).Assembly
                     .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 {
                     using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
@@ -77,7 +77,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/sample-data/classes", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetSampleDataClasses()
         {
-            using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.NorthwindModel.cs"))
+            using (var sampleData = typeof(SampleDataHandler).Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.NorthwindModel.cs"))
             using (var responseStream = ResponseBodyStream())
             {
                 HttpContext.Response.ContentType = "text/plain";

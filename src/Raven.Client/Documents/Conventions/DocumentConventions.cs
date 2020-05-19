@@ -728,14 +728,14 @@ namespace Raven.Client.Documents.Conventions
             // we want to reject queries and other operations on abstract types, because you usually
             // want to use them for polymorphic queries, and that require the conventions to be
             // applied properly, so we reject the behavior and hint to the user explicitly
-            if (t.GetTypeInfo().IsInterface)
+            if (t.IsInterface)
                 throw new InvalidOperationException("Cannot find collection name for interface " + t.FullName +
                                                     ", only concrete classes are supported. Did you forget to customize Conventions.FindCollectionName?");
-            if (t.GetTypeInfo().IsAbstract)
+            if (t.IsAbstract)
                 throw new InvalidOperationException("Cannot find collection name for abstract class " + t.FullName +
                                                     ", only concrete class are supported. Did you forget to customize Conventions.FindCollectionName?");
 
-            if (t.GetTypeInfo().IsGenericType)
+            if (t.IsGenericType)
             {
                 var name = t.GetGenericTypeDefinition().Name;
                 if (name.Contains('`'))

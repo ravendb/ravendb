@@ -20,7 +20,7 @@ namespace Raven.Server.Web.System
             var keys = new string[0];
             foreach (var configurationProperty in typeof(RavenConfiguration).GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
-                if (configurationProperty.PropertyType.GetTypeInfo().IsSubclassOf(typeof(ConfigurationCategory)) == false)
+                if (configurationProperty.PropertyType.IsSubclassOf(typeof(ConfigurationCategory)) == false)
                     continue;
 
                 foreach (var categoryProperty in configurationProperty.PropertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))

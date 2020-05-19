@@ -178,7 +178,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             if (fieldsToFetch?.Projections != null && fieldsToFetch.Projections.Length == 1) // we only select a single field
             {
-                var typeInfo = type.GetTypeInfo();
+                var typeInfo = type;
                 var projectionField = fieldsToFetch.Projections[0];
 
                 if (fieldsToFetch.SourceAlias != null)

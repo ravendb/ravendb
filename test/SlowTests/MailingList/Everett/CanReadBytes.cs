@@ -161,7 +161,7 @@ namespace SlowTests.MailingList.Everett
         private static string GetResourceText(string name)
         {
             name = typeof(CanReadBytes).Namespace + "." + name;
-            using (var stream = typeof(CanReadBytes).GetTypeInfo().Assembly.GetManifestResourceStream(name))
+            using (var stream = typeof(CanReadBytes).Assembly.GetManifestResourceStream(name))
             {
                 if (stream == null)
                     throw new InvalidOperationException("Could not find the following resource: " + name);

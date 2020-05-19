@@ -79,11 +79,11 @@ namespace FastTests.Issues
         {
             while (type != null && type != typeof(object))
             {
-                var current = type.GetTypeInfo().IsGenericType ? type.GetGenericTypeDefinition() : type;
+                var current = type.IsGenericType ? type.GetGenericTypeDefinition() : type;
                 if (genericType == current)
                     return true;
 
-                type = type.GetTypeInfo().BaseType;
+                type = type.BaseType;
             }
 
             return false;

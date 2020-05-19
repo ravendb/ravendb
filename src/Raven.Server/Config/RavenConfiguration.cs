@@ -231,7 +231,7 @@ namespace Raven.Server.Config
             foreach (var configurationCategoryProperty in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
                 var propertyType = configurationCategoryProperty.PropertyType;
-                if (propertyType.GetTypeInfo().IsSubclassOf(typeof(ConfigurationCategory)) == false)
+                if (propertyType.IsSubclassOf(typeof(ConfigurationCategory)) == false)
                     continue;
 
                 foreach (var configurationProperty in propertyType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
@@ -370,7 +370,7 @@ namespace Raven.Server.Config
             Dictionary<string, KeyValuePair<string, string>> results = null;
             foreach (var configurationProperty in typeof(RavenConfiguration).GetProperties(BindingFlags.Instance | BindingFlags.Public))
             {
-                if (configurationProperty.PropertyType.GetTypeInfo().IsSubclassOf(typeof(ConfigurationCategory)) == false)
+                if (configurationProperty.PropertyType.IsSubclassOf(typeof(ConfigurationCategory)) == false)
                     continue;
 
                 var categoryValue = configurationProperty.GetValue(this);

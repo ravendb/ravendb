@@ -36,7 +36,7 @@ namespace Raven.Client.Extensions
 
         public static bool IsNullableType(this Type type)
         {
-            return type != null && type.GetTypeInfo().IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+            return type != null && type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
         }
 
         public static Type GetNonNullableType(this Type type)
@@ -52,7 +52,7 @@ namespace Raven.Client.Extensions
                 return null;
             if (seqType.IsArray)
                 return typeof(IEnumerable<>).MakeGenericType(seqType.GetElementType());
-            if (seqType.GetTypeInfo().IsGenericType)
+            if (seqType.IsGenericType)
             {
                 foreach (var arg in seqType.GetGenericArguments())
                 {
@@ -71,8 +71,8 @@ namespace Raven.Client.Extensions
                         return ienum;
                 }
             }
-            if (seqType.GetTypeInfo().BaseType != null && seqType.GetTypeInfo().BaseType != typeof(object))
-                return FindIEnumerable(seqType.GetTypeInfo().BaseType);
+            if (seqType.BaseType != null && seqType.BaseType != typeof(object))
+                return FindIEnumerable(seqType.BaseType);
             return null;
         }
     }

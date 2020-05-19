@@ -37,7 +37,7 @@ namespace SlowTests.Issues
 
         static RavenDB_6596()
         {
-            FindTests(typeof(CRUD).GetTypeInfo().Assembly, typeof(RavenDB_6596).GetTypeInfo().Assembly);
+            FindTests(typeof(CRUD).Assembly, typeof(RavenDB_6596).Assembly);
         }
 
         private static void FindTests(params Assembly[] assemblies)

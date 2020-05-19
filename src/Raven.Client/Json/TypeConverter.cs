@@ -50,7 +50,7 @@ namespace Raven.Client.Json
             if (type == typeof(Guid))
                 return ((Guid)value).ToString("D");
 
-            if (type.GetTypeInfo().IsSubclassOf(typeof(Enum)))
+            if (type.IsSubclassOf(typeof(Enum)))
                 return value.ToString();
 
             if (value is byte[] bytes)

@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         public void Can_write_large_string()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var stream = typeof(RavenDB_10958).GetTypeInfo().Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_10958.txt"))
+            using (var stream = typeof(RavenDB_10958).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_10958.txt"))
             using (var reader = new StreamReader(stream))
             {
                 var content = reader.ReadToEnd();
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
         public void Can_write_large_compressed_stream()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var stream = typeof(RavenDB_10958).GetTypeInfo().Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_10958.json"))
+            using (var stream = typeof(RavenDB_10958).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_10958.json"))
             {
                 var json = context.Read(stream, "test");
 

@@ -240,7 +240,7 @@ namespace Raven.Client.Documents.Linq
             if (GetValueFromExpressionWithoutConversion(expression, out var value))
             {
                 var nonNullableType = Nullable.GetUnderlyingType(type) ?? type;
-                if (value is Enum || nonNullableType.GetTypeInfo().IsEnum)
+                if (value is Enum || nonNullableType.IsEnum)
                 {
                     if (value is IEnumerable valueAsEnumerable)
                     {

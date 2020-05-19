@@ -122,7 +122,7 @@ namespace StressTests.Voron
 
         private static IList<string> ReadIds(string fileName, int maxSize = int.MaxValue)
         {
-            var assembly = typeof(PageSplitterStressTests).GetTypeInfo().Assembly;
+            var assembly = typeof(PageSplitterStressTests).Assembly;
             using (var fs = assembly.GetManifestResourceStream("StressTests.Voron.Data." + fileName))
             using (var reader = new StreamReader(fs))
             {

@@ -29,7 +29,7 @@ namespace Raven.Server.Web
             if (_unsafePageRenderedHtml == null)
             {
                 using (var reader = new StreamReader(
-                    typeof(RavenServer).GetTypeInfo().Assembly.GetManifestResourceStream(UnsafePageHtmlResource)))
+                    typeof(RavenServer).Assembly.GetManifestResourceStream(UnsafePageHtmlResource)))
                 {
                     var html = reader.ReadToEnd();
 
@@ -68,7 +68,7 @@ namespace Raven.Server.Web
         public static string RenderStudioAuthErrorPage(string reason)
         {
             using (var reader = new StreamReader(
-                typeof(RavenServer).GetTypeInfo().Assembly.GetManifestResourceStream(AuthErrorPageHtmlResource)))
+                typeof(RavenServer).Assembly.GetManifestResourceStream(AuthErrorPageHtmlResource)))
             {
                 var html = reader.ReadToEnd();
 

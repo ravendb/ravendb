@@ -527,7 +527,7 @@ namespace Raven.Server.Utils
 
             var targetType = typeof(T);
 
-            if (targetType.GetTypeInfo().IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
+            if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>))
             {
                 targetType = Nullable.GetUnderlyingType(targetType);
             }

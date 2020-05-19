@@ -20,8 +20,8 @@ namespace Raven.Client.Json
         private static Expression CastFromObject(this Expression expr, Type targetType)
         {
             return expr.Type == targetType ? expr :
-              targetType.GetTypeInfo().IsClass ? Expression.TypeAs(expr, targetType) :
-              targetType.GetTypeInfo().IsValueType ? Expression.Unbox(expr, targetType) : Expression.Convert(expr, targetType);
+              targetType.IsClass ? Expression.TypeAs(expr, targetType) :
+              targetType.IsValueType ? Expression.Unbox(expr, targetType) : Expression.Convert(expr, targetType);
         }
     }
 }

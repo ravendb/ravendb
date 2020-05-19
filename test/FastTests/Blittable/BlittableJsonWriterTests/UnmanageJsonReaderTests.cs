@@ -20,7 +20,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         public void CanReadAll(string name)
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            using (var stream = typeof(UnmanageJsonReaderTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
+            using (var stream = typeof(UnmanageJsonReaderTests).Assembly.GetManifestResourceStream(name))
             using (var parser = new UnmanagedJsonParser(ctx, new JsonParserState(), "test"))
             {
                 var buffer = new byte[4096];
@@ -41,7 +41,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
         public static IEnumerable<object[]> Samples()
         {
-            var assembly = typeof(BlittableFormatTests).GetTypeInfo().Assembly;
+            var assembly = typeof(BlittableFormatTests).Assembly;
 
             foreach (var name in assembly.GetManifestResourceNames())
             {

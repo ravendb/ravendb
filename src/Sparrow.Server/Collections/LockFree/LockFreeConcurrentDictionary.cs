@@ -35,7 +35,7 @@ namespace Sparrow.Server.Collections.LockFree
         internal uint _lastResizeTickMillis;
 
         private readonly static Func<object, TValue> objToValueS =
-                (typeof(TValue).GetTypeInfo().IsValueType) ?
+                (typeof(TValue).IsValueType) ?
                     (Func<object, TValue>)objToValValue :
                     objToValRef;
 

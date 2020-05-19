@@ -41,7 +41,7 @@ namespace SlowTests.Voron
                     var entries = tx.OpenTable(_entriesSchema, "IndexEntries");
                     for (int i = 0; i < 10; i++)
                     {
-                        var assembly = typeof(DuplicatePageUsage).GetTypeInfo().Assembly;
+                        var assembly = typeof(DuplicatePageUsage).Assembly;
                         fixed (byte* buffer = new byte[1024])
                         using (var fs = assembly.GetManifestResourceStream("SlowTests.Data.places.txt"))
                         using (var reader = new StreamReader(fs))

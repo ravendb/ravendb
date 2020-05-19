@@ -21,12 +21,12 @@ namespace SlowTests.Issues
         [NonLinuxFact]
         public void TestClassesShouldNotInheritFromOtherTestClassesToNotMultiplyTests()
         {
-            var classes = from assembly in GetAssemblies(typeof(RavenDB_7322).GetTypeInfo().Assembly)
+            var classes = from assembly in GetAssemblies(typeof(RavenDB_7322).Assembly)
                           from test in assembly.GetTypes()
                           where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
                           select test;
 
-            var dictionary = classes.ToDictionary(x => x, x => x.GetTypeInfo().BaseType);
+            var dictionary = classes.ToDictionary(x => x, x => x.BaseType);
 
             var sb = new StringBuilder();
             foreach (var kvp in dictionary)

@@ -24,8 +24,8 @@ namespace Raven.Client.Properties
 
         static RavenVersionAttribute()
         {
-            _assemblyVersion = typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetName().Version;
-            Instance = (RavenVersionAttribute)typeof(RavenVersionAttribute).GetTypeInfo().Assembly.GetCustomAttributes(typeof(RavenVersionAttribute)).Single();
+            _assemblyVersion = typeof(RavenVersionAttribute).Assembly.GetName().Version;
+            Instance = (RavenVersionAttribute)typeof(RavenVersionAttribute).Assembly.GetCustomAttributes(typeof(RavenVersionAttribute)).Single();
         }
 
         public RavenVersionAttribute()

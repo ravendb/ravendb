@@ -752,7 +752,7 @@ namespace FastTests.Blittable
         [Fact]
         public unsafe void ParseBlitAndValidate()
         {
-            var assembly = typeof(BlittableFormatTests).GetTypeInfo().Assembly;
+            var assembly = typeof(BlittableFormatTests).Assembly;
 
             var resources = assembly.GetManifestResourceNames();
             var resourcePrefix = typeof(BlittableFormatTests).Namespace + ".Jsons.";

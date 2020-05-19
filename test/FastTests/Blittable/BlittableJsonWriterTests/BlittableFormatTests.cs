@@ -22,7 +22,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [MemberData(nameof(Samples))]
         public void CheckRoundtrip(string name)
         {
-            using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
+            using (var stream = typeof(BlittableFormatTests).Assembly.GetManifestResourceStream(name))
             {
                 var serializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
 
@@ -70,7 +70,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 {
                     var resource = typeof(BlittableFormatTests).Namespace + ".Jsons." + name;
 
-                    using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
+                    using (var stream = typeof(BlittableFormatTests).Assembly.GetManifestResourceStream(resource))
                     {
                         var serializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
 
@@ -94,7 +94,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
         public static IEnumerable<object[]> Samples()
         {
-            var assembly = typeof(BlittableFormatTests).GetTypeInfo().Assembly;
+            var assembly = typeof(BlittableFormatTests).Assembly;
 
             foreach (var name in assembly.GetManifestResourceNames())
             {
