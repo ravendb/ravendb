@@ -16,16 +16,16 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
 {
     internal abstract class BlittableJsonConverterBase : IBlittableJsonConverterBase
     {
-        protected readonly DocumentConventions Conventions;
+        protected readonly ISerializationConventions Conventions;
 
-        protected BlittableJsonConverterBase(DocumentConventions conventions)
+        protected BlittableJsonConverterBase(ISerializationConventions conventions)
         {
             Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
         }
 
         public void PopulateEntity(object entity, BlittableJsonReaderObject json)
         {
-            var jsonSerializer = Conventions.Serialization.CreateSerializer();
+            var jsonSerializer = Conventions.CreateSerializer();
             PopulateEntity(entity, json, jsonSerializer);
         }
 

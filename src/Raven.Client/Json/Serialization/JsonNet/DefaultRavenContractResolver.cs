@@ -29,7 +29,7 @@ namespace Raven.Client.Json.Serialization.JsonNet
         private static ExtensionDataGetter _currentExtensionGetter;
 
         public static BindingFlags? MembersSearchFlag = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        private readonly DocumentConventions _conventions;
+        private readonly ISerializationConventions _conventions;
 
         [ThreadStatic]
         internal static bool RemovedIdentityProperty;
@@ -37,7 +37,7 @@ namespace Raven.Client.Json.Serialization.JsonNet
         [ThreadStatic]
         internal static object RootEntity;
 
-        public DefaultRavenContractResolver(DocumentConventions conventions)
+        public DefaultRavenContractResolver(ISerializationConventions conventions)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
 
@@ -117,7 +117,7 @@ namespace Raven.Client.Json.Serialization.JsonNet
             };
             jsonObjectContract.ExtensionDataGetter += (o) => _currentExtensionGetter?.Invoke(o);
 
-            var identityProperty = _conventions.GetIdentityProperty(objectType);
+            var identityProperty = _conventions.Conventions.GetIdentityProperty(objectType);
             if (identityProperty != null)
             {
                 var jsonProperty = jsonObjectContract.Properties.GetProperty(identityProperty.Name, StringComparison.Ordinal);

@@ -10,7 +10,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Newtonsoft.Json;
+using Raven.Client.Json.Serialization.JsonNet;
 using Xunit;
 using Xunit.Abstractions;
 

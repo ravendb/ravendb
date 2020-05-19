@@ -11,7 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
-using Raven.Client.Newtonsoft.Json;
+using Raven.Client.Json.Serialization.JsonNet;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;

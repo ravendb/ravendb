@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Newtonsoft.Json;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
@@ -17,12 +16,12 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 
         public override bool CanRead => false;
 
-        public JsonEnumerableConverter(DocumentConventions conventions)
+        public JsonEnumerableConverter(JsonNetSerializationConventions conventions)
         {
             if (conventions is null)
                 throw new ArgumentNullException(nameof(conventions));
 
-            _conventions = (JsonNetSerializationConventions)conventions.Serialization;
+            _conventions = conventions;
         }
 
         public override bool CanConvert(Type objectType)

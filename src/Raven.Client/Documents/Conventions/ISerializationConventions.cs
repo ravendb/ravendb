@@ -7,6 +7,8 @@ namespace Raven.Client.Documents.Conventions
 {
     public interface ISerializationConventions
     {
+        DocumentConventions Conventions { get; }
+
         void Freeze(DocumentConventions conventions);
 
         IJsonSerializer CreateSerializer();

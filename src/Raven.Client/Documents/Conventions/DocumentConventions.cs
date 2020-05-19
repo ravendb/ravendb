@@ -15,7 +15,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
-using Raven.Client.Newtonsoft.Json;
+using Raven.Client.Json.Serialization.JsonNet;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -153,7 +153,7 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public DocumentConventions()
         {
-            Serialization = new JsonNetSerializationConventions();
+            Serialization = new JsonNetSerializationConventions(this);
 
             _topologyCacheLocation = AppContext.BaseDirectory;
 
