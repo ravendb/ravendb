@@ -39,7 +39,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     {
                         var d = new DateTime(1980, 1, 1);
 
-                        var r = new Random();
+                        var r = new Random(100);
                         var previous = 0.0;
                         var tsf = session.TimeSeriesFor("zzz/1", "small");
 
