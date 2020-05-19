@@ -22,13 +22,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public abstract class RavenAwsClient : RavenStorageClient
     {
+        private static readonly HashSet<string> ChinaRegions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "cn-north-1",
+            "cn-northwest-1"
+        };
+
         protected const string DefaultRegion = "us-east-1";
+        protected readonly string Domain;
         protected bool IsRegionInvariantRequest;
-        public abstract string ServiceName { get; }
 
         private readonly string _awsAccessKey;
         private readonly byte[] _awsSecretKey;
         private readonly string _sessionToken;
+
+        public abstract string ServiceName { get; }
 
         protected string AwsRegion { get; set; }
 
@@ -38,16 +46,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             : base(progress, cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(amazonSettings.AwsAccessKey))
-                throw new ArgumentException("AWS access key cannot be null or empty");  
-            
+                throw new ArgumentException("AWS access key cannot be null or empty");
+
             if (string.IsNullOrWhiteSpace(amazonSettings.AwsSecretKey))
                 throw new ArgumentException("AWS secret key cannot be null or empty");
 
             _awsAccessKey = amazonSettings.AwsAccessKey;
             _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + amazonSettings.AwsSecretKey);
             _sessionToken = amazonSettings.AwsSessionToken;
-            
+
             RemoteFolderName = amazonSettings.RemoteFolderName;
+
+            Domain = GetDomain(amazonSettings.AwsRegionName);
+
+            static string GetDomain(string awsRegionName)
+            {
+                const string DefaultDomain = "amazonaws.com";
+                const string ChinaDomain = "amazonaws.com.cn";
+
+                if (string.IsNullOrWhiteSpace(awsRegionName))
+                    return DefaultDomain;
+
+                if (ChinaRegions.Contains(awsRegionName))
+                    return ChinaDomain;
+
+                return DefaultDomain;
+            }
         }
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)

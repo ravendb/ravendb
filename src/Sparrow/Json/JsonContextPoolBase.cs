@@ -14,10 +14,12 @@ namespace Sparrow.Json
     {
         private readonly object _locker = new object();
 
-        private long _generation;
         private bool _disposed;
 
         protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
+        private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
+        private long _generation;
+
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly long _maxContextSizeToKeepInBytes;
         private readonly long _maxNumberOfContextsToKeepInGlobalStack;
@@ -345,13 +347,16 @@ namespace Sparrow.Json
 
         public void LowMemory(LowMemorySeverity lowMemorySeverity)
         {
+            if (LowMemoryFlag.Raise())
+            {
+                Interlocked.Increment(ref _generation);
+            }
+
             if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
                 return;
 
-            if (LowMemoryFlag.Raise() == false)
+            if (_isExtremelyLowMemory.Raise() == false)
                 return;
-
-            Interlocked.Increment(ref _generation);
 
             ClearStack(_globalStack);
 
@@ -384,6 +389,7 @@ namespace Sparrow.Json
         public void LowMemoryOver()
         {
             LowMemoryFlag.Lower();
+            _isExtremelyLowMemory.Lower();
         }
 
         private sealed class CountingConcurrentStack<TItem>

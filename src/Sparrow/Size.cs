@@ -206,14 +206,15 @@ namespace Sparrow
 
         public override string ToString()
         {
-            if (Math.Abs(_valueInBytes) > OneTb)
+            if (Math.Abs(_valueInBytes) >= OneTb)
                 return $"{Math.Round(_valueInBytes / (double)OneTb, 4):#,#.####} TBytes";
-            if (Math.Abs(_valueInBytes) > OneGb)
+            if (Math.Abs(_valueInBytes) >= OneGb)
                 return $"{Math.Round(_valueInBytes / (double)OneGb, 3):#,#.###} GBytes";
-            if (Math.Abs(_valueInBytes) > OneMb)
+            if (Math.Abs(_valueInBytes) >= OneMb)
                 return $"{Math.Round(_valueInBytes / (double)OneMb, 2):#,#.##} MBytes";
-            if (Math.Abs(_valueInBytes) > OneKb)
+            if (Math.Abs(_valueInBytes) >= OneKb)
                 return $"{Math.Round(_valueInBytes / (double)OneKb, 2):#,#.##} KBytes";
+
             return $"{_valueInBytes:#,#0} Bytes";
         }
 
