@@ -1,43 +1,27 @@
-<div id="database-settings-view" class="content-margin flex-vertical absolute-fill">
-    <div class="flex-horizontal flex-wrap margin-left margin-left-lg">
-        <div>
-            <button class="btn btn-primary" data-bind="click: save, enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
-                <i class="icon-save"></i><span>Save</span>
-            </button>
-        </div>
-        <div class="btn-group">
-            <button class="btn btn-default dropdown-toggle filter-entries" data-toggle="dropdown">
-                <span data-bind="visible: groupToShow() === 'allEntries'">All Entries</span>
-                <span data-bind="visible: groupToShow() === 'databaseEntries'">Database Entries</span>
-                <span data-bind="visible: groupToShow() === 'customizedDatabaseEntries'">Customized Database Entries</span>
-                <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li title="Show all entries per database & server-wide"><a href="#" data-bind="click: _.partial(setGroupToShow, 'allEntries')">All Entries</a></li>
-                <li title="Show only entries per this database"><a href="#" data-bind="click: _.partial(setGroupToShow, 'databaseEntries')">Database Entries</a></li>
-                <li title="Show entries that are customized per this database"><a href="#" data-bind="click: _.partial(setGroupToShow, 'customizedDatabaseEntries')">Customized Database Entries</a></li>
-            </ul>
-        </div>
+<div id="database-settings-view" class="flex-vertical absolute-fill">
+    <div class="flex-horizontal flex-wrap margin-top margin-top-lg margin-left margin-left-lg margin-bottom margin-bottom-lg">
         <div class="filter-entries">
             <input class="form-control" placeholder="Filter Keys" data-bind="textInput: filterKeys" />
         </div>
-        <div>
-            <button class="btn btn-default" data-bind="click: refresh, css: { 'btn-spinner': spinners.refresh }, disable: spinners.refresh() || spinners.save()" title="Reload settings">
+        <div class="btn-group">
+            <button class="btn btn-primary" data-bind="visible: viewMode() === 'editMode', click: save, enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
+                <i class="icon-save"></i><span>Save</span>
+            </button>
+            <button class="btn btn-default" data-bind="visible: viewMode() === 'editMode', click: cancelEdit">
+                <i class="icon-cancel"></i><span>Cancel</span>
+            </button>
+            <button class="btn btn-default" data-bind="visible: viewMode() === 'summaryMode', click: refresh, css: { 'btn-spinner': spinners.refresh }, disable: spinners.refresh()" title="Reload settings">
                 <i class="icon-refresh"></i><span>Refresh</span>
             </button>
+            <button class="btn btn-default" data-bind="visible: viewMode() === 'summaryMode', click: switchToEditMode, disable: spinners.refresh()">
+                <i class="icon-edit"></i><span>Edit</span>
+            </button>
         </div>
-    </div>
-    <div class="flex-horizontal flex-noshrink summary-buttons">
         <div class="flex-separator"></div>
-        <div data-bind="visible: viewMode() === 'summaryMode'">
-            <button class="btn btn-sm btn-default" data-bind="click: switchToEditMode" title="Edit the Database Settings">
-                <i class="icon-edit"></i><span>Edit Entries</span>
-            </button>
-        </div>
-        <div data-bind="visible: viewMode() === 'editMode', enable: !isSaveEnabled()">
-            <button class="btn btn-sm btn-default" data-bind="click: exitEditMode" title="View all effective values in a condensed view">
-                <i class="icon-table"></i><span>View Summary</span>
-            </button>
+        <div data-bind="visible: hasPendingValues() && viewMode() === 'summaryMode'" class="margin-right margin-right-lg" id="pendingValuesWarning">
+            <span class="text-warning bg-warning padding padding-sm">
+                <i class="icon-warning margin-right margin-right-sm"></i>Note: Pending values are Not yet applied and will only be in effect once the database is reloaded !
+            </span>
         </div>
     </div>
     <div class="flex-horizontal flex-stretch-items absolute-fill content-margin entries-grid" data-bind="visible: viewMode() === 'editMode'">
@@ -122,10 +106,15 @@
 <script type="text/html" id="db-settings-override-template">
     <div class="form-group no-margin margin-left margin-bottom margin-bottom-sm padding padding-xs no-padding-right flex-vertical">
         <div class="toggle">
-            <input type="checkbox" data-bind="checked: override, attr: {'id': 'overrideToggle_' + keyName() }" />
-            <label title="Customize the database value" data-bind="attr: { 'for': 'overrideToggle_' + keyName() }">
-                <span>Override</span>
-            </label>
+            <div title="Customize the database value">
+                <input type="checkbox" data-bind="checked: override, attr: {'id': 'overrideToggle_' + keyName() }" />
+                <label data-bind="attr: { 'for': 'overrideToggle_' + keyName() }">
+                    <span>Override</span>
+                </label>
+            </div>
+            <small class="text-warning bg-warning padding padding-xs margin-left" data-bind="visible: hasPendingValue" title="This configuration will be in effect only after reloading the database">
+                <i class="icon-warning"></i><span>This configuration is pending</span>
+            </small>
         </div>
         <div data-bind="collapse: override" class="margin-left margin-left-lg override-options flex-horizontal">
             <div class="margin-left margin-left-sm margin-right margin-right-lg flex-grow" data-bind="validationElement: customizedDatabaseValue">

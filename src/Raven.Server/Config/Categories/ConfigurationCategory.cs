@@ -60,7 +60,7 @@ namespace Raven.Server.Config.Categories
                     return null;
 
                 // This check is needed because cfg.GetSection(keyName) returns null even if key does Not exist in configuration!
-                keyExistsInConfiguration = cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName));
+                keyExistsInConfiguration = cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName, StringComparison.OrdinalIgnoreCase));
 
                 var val = GetValue(cfg, keyName);
                 if (val != null)

@@ -637,6 +637,10 @@ class virtualGrid<T> {
     }
 
     private normalizeTarget($target: JQuery) {
+        while ($target.hasClass("use-parent-action")) {
+            $target = $target.parent();
+        }
+        
         const tagName = _.toLower($target.prop("tagName"));
         if (tagName === "label") {
             const input = $target.prev("input");

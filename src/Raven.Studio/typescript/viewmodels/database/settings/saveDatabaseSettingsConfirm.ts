@@ -5,7 +5,7 @@ class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResu
 
     settingsToSaveText: string;
     
-    constructor(private databaseSettingsToSave: Array<setttingsItem>) {
+    constructor(private databaseSettingsToSave: Array<setttingsItem>, private howToReloadDatabaseHtml: string) {
         super();
         
         if (this.databaseSettingsToSave.length === 0) {
@@ -14,7 +14,10 @@ class saveDatabaseSettingsConfirm extends confirmViewModelBase<confirmDialogResu
             this.settingsToSaveText = "<pre>{<br>";
 
             databaseSettingsToSave.forEach(x => {
-                this.settingsToSaveText += `   <span>{ ${genUtils.escapeHtml(x.key)} : ${genUtils.escapeHtml(x.value)} }</span><br>`;
+                const keyPart = `"${genUtils.escapeHtml(x.key)}"`;
+                const valuePart =  x.value ? `"${genUtils.escapeHtml(x.value)}"` : "null";
+                
+                this.settingsToSaveText += `   <span>{ ${keyPart} : ${valuePart} }</span><br>`;
             });
 
             this.settingsToSaveText +=  "}</pre>";
