@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
@@ -10,14 +12,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         internal const char TimeSeriesRollupSeparator = '@';
         public Dictionary<string, TimeSeriesCollectionConfiguration> Collections { get; set; }
 
-        public TimeSpan PolicyCheckFrequency { get; set; } = TimeSpan.FromMinutes(10);
+        public TimeSpan? PolicyCheckFrequency { get; set; }
 
-        public ValueNameMapper ValueNameMapper { get; set; }
+        public TimeSeriesValueNameMapper ValueNameMapper { get; set; }
 
-        internal void Initialize()
+        internal void InitializeRollupAndRetention()
         {
             if (Collections == null) 
                 return;
+
+            PolicyCheckFrequency ??= TimeSpan.FromMinutes(10);
 
             if (PolicyCheckFrequency <= TimeSpan.Zero)
                 throw new ArgumentException($"{nameof(PolicyCheckFrequency)} must be positive.");
@@ -34,38 +38,39 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 [nameof(Collections)] = DynamicJsonValue.Convert(Collections),
                 [nameof(PolicyCheckFrequency)] = PolicyCheckFrequency,
-                [nameof(ValueNameMapper)] = ValueNameMapper.ToJson()
+                [nameof(ValueNameMapper)] = ValueNameMapper?.ToJson()
             };
         }
     }
     
-    public class ValueNameMapper : IDynamicJson
+    public class TimeSeriesValueNameMapper : IDynamicJson, IPostJsonDeserialization
     {
         // collection -> timeseries -> names
-        internal Dictionary<string, Dictionary<string, string[]>> CollectionHolder = new Dictionary<string, Dictionary<string, string[]>>();
+        public Dictionary<string, Dictionary<string, string[]>> Mapping { get; set; } =
+            new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);
 
-        public ValueNameMapper()
+        public TimeSeriesValueNameMapper()
         {
             // for de-serializer
         }
 
-        public ValueNameMapper(string collection, string timeSeries, string[] names)
+        public TimeSeriesValueNameMapper(string collection, string timeSeries, string[] names)
         {
             AddValueName(collection, timeSeries, names);
         }
 
         public void AddValueName(string collection, string timeSeries, string[] names)
         {
-            if (CollectionHolder.TryGetValue(collection, out var timeSeriesHolder) == false)
-                timeSeriesHolder = CollectionHolder[collection] = new Dictionary<string, string[]>();
+            if (Mapping.TryGetValue(collection, out var timeSeriesHolder) == false)
+                timeSeriesHolder = Mapping[collection] = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
             timeSeriesHolder[timeSeries] = names;
         }
 
         public bool TryAddValueName(string collection, string timeSeries, string[] names)
         {
-            if (CollectionHolder.TryGetValue(collection, out var timeSeriesHolder) == false)
-                timeSeriesHolder = CollectionHolder[collection] = new Dictionary<string, string[]>();
+            if (Mapping.TryGetValue(collection, out var timeSeriesHolder) == false)
+                timeSeriesHolder = Mapping[collection] = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
             if (timeSeriesHolder.ContainsKey(timeSeries))
                 return false;
@@ -76,7 +81,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public string[] GetNames(string collection, string timeSeries)
         {
-            if (CollectionHolder.TryGetValue(collection, out var timeSeriesHolder) == false)
+            if (Mapping.TryGetValue(collection, out var timeSeriesHolder) == false)
                 return null;
 
             if (timeSeriesHolder.ContainsKey(timeSeries) == false)
@@ -91,15 +96,33 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public DynamicJsonValue ToJson()
         {
             var djv = new DynamicJsonValue();
-            foreach (var collection in CollectionHolder)
+            foreach (var collection in Mapping)
             {
                 djv[collection.Key] = DynamicJsonValue.Convert(collection.Value);
             }
 
             return new DynamicJsonValue
             {
-                [nameof(CollectionHolder)] = djv
+                [nameof(Mapping)] = djv
             };
+        }
+
+        [OnDeserialized]
+        internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
+        {
+            PostDeserialization();
+        }
+
+        public void PostDeserialization()
+        {
+            // ensure StringComparer.InvariantCultureIgnoreCase
+            var dic = new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in Mapping)
+            {
+                dic[kvp.Key] = new Dictionary<string, string[]>(kvp.Value, StringComparer.OrdinalIgnoreCase);
+            }
+
+            Mapping = dic;
         }
     }
 }
