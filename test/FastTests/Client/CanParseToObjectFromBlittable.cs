@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,6 +25,7 @@ namespace FastTests.Client
             public List<Child> Children;
 #pragma warning restore 649
         }
+
         private class Child
         {
 #pragma warning disable 649
@@ -43,7 +44,7 @@ namespace FastTests.Client
 
                 var serializer = new JsonSerializer();
                 var blittableJsonReader = new BlittableJsonReader();
-                blittableJsonReader.Init(reader);
+                blittableJsonReader.Initialize(reader);
                 var u = serializer.Deserialize<User>(blittableJsonReader);
 
                 Assert.Equal("Oren", u.Name);
@@ -57,7 +58,6 @@ namespace FastTests.Client
                 Assert.Equal(1, u.Children.Count);
                 Assert.Equal("Date", u.Children[0].Name);
             }
-
         }
     }
 }

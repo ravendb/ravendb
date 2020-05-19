@@ -69,8 +69,6 @@ namespace FastTests.Client.Indexing
                     var now = marker.StartTime;
                     var queryId = marker.QueryId;
 
-                    var conventions = new DocumentConventions();
-
                     using (var commands = store.Commands())
                     {
                         var json = commands.RawGetJson<BlittableJsonReaderObject>("/debug/queries/running");
@@ -100,7 +98,7 @@ namespace FastTests.Client.Indexing
                                 BlittableJsonReaderObject queryInfo;
                                 Assert.True(info.TryGet(nameof(ExecutingQueryInfo.QueryInfo), out queryInfo));
 
-                                var query = (IndexQuery)conventions.DeserializeEntityFromBlittable(typeof(IndexQuery), queryInfo);
+                                var query = (IndexQuery)store.Conventions.Serialization.DeserializeEntityFromBlittable(typeof(IndexQuery), queryInfo);
 
                                 Assert.True(q.Equals(query));
                                 continue;

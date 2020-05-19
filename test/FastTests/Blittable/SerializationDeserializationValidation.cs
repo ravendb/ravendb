@@ -1,7 +1,7 @@
-﻿using Raven.Client.Documents.Session;
-using Sparrow.Json;
-using System;
+﻿using System;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,6 +11,7 @@ namespace FastTests.Blittable
     {
         public static readonly Func<BlittableJsonReaderObject, SerializationDeserializationValidation.Values> SerializationDeserializationValidation = GenerateJsonDeserializationRoutine<SerializationDeserializationValidation.Values>();
     }
+
     public class SerializationDeserializationValidation : NoDisposalNeeded
     {
         public SerializationDeserializationValidation(ITestOutputHelper output) : base(output)
@@ -24,11 +25,11 @@ namespace FastTests.Blittable
             public long longMinVal;
             public long longMaxVal;
             public double doubleMinVal;
-            public double doubleMaxVal;            
+            public double doubleMaxVal;
             public double doubleNegativeInfinity;
             public double doublePositiveInfinity;
             public double doubleNan;
-            public double doubleEpsilon;                        
+            public double doubleEpsilon;
             public float floatMinVal;
             public float floatMaxVal;
             public float floatMaxPercision;
@@ -36,11 +37,11 @@ namespace FastTests.Blittable
             public float floatNegativeInfinity;
             public float floatNan;
             public uint uintMaxVal;
-            public ulong ulongMaxVal;            
-            public string stringMaxLength;            
+            public ulong ulongMaxVal;
+            public string stringMaxLength;
             public DateTime dateMaxPercision;
             public DateTimeOffset dateTimeOffsetMinVal;
-            public DateTimeOffset dateTimeOffsetMaxVal;      
+            public DateTimeOffset dateTimeOffsetMaxVal;
             public TimeSpan timeSpanMinVal;
             public TimeSpan timeSpanMaxVal;
             public TimeSpan timeSpanDays;
@@ -54,7 +55,6 @@ namespace FastTests.Blittable
         [Fact]
         public void ValidateRanges()
         {
-
             var values = new Values
             {
                 intMinVal = Int32.MinValue,
@@ -66,14 +66,14 @@ namespace FastTests.Blittable
                 doubleNegativeInfinity = double.NegativeInfinity,
                 doublePositiveInfinity = double.PositiveInfinity,
                 doubleNan = double.NaN,
-                doubleEpsilon = double.Epsilon,                                
+                doubleEpsilon = double.Epsilon,
                 floatMinVal = float.MinValue,
                 floatMaxVal = float.MaxValue,
                 floatMaxPercision = float.Epsilon,
                 floatNegativeInfinity = float.NegativeInfinity,
                 floatPositiveInfinity = float.PositiveInfinity,
                 floatNan = float.NaN,
-                uintMaxVal = uint.MaxValue, 
+                uintMaxVal = uint.MaxValue,
                 ulongMaxVal = ulong.MaxValue,
                 stringMaxLength = string.Join("", Enumerable.Repeat(1, short.MaxValue)),
                 dateMaxPercision = DateTime.Now,
@@ -87,10 +87,10 @@ namespace FastTests.Blittable
                 timeSpanSeconds = TimeSpan.FromSeconds(1),
                 timeSpanMiliseconds = TimeSpan.FromMilliseconds(1),
                 timeSpanNanoseconds = TimeSpan.FromTicks(1)
-        };
+            };
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var blittableValues = EntityToBlittable.ConvertCommandToBlittable(values, context);
+                var blittableValues = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(values, context);
 
                 var valuesDeserialized = JsonDeserializationTest.SerializationDeserializationValidation(blittableValues);
 
@@ -103,8 +103,8 @@ namespace FastTests.Blittable
                 Assert.Equal(values.doubleMaxVal, valuesDeserialized.doubleMaxVal);
                 Assert.Equal(values.doubleNegativeInfinity, valuesDeserialized.doubleNegativeInfinity);
                 Assert.Equal(values.doublePositiveInfinity, valuesDeserialized.doublePositiveInfinity);
-                Assert.Equal(values.doubleNan, valuesDeserialized.doubleNan); 
-                Assert.Equal(values.doubleEpsilon, valuesDeserialized.doubleEpsilon);                                
+                Assert.Equal(values.doubleNan, valuesDeserialized.doubleNan);
+                Assert.Equal(values.doubleEpsilon, valuesDeserialized.doubleEpsilon);
                 Assert.Equal(values.floatMinVal, valuesDeserialized.floatMinVal);
                 Assert.Equal(values.floatMaxVal, valuesDeserialized.floatMaxVal);
                 Assert.Equal(values.floatMaxPercision, valuesDeserialized.floatMaxPercision);
@@ -126,8 +126,6 @@ namespace FastTests.Blittable
                 Assert.Equal(values.timeSpanMiliseconds, valuesDeserialized.timeSpanMiliseconds);
                 Assert.Equal(values.timeSpanNanoseconds, valuesDeserialized.timeSpanNanoseconds);
             }
-
-
         }
     }
 }

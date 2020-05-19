@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -73,28 +74,27 @@ namespace SlowTests.Issues
         public void ShouldAssignTheTypeOfDerivedProperties()
         {
             var entity5 = new IDocumentWithPropertyTypeOverride5();
-            var type5 = EntityToBlittable.GetPropertyType(nameof(entity5.Reference), entity5.GetType());
+            var type5 = BlittableJsonConverter.GetPropertyType(nameof(entity5.Reference), entity5.GetType());
             Assert.Equal(typeof(IRefDerived_Class), type5);
 
-
             var entity4 = new DocumentWithPropertyTypeOverride4();
-            var type4 = EntityToBlittable.GetPropertyType(nameof(entity4.Reference), entity4.GetType());
+            var type4 = BlittableJsonConverter.GetPropertyType(nameof(entity4.Reference), entity4.GetType());
             Assert.Equal(typeof(RefDerived3), type4);
 
             var entity3 = new DocumentWithPropertyTypeOverride3();
-            var type3 = EntityToBlittable.GetPropertyType(nameof(entity3.Reference), entity3.GetType());
+            var type3 = BlittableJsonConverter.GetPropertyType(nameof(entity3.Reference), entity3.GetType());
             Assert.Equal(typeof(RefDerived3), type3);
 
             var entity2 = new DocumentWithPropertyTypeOverride2();
-            var type2 = EntityToBlittable.GetPropertyType(nameof(entity2.Reference), entity2.GetType());
+            var type2 = BlittableJsonConverter.GetPropertyType(nameof(entity2.Reference), entity2.GetType());
             Assert.Equal(typeof(RefDerived2), type2);
 
             var entity1 = new DocumentWithPropertyTypeOverride1();
-            var type1 = EntityToBlittable.GetPropertyType(nameof(entity1.Reference), entity1.GetType());
+            var type1 = BlittableJsonConverter.GetPropertyType(nameof(entity1.Reference), entity1.GetType());
             Assert.Equal(typeof(RefDerived2), type1);
 
             var entity0 = new DocumentBase();
-            var type0 = EntityToBlittable.GetPropertyType(nameof(entity0.Reference), entity0.GetType());
+            var type0 = BlittableJsonConverter.GetPropertyType(nameof(entity0.Reference), entity0.GetType());
             Assert.Equal(typeof(RefDerived1), type0);
         }
 
@@ -102,27 +102,27 @@ namespace SlowTests.Issues
         public void ShouldAssignTheTypeOfDerivedPropertiesWithInterface()
         {
             var entity5 = new IDocumentWithPropertyTypeOverride5();
-            var type5 = EntityToBlittable.GetPropertyType(nameof(entity5.Reference), entity5.GetType());
+            var type5 = BlittableJsonConverter.GetPropertyType(nameof(entity5.Reference), entity5.GetType());
             Assert.Equal(typeof(IRefDerived_Class), type5);
 
             var entity4 = new IDocumentWithPropertyTypeOverride4();
-            var type4 = EntityToBlittable.GetPropertyType(nameof(entity4.Reference), entity4.GetType());
+            var type4 = BlittableJsonConverter.GetPropertyType(nameof(entity4.Reference), entity4.GetType());
             Assert.Equal(typeof(IRefDerived3), type4);
 
             var entity3 = new IDocumentWithPropertyTypeOverride3();
-            var type3 = EntityToBlittable.GetPropertyType(nameof(entity3.Reference), entity3.GetType());
+            var type3 = BlittableJsonConverter.GetPropertyType(nameof(entity3.Reference), entity3.GetType());
             Assert.Equal(typeof(IRefDerived3), type3);
 
             var entity2 = new IDocumentWithPropertyTypeOverride2();
-            var type2 = EntityToBlittable.GetPropertyType(nameof(entity2.Reference), entity2.GetType());
+            var type2 = BlittableJsonConverter.GetPropertyType(nameof(entity2.Reference), entity2.GetType());
             Assert.Equal(typeof(IRefDerived2), type2);
 
             var entity1 = new IDocumentWithPropertyTypeOverride1();
-            var type1 = EntityToBlittable.GetPropertyType(nameof(entity1.Reference), entity1.GetType());
+            var type1 = BlittableJsonConverter.GetPropertyType(nameof(entity1.Reference), entity1.GetType());
             Assert.Equal(typeof(IRefDerived2), type1);
 
             var entity0 = new IDocumentWithPropertyTypeOverrideBase();
-            var type0 = EntityToBlittable.GetPropertyType(nameof(entity0.Reference), entity0.GetType());
+            var type0 = BlittableJsonConverter.GetPropertyType(nameof(entity0.Reference), entity0.GetType());
             Assert.Equal(typeof(IRefBase), type0);
         }
 
@@ -178,6 +178,7 @@ namespace SlowTests.Issues
         private class IRefDerived2 : IRefBase
         {
         }
+
         private class IRefDerived3 : IRefBase
         {
         }
@@ -200,19 +201,18 @@ namespace SlowTests.Issues
         {
             public new IRefDerived3 Reference { get; set; }
         }
+
         private class IDocumentWithPropertyTypeOverride4 : IDocumentWithPropertyTypeOverride3
         {
         }
 
         private class IRefDerived_Class : IRefDerived2
         {
-
         }
 
         private class IDocumentWithPropertyTypeOverride5 : IDocumentWithPropertyTypeOverride2
         {
             public new IRefDerived_Class Reference { get; set; }
         }
-
     }
 }

@@ -1,8 +1,9 @@
 using System;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 {
     internal sealed class JsonIMetadataDictionaryConverter : RavenJsonConverter
     {

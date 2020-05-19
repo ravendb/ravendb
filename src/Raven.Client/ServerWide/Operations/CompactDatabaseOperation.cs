@@ -2,10 +2,9 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
@@ -37,7 +36,7 @@ namespace Raven.Client.ServerWide.Operations
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));
 
-                _compactSettings = EntityToBlittable.ConvertCommandToBlittable(compactSettings, context);
+                _compactSettings = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(compactSettings, context);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -51,7 +50,6 @@ namespace Raven.Client.ServerWide.Operations
                     {
                         ctx.Write(stream, _compactSettings);
                     })
-
                 };
 
                 return request;

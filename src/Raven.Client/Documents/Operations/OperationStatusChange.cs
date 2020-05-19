@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations
             return new OperationStatusChange
             {
                 OperationId = operationId,
-                State = (OperationState)conventions.DeserializeEntityFromBlittable(typeof(OperationState), stateAsJson)
+                State = conventions.Serialization.DeserializeEntityFromBlittable<OperationState>(stateAsJson)
             };
         }
     }

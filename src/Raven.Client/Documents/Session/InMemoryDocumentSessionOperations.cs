@@ -15,7 +15,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -31,6 +30,7 @@ using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -65,21 +65,27 @@ namespace Raven.Client.Documents.Session
         public TransactionMode TransactionMode;
 
         private bool _isDisposed;
-        private JsonSerializer _jsonSerializer;
+        private IJsonSerializer _jsonSerializer;
 
         /// <summary>
-        /// The session id 
+        /// The session id
         /// </summary>
         public Guid Id { get; }
 
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
+
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
+
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         public event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
+
         public event EventHandler<AfterConversionToDocumentEventArgs> OnAfterConversionToDocument;
+
         public event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
+
         public event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
         /// <summary>
@@ -218,9 +224,9 @@ namespace Raven.Client.Documents.Session
         public int DeferredCommandsCount => DeferredCommands.Count;
 
         public GenerateEntityIdOnTheClient GenerateEntityIdOnTheClient { get; }
-        public EntityToBlittable EntityToBlittable { get; }
+        public ISessionBlittableJsonConverter JsonConverter { get; }
 
-        protected internal JsonSerializer JsonSerializer => _jsonSerializer ?? (_jsonSerializer = RequestExecutor.Conventions.CreateSerializer());
+        protected internal IJsonSerializer JsonSerializer => _jsonSerializer ?? (_jsonSerializer = RequestExecutor.Conventions.Serialization.CreateSerializer());
 
         /// <summary>
         /// Initializes a new instance of the <see cref="InMemoryDocumentSessionOperations"/> class.
@@ -242,12 +248,12 @@ namespace Raven.Client.Documents.Session
             UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
-            EntityToBlittable = new EntityToBlittable(this);
+            JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
             SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
-                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter, 
+                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                 extensions: JavascriptConversionExtensions.LinqMethodsSupport.Instance)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
@@ -328,7 +334,6 @@ namespace Raven.Client.Documents.Session
             return tsList;
         }
 
-
         /// <summary>
         /// Gets the Change Vector for the specified entity.
         /// If the entity is transient, it will load the change vector from the store
@@ -375,7 +380,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whether a document with the specified id is loaded in the 
+        /// Returns whether a document with the specified id is loaded in the
         /// current session
         /// </summary>
         public bool IsLoaded(string id)
@@ -391,7 +396,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whether a document with the specified id is deleted 
+        /// Returns whether a document with the specified id is deleted
         /// or known to be missing
         /// </summary>
         public bool IsDeleted(string id)
@@ -418,10 +423,10 @@ namespace Raven.Client.Documents.Session
         {
             if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
                 throw new InvalidOperationException($@"The maximum number of requests ({MaxNumberOfRequestsPerSession}) allowed for this session has been reached.
-Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
+Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and
 Raven provides facilities like Load(string[] ids) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConventions.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
-advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
+advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a
 more responsive application.
 ");
         }
@@ -520,7 +525,7 @@ more responsive application.
                 // the local instance may have been changed, we adhere to the current Unit of Work
                 // instance, and return that, ignoring anything new.
                 if (docInfo.Entity == null)
-                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity: !noTracking);
+                    docInfo.Entity = JsonConverter.FromBlittable(entityType, ref document, id, trackEntity: noTracking == false);
 
                 if (noTracking == false)
                 {
@@ -534,7 +539,7 @@ more responsive application.
             if (IncludedDocumentsById.TryGetValue(id, out docInfo))
             {
                 if (docInfo.Entity == null)
-                    docInfo.Entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity: !noTracking);
+                    docInfo.Entity = JsonConverter.FromBlittable(entityType, ref document, id, trackEntity: noTracking == false);
 
                 if (noTracking == false)
                 {
@@ -546,7 +551,7 @@ more responsive application.
                 return docInfo.Entity;
             }
 
-            var entity = EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity: !noTracking);
+            var entity = JsonConverter.FromBlittable(entityType, ref document, id, trackEntity: noTracking == false);
 
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
                 throw new InvalidOperationException("Document " + id + " must have Change Vector");
@@ -618,7 +623,7 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsById.TryGetValue(id, out documentInfo))
             {
-                using (var newObj = EntityToBlittable.ConvertEntityToBlittable(documentInfo.Entity, documentInfo))
+                using (var newObj = JsonConverter.ToBlittable(documentInfo.Entity, documentInfo))
                 {
                     if (documentInfo.Entity != null && EntityChanged(newObj, documentInfo, null))
                     {
@@ -695,7 +700,7 @@ more responsive application.
             }
             else
             {
-                // Store it back into the Id field so the client has access to it                    
+                // Store it back into the Id field so the client has access to it
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
@@ -780,7 +785,7 @@ more responsive application.
                     return id;
 
                 id = await GenerateIdAsync(entity).ConfigureAwait(false);
-                // If we generated a new id, store it back into the Id field so the client has access to it                    
+                // If we generated a new id, store it back into the Id field so the client has access to it
                 if (id != null)
                     GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, id);
                 return id;
@@ -900,7 +905,7 @@ more responsive application.
         {
             if (HasClusterSession == false)
                 return;
-            
+
             var clusterSession = GetClusterSession();
             if (clusterSession.NumberOfTrackedCompareExchangeValues == 0)
                 return;
@@ -1028,7 +1033,7 @@ more responsive application.
 
                     var metadataUpdated = UpdateMetadataModifications(entity.Value);
 
-                    var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                    var document = JsonConverter.ToBlittable(entity.Key, entity.Value);
 
                     if (EntityChanged(document, entity.Value, null) == false)
                     {
@@ -1050,7 +1055,7 @@ more responsive application.
                             EntityChanged(document, entity.Value, null))
                         {
                             document.Dispose();
-                            document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                            document = JsonConverter.ToBlittable(entity.Key, entity.Value);
                         }
                     }
 
@@ -1153,7 +1158,7 @@ more responsive application.
             {
                 foreach (var entity in DocumentsByEntity)
                 {
-                    using (var document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value))
+                    using (var document = JsonConverter.ToBlittable(entity.Key, entity.Value))
                     {
                         if (EntityChanged(document, entity.Value, null))
                         {
@@ -1178,7 +1183,7 @@ more responsive application.
             DocumentInfo documentInfo;
             if (DocumentsByEntity.TryGetValue(entity, out documentInfo) == false)
                 return false;
-            using (var document = EntityToBlittable.ConvertEntityToBlittable(entity, documentInfo))
+            using (var document = JsonConverter.ToBlittable(entity, documentInfo))
                 return EntityChanged(document, documentInfo, null);
         }
 
@@ -1224,7 +1229,7 @@ more responsive application.
             foreach (var pair in DocumentsById)
             {
                 UpdateMetadataModifications(pair.Value);
-                var newObj = EntityToBlittable.ConvertEntityToBlittable(pair.Value.Entity, pair.Value);
+                var newObj = JsonConverter.ToBlittable(pair.Value.Entity, pair.Value);
                 EntityChanged(newObj, pair.Value, changes);
             }
         }
@@ -1255,7 +1260,7 @@ more responsive application.
             }
 
             DeletedEntities.Evict(entity);
-            EntityToBlittable.RemoveFromMissing(entity);
+            JsonConverter.RemoveFromMissing(entity);
         }
 
         /// <summary>
@@ -1273,7 +1278,7 @@ more responsive application.
             DeferredCommandsDictionary.Clear();
             ClearClusterSession();
             PendingLazyOperations.Clear();
-            EntityToBlittable.Clear();
+            JsonConverter.Clear();
         }
 
         /// <summary>
@@ -1459,7 +1464,6 @@ more responsive application.
 
                     return;
                 }
-
             }
             else
             {
@@ -1626,7 +1630,6 @@ more responsive application.
                     cache.Values[counter] = null;
                 }
             }
-
         }
 
         internal void RegisterTimeSeries(BlittableJsonReaderObject resultTimeSeries)
@@ -2103,7 +2106,7 @@ more responsive application.
         private object DeserializeFromTransformer(Type entityType, string id, BlittableJsonReaderObject document, bool trackEntity)
         {
             HandleInternalMetadata(document);
-            return EntityToBlittable.ConvertToEntity(entityType, id, ref document, trackEntity);
+            return JsonConverter.FromBlittable(entityType, ref document, id, trackEntity);
         }
 
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
@@ -2159,9 +2162,9 @@ more responsive application.
             }
 
             if (documentInfo.Entity != null && NoTracking == false)
-                EntityToBlittable.RemoveFromMissing(documentInfo.Entity);
+                JsonConverter.RemoveFromMissing(documentInfo.Entity);
 
-            documentInfo.Entity = EntityToBlittable.ConvertToEntity(typeof(T), documentInfo.Id, ref document, !NoTracking);
+            documentInfo.Entity = JsonConverter.FromBlittable<T>(ref document, documentInfo.Id, NoTracking == false);
             documentInfo.Document = document;
 
             var type = entity.GetType();

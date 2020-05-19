@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,12 @@ namespace SlowTests.Bugs.Stacey
         private readonly Options _options = new Options
         {
             ModifyDocumentStore = documentStore =>
-                documentStore.Conventions.CustomizeJsonSerializer = serializer => serializer.TypeNameHandling = TypeNameHandling.All
+            {
+                documentStore.Conventions.Serialization = new JsonNetSerializationConventions
+                {
+                    CustomizeJsonSerializer = serializer => serializer.TypeNameHandling = TypeNameHandling.All
+                };
+            }
         };
 
         [Fact]
@@ -124,7 +130,6 @@ namespace SlowTests.Bugs.Stacey
                     session.SaveChanges();
                 }
 
-
                 // assert
                 using (var session = store.OpenSession())
                 {
@@ -135,7 +140,6 @@ namespace SlowTests.Bugs.Stacey
                     // try to query each of the newly inserted aspects.
                     var results = session.Include("Path.Steps,Requirements,What").Load<Aspect>("aspects/1");
                     //var results = session.Include<Aspect>(aspect => aspect.Path.Steps[0].Requirements[0].What).Load<Aspect>("aspects/1");
-
 
                     // the first requirement should be an aspect
                     var requirements = new Entity[2];
@@ -151,7 +155,6 @@ namespace SlowTests.Bugs.Stacey
                     session.SaveChanges();
                 }
             }
-
         }
 
         [Fact]
@@ -220,9 +223,7 @@ namespace SlowTests.Bugs.Stacey
 
                     Assert.NotEmpty(results);
                 }
-
             }
- 
         }
 
         private abstract class Entity

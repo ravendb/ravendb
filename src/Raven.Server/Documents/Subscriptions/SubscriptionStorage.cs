@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;

@@ -5,7 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;

@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = (ReplicationPerformance)EntityToBlittable.ConvertToEntity(typeof(ReplicationPerformance), "replication/performance", response, _conventions);
+                Result = _conventions.Serialization.DefaultConverter.FromBlittable<ReplicationPerformance>(response, "replication/performance");
             }
         }
     }

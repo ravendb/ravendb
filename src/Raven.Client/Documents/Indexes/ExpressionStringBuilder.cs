@@ -26,6 +26,7 @@ namespace Raven.Client.Documents.Indexes
     {
         // Fields
         private static readonly char[] LiteralSymbolsToEscape = { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
+
         private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
         private readonly StringBuilder _out = new StringBuilder();
@@ -271,7 +272,6 @@ namespace Raven.Client.Documents.Indexes
                         return false;
                 }
             }
-
         }
 
         private string GetPropertyName(string name, Type exprType)
@@ -311,7 +311,6 @@ namespace Raven.Client.Documents.Indexes
             }
             return name;
         }
-
 
         private static Type GetMemberType(MemberInfo member)
         {
@@ -616,7 +615,6 @@ namespace Raven.Client.Documents.Indexes
                     throw new InvalidOperationException();
             }
 
-
             SometimesParenthesis(outerPrecedence, innerPrecedence, delegate
             {
                 if (innerPrecedence == ExpressionOperatorPrecedence.NullCoalescing && TypeExistsOnServer(rightOp.Type))
@@ -665,7 +663,6 @@ namespace Raven.Client.Documents.Indexes
                             right = _conventions.SaveEnumsAsIntegers
                                 ? Expression.Constant(Convert.ToInt32(constantExpression.Value))
                                 : Expression.Constant(Enum.ToObject(enumType, constantExpression.Value).ToString());
-
                         }
                     }
                     else
@@ -881,7 +878,6 @@ namespace Raven.Client.Documents.Indexes
             type = nonNullableType ?? type;
             var isNullableType = nonNullableType != null;
 
-
             // we only cast enums and types is mscorlib. We don't support anything else
             // because the VB compiler like to put converts all over the place, and include
             // types that we can't really support (only exists on the client)
@@ -1080,7 +1076,6 @@ namespace Raven.Client.Documents.Indexes
             Out(")");
             return node;
         }
-
 
         /// <summary>
         ///   Visits the element init.
@@ -1317,7 +1312,6 @@ namespace Raven.Client.Documents.Indexes
         /// </returns>
         protected override Expression VisitMember(MemberExpression node)
         {
-
             if (Nullable.GetUnderlyingType(node.Member.DeclaringType) != null)
             {
                 switch (node.Member.Name)
@@ -1727,8 +1721,8 @@ namespace Raven.Client.Documents.Indexes
                         var methodArgType = node.Method.GetParameters()[num2].ParameterType;
                         if (methodArgType.IsPrimitive || methodArgType == typeof(string))
                         {
-                            // now we need to figure out if this method has overloads, 
-                            // for example, we may call Convert.ToInt64(Int64), but we want to 
+                            // now we need to figure out if this method has overloads,
+                            // for example, we may call Convert.ToInt64(Int64), but we want to
                             // compile on the server to Convert.ToInt64(object);
                             if (node.Method.DeclaringType.GetMethods().Count(m => node.Method.Name == m.Name) == 1)
                                 Out("(" + methodArgType.FullName + ")");
@@ -1875,6 +1869,7 @@ namespace Raven.Client.Documents.Indexes
 
             return false;
         }
+
         private static bool IsExtensionMethod(MethodCallExpression node)
         {
             var attribute = node.Method.GetCustomAttribute(typeof(ExtensionAttribute));
@@ -2294,7 +2289,6 @@ namespace Raven.Client.Documents.Indexes
                 default:
                     throw new InvalidOperationException();
             }
-
 
             Visit(node.Expression, currentPrecedence);
             Out(op);

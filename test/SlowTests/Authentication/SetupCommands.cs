@@ -12,7 +12,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Sparrow.Json;
@@ -27,7 +27,7 @@ namespace SlowTests.Authentication
 
             public ClaimDomainCommand(DocumentConventions conventions, JsonOperationContext context, ClaimDomainInfo claimInfo)
             {
-                _payload = EntityToBlittable.ConvertCommandToBlittable(claimInfo, context);
+                _payload = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(claimInfo, context);
             }
 
             public override bool IsReadRequest => false;
@@ -89,7 +89,7 @@ namespace SlowTests.Authentication
 
             public SetupLetsEncryptCommand(DocumentConventions conventions, JsonOperationContext context, SetupInfo setupInfo)
             {
-                _payload = EntityToBlittable.ConvertCommandToBlittable(setupInfo, context);
+                _payload = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(setupInfo, context);
                 ResponseType = RavenCommandResponseType.Raw;
             }
 

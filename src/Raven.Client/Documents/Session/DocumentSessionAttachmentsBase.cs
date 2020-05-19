@@ -8,7 +8,7 @@ using System;
 using System.IO;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session

@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -19,6 +18,7 @@ using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -148,7 +148,7 @@ namespace Raven.Client.Documents.BulkInsert
         private long _operationId = -1;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
-        private readonly JsonSerializer _defaultSerializer;
+        private readonly IJsonSerializer _defaultSerializer;
         private readonly Func<object, IMetadataDictionary, StreamWriter, bool> _customEntitySerializer;
         private readonly int _timeSeriesBatchSize;
         private long _concurrentCheck;
@@ -185,7 +185,7 @@ namespace Raven.Client.Documents.BulkInsert
 
                     if (_operationId == -1)
                     {
-                        // closing without calling a single store. 
+                        // closing without calling a single store.
                         return;
                     }
 
@@ -218,7 +218,7 @@ namespace Raven.Client.Documents.BulkInsert
             _countersOperation = new CountersBulkInsertOperation(this);
             _attachmentsOperation = new AttachmentsBulkInsertOperation(this);
 
-            _defaultSerializer = _requestExecutor.Conventions.CreateSerializer();
+            _defaultSerializer = _requestExecutor.Conventions.Serialization.CreateSerializer();
             _customEntitySerializer = _requestExecutor.Conventions.BulkInsert.TrySerializeEntityToJsonStream;
             _timeSeriesBatchSize = _conventions.BulkInsert.TimeSeriesBatchSize;
 
@@ -318,11 +318,8 @@ namespace Raven.Client.Documents.BulkInsert
 
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
-                        using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, _conventions, _context,
-                            _defaultSerializer, new DocumentInfo { MetadataInstance = metadata }))
-                        {
+                        using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
                             json.WriteJsonTo(_currentWriter.BaseStream);
-                        }
                     }
 
                     _currentWriter.Write('}');
@@ -617,7 +614,7 @@ namespace Raven.Client.Documents.BulkInsert
                             if (isFirst == false)
                             {
                                 //we need to end the command for the previous document id
-                               _operation._currentWriter.Write("]}},");
+                                _operation._currentWriter.Write("]}},");
                             }
                             else if (_operation._first == false)
                             {

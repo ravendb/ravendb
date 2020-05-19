@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -17,7 +16,7 @@ namespace Raven.Client.ServerWide.Operations
         public Dictionary<string, ScriptResolver> CollectionByScript;
         public bool ResolveToLatest;
 
-        public ModifyConflictSolverOperation(string database, Dictionary<string,ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
+        public ModifyConflictSolverOperation(string database, Dictionary<string, ScriptResolver> collectionByScript = null, bool resolveToLatest = false)
         {
             ResourceNameValidator.AssertValidDatabaseName(database);
             _database = database;
@@ -35,7 +34,7 @@ namespace Raven.Client.ServerWide.Operations
             private readonly ModifyConflictSolverOperation _solver;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
-    
+
             public ModifyConflictSolverCommand(
                 DocumentConventions conventions,
                 string database,
@@ -55,7 +54,7 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var solver = EntityToBlittable.ConvertCommandToBlittable(new ConflictSolver
+                        var solver = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new ConflictSolver
                         {
                             ResolveByCollection = _solver.CollectionByScript,
                             ResolveToLatest = _solver.ResolveToLatest,

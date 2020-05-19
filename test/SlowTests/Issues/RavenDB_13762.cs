@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
                         .ModifyDatabaseRevisions(
                             context,
                             store.Database,
-                            EntityToBlittable.ConvertCommandToBlittable(configuration, context), RaftIdGenerator.NewId());
+                            DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration, context), RaftIdGenerator.NewId());
                 }
 
                 for (int i = 0; i < 10; i++)

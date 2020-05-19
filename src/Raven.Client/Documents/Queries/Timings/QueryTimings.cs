@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Timings
@@ -13,7 +12,7 @@ namespace Raven.Client.Documents.Queries.Timings
 
         public void FillFromBlittableJson(BlittableJsonReaderObject json)
         {
-            var timings = (QueryTimings)EntityToBlittable.ConvertToEntity(typeof(QueryTimings), "query/timings", json, DocumentConventions.Default);
+            var timings = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<QueryTimings>(json, "query/timings");
             DurationInMs = timings.DurationInMs;
             Timings = timings.Timings;
         }
@@ -29,7 +28,7 @@ namespace Raven.Client.Documents.Queries.Timings
                     timings[kvp.Key] = kvp.Value.Clone();
                 }
             }
-            
+
             return new QueryTimings
             {
                 DurationInMs = DurationInMs,

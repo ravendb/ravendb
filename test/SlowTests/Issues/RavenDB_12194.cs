@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,9 +23,12 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = x => x.Conventions = new DocumentConventions
                 {
-                    CustomizeJsonSerializer = s =>
+                    Serialization = new JsonNetSerializationConventions
                     {
-                        s.Converters.Add(new FrankenJsonConverter());
+                        CustomizeJsonSerializer = s =>
+                        {
+                            s.Converters.Add(new FrankenJsonConverter());
+                        }
                     }
                 }
             }))
@@ -121,4 +125,3 @@ namespace SlowTests.Issues
         public override bool CanConvert(Type objectType) => typeof(Franken) == objectType;
     }
 }
-

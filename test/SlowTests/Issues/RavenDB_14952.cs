@@ -3,9 +3,9 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -105,7 +105,7 @@ where Total < 1000
 select facet(sum(Total)) as Total"
                     });
 
-                    var facetResult = (FacetResult)EntityToBlittable.ConvertToEntity(typeof(FacetResult), "facet/result", (BlittableJsonReaderObject)result.Results[0], store.Conventions);
+                    var facetResult = (FacetResult)DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable(typeof(FacetResult), (BlittableJsonReaderObject)result.Results[0], "facet/result");
 
                     Assert.Equal("Total", facetResult.Name);
                     Assert.Equal(1, facetResult.Values.Count);

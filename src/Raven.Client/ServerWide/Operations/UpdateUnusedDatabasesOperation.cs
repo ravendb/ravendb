@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -54,13 +51,12 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        ctx.Write(stream, EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx));
+                        ctx.Write(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx));
                     })
                 };
             }
 
             public string RaftUniqueRequestId => RaftIdGenerator.NewId();
-
         }
 
         internal class Parameters

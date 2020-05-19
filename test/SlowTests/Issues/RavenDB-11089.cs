@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
+using Raven.Client.Newtonsoft.Json;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Xunit;
@@ -52,9 +53,15 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options: new Options
             {
-                ModifyDocumentStore = ss => ss.Conventions.CustomizeJsonSerializer = s =>
+                ModifyDocumentStore = ss =>
                 {
-                    s.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                 }
             }))
             {
@@ -87,7 +94,13 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -118,7 +131,13 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -148,7 +167,13 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -196,7 +221,13 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -239,7 +270,13 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -288,7 +325,13 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -327,7 +370,13 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -376,7 +425,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -619,7 +674,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -694,7 +755,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -745,7 +812,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -780,9 +853,12 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s =>
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
                     {
-                        s.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
                     };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
@@ -949,7 +1025,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -991,7 +1073,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -1056,7 +1144,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -1098,7 +1192,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = serializer => { serializer.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))
@@ -1147,7 +1247,13 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); };
+                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        }
+                    };
                     ss.Conventions.PropertyNameConverter = mi => FirstCharToLower(mi.Name);
                 }
             }))

@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -184,6 +185,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="mode"></param>
         void SetTransactionMode(TransactionMode mode);
 
-        EntityToBlittable EntityToBlittable { get; }
+        ISessionBlittableJsonConverter JsonConverter { get; }
     }
 }

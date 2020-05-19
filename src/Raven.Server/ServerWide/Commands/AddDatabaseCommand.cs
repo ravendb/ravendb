@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -14,7 +14,9 @@ namespace Raven.Server.ServerWide.Commands
         public bool Encrypted;
         public bool IsRestore;
 
-        public AddDatabaseCommand() { }
+        public AddDatabaseCommand()
+        {
+        }
 
         public AddDatabaseCommand(string uniqueRequestId) : base(uniqueRequestId)
         {
@@ -50,7 +52,7 @@ namespace Raven.Server.ServerWide.Commands
 
             var djv = base.ToJson(context);
             djv[nameof(Name)] = Name;
-            djv[nameof(Record)] = EntityToBlittable.ConvertCommandToBlittable(Record, context);
+            djv[nameof(Record)] = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(Record, context);
             djv[nameof(RaftCommandIndex)] = RaftCommandIndex;
             djv[nameof(Encrypted)] = Encrypted;
             djv[nameof(DatabaseValues)] = databaseValues;

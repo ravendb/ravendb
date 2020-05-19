@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.Serialization;
 using Newtonsoft.Json;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
@@ -12,7 +12,9 @@ namespace Raven.Server.Json.Converters
     {
         public static readonly SliceJsonConverter Instance = new SliceJsonConverter();
 
-        private SliceJsonConverter() {}
+        private SliceJsonConverter()
+        {
+        }
 
         protected override void WriteJson(BlittableJsonWriter writer, Slice value, JsonSerializer serializer)
         {

@@ -2,10 +2,9 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -53,7 +52,7 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx);
                         ctx.Write(stream, config);
                     })
                 };

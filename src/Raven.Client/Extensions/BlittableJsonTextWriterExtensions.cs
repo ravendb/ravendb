@@ -1,6 +1,5 @@
 ﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Extensions
@@ -63,7 +62,7 @@ namespace Raven.Client.Extensions
 
             writer.WritePropertyName(nameof(query.QueryParameters));
             if (query.QueryParameters != null)
-                writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query.QueryParameters, conventions, context, conventions.CreateSerializer(), documentInfo: null));
+                writer.WriteObject(DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(query.QueryParameters, context));
             else
                 writer.WriteNull();
 

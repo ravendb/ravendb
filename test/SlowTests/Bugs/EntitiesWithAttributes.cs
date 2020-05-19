@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,13 +26,14 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                var jObject = JObject.FromObject(new Item { Version = "First" }, store.Conventions.CreateSerializer());
+                var jObject = JObject.FromObject(new Item { Version = "First" }, (JsonSerializer)store.Conventions.Serialization.CreateSerializer());
                 Assert.Equal("First", jObject["Version"]);
 
-//                var rjObject = RavenJObject.FromObject(new Item { Version = "First" }, store.Conventions.CreateSerializer());
-//                Assert.Equal("First", rjObject["Version"]);
+                //                var rjObject = RavenJObject.FromObject(new Item { Version = "First" }, store.Conventions.CreateSerializer());
+                //                Assert.Equal("First", rjObject["Version"]);
             }
         }
+
         [Fact]
         public void PropertiesCanHaveAttributes()
         {
@@ -39,7 +41,7 @@ namespace SlowTests.Bugs
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Item {Version = "First"});
+                    session.Store(new Item { Version = "First" });
                     session.SaveChanges();
                 }
 

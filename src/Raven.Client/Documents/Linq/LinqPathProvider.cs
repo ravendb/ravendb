@@ -129,7 +129,6 @@ namespace Raven.Client.Documents.Linq
             return result;
         }
 
-
         internal static Result CreateCounterResult(MethodCallExpression callExpression)
         {
             var counterName = (callExpression.Arguments[callExpression.Arguments.Count - 1] as ConstantExpression)?.Value.ToString();
@@ -139,12 +138,12 @@ namespace Raven.Client.Documents.Linq
             {
                 // session.CountersFor().Get()
                 var path = (callExpression.Object as MethodCallExpression)?.Arguments[0].ToString();
-                args = new[] {RemoveTransparentIdentifiersIfNeeded(path), counterName};
+                args = new[] { RemoveTransparentIdentifiersIfNeeded(path), counterName };
             }
             else if (callExpression.Arguments.Count == 2)
-            {                
+            {
                 var path = callExpression.Arguments[0].ToString();
-                args = new[] {RemoveTransparentIdentifiersIfNeeded(path), counterName};               
+                args = new[] { RemoveTransparentIdentifiersIfNeeded(path), counterName };
             }
             else
             {
@@ -268,7 +267,6 @@ namespace Raven.Client.Documents.Linq
             }
         }
 
-
         /// <summary>
         /// Get the member expression from the expression
         /// </summary>
@@ -290,7 +288,6 @@ namespace Raven.Client.Documents.Linq
 
             return memberExpression;
         }
-
 
         public static bool GetValueFromExpressionWithoutConversion(Expression expression, out object value)
         {
@@ -361,7 +358,7 @@ namespace Raven.Client.Documents.Linq
             }
         }
 
-        private static bool TryGetMethodArguments(MethodCallExpression mce,  out object[] args)
+        private static bool TryGetMethodArguments(MethodCallExpression mce, out object[] args)
         {
             args = new object[mce.Arguments.Count];
             for (var index = 0; index < mce.Arguments.Count; index++)
@@ -390,7 +387,6 @@ namespace Raven.Client.Documents.Linq
             }).ToArray());
             return instance;
         }
-
 
         private static object GetMemberValue(MemberExpression memberExpression)
         {
@@ -436,7 +432,6 @@ namespace Raven.Client.Documents.Linq
             }
             throw new NotSupportedException("MemberInfo type not supported: " + memberInfo.GetType().FullName);
         }
-
 
         private static void AssertNoComputation(MemberExpression memberExpression)
         {
@@ -518,4 +513,3 @@ namespace Raven.Client.Documents.Linq
         }
     }
 }
-

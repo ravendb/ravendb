@@ -31,7 +31,7 @@ namespace SlowTests.Issues
         [Fact]
         public void CanSerializeYieldGetterMethods()
         {
-            // If this test breaks, this is likely becaused we merged 
+            // If this test breaks, this is likely becaused we merged
             // a new version of JSON.Net, which can revert a modification that we made to the code
             // Look at the other changes that happened in this commit (see the git log for that)
             // And at any rate, the full explanation, including the full reasoning is here:
@@ -41,7 +41,7 @@ namespace SlowTests.Issues
             // takes time to get to the right reason
 
             var DocumentConventions = new DocumentConventions();
-            var jsonSerializer = DocumentConventions.CreateSerializer();
+            var jsonSerializer = (JsonSerializer)DocumentConventions.Serialization.CreateSerializer();
             var stringWriter = new StringWriter();
             jsonSerializer.Serialize(stringWriter, new Item());
             var str = stringWriter.GetStringBuilder().ToString();

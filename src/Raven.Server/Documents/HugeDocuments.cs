@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
@@ -113,15 +112,10 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    details = (HugeDocumentsDetails)EntityToBlittable.ConvertToEntity(
-                        typeof(HugeDocumentsDetails),
-                        HugeDocumentsId,
-                        detailsJson,
-                        DocumentConventions.DefaultForServer);
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<HugeDocumentsDetails>(detailsJson, HugeDocumentsId);
                 }
 
                 string message = $"We have detected that some documents has surpassed the configured size threshold ({new Size(_maxWarnSize, SizeUnit.Bytes)}). It might have performance impact. You can alter warning limits by changing '{RavenConfiguration.GetKey(x => x.PerformanceHints.HugeDocumentSize)}' configuration value.";
-
 
                 return PerformanceHint.Create(
                     _database,

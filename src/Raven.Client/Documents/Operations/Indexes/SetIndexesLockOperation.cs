@@ -3,7 +3,6 @@ using System.Linq;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -25,7 +24,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 IndexNames = new[] { indexName },
                 Mode = mode
             };
-            
+
             FilterAutoIndexes();
         }
 
@@ -69,7 +68,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 if (parameters == null)
                     throw new ArgumentNullException(nameof(parameters));
 
-                _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters, context);
+                _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

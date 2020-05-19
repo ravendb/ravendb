@@ -6,11 +6,11 @@
 
 using System;
 using System.Linq;
-using Xunit.Abstractions;
-
 using FastTests;
 using Newtonsoft.Json;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Queries
 {
@@ -23,10 +23,17 @@ namespace SlowTests.Tests.Queries
         [Fact(Skip = "RavenDB-6263")]
         public void UsingConverter()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
             {
-                store.Conventions.CustomizeJsonSerializer += x => x.Converters.Add(new MoneyConverter());
-
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer => serializer.Converters.Add(new MoneyConverter())
+                    };
+                }
+            }))
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Order

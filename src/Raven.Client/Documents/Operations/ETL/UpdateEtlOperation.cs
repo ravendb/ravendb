@@ -1,11 +1,9 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -41,6 +39,7 @@ namespace Raven.Client.Documents.Operations.ETL
             }
 
             public override bool IsReadRequest => false;
+
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/etl?id={_taskId}";
@@ -50,7 +49,7 @@ namespace Raven.Client.Documents.Operations.ETL
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_configuration, ctx);
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx);
                         ctx.Write(stream, config);
                     })
                 };

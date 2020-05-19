@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             }
             if (val is BlittableJsonReaderObject obj)
             {
-                result = (T)EntityToBlittable.ConvertToEntity(typeof(T), "cluster-value", obj, conventions);
+                result = conventions.Serialization.DefaultConverter.FromBlittable<T>(obj, "cluster-value");
             }
             else
             {

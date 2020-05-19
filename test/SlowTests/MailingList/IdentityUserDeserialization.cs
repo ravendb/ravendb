@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,13 @@ namespace SlowTests.MailingList
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.CustomizeJsonSerializer += serializer => serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
+                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = serializer =>
+                        {
+                            serializer.ObjectCreationHandling = ObjectCreationHandling.Auto;
+                        }
+                    };
                 }
             }))
             {
@@ -120,7 +127,6 @@ namespace SlowTests.MailingList
             public IdentityUser(string userName) : this()
             {
                 UserName = userName;
-
             }
 
             public virtual TKey Id { get; set; }

@@ -24,7 +24,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(name))
             {
-                var serializer = DocumentConventions.Default.CreateSerializer();
+                var serializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
 
                 var before = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream))));
                 stream.Position = 0;
@@ -72,8 +72,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
 
                     using (var stream = typeof(BlittableFormatTests).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
                     {
-                        var serializer = DocumentConventions.Default.CreateSerializer();
-                        
+                        var serializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+
                         var compacted = ((JObject)serializer.Deserialize(new JsonTextReader(new StreamReader(stream)))).ToString(Formatting.None);
                         stream.Position = 0;
 

@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Extensions;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 {
     internal sealed class JsonDateTimeISO8601Converter : RavenJsonConverter
     {
@@ -53,7 +53,6 @@ namespace Raven.Client.Json.Converters
                     if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
                         return time;
                 }
-
             }
             return DeferReadToNextConverter(reader, objectType, serializer, existingValue);
         }

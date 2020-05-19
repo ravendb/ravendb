@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Exceptions

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Sparrow;
@@ -26,9 +25,13 @@ namespace Raven.Client.ServerWide
     public interface IDatabaseTask
     {
         ulong GetTaskKey();
+
         string GetMentorNode();
+
         string GetDefaultTaskName();
+
         string GetTaskName();
+
         bool IsResourceIntensive();
     }
 
@@ -105,6 +108,7 @@ namespace Raven.Client.ServerWide
     public class InternalReplication : ReplicationNode
     {
         private string _nodeTag;
+
         public string NodeTag
         {
             get => _nodeTag;
@@ -116,6 +120,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 _nodeTag = value;
             }
         }
+
         public override string FromString()
         {
             return $"[{NodeTag}/{Url}]";
@@ -130,7 +135,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
             }
             return false;
         }
-        
+
         public override int GetHashCode()
         {
             unchecked
@@ -202,7 +207,6 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
             Members = members;
         }
 
-
         internal bool TryUpdateByPriorityOrder()
         {
             if (IsReorderNeeded() == false)
@@ -216,6 +220,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
 
             return true;
         }
+
         private bool IsReorderNeeded()
         {
             if (PriorityOrder == null || PriorityOrder.Count == 0)
@@ -243,7 +248,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         {
             var list = new List<string>();
             var destinations = new List<ReplicationNode>();
-            
+
             if (Promotables.Contains(myTag)) // if we are a promotable we can't have any destinations
                 return destinations;
 
@@ -257,12 +262,12 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                     continue;
                 list.Add(clusterTopology.GetUrlFromTag(node));
             }
-          
+
             foreach (var promotable in Promotables)
             {
                 if (deletionInProgress != null && deletionInProgress.ContainsKey(promotable))
                     continue;
-                
+
                 var url = clusterTopology.GetUrlFromTag(promotable);
                 PredefinedMentors.TryGetValue(promotable, out var mentor);
                 if (WhoseTaskIsIt(state, new PromotableTask(promotable, url, databaseName, mentor), null) == myTag)
@@ -282,7 +287,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                     Database = databaseName
                 });
             }
-            
+
             return destinations;
         }
 
@@ -321,11 +326,11 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
                 if (topology.Members.Contains(node))
                 {
                     newMembers.Add(node);
-                } 
+                }
                 else if (topology.Promotables.Contains(node))
                 {
                     newPromotables.Add(node);
-                } 
+                }
                 else if (topology.Rehabs.Contains(node))
                 {
                     newRehabs.Add(node);
@@ -368,7 +373,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
 
             return (addDestinations, removeDestinations);
         }
-        
+
         public string DatabaseTopologyIdBase64;
 
         [JsonIgnore]
@@ -423,7 +428,7 @@ $"NodeTag of 'InternalReplication' can't be modified after 'GetHashCode' was inv
         }
 
         public string WhoseTaskIsIt(
-            RachisState state, 
+            RachisState state,
             IDatabaseTask task,
             Func<string> getLastResponsibleNode)
         {

@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using Sparrow;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 {
     internal sealed class SizeConverter : RavenJsonConverter
     {

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -88,11 +87,7 @@ namespace Raven.Server.NotificationCenter
                 }
                 else
                 {
-                    details = (RequestLatencyDetail)EntityToBlittable.ConvertToEntity(
-                        typeof(RequestLatencyDetail),
-                        QueryRequestLatenciesId,
-                        detailsJson,
-                        DocumentConventions.DefaultForServer);
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<RequestLatencyDetail>(detailsJson, QueryRequestLatenciesId);
                 }
 
                 return PerformanceHint.Create(

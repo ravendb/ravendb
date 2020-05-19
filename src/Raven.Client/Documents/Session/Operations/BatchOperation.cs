@@ -373,7 +373,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                     if (documentInfo.Entity != null)
                     {
-                        _session.EntityToBlittable.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
+                        _session.JsonConverter.PopulateEntity(documentInfo.Entity, id, documentInfo.Document, _session.JsonSerializer);
                         var afterSaveChangesEventArgs = new AfterSaveChangesEventArgs(_session, documentInfo.Id, documentInfo.Entity);
                         _session.OnAfterSaveChangesInvoke(afterSaveChangesEventArgs);
                     }

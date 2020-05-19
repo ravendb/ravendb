@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Json;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -55,7 +55,7 @@ namespace SlowTests.MailingList
                 documentStore.Initialize();
 
                 new CarIndex().Execute(documentStore);
-                
+
                 using (var session = documentStore.OpenSession())
                 {
                     foreach (CarLot doc in Docs)
@@ -76,7 +76,7 @@ namespace SlowTests.MailingList
                         .Where(carLot => carLot.Cars.Any(car => car.LeaseHistory.Any(leasee => leasee.Id == targetLeasee)))
                         .Take(1024);
 
-                    var deserializer = session.Advanced.DocumentStore.Conventions.CreateSerializer();
+                    var deserializer = session.Advanced.DocumentStore.Conventions.Serialization.CreateSerializer();
                     var indexQuery = RavenTestHelper.GetIndexQuery(query);
 
                     using (var commands = documentStore.Commands())
@@ -89,7 +89,7 @@ namespace SlowTests.MailingList
                             {
                                 using (var reader = new BlittableJsonReader())
                                 {
-                                    reader.Init((BlittableJsonReaderObject)x);
+                                    reader.Initialize((BlittableJsonReaderObject)x);
                                     return deserializer.Deserialize<CarLot>(reader);
                                 }
                             })
@@ -126,7 +126,6 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-
         private class Car
         {
             public IList<Leasee> LeaseHistory { get; set; }
@@ -155,7 +154,6 @@ namespace SlowTests.MailingList
                                      Cars_LeaseHistory_Id = car.LeaseHistory.Select(x => x.Id),
                                      Cars_LeaseHistory_Name = car.LeaseHistory.Select(x => x.Name)
                                  };
-
 
                 Store(x => x.LotName, FieldStorage.Yes);
                 Store(x => x.Make, FieldStorage.Yes);

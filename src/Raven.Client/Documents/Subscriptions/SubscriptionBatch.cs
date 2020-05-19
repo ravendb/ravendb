@@ -213,7 +213,7 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     else
                     {
-                        instance = (T)EntityToBlittable.ConvertToEntity(typeof(T), id, curDoc, _requestExecutor.Conventions);
+                        instance = _requestExecutor.Conventions.Serialization.DefaultConverter.FromBlittable<T>(curDoc, id);
                     }
 
                     if (string.IsNullOrEmpty(id) == false)

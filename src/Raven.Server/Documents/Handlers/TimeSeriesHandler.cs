@@ -10,7 +10,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.Routing;

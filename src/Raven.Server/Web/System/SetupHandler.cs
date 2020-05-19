@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
@@ -228,7 +229,7 @@ namespace Raven.Server.Web.System
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        var blittable = EntityToBlittable.ConvertCommandToBlittable(fullResult, context);
+                        var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(fullResult, context);
                         context.Write(writer, blittable);
                     }
                 }
@@ -271,7 +272,7 @@ namespace Raven.Server.Web.System
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var blittable = EntityToBlittable.ConvertCommandToBlittable(userDomainsWithIps, context);
+                    var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(userDomainsWithIps, context);
                     context.Write(writer, blittable);
                 }
             }

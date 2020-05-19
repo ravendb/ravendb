@@ -6,6 +6,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +30,10 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = str =>
                 {
-                    str.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter());
+                    str.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter())
+                    };
                     str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, RangeType.Long);
                 }
             }))
@@ -69,7 +73,10 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = str =>
                 {
-                    str.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter());
+                    str.Conventions.Serialization = new JsonNetSerializationConventions
+                    {
+                        CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter())
+                    };
                     str.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, RangeType.Long);
                 }
             }))
@@ -104,7 +111,6 @@ namespace SlowTests.Issues
                 }
             }
         }
-
 
         public struct Duration : IEquatable<Duration>, IComparable<Duration>, IComparable
         {

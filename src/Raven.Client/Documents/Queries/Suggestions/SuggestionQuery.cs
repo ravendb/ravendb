@@ -134,7 +134,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
             var results = new Dictionary<string, SuggestionResult>();
             foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
-                var suggestionResult = (SuggestionResult)EntityToBlittable.ConvertToEntity(typeof(SuggestionResult), "suggestion/result", result, conventions);
+                var suggestionResult = conventions.Serialization.DefaultConverter.FromBlittable<SuggestionResult>(result, "suggestion/result");
                 results[suggestionResult.Name] = suggestionResult;
             }
 

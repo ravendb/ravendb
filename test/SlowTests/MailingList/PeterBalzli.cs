@@ -10,6 +10,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Newtonsoft.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,10 @@ namespace SlowTests.MailingList
 
         private static void ModifyStore(DocumentStore store)
         {
-            store.Conventions.CustomizeJsonSerializer = serializers => serializers.Converters.Add(new CustomerNumberJsonConverter());
+            store.Conventions.Serialization = new JsonNetSerializationConventions
+            {
+                CustomizeJsonSerializer = serializers => serializers.Converters.Add(new CustomerNumberJsonConverter())
+            };
         }
 
         [Fact]
@@ -74,7 +78,6 @@ namespace SlowTests.MailingList
 
         private class Index : AbstractIndexCreationTask<Item, Index.Result>
         {
-
             public class Result
             {
                 public string Id { get; set; }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -40,7 +39,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            var order = EntityToBlittable.ConvertCommandToBlittable(_parameters, context);
+            var order = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, context);
             return new ReorderDatabaseMembersCommand(_database, order);
         }
 
@@ -77,6 +76,5 @@ namespace Raven.Client.ServerWide.Operations
             public override bool IsReadRequest => false;
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
-
     }
 }

@@ -115,7 +115,7 @@ namespace FastTests.Server.Documents.Revisions
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.False(metadata.Keys.Contains(Constants.Documents.Metadata.Flags));
                     var foo = await session.Advanced.Revisions.GetMetadataForAsync("foo");
-                    Assert.Equal(0 ,foo.Count);
+                    Assert.Equal(0, foo.Count);
 
                     var product = await session.LoadAsync<Product>("bar");
                     metadata = session.Advanced.GetMetadataFor(product);
@@ -127,7 +127,7 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task  EnforceRevisionConfiguration()
+        public async Task EnforceRevisionConfiguration()
         {
             using (var store = GetDocumentStore())
             {
@@ -139,7 +139,7 @@ namespace FastTests.Server.Documents.Revisions
                         MinimumRevisionsToKeep = 10
                     }
                 };
-                
+
                 await RevisionsHelper.SetupRevisions(store, Server.ServerStore, configuration);
 
                 for (int i = 0; i < 10; i++)
@@ -149,9 +149,9 @@ namespace FastTests.Server.Documents.Revisions
                         using (var session = store.OpenAsyncSession())
                         {
                             await session.StoreAsync(new Product
-                                {
-                                    Description = j.ToString()
-                                }, "bar" + i);
+                            {
+                                Description = j.ToString()
+                            }, "bar" + i);
                             await session.SaveChangesAsync();
                         }
                     }
@@ -161,8 +161,7 @@ namespace FastTests.Server.Documents.Revisions
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-
-                        var product = await session.LoadAsync<Product>("bar"+i);
+                        var product = await session.LoadAsync<Product>("bar" + i);
                         var metadata = session.Advanced.GetMetadataFor(product);
                         Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Constants.Documents.Metadata.Flags]);
                         var bar = await session.Advanced.Revisions.GetMetadataForAsync("bar" + i);
@@ -179,7 +178,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 for (int i = 0; i < 10; i++)
                 {
-                    using (var session = store.OpenAsyncSession( new SessionOptions
+                    using (var session = store.OpenAsyncSession(new SessionOptions
                     {
                         NoCaching = true // we aren't changing the document only it's revisions, so we need to disable caching otherwise we will get 'Not-Modified'
                     }))
@@ -235,21 +234,19 @@ namespace FastTests.Server.Documents.Revisions
                         using (var session = store.OpenAsyncSession())
                         {
                             await session.StoreAsync(new Product
-                                {
-                                    Description = j.ToString()
-                                }, "bar" + i);
+                            {
+                                Description = j.ToString()
+                            }, "bar" + i);
                             await session.SaveChangesAsync();
                         }
                     }
                 }
 
-                
                 for (int i = 0; i < 10; i++)
                 {
                     using (var session = store.OpenAsyncSession())
                     {
-
-                        var product = await session.LoadAsync<Product>("bar"+i);
+                        var product = await session.LoadAsync<Product>("bar" + i);
                         var metadata = session.Advanced.GetMetadataFor(product);
                         Assert.Equal((DocumentFlags.HasRevisions).ToString(), metadata[Constants.Documents.Metadata.Flags]);
                         var bar = await session.Advanced.Revisions.GetMetadataForAsync("bar" + i);
@@ -272,7 +269,6 @@ namespace FastTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown))
                     await db.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
-
 
                 for (int i = 0; i < 10; i++)
                 {
@@ -311,7 +307,7 @@ namespace FastTests.Server.Documents.Revisions
                     Default = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 },
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
-                        ["Dummy"] = new RevisionsCollectionConfiguration {Disabled = false, MinimumRevisionsToKeep = 10}
+                        ["Dummy"] = new RevisionsCollectionConfiguration { Disabled = false, MinimumRevisionsToKeep = 10 }
                     }
                 };
 
@@ -467,7 +463,6 @@ namespace FastTests.Server.Documents.Revisions
         [Fact]
         public async Task GetRevisionsOfNotExistKey()
         {
-
             using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
@@ -810,7 +805,6 @@ namespace FastTests.Server.Documents.Revisions
 
                     Assert.Null(companiesRevisions[2].Name);
                     Assert.False(metadatas[1].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
-
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -824,7 +818,6 @@ namespace FastTests.Server.Documents.Revisions
                     // revision 5
                     session.CountersFor(company).Increment("Dislikes", 20);
                     await session.SaveChangesAsync();
-
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -851,14 +844,12 @@ namespace FastTests.Server.Documents.Revisions
 
                     Assert.Equal("HR", companiesRevisions[3].Name);
                     Assert.False(metadatas[3].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
-                    
+
                     Assert.Null(companiesRevisions[4].Name);
                     Assert.False(metadatas[4].TryGetValue(Constants.Documents.Metadata.RevisionCounters, out _));
-
                 }
             }
         }
-
 
         [Fact]
         public async Task CanLimitNumberOfRevisionsByAge()
@@ -923,7 +914,7 @@ namespace FastTests.Server.Documents.Revisions
 
                     // revisions age limit has passed
                     // should delete the old revisions now
-                    // and keep just this one 
+                    // and keep just this one
 
                     await session.SaveChangesAsync();
                 }
@@ -1070,20 +1061,18 @@ namespace FastTests.Server.Documents.Revisions
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User(),"foo/bar");
+                    await session.StoreAsync(new User(), "foo/bar");
                     await session.SaveChangesAsync();
-
                 }
 
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using(ctx.OpenReadTransaction())
+                using (ctx.OpenReadTransaction())
                 {
                     database.DocumentsStorage.RevisionsStorage.DeleteRevisionsFor(ctx, "foo/bar");
                 }
-                    
             }
         }
 
@@ -1114,10 +1103,8 @@ namespace FastTests.Server.Documents.Revisions
                     if (parameters == null)
                         throw new ArgumentNullException(nameof(parameters));
 
-                    _parameters = EntityToBlittable.ConvertCommandToBlittable(parameters, context);
+                    _parameters = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(parameters, context);
                 }
-
-                
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {

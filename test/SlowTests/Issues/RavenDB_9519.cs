@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -286,7 +287,7 @@ namespace SlowTests.Issues
 
                 if (_csvConfig != null)
                 {
-                    var _csvConfigBlittable = EntityToBlittable.ConvertCommandToBlittable(_csvConfig, ctx);
+                    var _csvConfigBlittable = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_csvConfig, ctx);
                     form = new MultipartFormDataContent
                     {
                         {new BlittableJsonContent(stream => { ctx.Write(stream, _csvConfigBlittable); }), Constants.Smuggler.CsvImportOptions},

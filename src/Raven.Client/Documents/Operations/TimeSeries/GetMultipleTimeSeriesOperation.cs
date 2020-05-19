@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;

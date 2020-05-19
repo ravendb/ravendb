@@ -9,6 +9,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
@@ -161,7 +162,7 @@ namespace FastTests.Client
         [Fact]
         public void CanUseCustomSerializer()
         {
-            JsonSerializer jsonSerializer = null;
+            IJsonSerializer jsonSerializer = null;
             RequestExecutor requestExecutor = null;
             using (var store = GetDocumentStore(new Options
             {
@@ -169,8 +170,7 @@ namespace FastTests.Client
                 {
                     requestExecutor ??= store.GetRequestExecutor(store.Database);
                     requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
-                    using (var json = EntityToBlittable.ConvertEntityToBlittable(entity, store.Conventions, context,
-                        jsonSerializer ??= store.Conventions.CreateSerializer(), new DocumentInfo { MetadataInstance = metadata }))
+                    using (var json = store.Conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, context, jsonSerializer ??= store.Conventions.Serialization.CreateSerializer()))
                     {
                         json.WriteJsonTo(streamWriter.BaseStream);
                     }

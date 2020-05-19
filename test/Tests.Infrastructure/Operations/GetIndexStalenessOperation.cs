@@ -48,7 +48,7 @@ namespace Tests.Infrastructure.Operations
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                Result = (IndexStaleness)_conventions.DeserializeEntityFromBlittable(typeof(IndexStaleness), response);
+                Result = (IndexStaleness)_conventions.Serialization.DeserializeEntityFromBlittable(typeof(IndexStaleness), response);
             }
         }
 

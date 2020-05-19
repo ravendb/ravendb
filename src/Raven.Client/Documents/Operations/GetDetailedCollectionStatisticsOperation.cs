@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = (DetailedCollectionStatistics)_conventions.DeserializeEntityFromBlittable(typeof(DetailedCollectionStatistics), response);
+                Result = _conventions.Serialization.DeserializeEntityFromBlittable<DetailedCollectionStatistics>(response);
             }
         }
     }

@@ -4,13 +4,13 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 {
     /// <summary>
     /// This converter is used when a property is a Linq-To-Entities query, enumerating and
     /// then serializing it as a json array.
     /// </summary>
-    public sealed class JsonLinqEnumerableConverter : JsonConverter
+    internal sealed class JsonLinqEnumerableConverter : JsonConverter
     {
         public static readonly JsonLinqEnumerableConverter Instance = new JsonLinqEnumerableConverter();
 

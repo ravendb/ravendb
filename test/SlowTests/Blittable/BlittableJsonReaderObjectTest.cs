@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Xunit;
@@ -19,7 +20,7 @@ namespace SlowTests.Blittable
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var data = new { Property = new[] { "Value1", "Value2" } };
-                var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
 
                 //Action
@@ -37,7 +38,7 @@ namespace SlowTests.Blittable
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var data = new { Property = new[] { 1, 2 } };
-                var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
 
                 //Action
@@ -55,7 +56,7 @@ namespace SlowTests.Blittable
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var data = new { Property = new[] { 1.1, 2.3 } };
-                var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
 
                 //Action
@@ -77,7 +78,7 @@ namespace SlowTests.Blittable
                 {
                     Property = new[] { new { Prop = "Value1" }, new { Prop = "Value2" } }
                 };
-                var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, context);
+                var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, context);
                 readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
 
                 //Action
@@ -99,7 +100,7 @@ namespace SlowTests.Blittable
                 {
                     Property = new[] { new { Prop = "Value1" }, new { Prop = "Value2" } }
                 };
-                var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, originContext);
+                var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, originContext);
                 readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
 
                 //Action
@@ -121,7 +122,7 @@ namespace SlowTests.Blittable
                 {
                     Property = new object[] { new { Prop = "Value1" }, "Value2", 4 }
                 };
-                var readerObject = EntityToBlittable.ConvertCommandToBlittable(data, originContext);
+                var readerObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(data, originContext);
                 readerObject.TryGet(nameof(data.Property), out BlittableJsonReaderArray expected);
 
                 //Action

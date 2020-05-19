@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -96,7 +95,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             if (raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out _) == false)
             {
                 return new CompareExchangeValue<T>(key, index, default, metadata);
-            }
+        }
 
             var converted = (ResultHolder)EntityToBlittable.ConvertToEntity(typeof(ResultHolder), null, raw, conventions);
             return new CompareExchangeValue<T>(key, index, converted.Object, metadata);

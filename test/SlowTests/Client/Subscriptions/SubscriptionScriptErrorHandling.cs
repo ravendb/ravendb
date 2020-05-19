@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using FastTests;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
@@ -14,7 +14,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
-    public class SubscriptionScriptErrorHandling: RavenTestBase
+    public class SubscriptionScriptErrorHandling : RavenTestBase
     {
         public SubscriptionScriptErrorHandling(ITestOutputHelper output) : base(output)
         {
@@ -39,7 +39,8 @@ select project(d)
 "
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
@@ -73,8 +74,6 @@ select project(d)
                     }
                     mre.Set();
                 });
-
-                
 
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 Assert.NotNull(receivedItem);
@@ -113,7 +112,7 @@ select project(d)
 
                     AsyncHelpers.RunSync(() => Server.ServerStore.ModifyDatabaseRevisions(context,
                         store.Database,
-                        EntityToBlittable.ConvertCommandToBlittable(configuration,
+                        DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(configuration,
                             context), Guid.NewGuid().ToString()));
                 }
 
@@ -129,7 +128,8 @@ select project(d)
 "
                 });
 
-                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId) {
+                var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subscriptionId)
+                {
                     TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
                 });
 
@@ -164,8 +164,6 @@ select project(d)
                     }
                     mre.Set();
                 });
-
-              
 
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 Assert.NotNull(receivedItem);

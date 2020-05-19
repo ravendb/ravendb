@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations
                 }
 
                 result.Status = command.Result.Status;
-                result.Document = (TEntity)_requestExecutor.Conventions.DeserializeEntityFromBlittable(typeof(TEntity), command.Result.ModifiedDocument);
+                result.Document = _requestExecutor.Conventions.Serialization.DeserializeEntityFromBlittable<TEntity>(command.Result.ModifiedDocument);
                 return result;
             }
         }

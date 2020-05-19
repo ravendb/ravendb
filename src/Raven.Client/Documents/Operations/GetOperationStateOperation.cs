@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Operations
                 if (response == null)
                     return;
 
-                Result = (OperationState)_conventions.DeserializeEntityFromBlittable(typeof(OperationState), response);
+                Result = _conventions.Serialization.DeserializeEntityFromBlittable<OperationState>(response);
             }
         }
     }

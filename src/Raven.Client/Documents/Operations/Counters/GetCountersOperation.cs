@@ -4,11 +4,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Counters
@@ -33,7 +32,7 @@ namespace Raven.Client.Documents.Operations.Counters
             _returnFullResults = returnFullResults;
         }
 
-        public GetCountersOperation(string docId,  bool returnFullResults = false)
+        public GetCountersOperation(string docId, bool returnFullResults = false)
         {
             _docId = docId;
             _counters = Array.Empty<string>();
@@ -50,7 +49,6 @@ namespace Raven.Client.Documents.Operations.Counters
             private readonly string _docId;
             private readonly string[] _counters;
             private readonly bool _returnFullResults;
-
 
             public GetCounterValuesCommand(string docId, string[] counters, bool returnFullResults)
             {
@@ -140,7 +138,7 @@ namespace Raven.Client.Documents.Operations.Counters
 
                     request.Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(batch, ctx);
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(batch, ctx);
 
                         ctx.Write(stream, config);
                     });

@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -63,12 +62,12 @@ namespace Raven.Server.NotificationCenter
 
             _updateNotificationInStorageRequired = true;
 
-            if (_timer != null) 
+            if (_timer != null)
                 return;
 
             lock (_pagerCreationLock)
             {
-                if (_timer != null) 
+                if (_timer != null)
                     return;
 
                 _timer = new Timer(UpdateNotificationInStorage, null, TimeSpan.FromSeconds(10), TimeSpan.FromMinutes(1));
@@ -123,11 +122,7 @@ namespace Raven.Server.NotificationCenter
                 }
                 else
                 {
-                    details = (SlowWritesDetails)EntityToBlittable.ConvertToEntity(
-                        typeof(SlowWritesDetails),
-                        null,
-                        detailsJson,
-                        DocumentConventions.DefaultForServer);
+                    details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<SlowWritesDetails>(detailsJson);
                 }
 
                 return PerformanceHint.Create(

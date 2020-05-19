@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -119,7 +118,7 @@ namespace Raven.Server.NotificationCenter
             if (ntv == null || ntv.Json.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject detailsJson) == false || detailsJson == null)
                 return new T();
 
-            return (T)EntityToBlittable.ConvertToEntity(typeof(T), null, detailsJson, DocumentConventions.DefaultForServer);
+            return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.FromBlittable<T>(detailsJson);
         }
     }
 }

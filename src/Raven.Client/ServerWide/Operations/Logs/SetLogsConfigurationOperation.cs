@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
-using Sparrow;
 
 namespace Raven.Client.ServerWide.Operations.Logs
 {
@@ -24,7 +23,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
             public Parameters()
             {
             }
-            
+
             public Parameters(GetLogsConfigurationResult currentLogsConfiguration)
             {
                 Mode = currentLogsConfiguration.Mode;
@@ -61,7 +60,7 @@ namespace Raven.Client.ServerWide.Operations.Logs
                 {
                     Content = new BlittableJsonContent(stream =>
                     {
-                        ctx.Write(stream, EntityToBlittable.ConvertCommandToBlittable(_parameters, ctx));
+                        ctx.Write(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_parameters, ctx));
                     })
                 };
             }

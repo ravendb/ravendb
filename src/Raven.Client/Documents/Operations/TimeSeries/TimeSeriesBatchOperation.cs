@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow;
@@ -69,15 +68,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertCommandToBlittable(_operation, ctx);
+                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_operation, ctx);
                         ctx.Write(stream, config);
                     })
                 };
             }
 
             public override bool IsReadRequest => false;
-
         }
-
     }
 }

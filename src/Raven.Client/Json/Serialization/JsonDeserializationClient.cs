@@ -33,7 +33,7 @@ using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Converters
+namespace Raven.Client.Json.Serialization
 {
     internal class JsonDeserializationClient : JsonDeserializationBase
     {
@@ -78,7 +78,7 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskPullReplicationAsSink> OngoingTaskPullReplicationAsSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskPullReplicationAsSink>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskPullReplicationAsHub> OngoingTaskPullReplicationAsHubResult = GenerateJsonDeserializationRoutine<OngoingTaskPullReplicationAsHub>();
-        
+
         public static readonly Func<BlittableJsonReaderObject, PullReplicationDefinitionAndCurrentConnections> PullReplicationDefinitionAndCurrentConnectionsResult = GenerateJsonDeserializationRoutine<PullReplicationDefinitionAndCurrentConnections>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskReplication> GetOngoingTaskReplicationResult = GenerateJsonDeserializationRoutine<OngoingTaskReplication>();
@@ -218,7 +218,7 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, ForceRenewResult> ForceRenewResult = GenerateJsonDeserializationRoutine<ForceRenewResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, CounterBatch> CounterBatch = GenerateJsonDeserializationRoutine<CounterBatch>();
-        
+
         internal static readonly Func<BlittableJsonReaderObject, TimeSeriesOperation> TimeSeriesOperation = GenerateJsonDeserializationRoutine<TimeSeriesOperation>();
 
         internal static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
