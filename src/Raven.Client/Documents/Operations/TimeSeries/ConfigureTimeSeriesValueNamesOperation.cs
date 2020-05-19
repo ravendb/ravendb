@@ -12,62 +12,44 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class ConfigureTimeSeriesValueNamesOperation : IMaintenanceOperation<ConfigureTimeSeriesOperationResult>
     {
-        private readonly string _collection;
-        private readonly string _timeSeries;
-        private readonly bool _update;
-        private readonly string[] _valueNames;
+        private readonly Parameters _parameters;
 
         public ConfigureTimeSeriesValueNamesOperation(string collection, string timeSeries, string[] valueNames, bool update = true)
         {
-            _collection = collection ?? throw new ArgumentNullException(nameof(collection));
-            _timeSeries = timeSeries ?? throw new ArgumentNullException(nameof(timeSeries));
-            _valueNames = valueNames ?? throw new ArgumentNullException(nameof(valueNames));
-
-            if (valueNames.Length == 0)
-                throw new ArgumentException("Must contain at least one element", nameof(valueNames));
-
-            _update = update;
+            _parameters = new Parameters
+            {
+                Collection = collection,
+                TimeSeries = timeSeries,
+                ValueNames = valueNames,
+                Update = update
+            };
+            _parameters.Validate();
         }
 
         public RavenCommand<ConfigureTimeSeriesOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ConfigureTimeSeriesValueNamesCommand(_collection, _timeSeries, _valueNames, _update);
+            return new ConfigureTimeSeriesValueNamesCommand(_parameters);
         }
 
         private class ConfigureTimeSeriesValueNamesCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
         {
-            private readonly string _collection;
-            private readonly string _timeSeries;
-            private readonly string[] _valueNames;
-            private readonly bool _update;
-
-            public ConfigureTimeSeriesValueNamesCommand(string collection, string timeSeries, string[] valueNames, bool update)
+            private readonly Parameters _parameters;
+            public ConfigureTimeSeriesValueNamesCommand(Parameters parameters)
             {
-                _collection = collection;
-                _timeSeries = timeSeries;
-                _valueNames = valueNames;
-                _update = update;
+                _parameters = parameters;
             }
 
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/timeseries/config/names";
-                var parameters = new Parameters
-                {
-                    Collection = _collection,
-                    TimeSeries = _timeSeries,
-                    ValueNames = _valueNames,
-                    Update = _update
-                };
-
+                url = $"{node.Url}/databases/{node.Database}/timeseries/names/config";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = ctx.ReadObject(parameters.ToJson(),"convert time-series configuration");
+                        var config = ctx.ReadObject(_parameters.ToJson(),"convert time-series configuration");
                         ctx.Write(stream, config);
                     })
                 };
@@ -93,6 +75,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             public string[] ValueNames;
             public bool Update;
 
+            public void Validate()
+            {
+                if (string.IsNullOrEmpty(Collection))
+                    throw new ArgumentNullException(nameof(Collection));
+                if (string.IsNullOrEmpty(TimeSeries))
+                    throw new ArgumentNullException(nameof(TimeSeries));
+                if (ValueNames == null || ValueNames.Length == 0)
+                    throw new ArgumentException($"{nameof(ValueNames)} can't be empty.");
+            }
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue

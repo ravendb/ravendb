@@ -172,6 +172,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             Name = PolicyString;
             RetentionTime = retentionTime;
         }
+
+        public static bool IsRaw(TimeSeriesPolicy policy) => policy.Name == PolicyString;
     }
 
     public class TimeSeriesPolicy : IDynamicJson, IComparable<TimeSeriesPolicy>

@@ -544,15 +544,16 @@ namespace Raven.Server.Documents.Handlers
                 });
         }
 
-        [RavenAction("/databases/*/admin/timeseries/config/policy", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ConfigTimeSeriesPolicies()
+        [RavenAction("/databases/*/admin/timeseries/policy/add", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task AddTimeSeriesPolicy()
         {
             ServerStore.EnsureNotPassive();
             var collection = GetStringQueryString("collection", required: true);
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var json = context.ReadForDisk(RequestBodyStream(), "time-series policy config"))
             {
-                var config = JsonDeserializationCluster.TimeSeriesCollectionConfiguration(json);
+                var policy = JsonDeserializationCluster.TimeSeriesPolicy(json);
 
                 TimeSeriesConfiguration current;
                 using (context.OpenReadTransaction())
@@ -562,15 +563,73 @@ namespace Raven.Server.Documents.Handlers
 
                 current.Collections ??= new Dictionary<string, TimeSeriesCollectionConfiguration>(StringComparer.InvariantCultureIgnoreCase);
 
-                current.Collections[collection] = config;
+                if (current.Collections.ContainsKey(collection) == false)
+                    current.Collections[collection] = new TimeSeriesCollectionConfiguration();
+
+                if (RawTimeSeriesPolicy.IsRaw(policy))
+                    current.Collections[collection].RawPolicy = new RawTimeSeriesPolicy(policy.RetentionTime);
+                else
+                {
+                    current.Collections[collection].Policies ??= new List<TimeSeriesPolicy>();
+                    var existing = current.Collections[collection].GetPolicyByName(policy.Name, out _);
+                    if (existing != null)
+                        current.Collections[collection].Policies.Remove(existing);
+
+                    current.Collections[collection].Policies.Add(policy);
+                }
+
                 current.InitializeRollupAndRetention();
 
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
-                await ServerStore.SendToLeaderAsync(editTimeSeries);
+                var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
+
+                await WaitForIndexToBeApplied(context, index);
+                SendConfigurationResponse(context, index);
             }
         }
 
-        [RavenAction("/databases/*/timeseries/config/names", "POST", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/admin/timeseries/policy/remove", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task RemoveTimeSeriesPolicy()
+        {
+            ServerStore.EnsureNotPassive();
+            var collection = GetStringQueryString("collection", required: true);
+            var name = GetStringQueryString("name", required: true);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                TimeSeriesConfiguration current;
+                using (context.OpenReadTransaction())
+                {
+                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration;
+                }
+
+                if (current?.Collections?.ContainsKey(collection) == true)
+                {
+                    var p = current.Collections[collection].GetPolicyByName(name, out _);
+                    if (p == null)
+                        return;
+
+                    if (ReferenceEquals(p, current.Collections[collection].RawPolicy))
+                    {
+                        current.Collections[collection].RawPolicy = RawTimeSeriesPolicy.Default;
+                    }
+                    else
+                    {
+                        current.Collections[collection].Policies.Remove(p);
+                    }
+
+                    current.InitializeRollupAndRetention();
+
+                    var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
+                    var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
+
+                    await WaitForIndexToBeApplied(context, index);
+                    SendConfigurationResponse(context, index);
+                }
+            }
+        }
+
+        [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser)]
         public async Task ConfigTimeSeriesNames()
         {
             ServerStore.EnsureNotPassive();
@@ -579,13 +638,7 @@ namespace Raven.Server.Documents.Handlers
             using (var json = context.ReadForDisk(RequestBodyStream(), "time-series value names"))
             {
                 var parameters = JsonDeserializationServer.Parameters.TimeSeriesValueNamesParameters(json);
-
-                if (string.IsNullOrEmpty(parameters.Collection))
-                    throw new ArgumentNullException(nameof(ConfigureTimeSeriesValueNamesOperation.Parameters.Collection));
-                if (string.IsNullOrEmpty(parameters.TimeSeries))
-                    throw new ArgumentNullException(nameof(ConfigureTimeSeriesValueNamesOperation.Parameters.TimeSeries));
-                if (parameters.ValueNames == null || parameters.ValueNames.Length == 0)
-                    throw new ArgumentException($"{nameof(ConfigureTimeSeriesValueNamesOperation.Parameters.ValueNames)} can't be empty.");
+                parameters.Validate();
 
                 TimeSeriesConfiguration current;
                 using (context.OpenReadTransaction())
@@ -610,7 +663,20 @@ namespace Raven.Server.Documents.Handlers
                     current.ValueNameMapper.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
                 }
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
-                await ServerStore.SendToLeaderAsync(editTimeSeries);
+                var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
+
+                await WaitForIndexToBeApplied(context, index);
+                SendConfigurationResponse(context, index);
+            }
+        }
+
+        private void SendConfigurationResponse(TransactionOperationContext context, long index)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var response = new DynamicJsonValue {["RaftCommandIndex"] = index,};
+                context.Write(writer, response);
+                writer.Flush();
             }
         }
 
