@@ -386,9 +386,11 @@ class trafficSection {
     totalDocsWritesPerSecond = ko.observable<number>(0);
     totalAttachmentsWritesPerSecond = ko.observable<number>(0);
     totalCountersWritesPerSecond = ko.observable<number>(0);
+    totalTimeSeriesWritesPerSecond = ko.observable<number>(0);
     totalDocsWriteBytesPerSecond = ko.observable<number>(0);
     totalAttachmentsWriteBytesPerSecond = ko.observable<number>(0);
     totalCountersWriteBytesPerSecond = ko.observable<number>(0);
+    totalTimeSeriesWriteBytesPerSecond = ko.observable<number>(0);
 
     writesPerSecondTooltip: KnockoutComputed<string>;
     writeBytesPerSecondTooltip: KnockoutComputed<string>;
@@ -399,7 +401,8 @@ class trafficSection {
             return `<div>
                     Documents: <strong>${this.totalDocsWritesPerSecond().toLocaleString()}</strong><br />
                     Attachments: <strong>${this.totalAttachmentsWritesPerSecond().toLocaleString()}</strong><br />
-                    Counters: <strong>${this.totalCountersWritesPerSecond().toLocaleString()}</strong>
+                    Counters: <strong>${this.totalCountersWritesPerSecond().toLocaleString()}</strong><br />
+                    Time Series: <strong>${this.totalTimeSeriesWritesPerSecond().toLocaleString()}</strong>
                     </div>`;
         });
 
@@ -407,13 +410,14 @@ class trafficSection {
             return `<div>
                     Documents: <strong>${this.sizeFormatter(this.totalDocsWriteBytesPerSecond())}/s</strong><br />
                     Attachments: <strong>${this.sizeFormatter(this.totalAttachmentsWriteBytesPerSecond())}/s</strong><br />
-                    Counters: <strong>${this.sizeFormatter(this.totalCountersWriteBytesPerSecond())}/s</strong>
+                    Counters: <strong>${this.sizeFormatter(this.totalCountersWriteBytesPerSecond())}/s</strong><br />
+                    Time Series: <strong>${this.sizeFormatter(this.totalTimeSeriesWriteBytesPerSecond())}/s</strong>
                     </div>`;
         });
-        
+
         this.averageRequestTimeTooltip = ko.pureComputed(() => {
             return `This value represents moving average<br /> of every request execution time<Br /> which reaches the server.`;
-        })
+        });
     }
 
     init() {
@@ -558,9 +562,11 @@ class trafficSection {
         let docsWritesPerSeconds = 0;
         let attachmentsWritesPerSecond = 0;
         let countersWritesPerSecond = 0;
+        let timeSeriesWritesPerSecond = 0;
         let docsWriteBytesPerSeconds = 0;
         let attachmentsWriteBytesPerSecond = 0;
         let countersWriteBytesPerSecond = 0;
+        let timeSeriesWriteBytesPerSecond = 0;
 
         this.table.forEach(item => {
             totalRequests += item.requestsPerSecond();
@@ -570,17 +576,23 @@ class trafficSection {
             docsWritesPerSeconds += item.docsWritesPerSeconds();
             attachmentsWritesPerSecond += item.attachmentsWritesPerSecond();
             countersWritesPerSecond += item.countersWritesPerSecond();
+            timeSeriesWritesPerSecond += item.timeSeriesWritesPerSecond();
+
             docsWriteBytesPerSeconds += item.docsWriteBytesPerSeconds();
             attachmentsWriteBytesPerSecond += item.attachmentsWriteBytesPerSecond();
             countersWriteBytesPerSecond += item.countersWriteBytesPerSecond();
+            timeSeriesWriteBytesPerSecond += item.timeSeriesWriteBytesPerSecond();
         });
 
         this.totalDocsWritesPerSecond(docsWritesPerSeconds);
         this.totalAttachmentsWritesPerSecond(attachmentsWritesPerSecond);
         this.totalCountersWritesPerSecond(countersWritesPerSecond);
+        this.totalTimeSeriesWritesPerSecond(timeSeriesWritesPerSecond);
+
         this.totalDocsWriteBytesPerSecond(docsWriteBytesPerSeconds);
         this.totalAttachmentsWriteBytesPerSecond(attachmentsWriteBytesPerSecond);
         this.totalCountersWriteBytesPerSecond(countersWriteBytesPerSecond);
+        this.totalTimeSeriesWriteBytesPerSecond(timeSeriesWriteBytesPerSecond);
         
         this.totalRequestsPerSecond(totalRequests);
         this.totalWritesPerSecond(writesPerSecond);
