@@ -283,7 +283,7 @@ namespace Raven.Client.Documents.Session
                                 return v;
 
                             if (_value != null)
-                                throw new InvalidOperationException("TODO ppekrol");
+                                throw new InvalidOperationException("Value cannot be null.");
 
                             T entity = default;
                             if (_originalValue != null && _originalValue.Value != null)
@@ -353,8 +353,7 @@ namespace Raven.Client.Documents.Session
                         if (_value == null)
                             return null;
 
-                        //var entity = EntityToBlittable.ConvertToBlittableForCompareExchangeIfNeeded(_value.Value, conventions, context, jsonSerializer, documentInfo: null, removeIdentityProperty: false); // TODO [ppekrol]
-                        object entity = null;
+                        var entity = CompareExchangeValueBlittableJsonConverter.ConvertToBlittable(_value.Value, conventions, context, jsonSerializer);
                         var entityJson = entity as BlittableJsonReaderObject;
                         BlittableJsonReaderObject metadata = null;
                         if (_value.HasMetadata && _value.Metadata.Count != 0)
@@ -408,7 +407,7 @@ namespace Raven.Client.Documents.Session
                     return false;
 
                 if (string.Equals(originalValue.Key, newValue.Key, StringComparison.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException("TODO ppekrol");
+                    throw new InvalidOperationException($"Keys do not match. Expected '{originalValue.Key}' but was '{newValue.Key}'.");
 
                 if (originalValue.Index != newValue.Index)
                     return true;
