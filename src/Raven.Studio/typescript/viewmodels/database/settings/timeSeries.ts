@@ -164,6 +164,7 @@ class timeSeries extends viewModelBase {
         const perCollectionConfigurations = this.perCollectionConfigurations();
 
         const collectionsDto = {} as { [key: string]: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration; };
+        const valueNameMapperDto = {} as Raven.Client.Documents.Operations.TimeSeries.TimeSeriesValueNameMapper;
 
         perCollectionConfigurations.forEach(config => {
             collectionsDto[config.collection()] = config.toDto();
@@ -171,7 +172,8 @@ class timeSeries extends viewModelBase {
 
         return {
             Collections: collectionsDto,
-            PolicyCheckFrequency: generalUtils.formatAsTimeSpan(this.policyCheckFrequency() * 1000)
+            PolicyCheckFrequency: generalUtils.formatAsTimeSpan(this.policyCheckFrequency() * 1000),
+            ValueNameMapper : valueNameMapperDto
         }
     }
 
