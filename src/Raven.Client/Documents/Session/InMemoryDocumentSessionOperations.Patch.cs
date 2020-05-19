@@ -9,9 +9,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Lambda2Js;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
@@ -213,7 +215,8 @@ namespace Raven.Client.Documents.Session
                 // so we need to include $type in json
 
                 var serializer = Conventions.Serialization.CreateSerializer();
-                //serializer.TypeNameHandling = TypeNameHandling.Objects; // TODO [ppekrol]
+                var jsonSerializer = (JsonNetJsonSerializer)serializer;
+                jsonSerializer.TypeNameHandling = TypeNameHandling.Objects;
 
                 writer.WriteStartObject();
                 writer.WritePropertyName("Value");

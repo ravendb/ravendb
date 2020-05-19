@@ -1,4 +1,3 @@
-using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -10,18 +9,11 @@ namespace Raven.Client.Documents.Operations
     {
         public RavenCommand<CollectionStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetCollectionStatisticsCommand(conventions);
+            return new GetCollectionStatisticsCommand();
         }
 
         private class GetCollectionStatisticsCommand : RavenCommand<CollectionStatistics>
         {
-            private readonly DocumentConventions _conventions;
-
-            public GetCollectionStatisticsCommand(DocumentConventions conventions)
-            {
-                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            }
-
             public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -38,7 +30,7 @@ namespace Raven.Client.Documents.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = _conventions.Serialization.DeserializeEntityFromBlittable<CollectionStatistics>(response);
+                Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<CollectionStatistics>(response);
             }
         }
     }

@@ -23,19 +23,17 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetOperationStateCommand(conventions, _id, _nodeTag);
+            return new GetOperationStateCommand(_id, _nodeTag);
         }
 
         internal class GetOperationStateCommand : RavenCommand<OperationState>
         {
             public override bool IsReadRequest => true;
 
-            private readonly DocumentConventions _conventions;
             private readonly long _id;
 
-            public GetOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
+            public GetOperationStateCommand(long id, string nodeTag = null)
             {
-                _conventions = conventions;
                 _id = id;
                 SelectedNodeTag = nodeTag;
             }
@@ -55,7 +53,7 @@ namespace Raven.Client.Documents.Operations
                 if (response == null)
                     return;
 
-                Result = _conventions.Serialization.DeserializeEntityFromBlittable<OperationState>(response);
+                Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationState>(response);
             }
         }
     }

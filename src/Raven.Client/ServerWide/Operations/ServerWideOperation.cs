@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.Operations
 
         protected override RavenCommand<OperationState> GetOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
         {
-            return new GetServerWideOperationStateOperation.GetServerWideOperationStateCommand(conventions, id, nodeTag);
+            return new GetServerWideOperationStateOperation.GetServerWideOperationStateCommand(id, nodeTag);
         }
     }
 }

@@ -110,7 +110,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
             _session.IncrementRequestCount();
             _session.RequestExecutor.Execute(command, _session.Context, sessionInfo: _session.SessionInfo);
 
-            return ProcessResults(command.Result, _session.Conventions);
+            return ProcessResults(command.Result);
         }
 
         public async Task<Dictionary<string, SuggestionResult>> ExecuteAsync(CancellationToken token = default)
@@ -123,18 +123,18 @@ namespace Raven.Client.Documents.Queries.Suggestions
                 _session.IncrementRequestCount();
                 await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo, token).ConfigureAwait(false);
 
-                return ProcessResults(command.Result, _session.Conventions);
+                return ProcessResults(command.Result);
             }
         }
 
-        private Dictionary<string, SuggestionResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
+        private Dictionary<string, SuggestionResult> ProcessResults(QueryResult queryResult)
         {
             InvokeAfterQueryExecuted(queryResult);
 
             var results = new Dictionary<string, SuggestionResult>();
             foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
-                var suggestionResult = conventions.Serialization.DefaultConverter.FromBlittable<SuggestionResult>(result, "suggestion/result");
+                var suggestionResult = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<SuggestionResult>(result, "suggestion/result");
                 results[suggestionResult.Name] = suggestionResult;
             }
 

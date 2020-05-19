@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Queries.Facets
             _session.IncrementRequestCount();
             _session.RequestExecutor.Execute(command, _session.Context, sessionInfo: _session.SessionInfo);
 
-            return ProcessResults(command.Result, _session.Conventions);
+            return ProcessResults(command.Result);
         }
 
         public async Task<Dictionary<string, FacetResult>> ExecuteAsync(CancellationToken token = default)
@@ -126,7 +126,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 _session.IncrementRequestCount();
                 await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo, token).ConfigureAwait(false);
 
-                return ProcessResults(command.Result, _session.Conventions);
+                return ProcessResults(command.Result);
             }
         }
 
@@ -146,14 +146,14 @@ namespace Raven.Client.Documents.Queries.Facets
 
         protected abstract void InvokeAfterQueryExecuted(QueryResult result);
 
-        private Dictionary<string, FacetResult> ProcessResults(QueryResult queryResult, DocumentConventions conventions)
+        private Dictionary<string, FacetResult> ProcessResults(QueryResult queryResult)
         {
             InvokeAfterQueryExecuted(queryResult);
 
             var results = new Dictionary<string, FacetResult>();
             foreach (BlittableJsonReaderObject result in queryResult.Results)
             {
-                var facetResult = conventions.Serialization.DefaultConverter.FromBlittable<FacetResult>(result, "facet/result");
+                var facetResult = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<FacetResult>(result, "facet/result");
                 results[facetResult.Name] = facetResult;
             }
 
