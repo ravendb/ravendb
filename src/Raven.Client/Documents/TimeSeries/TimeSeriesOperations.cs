@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.TimeSeries
             if (typeof(TTimeSeriesEntry) == typeof(TimeSeriesEntry))
                 throw new InvalidOperationException($"Only derived class from '{nameof(TimeSeriesEntry)}' can be registered.");
 
-            var mapping = TimeSeriesEntryValues.GetFieldsMapping(typeof(TTimeSeriesEntry));
+            var mapping = TimeSeriesEntryValues.GetMembersMapping(typeof(TTimeSeriesEntry));
             if (mapping == null)
                 throw new InvalidOperationException($"{typeof(TTimeSeriesEntry).Name} must contain {nameof(TimeSeriesValueAttribute)}.");
 
