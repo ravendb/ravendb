@@ -2,14 +2,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Server;
-using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron.Data;
-using Voron.Platform;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Paging
@@ -67,6 +64,11 @@ namespace Voron.Impl.Paging
 
     public unsafe class EncryptionBuffer
     {
+        public EncryptionBuffer()
+        {
+            Generation = EncryptionBuffersPool.Instance.Generation;
+        }
+
         public static readonly UIntPtr HashSize = Sodium.crypto_generichash_bytes();
         public static readonly int HashSizeInt = (int)Sodium.crypto_generichash_bytes();
         public byte* Pointer;
@@ -74,6 +76,7 @@ namespace Voron.Impl.Paging
         public long? OriginalSize;
         public byte* Hash;
         public NativeMemory.ThreadStats AllocatingThread;
+        public long Generation;
         public bool SkipOnTxCommit;
     }
 
@@ -83,7 +86,6 @@ namespace Voron.Impl.Paging
 
             
         public AbstractPager Inner { get; }
-        private readonly EncryptionBuffersPool _encryptionBuffersPool;
         private readonly byte[] _masterKey;
         private const ulong MacLen = 16;
 
@@ -97,7 +99,6 @@ namespace Voron.Impl.Paging
                 throw new InvalidOperationException("Cannot use CryptoPager if EncryptionEnabled is false (no key defined)");
 
             Inner = inner;
-            _encryptionBuffersPool = new EncryptionBuffersPool();
             _masterKey = inner.Options.MasterKey;
 
             UniquePhysicalDriveId = Inner.UniquePhysicalDriveId;
@@ -232,10 +233,9 @@ namespace Voron.Impl.Paging
                     Pointer = encBuffer.Pointer + i * Constants.Storage.PageSize,
                     Size = Constants.Storage.PageSize,
                     OriginalSize = 0,
+                    Hash = EncryptionBuffersPool.Instance.Get(EncryptionBuffer.HashSizeInt, out var thread),
+                    AllocatingThread = thread
                 };
-
-                buffer.Hash = _encryptionBuffersPool.Get(EncryptionBuffer.HashSizeInt, out var thread);
-                buffer.AllocatingThread = thread;
 
                 // here we _intentionally_ copy the old hash from the large page, so when we commit
                 // the tx, the pager will realize that we need to write this page
@@ -254,8 +254,8 @@ namespace Voron.Impl.Paging
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int size)
         {
-            var ptr = _encryptionBuffersPool.Get(size, out var thread);
-            var hash = _encryptionBuffersPool.Get(EncryptionBuffer.HashSizeInt, out thread);
+            var ptr = EncryptionBuffersPool.Instance.Get(size, out var thread);
+            var hash = EncryptionBuffersPool.Instance.Get(EncryptionBuffer.HashSizeInt, out thread);
             
             var buffer = new EncryptionBuffer
             {
@@ -264,6 +264,7 @@ namespace Voron.Impl.Paging
                 Hash = hash,
                 AllocatingThread = thread
             };
+
             state[pageNumber] = buffer;
             return buffer;
         }
@@ -357,7 +358,7 @@ namespace Voron.Impl.Paging
                     // Pages that are marked with OriginalSize = 0 were separated from a larger allocation, we cannot free them directly.
                     // The first page of the section will be returned and when it will be freed, all the other parts will be freed as well.
                     // We still need to return the buffer allocated for the hash
-                    _encryptionBuffersPool.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread);
+                    EncryptionBuffersPool.Instance.Return(buffer.Value.Hash, EncryptionBuffer.HashSizeInt, buffer.Value.AllocatingThread, buffer.Value.Generation);
 
                     continue;
                 }
@@ -371,14 +372,14 @@ namespace Voron.Impl.Paging
             if (buffer.OriginalSize != null && buffer.OriginalSize != 0)
             {
                 // First page of a separated section, returned with its original size.
-                _encryptionBuffersPool.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread);
-                _encryptionBuffersPool.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
+                EncryptionBuffersPool.Instance.Return(buffer.Pointer, (int)buffer.OriginalSize, buffer.AllocatingThread, buffer.Generation);
+                EncryptionBuffersPool.Instance.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread, buffer.Generation);
             }
             else
             {
                 // Normal buffers
-                _encryptionBuffersPool.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread);
-                _encryptionBuffersPool.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread);
+                EncryptionBuffersPool.Instance.Return(buffer.Pointer, buffer.Size, buffer.AllocatingThread, buffer.Generation);
+                EncryptionBuffersPool.Instance.Return(buffer.Hash, EncryptionBuffer.HashSizeInt, buffer.AllocatingThread, buffer.Generation);
             }
         }
 
@@ -463,7 +464,6 @@ namespace Voron.Impl.Paging
         {
             Inner.Options.UntrackCryptoPager(this);
             Inner.Dispose();
-            _encryptionBuffersPool.Dispose();
         }
         
         public override I4KbBatchWrites BatchWriter()
@@ -474,11 +474,6 @@ namespace Voron.Impl.Paging
         public override byte* AcquireRawPagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
             return Inner.AcquireRawPagePointer(tx, pageNumber, pagerState);
-        }
-
-        public void CleanupEncryptionBuffersCache()
-        {
-            _encryptionBuffersPool.ReleaseUnmanagedResources();
         }
     }
 }

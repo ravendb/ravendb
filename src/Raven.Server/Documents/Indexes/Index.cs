@@ -1364,13 +1364,6 @@ namespace Raven.Server.Documents.Indexes
                                 _currentMaximumAllowedMemory = Size.Min(_currentMaximumAllowedMemory,
                                     new Size(NativeMemory.CurrentThreadStats.TotalAllocated, SizeUnit.Bytes));
 
-                                if (storageEnvironment.Options.EncryptionEnabled)
-                                {
-                                    // if encryption is turned on then a lot of memory might be consumed by encryption buffers caches
-                                    // let's clean it so our allocation budget won't be occupied by them
-                                    storageEnvironment.CleanupNativeMemory();
-                                }
-
                                 if (_allocationCleanupNeeded > AllocationCleanupRequestsLimit)
                                     forceMemoryCleanup = true;
                             }

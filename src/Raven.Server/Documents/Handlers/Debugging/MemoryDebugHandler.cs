@@ -17,6 +17,7 @@ using Sparrow.Platform.Posix;
 using Sparrow.Server.Platform.Win32;
 using Sparrow.Utils;
 using Size = Raven.Client.Util.Size;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -196,6 +197,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
+        [RavenAction("/admin/debug/memory/encryption-buffer-pool", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
+        public Task EncryptionBufferPoolStats()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(write, EncryptionBuffersPool.Instance.GetStats().ToJson());
+                }
+
+                return Task.CompletedTask;
+            }
+        }
+
         private static DynamicJsonValue MemoryStatsInternal()
         {
             var memInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
@@ -313,6 +328,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
             long workingSetInBytes = memInfo.WorkingSet.GetValue(SizeUnit.Bytes);
             var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
+            var encryptionBuffers = EncryptionBuffersPool.Instance.GetStats();
+
             var djv = new DynamicJsonValue
             {
                 [nameof(MemoryInfo.WorkingSet)] = workingSetInBytes,
@@ -336,6 +353,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     [nameof(MemoryInfoHumane.WorkingSet)] = Size.Humane(workingSetInBytes),
                     [nameof(MemoryInfoHumane.TotalUnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
+                    ["EncryptionBuffers"] = Size.Humane(encryptionBuffers.TotalSize),
                     [nameof(MemoryInfoHumane.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
                     [nameof(MemoryInfoHumane.TotalMemoryMapped)] = Size.Humane(totalMapping)
                 },
@@ -344,6 +362,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 [nameof(MemoryInfo.Mappings)] = fileMappings
             };
+
             return djv;
         }
 
