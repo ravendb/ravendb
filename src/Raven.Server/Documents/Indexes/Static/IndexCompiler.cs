@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static (string Path, AssemblyName AssemblyName, MetadataReference Reference)[] DiscoverManagedDlls()
         {
-            var path = Path.GetDirectoryName(typeof(IndexCompiler).GetTypeInfo().Assembly.Location);
+            var path = Path.GetDirectoryName(typeof(IndexCompiler).Assembly.Location);
             var results = new List<(string, AssemblyName, MetadataReference)>();
 
             foreach (var dll in Directory.GetFiles(path, "*.dll"))
@@ -97,19 +97,19 @@ namespace Raven.Server.Documents.Indexes.Static
 
         internal static readonly MetadataReference[] References =
         {
-            MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(ExpressionType).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(IndexCompiler).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(Lucene.Net.Documents.Document).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(ExpressionType).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(IndexCompiler).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(BoostedValue).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Lucene.Net.Documents.Document).Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("netstandard")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Collections")).Location),
-            MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
+            MetadataReference.CreateFromFile(typeof(Regex).Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(Uri).Assembly.Location)
         };
 
         public static AbstractStaticIndexBase Compile(IndexDefinition definition)

@@ -143,7 +143,7 @@ namespace Raven.Server.Config.Categories
 
                         if (minValue == null)
                         {
-                            if (property.PropertyType.GetTypeInfo().IsEnum)
+                            if (property.PropertyType.IsEnum)
                             {
                                 object parsedValue;
                                 try

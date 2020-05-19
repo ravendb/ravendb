@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         protected PropertyAccessor(Type type, HashSet<CompiledIndexField> groupByFields = null)
         {
-            var isValueType = type.GetTypeInfo().IsValueType;
+            var isValueType = type.IsValueType;
             foreach (var prop in type.GetProperties())
             {
                 var getMethod = isValueType
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             generator.Emit(OpCodes.Castclass, propertyInfo.DeclaringType);
             generator.EmitCall(OpCodes.Callvirt, getMethod, null);
 
-            if (propertyInfo.PropertyType.GetTypeInfo().IsClass == false)
+            if (propertyInfo.PropertyType.IsClass == false)
                 generator.Emit(OpCodes.Box, propertyInfo.PropertyType);
 
             generator.Emit(OpCodes.Ret);

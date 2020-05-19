@@ -1675,7 +1675,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 return whereParams.Value;
             if (whereParams.Value is Guid)
                 return whereParams.Value;
-            if (type.GetTypeInfo().IsEnum)
+            if (type.IsEnum)
                 return whereParams.Value;
 
             if (whereParams.Value is ValueType)

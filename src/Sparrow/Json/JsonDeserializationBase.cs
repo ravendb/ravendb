@@ -136,7 +136,7 @@ namespace Sparrow.Json
                 type == typeof(float) ||
                 type == typeof(double) ||
                 type == typeof(decimal) ||
-                type.GetTypeInfo().IsEnum ||
+                type.IsEnum ||
                 type == typeof(Guid) ||
                 type == typeof(DateTime) ||
                 type == typeof(DateTimeOffset) ||
@@ -175,7 +175,7 @@ namespace Sparrow.Json
                 return Expression.Condition(tryGet, value, Expression.Default(propertyType));
             }
 
-            if (propertyType.GetTypeInfo().IsGenericType)
+            if (propertyType.IsGenericType)
             {
                 var genericTypeDefinition = propertyType.GetGenericTypeDefinition();
                 if (genericTypeDefinition == typeof(Dictionary<,>))
@@ -189,7 +189,7 @@ namespace Sparrow.Json
                             var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfString), BindingFlags.NonPublic | BindingFlags.Static);
                             return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                         }
-                        if (keyType.GetTypeInfo().IsEnum)
+                        if (keyType.IsEnum)
                         {
                             var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnumKeys), BindingFlags.NonPublic | BindingFlags.Static)
                                 .MakeGenericMethod(keyType);
@@ -212,14 +212,14 @@ namespace Sparrow.Json
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringList), BindingFlags.NonPublic | BindingFlags.Static);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
                     }
-                    if (valueType.GetTypeInfo().IsGenericType && valueType.GetGenericTypeDefinition() == typeof(List<>))
+                    if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(List<>))
                     {
                         var listType = valueType.GenericTypeArguments[0];
                         var converterExpression = Expression.Constant(GetConverterFromCache(listType));
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(listType);
                         return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
                     }
-                    if (valueType.GetTypeInfo().IsEnum)
+                    if (valueType.IsEnum)
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnum), BindingFlags.NonPublic | BindingFlags.Static);
                         methodToCall = methodToCall.MakeGenericMethod(valueType);
@@ -279,7 +279,7 @@ namespace Sparrow.Json
             }
 
             // extract proper value from blittable if we have relevant type
-            if (propertyType == typeof(object) || propertyType.GetTypeInfo().IsPrimitive)
+            if (propertyType == typeof(object) || propertyType.IsPrimitive)
             {
                 var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(GetPrimitiveProperty), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName));

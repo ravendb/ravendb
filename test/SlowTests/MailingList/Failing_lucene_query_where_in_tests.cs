@@ -220,7 +220,7 @@ namespace SlowTests.MailingList
     {
         public static IDocumentQuery<TS> Projection<T, TS>(this IDocumentQuery<T> query)
         {
-            return query.SelectFields<TS>(typeof(TS).GetTypeInfo().GetProperties().Select(x => x.Name).ToArray());
+            return query.SelectFields<TS>(typeof(TS).GetProperties().Select(x => x.Name).ToArray());
         }
     }
 }

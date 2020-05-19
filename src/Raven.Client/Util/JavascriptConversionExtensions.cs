@@ -379,7 +379,7 @@ namespace Raven.Client.Util
                             // Get resulting type by interface of IEnumerable<>
                             var typeArguments = methodCallExpression.Arguments[0].Type.GetInterfaces()
                                 .Concat(new[] { methodCallExpression.Arguments[0].Type })
-                                .First(a => a.GetTypeInfo().IsGenericType && a.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                                .First(a => a.IsGenericType && a.GetGenericTypeDefinition() == typeof(IEnumerable<>))
                                 .GetGenericArguments()
                                 .First();
                             var count = Expression.Call(typeof(Enumerable), "Count", new Type[] { typeArguments }, methodCallExpression.Arguments[0]);
@@ -797,7 +797,7 @@ namespace Raven.Client.Util
 
             public static object GetDefault(Type type)
             {
-                if (type.GetTypeInfo().IsValueType)
+                if (type.IsValueType)
                 {
                     return Activator.CreateInstance(type);
                 }
@@ -1650,7 +1650,7 @@ namespace Raven.Client.Util
                     }
 
                     // Type.IsEnum is unavailable in .netstandard1.3
-                    if (valueType.GetTypeInfo().IsEnum)
+                    if (valueType.IsEnum)
                     {
                         context.PreventDefault();
                         if (_conventions.SaveEnumsAsIntegers == false)
@@ -1757,7 +1757,7 @@ namespace Raven.Client.Util
                     }
 
                     // Type.IsEnum is unavailable in .netstandard1.3
-                    if (nodeType.GetTypeInfo().IsEnum
+                    if (nodeType.IsEnum
                         && _conventions.SaveEnumsAsIntegers == false)
                     {
                         context.PreventDefault();

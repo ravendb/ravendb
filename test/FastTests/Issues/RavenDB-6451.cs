@@ -52,7 +52,7 @@ namespace FastTests.Issues
             Assert.True(HasInvalidProperties(typeof(ClassWithBlittable)));
             Assert.True(HasInvalidProperties(typeof(ClassWithNestedClassWithBlittable)));
 
-            var referenceAssemblies = GetAssemblies(GetType().GetTypeInfo().Assembly);
+            var referenceAssemblies = GetAssemblies(GetType().Assembly);
             var exceptionTypes = (from type in referenceAssemblies.SelectMany(x => x.ExportedTypes)
                                   where typeof(Exception).IsAssignableFrom(type)
                                   select type).ToArray();
@@ -96,16 +96,16 @@ namespace FastTests.Issues
 
                 if (p.PropertyType.IsArray ||
                     p.PropertyType.Namespace.StartsWith("System") ||
-                    p.PropertyType.GetTypeInfo().IsEnum ||
-                    p.PropertyType.GetTypeInfo().IsPrimitive)
+                    p.PropertyType.IsEnum ||
+                    p.PropertyType.IsPrimitive)
                 {
                     continue;
                 }
 
-                if (p.PropertyType.GetTypeInfo().IsPrimitive == false &&
+                if (p.PropertyType.IsPrimitive == false &&
                     IsIEnumerable(p.PropertyType) == false &&
-                    p.PropertyType.GetTypeInfo().IsInterface == false &&
-                    p.PropertyType.GetTypeInfo().ContainsGenericParameters == false &&
+                    p.PropertyType.IsInterface == false &&
+                    p.PropertyType.ContainsGenericParameters == false &&
                     typeof(IEnumerable).IsAssignableFrom(p.PropertyType) == false &&
                     HasInvalidProperties(p.PropertyType, visited))
                 {

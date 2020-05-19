@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override bool TryConvert(ConvertBinder binder, out object result)
         {
-            result = binder.ReturnType.GetTypeInfo().IsValueType
+            result = binder.ReturnType.IsValueType
                          ? Activator.CreateInstance(binder.ReturnType)
                          : null;
             return true;

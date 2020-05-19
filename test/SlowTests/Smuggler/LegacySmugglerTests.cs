@@ -27,7 +27,7 @@ namespace SlowTests.Smuggler
         [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
         public async Task CanImportNorthwind(string file)
         {
-            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
+            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
             using (var store = GetDocumentStore())
             {
                 Assert.NotNull(stream);
@@ -70,7 +70,7 @@ namespace SlowTests.Smuggler
         [InlineData("SlowTests.Smuggler.Data.Indexes_And_Transformers_3.5.ravendbdump")]
         public async Task CanImportIndexesAndTransformers(string file)
         {
-            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
+            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
             using (var store = GetDocumentStore())
             {
                 Assert.NotNull(stream);
@@ -152,7 +152,7 @@ namespace SlowTests.Smuggler
         [InlineData("SlowTests.Smuggler.Data.Revisions_3.5.35220.ravendbdump")]
         public async Task CanImportRevisions(string file)
         {
-            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
+            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
             using (var store = GetDocumentStore())
             {
                 Assert.NotNull(stream);
@@ -207,7 +207,7 @@ namespace SlowTests.Smuggler
         [InlineData("SlowTests.Smuggler.Data.Identities_3.5.35288.ravendbdump")]
         public async Task CanImportIdentities(string file)
         {
-            using (var stream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
+            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
             using (var store = GetDocumentStore())
             {
                 Assert.NotNull(stream);

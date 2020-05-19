@@ -97,7 +97,7 @@ namespace Raven.Server.Commercial
 
                 string publicKeyString;
                 const string publicKeyPath = "Raven.Server.Commercial.RavenDB.public.json";
-                using (var stream = typeof(LicenseManager).GetTypeInfo().Assembly.GetManifestResourceStream(publicKeyPath))
+                using (var stream = typeof(LicenseManager).Assembly.GetManifestResourceStream(publicKeyPath))
                 {
                     if (stream == null)
                         throw new InvalidOperationException("Could not find public key for the license");

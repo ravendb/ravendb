@@ -271,7 +271,7 @@ namespace Raven.Client.Documents.Queries.Facets
                         return ParseMemberExpression((MemberExpression)operand);
                     case ExpressionType.Constant:
                         var constant = (ConstantExpression)operand;
-                        var type = expression.Type.GetTypeInfo().IsGenericType ? expression.Type.GenericTypeArguments[0] : expression.Type;
+                        var type = expression.Type.IsGenericType ? expression.Type.GenericTypeArguments[0] : expression.Type;
                         return Convert.ChangeType(constant.Value, type);
                     case ExpressionType.Convert:
                         return ParseUnaryExpression((UnaryExpression)operand);

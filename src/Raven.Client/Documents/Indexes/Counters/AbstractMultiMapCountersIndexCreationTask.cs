@@ -47,18 +47,18 @@ namespace Raven.Client.Documents.Indexes.Counters
         protected void AddMapForAll<TBase>(string counter, Expression<Func<IEnumerable<CounterEntry>, IEnumerable>> map)
         {
             // Index the base class.
-            if (typeof(TBase).GetTypeInfo().IsAbstract == false &&
-                typeof(TBase).GetTypeInfo().IsInterface == false)
+            if (typeof(TBase).IsAbstract == false &&
+                typeof(TBase).IsInterface == false)
                 AddMap<TBase>(counter, map);
 
             // Index child classes.
-            var children = typeof(TBase).GetTypeInfo().Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
+            var children = typeof(TBase).Assembly.GetTypes().Where(x => typeof(TBase).IsAssignableFrom(x));
             var addMapGeneric = GetType().GetMethod(nameof(AddMap), BindingFlags.Instance | BindingFlags.NonPublic);
             foreach (var child in children)
             {
-                if (child.GetTypeInfo().IsGenericTypeDefinition ||
-                    child.GetTypeInfo().IsAbstract ||
-                    child.GetTypeInfo().IsInterface)
+                if (child.IsGenericTypeDefinition ||
+                    child.IsAbstract ||
+                    child.IsInterface)
                     continue;
 
                 var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);

@@ -17,7 +17,7 @@ namespace Regression.Benchmark
             {
                 var resource = "Regression.Benchmark.Data." + name;
 
-                streams.Add(new Tuple<string, Stream>("id/" + name, typeof(BlittableJsonBench).GetTypeInfo().Assembly.GetManifestResourceStream(resource)));
+                streams.Add(new Tuple<string, Stream>("id/" + name, typeof(BlittableJsonBench).Assembly.GetManifestResourceStream(resource)));
             }
 
             ExecuteBenchmark(() =>
@@ -50,7 +50,7 @@ namespace Regression.Benchmark
                     {                
                         var resource = "Regression.Benchmark.Data." + name;
 
-                        using (var stream = typeof(BlittableJsonBench).GetTypeInfo().Assembly.GetManifestResourceStream(resource))
+                        using (var stream = typeof(BlittableJsonBench).Assembly.GetManifestResourceStream(resource))
                         {
                             // We parse the whole thing.
                             var obj = context.Read(stream, "id/" + name);

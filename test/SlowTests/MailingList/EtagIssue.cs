@@ -322,7 +322,7 @@ namespace SlowTests.MailingList
 
         private static string ClrType(Type t)
         {
-            return string.Concat(t.FullName, ", ", t.GetTypeInfo().Assembly.GetName().Name);
+            return string.Concat(t.FullName, ", ", t.Assembly.GetName().Name);
         }
 
         private void Store(IDocumentStore store, params object[] objs)

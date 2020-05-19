@@ -1032,7 +1032,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
-            if (declaringType.GetTypeInfo().IsGenericType)
+            if (declaringType.IsGenericType)
             {
                 var genericTypeDefinition = declaringType.GetGenericTypeDefinition();
                 if (genericTypeDefinition == typeof(ICollection<>) ||
@@ -1516,14 +1516,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
             switch (expression.Method.Name)
             {
                 case "OfType":
-                    if (expression.Arguments[0].Type.GetTypeInfo().IsGenericType)
+                    if (expression.Arguments[0].Type.IsGenericType)
                     {
                         var type = expression.Arguments[0].Type.GetGenericArguments()[0];
                         DocumentQuery.AddRootType(type);
                     }
 
                     //set the _ofType variable only if OfType call precedes the projection
-                    if (_isSelectArg && expression.Type.GetTypeInfo().IsGenericType)
+                    if (_isSelectArg && expression.Type.IsGenericType)
                     {
                         _ofType = expression.Type.GetGenericArguments()[0];
                     }
@@ -1559,7 +1559,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                 case "Select":
                     {
-                        if (expression.Arguments[0].Type.GetTypeInfo().IsGenericType &&
+                        if (expression.Arguments[0].Type.IsGenericType &&
                             (expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IQueryable<>) ||
                             expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IOrderedQueryable<>) ||
                             expression.Arguments[0].Type.GetGenericTypeDefinition() == typeof(IRavenQueryable<>)) &&

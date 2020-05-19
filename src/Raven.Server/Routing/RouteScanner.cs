@@ -41,7 +41,7 @@ namespace Raven.Server.Routing
 
             var corsHandler = typeof(CorsPreflightHandler).GetMethod(nameof(CorsPreflightHandler.HandlePreflightRequest));
             
-            var actions = typeof(RouteScanner).GetTypeInfo().Assembly.GetTypes()
+            var actions = typeof(RouteScanner).Assembly.GetTypes()
                 .SelectMany(type => type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
                 .Where(type => type.IsDefined(typeof(RavenActionAttribute)))
                 .ToList();

@@ -26,7 +26,7 @@ namespace SlowTests.Tests
         [NonLinuxFact]
         public void ShouldExist()
         {
-            var types = from assembly in GetAssemblies(typeof(NoNonDisposableTests).GetTypeInfo().Assembly)
+            var types = from assembly in GetAssemblies(typeof(NoNonDisposableTests).Assembly)
                         from test in assembly.GetTypes()
                         where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
                         where typeof(IDisposable).IsAssignableFrom(test) == false

@@ -115,9 +115,9 @@ namespace Raven.Client.Documents.Indexes
         {
             foreach (var type in assembly.GetTypes()
                 .Where(x =>
-                x.GetTypeInfo().IsClass &&
-                x.GetTypeInfo().IsAbstract == false &&
-                x.GetTypeInfo().IsSubclassOf(typeof(TType))))
+                x.IsClass &&
+                x.IsAbstract == false &&
+                x.IsSubclassOf(typeof(TType))))
             {
                 yield return (TType)Activator.CreateInstance(type);
             }

@@ -18,7 +18,7 @@ namespace Raven.Server.Web.Studio
         {
             HttpContext.Response.ContentType = "text/plain; charset=utf-8";
 
-            using (var stream = typeof(LicenseManager).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Commercial.RavenDB.license.txt"))
+            using (var stream = typeof(LicenseManager).Assembly.GetManifestResourceStream("Raven.Server.Commercial.RavenDB.license.txt"))
             {
                 using (var responseStream = ResponseBodyStream())
                 {

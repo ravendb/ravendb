@@ -38,7 +38,7 @@ namespace SlowTests.MailingList
             {
                 var defaultFindIdentityProperty = store.Conventions.FindIdentityProperty;
                 store.Conventions.FindIdentityProperty = property =>
-                    typeof(IEntity).GetTypeInfo().IsAssignableFrom(property.DeclaringType)
+                    typeof(IEntity).IsAssignableFrom(property.DeclaringType)
                       ? property.Name == "Id2"
                       : defaultFindIdentityProperty(property);
 

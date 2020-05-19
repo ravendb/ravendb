@@ -17,7 +17,7 @@ namespace Micro.Benchmark
             Console.WriteLine($"{nameof(Avx)} support: {Avx.IsSupported}");
             Console.WriteLine($"{nameof(Avx2)} support: {Avx2.IsSupported}");
 
-            BenchmarkSwitcher.FromAssembly(typeof(Program).GetTypeInfo().Assembly).Run(args);
+            BenchmarkSwitcher.FromAssembly(typeof(Program).Assembly).Run(args);
         }
     }
 }

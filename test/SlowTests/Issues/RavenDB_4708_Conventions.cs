@@ -57,10 +57,10 @@ namespace SlowTests.Issues
                 .ToList();
 
             // filter out Lazy methods
-            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.GetTypeInfo().IsGenericType || typeof(Lazy<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
+            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.IsGenericType || typeof(Lazy<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
 
             // filter out methods which returns Task
-            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.GetTypeInfo().IsGenericType || typeof(Task<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
+            suspectedMethods = suspectedMethods.Where(x => !x.ReturnType.IsGenericType || typeof(Task<>) != x.ReturnType.GetGenericTypeDefinition()).ToList();
 
             // filter out where / group by methods as it only servs as reminder to not use in memory filtering
             suspectedMethods = suspectedMethods.Where(x => x.Name != "Where" && x.Name != "GroupBy").ToList();

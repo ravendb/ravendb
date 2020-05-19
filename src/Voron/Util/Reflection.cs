@@ -247,7 +247,7 @@ namespace Voron.Util
             // ReSharper disable once RedundantCast
             // This explicit cast is needed because when targeting non-portable runtime,
             // type.GetTypeInfo returns an object which is also a Type, causing wrong call.
-            return GetAttribute<T>(type.GetTypeInfo() as MemberInfo);
+            return GetAttribute<T>(type as MemberInfo);
         }
 
         /// <summary>

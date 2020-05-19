@@ -581,7 +581,7 @@ more responsive application.
         /// <returns></returns>
         public static object GetDefaultValue(Type type)
         {
-            return type.GetTypeInfo().IsValueType ? Activator.CreateInstance(type) : null;
+            return type.IsValueType ? Activator.CreateInstance(type) : null;
         }
 
         /// <summary>

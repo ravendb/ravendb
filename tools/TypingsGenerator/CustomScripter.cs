@@ -10,7 +10,7 @@ namespace TypingsGenerator
         protected override TsName GetName(Type type)
         {
             var tsName = base.GetName(type);
-            var typeInfo = type.GetTypeInfo();
+            var typeInfo = type;
 
             if (typeInfo.IsNested)
             {

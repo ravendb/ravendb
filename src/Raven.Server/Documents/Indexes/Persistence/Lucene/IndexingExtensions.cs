@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public static class IndexingExtensions
     {
-        private static readonly Assembly LuceneAssembly = typeof(StandardAnalyzer).GetTypeInfo().Assembly;
+        private static readonly Assembly LuceneAssembly = typeof(StandardAnalyzer).Assembly;
 
         private static readonly Type[] ConstructorParameterTypes = { typeof(global::Lucene.Net.Util.Version) };
 

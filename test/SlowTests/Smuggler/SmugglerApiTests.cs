@@ -708,7 +708,7 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task CanImportLegacyCounters()
         {
-            var assembly = typeof(SmugglerApiTests).GetTypeInfo().Assembly;
+            var assembly = typeof(SmugglerApiTests).Assembly;
 
             using (var fs = assembly.GetManifestResourceStream("SlowTests.Data.legacy-counters.4.1.5.ravendbdump"))
             using (var store = GetDocumentStore())

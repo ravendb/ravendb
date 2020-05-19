@@ -19,10 +19,10 @@ namespace FastTests.Server.Cluster
         public void AllClusterCommandsHasVersion()
         {
             List<Exception> exceptions = new List<Exception>();
-            var assembly = typeof(Raven.Server.ServerWide.ServerStore).GetTypeInfo().Assembly;
+            var assembly = typeof(Raven.Server.ServerWide.ServerStore).Assembly;
             foreach (var type in assembly.GetTypes())
             {
-                var typeInfo = type.GetTypeInfo();
+                var typeInfo = type;
                 if (typeInfo.IsAbstract)
                     continue;
 
@@ -49,10 +49,10 @@ namespace FastTests.Server.Cluster
         {
             List<Exception> exceptions = new List<Exception>();
 
-            var assembly = typeof(Raven.Server.ServerWide.ServerStore).GetTypeInfo().Assembly;
+            var assembly = typeof(Raven.Server.ServerWide.ServerStore).Assembly;
             foreach (var type in assembly.GetTypes())
             {
-                var typeInfo = type.GetTypeInfo();
+                var typeInfo = type;
                 if (typeInfo.IsAbstract)
                     continue;
 

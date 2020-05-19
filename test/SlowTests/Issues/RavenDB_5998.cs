@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
         public void CanImportNorthwind(string file)
         {
-            using (var inputStream = GetType().GetTypeInfo().Assembly.GetManifestResourceStream(file))
+            using (var inputStream = GetType().Assembly.GetManifestResourceStream(file))
             using (var stream = new GZipStream(inputStream, CompressionMode.Decompress))
             {
                 Assert.NotNull(stream);

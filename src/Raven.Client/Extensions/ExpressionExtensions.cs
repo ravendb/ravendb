@@ -166,7 +166,7 @@ namespace Raven.Client.Extensions
 
                 if (node.Member.DeclaringType == null)
                     return false;
-                if (node.Member.DeclaringType.GetTypeInfo().IsGenericType == false)
+                if (node.Member.DeclaringType.IsGenericType == false)
                     return false;
 
                 var genericTypeDefinition = node.Member.DeclaringType.GetGenericTypeDefinition();

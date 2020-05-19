@@ -334,7 +334,7 @@ namespace Sparrow.Json
 
                 try
                 {
-                    if (type.GetTypeInfo().IsEnum)
+                    if (type.IsEnum)
                     {
                         obj = (T)Enum.Parse(type, result.ToString());
                     }
