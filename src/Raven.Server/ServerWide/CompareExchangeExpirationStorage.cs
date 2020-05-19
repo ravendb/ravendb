@@ -35,11 +35,8 @@ namespace Raven.Server.ServerWide
                     return false;
 
                 var entryTicks = it.CurrentKey.CreateReader().ReadBigEndianInt64();
-                if (entryTicks > currentTicks)
-                    return false;
+                return entryTicks <= currentTicks;
             }
-
-            return true;
         }
 
         private static IEnumerable<(Slice keySlice, long expiredTicks, Slice ticksSlice)> GetExpiredValues(ClusterOperationContext context, long currentTicks)
@@ -77,34 +74,37 @@ namespace Raven.Server.ServerWide
 
         public static bool HasExpiredMetadata(BlittableJsonReaderObject value, out long ticks, Slice keySlice, string storageKey = null)
         {
-            if (value.TryGetMember(Constants.Documents.Metadata.Key, out var metadata))
-            {
-                if (metadata is BlittableJsonReaderObject bjro && bjro.TryGet(Constants.Documents.Metadata.Expires, out object obj))
-                {
-                    if (obj is LazyStringValue expirationDate)
-                    {
-                        if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
-                        {
-                            storageKey ??= keySlice.ToString();
+            ticks = default;
+            if (value.TryGetMember(Constants.Documents.Metadata.Key, out var metadata) == false || metadata == null)
+                return false;
 
-                            var inner = new InvalidOperationException(
-                                $"The expiration date format for compare exchange '{CompareExchangeKey.SplitStorageKey(storageKey).Key}' is not valid: '{expirationDate}'. Use the following format: {DateTime.UtcNow:O}");
-                            throw new RachisApplyException("Could not apply command.", inner);
-                        }
-                        var expiry = date.ToUniversalTime();
-                        ticks = expiry.Ticks;
-                        return true;
-                    }
-                    else
+            if (metadata is BlittableJsonReaderObject bjro && bjro.TryGet(Constants.Documents.Metadata.Expires, out object obj))
+            {
+                if (obj is LazyStringValue expirationDate)
+                {
+                    if (DateTime.TryParseExact(expirationDate, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
+                            out DateTime date) == false)
                     {
                         storageKey ??= keySlice.ToString();
-                        var inner = new InvalidOperationException($"The type of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{CompareExchangeKey.SplitStorageKey(storageKey).Key}' is not valid. Use the following type: {nameof(DateTime)}");
+
+                        var inner = new InvalidOperationException(
+                            $"The expiration date format for compare exchange '{CompareExchangeKey.SplitStorageKey(storageKey).Key}' is not valid: '{expirationDate}'. Use the following format: {DateTime.UtcNow:O}");
                         throw new RachisApplyException("Could not apply command.", inner);
                     }
+
+                    var expiry = date.ToUniversalTime();
+                    ticks = expiry.Ticks;
+                    return true;
+                }
+                else
+                {
+                    storageKey ??= keySlice.ToString();
+                    var inner = new InvalidOperationException(
+                        $"The type of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{CompareExchangeKey.SplitStorageKey(storageKey).Key}' is not valid. Use the following type: {nameof(DateTime)}");
+                    throw new RachisApplyException("Could not apply command.", inner);
                 }
             }
 
-            ticks = default;
             return false;
         }
 
@@ -122,15 +122,9 @@ namespace Raven.Server.ServerWide
                 }
 
                 if (expired.TryGetValue(ticksSlice, out List<Slice> list) == false)
-                {
-                    list = new List<Slice> { keySlice };
-                }
-                else
-                {
-                    list.Add(keySlice);
-                }
+                    expired[ticksSlice] = list = new List<Slice>();
 
-                expired[ticksSlice] = list;
+                list.Add(keySlice);
 
                 if (items.ReadByKey(keySlice, out var reader) == false)
                     continue;

@@ -278,9 +278,8 @@ namespace Raven.Server.ServerWide
                         leader?.SetStateOf(index, hasMore);
                         break;
                     case nameof(DeleteExpiredCompareExchangeCommand):
-                        DeleteExpiredCompareExchange(context, type, cmd, index, out var hasMoreExpired);
-                        result = hasMoreExpired;
-                        leader?.SetStateOf(index, hasMoreExpired);
+                        result = DeleteExpiredCompareExchange(context, type, cmd, index);
+                        leader?.SetStateOf(index, result);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
                         if (ValidatePropertyExistence(cmd, nameof(IncrementClusterIdentityCommand), nameof(IncrementClusterIdentityCommand.Prefix), out errorMessage) == false)
@@ -2404,7 +2403,7 @@ namespace Raven.Server.ServerWide
             return false;
         }
 
-        private void DeleteExpiredCompareExchange(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, out bool result)
+        private bool DeleteExpiredCompareExchange(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
             try
             {
@@ -2416,7 +2415,7 @@ namespace Raven.Server.ServerWide
 
                 var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
-                result = CompareExchangeExpirationStorage.DeleteExpiredCompareExchange(context, items, ticks, take);
+               return CompareExchangeExpirationStorage.DeleteExpiredCompareExchange(context, items, ticks, take);
             }
             finally
             {

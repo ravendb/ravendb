@@ -60,10 +60,8 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             if (raw == null)
                 return new CompareExchangeValue<T>(key, index, default);
 
-            MetadataAsDictionary metadata;
-            if (raw.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject bjro) == false || bjro == null)
-                metadata = new MetadataAsDictionary();
-            else
+            MetadataAsDictionary metadata = null;
+            if (raw.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject bjro) && bjro != null)
                 metadata = new MetadataAsDictionary(bjro);
 
             if (type.GetTypeInfo().IsPrimitive || type == typeof(string))

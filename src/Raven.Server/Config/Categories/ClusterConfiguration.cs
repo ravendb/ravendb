@@ -110,7 +110,7 @@ namespace Raven.Server.Config.Categories
         [Description("Time (in seconds) between expired compare exchange cleanup")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
-        [ConfigurationEntry("Cluster.CompareExchangeExpiredCleanupIntervalInSec", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Cluster.CompareExchangeExpiredDeleteFrequencyInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CompareExchangeExpiredCleanupInterval { get; set; }
     }
 }
