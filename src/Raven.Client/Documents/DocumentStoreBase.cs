@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,9 +11,12 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Documents.TimeSeries;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -87,6 +91,10 @@ namespace Raven.Client.Documents
 
             return Maintenance.ForDatabase(database ?? Database).SendAsync(new PutIndexesOperation(indexesToAdd), token);
         }
+
+        private TimeSeriesOperations _timeSeriesOperation;
+        public TimeSeriesOperations TimeSeries => _timeSeriesOperation ??= new TimeSeriesOperations(this);
+
 
         private DocumentConventions _conventions;
 

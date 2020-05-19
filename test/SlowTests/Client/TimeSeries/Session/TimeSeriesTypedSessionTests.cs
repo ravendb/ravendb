@@ -42,6 +42,15 @@ namespace SlowTests.Client.TimeSeries.Session
             [TimeSeriesValue(4)] public double Volume;
         }
 
+        public class BadStockPrice : TimeSeriesEntry
+        {
+            [TimeSeriesValue(0)] public double Close;
+            [TimeSeriesValue(1)] public double High;
+            [TimeSeriesValue(2)] public double Low;
+            [TimeSeriesValue(3)] public double Open;
+            [TimeSeriesValue(4)] public double Volume;
+        }
+
         public class HeartRateMeasureAggregation : TimeSeriesAggregatedEntry
         {
             [TimeSeriesValue(0)] public double HeartRate;
@@ -50,6 +59,16 @@ namespace SlowTests.Client.TimeSeries.Session
         public class HeartRateMeasure : TimeSeriesEntry
         {
             [TimeSeriesValue(0)] public double HeartRate;
+        }
+
+        [Fact]
+        public async Task CanRegisterTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.TimeSeries.Register<User, StockPrice>();
+                await store.TimeSeries.Register("Users", nameof(HeartRateMeasure), new[] {nameof(HeartRateMeasure.HeartRate)});
+            }
         }
 
         [Fact]

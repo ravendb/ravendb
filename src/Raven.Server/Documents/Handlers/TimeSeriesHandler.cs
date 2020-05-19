@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
@@ -11,7 +12,9 @@ using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Converters;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
@@ -539,7 +542,51 @@ namespace Raven.Server.Documents.Handlers
                     }
                 });
         }
-      
+
+        [RavenAction("/databases/*/timeseries/config/names", "POST", AuthorizationStatus.ValidUser)]
+        public async Task ConfigTimeSeriesNames()
+        {
+            ServerStore.EnsureNotPassive();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var json = context.ReadForDisk(RequestBodyStream(), "time-series value names"))
+            {
+                var parameters = JsonDeserializationServer.Parameters.TimeSeriesValueNamesParameters(json);
+
+                if (string.IsNullOrEmpty(parameters.Collection))
+                    throw new ArgumentNullException(nameof(ConfigureTimeSeriesValueNamesOperation.Parameters.Collection));
+                if (string.IsNullOrEmpty(parameters.TimeSeries))
+                    throw new ArgumentNullException(nameof(ConfigureTimeSeriesValueNamesOperation.Parameters.TimeSeries));
+                if (parameters.ValueNames == null || parameters.ValueNames.Length == 0)
+                    throw new ArgumentException($"{nameof(ConfigureTimeSeriesValueNamesOperation.Parameters.ValueNames)} can't be empty.");
+
+                TimeSeriesConfiguration current;
+                using (context.OpenReadTransaction())
+                {
+                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
+                }
+
+                if (current.ValueNameMapper == null)
+                    current.ValueNameMapper = new ValueNameMapper(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
+                else
+                {
+                    var currentNames = current.ValueNameMapper.GetNames(parameters.Collection, parameters.TimeSeries);
+                    if (currentNames?.SequenceEqual(parameters.ValueNames, StringComparer.Ordinal) == true)
+                        return; // no need to update, they identical
+
+                    if (parameters.Update == false)
+                    {
+                        if (current.ValueNameMapper.TryAddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames) == false)
+                            throw new InvalidOperationException(
+                                $"Failed to update the names for time-series '{parameters.TimeSeries}' in collection '{parameters.Collection}', they already exists.");
+                    }
+                    current.ValueNameMapper.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
+                }
+                var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
+                await ServerStore.SendToLeaderAsync(editTimeSeries);
+            }
+        }
+
         public class ExecuteTimeSeriesBatchCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly DocumentDatabase _database;
