@@ -13,8 +13,8 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -25,7 +25,6 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -242,11 +241,12 @@ namespace Raven.Client.Documents.Subscriptions
                         $"{_options.SubscriptionName}: TCP negotiation resulted with an invalid protocol version:{_supportedFeatures.ProtocolVersion}");
                 }
 
-                var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
+                using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
+                {
+                    optionsJson.WriteJsonTo(_stream);
 
-                await _stream.WriteAsync(options, 0, options.Length, token).ConfigureAwait(false);
-
-                await _stream.FlushAsync(token).ConfigureAwait(false);
+                    await _stream.FlushAsync(token).ConfigureAwait(false);
+                }
 
                 _subscriptionLocalRequestExecutor?.Dispose();
                 _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions);
@@ -478,7 +478,7 @@ namespace Raven.Client.Documents.Subscriptions
                             {
                                 if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
                                 {
-                                    SendAck(lastReceivedChangeVector, tcpStreamCopy);
+                                    await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context).ConfigureAwait(false);
                                 }
                             }
                             catch (ObjectDisposedException)
@@ -592,16 +592,20 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private void SendAck(string lastReceivedChangeVector, Stream networkStream)
+        private async Task SendAckAsync(string lastReceivedChangeVector, Stream stream, JsonOperationContext context)
         {
-            var ack = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new SubscriptionConnectionClientMessage
+            var message = new SubscriptionConnectionClientMessage
             {
                 ChangeVector = lastReceivedChangeVector,
                 Type = SubscriptionConnectionClientMessage.MessageType.Acknowledge
-            }));
+            };
 
-            networkStream.Write(ack, 0, ack.Length);
-            networkStream.Flush();
+            using (var messageJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(message, context))
+            {
+                messageJson.WriteJsonTo(stream);
+
+                await stream.FlushAsync().ConfigureAwait(false);
+            }
         }
 
         private async Task RunSubscriptionAsync()
