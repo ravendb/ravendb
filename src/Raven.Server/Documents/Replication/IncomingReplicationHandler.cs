@@ -1021,7 +1021,7 @@ namespace Raven.Server.Documents.Replication
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out docId, out name);
 
                                 var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
-                            {
+                                {
                                     DocumentId = docId,
                                     Collection = deletedRange.Collection,
                                     Name = name,

@@ -62,11 +62,15 @@ namespace Raven.Server.Dashboard
 
         public int CounterWritesPerSecond { get; set; }
 
+        public int TimeSeriesWritesPerSecond { get; set; }
+
         public double DocumentsWriteBytesPerSecond { get; set; }
 
         public double AttachmentsWriteBytesPerSecond { get; set; }
 
         public double CountersWriteBytesPerSecond { get; set; }
+
+        public double TimeSeriesWriteBytesPerSecond { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -77,9 +81,11 @@ namespace Raven.Server.Dashboard
                 [nameof(DocumentWritesPerSecond)] = DocumentWritesPerSecond,
                 [nameof(AttachmentWritesPerSecond)] = AttachmentWritesPerSecond,
                 [nameof(CounterWritesPerSecond)] = CounterWritesPerSecond,
+                [nameof(TimeSeriesWritesPerSecond)] = TimeSeriesWritesPerSecond,
                 [nameof(DocumentsWriteBytesPerSecond)] = DocumentsWriteBytesPerSecond,
                 [nameof(AttachmentsWriteBytesPerSecond)] = AttachmentsWriteBytesPerSecond,
                 [nameof(CountersWriteBytesPerSecond)] = CountersWriteBytesPerSecond,
+                [nameof(TimeSeriesWriteBytesPerSecond)] = TimeSeriesWriteBytesPerSecond,
                 [nameof(AverageRequestDuration)] = AverageRequestDuration
             };
         }

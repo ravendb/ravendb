@@ -986,7 +986,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collectionName.Name))
             {
-                Stats.UpdateStats(context, slicer, collectionName, segment, baseline);
+                Stats.UpdateStats(context, slicer, collectionName, segment, baseline, segment.NumberOfLiveEntries);
+
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 changeVector ??= _documentsStorage.GetNewChangeVector(context, newEtag);
 
@@ -1210,8 +1211,9 @@ namespace Raven.Server.Documents.TimeSeries
                     MarkSegmentAsPendingDeletion(_context, _collection.Name, _currentEtag);
                 }
 
+                var modifiedEntries = Math.Abs(newValueSegment.NumberOfLiveEntries - ReadOnlySegment.NumberOfLiveEntries);
                 ReduceCountBeforeAppend();
-                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate);
+                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, modifiedEntries);
 
                 using (Table.Allocate(out var tvb))
                 using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
@@ -1237,7 +1239,8 @@ namespace Raven.Server.Documents.TimeSeries
                 MarkSegmentAsPendingDeletion(_context, _collection.Name, _currentEtag);
 
                 ReduceCountBeforeAppend();
-                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate);
+                //TODO: unused code, check if the number of modified entries is correct
+                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, ReadOnlySegment.NumberOfLiveEntries);
 
                 using (Table.Allocate(out var tvb))
                 {
@@ -1265,7 +1268,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 ValidateSegment(newSegment);
 
-                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate);
+                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newSegment, BaselineDate, 1);
                 _tss._documentDatabase.TimeSeriesPolicyRunner?.MarkForPolicy(_context, SliceHolder, BaselineDate, item.Status);
 
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);

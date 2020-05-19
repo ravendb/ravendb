@@ -132,12 +132,15 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public void UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline)
+        public void UpdateStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer, CollectionName collection, TimeSeriesValuesSegment segment, DateTime baseline, int modifiedEntries)
         {
+            context.DocumentDatabase.Metrics.TimeSeries.PutsPerSec.MarkSingleThreaded(modifiedEntries);
+            context.DocumentDatabase.Metrics.TimeSeries.BytesPutsPerSec.MarkSingleThreaded(segment.NumberOfBytes);
+
             long previousCount = 0;
             var start = DateTime.MaxValue;
             var end = DateTime.MinValue;
-            
+
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
 
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);

@@ -167,9 +167,11 @@ namespace Raven.Server.Dashboard
                             DocumentWritesPerSecond = (int)database.Metrics.Docs.PutsPerSec.OneSecondRate,
                             AttachmentWritesPerSecond = (int)database.Metrics.Attachments.PutsPerSec.OneSecondRate,
                             CounterWritesPerSecond = (int)database.Metrics.Counters.PutsPerSec.OneSecondRate,
+                            TimeSeriesWritesPerSecond = (int)database.Metrics.TimeSeries.PutsPerSec.OneSecondRate,
                             DocumentsWriteBytesPerSecond = database.Metrics.Docs.BytesPutsPerSec.OneSecondRate,
                             AttachmentsWriteBytesPerSecond = database.Metrics.Attachments.BytesPutsPerSec.OneSecondRate,
-                            CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.OneSecondRate
+                            CountersWriteBytesPerSecond = database.Metrics.Counters.BytesPutsPerSec.OneSecondRate,
+                            TimeSeriesWriteBytesPerSecond = database.Metrics.TimeSeries.BytesPutsPerSec.OneSecondRate
                         };
                         trafficWatch.Items.Add(trafficWatchItem);
 
