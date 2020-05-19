@@ -64,21 +64,7 @@ namespace Raven.Server.Documents
                 beforeSetupConfiguration?.Invoke(Database.Name, ref configurationJson, context);
 
                 var (index, _) = await setupConfigurationFunc(context, Database.Name, configurationJson, raftRequestId);
-                DatabaseTopology dbTopology;
-                using (context.OpenReadTransaction())
-                {
-                    dbTopology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
-                }
-
-                if (dbTopology.RelevantFor(ServerStore.NodeTag))
-                {
-                    var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(Database.Name);
-                    await db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
-                }
-                else
-                {
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-                }
+                await WaitForIndexToBeApplied(context, index);
                 HttpContext.Response.StatusCode = (int)statusCode;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -93,6 +79,25 @@ namespace Raven.Server.Documents
                 }
             }
         }
+        protected async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
+        {
+            DatabaseTopology dbTopology;
+            using (context.OpenReadTransaction())
+            {
+                dbTopology = ServerStore.Cluster.ReadDatabaseTopology(context, Database.Name);
+            }
+
+            if (dbTopology.RelevantFor(ServerStore.NodeTag))
+            {
+                var db = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(Database.Name);
+                await db.RachisLogIndexNotifications.WaitForIndexNotification(index, ServerStore.Engine.OperationTimeout);
+            }
+            else
+            {
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+            }
+        }
+
         /// <summary>
         /// puts the given string in TrafficWatch property of HttpContext.Items
         /// puts the given type in TrafficWatchChangeType property of HttpContext.Items

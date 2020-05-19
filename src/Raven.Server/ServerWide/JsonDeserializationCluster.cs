@@ -78,6 +78,8 @@ namespace Raven.Server.ServerWide
 
         public static readonly Func<BlittableJsonReaderObject, TimeSeriesCollectionConfiguration> TimeSeriesCollectionConfiguration = GenerateJsonDeserializationRoutine<TimeSeriesCollectionConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, TimeSeriesPolicy> TimeSeriesPolicy = GenerateJsonDeserializationRoutine<TimeSeriesPolicy>();
+
         public static readonly Func<BlittableJsonReaderObject, RevisionsConfiguration> RevisionsConfiguration = GenerateJsonDeserializationRoutine<RevisionsConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, RevisionsCollectionConfiguration> RevisionsCollectionConfiguration = GenerateJsonDeserializationRoutine<RevisionsCollectionConfiguration>();

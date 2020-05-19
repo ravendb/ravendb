@@ -110,10 +110,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         [OnDeserialized]
         internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
         {
-            PostDeserialization();
+            InternalPostJsonDeserialization();
         }
 
-        public void PostDeserialization()
+        void IPostJsonDeserialization.PostDeserialization()
+        {
+            InternalPostJsonDeserialization();
+        }
+
+        private void InternalPostJsonDeserialization()
         {
             // ensure StringComparer.InvariantCultureIgnoreCase
             var dic = new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);

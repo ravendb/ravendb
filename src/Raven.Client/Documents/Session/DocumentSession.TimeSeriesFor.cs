@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Documents.TimeSeries;
 
 namespace Raven.Client.Documents.Session
 {
@@ -23,14 +24,16 @@ namespace Raven.Client.Documents.Session
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId) where TValues : TimeSeriesEntry
+        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name = null) where TValues : TimeSeriesEntry
         {
-            return new SessionDocumentTimeSeries<TValues>(this, documentId, typeof(TValues).Name);
+            var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
+            return new SessionDocumentTimeSeries<TValues>(this, documentId, tsName);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity) where TValues : TimeSeriesEntry
+        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name = null) where TValues : TimeSeriesEntry
         {
-            return new SessionDocumentTimeSeries<TValues>(this, entity, typeof(TValues).Name);
+            var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
+            return new SessionDocumentTimeSeries<TValues>(this, entity, tsName);
         }
     }
 }
