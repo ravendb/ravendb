@@ -42,6 +42,9 @@ namespace Raven.Server.Documents.Includes
 
         public void Fill(Document document)
         {
+            if (document == null)
+                return;
+
             var docId = document.Id;
 
             foreach (var kvp in _countersBySourcePath)

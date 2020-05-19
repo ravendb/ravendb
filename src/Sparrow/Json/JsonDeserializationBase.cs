@@ -593,12 +593,19 @@ namespace Sparrow.Json
         {
             var list = new List<T>();
 
-            BlittableJsonReaderArray array;
-            if (json.TryGet(name, out array) == false || array == null)
+            if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
                 return list;
 
             foreach (BlittableJsonReaderObject item in array.Items)
+            {
+                if (item == null)
+                {
+                    list.Add(default);
+                    continue;
+                }
+            
                 list.Add(converter(item));
+            }
 
             return list;
         }
