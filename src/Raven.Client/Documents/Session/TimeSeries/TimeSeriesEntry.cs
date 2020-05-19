@@ -94,8 +94,10 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
                     var i = attribute.Index;
                     mapping ??= new SortedDictionary<byte, MemberInfo>();
-                    if (mapping.TryAdd(i, field) == false)
+                    if (mapping.ContainsKey(i))
                         throw new InvalidOperationException($"Cannot map '{field.Name}' to '{i}', since '{mapping[i].Name}' already mapped to it.");
+
+                    mapping[i] = field;
                 }
 
                 return mapping;

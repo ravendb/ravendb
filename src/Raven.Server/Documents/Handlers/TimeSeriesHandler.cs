@@ -14,6 +14,7 @@ using Raven.Client.Json.Converters;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -543,6 +544,32 @@ namespace Raven.Server.Documents.Handlers
                 });
         }
 
+        [RavenAction("/databases/*/admin/timeseries/config/policy", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigTimeSeriesPolicies()
+        {
+            ServerStore.EnsureNotPassive();
+            var collection = GetStringQueryString("collection", required: true);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var json = context.ReadForDisk(RequestBodyStream(), "time-series policy config"))
+            {
+                var config = JsonDeserializationCluster.TimeSeriesCollectionConfiguration(json);
+
+                TimeSeriesConfiguration current;
+                using (context.OpenReadTransaction())
+                {
+                    current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
+                }
+
+                current.Collections ??= new Dictionary<string, TimeSeriesCollectionConfiguration>(StringComparer.InvariantCultureIgnoreCase);
+
+                current.Collections[collection] = config;
+                current.InitializeRollupAndRetention();
+
+                var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
+                await ServerStore.SendToLeaderAsync(editTimeSeries);
+            }
+        }
+
         [RavenAction("/databases/*/timeseries/config/names", "POST", AuthorizationStatus.ValidUser)]
         public async Task ConfigTimeSeriesNames()
         {
@@ -567,7 +594,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 if (current.ValueNameMapper == null)
-                    current.ValueNameMapper = new ValueNameMapper(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
+                    current.ValueNameMapper = new TimeSeriesValueNameMapper(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
                 else
                 {
                     var currentNames = current.ValueNameMapper.GetNames(parameters.Collection, parameters.TimeSeries);

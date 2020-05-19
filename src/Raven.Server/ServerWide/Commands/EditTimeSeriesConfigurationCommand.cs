@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            Configuration?.Initialize();
+            Configuration?.InitializeRollupAndRetention();
 
             record.TimeSeries = Configuration;
             return null;

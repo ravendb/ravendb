@@ -20,6 +20,8 @@ namespace Raven.Server.Documents.TimeSeries
 
         public TimeSeriesConfiguration Configuration { get; }
 
+        private readonly TimeSpan _checkFrequency;
+
         public TimeSeriesPolicyRunner(DocumentDatabase database, TimeSeriesConfiguration configuration) : base(database.Name, database.DatabaseShutdown)
         {
             _database = database;
@@ -28,7 +30,8 @@ namespace Raven.Server.Documents.TimeSeries
                 Configuration.Collections =
                     new Dictionary<string, TimeSeriesCollectionConfiguration>(Configuration.Collections, StringComparer.InvariantCultureIgnoreCase);
 
-            Configuration.Initialize();
+            Configuration.InitializeRollupAndRetention();
+            _checkFrequency = Configuration.PolicyCheckFrequency ?? TimeSpan.FromMinutes(10);
         }
 
         public static TimeSeriesPolicyRunner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, TimeSeriesPolicyRunner policyRunner)
@@ -86,7 +89,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             while (Cts.IsCancellationRequested == false)
             {
-                await WaitOrThrowOperationCanceled(Configuration.PolicyCheckFrequency);
+                await WaitOrThrowOperationCanceled(_checkFrequency);
 
                 await RunRollups();
 

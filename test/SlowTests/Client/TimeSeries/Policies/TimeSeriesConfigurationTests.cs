@@ -15,6 +15,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -79,6 +80,66 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 Assert.Equal(TimeValue.FromYears(3), policies[5].RetentionTime);
                 Assert.Equal(TimeValue.FromYears(1), policies[5].AggregationTime);
+            }
+        }
+
+        [Fact]
+        public async Task CanConfigureTimeSeries2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var collectionName = "Users";
+                var config = new TimeSeriesCollectionConfiguration();
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesPolicyOperation(collectionName, config));
+
+                config.Policies = new List<TimeSeriesPolicy>
+                {
+                    new TimeSeriesPolicy("ByHourFor12Hours",TimeValue.FromHours(1), TimeValue.FromHours(48)),
+                    new TimeSeriesPolicy("ByMinuteFor3Hours",TimeValue.FromMinutes(1), TimeValue.FromMinutes(180)),
+                    new TimeSeriesPolicy("BySecondFor1Minute",TimeValue.FromSeconds(1), TimeValue.FromSeconds(60)),
+                    new TimeSeriesPolicy("ByMonthFor1Year",TimeValue.FromMonths(1), TimeValue.FromYears(1)),
+                    new TimeSeriesPolicy("ByYearFor3Years",TimeValue.FromYears(1), TimeValue.FromYears(3)),
+                    new TimeSeriesPolicy("ByDayFor1Month",TimeValue.FromDays(1), TimeValue.FromMonths(1)),
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesPolicyOperation(collectionName, config));
+                
+                config.RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromHours(96));
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesPolicyOperation(collectionName, config));
+
+                var nameConfig = new ConfigureTimeSeriesValueNamesOperation(collectionName, "HeartRate", new[] {"HeartRate"});
+                await store.Maintenance.SendAsync(nameConfig);
+
+                var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
+                var collection = updated.Collections[collectionName];
+
+                var policies = collection.Policies;
+                Assert.Equal(6, policies.Count);
+
+                Assert.Equal(TimeValue.FromSeconds(60), policies[0].RetentionTime);
+                Assert.Equal(TimeValue.FromSeconds(1), policies[0].AggregationTime);
+
+                Assert.Equal(TimeValue.FromMinutes(180), policies[1].RetentionTime);
+                Assert.Equal(TimeValue.FromMinutes(1), policies[1].AggregationTime);
+
+                Assert.Equal(TimeValue.FromHours(48), policies[2].RetentionTime);
+                Assert.Equal(TimeValue.FromHours(1), policies[2].AggregationTime);
+
+                Assert.Equal(TimeValue.FromMonths(1), policies[3].RetentionTime);
+                Assert.Equal(TimeValue.FromDays(1), policies[3].AggregationTime);
+
+                Assert.Equal(TimeValue.FromYears(1), policies[4].RetentionTime);
+                Assert.Equal(TimeValue.FromMonths(1), policies[4].AggregationTime);
+
+                Assert.Equal(TimeValue.FromYears(3), policies[5].RetentionTime);
+                Assert.Equal(TimeValue.FromYears(1), policies[5].AggregationTime);
+
+                Assert.NotNull(updated.ValueNameMapper);
+                Assert.Equal(1, updated.ValueNameMapper.Mapping.Count);
+                var mapper = updated.ValueNameMapper.GetNames(collectionName, "heartrate");
+
+                Assert.NotNull(mapper);
+                Assert.Equal(1, mapper.Length);
+                Assert.Equal("HeartRate", mapper[0]);
             }
         }
 
@@ -192,7 +253,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     session.SaveChanges();
                 }
 
-                await Task.Delay(config.PolicyCheckFrequency * 3);
+                await Task.Delay(config.PolicyCheckFrequency.Value * 3);
 
                 using (var session = store.OpenSession())
                 {
@@ -1053,7 +1114,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
-                await Task.Delay(config.PolicyCheckFrequency * 3);
+                await Task.Delay(config.PolicyCheckFrequency.Value * 3);
                 WaitForUserToContinueTheTest(store);
 
                 foreach (var node in cluster.Nodes)
