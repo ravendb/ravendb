@@ -154,6 +154,10 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(Database.Metrics.Counters)] = new DynamicJsonValue
                     {
                         [nameof(Database.Metrics.Counters.PutsPerSec)] = Database.Metrics.Counters.PutsPerSec.CreateMeterData(true, empty)
+                    },
+                    [nameof(Database.Metrics.TimeSeries)] = new DynamicJsonValue
+                    {
+                        [nameof(Database.Metrics.TimeSeries.PutsPerSec)] = Database.Metrics.TimeSeries.PutsPerSec.CreateMeterData(true, empty)
                     }
                 });
             }
@@ -182,6 +186,10 @@ namespace Raven.Server.Documents.Handlers
                     [nameof(Database.Metrics.Counters)] = new DynamicJsonValue
                     {
                         [nameof(Database.Metrics.Counters.BytesPutsPerSec)] = Database.Metrics.Counters.BytesPutsPerSec.CreateMeterData(true, empty)
+                    },
+                    [nameof(Database.Metrics.TimeSeries)] = new DynamicJsonValue
+                    {
+                        [nameof(Database.Metrics.TimeSeries.BytesPutsPerSec)] = Database.Metrics.TimeSeries.BytesPutsPerSec.CreateMeterData(true, empty)
                     }
                 });
             }

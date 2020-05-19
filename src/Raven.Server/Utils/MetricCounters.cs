@@ -6,7 +6,6 @@
 
 using System;
 using Raven.Server.Utils.Metrics;
-
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 
@@ -22,6 +21,8 @@ namespace Raven.Server.Utils
 
         public readonly CounterCounters Counters = new CounterCounters();
 
+        public readonly TimeSeriesCounters TimeSeries = new TimeSeriesCounters();
+
         public readonly MapIndexCounters MapIndexes = new MapIndexCounters();
 
         public readonly MapReduceIndexCounters MapReduceIndexes = new MapReduceIndexCounters();
@@ -33,7 +34,6 @@ namespace Raven.Server.Utils
             CreateNew();
         }
 
-
         public void Reset()
         {
             CreateNew();
@@ -43,16 +43,16 @@ namespace Raven.Server.Utils
         {
             Requests.RequestsPerSec = new MeterMetric();
             Requests.AverageDuration = new Ewma(1 - Math.Exp(-1.0 / 60 / 5), 1);
-            Docs.PutsPerSec = new MeterMetric();
-            Docs.BytesPutsPerSec = new MeterMetric();
+
             MapIndexes.IndexedPerSec = new MeterMetric();
             MapReduceIndexes.MappedPerSec = new MeterMetric();
             MapReduceIndexes.ReducedPerSec = new MeterMetric();
             SqlReplications.BatchSize = new MeterMetric();
-            Attachments.PutsPerSec = new MeterMetric();
-            Attachments.BytesPutsPerSec = new MeterMetric();
-            Counters.PutsPerSec = new MeterMetric();
-            Counters.BytesPutsPerSec = new MeterMetric();
+
+            Docs.Initialize();
+            Attachments.Initialize();
+            Counters.Initialize();
+            TimeSeries.Initialize();
         }
 
         public class RequestCounters
@@ -70,22 +70,33 @@ namespace Raven.Server.Utils
             }
         }
 
-        public class DocCounters
+        public abstract class MetricsBase
         {
             public MeterMetric PutsPerSec { get; internal set; }
+
             public MeterMetric BytesPutsPerSec { get; internal set; }
+
+            public void Initialize()
+            {
+                PutsPerSec = new MeterMetric();
+                BytesPutsPerSec = new MeterMetric();
+            }
         }
 
-        public class AttachmentCounters
+        public class DocCounters : MetricsBase
         {
-            public MeterMetric PutsPerSec { get; internal set; }
-            public MeterMetric BytesPutsPerSec { get; internal set; }
         }
 
-        public class CounterCounters
+        public class AttachmentCounters : MetricsBase
         {
-            public MeterMetric PutsPerSec { get; internal set; }
-            public MeterMetric BytesPutsPerSec { get; internal set; }
+        }
+
+        public class CounterCounters : MetricsBase
+        {
+        }
+
+        public class TimeSeriesCounters : MetricsBase
+        {
         }
 
         public class MapIndexCounters
@@ -128,6 +139,11 @@ namespace Raven.Server.Utils
                 {
                     [nameof(Counters.BytesPutsPerSec)] = Counters.BytesPutsPerSec.CreateMeterData(),
                     [nameof(Counters.PutsPerSec)] = Counters.PutsPerSec.CreateMeterData()
+                },
+                [nameof(TimeSeries)] = new DynamicJsonValue
+                {
+                    [nameof(TimeSeries.BytesPutsPerSec)] = TimeSeries.BytesPutsPerSec.CreateMeterData(),
+                    [nameof(TimeSeries.PutsPerSec)] = TimeSeries.PutsPerSec.CreateMeterData()
                 },
                 [nameof(MapIndexes)] = new DynamicJsonValue
                 {
