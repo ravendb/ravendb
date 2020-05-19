@@ -720,6 +720,11 @@ namespace Raven.Server.Documents.Handlers
         private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId,
             string counterName, bool addFullValues, CountersDetail result)
         {
+            if (string.IsNullOrEmpty(counterName))
+            {
+                result.Counters.Add(null);
+                return;
+            }
 
             long value = 0;
             long etag = 0;

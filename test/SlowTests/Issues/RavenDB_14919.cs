@@ -38,8 +38,14 @@ namespace SlowTests.Issues
                 }
 
                 var vals = store.Operations.Send(new GetCountersOperation(docId, counterNames));
-                Assert.Equal(100, vals.Counters.Count);
+                Assert.Equal(101, vals.Counters.Count);
 
+                for (int i = 0; i < 100; i++)
+                {
+                    Assert.Equal(1, vals.Counters[i].TotalValue);
+                }
+
+                Assert.Null(vals.Counters[^1]);
             }
         }
 
@@ -68,8 +74,14 @@ namespace SlowTests.Issues
                 }
 
                 var vals = store.Operations.Send(new GetCountersOperation(docId, counterNames));
-                Assert.Equal(1000, vals.Counters.Count);
+                Assert.Equal(1001, vals.Counters.Count);
 
+                for (int i = 0; i < 1000; i++)
+                {
+                    Assert.Equal(1, vals.Counters[i].TotalValue);
+                }
+
+                Assert.Null(vals.Counters[^1]);
             }
 
         }
@@ -79,9 +91,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var docId = "users/2";
                 string[] ids = new string[124];
-
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 100; i++)
@@ -99,9 +109,9 @@ namespace SlowTests.Issues
                 {
                     var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
                     re.Execute(command, context);
-                    Assert.Equal(100, command.Result.Results.Length);
+                    Assert.Equal(101, command.Result.Results.Length);
+                    Assert.Null(command.Result.Results[^1]);
                 }
-
             }
         }
 
@@ -110,9 +120,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var docId = "users/2";
                 string[] ids = new string[1024];
-
                 using (var session = store.OpenSession())
                 {
                     for (int i = 0; i < 1000; i++)
@@ -130,7 +138,8 @@ namespace SlowTests.Issues
                 {
                     var command = new GetDocumentsCommand(ids, includes: null, metadataOnly: false);
                     re.Execute(command, context);
-                    Assert.Equal(1000, command.Result.Results.Length);
+                    Assert.Equal(1001, command.Result.Results.Length);
+                    Assert.Null(command.Result.Results[^1]);
                 }
 
             }
