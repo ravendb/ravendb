@@ -29,7 +29,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
             makeGenericMethod.Invoke(this, new[] { writer, value, serializer });
         }
 
-        public void GenericWriteJson<TKey, TValue>(JsonWriter writer, Dictionary<TKey, TValue> value, JsonNetJsonSerializer serializer)
+        public void GenericWriteJson<TKey, TValue>(JsonWriter writer, Dictionary<TKey, TValue> value, JsonSerializer serializer)
         {
             writer.WriteStartObject();
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
             writer.WriteEndObject();
         }
 
-        private Dictionary<TKey, TValue> GenericReadJson<TKey, TValue>(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        public Dictionary<TKey, TValue> GenericReadJson<TKey, TValue>(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
             var result = new Dictionary<TKey, TValue>();
             do

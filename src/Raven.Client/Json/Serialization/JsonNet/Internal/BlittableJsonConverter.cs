@@ -7,7 +7,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
 {
     internal class BlittableJsonConverter : BlittableJsonConverterBase, IBlittableJsonConverter
     {
-        public BlittableJsonConverter(DocumentConventions conventions)
+        public BlittableJsonConverter(ISerializationConventions conventions)
             : base(conventions)
         {
         }
@@ -24,19 +24,19 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
                 var entity = defaultValue;
 
-                var documentTypeAsString = Conventions.GetClrType(id, json);
+                var documentTypeAsString = Conventions.Conventions.GetClrType(id, json);
                 if (documentTypeAsString != null)
                 {
                     var documentType = Type.GetType(documentTypeAsString);
                     if (documentType != null && type.IsAssignableFrom(documentType))
                     {
-                        entity = Conventions.Serialization.DeserializeEntityFromBlittable(documentType, json);
+                        entity = Conventions.DeserializeEntityFromBlittable(documentType, json);
                     }
                 }
 
                 if (Equals(entity, defaultValue))
                 {
-                    entity = Conventions.Serialization.DeserializeEntityFromBlittable(type, json);
+                    entity = Conventions.DeserializeEntityFromBlittable(type, json);
                 }
 
                 return entity;
@@ -50,26 +50,26 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
 
         public BlittableJsonReaderObject ToBlittable(object entity, JsonOperationContext context)
         {
-            var jsonSerializer = Conventions.Serialization.CreateSerializer();
+            var jsonSerializer = Conventions.CreateSerializer();
             return ToBlittable(entity, context, jsonSerializer);
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, JsonOperationContext context, IJsonSerializer jsonSerializer)
         {
             using (var writer = new BlittableJsonWriter(context, documentInfo: null))
-                return ToBlittableInternal(entity, Conventions, context, jsonSerializer, writer, removeIdentityProperty: false);
+                return ToBlittableInternal(entity, Conventions.Conventions, context, jsonSerializer, writer, removeIdentityProperty: false);
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, IMetadataDictionary metadata, JsonOperationContext context)
         {
-            var jsonSerializer = Conventions.Serialization.CreateSerializer();
+            var jsonSerializer = Conventions.CreateSerializer();
             return ToBlittable(entity, metadata, context, jsonSerializer);
         }
 
         public BlittableJsonReaderObject ToBlittable(object entity, IMetadataDictionary metadata, JsonOperationContext context, IJsonSerializer jsonSerializer)
         {
             using (var writer = new BlittableJsonWriter(context, new DocumentInfo { MetadataInstance = metadata }))
-                return ToBlittableInternal(entity, Conventions, context, jsonSerializer, writer);
+                return ToBlittableInternal(entity, Conventions.Conventions, context, jsonSerializer, writer);
         }
     }
 }

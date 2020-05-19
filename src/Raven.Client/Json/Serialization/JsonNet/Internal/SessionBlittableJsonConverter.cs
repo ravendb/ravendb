@@ -13,7 +13,8 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
 
         private readonly Dictionary<object, Dictionary<object, object>> _missingDictionary = new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
 
-        public SessionBlittableJsonConverter(InMemoryDocumentSessionOperations session) : base(session.Conventions)
+        public SessionBlittableJsonConverter(InMemoryDocumentSessionOperations session)
+            : base(session.Conventions.Serialization)
         {
             _session = session ?? throw new ArgumentNullException(nameof(session));
         }

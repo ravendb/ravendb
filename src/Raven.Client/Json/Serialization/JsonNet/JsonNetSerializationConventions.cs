@@ -4,24 +4,39 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json.Serialization;
-using Raven.Client.Json.Serialization.JsonNet;
 using Raven.Client.Json.Serialization.JsonNet.Internal;
 using Raven.Client.Json.Serialization.JsonNet.Internal.Converters;
 using Sparrow.Json;
 
-namespace Raven.Client.Newtonsoft.Json
+namespace Raven.Client.Json.Serialization.JsonNet
 {
     public class JsonNetSerializationConventions : ISerializationConventions
     {
-        private DocumentConventions _parent;
-
         private BlittableJsonConverter _defaultConverter;
         private IContractResolver _jsonContractResolver;
         private Action<JsonSerializer> _customizeJsonSerializer;
         private Action<JsonSerializer> _customizeJsonDeserializer;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private JsonEnumerableConverter _jsonEnumerableConverter;
+
+        public DocumentConventions Conventions { get; private set; }
+
+        public JsonNetSerializationConventions(DocumentConventions conventions)
+            : this()
+        {
+            Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+        }
+
+        public JsonNetSerializationConventions()
+        {
+            _defaultConverter = new BlittableJsonConverter(this);
+            _jsonEnumerableConverter = new JsonEnumerableConverter(this);
+
+            DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
+            JsonContractResolver = new DefaultRavenContractResolver(this);
+            CustomizeJsonSerializer = _ => { };
+            CustomizeJsonDeserializer = _ => { };
+        }
 
         /// <summary>
         ///     Register an action to customize the json serializer used by the <see cref="DocumentStore" />
@@ -31,7 +46,7 @@ namespace Raven.Client.Newtonsoft.Json
             get => _customizeJsonSerializer;
             set
             {
-                _parent.AssertNotFrozen();
+                Conventions?.AssertNotFrozen();
                 _customizeJsonSerializer = value;
             }
         }
@@ -45,7 +60,7 @@ namespace Raven.Client.Newtonsoft.Json
             get => _customizeJsonDeserializer;
             set
             {
-                _parent.AssertNotFrozen();
+                Conventions?.AssertNotFrozen();
                 _customizeJsonDeserializer = value;
             }
         }
@@ -59,7 +74,7 @@ namespace Raven.Client.Newtonsoft.Json
             get => _jsonContractResolver;
             set
             {
-                _parent.AssertNotFrozen();
+                Conventions?.AssertNotFrozen();
                 _jsonContractResolver = value;
             }
         }
@@ -69,22 +84,14 @@ namespace Raven.Client.Newtonsoft.Json
             get => _deserializeEntityFromBlittable;
             set
             {
-                _parent.AssertNotFrozen();
+                Conventions?.AssertNotFrozen();
                 _deserializeEntityFromBlittable = value;
             }
         }
 
         void ISerializationConventions.Freeze(DocumentConventions conventions)
         {
-            _parent = conventions ?? throw new ArgumentNullException(nameof(conventions));
-
-            _defaultConverter = new BlittableJsonConverter(conventions);
-            _jsonEnumerableConverter = new JsonEnumerableConverter(conventions);
-
-            DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(conventions, this).EntityFromJsonStream;
-            JsonContractResolver = new DefaultRavenContractResolver(conventions);
-            CustomizeJsonSerializer = _ => { };
-            CustomizeJsonDeserializer = _ => { };
+            Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
         }
 
         IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;
@@ -142,7 +149,7 @@ namespace Raven.Client.Newtonsoft.Json
 
         private void PostJsonSerializerInitiation(JsonNetJsonSerializer jsonSerializer)
         {
-            if (_parent.SaveEnumsAsIntegers == false)
+            if (Conventions.SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
             jsonSerializer.Converters.Add(JsonDateTimeISO8601Converter.Instance);
