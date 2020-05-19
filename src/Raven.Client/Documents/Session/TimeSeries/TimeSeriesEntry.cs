@@ -37,8 +37,8 @@ namespace Raven.Client.Documents.Session.TimeSeries
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class TimeSeriesValueAttribute : Attribute
     {
-        public readonly int Index;
-        public TimeSeriesValueAttribute(int index)
+        public readonly byte Index;
+        public TimeSeriesValueAttribute(byte index)
         {
             Index = index;
         }
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
     {
         public double[] Values { get; set; }
 
-        private static readonly ConcurrentDictionary<Type, SortedDictionary<int, MemberInfo>> _cache = new ConcurrentDictionary<Type, SortedDictionary<int, MemberInfo>>();
+        private static readonly ConcurrentDictionary<Type, SortedDictionary<byte, MemberInfo>> _cache = new ConcurrentDictionary<Type, SortedDictionary<byte, MemberInfo>>();
 
         internal void SetValuesFromFields()
         {
@@ -81,11 +81,11 @@ namespace Raven.Client.Documents.Session.TimeSeries
             }
         }
 
-        internal static SortedDictionary<int, MemberInfo> GetFieldsMapping(Type type)
+        internal static SortedDictionary<byte, MemberInfo> GetFieldsMapping(Type type)
         {
             return _cache.GetOrAdd(type, (t) =>
             {
-                SortedDictionary<int, MemberInfo> mapping = null;
+                SortedDictionary<byte, MemberInfo> mapping = null;
                 foreach (var field in ReflectionUtil.GetPropertiesAndFieldsFor(t, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                 {
                     var attribute = field.GetCustomAttribute<TimeSeriesValueAttribute>(inherit: false);
@@ -93,8 +93,9 @@ namespace Raven.Client.Documents.Session.TimeSeries
                         continue;
 
                     var i = attribute.Index;
-                    mapping ??= new SortedDictionary<int, MemberInfo>();
-                    mapping[i] = field;
+                    mapping ??= new SortedDictionary<byte, MemberInfo>();
+                    if (mapping.TryAdd(i, field) == false)
+                        throw new InvalidOperationException($"Cannot map '{field.Name}' to '{i}', since '{mapping[i].Name}' already mapped to it.");
                 }
 
                 return mapping;
