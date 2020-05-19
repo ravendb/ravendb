@@ -24,7 +24,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
     <EmbeddedResource Include="Web\Assets\Unsafe.html" />
     <EmbeddedResource Include="Web\Assets\AuthError.html" />
-    <EmbeddedResource Include="..\..\LICENSE" Link="Commercial\RavenDB.license.txt" />
+    <EmbeddedResource Include="..\..\LICENSE.txt" Link="Commercial\RavenDB.license.txt" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\Imports\metrics.net\Src\Metrics\**\*.cs" />
