@@ -117,20 +117,27 @@ namespace Raven.Server.Config
                 }
 
                 string pendingValue = null;
-
+                var hasPendingValue = false;
+                
                 if (hasValue)
                 {
                     if (string.Equals(value, valueInDbRecord) == false)
+                    {
                         pendingValue = valueInDbRecord;
+                        hasPendingValue = true;
+                    }
                 }
                 else
+                {
                     pendingValue = valueInDbRecord;
+                    hasPendingValue = true;
+                }
 
                 DatabaseValues[key] = new ConfigurationEntrySingleValue
                 {
                     Value = canShowValue ? value : null,
                     HasAccess = true,
-                    HasPendingValue = true,
+                    HasPendingValue = hasPendingValue,
                     PendingValue = canShowValue ? pendingValue : null
                 };
             }

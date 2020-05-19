@@ -15,10 +15,18 @@ export abstract class settingsEntry {
     isServerWideOnlyEntry = ko.observable<boolean>();
     serverOrDefaultValue: KnockoutComputed<string>;
     hasServerValue: KnockoutComputed<boolean>;
-
+    
     effectiveValue: KnockoutComputed<string>;
     effectiveValueOrigin: KnockoutComputed<configurationOrigin>;
+    
+    rawValue = ko.observable<string>();
+    hasPendingValue = ko.observable<boolean>(false);
+    
+    // These 2 are needed for Summary view
+    pendingValueText: KnockoutComputed<string>;
+    effectiveValueInUseText: KnockoutComputed<string>;
 
+    entryClassForSummaryMode: KnockoutComputed<string>;
     descriptionHtml: KnockoutComputed<string>;
 
     protected constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
@@ -34,6 +42,27 @@ export abstract class settingsEntry {
             return rawDescription ? 
                 `<div><span>${genUtils.escapeHtml(rawDescription)}</span></div>` :
                 `<div><span class="text-muted">No description is available</span></div>`;
+        });
+
+        this.effectiveValueInUseText = ko.pureComputed(() => {
+            if (!this.hasPendingValue()) {
+                return this.effectiveValue();
+            }
+
+            if (this.rawValue()) {
+                return this.rawValue();
+            }
+
+            return this.serverOrDefaultValue();
+        });
+        
+        
+        this.entryClassForSummaryMode = ko.pureComputed(() => {
+            if (this.hasPendingValue()) {
+                return "highlight-key";
+            }
+
+            return this.effectiveValueOrigin() === "Database" ? "highlight-key" : "";
         });
     }
 
@@ -56,6 +85,9 @@ export class serverWideOnlyEntry extends settingsEntry {
 
         this.effectiveValue = ko.pureComputed(() => this.serverOrDefaultValue());
         this.effectiveValueOrigin = ko.pureComputed(() => this.hasServerValue() ? "Server" : "Default");
+        
+        this.pendingValueText = ko.pureComputed(() => "");
+        this.effectiveValueInUseText = ko.pureComputed(() => this.effectiveValue());
     }
 
     getTemplateType() {
@@ -65,7 +97,9 @@ export class serverWideOnlyEntry extends settingsEntry {
 
 export abstract class databaseEntry<T> extends settingsEntry {
     customizedDatabaseValue = ko.observable<T>();
-    override = ko.observable<boolean>();
+    override = ko.observable<boolean>(false);
+  
+    valueIsPendingRemoval = ko.observable<boolean>(false);
 
     entryDirtyFlag: () => DirtyFlag;
     validationGroup: KnockoutValidationGroup;
@@ -109,11 +143,20 @@ export abstract class databaseEntry<T> extends settingsEntry {
     init() {
         this.isServerWideOnlyEntry(false);
 
-        const hasDatabaseValues = !_.isEmpty(this.data.DatabaseValues); // if {key : value} or {key : null}
-        this.override(hasDatabaseValues);
+        const databaseValuesHasContent = !_.isEmpty(this.data.DatabaseValues);
+        
+        if (databaseValuesHasContent) {
+            const keyContent = this.data.DatabaseValues[this.keyName()];
+            this.hasPendingValue(keyContent.HasPendingValue);
 
-        if (hasDatabaseValues) {
-            this.initCustomizedValue(this.data.DatabaseValues[this.keyName()].Value);
+            this.rawValue(keyContent.Value);
+            this.valueIsPendingRemoval(keyContent.HasPendingValue && !keyContent.PendingValue && keyContent.PendingValue !== "0");
+            
+            this.override((keyContent.HasPendingValue && !!keyContent.PendingValue) ||
+                          (!!keyContent.Value && !this.valueIsPendingRemoval()));
+            
+            this.initCustomizedValue(keyContent.PendingValue || keyContent.Value || this.serverOrDefaultValue());
+            
         } else {
             this.initCustomizedValue(this.serverOrDefaultValue());
         }
@@ -127,6 +170,18 @@ export abstract class databaseEntry<T> extends settingsEntry {
         });
 
         this.effectiveValueOrigin = ko.pureComputed(() => this.override() ? "Database" : (this.hasServerValue() ? "Server" : "Default"));
+
+        this.pendingValueText = ko.pureComputed(() => {
+            if (!this.hasPendingValue()) {
+                return "";
+            }
+
+            if (this.valueIsPendingRemoval()) {
+                return "<Database value deleted>";
+            }
+
+            return this.effectiveValue();
+        });
 
         this.entryDirtyFlag = new ko.DirtyFlag([
             this.override,
@@ -233,8 +288,12 @@ export abstract class numberEntry extends databaseEntry<number | null> {
         } // i.e. for Indexing.MapBatchSize to indicate 'no limit'
 
         const numberValue = this.customizedDatabaseValue();
-        return numberValue >= this.minValue() ? numberValue.toString() : null;
-        // must have null option returned here for the validation of empty template
+        
+        if (numberValue) {
+            return numberValue >= this.minValue() ? numberValue.toString() : null;
+        } else {
+            return null;
+        }
     }
 
     initValidation() {

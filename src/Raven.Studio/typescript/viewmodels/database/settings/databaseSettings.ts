@@ -16,18 +16,27 @@ import popoverUtils = require("common/popoverUtils");
 import genUtils = require("common/generalUtils");
 
 type viewModeType = "summaryMode" | "editMode";
-type entriesGroupType = "allEntries" | "databaseEntries" | "customizedDatabaseEntries";
+
+class categoryInfo {
+    name = ko.observable<string>();
+    customizedEntriesCount = ko.observable<number>();
+    
+    constructor (categoryName: string, numberOfCustomizedEntries: number) {
+        this.name(categoryName);
+        this.customizedEntriesCount(numberOfCustomizedEntries);
+    }
+}
 
 class databaseSettings extends viewModelBase {
     
     allEntries = ko.observableArray<models.settingsEntry>([]);
-    groupToShow = ko.observable<entriesGroupType>("allEntries");
     isAnyMatchingEntries: KnockoutComputed<boolean>;
     
+    categoriesInfo = ko.observable<Array<categoryInfo>>();
     allCategoryNames: KnockoutComputed<Array<string>>;
     selectedCategory = ko.observable<string>();
 
-    private categoriesGridController = ko.observable<virtualGridController<string>>();
+    private categoriesGridController = ko.observable<virtualGridController<categoryInfo>>();
     private summaryGridController = ko.observable<virtualGridController<models.settingsEntry>>();
 
     viewMode = ko.observable<viewModeType>("summaryMode");
@@ -42,11 +51,12 @@ class databaseSettings extends viewModelBase {
 
     isForbidden = ko.observable<boolean>(false);
     filterKeys = ko.observable<string>("");
+    hasPendingValues = ko.observable<boolean>(false);
 
     constructor() {
         super();
         
-        this.bindToCurrentInstance("save", "refresh", "switchToEditMode", "exitEditMode", "setGroupToShow");
+        this.bindToCurrentInstance("save", "refresh", "switchToEditMode", "exitEditMode");
         this.initializeObservables();
     }
 
@@ -59,12 +69,7 @@ class databaseSettings extends viewModelBase {
             return isDirty && !this.spinners.save();
         });
 
-        this.allCategoryNames = ko.pureComputed(() => {
-            return _.uniq(this.allEntries().map(entry => entry.data.Metadata.Category)).sort();
-        });
-
         this.selectedCategory.subscribe(() => this.computeEntriesToShow());
-        this.groupToShow.subscribe(() => this.computeEntriesToShow());
         this.filterKeys.throttle(500).subscribe(() => this.computeEntriesToShow());
 
         this.isAnyMatchingEntries = ko.pureComputed(() => !!this.allEntries().filter(x => x.showEntry()).length);
@@ -85,11 +90,7 @@ class databaseSettings extends viewModelBase {
 
         const filterCondition = !this.filterKeys() || this.entryContainsFilterText(entry);
 
-        const dropDownCondition = this.groupToShow() === "allEntries" ||
-                                 (this.groupToShow() === "databaseEntries" && !entry.isServerWideOnlyEntry()) ||
-                                 (this.groupToShow() === "customizedDatabaseEntries" && entry instanceof models.databaseEntry && entry.override());
-
-        return categoryCondition && filterCondition && dropDownCondition;
+        return categoryCondition && filterCondition;
     }
     
     private entryContainsFilterText(entry: models.settingsEntry) {
@@ -130,37 +131,50 @@ class databaseSettings extends viewModelBase {
         categoriesGrid.headerVisible(true);
         categoriesGrid.init(() => this.fetchCategoriesData(), () =>
             [
-                new hyperlinkColumn<string>(categoriesGrid, x => x, x => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "90%",
+                new hyperlinkColumn<categoryInfo>(categoriesGrid, x => this.getCategoryHtml(x), x => appUrl.forDatabaseSettings(this.activeDatabase()), "Category", "90%",
                     {
+                        useRawValue: () => true,
                         sortable: "string",
-                        handler: (categoryToShow, event) => this.selectActionHandler(categoryToShow, event),
-                        extraClassForLink: x => this.getCategoryStateClass(x)
-                    })
+                        handler: (categoryToShow, event) => this.selectActionHandler(categoryToShow, event)
+                    }),
             ]);
     }
 
-    private fetchCategoriesData(): JQueryPromise<pagedResult<string>> {
-        return $.when<pagedResult<string>>({
-            items: this.allCategoryNames(),
-            totalResultCount: this.allCategoryNames().length,
+    private fetchCategoriesData(): JQueryPromise<pagedResult<categoryInfo>> {
+        return $.when<pagedResult<categoryInfo>>({
+            items: this.categoriesInfo(),
+            totalResultCount: this.categoriesInfo().length,
             resultEtag: null,
             additionalResultInfo: undefined
         })
     }
 
-    private selectActionHandler(categoryToShow: string, event: JQueryEventObject) {
+    private selectActionHandler(categoryToShow: categoryInfo, event: JQueryEventObject) {
         event.preventDefault();
-        this.setCategory(categoryToShow);
+        this.setCategory(categoryToShow.name());
     }
     
     private setCategory(category: string) {
         this.selectedCategory(category);
         
         if (this.categoriesGridController()) {
-            this.categoriesGridController().setSelectedItems([category]);
+            const categoryToSet = this.categoriesInfo().find(x => x.name() === category)
+            this.categoriesGridController().setSelectedItems([categoryToSet]);
         }
     }
 
+    private getCategoryHtml(category: categoryInfo) {
+        const statePart = this.getCategoryStateClass(category.name());
+        
+        const namePart = `<div class="use-parent-action ${statePart}">${genUtils.escapeHtml(category.name())}</div>`;
+        
+        const countPart = `<div class="use-parent-action label label-default customized-entries-label" title="Number of customized entries in category">
+                               ${category.customizedEntriesCount()}
+                           </div>`;
+        
+        return category.customizedEntriesCount() ? namePart + countPart : namePart;
+    }
+    
     private getCategoryStateClass(category: string) {
         let state: string;
         let errorState: string;
@@ -168,65 +182,94 @@ class databaseSettings extends viewModelBase {
         this.allEntries().filter(entry => entry.data.Metadata.Category === category).forEach(entry => {
             const entryState = this.getEntryStateClass(entry);
             
-            if (entryState === "customized-item-with-error") {
+            if (entryState === "invalid-item") {
                 errorState = entryState;
             }
     
-            if (entryState === "customized-item") {
+            if (entryState === "dirty-item") {
                 state = entryState;
-            } 
+            }
         });
         
-        return errorState || state || ""; 
+        return errorState || state || "";
     }
     
     private getEntryStateClass(entry: models.settingsEntry) {
-        let stateClass: string;
-        
-        if (entry instanceof models.databaseEntry && entry.override()) {
-            stateClass = this.isValid(entry.validationGroup) ? "customized-item" : "customized-item-with-error";
+        let stateClass = "";
+
+        if (entry instanceof models.databaseEntry) {
+            if (entry.override() && !this.isValid(entry.validationGroup)) {
+                stateClass = "invalid-item";
+            } else if (entry.entryDirtyFlag().isDirty()) {
+                stateClass = "dirty-item";
+            }
         }
         
-        return stateClass || "";
+        return stateClass;
     }
     
     private initSummaryGrid() {
         const summaryGrid = this.summaryGridController();
         summaryGrid.headerVisible(true);
 
-        summaryGrid.init(() => this.fetchSummaryData(), () =>
-            [
-                new textColumn<models.settingsEntry>(summaryGrid, x => x.keyName(), "Configuration Key", "30%", {
-                    sortable: "string",
-                    extraClass: x => this.getEntryStateClass(x)
-                }),
-                new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValue(), "Effective Value", "40%", {
-                    sortable: "string",
-                    extraClass: (x) => x.effectiveValue() ? "effective-value" : ""
-                }),
-                new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueOrigin(), "Origin", "20%", {
-                    sortable: "string",
-                    extraClass: (x) => {
-                        let classes = "source-item ";
-                        switch (x.effectiveValueOrigin()) {
-                            case "Database":
-                                classes += "source-item-database";
-                                break;
-                            case "Server":
-                                classes += "source-item-server";
-                                break;
-                            case "Default":
-                                classes += "source-item-default";
-                                break;
+        summaryGrid.init(() => this.fetchSummaryData(), () => {
+            if (this.hasPendingValues()) {
+                return [
+                    new textColumn<models.settingsEntry>(summaryGrid, x => x.keyName(), "Configuration Key", "30%", {
+                        sortable: "string",
+                        extraClass: x => x.entryClassForSummaryMode()
+                    }),
+                    new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueInUseText(), "Effective Value in Use", "30%", {
+                        sortable: "string",
+                        extraClass: (x) => x.effectiveValueInUseText() ? "value-has-content" : ""
+                    }),
+                    new textColumn<models.settingsEntry>(summaryGrid, x => x.pendingValueText() , "Pending Value", "30%", {
+                        sortable: "string",
+                        extraClass: (x) => x.pendingValueText() ? "value-has-content" : ""
+                    })
+                ]
+            } else {
+                return [
+                    new textColumn<models.settingsEntry>(summaryGrid, x => x.keyName(), "Configuration Key", "30%", {
+                        sortable: "string",
+                        extraClass: x => x.entryClassForSummaryMode()
+                    }),
+                    new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValue(), "Effective Value", "40%", {
+                        sortable: "string",
+                        extraClass: (x) => x.effectiveValue() ? "value-has-content" : ""
+                    }),
+                    new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueOrigin(), "Origin", "20%", {
+                        sortable: "string",
+                        extraClass: (x) => {
+                            let classes = "source-item ";
+                            switch (x.effectiveValueOrigin()) {
+                                case "Database":
+                                    classes += "source-item-database";
+                                    break;
+                                case "Server":
+                                    classes += "source-item-server";
+                                    break;
+                                case "Default":
+                                    classes += "source-item-default";
+                                    break;
+                            }
+                            return x.effectiveValue() ? classes : classes += " null-value";
                         }
-                        return x.effectiveValue() ? classes : classes += " null-value";
-                    }
-                })
-            ]);
+                    })
+                ]
+            }
+        });
     }
     
     private fetchSummaryData(): JQueryPromise<pagedResult<models.settingsEntry>> {
-        const entriesForSummaryMode = _.filter(this.allEntries(), x => x.showEntry());
+        let entriesForSummaryMode = _.filter(this.allEntries(), x => x.showEntry());
+
+        entriesForSummaryMode = entriesForSummaryMode.reduce((acc,element) => {
+            if (element.entryClassForSummaryMode() === "highlight-key") {
+                return [element, ...acc];
+            }
+            return [...acc, element];
+        }, []);
         
         return $.when<pagedResult<models.settingsEntry>>({
             items: entriesForSummaryMode,
@@ -251,30 +294,12 @@ class databaseSettings extends viewModelBase {
                 this.allEntries(_.sortBy(settingsEntries, x => x.keyName()));
             });
     }
-
-    private isEntriesValid() {
-        let valid = true;
-        let firstError = true;
-
-        this.allEntries().map(entry => {
-            if (this.getEntryStateClass(entry) === "customized-item-with-error") {
-                valid = false;
-
-                if (firstError) {
-                    firstError = false;
-                    this.setCategory(entry.data.Metadata.Category);
-                }
-            }
-        });
-
-        return valid;
-    }
     
     private findFirstCategoryWithError() {
         let categoryWithError: string;
         
         this.allEntries().some(entry => {
-            if (this.getEntryStateClass(entry) === "customized-item-with-error") {
+            if (this.getEntryStateClass(entry) === "invalid-item") {
                 return categoryWithError = entry.data.Metadata.Category;
             }
         });
@@ -286,10 +311,6 @@ class databaseSettings extends viewModelBase {
         const categoryWithErrors = this.findFirstCategoryWithError();
         if (categoryWithErrors) {
             this.setCategory(categoryWithErrors);
-            
-            if (this.viewMode() === "summaryMode") {
-                this.switchToEditMode();
-            }
 
             return;
         }
@@ -302,7 +323,7 @@ class databaseSettings extends viewModelBase {
 
         const settingsToSaveSorted = _.sortBy(settingsToSave, x => x.key);
         
-        const saveSettingsModel = new saveDatabaseSettingsConfirm((settingsToSaveSorted));
+        const saveSettingsModel = new saveDatabaseSettingsConfirm((settingsToSaveSorted), this.howToReloadDatabaseHtml);
 
         saveSettingsModel.result.done(result => {
             if (result.can) {
@@ -310,11 +331,8 @@ class databaseSettings extends viewModelBase {
 
                 new saveDatabaseSettingsCommand(this.activeDatabase(), settingsToSaveSorted)
                     .execute()
-                    .done(() => {
-                        this.fetchDatabaseSettings(this.activeDatabase())
-                            .done(() => this.processAfterFetch());
-                    })
-                    .always(() => this.spinners.save(false))
+                    .done(() => this.exitEditMode())
+                    .always(() => this.spinners.save(false));
                 }
             });
 
@@ -322,38 +340,15 @@ class databaseSettings extends viewModelBase {
     }
 
     refresh() {
-        if (this.dirtyFlag().isDirty()) {
-            this.confirmRefresh()
-                .then(result => {
-                      if (result.can) {
-                          this.executeRefresh();
-                      } 
-                });
-        } else {
-            this.executeRefresh();
-        }
-    }
-
-    confirmRefresh() {
-        const text = `<div><span class='bg-warning text-warning padding padding-xs'><i class='icon-warning margin-right margin-right-sm'></i>You have unsaved changes !</span></div>
-                      <div>Clicking Refresh will reload all database settings from the server.</div>`;
-
-        return this.confirmationMessage("Are you sure?", text,
-            {
-                html: true,
-                buttons: ["Cancel", "Refresh"]
-            });
-    }
-    
-    executeRefresh() {
         this.spinners.refresh(true);
 
-        this.fetchDatabaseSettings(this.activeDatabase(), true)
-            .done(() => {
-                this.processAfterFetch();
-                this.dirtyFlag().reset();
-            })
+        this.fetchData(true)
             .always(() => this.spinners.refresh(false));
+    }
+    
+    fetchData(refresh: boolean = false) {
+        return this.fetchDatabaseSettings(this.activeDatabase(), refresh)
+            .done(() => this.processAfterFetch());
     }
 
     private processAfterFetch() {
@@ -376,20 +371,68 @@ class databaseSettings extends viewModelBase {
 
             target.popover('show');
         });
+
+        popoverUtils.longWithHover($("#pendingValuesWarning"),
+            {
+                content: `<div class="margin-left margin-right margin-right-lg">${this.howToReloadDatabaseHtml}</div>`,
+                placement: 'bottom'
+            });
         
-        if (this.viewMode() === "editMode") {
-            this.setupEditMode();
-        } else {
-            this.computeEntriesToShow();
-        }
-    }
-    
-    setGroupToShow(groupType: entriesGroupType) {
-        this.groupToShow(groupType);
+        this.computeEntriesToShow();
+        
+        this.allCategoryNames = ko.pureComputed(() => {
+            return _.uniq(this.allEntries().map(entry => entry.data.Metadata.Category)).sort();
+        });
+        
+        const categories = this.allCategoryNames().map(x => new categoryInfo(x, this.getNumberOfCustomizedEntires(x)));
+        this.categoriesInfo(categories);
+        
+        this.hasPendingValues(this.allEntries().some(entry => entry instanceof models.databaseEntry && entry.hasPendingValue()));
+        
+        this.summaryGridController().reset(true);
     }
 
+    private getNumberOfCustomizedEntires(category: string) {
+        let customizedEntries = 0;
+        
+        this.allEntries().forEach(x => {
+            if (x instanceof models.databaseEntry && x.data.Metadata.Category === category && x.override()) {
+                customizedEntries++;
+            }
+        });
+        
+        return customizedEntries;
+    }
+    
+    cancelEdit() {
+        if (this.dirtyFlag().isDirty()) {
+            this.confirmUnsavedchanges()
+                .then(result => {
+                    if (result.can) {
+                        this.exitEditMode();
+                    }
+                });
+        } else {
+            this.exitEditMode();
+        }
+    }
+
+    confirmUnsavedchanges() {
+        const text = `<div class="padding">
+                         <div class='bg-warning text-warning padding padding-xs margin-right'><i class='icon-warning margin-right margin-right-sm'></i>You have unsaved changes !</div>
+                         <div class="margin-top">Clicking <strong>OK</strong> will reload all database settings from the server <strong>without saving</strong> your changes.</div>
+                      </div>`;
+
+        return this.confirmationMessage("Are you sure?", text,
+            {
+                html: true,
+                buttons: ["Cancel", "OK"]
+            });
+    }
+    
     exitEditMode() {
         this.viewMode("summaryMode");
+        this.fetchData();
         this.computeEntriesToShow();
     }
     
@@ -410,6 +453,8 @@ class databaseSettings extends viewModelBase {
     }
     
     private setupEditMode(reset: boolean = true) {
+        this.dirtyFlag().reset();
+        
         if (reset) {
             this.categoriesGridController().reset(false);
         }
@@ -421,7 +466,16 @@ class databaseSettings extends viewModelBase {
             entry.showEntry(this.shouldShowEntry(entry));
 
             if (entry instanceof models.databaseEntry) {
-                entry.override.subscribe(() => {
+                entry.override.subscribe((override) => {
+                    
+                    const category = this.categoriesInfo().find(x => x.name() === entry.data.Metadata.Category);
+                    const currentCustomizedCount = category.customizedEntriesCount();
+                    if (override) {
+                        category.customizedEntriesCount(currentCustomizedCount+1)
+                    } else {
+                        category.customizedEntriesCount(currentCustomizedCount-1)
+                    }
+                    
                     this.categoriesGridController().reset(false);
                     this.setCategory(entry.data.Metadata.Category);
                 });
@@ -451,6 +505,22 @@ class databaseSettings extends viewModelBase {
             hasAnyDirtyField
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
+
+    readonly howToReloadDatabaseHtml = `<h4 class="">There are two ways to reload the database:</h4>
+                                        <ul>
+                                            <li>
+                                                <small>
+                                                    Disable and then enable the database from the databases-list-view in the Studio.<br>
+                                                    This will reload the database on all the cluster nodes immediately.
+                                                </small>
+                                            </li>
+                                            <li class=\"margin-top margin-top-sm\">
+                                                <small>
+                                                    Restart RavenDB on all nodes.<br>
+                                                    The database settings configuration will become effective per node that is restarted.
+                                                </small>
+                                            </li>
+                                        </ul>`;
 }
 
 export = databaseSettings;

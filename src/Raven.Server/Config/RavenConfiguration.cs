@@ -508,7 +508,7 @@ namespace Raven.Server.Config
             if (cfg == null || keyName == null)
                 return false;
 
-            return cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName));
+            return cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName, StringComparison.OrdinalIgnoreCase));
         }
 
     }
