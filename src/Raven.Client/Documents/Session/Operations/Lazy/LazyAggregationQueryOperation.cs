@@ -15,9 +15,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _indexQuery;
         private readonly Action<QueryResult> _invokeAfterQueryExecuted;
-        private readonly Func<QueryResult, DocumentConventions, Dictionary<string, FacetResult>> _processResults;
+        private readonly Func<QueryResult, Dictionary<string, FacetResult>> _processResults;
 
-        public LazyAggregationQueryOperation(DocumentConventions conventions, IndexQuery indexQuery, Action<QueryResult> invokeAfterQueryExecuted, Func<QueryResult, DocumentConventions, Dictionary<string, FacetResult>> processResults)
+        public LazyAggregationQueryOperation(DocumentConventions conventions, IndexQuery indexQuery, Action<QueryResult> invokeAfterQueryExecuted, Func<QueryResult, Dictionary<string, FacetResult>> processResults)
         {
             _conventions = conventions;
             _indexQuery = indexQuery;
@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         private void HandleResponse(QueryResult queryResult)
         {
-            Result = _processResults(queryResult, _conventions);
+            Result = _processResults(queryResult);
             QueryResult = queryResult;
         }
     }

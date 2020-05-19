@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations
             };
         }
 
-        internal static OperationStatusChange FromJson(BlittableJsonReaderObject value, DocumentConventions conventions)
+        internal static OperationStatusChange FromJson(BlittableJsonReaderObject value)
         {
             value.TryGet(nameof(OperationId), out long operationId);
             value.TryGet(nameof(State), out BlittableJsonReaderObject stateAsJson);
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Operations
             return new OperationStatusChange
             {
                 OperationId = operationId,
-                State = conventions.Serialization.DeserializeEntityFromBlittable<OperationState>(stateAsJson)
+                State = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationState>(stateAsJson)
             };
         }
     }

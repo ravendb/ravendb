@@ -69,7 +69,7 @@ namespace Raven.Client.Documents.Commands
             for (var i = 0; i < array.Length; i++)
             {
                 var result = (BlittableJsonReaderObject)array[i];
-                results[i] = _conventions.Serialization.DeserializeEntityFromBlittable<ExplainQueryResult>(result);
+                results[i] = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ExplainQueryResult>(result);
             }
 
             Result = results;

@@ -17,19 +17,17 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<OperationState> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetServerWideOperationStateCommand(conventions, _id);
+            return new GetServerWideOperationStateCommand(_id);
         }
 
         internal class GetServerWideOperationStateCommand : RavenCommand<OperationState>
         {
             public override bool IsReadRequest => true;
 
-            private readonly DocumentConventions _conventions;
             private readonly long _id;
 
-            public GetServerWideOperationStateCommand(DocumentConventions conventions, long id, string nodeTag = null)
+            public GetServerWideOperationStateCommand(long id, string nodeTag = null)
             {
-                _conventions = conventions;
                 _id = id;
                 SelectedNodeTag = nodeTag;
             }
@@ -49,7 +47,7 @@ namespace Raven.Client.ServerWide.Operations
                 if (response == null)
                     return;
 
-                Result = _conventions.Serialization.DeserializeEntityFromBlittable<OperationState>(response);
+                Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<OperationState>(response);
             }
         }
     }

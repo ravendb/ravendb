@@ -1,8 +1,6 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -12,18 +10,11 @@ namespace Raven.Client.Documents.Operations.Replication
     {
         public RavenCommand<ReplicationPerformance> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetReplicationPerformanceStatisticsCommand(conventions);
+            return new GetReplicationPerformanceStatisticsCommand();
         }
 
         private class GetReplicationPerformanceStatisticsCommand : RavenCommand<ReplicationPerformance>
         {
-            private readonly DocumentConventions _conventions;
-
-            public GetReplicationPerformanceStatisticsCommand(DocumentConventions conventions)
-            {
-                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            }
-
             public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -41,7 +32,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = _conventions.Serialization.DefaultConverter.FromBlittable<ReplicationPerformance>(response, "replication/performance");
+                Result = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<ReplicationPerformance>(response, "replication/performance");
             }
         }
     }

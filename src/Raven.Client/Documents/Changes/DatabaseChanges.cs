@@ -699,7 +699,7 @@ namespace Raven.Client.Documents.Changes
                     }
                     break;
                 case nameof(OperationStatusChange):
-                    var operationStatusChange = OperationStatusChange.FromJson(value, _conventions);
+                    var operationStatusChange = OperationStatusChange.FromJson(value);
                     foreach (var state in states)
                     {
                         state.Send(operationStatusChange);
