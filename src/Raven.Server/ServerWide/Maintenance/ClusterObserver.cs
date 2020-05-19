@@ -545,7 +545,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (CompareExchangeExpirationStorage.HasExpired(context, nowTicks) == false)
                 return false;
 
-            var result = await _server.SendToLeaderAsync(new DeleteExpiredCompareExchangeCommand(nowTicks, batchSize, RaftIdGenerator.DontCareId));
+            var result = await _server.SendToLeaderAsync(new DeleteExpiredCompareExchangeCommand(nowTicks, batchSize, RaftIdGenerator.NewId()));
             await _server.Cluster.WaitForIndexNotification(result.Index);
             return (bool)result.Result;
         }
