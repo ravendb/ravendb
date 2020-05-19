@@ -91,34 +91,45 @@ namespace Raven.Server.Config
             DatabaseValues = new Dictionary<string, ConfigurationEntrySingleValue>();
             foreach (var key in Metadata.Keys)
             {
-                var hasValueInRecord = dbRecord.Settings.TryGetValue(key, out var valueInDbRecord);
-
-                var value = configuration.GetSetting(key);
-                string pendingValue = null;
-
                 bool canShowValue = Metadata.IsSecured == false;
 
-                if (value != null)
+                var hasValue = configuration.DoesKeyExistInSettings(key);
+                var value = configuration.GetSetting(key);
+
+                if (dbRecord.Settings.TryGetValue(key, out var valueInDbRecord) == false)
                 {
-                    if (hasValueInRecord && string.Equals(value, valueInDbRecord) == false)
+                    if (hasValue &&
+                        key != RavenConfiguration.GetKey(x => x.Core.DataDirectory) && key != RavenConfiguration.GetKey(x => x.Core.RunInMemory)) // DataDirectory and RunInMemory are always set as in-memory values
+                    {
+                        // key does not exist in db record but current configuration has a value - deletion of an override is pending
+
+                        DatabaseValues[key] = new ConfigurationEntrySingleValue
+                        {
+                            Value = canShowValue ? value : null,
+                            HasAccess = true,
+                            HasPendingValue = true,
+                            PendingValue = null,
+                        };
+                    }
+
+                    continue;
+                }
+
+                string pendingValue = null;
+
+                if (hasValue)
+                {
+                    if (string.Equals(value, valueInDbRecord) == false)
                         pendingValue = valueInDbRecord;
                 }
                 else
-                {
-                    if (hasValueInRecord)
-                    {
-                        pendingValue = valueInDbRecord;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
+                    pendingValue = valueInDbRecord;
 
                 DatabaseValues[key] = new ConfigurationEntrySingleValue
                 {
                     Value = canShowValue ? value : null,
                     HasAccess = true,
+                    HasPendingValue = true,
                     PendingValue = canShowValue ? pendingValue : null
                 };
             }
@@ -147,6 +158,7 @@ namespace Raven.Server.Config
     public class ConfigurationEntrySingleValue : IDynamicJson
     {
         public string Value { get; set; }
+        public bool HasPendingValue { get; set; }
         public string PendingValue { get; set; }
         public bool HasAccess { get; set; }
 
@@ -156,7 +168,8 @@ namespace Raven.Server.Config
             {
                 [nameof(Value)] = Value,
                 [nameof(HasAccess)] = HasAccess,
-                [nameof(PendingValue)] = PendingValue
+                [nameof(HasPendingValue)] = HasPendingValue,
+                [nameof(PendingValue)] = PendingValue,
             };
         }
     }
