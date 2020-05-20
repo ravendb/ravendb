@@ -56,17 +56,14 @@ namespace Raven.Server.Web.Studio
                     using (var source = new StreamSource(stream, context, Database))
                     {
                         var destination = new DatabaseDestination(Database);
+                        var withIndexes = skipIndexes ? DatabaseItemType.None : DatabaseItemType.Indexes;
 
-                        var withIndexes = DatabaseItemType.Indexes;
-
-                        if(skipIndexes)
-                            withIndexes = DatabaseItemType.None;
-                        
                         var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time,
                             options: new DatabaseSmugglerOptionsServerSide
                             {
-                                OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments |
-                                                 withIndexes,
+                                OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | 
+                                                 DatabaseItemType.Attachments | DatabaseItemType.CounterGroups | 
+                                                 DatabaseItemType.TimeSeries | withIndexes,
                                 SkipRevisionCreation = true
                             });
 
