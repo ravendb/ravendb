@@ -14,15 +14,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     {
         private readonly Parameters _parameters;
 
-        public ConfigureTimeSeriesValueNamesOperation(string collection, string timeSeries, string[] valueNames, bool update = true)
+        public ConfigureTimeSeriesValueNamesOperation(Parameters parameters)
         {
-            _parameters = new Parameters
-            {
-                Collection = collection,
-                TimeSeries = timeSeries,
-                ValueNames = valueNames,
-                Update = update
-            };
+            _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
             _parameters.Validate();
         }
 
@@ -75,7 +69,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             public string[] ValueNames;
             public bool Update;
 
-            public void Validate()
+            internal void Validate()
             {
                 if (string.IsNullOrEmpty(Collection))
                     throw new ArgumentNullException(nameof(Collection));

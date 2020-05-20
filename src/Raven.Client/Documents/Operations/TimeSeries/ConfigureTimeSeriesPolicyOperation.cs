@@ -40,11 +40,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/timeseries/policy/add?collection={_collection}";
+                url = $"{node.Url}/databases/{node.Database}/admin/timeseries/policy?collection={_collection}";
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
+                    Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
                         var config = ctx.ReadObject(_configuration.ToJson(),"convert time-series policy");
@@ -105,11 +105,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/timeseries/policy/remove?collection={_collection}&name={_name}";
+                url = $"{node.Url}/databases/{node.Database}/admin/timeseries/policy?collection={_collection}&name={_name}";
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
+                    Method = HttpMethod.Delete,
                 };
 
                 return request;

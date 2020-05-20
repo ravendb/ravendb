@@ -544,7 +544,7 @@ namespace Raven.Server.Documents.Handlers
                 });
         }
 
-        [RavenAction("/databases/*/admin/timeseries/policy/add", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/timeseries/policy", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddTimeSeriesPolicy()
         {
             ServerStore.EnsureNotPassive();
@@ -588,7 +588,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/admin/timeseries/policy/remove", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/timeseries/policy", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveTimeSeriesPolicy()
         {
             ServerStore.EnsureNotPassive();

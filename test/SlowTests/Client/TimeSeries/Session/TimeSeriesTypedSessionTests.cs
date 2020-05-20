@@ -58,8 +58,8 @@ namespace SlowTests.Client.TimeSeries.Session
         {
             using (var store = GetDocumentStore())
             {
-                await store.TimeSeries.Register<User, StockPrice>();
-                await store.TimeSeries.Register("Users", nameof(HeartRateMeasure), new[] {nameof(HeartRateMeasure.HeartRate)});
+                await store.TimeSeries.RegisterAsync<User, StockPrice>();
+                await store.TimeSeries.RegisterAsync("Users", nameof(HeartRateMeasure), new[] {nameof(HeartRateMeasure.HeartRate)});
 
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
                 var heartrate = updated.ValueNameMapper.GetNames("users",  nameof(HeartRateMeasure));
