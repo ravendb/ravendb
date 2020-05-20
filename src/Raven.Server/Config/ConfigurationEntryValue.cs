@@ -108,8 +108,10 @@ namespace Raven.Server.Config
                         {
                             Value = canShowValue ? value : null,
                             HasAccess = true,
-                            HasPendingValue = true,
-                            PendingValue = null,
+                            PendingValue = new ConfigurationEntrySinglePendingValue()
+                            {
+                                ValueDeleted = true,
+                            }
                         };
                     }
 
@@ -137,8 +139,11 @@ namespace Raven.Server.Config
                 {
                     Value = canShowValue ? value : null,
                     HasAccess = true,
-                    HasPendingValue = hasPendingValue,
-                    PendingValue = canShowValue ? pendingValue : null
+                    PendingValue = hasPendingValue == false ? null : new ConfigurationEntrySinglePendingValue()
+                    {
+                        HasValue = true,
+                        Value = canShowValue ? pendingValue : null
+                    }
                 };
             }
         }
@@ -166,9 +171,8 @@ namespace Raven.Server.Config
     public class ConfigurationEntrySingleValue : IDynamicJson
     {
         public string Value { get; set; }
-        public bool HasPendingValue { get; set; }
-        public string PendingValue { get; set; }
         public bool HasAccess { get; set; }
+        public ConfigurationEntrySinglePendingValue PendingValue { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -176,8 +180,24 @@ namespace Raven.Server.Config
             {
                 [nameof(Value)] = Value,
                 [nameof(HasAccess)] = HasAccess,
-                [nameof(HasPendingValue)] = HasPendingValue,
-                [nameof(PendingValue)] = PendingValue,
+                [nameof(PendingValue)] = PendingValue?.ToJson(),
+            };
+        }
+    }
+
+    public class ConfigurationEntrySinglePendingValue : IDynamicJson
+    {
+        public bool HasValue { get; set; }
+        public string Value { get; set; }
+        public bool ValueDeleted { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Value)] = Value,
+                [nameof(HasValue)] = HasValue,
+                [nameof(ValueDeleted)] = ValueDeleted
             };
         }
     }
