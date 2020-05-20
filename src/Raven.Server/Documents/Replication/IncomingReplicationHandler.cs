@@ -640,7 +640,8 @@ namespace Raven.Server.Documents.Replication
         private (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
-        private void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context, DataForReplicationCommand data, Reader reader, IncomingReplicationStatsScope stats)
+        private void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context, DataForReplicationCommand data, Reader reader,
+            IncomingReplicationStatsScope stats)
         {
             if (data.ReplicatedItems == null)
                 data.ReplicatedItems = new ReplicationBatchItem[replicatedDocs];
@@ -653,11 +654,11 @@ namespace Raven.Server.Documents.Replication
                 item.ReadChangeVectorAndMarker();
                 item.Read(context, stats);
                 data.ReplicatedItems[i] = item;
-                    }
-                }
+            }
+        }
 
         public unsafe class IncomingReplicationAllocator : IDisposable
-                    {
+        {
             private readonly DocumentsOperationContext _context;
             private readonly long _maxSizeForContextUseInBytes;
             private readonly long _minSizeToAllocateNonContextUseInBytes;
