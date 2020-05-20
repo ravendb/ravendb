@@ -107,7 +107,14 @@ namespace SlowTests.Client.TimeSeries.Policies
                 
                 await store.Maintenance.SendAsync(new ConfigureRawTimeSeriesPolicyOperation(collectionName, new RawTimeSeriesPolicy(TimeValue.FromHours(96))));
 
-                var nameConfig = new ConfigureTimeSeriesValueNamesOperation(collectionName, "HeartRate", new[] {"HeartRate"});
+                var parameters = new ConfigureTimeSeriesValueNamesOperation.Parameters
+                {
+                    Collection = collectionName,
+                    TimeSeries = "HeartRate",
+                    ValueNames = new[] {"HeartRate"},
+                    Update = true
+                };
+                var nameConfig = new ConfigureTimeSeriesValueNamesOperation(parameters);
                 await store.Maintenance.SendAsync(nameConfig);
 
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
@@ -149,12 +156,12 @@ namespace SlowTests.Client.TimeSeries.Policies
         {
             using (var store = GetDocumentStore())
             {
-                await store.TimeSeries.SetPolicy<User>("By15SecondsFor1Minute", TimeValue.FromSeconds(15), TimeValue.FromSeconds(60));
-                await store.TimeSeries.SetPolicy<User>("ByMinuteFor3Hours",TimeValue.FromMinutes(1), TimeValue.FromMinutes(180));
-                await store.TimeSeries.SetPolicy<User>("ByHourFor12Hours",TimeValue.FromHours(1), TimeValue.FromHours(48));
-                await store.TimeSeries.SetPolicy<User>("ByDayFor1Month",TimeValue.FromDays(1), TimeValue.FromMonths(1));
-                await store.TimeSeries.SetPolicy<User>("ByMonthFor1Year",TimeValue.FromMonths(1), TimeValue.FromYears(1));
-                await store.TimeSeries.SetPolicy<User>("ByYearFor3Years",TimeValue.FromYears(1), TimeValue.FromYears(3));
+                await store.TimeSeries.SetPolicyAsync<User>("By15SecondsFor1Minute", TimeValue.FromSeconds(15), TimeValue.FromSeconds(60));
+                await store.TimeSeries.SetPolicyAsync<User>("ByMinuteFor3Hours",TimeValue.FromMinutes(1), TimeValue.FromMinutes(180));
+                await store.TimeSeries.SetPolicyAsync<User>("ByHourFor12Hours",TimeValue.FromHours(1), TimeValue.FromHours(48));
+                await store.TimeSeries.SetPolicyAsync<User>("ByDayFor1Month",TimeValue.FromDays(1), TimeValue.FromMonths(1));
+                await store.TimeSeries.SetPolicyAsync<User>("ByMonthFor1Year",TimeValue.FromMonths(1), TimeValue.FromYears(1));
+                await store.TimeSeries.SetPolicyAsync<User>("ByYearFor3Years",TimeValue.FromYears(1), TimeValue.FromYears(3));
                 
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
                 var collection = updated.Collections["Users"];
@@ -180,18 +187,18 @@ namespace SlowTests.Client.TimeSeries.Policies
                 Assert.Equal(TimeValue.FromYears(3), policies[5].RetentionTime);
                 Assert.Equal(TimeValue.FromYears(1), policies[5].AggregationTime);
 
-                var ex = await Assert.ThrowsAsync<RavenException>(async () => await store.TimeSeries.RemovePolicy<User>("ByMinuteFor3Hours"));
+                var ex = await Assert.ThrowsAsync<RavenException>(async () => await store.TimeSeries.RemovePolicyAsync<User>("ByMinuteFor3Hours"));
                 Assert.Contains(
                     "System.InvalidOperationException: The policy 'By15SecondsFor1Minute' has a retention time of '60 seconds' but should be aggregated by policy 'ByHourFor12Hours' with the aggregation time frame of 60 minutes",
                     ex.Message);
 
-                ex = await Assert.ThrowsAsync<RavenException>(async () => await store.TimeSeries.SetRawPolicy<User>(TimeValue.FromSeconds(10)));
+                ex = await Assert.ThrowsAsync<RavenException>(async () => await store.TimeSeries.SetRawPolicyAsync<User>(TimeValue.FromSeconds(10)));
                 Assert.Contains(
                     "System.InvalidOperationException: The policy 'rawpolicy' has a retention time of '10 seconds' but should be aggregated by policy 'By15SecondsFor1Minute' with the aggregation time frame of 15 seconds",
                     ex.Message);
 
-                await store.TimeSeries.SetRawPolicy<User>(TimeValue.FromMinutes(120));
-                await store.TimeSeries.SetPolicy<User>("By15SecondsFor1Minute", TimeValue.FromSeconds(30), TimeValue.FromSeconds(120));
+                await store.TimeSeries.SetRawPolicyAsync<User>(TimeValue.FromMinutes(120));
+                await store.TimeSeries.SetPolicyAsync<User>("By15SecondsFor1Minute", TimeValue.FromSeconds(30), TimeValue.FromSeconds(120));
 
                 updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
                 collection = updated.Collections["Users"];
@@ -201,7 +208,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 Assert.Equal(TimeValue.FromSeconds(120), policies[0].RetentionTime);
                 Assert.Equal(TimeValue.FromSeconds(30), policies[0].AggregationTime);
 
-                await store.TimeSeries.RemovePolicy<User>("By15SecondsFor1Minute");
+                await store.TimeSeries.RemovePolicyAsync<User>("By15SecondsFor1Minute");
 
                 updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
                 collection = updated.Collections["Users"];
@@ -209,7 +216,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 Assert.Equal(5, policies.Count);
 
-                await store.TimeSeries.RemovePolicy<User>(RawTimeSeriesPolicy.PolicyString);
+                await store.TimeSeries.RemovePolicyAsync<User>(RawTimeSeriesPolicy.PolicyString);
 
             }
         }

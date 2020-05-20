@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Util;
 using Sparrow;
 
 namespace Raven.Client.Documents.TimeSeries
@@ -32,7 +33,7 @@ namespace Raven.Client.Documents.TimeSeries
         /// </summary>
         /// <typeparam name="TCollection">Collection type</typeparam>
         /// <typeparam name="TTimeSeriesEntry">Time-series type, must be derived from TimeSeriesEntry class</typeparam>
-        public Task Register<TCollection, TTimeSeriesEntry>() where TTimeSeriesEntry : TimeSeriesEntry
+        public Task RegisterAsync<TCollection, TTimeSeriesEntry>() where TTimeSeriesEntry : TimeSeriesEntry
         {
             var name = GetTimeSeriesName<TTimeSeriesEntry>();
 
@@ -42,15 +43,22 @@ namespace Raven.Client.Documents.TimeSeries
 
             var collection = _store.Conventions.FindCollectionName(typeof(TCollection));
 
-            return Register(collection, name, mapping.Values.Select(f => f.Name).ToArray());
+            return RegisterAsync(collection, name, mapping.Values.Select(f => f.Name).ToArray());
         }
         
         /// <summary>
         /// Register value names of a time-series
         /// </summary>
-        public Task Register(string collection, string name, string[] valueNames)
+        public Task RegisterAsync(string collection, string name, string[] valueNames)
         {
-            var command = new ConfigureTimeSeriesValueNamesOperation(collection, name, valueNames);
+            var parameters = new ConfigureTimeSeriesValueNamesOperation.Parameters
+            {
+                Collection = collection,
+                TimeSeries = name,
+                ValueNames = valueNames,
+                Update = true
+            };
+            var command = new ConfigureTimeSeriesValueNamesOperation(parameters);
             return _executor.SendAsync(command);
         }
 
@@ -61,10 +69,10 @@ namespace Raven.Client.Documents.TimeSeries
         /// <param name="name">Policy name</param>
         /// <param name="aggregation">Aggregation time</param>
         /// <param name="retention">Retention time</param>
-        public Task SetPolicy<TCollection>(string name, TimeValue aggregation, TimeValue retention)
+        public Task SetPolicyAsync<TCollection>(string name, TimeValue aggregation, TimeValue retention)
         {
             var collection = _store.Conventions.FindCollectionName(typeof(TCollection));
-            return SetPolicy(collection, name, aggregation, retention);
+            return SetPolicyAsync(collection, name, aggregation, retention);
         }
 
         /// <summary>
@@ -73,7 +81,7 @@ namespace Raven.Client.Documents.TimeSeries
         /// <param name="name">Policy name</param>
         /// <param name="aggregation">Aggregation time</param>
         /// <param name="retention">Retention time</param>
-        public Task SetPolicy(string collection, string name, TimeValue aggregation, TimeValue retention)        
+        public Task SetPolicyAsync(string collection, string name, TimeValue aggregation, TimeValue retention)        
         {
             var p = new TimeSeriesPolicy(name, aggregation, retention);
             return _executor.SendAsync(new ConfigureTimeSeriesPolicyOperation(collection, p));
@@ -84,10 +92,10 @@ namespace Raven.Client.Documents.TimeSeries
         /// </summary>
         /// <typeparam name="TCollection">Collection type</typeparam>
         /// <param name="retention">Retention time</param>
-        public Task SetRawPolicy<TCollection>(TimeValue retention)
+        public Task SetRawPolicyAsync<TCollection>(TimeValue retention)
         {
             var collection = _store.Conventions.FindCollectionName(typeof(TCollection));
-            return SetRawPolicy(collection, retention);
+            return SetRawPolicyAsync(collection, retention);
         }
 
         /// <summary>
@@ -95,7 +103,7 @@ namespace Raven.Client.Documents.TimeSeries
         /// </summary>
         /// <param name="retention">Retention time</param>
         /// <returns></returns>
-        public Task SetRawPolicy(string collection, TimeValue retention)
+        public Task SetRawPolicyAsync(string collection, TimeValue retention)
         {
             var p = new RawTimeSeriesPolicy(retention);
             return _executor.SendAsync(new ConfigureRawTimeSeriesPolicyOperation(collection, p));
@@ -105,7 +113,7 @@ namespace Raven.Client.Documents.TimeSeries
         /// Remove policy
         /// </summary>
         /// <param name="name">Policy name</param>
-        public Task RemovePolicy(string collection, string name)
+        public Task RemovePolicyAsync(string collection, string name)
         {
             return _executor.SendAsync(new RemoveTimeSeriesPolicyOperation(collection, name));
         }
@@ -116,10 +124,91 @@ namespace Raven.Client.Documents.TimeSeries
         /// <typeparam name="TCollection">Collection type</typeparam>
         /// <param name="name">Policy name</param>
         /// <returns></returns>
-        public Task RemovePolicy<TCollection>(string name)
+        public Task RemovePolicyAsync<TCollection>(string name)
         {
             var collection = _store.Conventions.FindCollectionName(typeof(TCollection));
-            return RemovePolicy(collection, name);
+            return RemovePolicyAsync(collection, name);
+        }
+
+        /// <summary>
+        /// Register value names of a time-series
+        /// </summary>
+        /// <typeparam name="TCollection">Collection type</typeparam>
+        /// <typeparam name="TTimeSeriesEntry">Time-series type, must be derived from TimeSeriesEntry class</typeparam>
+        public void Register<TCollection, TTimeSeriesEntry>() where TTimeSeriesEntry : TimeSeriesEntry
+        {
+            AsyncHelpers.RunSync(RegisterAsync<TCollection, TTimeSeriesEntry>);
+        }
+        
+        /// <summary>
+        /// Register value names of a time-series
+        /// </summary>
+        public void Register(string collection, string name, string[] valueNames)
+        {
+            AsyncHelpers.RunSync(() => RegisterAsync(collection, name, valueNames));
+        }
+
+        /// <summary>
+        /// Set rollup and retention policy
+        /// </summary>
+        /// <typeparam name="TCollection">Collection type</typeparam>
+        /// <param name="name">Policy name</param>
+        /// <param name="aggregation">Aggregation time</param>
+        /// <param name="retention">Retention time</param>
+        public void SetPolicy<TCollection>(string name, TimeValue aggregation, TimeValue retention)
+        {
+            AsyncHelpers.RunSync(() => SetPolicyAsync<TCollection>(name, aggregation, retention));
+        }
+
+        /// <summary>
+        /// Set rollup and retention policy
+        /// </summary>
+        /// <param name="name">Policy name</param>
+        /// <param name="aggregation">Aggregation time</param>
+        /// <param name="retention">Retention time</param>
+        public void SetPolicy(string collection, string name, TimeValue aggregation, TimeValue retention)        
+        {
+            AsyncHelpers.RunSync(() => SetPolicyAsync(collection, name, aggregation, retention));
+        }
+
+        /// <summary>
+        /// Set raw retention policy 
+        /// </summary>
+        /// <typeparam name="TCollection">Collection type</typeparam>
+        /// <param name="retention">Retention time</param>
+        public void SetRawPolicy<TCollection>(TimeValue retention)
+        {
+            AsyncHelpers.RunSync(() => SetRawPolicyAsync<TCollection>(retention));
+        }
+
+        /// <summary>
+        /// Set raw retention policy
+        /// </summary>
+        /// <param name="retention">Retention time</param>
+        /// <returns></returns>
+        public void SetRawPolicy(string collection, TimeValue retention)
+        {
+            AsyncHelpers.RunSync(() => SetRawPolicyAsync(collection, retention));
+        }
+
+        /// <summary>
+        /// Remove policy
+        /// </summary>
+        /// <param name="name">Policy name</param>
+        public void RemovePolicy(string collection, string name)
+        {
+            AsyncHelpers.RunSync(() => RemovePolicyAsync(collection, name));
+        }
+
+        /// <summary>
+        /// Remove policy
+        /// </summary>
+        /// <typeparam name="TCollection">Collection type</typeparam>
+        /// <param name="name">Policy name</param>
+        /// <returns></returns>
+        public void RemovePolicy<TCollection>(string name)
+        {
+            AsyncHelpers.RunSync(() => RemovePolicyAsync<TCollection>(name));
         }
 
         internal static string GetTimeSeriesName<TTimeSeriesEntry>() where TTimeSeriesEntry : TimeSeriesEntry
