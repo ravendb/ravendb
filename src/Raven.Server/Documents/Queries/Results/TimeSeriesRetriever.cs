@@ -653,7 +653,7 @@ namespace Raven.Server.Documents.Queries.Results
                         ? valueExpression.Token.Value
                         : valueExpression.GetValue(_queryParameters);
 
-                    if (!(val is string|| val is LazyStringValue))
+                    if (!(val is string || val is LazyStringValue))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
                                                         $"Expected argument '{val}' to be a string, but got '{val.GetType()}'");
                     return val.ToString();
