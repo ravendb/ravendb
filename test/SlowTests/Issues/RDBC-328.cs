@@ -59,13 +59,13 @@ namespace SlowTests.Issues
 
                     x.Conventions.Serialization = new JsonNetSerializationConventions
                     {
-                        CustomizeJsonDeserializer = s =>
-                        {
-                            s.Converters.Add(converter);
-                        },
                         CustomizeJsonSerializer = s =>
                         {
                             s.Converters.Add(converter);
+                        },
+                        CustomizeJsonDeserializer = s =>
+                        {
+                            s.Converters.Remove(converter);
                         }
                     };
                 }
