@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.ETL
         private readonly ServerStore _serverStore;
         private bool _isSubscribedToDocumentChanges;
         private bool _isSubscribedToCounterChanges;
+        private bool _isSubscribedToTimeSeriesChanges;
 
         protected Logger Logger;
 
@@ -142,7 +143,6 @@ namespace Raven.Server.Documents.ETL
                 }
 
                 var needToWatchCounters = _processes.Any(x => x.ShouldTrackCounters());
-
                 if (needToWatchCounters)
                 {
                     if (_isSubscribedToCounterChanges == false)
@@ -156,6 +156,21 @@ namespace Raven.Server.Documents.ETL
                     _database.Changes.OnCounterChange -= OnCounterChange;
                     _isSubscribedToCounterChanges = false;
                 }
+                
+                var needToWatchTimeSeries = _processes.Any(x => x.ShouldTrackTimeSeries());
+                if (needToWatchTimeSeries)
+                {
+                    if (_isSubscribedToTimeSeriesChanges == false)
+                    {
+                        _database.Changes.OnTimeSeriesChange += OnTimeSeriesChange;
+                        _isSubscribedToTimeSeriesChanges = true;
+                    }
+                }
+                else
+                {
+                    _database.Changes.OnTimeSeriesChange -= OnTimeSeriesChange;
+                    _isSubscribedToTimeSeriesChanges = false;
+                }
             }
             else
             {
@@ -164,6 +179,9 @@ namespace Raven.Server.Documents.ETL
 
                 _database.Changes.OnCounterChange -= OnCounterChange;
                 _isSubscribedToCounterChanges = false;
+                
+                _database.Changes.OnTimeSeriesChange -= OnTimeSeriesChange;
+                _isSubscribedToTimeSeriesChanges = false;
             }
         }
 
@@ -324,23 +342,17 @@ namespace Raven.Server.Documents.ETL
             _database.NotificationCenter.Add(alert);
         }
 
-        private void OnCounterChange(CounterChange change)
-        {
-            NotifyAboutWork(documentChange: null, counterChange: change);
-        }
-
-        private void OnDocumentChange(DocumentChange change)
-        {
-            NotifyAboutWork(documentChange: change, counterChange: null);
-        }
+        private void OnCounterChange(CounterChange change) => NotifyAboutWork(change);
+        private void OnDocumentChange(DocumentChange change) => NotifyAboutWork(change);
+        private void OnTimeSeriesChange(TimeSeriesChange change) => NotifyAboutWork(change);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void NotifyAboutWork(DocumentChange documentChange, CounterChange counterChange)
+        private void NotifyAboutWork(DatabaseChange change)
         {
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < _processes.Length; i++)
             {
-                _processes[i].NotifyAboutWork(documentChange, counterChange);
+                _processes[i].NotifyAboutWork(change);
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Raven.Client;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
@@ -59,6 +60,8 @@ namespace Raven.Server.Documents.ETL
         public EtlItemType Type { get; protected set; }
 
         public BlittableJsonReaderObject CounterGroupDocument { get; protected set; }
+        
+        public TimeSeriesSegmentEntry TimeSeriesSegmentEntry { get; protected set; }
 
         public LazyStringValue CounterTombstoneId { get; protected set; }
     }

@@ -720,7 +720,7 @@ namespace Raven.Server.Web.System
             switch (EtlConfiguration<ConnectionString>.GetEtlType(etlConfiguration))
             {
                 case EtlType.Raven:
-                    ServerStore.LicenseManager.AssertCanAddRavenEtl();
+                    // ServerStore.LicenseManager.AssertCanAddRavenEtl();
                     break;
                 case EtlType.Sql:
                     ServerStore.LicenseManager.AssertCanAddSqlEtl();

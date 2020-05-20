@@ -9,6 +9,7 @@ using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
 using Raven.Server.Documents.ETL.Providers.SQL.Test;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -44,15 +45,19 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
 
+        protected override IEnumerator<ToSqlItem> ConvertTimeSeriesEnumerator(IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        {
+            throw new NotImplementedException();
+        }
+
+
         protected override bool ShouldTrackAttachmentTombstones()
         {
             return false;
         }
 
-        public override bool ShouldTrackCounters()
-        {
-            return false;
-        }
+        public override bool ShouldTrackCounters() => false;
+        public override bool ShouldTrackTimeSeries() => false;
 
         protected override EtlTransformer<ToSqlItem, SqlTableWithRecords> GetTransformer(DocumentsOperationContext context)
         {

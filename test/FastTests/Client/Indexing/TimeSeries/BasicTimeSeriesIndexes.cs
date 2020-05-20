@@ -892,6 +892,7 @@ namespace FastTests.Client.Indexing.TimeSeries
                 }));
 
                 WaitForIndexing(store);
+                WaitForUserToContinueTheTest(store);
 
                 Assert.True(SpinWait.SpinUntil(() => store.Maintenance.Send(new GetIndexesOperation(0, 10)).Length == 1, TimeSpan.FromSeconds(20)));
 

@@ -1,11 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Jint.Native;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 using Sparrow.Utils;
+using TimeSeriesStats = Raven.Server.Documents.TimeSeries.TimeSeriesStats;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -23,8 +27,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private Dictionary<JsValue, List<CounterOperation>> _countersByJsReference;
 
         private Dictionary<LazyStringValue, List<CounterOperation>> _countersByDocumentId;
+        
+        private Dictionary<JsValue, Dictionary<JsValue, TimeSeriesOperation>> _timeSeriesByJsReference;
+
+        private Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>> _timeSeriesByDocumentId;
 
         private Dictionary<JsValue, (string Name, long Value)> _loadedCountersByJsReference;
+        private Dictionary<JsValue, (string Name, IEnumerable<TimeSeriesStorage.Reader.SingleResult> Value)> _loadedTimeSeriesByJsReference;
 
         private List<ICommandData> _fullDocuments;
 
@@ -40,7 +49,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _deletes.Add(command);
         }
 
-        public void PutFullDocument(string id, BlittableJsonReaderObject doc, List<Attachment> attachments, List<CounterOperation> counterOperations)
+        public void PutFullDocument(
+            string id, 
+            BlittableJsonReaderObject doc, 
+            List<Attachment> attachments, 
+            List<CounterOperation> counterOperations, 
+            List<TimeSeriesOperation> timeSeriesOperations)
         {
             if (_fullDocuments == null)
                 _fullDocuments = new List<ICommandData>();
@@ -65,6 +79,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     FromEtl = true
                 });
+            }
+            
+            if (timeSeriesOperations != null)
+            {
+                foreach (var operation in timeSeriesOperations)
+                {
+                    _fullDocuments.Add(new TimeSeriesBatchCommandData(id, operation.Name, operation.Appends, operation.Removals)
+                    {
+                        //TODO      FromEtl = true
+                    });    
+                }
             }
         }
 
@@ -93,6 +118,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 _loadedCountersByJsReference = new Dictionary<JsValue, (string, long)>(ReferenceEqualityComparer<JsValue>.Default);
 
             _loadedCountersByJsReference.Add(counterReference, (name, value));
+        }
+        
+        public void LoadTimeSeries(JsValue reference, string name, IEnumerable<TimeSeriesStorage.Reader.SingleResult> value)
+        {
+            (_loadedTimeSeriesByJsReference ??= new Dictionary<JsValue, (string, IEnumerable<TimeSeriesStorage.Reader.SingleResult>)>(ReferenceEqualityComparer<JsValue>.Default))
+                .Add(reference, (name, value));
         }
 
         public void AddAttachment(JsValue instance, string name, JsValue attachmentReference)
@@ -175,6 +206,124 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             });
         }
 
+        public void AddTimeSeries(JsValue instance, JsValue timeSeriesReference)
+        {
+            var (name, entries) = _loadedTimeSeriesByJsReference[timeSeriesReference];
+            
+            _timeSeriesByJsReference ??= new Dictionary<JsValue, Dictionary<JsValue, TimeSeriesOperation>>(ReferenceEqualityComparer<JsValue>.Default);
+            if (_timeSeriesByJsReference.TryGetValue(instance, out var timeSeriesOperations) == false)
+            {
+                timeSeriesOperations = new Dictionary<JsValue, TimeSeriesOperation>();
+                _timeSeriesByJsReference.Add(instance, timeSeriesOperations);
+            }
+
+            if (timeSeriesOperations.TryGetValue(name, out var timeSeriesOperation) == false)
+            {
+                timeSeriesOperation = new TimeSeriesOperation();
+                timeSeriesOperations.Add(name, timeSeriesOperation);
+            }
+
+            timeSeriesOperation.Appends ??= new List<TimeSeriesOperation.AppendOperation>();
+            foreach (var entry in entries)
+            {
+                timeSeriesOperation.Appends.Add(new TimeSeriesOperation.AppendOperation
+                {
+                    Timestamp = entry.Timestamp,
+                    Tag = entry.Tag,
+                    Values = entry.Values.ToArray()
+                });    
+            }
+        }
+        
+        public void AddTimeSeries(LazyStringValue documentId, string timeSeriesName, TimeSeriesStorage.Reader.SingleResult timeSeries)
+        {
+            var timeSeriesOperation = GetTimeSeriesOperationFor(documentId, timeSeriesName);
+            (timeSeriesOperation.TimeSeries.Appends ??= new List<TimeSeriesOperation.AppendOperation>())
+                .Add(new TimeSeriesOperation.AppendOperation
+                {
+                    Timestamp = timeSeries.Timestamp,
+                    Tag = timeSeries.Tag,
+                    Values = timeSeries.Values.ToArray()
+                });
+        }
+
+        public void RemoveTimeSeries(LazyStringValue documentId, string timeSeriesName, DateTime from, DateTime to)
+        {
+            var timeSeriesOperation = GetTimeSeriesOperationFor(documentId, timeSeriesName);
+            (timeSeriesOperation.TimeSeries.Removals ??= new List<TimeSeriesOperation.RemoveOperation>())
+                .Add(new TimeSeriesOperation.RemoveOperation { From = from, To = to });
+        }
+
+        private TimeSeriesBatchCommandData GetTimeSeriesOperationFor(LazyStringValue documentId, string timeSeriesName)
+        {
+            _timeSeriesByDocumentId ??= new Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>>(LazyStringValueComparer.Instance);
+            if (_timeSeriesByDocumentId.TryGetValue(documentId, out var timeSeriesOperations) == false)
+            {
+                timeSeriesOperations = new Dictionary<string, TimeSeriesBatchCommandData>();
+                _timeSeriesByDocumentId.Add(documentId, timeSeriesOperations);
+            }
+
+            if (timeSeriesOperations.TryGetValue(timeSeriesName, out var timeSeriesOperation) == false)
+            {
+                timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, null, null);
+                timeSeriesOperations.Add(timeSeriesName, timeSeriesOperation);
+            }
+
+            return timeSeriesOperation;
+        }
+
+
+        //         public void AddTimeSeries(LazyStringValue documentId, string timeSeriesName, IEnumerable<TimeSeriesStorage.Reader.SingleResult> entries)
+        // {
+        //     _timeSeriesByDocumentId ??= new Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>>(LazyStringValueComparer.Instance);
+        //     if (_timeSeriesByDocumentId.TryGetValue(documentId, out var timeSeriesOperations) == false)
+        //     {
+        //         timeSeriesOperations = new Dictionary<string, TimeSeriesBatchCommandData>();
+        //         _timeSeriesByDocumentId.Add(documentId, timeSeriesOperations);
+        //     }
+        //
+        //     if (timeSeriesOperations.TryGetValue(timeSeriesName, out var timeSeriesOperation) == false)
+        //     {
+        //         timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, null, null);
+        //         timeSeriesOperations.Add(documentId, timeSeriesOperation);
+        //     }
+        //     
+        //     ref var appends = ref timeSeriesOperation.TimeSeries.Appends;
+        //     ref var removals = ref timeSeriesOperation.TimeSeries.Removals;
+        //     (DateTime from, DateTime to) toRemove = (default, default); 
+        //     foreach (var entry in entries)
+        //     {
+        //         if (entry.Status == TimeSeriesValuesSegment.Dead)
+        //         {
+        //             if (toRemove.from == default)
+        //                 toRemove.from = entry.Timestamp;
+        //             toRemove.to = entry.Timestamp;
+        //         }
+        //         else
+        //         {
+        //             CheckAndAddToRemovals(ref removals);
+        //             appends ??= new List<TimeSeriesOperation.AppendOperation>();
+        //             appends.Add(new TimeSeriesOperation.AppendOperation
+        //             {
+        //                 Timestamp = entry.Timestamp,
+        //                 Tag = entry.Tag,
+        //                 Values = entry.Values.ToArray()
+        //             });
+        //         }
+        //     }
+        //     CheckAndAddToRemovals(ref removals);
+        //
+        //     void CheckAndAddToRemovals(ref List<TimeSeriesOperation.RemoveOperation> removals)
+        //     {
+        //         if (toRemove.from == default)
+        //             return;
+        //         
+        //         removals ??= new List<TimeSeriesOperation.RemoveOperation>();
+        //         removals.Add(new TimeSeriesOperation.RemoveOperation {From = toRemove.from, To = toRemove.to});
+        //         toRemove.from = default;
+        //     }
+        // }
+
         public List<ICommandData> GetCommands()
         {
             // let's send deletions first
@@ -210,6 +359,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             FromEtl = true
                         });
                     }
+                    
+                    if (_timeSeriesByJsReference != null && _timeSeriesByJsReference.TryGetValue(put.Key, out var timeSeriesOperations))
+                    {
+                        foreach (var (_, operation) in timeSeriesOperations)
+                        {
+                            commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Removals));
+                        }
+                    }
                 }
             }
 
@@ -221,6 +378,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     {
                         FromEtl = true
                     });
+                }
+            }
+            
+            if (_timeSeriesByDocumentId != null)
+            {
+                foreach (var timeSeriesSetForDoc in _timeSeriesByDocumentId)
+                {
+                    commands.AddRange(timeSeriesSetForDoc.Value.Values);
                 }
             }
             

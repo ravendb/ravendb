@@ -289,10 +289,10 @@ namespace Raven.Server.Documents.TimeSeries
                 slicer.SetBaselineToKey(stats.Start > from ? stats.Start : from);
 
                 // first try to find the previous segment containing from value
-                if (table.SeekOneBackwardByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out var segmentValueReader) == false)
+                if (table.SeekOneBackwardByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice1, slicer.TimeSeriesKeySlice, out var segmentValueReader) == false)
                 {
                     // or the first segment _after_ the from value
-                    if (table.SeekOnePrimaryKeyWithPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out segmentValueReader) == false)
+                    if (table.SeekOnePrimaryKeyWithPrefix(slicer.TimeSeriesPrefixSlice1, slicer.TimeSeriesKeySlice, out segmentValueReader) == false)
                         return null;
                 }
 
@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.TimeSeries
                     var offset = slicer.TimeSeriesKeySlice.Size - sizeof(long);
                     *(long*)(slicer.TimeSeriesKeySlice.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
 
-                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, 0))
+                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice1, slicer.TimeSeriesKeySlice, 0))
                     {
                         return GetBaseline(tvh.Reader);
                     }
@@ -573,9 +573,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(_from))
                 {
-                    if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
+                    if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice1, holder.TimeSeriesKeySlice, out _tvr) == false)
                     {
-                        return _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr);
+                        return _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice1, holder.TimeSeriesKeySlice, out _tvr);
                     }
 
                     return true;
@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(date))
                     {
-                        if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
+                        if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice1, holder.TimeSeriesKeySlice, out _tvr) == false)
                             return null;
                     }
 
@@ -1070,7 +1070,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static DateTime? BaselineOfNextSegment(TimeSeriesSegmentHolder segmentHolder, DateTime myDate)
         {
             var table = segmentHolder.Table;
-            var prefix = segmentHolder.SliceHolder.TimeSeriesPrefixSlice;
+            var prefix = segmentHolder.SliceHolder.TimeSeriesPrefixSlice1;
             var key = segmentHolder.SliceHolder.TimeSeriesKeySlice;
 
             return BaselineOfNextSegment(table, prefix, key, myDate);
@@ -1317,7 +1317,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             public bool LoadCurrentSegment()
             {
-                if (Table.SeekOneBackwardByPrimaryKeyPrefix(SliceHolder.TimeSeriesPrefixSlice, SliceHolder.TimeSeriesKeySlice, out _tvr))
+                if (Table.SeekOneBackwardByPrimaryKeyPrefix(SliceHolder.TimeSeriesPrefixSlice1, SliceHolder.TimeSeriesKeySlice, out _tvr))
                 {
                     Initialize();
                     return true;
@@ -2029,6 +2029,28 @@ namespace Raven.Server.Documents.TimeSeries
             return CreateTimeSeriesItem(context, ref tvr);
         }
 
+        // public IEnumerable<TimeSeriesSegmentEntry> GetCompareExchangeFromPrefix(TransactionOperationContext context, string docId, long fromIndex, long take)
+        // {
+        //     var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
+        //     using(DocumentIdWorker.GetSliceFromId(context.Allocator, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator)) // documentId/
+        //     using(DocumentIdWorker.GetLower(context.Allocator, Name, out LowerTimeSeriesName))
+        //     // using (Slice.External(context.Allocator, buffer, buffer.Length, out var keySlice))
+        //     // using (Slice.External(context.Allocator, buffer, buffer.Length - sizeof(long), out var prefix))
+        //     {
+        //         foreach (var tvr in table.SeekForwardFromPrefix(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], keySlice, prefix, 0))
+        //         {
+        //             if (take-- <= 0)
+        //                 yield break;
+        //
+        //             var key = ReadCompareExchangeKey(context, tvr.Result.Reader, dbName);
+        //             var index = ReadCompareExchangeOrTombstoneIndex(tvr.Result.Reader);
+        //             var value = ReadCompareExchangeValue(context, tvr.Result.Reader);
+        //
+        //             yield return (key, index, value);
+        //         }
+        //     }
+        // }
+        
         public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
@@ -2176,6 +2198,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private Table GetOrCreateTable(Transaction tx, TableSchema tableSchema, CollectionName collection, CollectionTableType type)
         {
+            //TODO maybe to join with counter
             string tableName = collection.GetTableName(type);
 
             if (tx.IsWriteTransaction && _tableCreated.Contains(tableName) == false)
@@ -2366,6 +2389,28 @@ namespace Raven.Server.Documents.TimeSeries
             TransactionMarker = 4,
             From = 5,
             To = 6,
+        }
+
+        public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice];
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
         }
     }
 }

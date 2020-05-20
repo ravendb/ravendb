@@ -1157,6 +1157,37 @@ namespace Voron.Data.Tables
                 } while (it.MoveNext());
             }
         }
+        
+        // public IEnumerable<SeekResult> SeekForwardFromPrefix(TableSchema.FixedSizeSchemaIndexDef index, Slice start, Slice prefix, long skip)
+        // {
+        //     //TODO
+        //     var tree = GetFixedSizeTree(index);
+        //     using (var it = tree.Iterate(true))
+        //     {
+        //         it.SetRequiredPrefix(prefix);
+        //
+        //         if (it.Seek(start) == false)
+        //             yield break;
+        //
+        //         do
+        //         {
+        //             foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), index))
+        //             {
+        //                 if (skip > 0)
+        //                 {
+        //                     skip--;
+        //                     continue;
+        //                 }
+        //
+        //                 yield return new SeekResult
+        //                 {
+        //                     Key = it.CurrentKey,
+        //                     Result = result
+        //                 };
+        //             }
+        //         } while (it.MoveNext());
+        //     }
+        // }
 
         public TableValueHolder SeekOneForwardFromPrefix(TableSchema.SchemaIndexDef index, Slice value)
         {

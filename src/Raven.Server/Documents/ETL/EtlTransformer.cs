@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -66,7 +67,9 @@ namespace Raven.Server.Documents.ETL
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadCounter, LoadCounter));
+            DocumentScript.ScriptEngine.SetValue(Transformation.CountersTransformation.Load, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.CountersTransformation.Load, LoadCounter));
+            
+            DocumentScript.ScriptEngine.SetValue(Transformation.TimeSeriesTransformation.LoadTimeSeries.Name, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.TimeSeriesTransformation.LoadTimeSeries.Name, LoadTimeSeries));
 
             DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
 
@@ -113,6 +116,7 @@ namespace Raven.Server.Documents.ETL
         protected abstract void AddLoadedAttachment(JsValue reference, string name, Attachment attachment);
 
         protected abstract void AddLoadedCounter(JsValue reference, string name, long value);
+        protected abstract void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<TimeSeriesStorage.Reader.SingleResult> entries);
 
         private JsValue LoadAttachment(JsValue self, JsValue[] args)
         {
@@ -142,10 +146,10 @@ namespace Raven.Server.Documents.ETL
         private JsValue LoadCounter(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || args[0].IsString() == false)
-                ThrowInvalidScriptMethodCall($"{Transformation.LoadCounter}(name) must have a single string argument");
+                ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
 
             var counterName = args[0].AsString();
-            JsValue loadCounterReference = (JsValue)Transformation.CounterMarker + counterName;
+            JsValue loadCounterReference = (JsValue)Transformation.CountersTransformation.Marker + counterName;
 
             if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
             {
@@ -164,6 +168,64 @@ namespace Raven.Server.Documents.ETL
             return loadCounterReference;
         }
 
+        private JsValue LoadTimeSeries(JsValue self, JsValue[] args)
+        {
+            const int paramsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.ParamsCount;
+            const string signature = Transformation.TimeSeriesTransformation.LoadTimeSeries.Signature;
+            
+            if (args.Length == paramsCount)
+                ThrowInvalidScriptMethodCall($"{signature} must have {paramsCount} arguments");
+                
+            if(args[0].IsString() == false)
+                ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be string");
+            var timeSeriesName = args[0].AsString();
+
+            var from = GetDateArg(args[1], signature, "from"); 
+            var to = GetDateArg(args[2], signature, "to"); 
+                
+            JsValue loadCounterReference = (JsValue)Transformation.TimeSeriesTransformation.Marker + timeSeriesName;
+
+            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries)
+            {
+                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
+                //TODO Maybe to return null if no entries
+                // if (reader == null)
+                    // return JsValue.Null;
+
+                AddLoadedTimeSeries(loadCounterReference, timeSeriesName, reader.AllValues());
+            }
+            else
+            {
+                return JsValue.Null;
+            }
+
+            return loadCounterReference;
+        }
+        
+        //TODO Same code as in ScriptRunner
+        private static unsafe DateTime GetDateArg(JsValue arg, string signature, string argName)
+        {
+            if (arg.IsDate())
+                return arg.AsDate().ToDateTime();
+
+            if (arg.IsString() == false)
+                ThrowInvalidDateArgument();
+
+            var s = arg.AsString();
+            fixed (char* pValue = s)
+            {
+                var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                if (result != LazyStringParser.Result.DateTime)
+                    ThrowInvalidDateArgument();
+
+                return dt;
+            }
+
+            void ThrowInvalidDateArgument() =>
+                throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
+        }
+        private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
+        
         private JsValue GetAttachments(JsValue self, JsValue[] args)
         {
             if (args.Length != 0)

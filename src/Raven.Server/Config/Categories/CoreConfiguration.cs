@@ -14,7 +14,7 @@ namespace Raven.Server.Config.Categories
     public class CoreConfiguration : ConfigurationCategory
     {
         [Description("The URLs which the server should listen to. By default we listen to localhost:8080")]
-        [DefaultValue("http://localhost:8080")]
+        [DefaultValue("http://192.168.1.21:8080")]
         [ConfigurationEntry("ServerUrl", ConfigurationEntryScope.ServerWideOnly)]
         public string[] ServerUrls { get; set; }
 

@@ -20,6 +20,8 @@ namespace Voron.Data.Fixed
             bool MoveNext();
             bool MovePrev();
 
+            // public void SetRequiredPrefix(Slice prefix);
+
             ValueReader CreateReaderForCurrent();
 
             bool Skip(long count);

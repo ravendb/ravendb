@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.TimeSeries
         private readonly List<ByteStringContext.ExternalScope> _externalScopesToDispose = new List<ByteStringContext.ExternalScope>();
 
         public ByteString SegmentBuffer, TimeSeriesKeyBuffer;
-        public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, LowerTimeSeriesName, DocumentKeyPrefix, StatsKey, CollectionSlice;
+        public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice1, LowerTimeSeriesName, DocumentKeyPrefix, StatsKey, CollectionSlice;
         public DateTime CurrentBaseline;
 
         public TimeSeriesSliceHolder(DocumentsOperationContext context, string documentId, string name, string collection = null)
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.TimeSeries
             _internalScopesToDispose.Add(_context.Allocator.Allocate(keyBufferSize, out TimeSeriesKeyBuffer));
 
             _externalScopesToDispose.Add(CreateTimeSeriesKeyPrefixSlice(_context, TimeSeriesKeyBuffer, DocumentKeyPrefix, LowerTimeSeriesName,
-                out TimeSeriesPrefixSlice)); // documentId/timeseries/
+                out TimeSeriesPrefixSlice1)); // documentId/timeseries/
 
             _externalScopesToDispose.Add(Slice.External(_context.Allocator, TimeSeriesKeyBuffer, 0, DocumentKeyPrefix.Size + LowerTimeSeriesName.Size,
                 out StatsKey)); // documentId/timeseries
@@ -77,11 +77,11 @@ namespace Raven.Server.Documents.TimeSeries
         public void SetBaselineToKey(DateTime time)
         {
             if (TimeSeriesKeySlice.Content.HasValue == false) // uninitialized
-                _externalScopesToDispose.Add(CreateTimeSeriesKeySlice(_context, TimeSeriesKeyBuffer, TimeSeriesPrefixSlice, time,
+                _externalScopesToDispose.Add(CreateTimeSeriesKeySlice(_context, TimeSeriesKeyBuffer, TimeSeriesPrefixSlice1, time,
                     out TimeSeriesKeySlice)); // documentId/timeseries/ticks
 
             var ms = time.Ticks / 10_000;
-            *(long*)(TimeSeriesKeyBuffer.Ptr + TimeSeriesPrefixSlice.Size) = Bits.SwapBytes(ms);
+            *(long*)(TimeSeriesKeyBuffer.Ptr + TimeSeriesPrefixSlice1.Size) = Bits.SwapBytes(ms);
 
             CurrentBaseline = time;
         }

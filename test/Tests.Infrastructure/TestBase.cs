@@ -580,7 +580,7 @@ namespace FastTests
                     ThrowOnDuplicateConfiguration(nameof(ServerCreationOptions.RunInMemory));
 
                 if (hasServerUrls == false)
-                    configuration.Core.ServerUrls = new[] { "http://127.0.0.1:0" };
+                    configuration.Core.ServerUrls = new[] { "http://192.168.1.21:0" };
 
                 if (hasDataDirectory == false)
                 {

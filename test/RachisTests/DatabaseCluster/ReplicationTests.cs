@@ -18,6 +18,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
@@ -979,10 +980,7 @@ namespace RachisTests.DatabaseCluster
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 1,
-                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology
-                {
-                    Members = new List<string>{cluster.Leader.ServerStore.NodeTag}
-                }
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(c => c.Etl.MaxNumberOfExtractedDocuments)] = "2"
             }))
             {
                 var database = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);

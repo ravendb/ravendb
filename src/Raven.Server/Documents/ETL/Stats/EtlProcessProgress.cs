@@ -32,5 +32,9 @@ namespace Raven.Server.Documents.ETL.Stats
         public long NumberOfCounterGroupsToProcess { get; set; }
 
         public long TotalNumberOfCounterGroups { get; set; }
+        
+        public long NumberOfTimeSeriesSegmentsToProcess { get; set; }
+        
+        public long TotalNumberOfTimeSeriesSegments { get; set; }
     }
 }

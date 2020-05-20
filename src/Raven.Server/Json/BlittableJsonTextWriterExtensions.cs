@@ -143,7 +143,15 @@ namespace Raven.Server.Json
 
                     wp.WritePropertyName(nameof(processProgress.TotalNumberOfCounterGroups));
                     wp.WriteInteger(processProgress.TotalNumberOfCounterGroups);
+                    wp.WriteComma();
 
+                    wp.WritePropertyName(nameof(processProgress.NumberOfTimeSeriesSegmentsToProcess));
+                    wp.WriteInteger(processProgress.NumberOfTimeSeriesSegmentsToProcess);
+                    wp.WriteComma();
+
+                    wp.WritePropertyName(nameof(processProgress.TotalNumberOfTimeSeriesSegments));
+                    wp.WriteInteger(processProgress.TotalNumberOfTimeSeriesSegments);
+                    
                     wp.WriteEndObject();
                 });
 

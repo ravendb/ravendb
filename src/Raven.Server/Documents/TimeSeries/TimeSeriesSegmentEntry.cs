@@ -5,6 +5,10 @@ namespace Raven.Server.Documents.TimeSeries
 {
     public class TimeSeriesSegmentEntry
     {
+        public TimeSeriesSegmentEntry()
+        {
+            
+        }
         public LazyStringValue Key;
 
         public LazyStringValue LuceneKey;

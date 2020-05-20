@@ -2297,6 +2297,7 @@ namespace Raven.Server.ServerWide
 
         public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeFromPrefix(TransactionOperationContext context, string dbName, long fromIndex, long take)
         {
+            //TODO
             using (CompareExchangeCommandBase.GetPrefixIndexSlices(context.Allocator, dbName, fromIndex, out var buffer))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);

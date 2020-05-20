@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -77,6 +78,30 @@ namespace SlowTests.Server.Documents.ETL
 
 
             return mre;
+        }
+        
+        protected async Task WaitForEtlAsync(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate, TimeSpan timeout)
+        {
+            var tcs = new TaskCompletionSource<bool>();
+
+            var database = GetDatabase(store.Database).Result;
+            database.EtlLoader.BatchCompleted += OnBatchCompleted;
+            try
+            {
+                await Task.WhenAny(tcs.Task, Task.Delay(timeout));
+                if (tcs.Task.IsCompleted == false)
+                    throw new TimeoutException($"Timeout {timeout:c}");
+            }
+            catch (Exception e)
+            {
+                database.EtlLoader.BatchCompleted -= OnBatchCompleted;
+                throw;
+            }
+            
+            void OnBatchCompleted((string ConfigurationName, string TransformationName, EtlProcessStatistics Statistics) x)
+            {
+                if (predicate($"{x.ConfigurationName}/{x.TransformationName}", x.Statistics)) tcs.SetResult(true);
+            }
         }
     }
 }
