@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Queries.AST
     public class TimeSeriesFunction
     {
         public TimeSeriesBetweenExpression Between;
-        public FieldExpression Source;
+        public QueryExpression Source;
         public QueryExpression Where;
         public List<(QueryExpression, StringSegment?)> Select;
         public StringSegment? LoadTagAs;

@@ -1343,12 +1343,22 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("from") == false)
                 ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
 
-            if (Field(out var source) == false)
-                ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
-
-            if (source.Compound.Count > 1 && source.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
+            QueryExpression source;
+            if (Field(out var field) == false)
             {
-                source.Compound.RemoveAt(0);
+                if (Value(out var valueExpression) == false)
+                    ThrowParseException($"Unable to parse time series query for {name}, missing FROM");
+                
+                source = valueExpression;
+            }
+            else
+            {
+                if (field.Compound.Count > 1 && field.Compound[0] == rootSource) // turn u.Heartrate into just Heartrate
+                {
+                    field.Compound.RemoveAt(0);
+                }
+
+                source = field;
             }
 
             tsf.Source = source;
@@ -1643,26 +1653,30 @@ namespace Raven.Server.Documents.Queries.Parser
             if (query?.TryAddTimeSeriesFunction(func) == false)
                 ThrowParseException($"time series function '{func.Name}' was declared multiple times");
 
-            var compound = func.TimeSeries.Source.Compound;
             var args = new List<QueryExpression>();
 
-            if (compound.Count > 1)
+            if (func.TimeSeries.Source is FieldExpression f)
             {
-                if (query?.From.Alias != null)
-                {
-                    args.Add(new FieldExpression(new List<StringSegment> { query.From.Alias.Value }));
+                var compound = f.Compound;
 
-                    if (query.From.Alias.Value != compound[0])
+                if (compound.Count > 1)
+                {
+                    if (query?.From.Alias != null)
+                    {
+                        args.Add(new FieldExpression(new List<StringSegment> { query.From.Alias.Value }));
+
+                        if (query.From.Alias.Value != compound[0])
+                        {
+                            args.Add(new FieldExpression(new List<StringSegment> { compound[0] }));
+                        }
+                    }
+                    else
                     {
                         args.Add(new FieldExpression(new List<StringSegment> { compound[0] }));
                     }
-                }
-                else
-                {
-                    args.Add(new FieldExpression(new List<StringSegment> { compound[0] }));
-                }
 
-                func.Parameters = args;
+                    func.Parameters = args;
+                }
             }
 
             return new MethodExpression(func.Name, args);
@@ -2103,7 +2117,7 @@ namespace Raven.Server.Documents.Queries.Parser
         }
 
 
-        private TimeSeriesBetweenExpression ReadTimeSeriesBetweenExpression(FieldExpression field)
+        private TimeSeriesBetweenExpression ReadTimeSeriesBetweenExpression(QueryExpression source)
         {
             QueryExpression minExpression, maxExpression;
             if (Value(out var val) == false)
@@ -2133,7 +2147,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 maxExpression = val;
             }
 
-            return new TimeSeriesBetweenExpression(field, minExpression, maxExpression);
+            return new TimeSeriesBetweenExpression(source, minExpression, maxExpression);
         }
 
         private bool Method(FieldExpression field, out MethodExpression op)

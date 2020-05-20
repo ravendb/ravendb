@@ -647,17 +647,34 @@ namespace Raven.Server.Documents.Queries.Results
 
             string GetSourceAndId()
             {
-                var compound = timeSeriesFunction.Source.Compound;
+                if (timeSeriesFunction.Source is ValueExpression valueExpression)
+                {
+                    var val = valueExpression.Value == ValueTokenType.String
+                        ? valueExpression.Token.Value
+                        : valueExpression.GetValue(_queryParameters);
+
+                    if (!(val is string|| val is LazyStringValue))
+                        throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
+                                                        $"Expected argument '{val}' to be a string, but got '{val.GetType()}'");
+                    return val.ToString();
+                }
+
+                if (!(timeSeriesFunction.Source is FieldExpression field))
+                    throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
+                                                    $"Expected time series name to be a ValueExpression or a FieldExpression, but got '{timeSeriesFunction.Source.GetType()}'");
+            
+                var compound = field.Compound;
 
                 if (compound.Count == 1)
                 {
                     var paramIndex = GetParameterIndex(declaredFunction, compound[0]);
                     if (paramIndex == -1 || paramIndex == declaredFunction.Parameters.Count) 
-                        return timeSeriesFunction.Source.FieldValue; //not found
-                    if (!(args[paramIndex] is string s))
+                        return field.FieldValue; //not found
+
+                    if (!(args[paramIndex] is string || args[paramIndex] is LazyStringValue))
                         throw new InvalidQueryException($"Unable to parse TimeSeries name from expression '{timeSeriesFunction.Source}'. " +
                                                         $"Expected argument '{compound[0]}' to be a string, but got '{args[paramIndex].GetType()}'");
-                    return s;
+                    return args[paramIndex].ToString();
                 }
 
                 if (args == null)
@@ -687,7 +704,7 @@ namespace Raven.Server.Documents.Queries.Results
                     documentId = document.Id;
                 }
 
-                return timeSeriesFunction.Source.FieldValueWithoutAlias;
+                return field.FieldValueWithoutAlias;
             }
         }
 
