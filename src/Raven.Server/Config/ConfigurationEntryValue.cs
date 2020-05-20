@@ -99,7 +99,8 @@ namespace Raven.Server.Config
                 if (dbRecord.Settings.TryGetValue(key, out var valueInDbRecord) == false)
                 {
                     if (hasValue &&
-                        key != RavenConfiguration.GetKey(x => x.Core.DataDirectory) && key != RavenConfiguration.GetKey(x => x.Core.RunInMemory)) // DataDirectory and RunInMemory are always set as in-memory values
+                        string.Equals(key, RavenConfiguration.GetKey(x => x.Core.DataDirectory), StringComparison.OrdinalIgnoreCase) == false &&
+                        string.Equals(key, RavenConfiguration.GetKey(x => x.Core.RunInMemory), StringComparison.OrdinalIgnoreCase) == false) // DataDirectory and RunInMemory are always set as in-memory values
                     {
                         // key does not exist in db record but current configuration has a value - deletion of an override is pending
 
