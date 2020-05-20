@@ -1303,11 +1303,14 @@ namespace Raven.Server.Documents.Indexes
         {
             AlertRaised alert = null;
             int numberOfTimesSlept = 0;
-            while (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() &&
-                DocumentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+
+            while (DocumentDatabase.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised() && _indexDisabled == false)
             {
+                _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
+
                 // give us a bit more than a measuring cycle to gain more CPU credits
                 Thread.Sleep(1250);
+
                 if (alert == null && numberOfTimesSlept++ > 5)
                 {
                     alert = AlertRaised.Create(
@@ -1320,6 +1323,7 @@ namespace Raven.Server.Documents.Indexes
                     DocumentDatabase.NotificationCenter.Add(alert);
                 }
             }
+
             if (alert != null)
             {
                 DocumentDatabase.NotificationCenter.Dismiss(alert.Id);
@@ -3640,6 +3644,7 @@ namespace Raven.Server.Documents.Indexes
                 _batchStopped = DocumentDatabase.IndexStore.StoppedConcurrentIndexBatches.Wait(
                     timeout,
                     _indexingProcessCancellationTokenSource.Token);
+
                 if (_batchStopped)
                     break;
 
