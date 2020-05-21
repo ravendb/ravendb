@@ -21,18 +21,10 @@ namespace Raven.Client.Json.Serialization.JsonNet
 
         public DocumentConventions Conventions { get; private set; }
 
-        public JsonNetSerializationConventions(DocumentConventions conventions)
-            : this()
-        {
-            Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-        }
-
         public JsonNetSerializationConventions()
         {
             _defaultConverter = new BlittableJsonConverter(this);
             _jsonEnumerableConverter = new JsonEnumerableConverter(this);
-
-            DeserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
             JsonContractResolver = new DefaultRavenContractResolver(this);
             CustomizeJsonSerializer = _ => { };
             CustomizeJsonDeserializer = _ => { };
@@ -89,9 +81,12 @@ namespace Raven.Client.Json.Serialization.JsonNet
             }
         }
 
-        void ISerializationConventions.Freeze(DocumentConventions conventions)
+        void ISerializationConventions.Initialize(DocumentConventions conventions)
         {
             Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+
+            if (_deserializeEntityFromBlittable == null)
+                _deserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
         IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;

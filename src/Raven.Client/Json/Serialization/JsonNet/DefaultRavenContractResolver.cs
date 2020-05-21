@@ -12,7 +12,6 @@ using System.Runtime.CompilerServices;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.JsonNet
