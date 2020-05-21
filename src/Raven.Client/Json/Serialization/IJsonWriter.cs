@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization
@@ -24,6 +25,8 @@ namespace Raven.Client.Json.Serialization
         void WriteEndObject();
 
         void WriteNull();
+
+        void WriteMetadata(IMetadataDictionary metadata);
 
         void WritePropertyName(string name);
 

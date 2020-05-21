@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -64,7 +65,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
                 if (_metadata != null)
                 {
-                    var metadata = ClusterTransactionOperationsBase.CompareExchangeSessionValue.PrepareMetadataForPut(_key, _metadata, ctx);
+                    var metadata = ClusterTransactionOperationsBase.CompareExchangeSessionValue.PrepareMetadataForPut(_key, _metadata, _conventions, ctx);
                     djv[Constants.Documents.Metadata.Key] = metadata;
                 }
                 var blittable = ctx.ReadObject(djv, _key);
