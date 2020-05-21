@@ -138,6 +138,7 @@ namespace Raven.Server.Config
                 DatabaseValues[key] = new ConfigurationEntrySingleValue
                 {
                     Value = canShowValue ? value : null,
+                    HasValue = hasValue,
                     HasAccess = true,
                     PendingValue = hasPendingValue == false ? null : new ConfigurationEntrySinglePendingValue()
                     {
@@ -171,6 +172,7 @@ namespace Raven.Server.Config
     public class ConfigurationEntrySingleValue : IDynamicJson
     {
         public string Value { get; set; }
+        public bool HasValue { get; set; }
         public bool HasAccess { get; set; }
         public ConfigurationEntrySinglePendingValue PendingValue { get; set; }
 
@@ -179,6 +181,7 @@ namespace Raven.Server.Config
             return new DynamicJsonValue
             {
                 [nameof(Value)] = Value,
+                [nameof(HasValue)] = HasValue,
                 [nameof(HasAccess)] = HasAccess,
                 [nameof(PendingValue)] = PendingValue?.ToJson(),
             };

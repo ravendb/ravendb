@@ -387,7 +387,7 @@ class databaseSettings extends viewModelBase {
         const categories = this.allCategoryNames().map(x => new categoryInfo(x, this.getNumberOfCustomizedEntires(x)));
         this.categoriesInfo(categories);
         
-        this.hasPendingValues(this.allEntries().some(entry => entry instanceof models.databaseEntry && entry.hasPendingValue()));
+        this.hasPendingValues(this.allEntries().some(entry => entry instanceof models.databaseEntry && entry.hasPendingContent()));
         
         this.summaryGridController().reset(true);
     }

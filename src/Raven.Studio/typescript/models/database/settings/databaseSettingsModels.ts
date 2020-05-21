@@ -20,7 +20,7 @@ export abstract class settingsEntry {
     effectiveValueOrigin: KnockoutComputed<configurationOrigin>;
     
     rawValue = ko.observable<string>();
-    hasPendingValue = ko.observable<boolean>(false);
+    hasPendingContent = ko.observable<boolean>(false);
     
     // These 2 are needed for Summary view
     pendingValueText: KnockoutComputed<string>;
@@ -43,22 +43,9 @@ export abstract class settingsEntry {
                 `<div><span>${genUtils.escapeHtml(rawDescription)}</span></div>` :
                 `<div><span class="text-muted">No description is available</span></div>`;
         });
-
-        this.effectiveValueInUseText = ko.pureComputed(() => {
-            if (!this.hasPendingValue()) {
-                return this.effectiveValue();
-            }
-
-            if (this.rawValue()) {
-                return this.rawValue();
-            }
-
-            return this.serverOrDefaultValue();
-        });
-        
         
         this.entryClassForSummaryMode = ko.pureComputed(() => {
-            if (this.hasPendingValue()) {
+            if (this.hasPendingContent()) {
                 return "highlight-key";
             }
 
@@ -99,7 +86,7 @@ export abstract class databaseEntry<T> extends settingsEntry {
     customizedDatabaseValue = ko.observable<T>();
     override = ko.observable<boolean>(false);
   
-    valueIsPendingRemoval = ko.observable<boolean>(false);
+    valueIsPendingDeletion = ko.observable<boolean>(false);
 
     entryDirtyFlag: () => DirtyFlag;
     validationGroup: KnockoutValidationGroup;
@@ -147,15 +134,23 @@ export abstract class databaseEntry<T> extends settingsEntry {
         
         if (databaseValuesHasContent) {
             const keyContent = this.data.DatabaseValues[this.keyName()];
-            this.hasPendingValue(keyContent.HasPendingValue);
-
-            this.rawValue(keyContent.Value);
-            this.valueIsPendingRemoval(keyContent.HasPendingValue && !keyContent.PendingValue && keyContent.PendingValue !== "0");
             
-            this.override((keyContent.HasPendingValue && !!keyContent.PendingValue) ||
-                          (!!keyContent.Value && !this.valueIsPendingRemoval()));
+            if (keyContent.HasValue) {
+                this.rawValue(keyContent.Value);
+            }
+           
+            if (keyContent.PendingValue) {
+                this.hasPendingContent(keyContent.PendingValue.HasValue || keyContent.PendingValue.ValueDeleted);
+                this.valueIsPendingDeletion(keyContent.PendingValue.ValueDeleted);
+            }
+          
+            this.override(!this.valueIsPendingDeletion());
             
-            this.initCustomizedValue(keyContent.PendingValue || keyContent.Value || this.serverOrDefaultValue());
+            const customizedValue = keyContent.PendingValue && keyContent.PendingValue.HasValue ?
+                                    keyContent.PendingValue.Value :
+                                    keyContent.Value;
+            
+            this.initCustomizedValue(customizedValue);
             
         } else {
             this.initCustomizedValue(this.serverOrDefaultValue());
@@ -172,15 +167,23 @@ export abstract class databaseEntry<T> extends settingsEntry {
         this.effectiveValueOrigin = ko.pureComputed(() => this.override() ? "Database" : (this.hasServerValue() ? "Server" : "Default"));
 
         this.pendingValueText = ko.pureComputed(() => {
-            if (!this.hasPendingValue()) {
+            if (!this.hasPendingContent()) {
                 return "";
             }
 
-            if (this.valueIsPendingRemoval()) {
+            if (this.valueIsPendingDeletion()) {
                 return "<Database value deleted>";
             }
 
             return this.effectiveValue();
+        });
+
+        this.effectiveValueInUseText = ko.pureComputed(() => {
+            if (!this.hasPendingContent()) {
+                return this.effectiveValue();
+            }
+            
+            return this.rawValue() || this.serverOrDefaultValue();
         });
 
         this.entryDirtyFlag = new ko.DirtyFlag([
