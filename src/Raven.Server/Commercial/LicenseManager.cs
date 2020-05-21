@@ -1251,71 +1251,61 @@ namespace Raven.Server.Commercial
                 }
             }
 
-            if (encryptedDatabasesCount > 0 &&
-                newLicenseStatus.HasEncryption == false)
+            if (encryptedDatabasesCount > 0 && newLicenseStatus.HasEncryption == false)
             {
                 var message = GenerateDetails(encryptedDatabasesCount, "encryption");
                 throw GenerateLicenseLimit(LimitType.Encryption, message);
             }
 
-            if (externalReplicationCount > 0 &&
-                newLicenseStatus.HasExternalReplication == false)
+            if (externalReplicationCount > 0 && newLicenseStatus.HasExternalReplication == false)
             {
                 var message = GenerateDetails(externalReplicationCount, "external replication");
                 throw GenerateLicenseLimit(LimitType.ExternalReplication, message);
             }
 
-            if (delayedExternalReplicationCount > 0 &&
-                newLicenseStatus.HasDelayedExternalReplication == false)
+            if (delayedExternalReplicationCount > 0 && newLicenseStatus.HasDelayedExternalReplication == false)
             {
                 var message = GenerateDetails(externalReplicationCount, "delayed external replication");
                 throw GenerateLicenseLimit(LimitType.DelayedExternalReplication, message);
             }
 
-            if (pullReplicationAsHubCount > 0 &&
-                newLicenseStatus.HasPullReplicationAsHub == false)
+            if (pullReplicationAsHubCount > 0 && newLicenseStatus.HasPullReplicationAsHub == false)
             {
                 var message = GenerateDetails(pullReplicationAsHubCount, "pull replication as hub");
                 throw GenerateLicenseLimit(LimitType.PullReplicationAsHub, message);
             }
 
-            if (pullReplicationAsSinkCount > 0 &&
-                newLicenseStatus.HasPullReplicationAsSink == false)
+            if (pullReplicationAsSinkCount > 0 && newLicenseStatus.HasPullReplicationAsSink == false)
             {
                 var message = GenerateDetails(pullReplicationAsSinkCount, "pull replication as sink");
                 throw GenerateLicenseLimit(LimitType.PullReplicationAsSink, message);
             }
 
-            if (ravenEtlCount > 0 &&
-                newLicenseStatus.HasRavenEtl == false)
+            if (ravenEtlCount > 0 && newLicenseStatus.HasRavenEtl == false)
             {
                 var message = GenerateDetails(ravenEtlCount, "Raven ETL");
                 throw GenerateLicenseLimit(LimitType.RavenEtl, message);
             }
 
-            if (sqlEtlCount > 0 &&
-                newLicenseStatus.HasSqlEtl == false)
+            if (sqlEtlCount > 0 && newLicenseStatus.HasSqlEtl == false)
             {
                 var message = GenerateDetails(sqlEtlCount, "SQL ETL");
                 throw GenerateLicenseLimit(LimitType.SqlEtl, message);
             }
 
-            if (snapshotBackupsCount > 0 &&
-                newLicenseStatus.HasSnapshotBackups == false)
+            if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
             {
                 var message = GenerateDetails(snapshotBackupsCount, "snapshot backups");
                 throw GenerateLicenseLimit(LimitType.SnapshotBackup, message);
             }
 
-            if (cloudBackupsCount > 0 &&
-                newLicenseStatus.HasCloudBackups == false)
+            if (cloudBackupsCount > 0 && newLicenseStatus.HasCloudBackups == false)
             {
                 var message = GenerateDetails(cloudBackupsCount, "cloud backups");
                 throw GenerateLicenseLimit(LimitType.CloudBackup, message);
             }
 
-            if (encryptedBackupsCount > 0 &&
-                newLicenseStatus.HasEncryptedBackups == false)
+            if (encryptedBackupsCount > 0 && newLicenseStatus.HasEncryptedBackups == false)
             {
                 var message = GenerateDetails(cloudBackupsCount, "encrypted backups");
                 throw GenerateLicenseLimit(LimitType.EncryptedBackup, message);
@@ -1327,7 +1317,7 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message);
             }
 
-            if(!newLicenseStatus.HasDocumentsCompression && documentCompressionCount > 0)
+            if (documentCompressionCount > 0 && newLicenseStatus.HasDocumentsCompression == false)
             {
                 var message = GenerateDetails(documentCompressionCount, "documents compression");
                 throw GenerateLicenseLimit(LimitType.DocumentsCompression, message);
