@@ -755,13 +755,10 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public static List<TimeSeriesStorage.Reader.SingleResult> GetAggregatedValues(TimeSeriesStorage.Reader reader, RangeGroup rangeSpec, AggregationMode mode)
+        public static List<SingleResult> GetAggregatedValues(TimeSeriesReader reader, RangeGroup rangeSpec, AggregationMode mode)
         {
             var aggStates = new TimeSeriesAggregation(mode); // we always will aggregate here by Min, Max, First, Last, Sum, Count, Mean
-            var results = new List<TimeSeriesStorage.Reader.SingleResult>();
-
-                
-            
+            var results = new List<SingleResult>();
            
             foreach (var it in reader.SegmentsOrValues())
             {
@@ -792,11 +789,12 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (aggStates.Any)
             {
-                results.Add(new TimeSeriesStorage.Reader.SingleResult
+                results.Add(new SingleResult
                 {
                     Timestamp = rangeSpec.End.AddTicks(-1),
                     Values = new Memory<double>(aggStates.Values.ToArray()),
                     Status = TimeSeriesValuesSegment.Live,
+                    Type = SingleResultType.RolledUp
                     // TODO: Tag = ""
                 });
             }
@@ -810,11 +808,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (aggStates.Any)
                 {
-                    results.Add(new TimeSeriesStorage.Reader.SingleResult
+                    results.Add(new SingleResult
                     {
                         Timestamp = rangeSpec.End.AddTicks(-1),
                         Values = new Memory<double>(aggStates.Values.ToArray()),
                         Status = TimeSeriesValuesSegment.Live,
+                        Type = SingleResultType.RolledUp
                         // TODO: Tag = ""
                     });
                 }
@@ -823,7 +822,7 @@ namespace Raven.Server.Documents.TimeSeries
                 aggStates.Init();
             }
 
-            void AggregateIndividualItems(IEnumerable<TimeSeriesStorage.Reader.SingleResult> items)
+            void AggregateIndividualItems(IEnumerable<SingleResult> items)
             {
                 foreach (var cur in items)
                 {

@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Queries.AST
         public TimeSeriesBetweenExpression Between;
         public QueryExpression Source;
         public QueryExpression Where;
-        public List<(QueryExpression, StringSegment?)> Select;
+        public List<(QueryExpression QueryExpression, StringSegment? StringSegment)> Select;
         public StringSegment? LoadTagAs;
         public ValueExpression Last, First, GroupBy, Offset;
     }

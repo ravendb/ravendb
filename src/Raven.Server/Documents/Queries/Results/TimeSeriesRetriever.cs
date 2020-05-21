@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Queries.Results
             var (min, max) = GetMinAndMax(declaredFunction, documentId, args, timeSeriesFunction, source, offset);
             var collection = GetCollection(documentId);
 
-            var reader = new MultiReader(_context, documentId, source, collection, min, max, offset);
+            var reader = new TimeSeriesMultiReader(_context, documentId, source, collection, min, max, offset);
 
             long count = 0;
             var array = new DynamicJsonArray();
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             return GetAggregatedValues();
 
-            void AggregateIndividualItems(IEnumerable<TimeSeriesStorage.Reader.SingleResult> items)
+            void AggregateIndividualItems(IEnumerable<SingleResult> items)
             {
                 foreach (var cur in items)
                 {
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Queries.Results
                         [nameof(TimeSeriesEntry.Tag)] = singleResult.Tag?.ToString(),
                         [nameof(TimeSeriesEntry.Timestamp)] = singleResult.Timestamp,
                         [nameof(TimeSeriesEntry.Values)] = vals,
-                        [nameof(TimeSeriesEntry.Value)] = singleResult.Values.Span[0]
+                        [nameof(TimeSeriesEntry.IsRollup)] = singleResult.Type == SingleResultType.RolledUp,
                     });
 
                     count++;
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }, "timeseries/value");
             }
 
-            bool ShouldFilter(TimeSeriesStorage.Reader.SingleResult singleResult, QueryExpression filter)
+            bool ShouldFilter(SingleResult singleResult, QueryExpression filter)
             {
                 if (filter == null)
                     return false;
@@ -556,7 +556,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            object GetValue(QueryExpression expression, TimeSeriesStorage.Reader.SingleResult singleResult)
+            object GetValue(QueryExpression expression, SingleResult singleResult)
             {
                 if (expression is FieldExpression fe)
                 {
@@ -871,7 +871,7 @@ namespace Raven.Server.Documents.Queries.Results
             return val;
         }
 
-        private object GetValueFromLoadedTag(FieldExpression fe, TimeSeriesStorage.Reader.SingleResult singleResult)
+        private object GetValueFromLoadedTag(FieldExpression fe, SingleResult singleResult)
         {
             if (_loadedDocuments == null)
                 _loadedDocuments = new Dictionary<string, Document>();
@@ -893,7 +893,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
             {
-                if (timeSeriesFunction.Select[i].Item1 is MethodExpression me)
+                if (timeSeriesFunction.Select[i].QueryExpression is MethodExpression me)
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                     {
@@ -910,7 +910,7 @@ namespace Raven.Server.Documents.Queries.Results
                     throw new ArgumentException("Unknown method in timeseries query: " + me);
                 }
 
-                throw new ArgumentException("Unknown method in timeseries query: " + timeSeriesFunction.Select[i].Item1);
+                throw new ArgumentException("Unknown method in timeseries query: " + timeSeriesFunction.Select[i].QueryExpression);
             }
         }
 
@@ -927,7 +927,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             for (int i = 0; i < aggStates.Length; i++)
             {
-                var name = func.Select[i].Item2?.ToString() ?? aggStates[i].Aggregation.ToString();
+                var name = func.Select[i].StringSegment?.ToString() ?? aggStates[i].Aggregation.ToString();
                 result[name] = new DynamicJsonArray(aggStates[i].GetFinalValues());
             }
 
@@ -983,105 +983,5 @@ namespace Raven.Server.Documents.Queries.Results
             "yyyy-MM-ddTHH:mm",
             "yyyy-MM-ddTHH:mm:ss.fff"
         };
-
-        private class MultiReader
-        {
-            private readonly DocumentsOperationContext _context;
-            private TimeSeriesStorage.Reader _reader;
-            private readonly string _docId, _source;
-            private readonly TimeSpan? _offset;
-            private readonly DateTime _min, _max;
-            private SortedList<long, string> _names;
-            private int _current;
-
-            public bool CurrentIsRaw { get; private set; }
-
-            public MultiReader(DocumentsOperationContext context, string documentId,
-                string source, string collection, DateTime min, DateTime max, TimeSpan? offset)
-            {
-                if (string.IsNullOrEmpty(source))
-                    throw new ArgumentNullException(nameof(source));
-                _source = source;
-                _docId = documentId ?? throw new ArgumentNullException(nameof(documentId));
-                _context = context;
-                _min = min;
-                _max = max;
-                _offset = offset;
-                _current = 0;
-
-                Initialize(collection);
-            }
-
-            private void Initialize(string collection)
-            {
-                _names = new SortedList<long, string>();
-
-                var policyRunner = _context.DocumentDatabase.TimeSeriesPolicyRunner;
-                if (policyRunner == null ||
-                    policyRunner.Configuration.Collections.TryGetValue(collection, out var config) == false ||
-                    config.Disabled || config.Policies.Count == 0)
-                {
-                    _names[0] = _source;
-                    return;
-                }
-
-                for (var i = 0; i < config.Policies.Count + 1; i++)
-                {
-                    var name = i == 0
-                        ? _source
-                        : config.Policies[i - 1].GetTimeSeriesName(_source);
-
-                    var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, _docId, name);
-                    if (stats.End < _min || stats.Start > _max || stats.Count == 0)
-                        continue;
-
-                    _names[stats.Start.Ticks] = name;
-
-                    if (stats.Start.Ticks <= _min.Ticks)
-                        break;
-                }
-            }
-
-            public IEnumerable<(IEnumerable<TimeSeriesStorage.Reader.SingleResult> IndividualValues, TimeSeriesStorage.Reader.SegmentResult Segment)> SegmentsOrValues()
-            {
-                while (_current < _names.Count)
-                {
-                    GetNextReader();
-
-                    foreach (var sov in _reader.SegmentsOrValues())
-                    {
-                        yield return sov;
-                    }
-                }
-            }
-
-            public IEnumerable<TimeSeriesStorage.Reader.SingleResult> AllValues()
-            {
-                while (_current < _names.Count)
-                {
-                    GetNextReader();
-
-                    foreach (var singleResult in _reader.AllValues())
-                    {
-                        yield return singleResult;
-                    }
-                }
-            }
-
-            private void GetNextReader()
-            {
-                var name = _names.Values[_current];
-
-                CurrentIsRaw = name == _source;
-
-                var from = _reader?._to.AddMilliseconds(1) ?? _min;
-
-                var to = ++_current > _names.Count - 1
-                    ? _max
-                    : new DateTime(_names.Keys[_current]).AddMilliseconds(-1);
-
-                _reader = new TimeSeriesStorage.Reader(_context, _docId, name, from, to, _offset);
-            }
-        }
     }
 }

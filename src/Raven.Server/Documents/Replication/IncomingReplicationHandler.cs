@@ -37,6 +37,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Sparrow.Binary;
 using Sparrow.Threading;
+using Reader = Raven.Server.Documents.Replication.ReplicationItems.Reader;
 
 namespace Raven.Server.Documents.Replication
 {
