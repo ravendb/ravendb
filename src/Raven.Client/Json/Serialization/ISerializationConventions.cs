@@ -1,15 +1,15 @@
 ﻿using System;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Conventions
+namespace Raven.Client.Json.Serialization
 {
     public interface ISerializationConventions
     {
         DocumentConventions Conventions { get; }
 
-        void Freeze(DocumentConventions conventions);
+        void Initialize(DocumentConventions conventions);
 
         IJsonSerializer CreateSerializer();
 

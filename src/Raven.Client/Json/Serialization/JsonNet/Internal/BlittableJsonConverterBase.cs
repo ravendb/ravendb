@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
@@ -61,7 +60,6 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static BlittableJsonReaderObject ToBlittableInternal(
              object entity,
              DocumentConventions conventions,

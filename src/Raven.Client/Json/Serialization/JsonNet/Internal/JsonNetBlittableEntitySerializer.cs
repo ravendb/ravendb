@@ -1,6 +1,5 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Identity;
 using Sparrow.Json;
 using Sparrow.Threading;
@@ -12,11 +11,11 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
         private readonly LightWeightThreadLocal<BlittableJsonReader> _reader;
         private readonly LightWeightThreadLocal<IJsonSerializer> _deserializer;
 
-        private readonly Lazy<GenerateEntityIdOnTheClient> _generateEntityIdOnTheClient;
+        private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public JsonNetBlittableEntitySerializer(ISerializationConventions conventions)
         {
-            _generateEntityIdOnTheClient = new Lazy<GenerateEntityIdOnTheClient>(() => new GenerateEntityIdOnTheClient(conventions.Conventions, null));
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, null);
             _deserializer = new LightWeightThreadLocal<IJsonSerializer>(conventions.CreateDeserializer);
             _reader = new LightWeightThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
         }
@@ -32,7 +31,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
                 {
                     if (json.TryGetValue(Constants.Documents.Metadata.Id, out id))
                     {
-                        if (_generateEntityIdOnTheClient.Value.TryGetIdFromInstance(o, out var existing) &&
+                        if (_generateEntityIdOnTheClient.TryGetIdFromInstance(o, out var existing) &&
                             existing != null)
                             return;
 
@@ -40,7 +39,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
                                          && projection.Type == JTokenType.Boolean
                                          && projection.Value<bool>();
 
-                        _generateEntityIdOnTheClient.Value.TrySetIdentity(o, id.Value<string>(), isProjection);
+                        _generateEntityIdOnTheClient.TrySetIdentity(o, id.Value<string>(), isProjection);
                     }
                 }
 
@@ -50,10 +49,10 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
                     if (id == null)
                         return;
 
-                    if (_generateEntityIdOnTheClient.Value.TryGetIdFromInstance(o, out var existing) &&
+                    if (_generateEntityIdOnTheClient.TryGetIdFromInstance(o, out var existing) &&
                         existing != null)
                         return;
-                    _generateEntityIdOnTheClient.Value.TrySetIdentity(o, id.Value<string>());
+                    _generateEntityIdOnTheClient.TrySetIdentity(o, id.Value<string>());
                 }
             }))
             {

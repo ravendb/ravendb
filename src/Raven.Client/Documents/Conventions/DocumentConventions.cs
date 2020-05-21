@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Json.Serialization.JsonNet;
 using Raven.Client.Util;
 using Sparrow;
@@ -68,7 +69,9 @@ namespace Raven.Client.Documents.Conventions
             set
             {
                 AssertNotFrozen();
-                _serialization = value;
+
+                _serialization = value ?? throw new ArgumentNullException(nameof(value));
+                _serialization.Initialize(this);
             }
         }
 
@@ -153,7 +156,7 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public DocumentConventions()
         {
-            Serialization = new JsonNetSerializationConventions(this);
+            Serialization = new JsonNetSerializationConventions();
 
             _topologyCacheLocation = AppContext.BaseDirectory;
 
@@ -1110,8 +1113,6 @@ namespace Raven.Client.Documents.Conventions
 
         internal void Freeze()
         {
-            Serialization.Freeze(this);
-
             _frozen = true;
         }
 
