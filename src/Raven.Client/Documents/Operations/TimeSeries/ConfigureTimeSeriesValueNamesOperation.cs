@@ -3,7 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,6 +28,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private class ConfigureTimeSeriesValueNamesCommand : RavenCommand<ConfigureTimeSeriesOperationResult>, IRaftCommand
         {
             private readonly Parameters _parameters;
+
             public ConfigureTimeSeriesValueNamesCommand(Parameters parameters)
             {
                 _parameters = parameters;
@@ -43,7 +44,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = ctx.ReadObject(_parameters.ToJson(),"convert time-series configuration");
+                        var config = ctx.ReadObject(_parameters.ToJson(), "convert time-series configuration");
                         ctx.Write(stream, config);
                     })
                 };
@@ -78,6 +79,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 if (ValueNames == null || ValueNames.Length == 0)
                     throw new ArgumentException($"{nameof(ValueNames)} can't be empty.");
             }
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue

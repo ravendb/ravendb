@@ -358,7 +358,7 @@ namespace Raven.Client.Documents.Session
                         BlittableJsonReaderObject metadata = null;
                         if (_value.HasMetadata && _value.Metadata.Count != 0)
                         {
-                            metadata = PrepareMetadataForPut(_key, _value.Metadata, context);
+                            metadata = PrepareMetadataForPut(_key, _value.Metadata, conventions, context);
                         }
 
                         BlittableJsonReaderObject entityToInsert = null;
@@ -394,7 +394,7 @@ namespace Raven.Client.Documents.Session
                     };
 
                     if (metadata == null)
-                    return context.ReadObject(djv, key);
+                        return context.ReadObject(djv, key);
 
                     djv[Constants.Documents.Metadata.Key] = metadata;
                     return context.ReadObject(djv, key);
@@ -454,7 +454,7 @@ namespace Raven.Client.Documents.Session
                 }
             }
 
-            internal static BlittableJsonReaderObject PrepareMetadataForPut(string key, IMetadataDictionary metadataDictionary, JsonOperationContext context)
+            internal static BlittableJsonReaderObject PrepareMetadataForPut(string key, IMetadataDictionary metadataDictionary, DocumentConventions conventions, JsonOperationContext context)
             {
                 if (metadataDictionary.TryGetValue(Constants.Documents.Metadata.Expires, out object obj))
                 {
@@ -462,14 +462,15 @@ namespace Raven.Client.Documents.Session
                         ThrowInvalidExpiresMetadata($"The value of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is null.");
                     if (obj is DateTime == false && obj is string == false)
                         ThrowInvalidExpiresMetadata($"The type of {Constants.Documents.Metadata.Expires} metadata for compare exchange '{key}' is not valid. Use the following type: {nameof(DateTime)} or {nameof(String)}");
-        }
+                }
 
-                using var writer = new BlittableJsonWriter(context);
-                writer.WriteMetadataInternal(metadataDictionary);
-                writer.FinalizeDocument();
-                var reader = writer.CreateReader();
-                return reader;
-    }
+                using (var writer = conventions.Serialization.CreateWriter(context))
+                {
+                    writer.WriteMetadata(metadataDictionary);
+                    writer.FinalizeDocument();
+                    return writer.CreateReader();
+                }
+            }
 
             private static void ThrowInvalidExpiresMetadata(string message)
             {

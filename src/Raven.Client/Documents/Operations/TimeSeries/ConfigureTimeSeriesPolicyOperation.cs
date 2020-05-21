@@ -3,7 +3,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = ctx.ReadObject(_configuration.ToJson(),"convert time-series policy");
+                        var config = ctx.ReadObject(_configuration.ToJson(), "convert time-series policy");
                         ctx.Write(stream, config);
                     })
                 };
@@ -81,8 +81,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public RemoveTimeSeriesPolicyOperation(string collection, string name)
         {
-            _collection = collection ?? throw new ArgumentNullException(nameof(name));;
-            _name = name ?? throw new ArgumentNullException(nameof(collection));;
+            _collection = collection ?? throw new ArgumentNullException(nameof(name));
+            _name = name ?? throw new ArgumentNullException(nameof(collection));
         }
 
         public RavenCommand<ConfigureTimeSeriesOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)

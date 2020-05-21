@@ -87,7 +87,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
             else if (_documentInfo.MetadataInstance != null)
             {
                 _manualBlittableJsonDocumentBuilder.WritePropertyName(Constants.Documents.Metadata.Key);
-                WriteMetadataInternal(_documentInfo.MetadataInstance);
+                WriteMetadata(_documentInfo.MetadataInstance);
             }
             else if (_documentInfo.Collection != null)
             {
@@ -107,7 +107,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
             }
         }
 
-        internal void WriteMetadataInternal(IMetadataDictionary metadata)
+        public void WriteMetadata(IMetadataDictionary metadata)
         {
             _manualBlittableJsonDocumentBuilder.StartWriteObject();
 

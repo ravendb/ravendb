@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
@@ -94,7 +95,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                     : MetadataAsDictionary.MaterializeFromBlittable(bjro);
             }
 
-            if (type.GetTypeInfo().IsPrimitive || type == typeof(string))
+            if (type.IsPrimitive || type == typeof(string))
             {
                 // simple
                 raw.TryGet(Constants.CompareExchange.ObjectFieldName, out T value);
@@ -122,9 +123,9 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             if (raw.TryGetMember(Constants.CompareExchange.ObjectFieldName, out _) == false)
             {
                 return new CompareExchangeValue<T>(key, index, default, metadata);
-        }
+            }
 
-            var converted = (ResultHolder)EntityToBlittable.ConvertToEntity(typeof(ResultHolder), null, raw, conventions);
+            var converted = conventions.Serialization.DefaultConverter.FromBlittable<ResultHolder>(raw);
             return new CompareExchangeValue<T>(key, index, converted.Object, metadata);
         }
 
