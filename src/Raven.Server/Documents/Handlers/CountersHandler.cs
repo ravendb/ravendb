@@ -390,7 +390,7 @@ namespace Raven.Server.Documents.Handlers
                     var tuple = toUpdate.Value;
                     using (tuple.Doc.Data)
                     {
-                        UpdateDocumentCountersAfterImportBatch(context, tuple.Doc, toUpdate.Key, tuple.CounterNames);
+                        UpdateDocumentCountersAfterImportBatch(context, tuple.Doc, tuple.CounterNames);
                     }
                 }
             }
@@ -474,8 +474,7 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            private void UpdateDocumentCountersAfterImportBatch(DocumentsOperationContext context, Document doc, string docId,
-                HashSet<string> countersToAdd)
+            private void UpdateDocumentCountersAfterImportBatch(DocumentsOperationContext context, Document doc, HashSet<string> countersToAdd)
             {
                 if (countersToAdd.Count == 0)
                     return;
@@ -546,8 +545,8 @@ namespace Raven.Server.Documents.Handlers
 
                 using (data)
                 {
-                    var newDocumentData = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                    _database.DocumentsStorage.Put(context, docId, null, newDocumentData, flags: flags,
+                    var newDocumentData = context.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    _database.DocumentsStorage.Put(context, doc.Id, null, newDocumentData, flags: flags,
                         nonPersistentFlags: NonPersistentDocumentFlags.ByCountersUpdate | NonPersistentDocumentFlags.FromSmuggler);
                 }
             }

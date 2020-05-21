@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
@@ -60,6 +61,17 @@ namespace FastTests
         protected static void CreateNorthwindDatabase(DocumentStore store)
         {
             store.Maintenance.Send(new CreateSampleDataOperation());
+        }
+
+        protected async Task CreateLegacyNorthwindDatabase(DocumentStore store)
+        {
+            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("Tests.Infrastructure.Data.Northwind.4.2.ravendbdump"))
+            {
+                Assert.NotNull(stream);
+
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+            }
         }
 
         protected async Task SetDatabaseId(DocumentStore store, Guid dbId)
