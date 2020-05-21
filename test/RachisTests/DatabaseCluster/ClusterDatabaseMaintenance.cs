@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -19,7 +17,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
-using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
@@ -1156,7 +1153,7 @@ namespace RachisTests.DatabaseCluster
         {
             using (var store = GetDocumentStore())
             {
-                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+                await CreateLegacyNorthwindDatabase(store);
 
                 await store.Maintenance.Server.SendAsync(new UpdateUnusedDatabasesOperation(store.Database, new HashSet<string>
                 {
