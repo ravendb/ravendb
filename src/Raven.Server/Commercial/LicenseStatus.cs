@@ -105,10 +105,7 @@ namespace Raven.Server.Commercial
 
         public bool HasEncryption => GetValue<bool>("encryption");
 
-        public bool HasDocumentsCompression =>
-            // TODO: we don't have compression in any license yet
-            GetValue<bool?>("documentsCompression") ??
-            GetValue<bool>("encryption");
+        public bool HasDocumentsCompression => GetValue<bool>("documentsCompression");
 
         public bool HasExternalReplication => GetValue<bool>("externalReplication");
 
@@ -165,6 +162,7 @@ namespace Raven.Server.Commercial
                 [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
                 [nameof(HasDynamicNodesDistribution)] = HasDynamicNodesDistribution,
                 [nameof(HasEncryption)] = HasEncryption,
+                [nameof(HasDocumentsCompression)] = HasDocumentsCompression,
                 [nameof(HasSnapshotBackups)] = HasSnapshotBackups,
                 [nameof(HasCloudBackups)] = HasCloudBackups,
                 [nameof(HasEncryptedBackups)] = HasEncryptedBackups,
