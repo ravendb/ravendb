@@ -79,16 +79,15 @@
                 <div class="col-md-7 add-vertical-split">
                     <div class="form-group no-margin">
                         <div class="margin-top margin-top-sm">
-                            <small data-placement="left" data-toggle="tooltip" data-animation="true"
+                            <small class="source-icon" data-placement="left" data-toggle="tooltip" data-animation="true"
                                    data-bind="attr: { title: hasServerValue() ? 'This is a server-wide configuration' : 'This is the default configuration' }">
-                            <!-- //TODO -- Waiting for icons from RavenDB-14970 -->
-                            <!-- <i class="source-icon" data-bind="css: { 'icon-xxx': hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i> -->
-                            <!-- <i class="source-icon" data-bind="css: { 'icon-yyy': !hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i> -->
-                                <span data-bind="text: serverOrDefaultValue() || 'null'"></span>
+                                <i class="fix-icon-top" data-bind="css: { 'icon-default': !hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i>
+                                <i class="fix-icon-top" data-bind="css: { 'icon-server': hasServerValue(), 'source-icon-null': !serverOrDefaultValue() }"></i>
                             </small>
+                            <span data-bind="text: serverOrDefaultValue() || 'null'"></span>
                             <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="visible: isServerWideOnlyEntry"
                                    title="This is a server-wide entry.<br>It can be edited only from the <strong>settings.json</strong> file located in your RavenDB executable folder.">
-                                <small class="margin-left margin-left-sm"><i class="icon-lock"></i></small>
+                                <small class="margin-left margin-left-sm"><i class="icon-lock fix-icon-top"></i></small>
                             </small>
                         </div>
                     </div>
