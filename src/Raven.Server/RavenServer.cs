@@ -191,6 +191,7 @@ namespace Raven.Server
                             });
                         }
 
+                        ServerCertificateChanged += UpdateCertificateExpirationAlert;
                         _refreshClusterCertificate = new Timer(RefreshClusterCertificateTimerCallback);
                     }
                 }
@@ -341,6 +342,38 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Could not start server", e);
                 throw;
+            }
+        }
+
+        private void UpdateCertificateExpirationAlert(object sender = null, EventArgs args = null)
+        {
+            var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
+            if (remainingDays <= 20)
+            {
+                string msg = $"The server certificate will expire on {Certificate.Certificate.NotAfter.ToShortDateString()}. There are only {(int)remainingDays} days left for renewal.";
+                
+                if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
+                {
+                    if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate)
+                    {
+                        msg += " You are using a Let's Encrypt server certificate which was supposed to renew automatically. Please check the logs for errors and contact support@ravendb.net.";
+                    }
+                    else
+                    {
+                        msg += " You are using a Let's Encrypt server certificate but automatic renewal is not supported by your license. Go to the certificate page in the studio and trigger the renewal manually.";
+                    }
+                }
+
+                var severity = remainingDays < 3 ? NotificationSeverity.Error : NotificationSeverity.Warning;
+
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_AboutToExpire, severity));
+
+                if (Logger.IsOperationsEnabled) 
+                    Logger.Operations(msg);
+            }
+            else
+            {
+                ServerStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_AboutToExpire, null));
             }
         }
 
@@ -843,6 +876,7 @@ namespace Raven.Server
         public void RefreshClusterCertificateTimerCallback(object state)
         {
             RefreshClusterCertificate(state, RaftIdGenerator.NewId());
+            UpdateCertificateExpirationAlert();
         }
 
         public bool RefreshClusterCertificate(object state, string raftRequestId)
