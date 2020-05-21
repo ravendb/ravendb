@@ -96,20 +96,26 @@ namespace Raven.Client.Json.Serialization.JsonNet
             return new SessionBlittableJsonConverter(session);
         }
 
-        IJsonSerializer ISerializationConventions.CreateDeserializer()
+        IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
         {
             var jsonSerializer = CreateInitialSerializer();
             CustomizeJsonSerializer(jsonSerializer);
             CustomizeJsonDeserializer(jsonSerializer);
             PostJsonSerializerInitiation(jsonSerializer);
+
+            jsonSerializer.ApplyOptions(options);
+
             return jsonSerializer;
         }
 
-        IJsonSerializer ISerializationConventions.CreateSerializer()
+        IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
         {
             var jsonSerializer = CreateInitialSerializer();
             CustomizeJsonSerializer(jsonSerializer);
             PostJsonSerializerInitiation(jsonSerializer);
+
+            jsonSerializer.ApplyOptions(options);
+
             return jsonSerializer;
         }
 
@@ -135,7 +141,7 @@ namespace Raven.Client.Json.Serialization.JsonNet
                 DateParseHandling = DateParseHandling.None,
                 ObjectCreationHandling = ObjectCreationHandling.Auto,
                 ContractResolver = JsonContractResolver,
-                TypeNameHandling = TypeNameHandling.Auto,
+                TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto,
                 TypeNameAssemblyFormatHandling = TypeNameAssemblyFormatHandling.Simple,
                 ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
                 FloatParseHandling = FloatParseHandling.Double

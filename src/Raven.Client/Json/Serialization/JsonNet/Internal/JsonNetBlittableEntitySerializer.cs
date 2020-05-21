@@ -16,7 +16,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
         public JsonNetBlittableEntitySerializer(ISerializationConventions conventions)
         {
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, null);
-            _deserializer = new LightWeightThreadLocal<IJsonSerializer>(conventions.CreateDeserializer);
+            _deserializer = new LightWeightThreadLocal<IJsonSerializer>(() => conventions.CreateDeserializer());
             _reader = new LightWeightThreadLocal<BlittableJsonReader>(() => new BlittableJsonReader());
         }
 

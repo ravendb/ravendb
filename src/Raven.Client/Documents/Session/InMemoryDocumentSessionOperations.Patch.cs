@@ -9,11 +9,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Lambda2Js;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Json.Serialization.JsonNet.Internal;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
@@ -199,6 +198,11 @@ namespace Raven.Client.Documents.Session
             return true;
         }
 
+        private static readonly CreateSerializerOptions SerializerOptions = new CreateSerializerOptions
+        {
+            TypeNameHandling = TypeNameHandling.Objects
+        };
+
         private object AddTypeNameToValueIfNeeded(Type propertyType, object value)
         {
             if (value == null)
@@ -214,9 +218,7 @@ namespace Raven.Client.Documents.Session
                 // is not the same as its declared type.
                 // so we need to include $type in json
 
-                var serializer = Conventions.Serialization.CreateSerializer();
-                var jsonSerializer = (JsonNetJsonSerializer)serializer;
-                jsonSerializer.TypeNameHandling = TypeNameHandling.Objects;
+                var serializer = Conventions.Serialization.CreateSerializer(SerializerOptions);
 
                 writer.WriteStartObject();
                 writer.WritePropertyName("Value");
