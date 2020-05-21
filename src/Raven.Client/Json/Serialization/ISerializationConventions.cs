@@ -11,9 +11,9 @@ namespace Raven.Client.Json.Serialization
 
         void Initialize(DocumentConventions conventions);
 
-        IJsonSerializer CreateSerializer();
+        IJsonSerializer CreateSerializer(CreateSerializerOptions options = null);
 
-        IJsonSerializer CreateDeserializer();
+        IJsonSerializer CreateDeserializer(CreateDeserializerOptions options = null);
 
         IBlittableJsonConverter DefaultConverter { get; }
 

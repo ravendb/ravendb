@@ -60,7 +60,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
 
                         try
                         {
-                            serializer.TypeNameHandling = TypeNameHandling.None;
+                            serializer.TypeNameHandling = Newtonsoft.Json.TypeNameHandling.None;
 
                             serializer.Serialize(writer, enumerable);
                         }
