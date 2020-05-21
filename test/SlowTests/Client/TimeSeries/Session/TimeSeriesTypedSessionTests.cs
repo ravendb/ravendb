@@ -594,5 +594,130 @@ select out(doc)
                 }
             }
         }
+
+        [Fact]
+        public async Task CanWorkWithRollupTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
+
+                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
+                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
+                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,p2,p3,p4
+                            }
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await store.TimeSeries.RegisterAsync<User, StockPrice>();
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    var entry = new StockPrice
+                    {
+                        Tag = "watches/fitbit"
+                    };
+                    for (int i = 0; i <= total; i++)
+                    {
+                        entry.Timestamp = baseline.AddMinutes(i);
+                        entry.Open = i;
+                        entry.Close = i + 100_000;
+                        entry.High = i + 200_000;
+                        entry.Low = i + 300_000;
+                        entry.Volume = i + 400_000;
+                        session.TimeSeriesFor<StockPrice>("users/karmel").Append(entry);
+                    }
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult<StockPrice>>(@"
+declare timeseries out() 
+{
+    from StockPrice 
+    between $start and $end
+}
+from Users as u
+select out()
+")
+                        .AddParameter("start", baseline.AddDays(-1))
+                        .AddParameter("end", now.AddDays(1));
+
+
+                    var result = query.First();
+                    var expected = (60 * 24) // entire raw policy for 1 day 
+                                   + (2 * 24) // first day of 'By30Minutes'
+                                   + 24 // first day of 'By1Hour'
+                                   + 4  // first day of 'By6Hours'
+                                   + 1; // first day of 'By1Day'
+
+                    Assert.Equal(expected, result.Count);
+
+                    foreach (var res in result.Results)
+                    {
+                        if (res.IsRollup)
+                        {
+                            Assert.Equal(30, res.Values.Length);
+
+                            var rolled = res.AsRollUpEntry<StockPrice>();
+                            Assert.Equal(res.Close, rolled.First.Close);
+                            Assert.Equal(res.High, rolled.First.High);
+                            Assert.Equal(res.Low, rolled.First.Low);
+                            Assert.Equal(res.Open, rolled.First.Open);
+                            Assert.Equal(res.Volume, rolled.First.Volume);
+                            continue;
+                        }
+
+                        Assert.Equal(5, res.Values.Length);
+                    }
+                }
+
+                now = DateTime.UtcNow;
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.RollupTimeSeriesFor<StockPrice>("users/karmel", p1.Name);
+                    var a = new TimeSeriesRollupEntry<StockPrice>(now);
+                    a.Max.Close = 1;
+                    ts.Append(a);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.RollupTimeSeriesFor<StockPrice>("users/karmel", p1.Name);
+                    var res = ts.Get(from: now.AddMilliseconds(-1)).ToList();
+                    Assert.Equal(1, res.Count);
+                }
+            }
+        }
     }
 }
