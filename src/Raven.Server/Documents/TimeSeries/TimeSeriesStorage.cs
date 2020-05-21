@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static readonly Slice AllDeletedRangesEtagSlice;
         private static readonly Slice CollectionDeletedRangesEtagsSlice;
 
-        private static readonly TableSchema TimeSeriesSchema = new TableSchema
+        internal static readonly TableSchema TimeSeriesSchema = new TableSchema
         {
             TableType = (byte)TableType.TimeSeries
         };
@@ -536,376 +536,9 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public Reader GetReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset = null)
+        public TimeSeriesReader GetReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset = null)
         {
-            return new Reader(context, documentId, name, from, to, offset);
-        }
-
-        public class Reader
-        {
-            private readonly DocumentsOperationContext _context;
-            private readonly string _documentId;
-            private readonly string _name;
-            internal readonly DateTime _from, _to;
-            private readonly Table _table;
-            internal TableValueReader _tvr;
-            private double[] _values = Array.Empty<double>();
-            private TimestampState[] _states = Array.Empty<TimestampState>();
-            private TimeSeriesValuesSegment.TagPointer _tagPointer;
-            private LazyStringValue _tag;
-            private TimeSeriesValuesSegment _currentSegment;
-            private TimeSpan? _offset;
-
-            public Reader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset)
-            {
-                _context = context;
-                _documentId = documentId;
-                _name = name.ToLowerInvariant();
-                _table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
-                _tag = new LazyStringValue(null, null, 0, context);
-                _offset = offset;
-
-                _from = from;
-                _to = to;
-            }
-
-            internal bool Init()
-            {
-                using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(_from))
-                {
-                    if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
-                    {
-                        return _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr);
-                    }
-
-                    return true;
-                }
-            }
-
-            public SingleResult First()
-            {
-                return AllValues().FirstOrDefault();
-            }
-
-            public SingleResult Last()
-            {
-                var date = _to;
-                while (true)
-                {
-                    using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(date))
-                    {
-                        if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
-                            return null;
-                    }
-
-                    InitializeSegment(out var baseline, out var segment);
-                    date = new DateTime(baseline * 10_000);
-                    if (segment.NumberOfLiveEntries == 0)
-                    {
-                        // find the prev segment
-                        date = date.AddMilliseconds(-1);
-                        continue;
-                    }
-
-                    if (_to == DateTime.MaxValue)
-                        return segment.YieldAllValues(_context, date, includeDead: false).Last();
-
-                    SingleResult last = default;
-                    foreach (var item in segment.YieldAllValues(_context, date, includeDead: false))
-                    {
-                        if (item.Timestamp > _to)
-                            return last;
-
-                        last = item;
-                    }
-
-                    return last;
-                }
-            }
-
-            public class SingleResult
-            {
-                public DateTime Timestamp;
-                public Memory<double> Values;
-                public LazyStringValue Tag;
-                public ulong Status;
-            }
-
-            public class SegmentResult
-            {
-                public DateTime Start, End;
-                public StatefulTimestampValueSpan Summary;
-                public string ChangeVector;
-                private Reader _reader;
-
-                public SegmentResult(Reader reader)
-                {
-                    _reader = reader;
-                }
-
-                public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
-            }
-
-            internal class SeriesSummary
-            {
-                public SeriesSummary(int numberOfValues)
-                {
-                    Min = new double[numberOfValues];
-                    Max = new double[numberOfValues];
-                }
-
-                public int Count { get; set; }
-
-                public double[] Min { get; set; }
-
-                public double[] Max { get; set; }
-            }
-
-            internal SeriesSummary GetSummary()
-            {
-                if (Init() == false)
-                    return null;
-
-                InitializeSegment(out _, out _currentSegment);
-
-                var result = new SeriesSummary(_currentSegment.NumberOfValues);
-
-                do
-                {
-                    if (_currentSegment.NumberOfEntries == 0)
-                        continue;
-
-                    for (int i = 0; i < _currentSegment.NumberOfValues; i++)
-                    {
-                        if (result.Count == 0)
-                        {
-                            result.Min[i] = _currentSegment.SegmentValues.Span[i].Min;
-                            result.Max[i] = _currentSegment.SegmentValues.Span[i].Max;
-                            continue;
-                        }
-
-                        if (double.IsNaN(_currentSegment.SegmentValues.Span[i].Min) == false)
-                        {
-                            result.Min[i] = Math.Min(result.Min[i], _currentSegment.SegmentValues.Span[i].Min);
-                        }
-
-                        if (double.IsNaN(_currentSegment.SegmentValues.Span[i].Max) == false)
-                        {
-                            result.Max[i] = Math.Max(result.Max[i], _currentSegment.SegmentValues.Span[i].Max);
-                        }
-                    }
-
-                    result.Count += _currentSegment.SegmentValues.Span[0].Count;
-                } while (NextSegment(out _));
-
-                return result;
-            }
-
-            public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
-            {
-                if (Init() == false)
-                    yield break;
-
-                var segmentResult = new SegmentResult(this);
-                InitializeSegment(out var baselineMilliseconds, out _currentSegment);
-
-                while (true)
-                {
-                    var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
-
-                    if (baseline > _to)
-                        yield break;
-
-                    if (_currentSegment.NumberOfValues != _values.Length)
-                    {
-                        _values = new double[_currentSegment.NumberOfValues];
-                        _states = new TimestampState[_currentSegment.NumberOfValues];
-                    }
-
-                    if (_offset.HasValue)
-                    {
-                        baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
-                    }
-
-                    segmentResult.End = _currentSegment.GetLastTimestamp(baseline);
-                    segmentResult.Start = baseline;
-                    segmentResult.ChangeVector = GetCurrentSegmentChangeVector();
-
-                    if (segmentResult.Start >= _from &&
-                        segmentResult.End <= _to &&
-                        _currentSegment.NumberOfLiveEntries > 0)
-                    {
-                        // we can yield the whole segment in one go
-                        segmentResult.Summary = _currentSegment.SegmentValues;
-                        yield return (null, segmentResult);
-                    }
-                    else
-                    {
-                        yield return (YieldSegment(baseline), segmentResult);
-                    }
-
-                    if (NextSegment(out baselineMilliseconds) == false)
-                        yield break;
-                }
-            }
-
-            public IEnumerable<SingleResult> AllValues(bool includeDead = false)
-            {
-                if (Init() == false)
-                    yield break;
-
-                InitializeSegment(out var baselineMilliseconds, out _currentSegment);
-                while (true)
-                {
-                    var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
-
-                    if (baseline > _to)
-                        yield break;
-
-                    var openSegment = includeDead ?
-                        _currentSegment.NumberOfEntries > 0 :
-                        _currentSegment.NumberOfLiveEntries > 0;
-
-                    if (openSegment)
-                    {
-                        if (_currentSegment.NumberOfValues > _values.Length)
-                        {
-                            _values = new double[_currentSegment.NumberOfValues];
-                            _states = new TimestampState[_currentSegment.NumberOfValues];
-                        }
-
-                        if (_offset.HasValue)
-                        {
-                            baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
-                        }
-
-                        foreach (var val in YieldSegment(baseline, includeDead))
-                        {
-                            yield return val;
-                        }
-                    }
-
-                    if (NextSegment(out baselineMilliseconds) == false)
-                        yield break;
-                }
-            }
-
-            private IEnumerable<SingleResult> YieldSegment(DateTime baseline, bool includeDead = false)
-            {
-                var shouldBreak = includeDead ? _currentSegment.NumberOfEntries == 0 : _currentSegment.NumberOfLiveEntries == 0;
-                if (shouldBreak)
-                    yield break;
-
-                using (var enumerator = _currentSegment.GetEnumerator(_context.Allocator))
-                {
-                    while (enumerator.MoveNext(out int ts, _values, _states, ref _tagPointer, out var status))
-                    {
-                        if (includeDead == false &&
-                            status == TimeSeriesValuesSegment.Dead)
-                            continue;
-
-                        var cur = baseline.AddMilliseconds(ts);
-
-                        if (cur > _to)
-                            yield break;
-
-                        if (cur < _from)
-                            continue;
-
-                        var tag = SetTimestampTag();
-
-                        var end = _values.Length;
-                        while (end >= 0 && double.IsNaN(_values[end - 1]))
-                        {
-                            end--;
-                        }
-
-                        yield return new SingleResult
-                        {
-                            Timestamp = cur,
-                            Tag = tag,
-                            Status = status,
-                            Values = new Memory<double>(_values, 0, end)
-                        };
-                    }
-                }
-            }
-
-            private LazyStringValue SetTimestampTag()
-            {
-                if (_tagPointer.Pointer == null)
-                {
-                    return null;
-                }
-                var lazyStringLen = BlittableJsonReaderBase.ReadVariableSizeInt(_tagPointer.Pointer, 0, out var offset);
-                _tag.Renew(null, _tagPointer.Pointer + offset, lazyStringLen);
-                return _tag;
-            }
-
-            public DateTime NextSegmentBaseline()
-            {
-                if (Init() == false)
-                    return default;
-
-                if (NextSegment(out var baselineMilliseconds) == false)
-                    return default;
-
-                return new DateTime(baselineMilliseconds * 10_000);
-            }
-
-            internal bool NextSegment(out long baselineMilliseconds)
-            {
-                byte* key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
-                using (Slice.From(_context.Allocator, key, keySize - sizeof(long), out var prefix))
-                using (Slice.From(_context.Allocator, key, keySize, out var current))
-                {
-                    foreach (var (nextKey, tvh) in _table.SeekByPrimaryKeyPrefix(prefix, current, 0))
-                    {
-                        _tvr = tvh.Reader;
-
-                        InitializeSegment(out baselineMilliseconds, out _currentSegment);
-
-                        return true;
-                    }
-                }
-
-                baselineMilliseconds = default;
-                _currentSegment = default;
-
-                return false;
-            }
-
-            private void InitializeSegment(out long baselineMilliseconds, out TimeSeriesValuesSegment readOnlySegment)
-            {
-                baselineMilliseconds = ReadBaseline();
-                var segmentReadOnlyBuffer = _tvr.Read((int)TimeSeriesTable.Segment, out int size);
-                readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
-            }
-
-            private long ReadBaseline()
-            {
-                var key = _tvr.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
-                return Bits.SwapBytes(*(long*)(key + keySize - sizeof(long)));
-            }
-
-            public DateTime ReadBaselineAsDateTime()
-            {
-                return new DateTime(ReadBaseline() * 10_000);
-            }
-
-            internal string GetCurrentSegmentChangeVector()
-            {
-                return DocumentsStorage.TableValueToChangeVector(_context, (int)TimeSeriesTable.ChangeVector, ref _tvr);
-            }
-
-            internal (long Etag, string ChangeVector, DateTime Baseline) GetSegmentInfo()
-            {
-                var changeVector = GetCurrentSegmentChangeVector();
-                var etag = DocumentsStorage.TableValueToEtag((int)TimeSeriesTable.Etag, ref _tvr);
-                var baseline = new DateTime(ReadBaseline() * 10_000);
-
-                return (etag, changeVector, baseline);
-            }
+            return new TimeSeriesReader(context, documentId, name, from, to, offset);
         }
 
         public bool TryAppendEntireSegment(DocumentsOperationContext context, TimeSeriesReplicationItem item, string docId, LazyStringValue name, DateTime baseline)
@@ -1257,7 +890,7 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureStatsAndDataIntegrity(_context, _docId, _name);
             }
 
-            public void AppendToNewSegment(Reader.SingleResult item)
+            public void AppendToNewSegment(SingleResult item)
             {
                 BaselineDate = EnsureMillisecondsPrecision(item.Timestamp);
                 SliceHolder.SetBaselineToKey(BaselineDate);
@@ -1289,7 +922,7 @@ namespace Raven.Server.Documents.TimeSeries
                 EnsureStatsAndDataIntegrity(_context, _docId, _name);
             }
 
-            public void AddNewValue(Reader.SingleResult result, ref TimeSeriesValuesSegment segment)
+            public void AddNewValue(SingleResult result, ref TimeSeriesValuesSegment segment)
             {
                 AddNewValue(result.Timestamp, result.Values.Span, SliceHolder.TagAsSpan(result.Tag), ref segment, result.Status);
             }
@@ -1367,11 +1000,11 @@ namespace Raven.Server.Documents.TimeSeries
             IEnumerable<TimeSeriesOperation.AppendOperation> toAppend,
             string changeVectorFromReplication = null)
         {
-            var holder = new Reader.SingleResult();
+            var holder = new SingleResult();
 
             return AppendTimestamp(context, documentId, collection, name, toAppend.Select(ToResult), changeVectorFromReplication);
 
-            Reader.SingleResult ToResult(TimeSeriesOperation.AppendOperation element)
+            SingleResult ToResult(TimeSeriesOperation.AppendOperation element)
             {
                 holder.Values = element.Values;
                 holder.Tag = context.GetLazyString(element.Tag);
@@ -1381,13 +1014,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private class AppendEnumerator : IEnumerator<Reader.SingleResult>
+        private class AppendEnumerator : IEnumerator<SingleResult>
         {
             private readonly bool _fromReplication;
-            private readonly IEnumerator<Reader.SingleResult> _toAppend;
-            private Reader.SingleResult _current;
+            private readonly IEnumerator<SingleResult> _toAppend;
+            private SingleResult _current;
 
-            public AppendEnumerator(IEnumerable<Reader.SingleResult> toAppend, bool fromReplication)
+            public AppendEnumerator(IEnumerable<SingleResult> toAppend, bool fromReplication)
             {
                 _fromReplication = fromReplication;
                 _toAppend = toAppend.GetEnumerator();
@@ -1423,7 +1056,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             object IEnumerator.Current => _current;
 
-            public Reader.SingleResult Current => _current;
+            public SingleResult Current => _current;
 
             public void Dispose()
             {
@@ -1436,7 +1069,7 @@ namespace Raven.Server.Documents.TimeSeries
             string documentId,
             string collection,
             string name,
-            IEnumerable<Reader.SingleResult> toAppend,
+            IEnumerable<SingleResult> toAppend,
             string changeVectorFromReplication = null,
             bool verifyName = true
             )
@@ -1538,13 +1171,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private bool ValueTooFar(TimeSeriesSegmentHolder segmentHolder, Reader.SingleResult current)
+        private bool ValueTooFar(TimeSeriesSegmentHolder segmentHolder, SingleResult current)
         {
             var deltaInMs = (current.Timestamp.Ticks / 10_000) - segmentHolder.BaselineMilliseconds;
             return deltaInMs >= int.MaxValue;
         }
 
-        private static bool EnsureNumberOfValues(int segmentNumberOfValues, ref Reader.SingleResult current)
+        private static bool EnsureNumberOfValues(int segmentNumberOfValues, ref SingleResult current)
         {
             if (segmentNumberOfValues > current.Values.Length)
             {
@@ -1557,12 +1190,13 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 // we create a new instance to avoid having NaN in the case of re-appending
-                current = new Reader.SingleResult
+                current = new SingleResult
                 {
                     Timestamp = current.Timestamp,
                     Values = updatedValues,
                     Status = current.Status,
-                    Tag = current.Tag
+                    Tag = current.Tag,
+                    Type = current.Type
                 };
             }
 
@@ -1572,7 +1206,7 @@ namespace Raven.Server.Documents.TimeSeries
         private bool TryAppendToCurrentSegment(
             DocumentsOperationContext context,
             TimeSeriesSegmentHolder segmentHolder,
-            IEnumerator<Reader.SingleResult> appendEnumerator,
+            IEnumerator<SingleResult> appendEnumerator,
             out bool newValueFetched)
         {
             var segment = segmentHolder.ReadOnlySegment;
@@ -1644,8 +1278,8 @@ namespace Raven.Server.Documents.TimeSeries
         private bool SplitSegment(
             DocumentsOperationContext context,
             TimeSeriesSegmentHolder timeSeriesSegment,
-            IEnumerator<Reader.SingleResult> reader,
-            Reader.SingleResult current)
+            IEnumerator<SingleResult> reader,
+            SingleResult current)
         {
             // here we have a complex scenario, we need to add it in the middle of the current segment
             // to do that, we have to re-create it from scratch.
@@ -1755,7 +1389,7 @@ namespace Raven.Server.Documents.TimeSeries
             Remote
         }
 
-        private static CompareResult Compare(DateTime localTime, Span<double> localValues, ulong localStatus, Reader.SingleResult remote, DateTime? nextSegmentBaseline, TimeSeriesSegmentHolder holder)
+        private static CompareResult Compare(DateTime localTime, Span<double> localValues, ulong localStatus, SingleResult remote, DateTime? nextSegmentBaseline, TimeSeriesSegmentHolder holder)
         {
             if (remote == null)
                 return CompareResult.Local;
@@ -2115,7 +1749,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private static readonly StandardFormat FormatD18 = new StandardFormat('D', 18);
 
-        internal Reader.SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)
+        internal SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)
         {
             var reader = GetReader(context, documentId, name, DateTime.MinValue, DateTime.MaxValue);
             return reader.GetSummary();
@@ -2154,7 +1788,7 @@ namespace Raven.Server.Documents.TimeSeries
             return fst.NumberOfEntries;
         }
 
-        private static void AssertNoNanValue(Reader.SingleResult toAppend)
+        private static void AssertNoNanValue(SingleResult toAppend)
         {
             foreach (var val in toAppend.Values.Span)
             {
@@ -2342,7 +1976,7 @@ namespace Raven.Server.Documents.TimeSeries
             Debug.Assert(last == stats.End, $"Failed end check: {last} == {stats.End}");
         }
 
-        private enum TimeSeriesTable
+        internal enum TimeSeriesTable
         {
             // Format of this is:
             // lower document id, record separator, lower time series name, record separator, segment start

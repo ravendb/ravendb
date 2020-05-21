@@ -157,9 +157,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         private class DynamicTimeSeriesEnumerable : IEnumerable<DynamicTimeSeriesEntry>
         {
-            private readonly IEnumerable<TimeSeriesStorage.Reader.SingleResult> _inner;
+            private readonly IEnumerable<SingleResult> _inner;
 
-            public DynamicTimeSeriesEnumerable(IEnumerable<TimeSeriesStorage.Reader.SingleResult> inner)
+            public DynamicTimeSeriesEnumerable(IEnumerable<SingleResult> inner)
             {
                 _inner = inner;
             }
@@ -176,9 +176,9 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             private class Enumerator : IEnumerator<DynamicTimeSeriesEntry>
             {
-                private readonly IEnumerator<TimeSeriesStorage.Reader.SingleResult> _inner;
+                private readonly IEnumerator<SingleResult> _inner;
 
-                public Enumerator(IEnumerator<TimeSeriesStorage.Reader.SingleResult> inner)
+                public Enumerator(IEnumerator<SingleResult> inner)
                 {
                     _inner = inner;
                 }
@@ -209,10 +209,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public class DynamicTimeSeriesEntry : AbstractDynamicObject
         {
-            private TimeSeriesStorage.Reader.SingleResult _entry;
+            private SingleResult _entry;
             private DynamicArray _values;
 
-            public DynamicTimeSeriesEntry(TimeSeriesStorage.Reader.SingleResult entry)
+            public DynamicTimeSeriesEntry(SingleResult entry)
             {
                 Debug.Assert(nameof(Values) == nameof(entry.Values), "nameof(Values) == nameof(entry.Values)");
                 Debug.Assert(nameof(Timestamp) == nameof(_entry.Timestamp), "nameof(Timestamp) == nameof(_segmentEntry.Timestamp");
@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             public override bool Set(object item)
             {
-                _entry = (TimeSeriesStorage.Reader.SingleResult)item;
+                _entry = (SingleResult)item;
                 _values = null;
                 return true;
             }

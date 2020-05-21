@@ -197,7 +197,7 @@ namespace StressTests.Client.TimeSeries
                                 var id = $"users/karmel/{j}";
                                 var stats = tss.Stats.GetStats(ctx, id, "Heartrate");
 
-                                TimeSeriesStorage.Reader reader;
+                                TimeSeriesReader reader;
                                 if (stats == default || stats.Count == 0)
                                 {
                                     var name = config.Collections["Users"].Policies[0].GetTimeSeriesName("Heartrate");
