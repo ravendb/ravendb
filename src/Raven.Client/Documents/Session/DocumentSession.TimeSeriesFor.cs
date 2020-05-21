@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.TimeSeries;
 
@@ -34,6 +35,18 @@ namespace Raven.Client.Documents.Session
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
             return new SessionDocumentTimeSeries<TValues>(this, entity, tsName);
+        }
+        
+        public ISessionDocumentTypedTimeSeries<TimeSeriesRollupEntry<TValues>> RollupTimeSeriesFor<TValues>(string documentId, string policy, string name = null) where TValues : TimeSeriesEntry, new()
+        {
+            var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
+            return new SessionDocumentTimeSeries<TimeSeriesRollupEntry<TValues>>(this, documentId, $"{tsName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{policy}");
+        }
+
+        public ISessionDocumentTypedTimeSeries<TimeSeriesRollupEntry<TValues>> RollupTimeSeriesFor<TValues>(object entity, string policy, string name = null) where TValues : TimeSeriesEntry, new()
+        {
+            var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
+            return new SessionDocumentTimeSeries<TimeSeriesRollupEntry<TValues>>(this, entity, $"{tsName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{policy}");
         }
     }
 }

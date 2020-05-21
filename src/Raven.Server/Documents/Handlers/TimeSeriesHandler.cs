@@ -278,7 +278,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         Timestamp = singleResult.Timestamp,
                         Tag = singleResult.Tag,
-                        Values = singleResult.Values.ToArray()
+                        Values = singleResult.Values.ToArray(),
+                        IsRollup = singleResult.Type == SingleResultType.RolledUp
                     });
                 }
 
@@ -442,6 +443,9 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteString(entries[i].Tag);
                     writer.WriteComma();
                     writer.WriteArray(nameof(TimeSeriesEntry.Values), entries[i].Values);
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TimeSeriesEntry.IsRollup));
+                    writer.WriteBool(entries[i].IsRollup);
                 }
                 writer.WriteEndObject();
             }

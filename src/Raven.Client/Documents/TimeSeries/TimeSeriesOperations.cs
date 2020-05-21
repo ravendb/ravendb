@@ -49,6 +49,16 @@ namespace Raven.Client.Documents.TimeSeries
         /// <summary>
         /// Register value names of a time-series
         /// </summary>
+        /// <typeparam name="TCollection">Collection type</typeparam>
+        public Task RegisterAsync<TCollection>(string name, string[] valueNames)
+        {
+            var collection = _store.Conventions.FindCollectionName(typeof(TCollection));
+            return RegisterAsync(collection, name, valueNames);
+        }
+
+        /// <summary>
+        /// Register value names of a time-series
+        /// </summary>
         public Task RegisterAsync(string collection, string name, string[] valueNames)
         {
             var parameters = new ConfigureTimeSeriesValueNamesOperation.Parameters
@@ -140,6 +150,15 @@ namespace Raven.Client.Documents.TimeSeries
             AsyncHelpers.RunSync(RegisterAsync<TCollection, TTimeSeriesEntry>);
         }
         
+        /// <summary>
+        /// Register value names of a time-series
+        /// </summary>
+        /// <typeparam name="TCollection">Collection type</typeparam>
+        public void Register<TCollection>(string name, string[] valueNames)
+        {
+            AsyncHelpers.RunSync(() => RegisterAsync<TCollection>(name, valueNames));
+        }
+
         /// <summary>
         /// Register value names of a time-series
         /// </summary>
