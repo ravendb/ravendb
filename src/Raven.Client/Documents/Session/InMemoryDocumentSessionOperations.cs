@@ -1964,6 +1964,7 @@ more responsive application.
                                                        $"The time series value is missing '{nameof(TimeSeriesEntry.Values)}' property");
 
                     timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Tag), out string tag); // tag is optional
+                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.IsRollup), out bool rollup); 
 
                     valuesArray[j] = new TimeSeriesEntry
                     {
@@ -1971,7 +1972,8 @@ more responsive application.
                         Timestamp = timestamp,
                         Values = values.Select(x => x is LazyNumberValue val
                             ? val.ToDouble(CultureInfo.InvariantCulture)
-                            : (long)x).ToArray()
+                            : (long)x).ToArray(),
+                        IsRollup = rollup
                     };
                 }
 

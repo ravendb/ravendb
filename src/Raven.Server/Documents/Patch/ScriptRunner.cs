@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
                     }
 
-                    var toAppend = new TimeSeriesStorage.Reader.SingleResult
+                    var toAppend = new SingleResult
                     {
                         Values = values,
                         Tag = lsTag,
@@ -501,6 +501,7 @@ namespace Raven.Server.Documents.Patch
                     entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat());
                     entry.Set(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
                     entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
+                    entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type.ToString());
 
                     entries.Add(entry);
                 }

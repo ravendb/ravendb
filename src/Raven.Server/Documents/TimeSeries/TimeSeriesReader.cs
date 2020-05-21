@@ -123,16 +123,21 @@ namespace Raven.Server.Documents.TimeSeries
                     continue;
                 }
 
-                if (_to == DateTime.MaxValue)
-                    return segment.YieldAllValues(_context, date, includeDead: false).Last();
-
                 SingleResult last = default;
+                if (_to == DateTime.MaxValue)
+                {
+                    last = segment.YieldAllValues(_context, date, includeDead: false).Last();
+                    last.Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp;
+                    return last;
+                }
+
                 foreach (var item in segment.YieldAllValues(_context, date, includeDead: false))
                 {
                     if (item.Timestamp > _to)
                         return last;
 
                     last = item;
+                    last.Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp;
                 }
 
                 return last;

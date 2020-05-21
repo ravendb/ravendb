@@ -423,12 +423,12 @@ namespace Raven.Server.Documents.TimeSeries
             return context.GetLazyStringValue(tagPointer.Pointer);
         }
 
-        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(DocumentsOperationContext context, DateTime baseline, bool includeDead = true)
+        public IEnumerable<SingleResult> YieldAllValues(DocumentsOperationContext context, DateTime baseline, bool includeDead = true)
         {
             return YieldAllValues(context, context.Allocator, baseline, includeDead);
         }
 
-        public IEnumerable<TimeSeriesStorage.Reader.SingleResult> YieldAllValues(JsonOperationContext context, ByteStringContext allocator, DateTime baseline, bool includeDead = true)
+        public IEnumerable<SingleResult> YieldAllValues(JsonOperationContext context, ByteStringContext allocator, DateTime baseline, bool includeDead = true)
         {
             var values = new double[NumberOfValues];
             var states = new TimestampState[NumberOfValues];
@@ -449,8 +449,8 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         end--;
                     }
-
-                    yield return new TimeSeriesStorage.Reader.SingleResult
+                    
+                    yield return new SingleResult
                     {
                         Timestamp = cur,
                         Tag = tag,
