@@ -751,6 +751,7 @@ namespace SlowTests.Smuggler
         public async Task ShouldAvoidCreatingNewRevisionsDuringImport()
         {
             var file = GetTempFileName();
+
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -841,7 +842,6 @@ namespace SlowTests.Smuggler
         [Fact]
         public async Task Smuggler_Export_And_Import_Should_Work_With_ForDatabase()
         {
-
             using (var server = GetNewServer())
             {
                 using (var store = new DocumentStore
@@ -893,6 +893,52 @@ namespace SlowTests.Smuggler
                         Assert.NotNull(employee);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task Keep_The_Same_Document_Id_After_Counters_Import()
+        {
+            var file = GetTempFileName();
+
+            try
+            {
+                using (var store = GetDocumentStore())
+                {
+                    const string userId = "Users/1-A";
+                    using (var session = store.OpenSession())
+                    {
+                        var user = new User {Name = "Grisha"};
+                        session.Store(user, userId);
+                        session.CountersFor(user).Increment("Likes", 1);
+                        session.SaveChanges();
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        var user = session.Load<User>(userId);
+                        Assert.Equal(userId, user.Id);
+                    }
+
+                    var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                    using (var innerStore = GetDocumentStore())
+                    {
+                        operation = await innerStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                        await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+
+                        using (var session = innerStore.OpenSession())
+                        {
+                            var user = session.Load<User>(userId);
+                            Assert.Equal(userId, user.Id);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
             }
         }
 
