@@ -106,22 +106,19 @@
         
         .source-item-default {
             &::before {
-                //TODO
-                //content: "\e9d9"; // Waiting for icon from RavenDB-14970
+                content: "\ea2d";
             }
         }
 
         .source-item-server {
             &::before {
-                //TODO
-                //content:"\e93d";  // Waiting for icon from RavenDB-14970
+                content:"\e967";
             }
         }
 
         .source-item-database {
             &::before {
-                //TODO
-                //content: "\e9ce";  // Waiting for icon from RavenDB-14970
+                content: "\e9ce";
             }
         }
     }
@@ -151,10 +148,15 @@
 
     .source-icon {
         color: @source-item-color;
+        margin-right: 2px;
     }
     
     .source-icon-null {
         color: @source-item-color-basic;
+    }
+    
+    .fix-icon-top {
+        top: 1px;
     }
     
     .set-default {
