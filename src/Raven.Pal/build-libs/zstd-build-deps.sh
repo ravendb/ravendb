@@ -8,7 +8,10 @@ LIBZSTD_REPO="https://github.com/ravendb/zstd.git"
 function zstd_install_build_deps {
     pushd zstd >> ${ZSTD_LOG} 2>&1
     echo -ne "${C_YELLOW}[`date`] ${C_L_MAGENTA}Install zstd build dependencies... ${NC}" >> ${ZSTD_LOG} 2>&1 
-    make arminstall >> ${ZSTD_LOG} 2>&1 || return 1
+    if ! make arminstall >> ${ZSTD_LOG} 2>&1; then
+        echo "Failed to install ARM build deps."
+        return 1
+    fi 
     echo -e "${C_GREEN}ok." 
     popd >> ${ZSTD_LOG} 2>&1
     return 0
@@ -28,7 +31,6 @@ function zstd_clone {
     git checkout ${LIBZSTD_VER} >> ${ZSTD_LOG} 2>&1
     if [ $? -ne 0 ]; then echo -e "${ERR_STRING}Failed to checkout tags/${LIBZSTD_VER}. See ${ZSTD_LOG} for details.${NC}"; popd; exit 1; fi
     echo -e "${C_GREEN}ok."
-    git show
     popd >> ${ZSTD_LOG} 2>&1
 }
 
