@@ -74,7 +74,7 @@ namespace Sparrow.Json
                     if (fieldInfo.IsPublic && fieldInfo.IsInitOnly)
                         ThrowDeserializationError(type, fieldInfo);
 
-                    propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, json, vars)));
+                    propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, fieldInfo.GetCustomAttributes().ToList(), json, vars)));
                 }
 
                 foreach (var propertyInfo in typeof(T).GetProperties())
@@ -82,7 +82,7 @@ namespace Sparrow.Json
                     if (propertyInfo.CanWrite == false || propertyInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
                         continue;
 
-                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, json, vars)));
+                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, propertyInfo.GetCustomAttributes().ToList(), json, vars)));
                 }
 
                 var conversionFuncBody = Expression.Block(vars.Values, Expression.MemberInit(instance, propInit));
@@ -122,7 +122,7 @@ namespace Sparrow.Json
             throw new InvalidOperationException($"Cannot create deserialization routine for '{type.FullName}' because '{fieldInfo.Name}' is readonly field");
         }
 
-        private static Expression GetValue(string propertyName, Type propertyType, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
+        private static Expression GetValue(string propertyName, Type propertyType, List<Attribute> customAttributes, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
 
@@ -178,7 +178,7 @@ namespace Sparrow.Json
             if (propertyType.IsGenericType)
             {
                 var genericTypeDefinition = propertyType.GetGenericTypeDefinition();
-                if (genericTypeDefinition == typeof(Dictionary<,>))
+                if (genericTypeDefinition == typeof(Dictionary<,>) || genericTypeDefinition == typeof(IDictionary<,>))
                 {
                     var valueType = propertyType.GenericTypeArguments[1];
                     if (valueType == typeof(string))
@@ -187,7 +187,7 @@ namespace Sparrow.Json
                         if (keyType == typeof(string))
                         {
                             var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfString), BindingFlags.NonPublic | BindingFlags.Static);
-                            return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                            return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes));
                         }
                         if (keyType.IsEnum)
                         {
@@ -200,36 +200,36 @@ namespace Sparrow.Json
                     if (valueType == typeof(Dictionary<string, string[]>))
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfDictionaryOfStringArray), BindingFlags.NonPublic | BindingFlags.Static);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes));
                     }
                     if (valueType == typeof(string[]))
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringArray), BindingFlags.NonPublic | BindingFlags.Static);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes));
                     }
                     if (valueType == typeof(List<string>))
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfStringList), BindingFlags.NonPublic | BindingFlags.Static);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes));
                     }
                     if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(List<>))
                     {
                         var listType = valueType.GenericTypeArguments[0];
                         var converterExpression = Expression.Constant(GetConverterFromCache(listType));
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(listType);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes), converterExpression);
                     }
                     if (valueType.IsEnum)
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfEnum), BindingFlags.NonPublic | BindingFlags.Static);
                         methodToCall = methodToCall.MakeGenericMethod(valueType);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes));
                     }
                     if (valueType == typeof(long) ||
                         valueType == typeof(double))
                     {
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionaryOfPrimitive), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes));
                     }
                     else
                     {
@@ -240,7 +240,7 @@ namespace Sparrow.Json
                             converterExpression = Expression.Constant(GetConverterFromCache(valueType));
 
                         var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToDictionary), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType.GenericTypeArguments[0], valueType);
-                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
+                        return Expression.Call(methodToCall, json, Expression.Constant(propertyName), GetJsonDeserializationDictionaryAttribute(customAttributes), converterExpression);
                     }
                 }
 
@@ -304,6 +304,11 @@ namespace Sparrow.Json
             }
 
             // throw new InvalidOperationException($"We weren't able to convert the property '{propertyName}' of type '{type}'.");
+
+            static ConstantExpression GetJsonDeserializationDictionaryAttribute(List<Attribute> customAttributes)
+            {
+                return Expression.Constant(customAttributes.SingleOrDefault(x => x is JsonDeserializationDictionaryAttribute) as JsonDeserializationDictionaryAttribute, typeof(JsonDeserializationDictionaryAttribute));
+            }
         }
 
         private static object GetConverterFromCache(Type propertyType)
@@ -333,10 +338,10 @@ namespace Sparrow.Json
             return value;
         }
 
-        private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name)
+        private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
             where T : struct
         {
-            var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, T>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false || obj == null)
@@ -353,10 +358,10 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, TV> converter)
+        private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
         {
             var isStringKey = typeof(TK) == typeof(string);
-            var dictionary = new Dictionary<TK, TV>((IEqualityComparer<TK>)StringComparer.Ordinal); // we need to deserialize it as we got it, keys could be case sensitive - RavenDB-8713
+            var dictionary = new Dictionary<TK, TV>((IEqualityComparer<TK>)GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.Ordinal)); // we need to deserialize it as we got it, keys could be case sensitive - RavenDB-8713
 
             BlittableJsonReaderObject obj;
             if (json.TryGet(name, out obj) == false || obj == null)
@@ -419,9 +424,9 @@ namespace Sparrow.Json
             return (T)methodToCall.Invoke(null, new[] { obj });
         }
 
-        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name)
+        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
-            var dic = new Dictionary<string, TEnum>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, TEnum>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
             //should a "null" exist in json? -> not sure that "null" can exist there
@@ -459,9 +464,9 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name)
+        private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
-            var dic = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, string>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
             //should a "null" exist in json? -> not sure that "null" can exist there
@@ -479,9 +484,9 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, T> converter)
         {
-            var dic = new Dictionary<string, List<T>>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, List<T>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
             //should a "null" exist in json? -> not sure that "null" can exist there
@@ -504,9 +509,9 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name)
+        private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
-            var dic = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, List<string>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
             //should a "null" exist in json? -> not sure that "null" can exist there
@@ -529,9 +534,9 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name)
+        private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
-            var dic = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, string[]>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
             //should a "null" exist in json? -> not sure that "null" can exist there
@@ -554,9 +559,9 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name)
+        private static Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
-            var dic = new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);
+            var dic = new Dictionary<string, Dictionary<string, string[]>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
             BlittableJsonReaderObject obj;
             //should a "null" exist in json? -> not sure that "null" can exist there
@@ -789,6 +794,27 @@ namespace Sparrow.Json
             }
 
             throw new FormatException($"Could not convert {value.GetType().Name} ('{value}') to {typeof(Size).Name}");
+        }
+
+        private static StringComparer GetStringComparer(StringComparison stringComparison)
+        {
+            switch (stringComparison)
+            {
+                case StringComparison.CurrentCulture:
+                    return StringComparer.CurrentCulture;
+                case StringComparison.CurrentCultureIgnoreCase:
+                    return StringComparer.CurrentCultureIgnoreCase;
+                case StringComparison.InvariantCulture:
+                    return StringComparer.InvariantCulture;
+                case StringComparison.InvariantCultureIgnoreCase:
+                    return StringComparer.InvariantCultureIgnoreCase;
+                case StringComparison.Ordinal:
+                    return StringComparer.Ordinal;
+                case StringComparison.OrdinalIgnoreCase:
+                    return StringComparer.OrdinalIgnoreCase;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(stringComparison));
+            }
         }
     }
 }
