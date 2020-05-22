@@ -42,35 +42,9 @@ function RemoveImages($imageTags) {
         CheckLastExitCode
     }
 }
-function GetImageTags($repo, $version, $arch) {
-    switch ($arch) {
-        "x64" { 
-            return @(
-                "$($repo):latest",
-                "$($repo):ubuntu-latest",
-                "$($repo):4.2-ubuntu-latest",
-                "$($repo):$($version)-ubuntu.18.04-x64"
-            )
-            break;
-        }
-        "arm32v7" {
-            return @(
-                "$($repo):latest",
-                "$($repo):ubuntu-arm32v7-latest",
-                "$($repo):4.2-ubuntu-arm32v7-latest",
-                "$($repo):$($version)-ubuntu.18.04-arm32v7"
-            )
-            break;
-        }
-        Default {
-            throw "Arch not supported."
-        }
-    }
-        
-}
 
 $version = GetVersionFromArtifactName
-$tags = GetImageTags $Repo $version $Arch
+$tags = GetUbuntuImageTags $Repo $version $Arch
 PushImages $tags
 
 if ($RemoveImages) {
