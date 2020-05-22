@@ -291,7 +291,7 @@ namespace FastTests
                             raftCommand = record.Etag;
                         }
 
-                        Assert.True(raftCommand > 0); //sanity check             
+                        Assert.True(raftCommand > 0); //sanity check
 
                         if (Servers.Contains(serverToUse))
                         {
@@ -572,9 +572,11 @@ namespace FastTests
 
         public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null)
         {
-            timeout = timeout ?? (Debugger.IsAttached
+            timeout ??= (Debugger.IsAttached
                           ? TimeSpan.FromMinutes(15)
                           : TimeSpan.FromMinutes(1));
+
+            var toWait = new HashSet<string>(indexNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
 
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
@@ -582,14 +584,23 @@ namespace FastTests
                 var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames));
                 foreach (var index in indexes)
                 {
-                    if (index.Errors.Any())
-                        return indexes;
+                    if (index.Errors.Length > 0)
+                    {
+                        toWait.Remove(index.Name);
+
+                        if (toWait.Count == 0)
+                            return indexes;
+                    }
                 }
 
                 Thread.Sleep(32);
             }
 
-            throw new TimeoutException("Got no index error for more than " + timeout.Value);
+            var msg = $"Got no index error for more than {timeout.Value}.";
+            if (toWait.Count != 0)
+                msg += $" Still waiting for following indexes: {string.Join(",", toWait)}";
+
+            throw new TimeoutException(msg);
         }
 
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
