@@ -51,6 +51,8 @@ namespace SlowTests.Issues
 
                 WaitForIndexingErrors(store, new [] { "Index1", "Index2", "Index3" });
 
+                store.Maintenance.Send(new StopIndexingOperation());
+
                 var indexErrors1 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index1" }));
                 var indexErrors2 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index2" }));
                 var indexErrors3 = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { "Index3" }));
