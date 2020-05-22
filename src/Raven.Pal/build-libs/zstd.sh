@@ -45,7 +45,7 @@ function zstd_lib_win32 {
         make lib-release \
             CC=i686-w64-mingw32-gcc \
             OS=Windows_NT \
-            CFLAGS="-Ofast -fomit-frame-pointer -m32 -march=pentium3 -mtune=westmere" && \
+            CFLAGS="-Ofast -fomit-frame-pointer -m32 -march=pentium3 -static-libgcc -mtune=westmere" && \
         cp zstd/lib/dll/libzstd.dll "${ARTIFACTS_DIR}/libzstd.win.x86.dll" >> ${ZSTD_LOG} 2>&1
 }
 
