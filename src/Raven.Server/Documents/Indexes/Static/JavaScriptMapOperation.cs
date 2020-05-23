@@ -154,7 +154,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var field = function.TryGetFieldFromSimpleLambdaExpression();
             if (field == null)
                 return null;
-            var properties = new List<Property>
+            var properties = new List<Expression>
             {
                 new Property(PropertyKind.Data, new Identifier(field), false,
                     new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false)
@@ -179,11 +179,16 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
 
-            var functionExp = new FunctionExpression(function.Id, NodeList.Create(new List<INode> { new Identifier("self") }),
-                new BlockStatement(NodeList.Create(new List<IStatementListItem>
+            var functionExp = new FunctionExpression(
+                function.Id, 
+                NodeList.Create(new List<Expression> { new Identifier("self") }),
+                new BlockStatement(NodeList.Create(new List<Statement>
                 {
                     new ReturnStatement(new ObjectExpression(NodeList.Create(properties)))
-                })), false, function.HoistingScope, function.Strict);
+                })),
+                generator: false,
+                function.Strict,
+                async: false);
             var functionObject = new ScriptFunctionInstance(
                     engine,
                     functionExp,

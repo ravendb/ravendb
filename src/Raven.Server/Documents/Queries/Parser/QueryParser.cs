@@ -1199,7 +1199,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private static Esprima.Ast.Program ValidateScript(string script)
         {
             var javaScriptParser = new JavaScriptParser(script);
-            return javaScriptParser.ParseProgram();
+            return javaScriptParser.ParseScript();
         }
 
         private static void ThrowUnknownQueryType(QueryType queryType)
