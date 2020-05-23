@@ -197,7 +197,7 @@ namespace Raven.Server.Documents
         private readonly Action<string> _addToInitLog;
 
         // this is used to remember the metadata about collections / documents for
-        // common operations. It always points to the latest valid transaction and is updated by 
+        // common operations. It always points to the latest valid transaction and is updated by
         // the write tx on commit, thread safety is inherited from the voron transaction
         private DocumentTransactionCache _documentsMetadataCache = new DocumentTransactionCache();
 
@@ -396,13 +396,10 @@ namespace Raven.Server.Documents
                     }
                     currentCache.LastEtagsByCollection[collection] = colCache;
                 }
-
             }
             // we set it on the current transaction because we aren't committed yet
             // we'll publish this after the commit finalization
             tx.LowLevelTransaction.ImmutableExternalState = currentCache;
-            
-
         }
 
         private void UpdateDocumentTransactionCache(LowLevelTransaction obj)
@@ -1996,7 +1993,7 @@ namespace Raven.Server.Documents
 
         public CollectionDetails GetCollectionDetails(DocumentsOperationContext context, string collection)
         {
-            CollectionDetails collectionDetails = new CollectionDetails() { Name = collection, CountOfDocuments = 0, Size = new Client.Util.Size() };
+            CollectionDetails collectionDetails = new CollectionDetails { Name = collection, CountOfDocuments = 0, Size = new Client.Util.Size() };
             CollectionName collectionName = GetCollection(collection, throwIfDoesNotExist: false);
 
             if (collectionName != null)
@@ -2017,12 +2014,12 @@ namespace Raven.Server.Documents
         {
             TableReport report = new TableReport(0, 0, false);
             Table table = context.Transaction.InnerTransaction.OpenTable(schema, name);
-            
+
             if (table != null)
             {
                 report = table.GetReport(blnDetailed);
             }
-            
+
             return report;
         }
 

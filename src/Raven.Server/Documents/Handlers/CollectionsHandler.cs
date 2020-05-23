@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private DynamicJsonValue GetCollectionStats(DocumentsOperationContext context, bool blnDetailed = false)
+        private DynamicJsonValue GetCollectionStats(DocumentsOperationContext context, bool detailed = false)
         {
             DynamicJsonValue collections = new DynamicJsonValue();
 
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var collection in Database.DocumentsStorage.GetCollections(context))
             {
-                if (blnDetailed)
+                if (detailed)
                 {
                     collections[collection.Name] = Database.DocumentsStorage.GetCollectionDetails(context, collection.Name);
                 }

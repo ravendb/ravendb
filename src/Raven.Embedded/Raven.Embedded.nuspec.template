@@ -6,8 +6,9 @@
         <title>RavenDB Embedded</title>
         <authors>Hibernating Rhinos</authors>
         <owners>Hibernating Rhinos</owners>
-        <licenseUrl>http://www.ravendb.net/licensing</licenseUrl>
+        <license type="file">LICENSE.txt</license>
         <projectUrl>https://ravendb.net/</projectUrl>
+        <icon>icon.png</icon>
         <iconUrl>http://static.ravendb.net/logo-for-nuget.png</iconUrl>
         <requireLicenseAcceptance>true</requireLicenseAcceptance>
         <description>RavenDB Embedded library to run ravendb in embedded way</description>

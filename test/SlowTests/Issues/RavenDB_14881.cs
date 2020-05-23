@@ -57,6 +57,7 @@ namespace SlowTests.Issues
                 // get detailed collection statistics before we are going to change some data
                 // right now there shouldn't be any revisions
                 var detailedCollectionStats_beforeDataChanged = await store.Maintenance.SendAsync(new GetDetailedCollectionStatisticsOperation());
+                Assert.Equal(strCollectionName, detailedCollectionStats_beforeDataChanged.Collections[strCollectionName].Name);
                 long sizeInBytesWithoutRevisions = detailedCollectionStats_beforeDataChanged.Collections[strCollectionName].Size.SizeInBytes;
                 Assert.True(sizeInBytesWithoutRevisions > 0);
 

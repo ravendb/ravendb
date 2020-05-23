@@ -40,6 +40,7 @@ namespace Raven.Client.Documents.Operations
         {
             return new DynamicJsonValue
             {
+                [nameof(Name)] = Name,
                 [nameof(CountOfDocuments)] = CountOfDocuments,
                 [nameof(Size)] = new DynamicJsonValue
                 {
