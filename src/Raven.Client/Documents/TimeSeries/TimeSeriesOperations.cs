@@ -32,12 +32,12 @@ namespace Raven.Client.Documents.TimeSeries
         /// Register value names of a time-series
         /// </summary>
         /// <typeparam name="TCollection">Collection type</typeparam>
-        /// <typeparam name="TTimeSeriesEntry">Time-series type, must be derived from TimeSeriesEntry class</typeparam>
-        public Task RegisterAsync<TCollection, TTimeSeriesEntry>() where TTimeSeriesEntry : TimeSeriesEntry
+        /// <typeparam name="TTimeSeriesEntry">Time-series type</typeparam>
+        public Task RegisterAsync<TCollection, TTimeSeriesEntry>(string name = null)
         {
-            var name = GetTimeSeriesName<TTimeSeriesEntry>();
+            name ??= GetTimeSeriesName<TTimeSeriesEntry>();
 
-            var mapping = TimeSeriesEntryValues.GetMembersMapping(typeof(TTimeSeriesEntry));
+            var mapping = TimeSeriesValuesHelper.GetMembersMapping(typeof(TTimeSeriesEntry));
             if (mapping == null)
                 throw new InvalidOperationException($"{typeof(TTimeSeriesEntry).Name} must contain {nameof(TimeSeriesValueAttribute)}.");
 
@@ -144,10 +144,10 @@ namespace Raven.Client.Documents.TimeSeries
         /// Register value names of a time-series
         /// </summary>
         /// <typeparam name="TCollection">Collection type</typeparam>
-        /// <typeparam name="TTimeSeriesEntry">Time-series type, must be derived from TimeSeriesEntry class</typeparam>
-        public void Register<TCollection, TTimeSeriesEntry>() where TTimeSeriesEntry : TimeSeriesEntry
+        /// <typeparam name="TTimeSeriesEntry">Time-series type</typeparam>
+        public void Register<TCollection, TTimeSeriesEntry>(string name = null)
         {
-            AsyncHelpers.RunSync(RegisterAsync<TCollection, TTimeSeriesEntry>);
+            AsyncHelpers.RunSync(() => RegisterAsync<TCollection, TTimeSeriesEntry>(name));
         }
         
         /// <summary>
@@ -230,11 +230,8 @@ namespace Raven.Client.Documents.TimeSeries
             AsyncHelpers.RunSync(() => RemovePolicyAsync<TCollection>(name));
         }
 
-        internal static string GetTimeSeriesName<TTimeSeriesEntry>() where TTimeSeriesEntry : TimeSeriesEntry
+        internal static string GetTimeSeriesName<TTimeSeriesEntry>()
         {
-            if (typeof(TTimeSeriesEntry) == typeof(TimeSeriesEntry))
-                throw new InvalidOperationException($"Only derived class from '{nameof(TimeSeriesEntry)}' can be registered.");
-
             return typeof(TTimeSeriesEntry).Name;
         }
 

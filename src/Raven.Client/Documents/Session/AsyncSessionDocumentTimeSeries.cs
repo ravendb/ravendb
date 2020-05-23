@@ -17,7 +17,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
-    public class AsyncSessionDocumentTimeSeries<TValues> : SessionTimeSeriesBase, IAsyncSessionDocumentTimeSeries, IAsyncSessionDocumentTypedTimeSeries<TValues> where TValues : TimeSeriesEntry
+    public class AsyncSessionDocumentTimeSeries<TValues> : SessionTimeSeriesBase, IAsyncSessionDocumentTimeSeries, IAsyncSessionDocumentRollupTypedTimeSeries<TValues>, IAsyncSessionDocumentTypedTimeSeries<TValues> where TValues : new()
     {
         public AsyncSessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId, string name) : base(session, documentId, name)
         {
@@ -351,14 +351,24 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        Task<IEnumerable<TValues>> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
+        Task<IEnumerable<TimeSeriesEntry<TValues>>> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token) 
         {
-            return GetAsyncInternal<TValues>(from, to, start, pageSize, token);
+            return GetAsyncInternal<TimeSeriesEntry<TValues>>(from, to, start, pageSize, token);
         }
 
-        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(TValues entry)
+        void ISessionDocumentTypedAppendTimeSeriesBase<TValues>.Append(DateTime timestamp, TValues entry, string tag)
         {
-            Append(entry);
+            Append(timestamp, entry, tag);
+        }
+
+        public void Append(TimeSeriesEntry<TValues> entry)
+        {
+            Append(entry.Timestamp, entry.Value, entry.Tag);
+        }
+
+        Task<IEnumerable<TimeSeriesRollupEntry<TValues>>> IAsyncSessionDocumentRollupTypedTimeSeries<TValues>.GetAsync(DateTime? @from, DateTime? to, int start, int pageSize, CancellationToken token)
+        {
+            return GetAsyncInternal<TimeSeriesRollupEntry<TValues>>(from, to, start, pageSize, token);
         }
     }
 }

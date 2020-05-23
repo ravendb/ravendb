@@ -24,9 +24,18 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced async TimeSeries typed session operations
     /// </summary>
-    public interface IAsyncSessionDocumentTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentRemoveTimeSeriesBase where TValues : TimeSeriesEntry
+    public interface IAsyncSessionDocumentTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentRemoveTimeSeriesBase where TValues : new()
     {
-        Task<IEnumerable<TValues>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
+        Task<IEnumerable<TimeSeriesEntry<TValues>>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
+            CancellationToken token = default);
+    }
+
+    /// <summary>
+    ///     Advanced async TimeSeries typed session operations
+    /// </summary>
+    public interface IAsyncSessionDocumentRollupTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentRemoveTimeSeriesBase where TValues : new()
+    {
+        Task<IEnumerable<TimeSeriesRollupEntry<TValues>>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
     }
 }
