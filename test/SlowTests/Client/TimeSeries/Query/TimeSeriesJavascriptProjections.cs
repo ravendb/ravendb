@@ -2231,15 +2231,16 @@ select foo(heartrate(p))
                                 .Where(ts => ts.Value < 500)
                                 .ToList()
                         let last = tsQuery.Results
-                            .OrderBy(entry => entry.Value)
+                            .OrderBy(entry => entry.Values[0])
                             .Last()
                         select new
                         {
-                            Max = last.Value,
+                            Max = last.Values[0],
                             TagOfMax = last.Tag
                         };
 
-                    var result = query.First();
+                    var results = query.ToList();
+                    var result = results.First();
 
                     Assert.Equal(479d, result.Max);
                     Assert.Equal("watches/fitbit", result.TagOfMax);

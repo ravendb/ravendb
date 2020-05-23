@@ -18,12 +18,12 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.TimeSeries
 {
-    public class TimeSeriesEntry : TimeSeriesEntryValues
+    public class TimeSeriesEntry
     {
         public DateTime Timestamp { get; set; }
-
+        public double[] Values { get; set; }
         public string Tag { get; set; }
-
+        public bool IsRollup { get; set; }
 
         [JsonDeserializationIgnore]
         public double Value
@@ -47,47 +47,37 @@ namespace Raven.Client.Documents.Session.TimeSeries
             }
         }
 
-        public TimeSeriesRollupEntry<T> ToRollupEntry<T>() where T : TimeSeriesEntry, new()
-        {
-            if (IsRollup == false)
-                throw new InvalidCastException("Not a rolled up entry.");
-
-            if (typeof(T) != GetType())
-                throw new InvalidCastException($"Can't cast '{typeof(T).FullName}' to '{GetType().FullName}'");
-
-            return new TimeSeriesRollupEntry<T>
-            {
-                Tag = Tag,
-                Timestamp = Timestamp,
-                Values = Values,
-                IsRollup = true
-            };
-        }
     }
 
-    public static class RollupExtensions
+    public class TimeSeriesEntry<T> : TimeSeriesEntry, IPostJsonDeserialization where T : new ()
     {
-        public static TimeSeriesRollupEntry<T> AsRollUpEntry<T>(this TimeSeriesEntry entry) where T : TimeSeriesEntry, new()
+        public new T Value { get; set; }
+
+        public void Deconstruct(out DateTime timestamp, out T value)
         {
-            if (entry.IsRollup == false)
-                throw new InvalidCastException("Not a rolled up entry.");
+            timestamp = Timestamp;
+            value = Value ?? throw new ArgumentNullException(nameof(Value));
+        }
 
-            if (entry is TimeSeriesRollupEntry<T> rollupEntry)
-                return rollupEntry;
+        public void Deconstruct(out DateTime timestamp, out T value, out string tag)
+        {
+            timestamp = Timestamp;
+            value = Value ?? throw new ArgumentNullException(nameof(Value));
+            tag = Tag;
+        }
 
-            if (typeof(T) != entry.GetType())
-                throw new InvalidCastException($"Can't cast '{typeof(T).FullName}' to '{entry.GetType().FullName}'");
+        [OnDeserialized]
+        internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
+        {
+            Value = TimeSeriesValuesHelper.SetMembers<T>(Values, IsRollup);
+        }
 
-            return new TimeSeriesRollupEntry<T>
-            {
-                Tag = entry.Tag,
-                Timestamp = entry.Timestamp,
-                Values = entry.Values,
-                IsRollup = true
-            };
+        void IPostJsonDeserialization.PostDeserialization()
+        {
+            Value = TimeSeriesValuesHelper.SetMembers<T>(Values, IsRollup);
         }
     }
-    
+
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public class TimeSeriesValueAttribute : Attribute
     {
@@ -98,49 +88,9 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
     }
 
-    public abstract class TimeSeriesEntryValues : IPostJsonDeserialization
+    internal static class TimeSeriesValuesHelper
     {
-        public double[] Values { get; set; }
-        public bool IsRollup { get; set; }
-
         private static readonly ConcurrentDictionary<Type, SortedDictionary<byte, MemberInfo>> _cache = new ConcurrentDictionary<Type, SortedDictionary<byte, MemberInfo>>();
-
-        internal virtual void SetValuesFromMembers()
-        {
-            var t = GetType();
-            var mapping = GetMembersMapping(t);
-            if (mapping == null)
-                return;
-
-            Values = new double[mapping.Count];
-            foreach (var memberInfo in mapping)
-            {
-                var index = memberInfo.Key;
-                var member = memberInfo.Value;
-                if (IsRollup)
-                    index *= 6;
-
-                Values[index] = (double)member.GetValue(this);
-            }
-        }
-
-        internal virtual void SetMembersFromValues()
-        {
-            var t = GetType();
-            var mapping = GetMembersMapping(t);
-            if (mapping == null)
-                return;
-
-            foreach (var memberInfo in mapping)
-            {
-                var index = memberInfo.Key;
-                var member = memberInfo.Value;
-                if (IsRollup)
-                    index *= 6;
-                
-                member.SetValue(this, Values[index]);
-            }
-        }
 
         internal static SortedDictionary<byte, MemberInfo> GetMembersMapping(Type type)
         {
@@ -171,185 +121,220 @@ namespace Raven.Client.Documents.Session.TimeSeries
             });
         }
 
-        [OnDeserialized]
-        internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
+        internal static IEnumerable<double> GetValues<T>(T obj, bool asRollup = false)
         {
-            SetMembersFromValues();
+            var mapping = GetMembersMapping(typeof(T));
+            if (mapping == null)
+                return null;
+
+            var values = new double[mapping.Count];
+            foreach (var memberInfo in mapping)
+            {
+                var index = memberInfo.Key;
+                if (asRollup)
+                    index *= 6;
+                var member = memberInfo.Value;
+                values[index] = (double)member.GetValue(obj);
+            }
+
+            return values;
         }
 
-        void IPostJsonDeserialization.PostDeserialization()
+        internal static T SetMembers<T>(double[] values, bool asRollup = false) where T : new()
         {
-            SetMembersFromValues();
+            if (values == null)
+                return default;
+
+            var mapping = GetMembersMapping(typeof(T));
+            if (mapping == null)
+                return default;
+
+            var obj = new T();
+            foreach (var memberInfo in mapping)
+            {
+                var index = memberInfo.Key;
+                if (asRollup)
+                    index *= 6;
+                var member = memberInfo.Value;
+                member.SetValue(obj, values[index]);
+            }
+
+            return obj;
         }
     }
 
-    public class TimeSeriesRollupEntry<TTimeSeriesEntry> : TimeSeriesEntry, IPostJsonDeserialization where TTimeSeriesEntry : TimeSeriesEntry, new()
+    public static class RollupExtensions
+    {
+        public static TimeSeriesRollupEntry<T> AsRollupEntry<T>(this TimeSeriesEntry<T> entry) where T : new()
+        {
+            if (entry.IsRollup == false)
+                throw new InvalidCastException("Not a rolled up entry.");
+            
+            if (typeof(T) != entry.Value.GetType())
+                throw new InvalidCastException($"Can't cast '{typeof(T).FullName}' to '{entry.GetType().FullName}'");
+
+            return new TimeSeriesRollupEntry<T>
+            {
+                Tag = entry.Tag,
+                Timestamp = entry.Timestamp,
+                Values = entry.Values,
+                IsRollup = true
+            };
+        }
+    }
+
+    public class TimeSeriesRollupEntry<TValues> : TimeSeriesEntry, IPostJsonDeserialization where TValues : new()
     {
         private int _dim;
 
-        private TTimeSeriesEntry _first;
-        private TTimeSeriesEntry _last;
-        private TTimeSeriesEntry _max;
-        private TTimeSeriesEntry _min;
-        private TTimeSeriesEntry _sum;
-        private TTimeSeriesEntry _count;
+        private TValues _first;
+        private TValues _last;
+        private TValues _max;
+        private TValues _min;
+        private TValues _sum;
+        private TValues _count;
 
-        private TTimeSeriesEntry _average;
+        private TValues _average;
 
-        internal TimeSeriesRollupEntry(){ /* for de-serialization*/ }
+        internal TimeSeriesRollupEntry()
+        {
+            
+        }
 
         public TimeSeriesRollupEntry(DateTime timestamp)
         {
             IsRollup = true;
-            var map = GetMembersMapping(typeof(TTimeSeriesEntry));
-            Values = new double[map.Count * 6];
             Timestamp = timestamp;
+
+            var mapping = TimeSeriesValuesHelper.GetMembersMapping(typeof(TValues));
+            Values = new double[mapping.Count * 6];
         }
 
         [JsonIgnore]
-        public TTimeSeriesEntry First
+        public TValues First
         {
             get
             {
-                if (_first?.Values != null)
+                if (_first != null)
                     return _first;
 
                 Build2DArray();
-                _first = new TTimeSeriesEntry
-                {
-                    Timestamp = Timestamp,
-                    Values = _innerValues[(int)AggregationType.First]
-                };
-                _first.SetMembersFromValues();
+                _first = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.First]);
                 return _first;
             }
         }
 
         [JsonIgnore]
-        public TTimeSeriesEntry Last
+        public TValues Last
         {
             get
             {
-                if (_last?.Values != null)
+                if (_last != null)
                     return _last;
 
                 Build2DArray();
-                _last = new TTimeSeriesEntry
-                {
-                    Timestamp = Timestamp, 
-                    Values = _innerValues[(int)AggregationType.Last]
-                };
-                _last.SetMembersFromValues();
+                _last = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Last]);
                 return _last;
             }
         }
 
         [JsonIgnore]
-        public TTimeSeriesEntry Min
+        public TValues Min
         {
             get
             {
-                if (_min?.Values != null)
+                if (_min != null)
                     return _min;
 
                 Build2DArray();
-                _min = new TTimeSeriesEntry
-                {
-                    Timestamp = Timestamp, 
-                    Values = _innerValues[(int)AggregationType.Min]
-                };
-                _min.SetMembersFromValues();
+                _min = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Min]);
                 return _min;
             }
         }
 
         [JsonIgnore]
-        public TTimeSeriesEntry Max
+        public TValues Max
         {
             get
             {
-                if (_max?.Values != null)
+                if (_max != null)
                     return _max;
 
                 Build2DArray();
-                _max = new TTimeSeriesEntry
-                {
-                    Timestamp = Timestamp, 
-                    Values = _innerValues[(int)AggregationType.Max]
-                };
-                _max.SetMembersFromValues();
+                _max = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Max]);
                 return _max;
             }
         }
 
         [JsonIgnore]
-        public TTimeSeriesEntry Sum
+        public TValues Sum
         {
             get
             {
-                if (_sum?.Values != null)
+                if (_sum != null)
                     return _sum;
 
                 Build2DArray();
-                _sum = new TTimeSeriesEntry
-                {
-                    Timestamp = Timestamp, 
-                    Values = _innerValues[(int)AggregationType.Sum]
-                };
-                _sum.SetMembersFromValues();
+                _sum = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Sum]);
                 return _sum;
             }
         }
 
         [JsonIgnore]
-        public TTimeSeriesEntry Count
+        public TValues Count
         {
             get
             {
-                if (_count?.Values != null)
+                if (_count != null)
                     return _count;
 
                 Build2DArray();
-                _count = new TTimeSeriesEntry
-                {
-                    Timestamp = Timestamp,
-                    Values = _innerValues[(int)AggregationType.Count]
-                };
-                _count.SetMembersFromValues();
+                _count = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Count]);
                 return _count;
             }
         }
 
         [JsonIgnore]
-        public TTimeSeriesEntry Average
+        public TValues Average
         {
             get
             {
-                if (_average?.Values != null)
+                if (_average != null)
                     return _average;
 
                 Build2DArray();
                 var arr = new double[_dim];
                 for (int i = 0; i < arr.Length; i++)
                 {
+                    var count = _innerValues[(int)AggregationType.Count][i];
+                    if (IsNormal(count) == false)
+                    {
+                        arr[i] = double.NaN;
+                        continue;
+                    }
+
                     arr[i] = _innerValues[(int)AggregationType.Sum][i] / _innerValues[(int)AggregationType.Count][i];
                 }
 
-                _average = new TTimeSeriesEntry
-                {
-                    Timestamp = Timestamp,
-                    Values = arr
-                };
-                _average.SetMembersFromValues();
+                _average = TimeSeriesValuesHelper.SetMembers<TValues>(arr);
                 return _average;
             }
+        }
+
+        // taken from dotnet/runtime since it is supported only in 2.1 and up
+        // https://github.com/dotnet/runtime/blob/abfdb542e8dfd72ab2715222edf527952e9fda10/src/libraries/System.Private.CoreLib/src/System/Double.cs#L121
+        private static bool IsNormal(double d)
+        {
+            long bits = BitConverter.DoubleToInt64Bits(d);
+            bits &= 0x7FFFFFFFFFFFFFFF;
+            return (bits < 0x7FF0000000000000) && (bits != 0) && ((bits & 0x7FF0000000000000) != 0);
         }
 
         private bool _innerArrayInitialized;
         private void Build2DArray()
         {
             if (IsRollup == false)
-                throw new InvalidOperationException("Not a rolled up entry.");
+                throw new InvalidOperationException("Not a rollup entry.");
 
             if (_innerArrayInitialized)
                 return;
@@ -371,7 +356,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         private double[][] _innerValues;
 
         [OnDeserialized]
-        internal new void OnNewtonSoftJsonDeserialized(StreamingContext context)
+        internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
         {
             Build2DArray();
         }
@@ -381,7 +366,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
             Build2DArray();
         }
 
-        internal override void SetValuesFromMembers()
+        internal void SetValuesFromMembers()
         {
             SetInternal(_first, (int)AggregationType.First);
             SetInternal(_last, (int)AggregationType.Last);
@@ -391,21 +376,25 @@ namespace Raven.Client.Documents.Session.TimeSeries
             SetInternal(_sum, (int)AggregationType.Sum);
         }
 
-        private void SetInternal(TTimeSeriesEntry entry, int position)
+        private void SetInternal(TValues entry, int position)
         {
             if (entry == null) 
                 return;
 
-            entry.SetValuesFromMembers();
-            for (int i = 0; i < entry.Values.Length; i++)
+            var values = TimeSeriesValuesHelper.GetValues(entry).ToArray();
+            for (int i = 0; i < values.Length; i++)
             {
-                Values[6 * i + position] = entry.Values[i];
+                Values[6 * i + position] = values[i];
             }
         }
 
-        public static explicit operator TTimeSeriesEntry(TimeSeriesRollupEntry<TTimeSeriesEntry> rollupEntry)
+        public static explicit operator TimeSeriesEntry<TValues>(TimeSeriesRollupEntry<TValues> rollupEntry)
         {
-            return rollupEntry.First;
+            return new TimeSeriesEntry<TValues>
+            {
+                Timestamp = rollupEntry.Timestamp, 
+                Values = TimeSeriesValuesHelper.GetValues(rollupEntry.First).ToArray()
+            };
         }
     }
 }

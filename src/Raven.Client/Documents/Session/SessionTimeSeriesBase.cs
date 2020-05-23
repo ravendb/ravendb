@@ -57,10 +57,16 @@ namespace Raven.Client.Documents.Session
             Append(timestamp, new []{ value }, tag);
         }
 
-        public void Append<TValue>(TValue value) where TValue : TimeSeriesEntry
+        public void Append<TValues>(DateTime timestamp, TValues value, string tag = null)
         {
-            value.SetValuesFromMembers();
-            Append(value.Timestamp, value.Values, value.Tag);
+            if (value is IEnumerable<double> doubles)
+            {
+                Append(timestamp, doubles, tag);
+                return;
+            }
+
+            var values = TimeSeriesValuesHelper.GetValues(value);
+            Append(timestamp, values, tag);
         }
 
         public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)

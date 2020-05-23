@@ -25,28 +25,28 @@ namespace Raven.Client.Documents.Session
             return new SessionDocumentTimeSeries<TimeSeriesEntry>(this, entity, name);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name = null) where TValues : TimeSeriesEntry
+        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new()
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
             return new SessionDocumentTimeSeries<TValues>(this, documentId, tsName);
         }
 
-        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name = null) where TValues : TimeSeriesEntry
+        public ISessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name = null) where TValues : new()
         {
             var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
             return new SessionDocumentTimeSeries<TValues>(this, entity, tsName);
         }
         
-        public ISessionDocumentTypedTimeSeries<TimeSeriesRollupEntry<TValues>> RollupTimeSeriesFor<TValues>(string documentId, string policy, string name = null) where TValues : TimeSeriesEntry, new()
+        public ISessionDocumentRollupTypedTimeSeries<TValues> TimeSeriesRollupFor<TValues>(object entity, string policy, string raw = null) where TValues : new()
         {
-            var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
-            return new SessionDocumentTimeSeries<TimeSeriesRollupEntry<TValues>>(this, documentId, $"{tsName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{policy}");
+            var tsName = raw ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
+            return new SessionDocumentTimeSeries<TValues>(this, entity, $"{tsName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{policy}");
         }
 
-        public ISessionDocumentTypedTimeSeries<TimeSeriesRollupEntry<TValues>> RollupTimeSeriesFor<TValues>(object entity, string policy, string name = null) where TValues : TimeSeriesEntry, new()
+        public ISessionDocumentRollupTypedTimeSeries<TValues> TimeSeriesRollupFor<TValues>(string documentId, string policy, string raw = null) where TValues : new()
         {
-            var tsName = name ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
-            return new SessionDocumentTimeSeries<TimeSeriesRollupEntry<TValues>>(this, entity, $"{tsName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{policy}");
+            var tsName = raw ?? TimeSeriesOperations.GetTimeSeriesName<TValues>();
+            return new SessionDocumentTimeSeries<TValues>(this, documentId, $"{tsName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{policy}");
         }
     }
 }

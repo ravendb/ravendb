@@ -501,7 +501,7 @@ namespace Raven.Server.Documents.Patch
                     entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat());
                     entry.Set(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
                     entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
-                    entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type.ToString());
+                    entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
 
                     entries.Add(entry);
                 }

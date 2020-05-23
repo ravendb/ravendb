@@ -16,9 +16,9 @@ namespace Raven.Client.Documents.Session
     {
         IAsyncSessionDocumentTimeSeries TimeSeriesFor(string documentId, string name);
         IAsyncSessionDocumentTimeSeries TimeSeriesFor(object entity, string name);
-        IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name = null) where TValues : TimeSeriesEntry;
-        IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name = null) where TValues : TimeSeriesEntry;
-        IAsyncSessionDocumentTypedTimeSeries<TimeSeriesRollupEntry<TValues>> RollupTimeSeriesFor<TValues>(object entity, string policy, string name = null) where TValues : TimeSeriesEntry, new();
-        IAsyncSessionDocumentTypedTimeSeries<TimeSeriesRollupEntry<TValues>> RollupTimeSeriesFor<TValues>(string documentId, string policy, string name = null) where TValues : TimeSeriesEntry, new();
+        IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(string documentId, string name = null) where TValues : new();
+        IAsyncSessionDocumentTypedTimeSeries<TValues> TimeSeriesFor<TValues>(object entity, string name = null) where TValues : new();
+        IAsyncSessionDocumentRollupTypedTimeSeries<TValues> TimeSeriesRollupFor<TValues>(object entity, string policy, string raw = null) where TValues : new();
+        IAsyncSessionDocumentRollupTypedTimeSeries<TValues> TimeSeriesRollupFor<TValues>(string documentId, string policy, string raw = null) where TValues : new();
     }
 }

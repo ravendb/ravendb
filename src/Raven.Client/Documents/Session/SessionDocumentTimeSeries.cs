@@ -11,18 +11,18 @@ using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
-    public class SessionDocumentTimeSeries<TValues> : ISessionDocumentTimeSeries, ISessionDocumentTypedTimeSeries<TValues> where TValues : TimeSeriesEntry
+    public class SessionDocumentTimeSeries<TValues> : ISessionDocumentTimeSeries, ISessionDocumentRollupTypedTimeSeries<TValues>, ISessionDocumentTypedTimeSeries<TValues> where TValues : new()
     {
-        private readonly AsyncSessionDocumentTimeSeries<TValues> _asyncSessionTimeSeries;
+        private readonly AsyncSessionDocumentTimeSeries<TimeSeriesEntry> _asyncSessionTimeSeries;
 
         public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, string documentId, string name)
         {
-            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TValues>(session, documentId, name);
+            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(session, documentId, name);
         }
 
         public SessionDocumentTimeSeries(InMemoryDocumentSessionOperations session, object entity, string name)
         {
-            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TValues>(session, entity, name);
+            _asyncSessionTimeSeries = new AsyncSessionDocumentTimeSeries<TimeSeriesEntry>(session, entity, name);
         }
 
         public void Append(DateTime timestamp, IEnumerable<double> values, string tag = null)
@@ -35,9 +35,14 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Append(timestamp, value, tag);
         }
 
-        public void Append(TValues value)
+        public void Append(DateTime timestamp, TValues value, string tag = null)
         {
-            _asyncSessionTimeSeries.Append(value);
+            _asyncSessionTimeSeries.Append(timestamp, value, tag);
+        }
+
+        public void Append(TimeSeriesEntry<TValues> entry)
+        {
+            _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Value, entry.Tag);
         }
 
         public IEnumerable<TimeSeriesEntry> Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue)
@@ -45,9 +50,19 @@ namespace Raven.Client.Documents.Session
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(from, to, start, pageSize));
         }
 
-        IEnumerable<TValues> ISessionDocumentTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
+        IEnumerable<TimeSeriesEntry<TValues>> ISessionDocumentTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
         {
-            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsyncInternal<TValues>(from, to, start, pageSize));
+            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsyncInternal<TimeSeriesEntry<TValues>>(from, to, start, pageSize));
+        }
+
+        IEnumerable<TimeSeriesRollupEntry<TValues>> ISessionDocumentRollupTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
+        {
+            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsyncInternal<TimeSeriesRollupEntry<TValues>>(from, to, start, pageSize));
+        }
+        public void Append(TimeSeriesRollupEntry<TValues> entry)
+        {
+            entry.SetValuesFromMembers();
+            _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Values, entry.Tag);
         }
 
         public void Remove(DateTime? from = null, DateTime? to = null)

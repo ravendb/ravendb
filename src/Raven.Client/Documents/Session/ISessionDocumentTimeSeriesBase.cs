@@ -26,9 +26,15 @@ namespace Raven.Client.Documents.Session
         void Append(DateTime timestamp, double value, string tag = null);
     }
 
-    public interface ISessionDocumentTypedAppendTimeSeriesBase<in TValues> where TValues : TimeSeriesEntry
+    public interface ISessionDocumentTypedAppendTimeSeriesBase<T> where T : new()
     {
-        void Append(TValues entry);
+        void Append(DateTime timestamp, T entry, string tag = null);
+        void Append(TimeSeriesEntry<T> entry);
+    }
+
+    public interface ISessionDocumentRollupTypedAppendTimeSeriesBase<T> where T : new()
+    {
+        void Append(TimeSeriesRollupEntry<T> entry);
     }
 
     public interface ISessionDocumentRemoveTimeSeriesBase

@@ -25,7 +25,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        public class StockPriceAggregated : TimeSeriesAggregatedEntry
+        public class StockPrice
         {
             [TimeSeriesValue(0)] public double Open;
             [TimeSeriesValue(1)] public double Close;
@@ -34,21 +34,7 @@ namespace SlowTests.Client.TimeSeries.Session
             [TimeSeriesValue(4)] public double Volume;
         }
 
-        public class StockPrice : TimeSeriesEntry
-        {
-            [TimeSeriesValue(0)] public double Open;
-            [TimeSeriesValue(1)] public double Close;
-            [TimeSeriesValue(2)] public double High;
-            [TimeSeriesValue(3)] public double Low;
-            [TimeSeriesValue(4)] public double Volume;
-        }
-
-        public class HeartRateMeasureAggregation : TimeSeriesAggregatedEntry
-        {
-            [TimeSeriesValue(0)] public double HeartRate;
-        }
-
-        public class HeartRateMeasure : TimeSeriesEntry
+        public class HeartRateMeasure
         {
             [TimeSeriesValue(0)] public double HeartRate;
         }
@@ -86,14 +72,9 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    var measure = new HeartRateMeasure
-                    {
-                        Timestamp = baseline.AddMinutes(1),
-                        HeartRate = 59d,
-                        Tag = "watches/fitbit"
-                    };
-                    session.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(measure);
 
+                    var ts = session.TimeSeriesFor<HeartRateMeasure>("users/ayende");
+                    ts.Append(baseline, new HeartRateMeasure {HeartRate = 59d}, "watches/fitbit");
                     session.SaveChanges();
                 }
 
@@ -101,10 +82,10 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     var val = session.TimeSeriesFor<HeartRateMeasure>("users/ayende")
                         .Get().Single();
-
-                    Assert.Equal(59d , val.HeartRate);
+                    
+                    Assert.Equal(59d , val.Value.HeartRate);
                     Assert.Equal("watches/fitbit", val.Tag);
-                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline, val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -119,10 +100,13 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new { Name = "Oren" }, "users/ayende");
-                    var measure = new HeartRateMeasure
+                    var measure = new TimeSeriesEntry<HeartRateMeasure>
                     {
                         Timestamp = baseline.AddMinutes(1),
-                        HeartRate = 59d,
+                        Value = new HeartRateMeasure
+                        {
+                            HeartRate = 59d
+                        },
                         Tag = "watches/fitbit"
                     };
                     var ts = session.TimeSeriesFor<HeartRateMeasure>("users/ayende");
@@ -136,7 +120,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var result = await session.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync();
                     var val = result.Single();
 
-                    Assert.Equal(59d , val.HeartRate);
+                    Assert.Equal(59d , val.Value.HeartRate);
                     Assert.Equal("watches/fitbit", val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
@@ -216,22 +200,19 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     session.Store(new User(), "users/karmel");
                     session.TimeSeriesFor<HeartRateMeasure>("users/karmel")
-                        .Append(new HeartRateMeasure
+                        .Append(DateTime.Now,new HeartRateMeasure
                         {
                             HeartRate = 66,
-                            Tag = "MyHeart",
-                            Timestamp = DateTime.Now
-                        });
+                        },"MyHeart");
 
                     session.TimeSeriesFor<StockPrice>("users/karmel")
-                        .Append(new StockPrice
+                        .Append( DateTime.Now, new StockPrice
                         {
                             Open = 66,
                             Close = 55,
                             High = 113.4,
                             Low = 52.4,
                             Volume = 15472,
-                            Timestamp = DateTime.Now
                         });
 
                     session.SaveChanges();
@@ -248,14 +229,14 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(nameof(StockPrice), tsNames[1]);
 
                     var heartRateMeasures = session.TimeSeriesFor<HeartRateMeasure>(user).Get().Single();
-                    Assert.Equal(66, heartRateMeasures.HeartRate);
+                    Assert.Equal(66, heartRateMeasures.Value.HeartRate);
 
-                    var stockPrice = session.TimeSeriesFor<StockPrice>(user).Get().Single();
-                    Assert.Equal(66, stockPrice.Open);
-                    Assert.Equal(55, stockPrice.Close);
-                    Assert.Equal(113.4, stockPrice.High);
-                    Assert.Equal(52.4, stockPrice.Low);
-                    Assert.Equal(15472, stockPrice.Volume);
+                    var (date, value) = session.TimeSeriesFor<StockPrice>(user).Get().Single();
+                    Assert.Equal(66, value.Open);
+                    Assert.Equal(55, value.Close);
+                    Assert.Equal(113.4, value.High);
+                    Assert.Equal(52.4, value.Low);
+                    Assert.Equal(15472, value.Volume);
                 }
             }
         }
@@ -274,28 +255,25 @@ namespace SlowTests.Client.TimeSeries.Session
                     session.Store(new { Name = "Oren" }, "users/ayende");
 
                     var tsf = session.TimeSeriesFor<HeartRateMeasure>("users/ayende");
+                    var tag = "watches/fitbit";
                     var m = new HeartRateMeasure
                     {
-                        Timestamp = baseline.AddMinutes(61), 
                         HeartRate = 59d, 
-                        Tag = "watches/fitbit"
                     };
-                    tsf.Append(m);
+                    tsf.Append(baseline.AddMinutes(61), m,tag);
 
-                    m.Timestamp = m.Timestamp.AddMinutes(1);
                     m.HeartRate = 79d;
-                    tsf.Append(m);
+                    tsf.Append(baseline.AddMinutes(62), m, tag);
 
-                    m.Timestamp = m.Timestamp.AddMinutes(1);
                     m.HeartRate = 69d;
-                    tsf.Append(m);
+                    tsf.Append(baseline.AddMinutes(63), m, tag);
 
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<HeartRateMeasureAggregation>>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<HeartRateMeasure>>(@"
     declare timeseries out(u) 
     {
         from u.HeartRateMeasure between $start and $end
@@ -379,35 +357,25 @@ namespace SlowTests.Client.TimeSeries.Session
                         var tsf = session.TimeSeriesFor<HeartRateMeasure>(id);
                         var m = new HeartRateMeasure
                         {
-                            Timestamp = baseline.AddMinutes(61), 
                             HeartRate = 59d, 
-                            Tag = "watches/fitbit"
                         };
-                        tsf.Append(m);
 
-                        m.Timestamp = m.Timestamp.AddMinutes(1);
+                        tsf.Append(baseline.AddMinutes(61), m, "watches/fitbit");
+
                         m.HeartRate = 79d;
-                        tsf.Append(m);
+                        tsf.Append(baseline.AddMinutes(62), m, "watches/fitbit");
 
-                        m.Timestamp = m.Timestamp.AddMinutes(1);
                         m.HeartRate = 69d;
-                        m.Tag = "watches/apple";
-                        tsf.Append(m);
+                        tsf.Append(baseline.AddMinutes(63), m, "watches/apple");
 
-                        m.Timestamp = baseline.AddMonths(1).AddMinutes(61);
                         m.HeartRate = 159d;
-                        m.Tag = "watches/fitbit";
-                        tsf.Append(m);
+                        tsf.Append(baseline.AddMonths(1).AddMinutes(61), m, "watches/fitbit");
 
-                        m.Timestamp = m.Timestamp.AddMinutes(1);
                         m.HeartRate = 179d;
-                        m.Tag = "watches/apple";
-                        tsf.Append(m);
+                        tsf.Append(baseline.AddMonths(1).AddMinutes(62), m, "watches/apple");
 
-                        m.Timestamp = m.Timestamp.AddMinutes(1);
                         m.HeartRate = 169d;
-                        m.Tag = "watches/fitbit";
-                        tsf.Append(m);
+                        tsf.Append(baseline.AddMonths(1).AddMinutes(63), m, "watches/fitbit");
                     }
 
                     session.SaveChanges();
@@ -440,42 +408,41 @@ select out(doc)
                         var val = agg.Results[0];
 
                         Assert.Equal(1, val.Values.Length);
-                        Assert.Equal(59, val.HeartRate);
+                        Assert.Equal(59, val.Value.HeartRate);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[1];
-
                         Assert.Equal(1, val.Values.Length);
-                        Assert.Equal(79, val.HeartRate);
+                        Assert.Equal(79, val.Value.HeartRate);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[2];
 
                         Assert.Equal(1, val.Values.Length);
-                        Assert.Equal(69, val.HeartRate);
+                        Assert.Equal(69, val.Value.HeartRate);
                         Assert.Equal("watches/apple", val.Tag);
                         Assert.Equal(baseline.AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[3];
 
                         Assert.Equal(1, val.Values.Length);
-                        Assert.Equal(159, val.HeartRate);
+                        Assert.Equal(159, val.Value.HeartRate);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(61), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                         
                         val = agg.Results[4];
 
                         Assert.Equal(1, val.Values.Length);
-                        Assert.Equal(179, val.HeartRate);
+                        Assert.Equal(179, val.Value.HeartRate);
                         Assert.Equal("watches/apple", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(62), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
                         val = agg.Results[5];
 
                         Assert.Equal(1, val.Values.Length);
-                        Assert.Equal(169, val.HeartRate);
+                        Assert.Equal(169, val.Value.HeartRate);
                         Assert.Equal("watches/fitbit", val.Tag);
                         Assert.Equal(baseline.AddMonths(1).AddMinutes(63), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
@@ -523,7 +490,7 @@ select out(doc)
                             {
                                 Avg = g.Average(),
                                 Max = g.Max()
-                            }).ToList<HeartRateMeasureAggregation>()
+                            }).ToList<HeartRateMeasure>()
                         );
 
                     var result = query.ToList();
@@ -583,13 +550,13 @@ select out(doc)
 
                     var timeSeriesValues = result.Results;
 
-                    Assert.Equal(79, timeSeriesValues[0].HeartRate);
+                    Assert.Equal(79, timeSeriesValues[0].Value.HeartRate);
                     Assert.Equal(baseline.AddMinutes(62), timeSeriesValues[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                    Assert.Equal(159, timeSeriesValues[1].HeartRate);
+                    Assert.Equal(159, timeSeriesValues[1].Value.HeartRate);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(61), timeSeriesValues[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                    Assert.Equal(169, timeSeriesValues[2].HeartRate);
+                    Assert.Equal(169, timeSeriesValues[2].Value.HeartRate);
                     Assert.Equal(baseline.AddMonths(1).AddMinutes(63), timeSeriesValues[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
@@ -638,19 +605,16 @@ select out(doc)
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Karmel" }, "users/karmel");
-                    var entry = new StockPrice
-                    {
-                        Tag = "watches/fitbit"
-                    };
+                    var ts = session.TimeSeriesFor<StockPrice>("users/karmel");
+                    var entry = new StockPrice();
                     for (int i = 0; i <= total; i++)
                     {
-                        entry.Timestamp = baseline.AddMinutes(i);
                         entry.Open = i;
                         entry.Close = i + 100_000;
                         entry.High = i + 200_000;
                         entry.Low = i + 300_000;
                         entry.Volume = i + 400_000;
-                        session.TimeSeriesFor<StockPrice>("users/karmel").Append(entry);
+                        ts.Append(baseline.AddMinutes(i), entry,"watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -688,12 +652,12 @@ select out()
                         {
                             Assert.Equal(30, res.Values.Length);
 
-                            var rolled = res.AsRollUpEntry<StockPrice>();
-                            Assert.Equal(res.Close, rolled.First.Close);
-                            Assert.Equal(res.High, rolled.First.High);
-                            Assert.Equal(res.Low, rolled.First.Low);
-                            Assert.Equal(res.Open, rolled.First.Open);
-                            Assert.Equal(res.Volume, rolled.First.Volume);
+                            var rolled = res.AsRollupEntry();
+                            Assert.Equal(res.Value.Close, rolled.First.Close);
+                            Assert.Equal(res.Value.High, rolled.First.High);
+                            Assert.Equal(res.Value.Low, rolled.First.Low);
+                            Assert.Equal(res.Value.Open, rolled.First.Open);
+                            Assert.Equal(res.Value.Volume, rolled.First.Volume);
                             continue;
                         }
 
@@ -704,8 +668,8 @@ select out()
                 now = DateTime.UtcNow;
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.RollupTimeSeriesFor<StockPrice>("users/karmel", p1.Name);
-                    var a = new TimeSeriesRollupEntry<StockPrice>(now);
+                    var ts = session.TimeSeriesRollupFor<StockPrice>("users/karmel", p1.Name);
+                    var a = new TimeSeriesRollupEntry<StockPrice>(DateTime.Now);
                     a.Max.Close = 1;
                     ts.Append(a);
                     session.SaveChanges();
@@ -713,9 +677,10 @@ select out()
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.RollupTimeSeriesFor<StockPrice>("users/karmel", p1.Name);
+                    var ts = session.TimeSeriesRollupFor<StockPrice>("users/karmel", p1.Name);
                     var res = ts.Get(from: now.AddMilliseconds(-1)).ToList();
                     Assert.Equal(1, res.Count);
+                    Assert.Equal(1, res[0].Max.Close);
                 }
             }
         }
