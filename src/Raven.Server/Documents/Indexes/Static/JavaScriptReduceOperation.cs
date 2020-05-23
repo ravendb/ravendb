@@ -332,10 +332,10 @@ namespace Raven.Server.Documents.Indexes.Static
                     foreach (var prop in oe.Properties)
                     {
                         string[] path = null;
-                        if (prop.Value is MemberExpression me)
+                        if (prop is MemberExpression me)
                             path = GetPropertyPath(me).ToArray();
 
-                        var propertyName = prop.GetKey(Engine);
+                        var propertyName = prop.GetKey(Engine, false);
                         cur.Add(CreateField(propertyName.AsString(), path));
                     }
 

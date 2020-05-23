@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private void HandleDeclaredFunctionBody(IEnumerable<INode> body)
+        private void HandleDeclaredFunctionBody(IEnumerable<Node> body)
         {
             foreach (var statement in body)
             {
@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         foreach (var property in objectExpression.Properties)
                         {
-                            if (property.Value is StaticMemberExpression staticMemberExpression)
+                            if (property is StaticMemberExpression staticMemberExpression)
                             {
                                 HandleDeclaredFunctionStaticMemberExpression(staticMemberExpression);
                                 if (HasIncludeOrLoad)
@@ -2383,7 +2383,7 @@ namespace Raven.Server.Documents.Queries
             HashSet<string> maybeUnknowns = null;
             Identifier currentProp = null;
 
-            void VerifyKnownAliases(INode node)
+            void VerifyKnownAliases(Node node)
             {
                 switch (node)
                 {
@@ -2418,7 +2418,7 @@ namespace Raven.Server.Documents.Queries
                         parameters.TryGet(identifier.Substring(1), out object _) == false);
             }
 
-            void RemoveFromUnknowns(NodeList<INode> functionParameters)
+            void RemoveFromUnknowns(NodeList<Expression> functionParameters)
             {
                 if (maybeUnknowns == null || maybeUnknowns.Count == 0)
                     return;
@@ -2432,7 +2432,7 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseProgram();
+            return new JavaScriptParser("return " + Query.SelectFunctionBody.FunctionText, new ParserOptions(), VerifyKnownAliases).ParseScript();
         }
 
         private bool NotInRootAliasPaths(string key)

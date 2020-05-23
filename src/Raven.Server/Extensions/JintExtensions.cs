@@ -48,11 +48,11 @@ namespace Raven.Server.Extensions
             }
         }
 
-        public static void ExecuteWithReset(this Engine engine, Esprima.Ast.Program program)
+        public static void ExecuteWithReset(this Engine engine, Script script)
         {
             try
             {
-                engine.Execute(program);
+                engine.Execute(script);
             }
             finally
             {

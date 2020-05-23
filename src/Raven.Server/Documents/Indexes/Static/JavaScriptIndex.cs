@@ -208,11 +208,11 @@ namespace Raven.Server.Documents.Indexes.Static
         private MapMetadata ExecuteCodeAndCollectReferencedCollections(string code, string additionalSources)
         {
             var javascriptParser = new JavaScriptParser(code, DefaultParserOptions);
-            var program = javascriptParser.ParseProgram();
+            var program = javascriptParser.ParseScript();
             _engine.ExecuteWithReset(program);
             var loadVisitor = new EsprimaReferencedCollectionVisitor();
             if (string.IsNullOrEmpty(additionalSources) == false)
-                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseProgram());
+                loadVisitor.Visit(new JavaScriptParser(additionalSources, DefaultParserOptions).ParseScript());
 
             loadVisitor.Visit(program);
             return new MapMetadata

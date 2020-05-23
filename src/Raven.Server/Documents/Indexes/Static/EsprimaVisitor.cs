@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Esprima;
 using Esprima.Ast;
 using Jint;
 
@@ -13,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             foreach (var statement in program.Body)
             {
-                VisitStatement((Statement)statement);
+                VisitStatement(statement);
             }
         }
 
@@ -93,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public virtual void VisitUnknownNode(INode node)
+        public virtual void VisitUnknownNode(Node node)
         {
             throw new NotImplementedException($"ESprima visitor doesn't support nodes of type {node.Type}, you can override VisitUnknownNode to handle this case.");
         }
@@ -185,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     VisitStatement(statment);
                 }
-                else if (s is INode node)
+                else if (s is Node node)
                 {
                     Visit(node);
                 }
@@ -331,14 +330,16 @@ namespace Raven.Server.Documents.Indexes.Static
             //Here we construct the function so if we iterate only functions we will be able to iterate ArrowFunctions too
             var statement =
                 arrowFunctionExpression.Expression
-                    ? new BlockStatement(NodeList.Create(new List<IStatementListItem> { new ReturnStatement(arrowFunctionExpression.Body.As<Expression>()) }))
+                    ? new BlockStatement(NodeList.Create(new List<Statement> { new ReturnStatement(arrowFunctionExpression.Body.As<Expression>()) }))
                     : arrowFunctionExpression.Body.As<BlockStatement>();
-            var func = new FunctionExpression(new Identifier(null),
+            var func = new FunctionExpression(
+                new Identifier(null),
                 arrowFunctionExpression.Params,
                 statement,
-                false,
-                new HoistingScope(),
-                StrictModeScope.IsStrictModeCode);
+                generator: false,
+                StrictModeScope.IsStrictModeCode,
+                async: false);
+            
             VisitFunctionExpression(func);
         }
 
@@ -367,7 +368,14 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             foreach (var p in objectExpression.Properties)
             {
-                VisitProperty(p);
+                if (p is Property property)
+                {
+                    VisitProperty(property);
+                }
+                else
+                {
+                    VisitRestElement((RestElement) p);
+                }
             }
         }
 
@@ -407,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.Static
             VisitBlockStatement(function.Body);
         }
 
-        public virtual void Visit(INode node)
+        public virtual void Visit(Node node)
         {
             switch (node.Type)
             {
@@ -790,7 +798,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
         }
 
-        public virtual void VisitBlockStatement(INode blockStatement)
+        public virtual void VisitBlockStatement(Node blockStatement)
         {
             foreach (var statement in blockStatement.ChildNodes)
             {
