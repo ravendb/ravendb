@@ -9,6 +9,7 @@
     <AssemblyName>Raven.Embedded</AssemblyName>
     <PackageId>RavenDB.Embedded</PackageId>
     <PackageTags>embedded;database;nosql;doc db</PackageTags>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
   </PropertyGroup>
@@ -33,6 +34,7 @@
     <Compile Include="..\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\LICENSE.txt" Pack="true" Visible="false" PackagePath="" />
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
 
@@ -50,5 +52,4 @@
   <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
-
 </Project>

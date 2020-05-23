@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.Counters
         {
             return new DynamicJsonValue
             {
-                [nameof(Counters)] = new DynamicJsonArray(Counters.Select(x => x.ToJson()))
+                [nameof(Counters)] = new DynamicJsonArray(Counters.Select(x => x?.ToJson()))
             };
         }
     }
