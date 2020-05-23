@@ -17,12 +17,20 @@ namespace Raven.Client.Documents.Operations.CompareExchange
         private readonly int? _start;
         private readonly int? _pageSize;
 
-        public GetCompareExchangeValuesOperation(string[] keys)
+        private readonly bool _materializeMetadata;
+
+        internal GetCompareExchangeValuesOperation(string[] keys)
+            : this(keys, materializeMetadata: true)
+        {
+        }
+
+        internal GetCompareExchangeValuesOperation(string[] keys, bool materializeMetadata)
         {
             if (keys == null || keys.Length == 0)
                 throw new ArgumentNullException(nameof(keys));
 
             _keys = keys;
+            _materializeMetadata = materializeMetadata;
         }
 
         public GetCompareExchangeValuesOperation(string startWith, int? start = null, int? pageSize = null)
@@ -30,21 +38,24 @@ namespace Raven.Client.Documents.Operations.CompareExchange
             _startWith = startWith;
             _start = start;
             _pageSize = pageSize;
+            _materializeMetadata = true;
         }
 
         public RavenCommand<Dictionary<string, CompareExchangeValue<T>>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetCompareExchangeValuesCommand(this, conventions);
+            return new GetCompareExchangeValuesCommand(this, _materializeMetadata, conventions);
         }
 
         private class GetCompareExchangeValuesCommand : RavenCommand<Dictionary<string, CompareExchangeValue<T>>>
         {
             private readonly GetCompareExchangeValuesOperation<T> _operation;
+            private readonly bool _materializeMetadata;
             private readonly DocumentConventions _conventions;
 
-            public GetCompareExchangeValuesCommand(GetCompareExchangeValuesOperation<T> operation, DocumentConventions conventions)
+            public GetCompareExchangeValuesCommand(GetCompareExchangeValuesOperation<T> operation, bool materializeMetadata, DocumentConventions conventions)
             {
                 _operation = operation;
+                _materializeMetadata = materializeMetadata;
                 _conventions = conventions;
             }
 
@@ -84,7 +95,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                Result = CompareExchangeValueResultParser<T>.GetValues(response, _conventions);
+                Result = CompareExchangeValueResultParser<T>.GetValues(response, _materializeMetadata, _conventions);
             }
         }
     }

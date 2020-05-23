@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 {
     internal static class CompareExchangeValueResultParser<T>
     {
-        public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, DocumentConventions conventions)
+        public static Dictionary<string, CompareExchangeValue<T>> GetValues(BlittableJsonReaderObject response, bool materializeMetadata, DocumentConventions conventions)
         {
             var results = new Dictionary<string, CompareExchangeValue<T>>(StringComparer.OrdinalIgnoreCase);
 
@@ -27,23 +27,23 @@ namespace Raven.Client.Documents.Operations.CompareExchange
                 if (item == null)
                     throw new InvalidDataException("Response is invalid. Item is null.");
 
-                var value = GetSingleValue(item, conventions);
+                var value = GetSingleValue(item, materializeMetadata, conventions);
                 results[value.Key] = value;
             }
 
             return results;
         }
 
-        public static CompareExchangeValue<T> GetValue(BlittableJsonReaderObject response, DocumentConventions conventions)
+        public static CompareExchangeValue<T> GetValue(BlittableJsonReaderObject response, bool materializeMetadata, DocumentConventions conventions)
         {
             if (response == null)
                 return null;
 
-            var value = GetValues(response, conventions).FirstOrDefault();
+            var value = GetValues(response, materializeMetadata, conventions).FirstOrDefault();
             return value.Value;
         }
 
-        public static CompareExchangeValue<T> GetSingleValue(BlittableJsonReaderObject item, DocumentConventions conventions)
+        public static CompareExchangeValue<T> GetSingleValue(BlittableJsonReaderObject item, bool materializeMetadata, DocumentConventions conventions)
         {
             if (item == null)
                 return null;
@@ -62,7 +62,11 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             MetadataAsDictionary metadata = null;
             if (raw.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject bjro) && bjro != null)
-                metadata = new MetadataAsDictionary(bjro);
+            {
+                metadata = materializeMetadata == false 
+                    ? new MetadataAsDictionary(bjro)
+                    : MetadataAsDictionary.MaterializeFromBlittable(bjro);
+            }
 
             if (type.GetTypeInfo().IsPrimitive || type == typeof(string))
             {

@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
             if (response.Result != null)
             {
-                var value = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValue((BlittableJsonReaderObject)response.Result, _conventions);
+                var value = CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValue((BlittableJsonReaderObject)response.Result, materializeMetadata: false, _conventions);
                 if (value != null)
                     _clusterSession.RegisterCompareExchangeValue(value);
             }
