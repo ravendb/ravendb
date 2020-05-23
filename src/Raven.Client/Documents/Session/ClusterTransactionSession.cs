@@ -98,7 +98,7 @@ namespace Raven.Client.Documents.Session
             {
                 _session.IncrementRequestCount();
 
-                var value = await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(key), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+                var value = await _session.Operations.SendAsync(new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(key, materializeMetadata: false), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
                 if (value == null)
                 {
                     RegisterMissingCompareExchangeValue(key);
@@ -122,7 +122,7 @@ namespace Raven.Client.Documents.Session
                 _session.IncrementRequestCount();
 
                 var keysArray = notTrackedKeys.ToArray();
-                var values = await _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<BlittableJsonReaderObject>(keysArray), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+                var values = await _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<BlittableJsonReaderObject>(keysArray, materializeMetadata: false), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
 
                 foreach (var key in keysArray)
                 {
@@ -199,7 +199,7 @@ namespace Raven.Client.Documents.Session
 
                     var value = propertyDetails.Value as BlittableJsonReaderObject;
 
-                    RegisterCompareExchangeValue(CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, _session.Conventions));
+                    RegisterCompareExchangeValue(CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetSingleValue(value, materializeMetadata: false, _session.Conventions));
                 }
             }
         }

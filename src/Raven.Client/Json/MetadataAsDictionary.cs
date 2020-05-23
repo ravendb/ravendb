@@ -31,7 +31,6 @@ namespace Raven.Client.Json
 
         public MetadataAsDictionary() : this(new Dictionary<string, object>())
         {
-
         }
 
         public MetadataAsDictionary(Dictionary<string, object> metadata)
@@ -39,13 +38,13 @@ namespace Raven.Client.Json
             _metadata = metadata;
         }
 
-        private void Init()
+        private void Initialize(BlittableJsonReaderObject metadata)
         {
             _metadata = new Dictionary<string, object>();
-            for (int i = 0; i < _source.Count; i++)
+            for (int i = 0; i < metadata.Count; i++)
             {
                 var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                _source.GetPropertyByIndex(i, ref propDetails);
+                metadata.GetPropertyByIndex(i, ref propDetails);
                 _metadata[propDetails.Name] = ConvertValue(propDetails.Name, propDetails.Value);
             }
 
@@ -73,7 +72,7 @@ namespace Raven.Client.Json
             if (value is BlittableJsonReaderObject obj)
             {
                 var dictionary = new MetadataAsDictionary(obj, this, key);
-                dictionary.Init();
+                dictionary.Initialize(obj);
                 return dictionary;
             }
 
@@ -105,10 +104,18 @@ namespace Raven.Client.Json
             set
             {
                 if (_metadata == null)
-                    Init();
+                    Initialize(_source);
                 Debug.Assert(_metadata != null);
                 _metadata[key] = value;
             }
+        }
+
+        internal static MetadataAsDictionary MaterializeFromBlittable(BlittableJsonReaderObject metadata)
+        {
+            var result = new MetadataAsDictionary((Dictionary<string, object>)null);
+            result.Initialize(metadata);
+
+            return result;
         }
 
         public bool Changed => _metadata != null;
@@ -139,7 +146,7 @@ namespace Raven.Client.Json
         public void Add(KeyValuePair<string, object> item)
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
             Debug.Assert(_metadata != null);
             _metadata.Add(item.Key, item.Value);
         }
@@ -147,7 +154,7 @@ namespace Raven.Client.Json
         public void Add(string key, object value)
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
 
             Debug.Assert(_metadata != null);
             _metadata.Add(key, value);
@@ -156,7 +163,7 @@ namespace Raven.Client.Json
         public void Clear()
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
             Debug.Assert(_metadata != null);
             _metadata.Clear();
         }
@@ -180,7 +187,7 @@ namespace Raven.Client.Json
         public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
             Debug.Assert(_metadata != null);
             _metadata.CopyTo(array, arrayIndex);
         }
@@ -188,7 +195,7 @@ namespace Raven.Client.Json
         public IEnumerator<KeyValuePair<string, object>> GetEnumerator()
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
             Debug.Assert(_metadata != null);
             return _metadata.GetEnumerator();
         }
@@ -196,7 +203,7 @@ namespace Raven.Client.Json
         public bool Remove(KeyValuePair<string, object> item)
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
             Debug.Assert(_metadata != null);
             return _metadata.Remove(item);
         }
@@ -204,7 +211,7 @@ namespace Raven.Client.Json
         public bool Remove(string key)
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
             Debug.Assert(_metadata != null);
             return _metadata.Remove(key);
         }
@@ -269,7 +276,7 @@ namespace Raven.Client.Json
         IEnumerator IEnumerable.GetEnumerator()
         {
             if (_metadata == null)
-                Init();
+                Initialize(_source);
             Debug.Assert(_metadata != null);
             return _metadata.GetEnumerator();
         }

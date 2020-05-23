@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
             if (response.Result != null)
             {
-                foreach (var kvp in CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValues((BlittableJsonReaderObject)response.Result, _conventions))
+                foreach (var kvp in CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValues((BlittableJsonReaderObject)response.Result, materializeMetadata: false, _conventions))
                 {
                     if (kvp.Value == null)
                         continue;

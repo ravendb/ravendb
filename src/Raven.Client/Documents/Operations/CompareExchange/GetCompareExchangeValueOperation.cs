@@ -12,26 +12,36 @@ namespace Raven.Client.Documents.Operations.CompareExchange
     {
         private readonly string _key;
 
+        private readonly bool _materializeMetadata;
+
         public GetCompareExchangeValueOperation(string key)
+            : this(key, materializeMetadata: true)
+        {
+        }
+
+        internal GetCompareExchangeValueOperation(string key, bool materializeMetadata)
         {
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key), "The key argument must have value");
             _key = key;
+            _materializeMetadata = materializeMetadata;
         }
 
         public RavenCommand<CompareExchangeValue<T>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetCompareExchangeValueCommand(_key, conventions);
+            return new GetCompareExchangeValueCommand(_key, _materializeMetadata, conventions);
         }
 
         private class GetCompareExchangeValueCommand : RavenCommand<CompareExchangeValue<T>>
         {
             private readonly string _key;
+            private readonly bool _materializeMetadata;
             private readonly DocumentConventions _conventions;
 
-            public GetCompareExchangeValueCommand(string key, DocumentConventions conventions)
+            public GetCompareExchangeValueCommand(string key, bool materializeMetadata, DocumentConventions conventions)
             {
                 _key = key;
+                _materializeMetadata = materializeMetadata;
                 _conventions = conventions;
             }
 
@@ -55,7 +65,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
-                Result = CompareExchangeValueResultParser<T>.GetValue(response, _conventions);
+                Result = CompareExchangeValueResultParser<T>.GetValue(response, _materializeMetadata, _conventions);
             }
         }
     }
