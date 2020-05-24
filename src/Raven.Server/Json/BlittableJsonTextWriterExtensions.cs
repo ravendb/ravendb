@@ -1174,7 +1174,11 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(progress.Type));
             writer.WriteString(progress.Type.ToString());
+            writer.WriteComma();
 
+            writer.WritePropertyName(nameof(progress.SourceType));
+            writer.WriteString(progress.SourceType.ToString());
+            
             writer.WriteEndObject();
         }
 

@@ -2205,6 +2205,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Name = Name,
                         Type = Type,
+                        SourceType = SourceType,
                         IndexRunningStatus = Status,
                         Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
                     };
@@ -2226,6 +2227,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         Name = Name,
                         Type = Type,
+                        SourceType = SourceType,
                         IsStale = isStale ?? IsStale(queryContext, context),
                         IndexRunningStatus = Status,
                         Collections = new Dictionary<string, IndexProgress.CollectionStats>(StringComparer.OrdinalIgnoreCase)
