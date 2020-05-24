@@ -30,6 +30,17 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Dictionary<string, Document> _loadedDocuments;
 
+        private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
+        {
+            new TimeSeriesAggregation(AggregationType.First),
+            new TimeSeriesAggregation(AggregationType.Last),
+            new TimeSeriesAggregation(AggregationType.Min),
+            new TimeSeriesAggregation(AggregationType.Max),
+            new TimeSeriesAggregation(AggregationType.Sum),
+            new TimeSeriesAggregation(AggregationType.Count),
+            new TimeSeriesAggregation(AggregationType.Average),
+        };
+
         public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
         {
             _context = context;
@@ -69,8 +80,16 @@ namespace Raven.Server.Documents.Queries.Results
                 rangeSpec.InitializeFullRange(min, max);
             }
 
-            var aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
-            InitializeAggregationStates(timeSeriesFunction, aggStates);
+            TimeSeriesAggregation[] aggStates;
+            if (timeSeriesFunction.Select != null)
+            {
+                aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
+                InitializeAggregationStates(timeSeriesFunction, aggStates);
+            }
+            else
+            {
+                aggStates = AllAggregationTypes();
+            }
 
             return GetAggregatedValues();
 
@@ -927,7 +946,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             for (int i = 0; i < aggStates.Length; i++)
             {
-                var name = func.Select[i].StringSegment?.ToString() ?? aggStates[i].Aggregation.ToString();
+                var name = func.Select?[i].StringSegment?.ToString() ?? aggStates[i].Aggregation.ToString();
                 result[name] = new DynamicJsonArray(aggStates[i].GetFinalValues());
             }
 
