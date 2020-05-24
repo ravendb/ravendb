@@ -15,6 +15,8 @@ namespace Raven.Client.Documents.Operations.Configuration
         public int? MaxNumberOfRequestsPerSession { get; set; }
 
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
+        
+        public WriteBalanceBehavior? WriteBalanceBehavior { get; set; }
 
         public char? IdentityPartsSeparator
         {
@@ -36,6 +38,7 @@ namespace Raven.Client.Documents.Operations.Configuration
                 [nameof(Etag)] = Etag,
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
                 [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior,
+                [nameof(WriteBalanceBehavior)] = WriteBalanceBehavior,
                 [nameof(IdentityPartsSeparator)] = IdentityPartsSeparator
             };
         }

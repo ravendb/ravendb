@@ -108,7 +108,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
             _duration = Stopwatch.StartNew();
             _session.IncrementRequestCount();
-            _session.RequestExecutor.Execute(command, _session.Context, sessionInfo: _session.SessionInfo);
+            _session.RequestExecutor.Execute(command, _session.Context, sessionInfo: _session._sessionInfo);
 
             return ProcessResults(command.Result);
         }
@@ -121,7 +121,7 @@ namespace Raven.Client.Documents.Queries.Suggestions
 
                 _duration = Stopwatch.StartNew();
                 _session.IncrementRequestCount();
-                await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session.SessionInfo, token).ConfigureAwait(false);
+                await _session.RequestExecutor.ExecuteAsync(command, _session.Context, _session._sessionInfo, token).ConfigureAwait(false);
 
                 return ProcessResults(command.Result);
             }

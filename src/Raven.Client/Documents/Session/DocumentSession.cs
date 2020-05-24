@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Session
                 if (NoTracking)
                     throw new InvalidOperationException($"Cannot execute '{nameof(SaveChanges)}' when entity tracking is disabled in session.");
 
-                RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+                RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
                 UpdateSessionAfterSaveChanges(command.Result);
                 saveChangesOperation.SetResult(command.Result);
             }
@@ -123,7 +123,7 @@ namespace Raven.Client.Documents.Session
                 return true;
 
             var command = new HeadDocumentCommand(id, null);
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
             return command.Result != null;
         }
@@ -141,7 +141,7 @@ namespace Raven.Client.Documents.Session
             IncrementRequestCount();
 
             var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
             RefreshInternal(entity, command, documentInfo);
         }
@@ -219,7 +219,7 @@ namespace Raven.Client.Documents.Session
         {
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
-            RequestExecutor.Execute(multiGetCommand, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(multiGetCommand, Context, sessionInfo: _sessionInfo);
             var responses = multiGetCommand.Result;
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)

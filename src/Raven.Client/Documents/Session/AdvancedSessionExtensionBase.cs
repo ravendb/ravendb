@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Session
         {
             Session = session;
             RequestExecutor = Session.RequestExecutor;
-            SessionInfo = Session.SessionInfo;
+            SessionInfo = Session._sessionInfo;
             Context = Session.Context;
             DocumentStore = Session.DocumentStore;
             DeferredCommandsDictionary = Session.DeferredCommandsDictionary;

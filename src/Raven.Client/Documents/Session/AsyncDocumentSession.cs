@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Session
                     return true;
 
                 var command = new HeadDocumentCommand(id, null);
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token: token).ConfigureAwait(false);
 
                 return command.Result != null;
             }
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Session
                 IncrementRequestCount();
 
                 var command = new GetDocumentsCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
-                await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
                 RefreshInternal(entity, command, documentInfo);
             }
@@ -162,7 +162,7 @@ namespace Raven.Client.Documents.Session
                     if (NoTracking)
                         throw new InvalidOperationException($"Cannot execute '{nameof(SaveChangesAsync)}' when entity tracking is disabled in session.");
 
-                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                    await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
                     UpdateSessionAfterSaveChanges(command.Result);
                     saveChangesOperation.SetResult(command.Result);
                 }

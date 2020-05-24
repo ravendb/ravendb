@@ -32,6 +32,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -47,7 +48,7 @@ namespace Raven.Client.Documents.Session
 
         internal long _asyncTasksCounter;
 
-        protected readonly int _clientSessionId = ++_clientSessionIdCounter;
+        protected readonly int _clientSessionId;
 
         protected readonly RequestExecutor _requestExecutor;
         private OperationExecutor _operationExecutor;
@@ -58,7 +59,7 @@ namespace Raven.Client.Documents.Session
         private static int _instancesCounter;
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
-        protected internal readonly SessionInfo SessionInfo;
+        protected internal readonly SessionInfo _sessionInfo;
 
         private BatchOptions _saveChangesOptions;
 
@@ -68,7 +69,7 @@ namespace Raven.Client.Documents.Session
         private IJsonSerializer _jsonSerializer;
 
         /// <summary>
-        /// The session id
+        /// The session id 
         /// </summary>
         public Guid Id { get; }
 
@@ -165,7 +166,9 @@ namespace Raven.Client.Documents.Session
 
         public RequestExecutor RequestExecutor => _requestExecutor;
 
-        internal OperationExecutor Operations => _operationExecutor ?? (_operationExecutor = new SessionOperationExecutor(this));
+        public SessionInfo SessionInfo => _sessionInfo;
+
+        internal OperationExecutor Operations => _operationExecutor ??= new SessionOperationExecutor(this);
 
         public JsonOperationContext Context => _context;
 
@@ -241,6 +244,20 @@ namespace Raven.Client.Documents.Session
             if (string.IsNullOrWhiteSpace(DatabaseName))
                 ThrowNoDatabase();
 
+            string sessionKey = documentStore.Conventions.WriteBalanceSessionContextSelector?.Invoke(DatabaseName);
+
+            if (sessionKey == null)
+            {
+                _clientSessionId = ++_clientSessionIdCounter;
+            }
+            else
+            {
+                _clientSessionId = (int)Hashing.XXHash32.Calculate(sessionKey,
+                    (uint)documentStore.Conventions.WriteBalanceSeed);
+            }
+
+
+
             _documentStore = documentStore;
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
@@ -249,11 +266,11 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
-            SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
+            _sessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
-                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
+                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter, 
                 extensions: JavascriptConversionExtensions.LinqMethodsSupport.Instance)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
@@ -380,7 +397,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whether a document with the specified id is loaded in the
+        /// Returns whether a document with the specified id is loaded in the 
         /// current session
         /// </summary>
         public bool IsLoaded(string id)
@@ -396,7 +413,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whether a document with the specified id is deleted
+        /// Returns whether a document with the specified id is deleted 
         /// or known to be missing
         /// </summary>
         public bool IsDeleted(string id)
@@ -423,10 +440,10 @@ namespace Raven.Client.Documents.Session
         {
             if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
                 throw new InvalidOperationException($@"The maximum number of requests ({MaxNumberOfRequestsPerSession}) allowed for this session has been reached.
-Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and
+Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
 Raven provides facilities like Load(string[] ids) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConventions.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
-advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a
+advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
 more responsive application.
 ");
         }
@@ -700,7 +717,7 @@ more responsive application.
             }
             else
             {
-                // Store it back into the Id field so the client has access to it
+                // Store it back into the Id field so the client has access to it                    
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
@@ -785,7 +802,7 @@ more responsive application.
                     return id;
 
                 id = await GenerateIdAsync(entity).ConfigureAwait(false);
-                // If we generated a new id, store it back into the Id field so the client has access to it
+                // If we generated a new id, store it back into the Id field so the client has access to it                    
                 if (id != null)
                     GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, id);
                 return id;
@@ -905,7 +922,7 @@ more responsive application.
         {
             if (HasClusterSession == false)
                 return;
-
+            
             var clusterSession = GetClusterSession();
             if (clusterSession.NumberOfTrackedCompareExchangeValues == 0)
                 return;
@@ -2290,7 +2307,7 @@ more responsive application.
         {
             var returnedTransactionIndex = result.TransactionIndex;
             _documentStore.SetLastTransactionIndex(DatabaseName, returnedTransactionIndex);
-            SessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
+            _sessionInfo.LastClusterTransactionIndex = returnedTransactionIndex;
         }
 
         internal void OnBeforeConversionToDocumentInvoke(string id, object entity)

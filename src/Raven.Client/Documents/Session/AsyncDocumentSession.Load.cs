@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Session
                 var command = loadOperation.CreateRequest();
                 if (command != null)
                 {
-                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                    await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
                     loadOperation.SetResult(command.Result);
                 }
 
@@ -106,7 +106,7 @@ namespace Raven.Client.Documents.Session
                 var command = loadOperation.CreateRequest();
                 if (command != null)
                 {
-                    await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+                    await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: _sessionInfo, token: token).ConfigureAwait(false);
                     loadOperation.SetResult(command.Result);
                 }
 
@@ -180,7 +180,7 @@ namespace Raven.Client.Documents.Session
                 var command = operation.CreateRequest();
                 if (command != null)
                 {
-                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                    await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
                     if (stream != null)
                         Context.Write(stream, command.Result.Results.Parent);
@@ -202,7 +202,7 @@ namespace Raven.Client.Documents.Session
                 var command = operation.CreateRequest();
                 if (command != null)
                 {
-                    await RequestExecutor.ExecuteAsync(command, Context, SessionInfo, token).ConfigureAwait(false);
+                    await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
 
                     if (stream != null)
                         Context.Write(stream, command.Result.Results.Parent);

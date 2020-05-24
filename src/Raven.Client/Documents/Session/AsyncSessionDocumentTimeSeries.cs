@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Session
                     Session.IncrementRequestCount();
 
                     rangeResult = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
+                            new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session._sessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     if (rangeResult == null)
@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             rangeResult = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session.SessionInfo, token: token)
+                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (rangeResult == null)
@@ -228,7 +228,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             var details = await Session.Operations.SendAsync(
-                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize), Session.SessionInfo, token: token)
+                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
             // merge all the missing parts we got from server

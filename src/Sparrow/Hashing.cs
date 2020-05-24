@@ -258,6 +258,12 @@ namespace Sparrow
                         position += 2;
                     }
 
+                    if (position != len)
+                    {
+                        h32 += buffer[(int)position] * XXHash32Constants.PRIME32_3;
+                        h32 = Bits.RotateLeft32(h32, 17) * XXHash32Constants.PRIME32_4;
+                    }
+
                     h32 ^= h32 >> 15;
                     h32 *= XXHash32Constants.PRIME32_2;
                     h32 ^= h32 >> 13;
