@@ -348,10 +348,24 @@ namespace Raven.Server
         private void UpdateCertificateExpirationAlert(object sender = null, EventArgs args = null)
         {
             var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
-            if (remainingDays <= 20)
+            if (remainingDays <= 0)
+            {
+                string msg = $"The server certificate has expired on {Certificate.Certificate.NotAfter.ToShortDateString()}.";
+
+                if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
+                {
+                    msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support@ravendb.net.";
+                }
+                
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, NotificationSeverity.Error));
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+            }
+            else if (remainingDays <= 20)
             {
                 string msg = $"The server certificate will expire on {Certificate.Certificate.NotAfter.ToShortDateString()}. There are only {(int)remainingDays} days left for renewal.";
-                
+
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
                     if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate)
@@ -366,14 +380,14 @@ namespace Raven.Server
 
                 var severity = remainingDays < 3 ? NotificationSeverity.Error : NotificationSeverity.Warning;
 
-                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_AboutToExpire, severity));
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, severity));
 
                 if (Logger.IsOperationsEnabled) 
                     Logger.Operations(msg);
             }
             else
             {
-                ServerStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_AboutToExpire, null));
+                ServerStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_Expiration, null));
             }
         }
 
