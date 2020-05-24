@@ -650,21 +650,21 @@ namespace Raven.Server.Documents.Handlers
                     current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
                 }
 
-                if (current.ValueNameMapper == null)
-                    current.ValueNameMapper = new TimeSeriesValueNameMapper(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
+                if (current.NamedValues == null)
+                    current.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
                 else
                 {
-                    var currentNames = current.ValueNameMapper.GetNames(parameters.Collection, parameters.TimeSeries);
+                    var currentNames = current.GetNames(parameters.Collection, parameters.TimeSeries);
                     if (currentNames?.SequenceEqual(parameters.ValueNames, StringComparer.Ordinal) == true)
                         return; // no need to update, they identical
 
                     if (parameters.Update == false)
                     {
-                        if (current.ValueNameMapper.TryAddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames) == false)
+                        if (current.TryAddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames) == false)
                             throw new InvalidOperationException(
                                 $"Failed to update the names for time-series '{parameters.TimeSeries}' in collection '{parameters.Collection}', they already exists.");
                     }
-                    current.ValueNameMapper.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
+                    current.AddValueName(parameters.Collection, parameters.TimeSeries, parameters.ValueNames);
                 }
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
                 var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);

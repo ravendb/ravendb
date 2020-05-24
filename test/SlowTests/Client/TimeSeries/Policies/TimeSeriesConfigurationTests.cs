@@ -141,9 +141,9 @@ namespace SlowTests.Client.TimeSeries.Policies
                 Assert.Equal(TimeValue.FromYears(3), policies[5].RetentionTime);
                 Assert.Equal(TimeValue.FromYears(1), policies[5].AggregationTime);
 
-                Assert.NotNull(updated.ValueNameMapper);
-                Assert.Equal(1, updated.ValueNameMapper.Mapping.Count);
-                var mapper = updated.ValueNameMapper.GetNames(collectionName, "heartrate");
+                Assert.NotNull(updated.NamedValues);
+                Assert.Equal(1, updated.NamedValues.Count);
+                var mapper = updated.GetNames(collectionName, "heartrate");
 
                 Assert.NotNull(mapper);
                 Assert.Equal(1, mapper.Length);
