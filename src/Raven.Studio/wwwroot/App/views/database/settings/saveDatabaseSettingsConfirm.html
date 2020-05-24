@@ -1,16 +1,19 @@
 <div class="modal-dialog modal-lg" role="document" id="saveConfirmationDialog">
     <div class="modal-content">
         <div class="modal-header">
+            <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
             <div class="padding padding-sm">
-                <div class="bg-warning text-warning padding padding-sm margin-top flex-horizontal">
+                <div class="bg-warning text-warning padding padding-sm margin-top margin-top-lg flex-horizontal">
                     <i class="icon-warning flex-start padding padding-sm" id="warning-icon"></i>
                     <div class="padding padding-sm">
                         <h4>Note:</h4>
                         <span>
                             After saving, the database must be reloaded in order for these configuration changes to be in effect.<br>
-                            Without reloading the database, the changes will Not apply (despite being written to the database record).
+                            Without reloading the database, the changes will NOT apply (despite being written to the database record).
                         </span>
-                        <hr id="save-hr"> 
+                        <hr> 
                         <div class="margin-top" data-bind="html: howToReloadDatabaseHtml"></div>
                     </div>
                 </div>
@@ -18,13 +21,9 @@
         </div>
         <div class="modal-body">
             <div class="padding padding-sm">
-                <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
-                    <i class="icon-cancel"></i>
-                </button>
-                <h4 class="modal-title margin-bottom margin-bottom-sm">The following database settings will be saved:</h4>
+                <h4 class="modal-title margin-bottom">The following database settings will be saved:</h4>
                 <div class="panel">
-                    <div data-bind="html: settingsToSaveText">
-                    </div>
+                    <pre><code class="white-space-pre" data-bind="html: settingsToSaveText"></code></pre>
                 </div>
             </div>
         </div>

@@ -37,7 +37,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
         if (hyperlinkValue) {
             // decorate with link
             const preparedValue = this.prepareValue(item);
-            const extraHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
+            const titleHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
             
             let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
             
@@ -48,7 +48,7 @@ class hyperlinkColumn<T> extends textColumn<T> {
             const customAction = this.customHandler ? `data-action="${this.linkActionUniqueId}"` : "";
             const extraCssClassesForLink = this.extraClassForLink ? `class="${this.extraClassForLink(item)}"` : "";
 
-            return `<div ${extraHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a ${extraCssClassesForLink} href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
+            return `<div ${titleHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}"><a ${extraCssClassesForLink} href="${hyperlinkValue}" ${customAction}>${preparedValue.rawText}</a></div>`;
             
         } else {
             // fallback to plain text column
