@@ -1434,13 +1434,9 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
             {
                 tsf.GroupBy = GetTimePeriodValueExpression(name, "GROUP BY");
-
-                if (Scanner.TryScan("SELECT") == false)
-                    ThrowParseException($"Expected select clause for {name}, but didn't find it");
-
-                tsf.Select = SelectClauseExpressions("SELECT", false);
             }
-            else if (Scanner.TryScan("SELECT"))
+
+            if (Scanner.TryScan("SELECT"))
             {
                 tsf.Select = SelectClauseExpressions("SELECT", false);
             }

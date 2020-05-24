@@ -369,8 +369,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
                 break;
             }
-
-            AssertNoMissingSelect();
         }
 
         private string BuildQuery()
@@ -453,12 +451,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             var duration = ((ConstantExpression)mce.Arguments[0]).Value;
             return $"{duration} {mce.Method.Name}";
-        }
-
-        private void AssertNoMissingSelect()
-        {
-            if (_groupBy != null && _selectFields == null)
-                throw new InvalidOperationException("Missing Select call. Cannot have GroupBy without Select in Time Series functions ");
         }
 
         private static void ThrowInvalidMethodArgument(Expression argument, string method)

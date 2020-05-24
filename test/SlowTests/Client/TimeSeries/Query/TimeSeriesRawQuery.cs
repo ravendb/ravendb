@@ -5944,6 +5944,61 @@ select out(p)")
         }
 
         [Fact]
+        public void CanQueryTimeSeriesAggregation_GroupByWithoutSelect()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "HeartRate");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
+@"declare timeseries out(){
+    from HeartRate
+    where Tag != $t
+    group by '2 minutes'
+}
+from People 
+select out()
+")
+                        .AddParameter("t", "watches/sony");
+
+                    var result = query.First();
+                    Assert.Equal(10, result.Count);
+                    Assert.Equal(5, result.Results.Length);
+
+                    for (int i = 0; i < 10; i += 2)
+                    {
+                        var resultIndex = i / 2;
+
+                        Assert.Equal(i, result.Results[resultIndex].First[0]);
+                        Assert.Equal(i, result.Results[resultIndex].Min[0]);
+
+                        Assert.Equal(i + 1, result.Results[resultIndex].Last[0]);
+                        Assert.Equal(i + 1, result.Results[resultIndex].Max[0]);
+
+                        Assert.Equal(2 * i + 1, result.Results[resultIndex].Sum[0]);
+                        Assert.Equal(i + 0.5, result.Results[resultIndex].Average[0]);
+                        Assert.Equal(2, result.Results[resultIndex].Count[0]);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void CanQueryTimeSeriesAggregation_WithSelectSum()
         {
             using (var store = GetDocumentStore())
