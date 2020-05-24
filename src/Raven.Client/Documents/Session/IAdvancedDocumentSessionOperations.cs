@@ -34,6 +34,8 @@ namespace Raven.Client.Documents.Session
         RequestExecutor RequestExecutor { get; }
         JsonOperationContext Context { get; }
 
+        SessionInfo SessionInfo { get; }
+        
         event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;

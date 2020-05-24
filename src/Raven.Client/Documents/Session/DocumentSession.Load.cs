@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
 
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+                RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
                 loadOperation.SetResult(command.Result);
             }
 
@@ -105,7 +105,7 @@ namespace Raven.Client.Documents.Session
             var command = loadOperation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+                RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
                 loadOperation.SetResult(command.Result);
             }
 
@@ -171,7 +171,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+                RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
                 if (stream != null)
                     Context.Write(stream, command.Result.Results.Parent);
@@ -190,7 +190,7 @@ namespace Raven.Client.Documents.Session
             var command = operation.CreateRequest();
             if (command != null)
             {
-                RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+                RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
                 if (stream != null)
                     Context.Write(stream, command.Result.Results.Parent);
                 else

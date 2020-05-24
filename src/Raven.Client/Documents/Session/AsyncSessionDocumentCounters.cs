@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Session
                     Session.IncrementRequestCount();
 
                     var details = await Session.Operations.SendAsync(
-                            new GetCountersOperation(DocId, counter), Session.SessionInfo, token: token)
+                            new GetCountersOperation(DocId, counter), Session._sessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     if (details.Counters?.Count > 0)
@@ -105,7 +105,7 @@ namespace Raven.Client.Documents.Session
                     result.Clear();
                     Session.IncrementRequestCount();
 
-                    var details = await Session.Operations.SendAsync(new GetCountersOperation(DocId, countersArray), Session.SessionInfo, token: token)
+                    var details = await Session.Operations.SendAsync(new GetCountersOperation(DocId, countersArray), Session._sessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     foreach (var counterDetail in details.Counters)
@@ -164,7 +164,7 @@ namespace Raven.Client.Documents.Session
 
                     Session.IncrementRequestCount();
 
-                    var details = await Session.Operations.SendAsync(new GetCountersOperation(DocId), Session.SessionInfo, token: token)
+                    var details = await Session.Operations.SendAsync(new GetCountersOperation(DocId), Session._sessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     cache.Values.Clear();

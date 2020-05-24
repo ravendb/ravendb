@@ -220,6 +220,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, string, string, string, string> _findPropertyNameForDynamicIndex;
         private Func<Type, string, string, string, string> _findPropertyNameForIndex;
         private Func<Type, string, string, string, string> _findProjectedPropertyNameForIndex;
+        private Func<string, string> _writeBalanceSessionContextSelector;
 
         private Func<dynamic, string> _findCollectionNameForDynamic;
         private Func<dynamic, string> _findClrTypeNameForDynamic;
@@ -236,6 +237,8 @@ namespace Raven.Client.Documents.Conventions
         private TimeSpan _secondBroadcastAttemptTimeout;
         private TimeSpan _firstBroadcastAttemptTimeout;
 
+        private int _writeBalanceSeed;
+        private WriteBalanceBehavior _writeBalanceBehavior;
         private ReadBalanceBehavior _readBalanceBehavior;
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
@@ -370,6 +373,27 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        public int WriteBalanceSeed
+        {
+            get => _writeBalanceSeed;
+            set
+            {
+                AssertNotFrozen();
+                _writeBalanceSeed = value;
+            }
+        }
+
+        public WriteBalanceBehavior WriteBalanceBehavior
+        {
+            // We have to make this check so if admin activated this, but client code did not provide the selector,
+            // it is still disabled. Relevant if we have multiple clients / versions at once.
+            get => _writeBalanceSessionContextSelector == null ? WriteBalanceBehavior.None : _writeBalanceBehavior;
+            set
+            {
+                AssertNotFrozen();
+                _writeBalanceBehavior = value;
+            }
+        }
         /// <summary>
         ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
         ///     Default value is 'true'
@@ -439,6 +463,21 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _useOptimisticConcurrency = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets or set the function that allow to specialize the topology
+        /// selection for a particular session. Used in load balancing
+        /// scenarios.
+        /// </summary>
+        public Func<string, string> WriteBalanceSessionContextSelector
+        {
+            get => _writeBalanceSessionContextSelector;
+            set
+            {
+                AssertNotFrozen();
+                _writeBalanceSessionContextSelector = value;
             }
         }
 
@@ -951,9 +990,10 @@ namespace Raven.Client.Documents.Conventions
 
                 if (configuration.Disabled && _originalConfiguration != null) // need to revert to original values
                 {
-                    _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-                    _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
-                    _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator.Value;
+                    _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
+                    _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
+                    _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
+                    _writeBalanceBehavior = _originalConfiguration.WriteBalanceBehavior ?? _writeBalanceBehavior;
 
                     _originalConfiguration = null;
                     return;
@@ -965,12 +1005,14 @@ namespace Raven.Client.Documents.Conventions
                         Etag = -1,
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
                         ReadBalanceBehavior = ReadBalanceBehavior,
-                        IdentityPartsSeparator = IdentityPartsSeparator
+                        IdentityPartsSeparator = IdentityPartsSeparator,
+                        WriteBalanceBehavior = _writeBalanceBehavior,
                     };
 
-                _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-                _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
-                _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator.Value;
+                _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
+                _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
+                _writeBalanceBehavior = configuration.WriteBalanceBehavior ?? _originalConfiguration.WriteBalanceBehavior ?? _writeBalanceBehavior;
+                _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
             }
         }
 
@@ -1113,6 +1155,12 @@ namespace Raven.Client.Documents.Conventions
 
         internal void Freeze()
         {
+            if (_writeBalanceBehavior == WriteBalanceBehavior.ClientContextSelection && 
+                _writeBalanceSessionContextSelector == null)
+            {
+                throw new NotSupportedException($"Cannot set {nameof(WriteBalanceBehavior)} to {WriteBalanceBehavior.ClientContextSelection} without also providing a value for {nameof(WriteBalanceSessionContextSelector)}");
+            }
+
             _frozen = true;
         }
 

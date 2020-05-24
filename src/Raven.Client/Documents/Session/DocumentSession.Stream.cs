@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
             var result = streamOperation.SetResult(command.Result);
 
             return YieldResults(query, result);
@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this, stats);
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
             var result = streamOperation.SetResult(command.Result);
             streamQueryStats = stats;
 
@@ -91,7 +91,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
 
             using (command.Result.Response)
             using (command.Result.Stream)
@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Session
             var streamOperation = new StreamOperation(this);
 
             var command = streamOperation.CreateRequest(startsWith, matches, start, pageSize, null, startAfter);
-            RequestExecutor.Execute(command, Context, sessionInfo: SessionInfo);
+            RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
             using (var result = streamOperation.SetResult(command.Result))
             {
                 while (result.MoveNext())

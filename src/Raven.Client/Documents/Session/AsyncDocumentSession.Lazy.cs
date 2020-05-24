@@ -116,7 +116,7 @@ namespace Raven.Client.Documents.Session
         {
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
-            await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionInfo: SessionInfo, token: token).ConfigureAwait(false);
+            await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionInfo: _sessionInfo, token: token).ConfigureAwait(false);
             var responses = multiGetCommand.Result;
 
             for (var i = 0; i < PendingLazyOperations.Count; i++)

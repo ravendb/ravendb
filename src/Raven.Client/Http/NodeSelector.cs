@@ -130,7 +130,7 @@ namespace Raven.Client.Http
             if (state.Topology.Nodes.Count == 0)
                 throw new AllTopologyNodesDownException("There are no nodes in the topology at all");
 
-            var index = sessionId % state.Topology.Nodes.Count;
+            var index = Math.Abs(sessionId % state.Topology.Nodes.Count);
 
             for (int i = index; i < state.Failures.Length; i++)
             {

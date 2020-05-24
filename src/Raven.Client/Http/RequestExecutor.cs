@@ -534,6 +534,15 @@ namespace Raven.Client.Http
                 }
             }
 
+            switch (Conventions.WriteBalanceBehavior)
+            {
+                case WriteBalanceBehavior.ClientContextSelection:
+                    int? id = sessionInfo?.SessionId;
+                    if(id != null)
+                        return _nodeSelector.GetNodeBySessionId(id.Value);
+                    break;
+            }
+
             if (cmd.IsReadRequest == false)
             {
                 return _nodeSelector.GetPreferredNode();
