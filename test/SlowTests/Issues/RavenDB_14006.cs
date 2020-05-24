@@ -581,7 +581,6 @@ select incl(c)"
             }
         }
 
-
         [Fact]
         public void CanUseCompareExchangeValueIncludesInQueries_Static_JavaScript()
         {
@@ -680,6 +679,114 @@ select incl(c)"
 
                     value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(companies[0].ExternalId);
                     Assert.Equal("Bydgoszcz", value1.Value.City);
+                }
+            }
+        }
+
+        [Fact]
+        public void CompareExchangeValueTrackingInSessionStartsWith()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var allCompanies = new List<string>();
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var company = new Company
+                        {
+                            Id = $"companies/{i}",
+                            ExternalId = "companies/hr",
+                            Name = "HR"
+                        };
+
+                        allCompanies.Add(company.Id);
+                        session.Advanced.ClusterTransaction.CreateCompareExchangeValue(company.Id, company);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var results = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Company>("comp");
+
+                    Assert.Equal(10, results.Count);
+                    Assert.True(results.All(x => x.Value != null));
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    results = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Company>(allCompanies.ToArray());
+
+                    Assert.Equal(10, results.Count);
+                    Assert.True(results.All(x => x.Value != null));
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    foreach (var companyId in allCompanies)
+                    {
+                        var result = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Company>(companyId);
+                        Assert.NotNull(result.Value);
+                        Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CompareExchangeValueTrackingInSessionStartsWithAsync()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var allCompanies = new List<string>();
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    for (var i = 0; i < 10; i++)
+                    {
+                        var company = new Company
+                        {
+                            Id = $"companies/{i}",
+                            ExternalId = "companies/hr",
+                            Name = "HR"
+                        };
+
+                        allCompanies.Add(company.Id);
+                        session.Advanced.ClusterTransaction.CreateCompareExchangeValue(company.Id, company);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                }))
+                {
+                    var results = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<Company>("comp");
+
+                    Assert.Equal(10, results.Count);
+                    Assert.True(results.All(x => x.Value != null));
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    results = await session.Advanced.ClusterTransaction.GetCompareExchangeValuesAsync<Company>(allCompanies.ToArray());
+
+                    Assert.Equal(10, results.Count);
+                    Assert.True(results.All(x => x.Value != null));
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    foreach (var companyId in allCompanies)
+                    {
+                        var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(companyId);
+                        Assert.NotNull(result.Value);
+                        Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    }
                 }
             }
         }
