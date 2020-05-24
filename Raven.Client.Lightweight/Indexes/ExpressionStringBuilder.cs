@@ -1738,6 +1738,7 @@ namespace Raven.Client.Indexes
             {
                 switch (node.Method.Name)
                 {
+                    case "ToArray":
                     case "First":
                     case "FirstOrDefault":
                     case "Single":
