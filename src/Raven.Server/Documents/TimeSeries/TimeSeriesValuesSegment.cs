@@ -223,7 +223,9 @@ namespace Raven.Server.Documents.TimeSeries
                     if (actualBitsBuffer.EnsureAdditionalBits(allocator, tempBitsBuffer.NumberOfBits + (tag.Length + 1) * 8) == false)
                         return false;
 
-                    InsertTag(tag, tempHeader, actualBitsBuffer.NumberOfBytes);
+                    if (InsertTag(tag, tempHeader, actualBitsBuffer.NumberOfBytes) == false)
+                        return false;
+
                     actualBitsBuffer = GetBitsBuffer(tempHeader);
                     var result = actualBitsBuffer.AddBits(allocator, tempBitsBuffer);
                     Debug.Assert(result, "Failed to add bits, but already checked precondition");
@@ -272,14 +274,14 @@ namespace Raven.Server.Documents.TimeSeries
             return ~numberOfTags;
         }
 
-        public void InsertTag(Span<byte> tag, SegmentHeader* tempHeader, int numberOfBytes)
+        public bool InsertTag(Span<byte> tag, SegmentHeader* tempHeader, int numberOfBytes)
         {
             var offset = tempHeader->SizeOfTags;
             var tagsPtr = _buffer + sizeof(SegmentHeader) + sizeof(StatefulTimestampValue) * tempHeader->NumberOfValues;
             var numberOfTags = tagsPtr[offset - 1];
 
             if (numberOfTags >= 127)
-                throw new InvalidOperationException("Cannot have more than 127 tags per segment");
+                return false;
 
             var tagsLens = tagsPtr + offset - 1 - numberOfTags;
             var copyOfTagLens = stackalloc byte[numberOfTags];
@@ -295,6 +297,7 @@ namespace Raven.Server.Documents.TimeSeries
             *tagsLens++ = (byte)tag.Length;
             *tagsLens++ = (byte)(numberOfTags + 1);
             tempHeader->SizeOfTags = (ushort)(tagsLens - tagsPtr);
+            return true;
         }
 
         private static void ThrowInvalidTagLength()
