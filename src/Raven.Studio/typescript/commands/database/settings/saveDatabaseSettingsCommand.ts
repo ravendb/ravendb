@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveDatabaseSettingsCommand extends commandBase {
    
-    constructor(private db: database, private settingsToSave: object) {
+    constructor(private db: database, private settingsToSave: Record<string, string>) {
         super();
     }
     
