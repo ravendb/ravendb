@@ -62,17 +62,18 @@ namespace SlowTests.Client.TimeSeries.Session
                 await store.TimeSeries.RegisterAsync("Users", nameof(HeartRateMeasure), new[] {nameof(HeartRateMeasure.HeartRate)});
 
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
-                var heartrate = updated.ValueNameMapper.GetNames("users",  nameof(HeartRateMeasure));
+                var heartrate = updated.GetNames("users",  nameof(HeartRateMeasure));
                 Assert.Equal(1, heartrate.Length);
                 Assert.Equal(nameof(HeartRateMeasure.HeartRate), heartrate[0]);
 
-                var stock = updated.ValueNameMapper.GetNames("users",  nameof(StockPrice));
+                var stock = updated.GetNames("users",  nameof(StockPrice));
                 Assert.Equal(5, stock.Length);
                 Assert.Equal(nameof(StockPrice.Open), stock[0]);
                 Assert.Equal(nameof(StockPrice.Close), stock[1]);
                 Assert.Equal(nameof(StockPrice.High), stock[2]);
                 Assert.Equal(nameof(StockPrice.Low), stock[3]);
                 Assert.Equal(nameof(StockPrice.Volume), stock[4]);
+
             }
         }
 
