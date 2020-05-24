@@ -129,8 +129,9 @@ class indexProgress {
             return p + c.documentsProgress.processed() + c.tombstonesProgress.processed();
         }, 0);
         
+        const units = dto.SourceType === "TimeSeries" || dto.SourceType === "Counters" ? "items" : "docs";
         this.globalProgress(new progress(
-            processed, total, (processed: number) => `${processed.toLocaleString()} docs`,
+            processed, total, (processed: number) => `${processed.toLocaleString()} ${units}`,
             dto.ProcessedPerSecond, dto.IsStale, dto.IndexRunningStatus));
     }
     

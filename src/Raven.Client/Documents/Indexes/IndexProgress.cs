@@ -8,6 +8,8 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexType Type { get; set; }
 
+        public IndexSourceType SourceType { get; set; }
+
         public Dictionary<string, CollectionStats> Collections { get; set; }
 
         public bool IsStale { get; set; }
