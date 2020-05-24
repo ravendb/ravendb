@@ -140,6 +140,35 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        protected async Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsyncInternal<T>(string startWith, int? start, int? pageSize, CancellationToken token = default)
+        {
+            using (_session.AsyncTaskHolder())
+            {
+                _session.IncrementRequestCount();
+
+                var values = await _session.Operations.SendAsync(new GetCompareExchangeValuesOperation<BlittableJsonReaderObject>(startWith, start, pageSize), sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
+                var results = new Dictionary<string, CompareExchangeValue<T>>();
+
+                foreach (var keyValue in values)
+                {
+                    var key = keyValue.Key;
+                    var value = keyValue.Value;
+
+                    if (value == null)
+                    {
+                        RegisterMissingCompareExchangeValue(key);
+                        results.Add(key, null);
+                        continue;
+                    }
+
+                    var sessionValue = RegisterCompareExchangeValue(value);
+                    results.Add(key, sessionValue.GetValue<T>(_session.Conventions));
+                }
+
+                return results;
+            }
+        }
+
         internal CompareExchangeValue<T> GetCompareExchangeValueFromSessionInternal<T>(string key, out bool notTracked)
         {
             if (TryGetCompareExchangeValueFromSession(key, out var sessionValue))
@@ -494,6 +523,8 @@ namespace Raven.Client.Documents.Session
 
         Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValues<T>(string[] keys);
 
+        Dictionary<string, CompareExchangeValue<T>> GetCompareExchangeValues<T>(string startWith, int? start = null, int? pageSize = null);
+
         ILazyClusterTransactionOperations Lazily { get; }
     }
 
@@ -513,6 +544,8 @@ namespace Raven.Client.Documents.Session
         Task<CompareExchangeValue<T>> GetCompareExchangeValueAsync<T>(string key, CancellationToken token = default);
 
         Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsync<T>(string[] keys, CancellationToken token = default);
+
+        Task<Dictionary<string, CompareExchangeValue<T>>> GetCompareExchangeValuesAsync<T>(string startWith, int? start = null, int? pageSize = null, CancellationToken token = default);
 
         ILazyClusterTransactionOperationsAsync Lazily { get; }
     }
@@ -544,6 +577,11 @@ namespace Raven.Client.Documents.Session
         Task<CompareExchangeValue<T>> IClusterTransactionOperationsAsync.GetCompareExchangeValueAsync<T>(string key, CancellationToken token)
         {
             return GetCompareExchangeValueAsyncInternal<T>(key, token);
+        }
+
+        Task<Dictionary<string, CompareExchangeValue<T>>> IClusterTransactionOperationsAsync.GetCompareExchangeValuesAsync<T>(string startWith, int? start, int? pageSize, CancellationToken token)
+        {
+            return GetCompareExchangeValuesAsyncInternal<T>(startWith, start, pageSize, token);
         }
 
         Lazy<Task<CompareExchangeValue<T>>> ILazyClusterTransactionOperationsAsync.GetCompareExchangeValueAsync<T>(string key, Action<CompareExchangeValue<T>> onEval, CancellationToken token)
@@ -598,6 +636,11 @@ namespace Raven.Client.Documents.Session
         Lazy<Dictionary<string, CompareExchangeValue<T>>> ILazyClusterTransactionOperations.GetCompareExchangeValues<T>(string[] keys)
         {
             return Session.AddLazyOperation<Dictionary<string, CompareExchangeValue<T>>>(new LazyGetCompareExchangeValuesOperation<T>(this, Session.Conventions, keys), onEval: null);
+        }
+
+        Dictionary<string, CompareExchangeValue<T>> IClusterTransactionOperations.GetCompareExchangeValues<T>(string startWith, int? start, int? pageSize)
+        {
+            return AsyncHelpers.RunSync(() => GetCompareExchangeValuesAsyncInternal<T>(startWith, start, pageSize));
         }
 
         Lazy<Dictionary<string, CompareExchangeValue<T>>> ILazyClusterTransactionOperations.GetCompareExchangeValues<T>(string[] keys, Action<Dictionary<string, CompareExchangeValue<T>>> onEval)
