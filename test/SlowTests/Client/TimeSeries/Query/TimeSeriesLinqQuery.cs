@@ -1402,22 +1402,44 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
-        public void ShouldThrowOnGroupByWithoutSelect()
+        public void CanQueryTimeSeriesAggregation_WithSelectSum()
         {
             using (var store = GetDocumentStore())
             {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "HeartRate");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i);
+                    }
+
+                    session.SaveChanges();
+                }
+
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
-                            .Where(ts=> ts.Tag != "watches/sony")
-                            .GroupBy(g => g.Months(1))
+                            .GroupBy(g => g.Minutes(2))
+                            .Select(x => new
+                            {
+                                Sum = x.Sum()
+                            })
                             .ToList());
 
-                    var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
-                    Assert.NotNull(ex.InnerException);
-                    Assert.Contains("Missing Select call. Cannot have GroupBy without Select in Time Series functions ", ex.InnerException.Message);
+                    var result = query.First();
+                    Assert.Equal(10, result.Count);
+                    Assert.Equal(5, result.Results.Length);
 
+                    for (int i = 0; i < 5; i ++)
+                    {
+                        Assert.Equal(4 * i + 1, result.Results[i].Sum[0]);
+                    }
                 }
             }
         }

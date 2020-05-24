@@ -5943,6 +5943,48 @@ select out(p)")
             }
         }
 
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_WithSelectSum()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), "people/1");
+                    var tsf = session.TimeSeriesFor("people/1", "HeartRate");
+
+                    for (int i = 0; i < 10; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
+@"declare timeseries out(){
+    from HeartRate
+    group by '2 minutes'
+    select sum()
+}
+from People
+select out()");
+                    var result = query.First();
+                    Assert.Equal(10, result.Count);
+                    Assert.Equal(5, result.Results.Length);
+
+                    for (int i = 0; i < 5; i++)
+                    {
+                        Assert.Equal(4 * i + 1, result.Results[i].Sum[0]);
+                    }
+                }
+            }
+        }
+
         [Fact (Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {

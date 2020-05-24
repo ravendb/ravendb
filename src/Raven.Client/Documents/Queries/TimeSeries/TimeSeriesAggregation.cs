@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     public class TimeSeriesRangeAggregation
     {
         public long[] Count;
-        public double[] Max, Min, Last, First, Average;
+        public double[] Max, Min, Last, First, Average, Sum;
         public DateTime To, From;
     }
    
