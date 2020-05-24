@@ -412,11 +412,11 @@ class databaseSettings extends viewModelBase {
     }
 
     confirmUnsavedchanges() {
-        const text = `<div class="margin-top">Discarding the changes will reload all current database settings from the server.</div>`;
-        return this.confirmationMessage("You have unsaved changes.", text,
+        const text = `<div class="margin-top">You have unsaved changes. How do you want to proceed?</div>`;
+        return this.confirmationMessage("Unsaved changes", text,
             {
                 html: true,
-                buttons: ["Stay on this page", "Discard changes"]
+                buttons: ["Stay in edit mode", "Discard changes"]
             });
     }
     
