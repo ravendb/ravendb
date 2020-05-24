@@ -140,9 +140,13 @@ class databaseRecord extends viewModelBase {
 
     private stringify(obj: any, stripNullAndEmptyValues: boolean = true) {
         const prettifySpacing = 4;
+        
         if (stripNullAndEmptyValues) {
-            return JSON.stringify(obj, (key, val) => {
-                // strip out null properties
+            return JSON.stringify(obj, function(key, val) {
+                // Strip out null values for all entries except for 'Settings'
+                if (this === obj.Settings) {
+                    return _.isEqual(val, {}) ? undefined : val;
+                }
                 return _.isNull(val) || _.isEqual(val, {}) ? undefined : val;
             }, prettifySpacing);
         } else {

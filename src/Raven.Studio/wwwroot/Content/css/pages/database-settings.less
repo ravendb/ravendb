@@ -1,7 +1,6 @@
 #database-settings-view {
     
-    @source-item-color: @database-settings-source-item;
-    @source-item-color-basic: @database-settings-source-item-basic;
+    @source-item-color: @database-settings-source-item-color;
     @highlight-key-color: @database-origin-key-color;
     
     .all-entries {
@@ -41,7 +40,7 @@
     .dirty-item {
         &::after {
             content: '*';
-            color: @database-settings-dirty-item;
+            color: @database-settings-dirty-item-color;
             margin-left: 4px;
             font-size: large;
         }
@@ -50,7 +49,7 @@
     .invalid-item {
         &::after {
             content: "\e93f";
-            color: @database-settings-invalid-item;
+            color: @database-settings-invalid-item-color;
             margin-left: 4px;
             font-size: small;
             font-family: 'icomoon' !important;
@@ -88,7 +87,7 @@
         }
         
         .source-item {
-            color: @source-item-color-basic;
+            color: @source-item-color;
             padding-left: 25px;
             
             &::before {
@@ -96,11 +95,6 @@
                 font-size: small;
                 margin-left: 5px;
                 padding-left: 10px;
-                color: @source-item-color;
-            }
-            
-            &.null-value::before {
-                color: @source-item-color-basic;
             }
         }
         
@@ -151,10 +145,6 @@
         margin-right: 2px;
     }
     
-    .source-icon-null {
-        color: @source-item-color-basic;
-    }
-    
     .fix-icon-top {
         top: 1px;
     }
@@ -178,8 +168,7 @@
         top: 12px;
     }
     
-    #save-hr {
-        //TODO transform to one of the existing color variables
-        border-top-color: #ecb76e1c;
+    hr {
+        border-top-color: fade(@brand-warning-dark, 15%);
     }
 }

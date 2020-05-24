@@ -78,7 +78,7 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
         const customPlotAction = `data-action="${this.tsPlotActionUniqueId}" `;
         const customPreviewAction = `data-action="${this.tsPreviewActionUniqueId}" `;
 
-        const extraHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
+        const titleHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
 
         if (isSorted) {
@@ -113,7 +113,7 @@ class timeSeriesColumn<T extends document> extends textColumn<T> {
             
             const separator = `<div class="flex-separator"></div>`;
             const valueContainer = `<div class="flex-horizontal">${tsInfo}${separator}${previewButton}&nbsp;${plotButton}</div>`;
-            return `<div  ${extraHtml} class="cell text-cell flex-horizontal ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}">${valueContainer}</div>`;
+            return `<div  ${titleHtml} class="cell text-cell flex-horizontal ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}">${valueContainer}</div>`;
         } catch (error) {
             return `<div class="cell text-cell eval-error ${extraCssClasses}" style="width: ${this.width}">Error!</div>`;
         }

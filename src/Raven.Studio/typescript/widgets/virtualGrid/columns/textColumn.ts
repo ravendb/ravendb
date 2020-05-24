@@ -71,7 +71,7 @@ class textColumn<T> implements virtualColumn {
     }
 
     renderCell(item: T, isSelected: boolean, isSorted: boolean): string {
-        const extraHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
+        const titleHtml = this.opts.title ? ` title="${generalUtils.escapeHtml(this.opts.title(item))}" ` : '';
         let extraCssClasses = this.opts.extraClass ? this.opts.extraClass(item) : '';
         
         if (isSorted) {
@@ -80,7 +80,7 @@ class textColumn<T> implements virtualColumn {
         
         try {
             const preparedValue = this.prepareValue(item);
-            return `<div  ${extraHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
+            return `<div  ${titleHtml} class="cell text-cell ${preparedValue.typeCssClass} ${extraCssClasses}" style="width: ${this.width}">${preparedValue.rawText}</div>`;
         } catch (error) {
             //TODO: work on L&F of errors!
             return `<div class="cell text-cell eval-error ${extraCssClasses}" style="width: ${this.width}">Error!</div>`;

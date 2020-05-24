@@ -14,16 +14,16 @@ import saveDatabaseSettingsConfirm = require("viewmodels/database/settings/saveD
 import models = require("models/database/settings/databaseSettingsModels");
 import popoverUtils = require("common/popoverUtils");
 import genUtils = require("common/generalUtils");
+import messagePublisher = require("common/messagePublisher");
 
 type viewModeType = "summaryMode" | "editMode";
 
 class categoryInfo {
     name = ko.observable<string>();
-    customizedEntriesCount = ko.observable<number>();
+    customizedEntriesCount: KnockoutComputed<number>;
     
-    constructor (categoryName: string, numberOfCustomizedEntries: number) {
+    constructor (categoryName: string) {
         this.name(categoryName);
-        this.customizedEntriesCount(numberOfCustomizedEntries);
     }
 }
 
@@ -122,8 +122,11 @@ class databaseSettings extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.initSummaryGrid();
-        this.processAfterFetch();
+        
+        if (!this.isForbidden()) {
+            this.initSummaryGrid();
+            this.processAfterFetch();
+        }
     }
     
     private initCategoryGrid() {
@@ -240,6 +243,16 @@ class databaseSettings extends viewModelBase {
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueOrigin(), "Origin", "20%", {
                         sortable: "string",
+                        title: (x) => {
+                            switch (x.effectiveValueOrigin()) {
+                                case "Database":
+                                    return "Value is configured in the database record, overriding the server & default settings";
+                                case "Server":
+                                    return "Value is configured in the settings.json file, overriding the default settings";
+                                case "Default":
+                                    return "No customized value is set";
+                            }
+                        },
                         extraClass: (x) => {
                             let classes = "source-item ";
                             switch (x.effectiveValueOrigin()) {
@@ -253,7 +266,7 @@ class databaseSettings extends viewModelBase {
                                     classes += "source-item-default";
                                     break;
                             }
-                            return x.effectiveValue() ? classes : classes += " null-value";
+                            return classes;
                         }
                     })
                 ]
@@ -262,14 +275,9 @@ class databaseSettings extends viewModelBase {
     }
     
     private fetchSummaryData(): JQueryPromise<pagedResult<models.settingsEntry>> {
-        let entriesForSummaryMode = _.filter(this.allEntries(), x => x.showEntry());
-
-        entriesForSummaryMode = entriesForSummaryMode.reduce((acc,element) => {
-            if (element.entryClassForSummaryMode() === "highlight-key") {
-                return [element, ...acc];
-            }
-            return [...acc, element];
-        }, []);
+        const topEntries = this.allEntries().filter(entry => entry.showEntry() && entry.entryClassForSummaryMode() === "highlight-key").sort();
+        const allOtherEntries = this.allEntries().filter(entry => entry.showEntry() && entry.entryClassForSummaryMode() !== "highlight-key");
+        const entriesForSummaryMode = topEntries.concat(allOtherEntries);
         
         return $.when<pagedResult<models.settingsEntry>>({
             items: entriesForSummaryMode,
@@ -279,10 +287,10 @@ class databaseSettings extends viewModelBase {
         })
     }
 
-    private fetchDatabaseSettings(db: database, refresh: boolean = false): JQueryPromise<Raven.Server.Config.SettingsResult> {
+    private fetchDatabaseSettings(db: database): JQueryPromise<Raven.Server.Config.SettingsResult> {
         eventsCollector.default.reportEvent("database-settings", "get");
 
-        return new getDatabaseSettingsCommand(db, refresh)
+        return new getDatabaseSettingsCommand(db)
             .execute()
             .done((result: Raven.Server.Config.SettingsResult) => {
                 
@@ -296,15 +304,7 @@ class databaseSettings extends viewModelBase {
     }
     
     private findFirstCategoryWithError() {
-        let categoryWithError: string;
-        
-        this.allEntries().some(entry => {
-            if (this.getEntryStateClass(entry) === "invalid-item") {
-                return categoryWithError = entry.data.Metadata.Category;
-            }
-        });
-        
-        return categoryWithError;
+        return this.allEntries().find(entry => this.getEntryStateClass(entry) === "invalid-item")?.data.Metadata.Category;
     }
     
     save() {
@@ -314,22 +314,27 @@ class databaseSettings extends viewModelBase {
 
             return;
         }
-
-        const settingsToSave = this.allEntries().map(entry => {
-            if (entry instanceof models.databaseEntry) {
-                return entry.getEntrySetting();
-            }
-        }).filter(x => !!x);
+        
+        const settingsToSave = this.allEntries()
+            .filter(entry => entry instanceof models.databaseEntry && entry.override())
+            .map(entry => { 
+                return { key: entry.keyName(), value: entry.effectiveValue() };
+            });
 
         const settingsToSaveSorted = _.sortBy(settingsToSave, x => x.key);
-        
-        const saveSettingsModel = new saveDatabaseSettingsConfirm((settingsToSaveSorted), this.howToReloadDatabaseHtml);
+      
+        const settingsToSaveObject = settingsToSaveSorted.reduce((acc, item) => {
+            acc[item.key] = item.value;
+            return acc;
+        }, {} as Record<string, string>);
+
+        const saveSettingsModel = new saveDatabaseSettingsConfirm(settingsToSaveObject, this.howToReloadDatabaseHtml);
 
         saveSettingsModel.result.done(result => {
             if (result.can) {
                 this.spinners.save(true);
 
-                new saveDatabaseSettingsCommand(this.activeDatabase(), settingsToSaveSorted)
+                new saveDatabaseSettingsCommand(this.activeDatabase(), settingsToSaveObject)
                     .execute()
                     .done(() => this.exitEditMode())
                     .always(() => this.spinners.save(false));
@@ -342,12 +347,13 @@ class databaseSettings extends viewModelBase {
     refresh() {
         this.spinners.refresh(true);
 
-        this.fetchData(true)
+        this.fetchData()
+            .done(() =>  messagePublisher.reportSuccess("Database Settings was successfully refreshed"))
             .always(() => this.spinners.refresh(false));
     }
     
-    fetchData(refresh: boolean = false) {
-        return this.fetchDatabaseSettings(this.activeDatabase(), refresh)
+    fetchData() {
+        return this.fetchDatabaseSettings(this.activeDatabase())
             .done(() => this.processAfterFetch());
     }
 
@@ -384,24 +390,12 @@ class databaseSettings extends viewModelBase {
             return _.uniq(this.allEntries().map(entry => entry.data.Metadata.Category)).sort();
         });
         
-        const categories = this.allCategoryNames().map(x => new categoryInfo(x, this.getNumberOfCustomizedEntires(x)));
+        const categories = this.allCategoryNames().map(x => new categoryInfo(x));
         this.categoriesInfo(categories);
         
         this.hasPendingValues(this.allEntries().some(entry => entry instanceof models.databaseEntry && entry.hasPendingContent()));
         
         this.summaryGridController().reset(true);
-    }
-
-    private getNumberOfCustomizedEntires(category: string) {
-        let customizedEntries = 0;
-        
-        this.allEntries().forEach(x => {
-            if (x instanceof models.databaseEntry && x.data.Metadata.Category === category && x.override()) {
-                customizedEntries++;
-            }
-        });
-        
-        return customizedEntries;
     }
     
     cancelEdit() {
@@ -418,15 +412,11 @@ class databaseSettings extends viewModelBase {
     }
 
     confirmUnsavedchanges() {
-        const text = `<div class="padding">
-                         <div class='bg-warning text-warning padding padding-xs margin-right'><i class='icon-warning margin-right margin-right-sm'></i>You have unsaved changes !</div>
-                         <div class="margin-top">Clicking <strong>OK</strong> will reload all database settings from the server <strong>without saving</strong> your changes.</div>
-                      </div>`;
-
-        return this.confirmationMessage("Are you sure?", text,
+        const text = `<div class="margin-top">Discarding the changes will reload all current database settings from the server.</div>`;
+        return this.confirmationMessage("You have unsaved changes.", text,
             {
                 html: true,
-                buttons: ["Cancel", "OK"]
+                buttons: ["Stay on this page", "Discard changes"]
             });
     }
     
@@ -439,23 +429,32 @@ class databaseSettings extends viewModelBase {
     switchToEditMode() {
         if (this.editModeHasBeenEntered) {
             this.viewMode("editMode");
-            this.setupEditMode();
+            this.setupEditMode(false);
         } else {
-            this.confirmationMessage("Are you an expert?",
-                "Modify the database settings only if you know what you are doing!", { buttons: ["Cancel", "OK"] })
+            const text = `<div class="margin-top">Modify the database settings only if you know what you are doing.</div>`;
+            this.confirmationMessage("Are you an expert?", text, { html: true, buttons: ["Cancel", "OK"] })
                 .done(() => {
                     this.editModeHasBeenEntered = true;
                     this.viewMode("editMode");
-                    this.initCategoryGrid();
-                    this.setupEditMode(false);
+                    this.setupEditMode(true);
                 });
         }
     }
     
-    private setupEditMode(reset: boolean = true) {
+    private setupEditMode(firstTime: boolean) {
         this.dirtyFlag().reset();
+
+        this.categoriesInfo().forEach(category => {
+            category.customizedEntriesCount = ko.pureComputed<number>(() => {
+                return this.allEntries().filter(entry => entry.data.Metadata.Category === category.name() &&
+                    entry instanceof models.databaseEntry &&
+                    entry.override()).length;
+            });
+        });
         
-        if (reset) {
+        if (firstTime) {
+            this.initCategoryGrid();
+        } else {
             this.categoriesGridController().reset(false);
         }
         
@@ -467,15 +466,6 @@ class databaseSettings extends viewModelBase {
 
             if (entry instanceof models.databaseEntry) {
                 entry.override.subscribe((override) => {
-                    
-                    const category = this.categoriesInfo().find(x => x.name() === entry.data.Metadata.Category);
-                    const currentCustomizedCount = category.customizedEntriesCount();
-                    if (override) {
-                        category.customizedEntriesCount(currentCustomizedCount+1)
-                    } else {
-                        category.customizedEntriesCount(currentCustomizedCount-1)
-                    }
-                    
                     this.categoriesGridController().reset(false);
                     this.setCategory(entry.data.Metadata.Category);
                 });
@@ -506,15 +496,15 @@ class databaseSettings extends viewModelBase {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    readonly howToReloadDatabaseHtml = `<h4 class="">There are two ways to reload the database:</h4>
+    readonly howToReloadDatabaseHtml = `<h4>There are two ways to reload the database:</h4>
                                         <ul>
                                             <li>
                                                 <small>
-                                                    Disable and then enable the database from the databases-list-view in the Studio.<br>
+                                                    Disable and then enable the database from the databases view in the Studio.<br>
                                                     This will reload the database on all the cluster nodes immediately.
                                                 </small>
                                             </li>
-                                            <li class=\"margin-top margin-top-sm\">
+                                            <li class="margin-top margin-top-sm">
                                                 <small>
                                                     Restart RavenDB on all nodes.<br>
                                                     The database settings configuration will become effective per node that is restarted.

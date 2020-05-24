@@ -39,17 +39,14 @@ export abstract class settingsEntry {
         
         this.descriptionHtml = ko.pureComputed(() => {
             const rawDescription = data.Metadata.Description;
-            return rawDescription ? 
-                `<div><span>${genUtils.escapeHtml(rawDescription)}</span></div>` :
-                `<div><span class="text-muted">No description is available</span></div>`;
+            return rawDescription ?
+                `<div>${genUtils.escapeHtml(rawDescription)}</div>` :
+                `<div class="text-muted">No description is available</div>`;
         });
         
         this.entryClassForSummaryMode = ko.pureComputed(() => {
-            if (this.hasPendingContent()) {
-                return "highlight-key";
-            }
-
-            return this.effectiveValueOrigin() === "Database" ? "highlight-key" : "";
+            return this.hasPendingContent() || 
+                   this.effectiveValueOrigin() === "Database" ? "highlight-key" : "";
         });
     }
 
@@ -194,14 +191,6 @@ export abstract class databaseEntry<T> extends settingsEntry {
         this.initValidation();
     }
 
-    getEntrySetting(): setttingsItem | null {
-        if (!this.override()) {
-            return null;
-        }
-
-        return { key: this.keyName(), value: this.effectiveValue() };
-    }
-
     useDefaultValue() {
         this.initCustomizedValue(this.data.Metadata.DefaultValue);
     }
@@ -324,7 +313,7 @@ export abstract class numberEntry extends databaseEntry<number | null> {
 
 export class integerEntry extends numberEntry {
 
-    initCustomizedValue(value?: string) {
+    initCustomizedValue(value: string) {
         const integerValue = value ? parseInt(value) : null;
         this.customizedDatabaseValue(integerValue);
     }
@@ -344,7 +333,7 @@ export class integerEntry extends numberEntry {
 
 export class doubleEntry extends numberEntry {
 
-    initCustomizedValue(value?: string) : void {
+    initCustomizedValue(value: string) {
         const doubleValue = value ? parseFloat(value) : null;
         this.customizedDatabaseValue(doubleValue);
     }
@@ -357,7 +346,7 @@ export class doubleEntry extends numberEntry {
 export class sizeEntry extends numberEntry {
     sizeUnit = ko.observable<string>(this.data.Metadata.SizeUnit);
 
-    initCustomizedValue(value?: string) {
+    initCustomizedValue(value: string) {
         const sizeValue = value ? parseInt(value) : null;
         this.customizedDatabaseValue(sizeValue);
     }
@@ -379,7 +368,7 @@ export class timeEntry extends numberEntry {
     timeUnit = ko.observable<string>();
     specialTimeEntry = "Indexing.MapTimeoutInSec"; // Not nullable and default value is -1
 
-    initCustomizedValue(value?: string) {
+    initCustomizedValue(value: string) {
         const timeValue = value ? parseInt(value) : null;
         this.customizedDatabaseValue(timeValue);
 
