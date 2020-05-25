@@ -31,7 +31,7 @@ namespace SlowTests.MailingList.Everett
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -99,7 +99,7 @@ namespace SlowTests.MailingList.Everett
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {

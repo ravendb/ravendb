@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson
 {
-    public class JsonNetSerializationConventions : ISerializationConventions
+    public class NewtonsoftJsonSerializationConventions : ISerializationConventions
     {
         private BlittableJsonConverter _defaultConverter;
         private IContractResolver _jsonContractResolver;
@@ -21,7 +21,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
 
         public DocumentConventions Conventions { get; private set; }
 
-        public JsonNetSerializationConventions()
+        public NewtonsoftJsonSerializationConventions()
         {
             _defaultConverter = new BlittableJsonConverter(this);
             _jsonEnumerableConverter = new JsonEnumerableConverter(this);
@@ -86,7 +86,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
 
             if (_deserializeEntityFromBlittable == null)
-                _deserializeEntityFromBlittable = new JsonNetBlittableEntitySerializer(this).EntityFromJsonStream;
+                _deserializeEntityFromBlittable = new NewtonsoftJsonBlittableEntitySerializer(this).EntityFromJsonStream;
         }
 
         IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;
@@ -134,9 +134,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             return (T)DeserializeEntityFromBlittable(typeof(T), json);
         }
 
-        private JsonNetJsonSerializer CreateInitialSerializer()
+        private NewtonsoftJsonJsonSerializer CreateInitialSerializer()
         {
-            return new JsonNetJsonSerializer
+            return new NewtonsoftJsonJsonSerializer
             {
                 DateParseHandling = DateParseHandling.None,
                 ObjectCreationHandling = ObjectCreationHandling.Auto,
@@ -148,7 +148,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             };
         }
 
-        private void PostJsonSerializerInitiation(JsonNetJsonSerializer jsonSerializer)
+        private void PostJsonSerializerInitiation(NewtonsoftJsonJsonSerializer jsonSerializer)
         {
             if (Conventions.SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());

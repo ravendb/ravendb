@@ -24,7 +24,7 @@ namespace SlowTests.MailingList
 
         private static void ModifyStore(DocumentStore store)
         {
-            store.Conventions.Serialization = new JsonNetSerializationConventions
+            store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
             {
                 CustomizeJsonSerializer = serializers => serializers.Converters.Add(new CustomerNumberJsonConverter())
             };

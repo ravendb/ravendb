@@ -237,7 +237,7 @@ namespace Raven.Server.Documents
 
         internal static JsonSerializer GetJsonSerializer()
         {
-            var jsonSerializer = (JsonNetJsonSerializer)DocumentConventions.DefaultForServer.Serialization.CreateSerializer();
+            var jsonSerializer = (NewtonsoftJsonJsonSerializer)DocumentConventions.DefaultForServer.Serialization.CreateSerializer();
             jsonSerializer.Converters.Add(SliceJsonConverter.Instance);
             jsonSerializer.Converters.Add(Raven.Server.Json.Converters.BlittableJsonConverter.Instance);
             jsonSerializer.Converters.Add(LazyStringValueJsonConverter.Instance);

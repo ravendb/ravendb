@@ -37,7 +37,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             if (jsonSerializer == null)
                 throw new ArgumentNullException(nameof(jsonSerializer));
 
-            var serializer = (JsonNetJsonSerializer)jsonSerializer;
+            var serializer = (NewtonsoftJsonJsonSerializer)jsonSerializer;
             var old = serializer.ObjectCreationHandling;
             serializer.ObjectCreationHandling = ObjectCreationHandling.Replace;
 

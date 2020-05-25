@@ -83,7 +83,7 @@ namespace SlowTests.MailingList
                 {
                     ModifyDocumentStore = ss =>
                     {
-                        ss.Conventions.Serialization = new JsonNetSerializationConventions
+                        ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                         {
                             CustomizeJsonSerializer = s => { s.ContractResolver = new CamelCasePropertyNamesContractResolver(); }
                         };

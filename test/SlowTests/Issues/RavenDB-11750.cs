@@ -87,7 +87,7 @@ namespace SlowTests.Issues
 
         public static void ModifyDocumentStore(IDocumentStore documentStore)
         {
-            var serializationConventions = (JsonNetSerializationConventions)documentStore.Conventions.Serialization;
+            var serializationConventions = (NewtonsoftJsonSerializationConventions)documentStore.Conventions.Serialization;
             Action<JsonSerializer> previousCustomSerializer = serializationConventions.CustomizeJsonSerializer;
             serializationConventions.CustomizeJsonSerializer = (serializer =>
             {
