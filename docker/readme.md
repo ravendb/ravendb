@@ -17,11 +17,19 @@ The files here support building and running RavenDB 5.0 in a docker container on
 Simplest way to run and try RavenDB out is:
 
 Linux image:
+
 ```
 $ docker run -p 8080:8080 ravendb/ravendb:5.0-ubuntu-latest
 ```
 
+Ubuntu ARM image:
+
+```
+$ docker run -p 8080:8080 ravendb/ravendb:4.2-ubuntu-arm-latest
+```
+
 Windows image:
+
 ```
 $ docker run -p 8080:8080 ravendb/ravendb:5.0-windows-nanoserver-latest
 ```
@@ -37,16 +45,16 @@ Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
 |Option|Default|Description|
-|------|:-----:|-----------|
+| ---------------------------------- | :--------: | --------------------------------------------------------------------------------------------------------------------------------------- |
 |`-DryRun`| | print `docker run` command and exit |
 |`-LogsMode [log level]`| Operations | set logging level (Operations, Information) |
-|`-ConfigPath [absolute file path]` | | *absolute* path to settings file used by RavenDB inside the container |
+| `-ConfigPath [absolute file path]` |            | _absolute_ path to settings file used by RavenDB inside the container                                                                   |
 | `-DataDir [absolute dir path]` || host directory mounted to the volume used for persistence of RavenDB data (if not provided a regular docker volume is going to be used) |
 | `-BindPort [port]` | 8080 | the port number on which RavenDB Server is exposed on the container |
 | `-BindTcpPort [port]` | 38888 | the port number on which RavenDB Server listens for TCP connections exposed on the container |
 | `-NoSetup` | | disable setup wizard |
 | `-RemoveOnExit` || removes container on server process exit |
-| `-PublicServerUrl` || set the public url under which server is available to other nodes or admins (e.g. http://4.live-test.ravendb.net:80)
+| `-PublicServerUrl`                 |            | set the public url under which server is available to other nodes or admins (e.g. http://4.live-test.ravendb.net:80)                    |
 | `-PublicTcpServerUrl` || set the url under which server is available to the outside world (e.g. tcp://4.live-test.ravendb.net:38888) |
 | `-Unsecured` | | HERE BE DRAGONS - disable authentication for RavenDB server |
 
@@ -81,9 +89,11 @@ To configure RavenDB one can use (in order of precedence):
 #### Environment variables
 
 Environment variables prefixed with `RAVEN_` can be used to configure RavenDB server. E.g. one can use:
+
 ```bash
 RAVEN_Setup_Mode='None'
 ```
+
 to disable RavenDB Setup Wizard.
 
 #### FAQ
@@ -91,6 +101,7 @@ to disable RavenDB Setup Wizard.
 ##### I'm using compose / doing automated installation. How do I disable setup wizard?
     
 Set `Setup.Mode` configuration option to `None` like so:
+
 ```bash
 RAVEN_Setup_Mode='None'
 ```
@@ -98,6 +109,7 @@ RAVEN_Setup_Mode='None'
 ##### I want to try it out on my local / development machine. How do I run unsecured server?
 
 Set env variables like so:
+
 ```bash
 RAVEN_Setup_Mode='None'
 RAVEN_Security_UnsecuredAccessAllowed='PrivateNetwork'
@@ -125,4 +137,6 @@ These images were built using the following Dockerfiles:
 
 - [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.0/docker/ravendb-nanoserver/Dockerfile)
 
-- [Ubuntu 18.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.0/docker/ravendb-linux/Dockerfile)
+-   [Ubuntu 18.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.0/docker/ravendb-ubuntu/Dockerfile.x64)
+
+-   [Ubuntu 18.04 ARM image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.0/docker/ravendb-ubuntu/Dockerfile.arm32v7)

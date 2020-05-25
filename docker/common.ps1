@@ -30,3 +30,29 @@ CALLSTACK:$(Get-PSCallStack | Out-String)
         throw $msg
     }
 }
+
+function GetUbuntuImageTags($repo, $version, $arch) {
+    switch ($arch) {
+        "x64" { 
+            return @(
+                "$($repo):$($version)-ubuntu.18.04-x64",
+                "$($repo):latest",
+                "$($repo):ubuntu-latest",
+                "$($repo):4.2-ubuntu-latest"
+            )
+            break;
+        }
+        "arm32v7" {
+            return @(
+                "$($repo):$($version)-ubuntu.18.04-arm32v7",
+                "$($repo):ubuntu-arm32v7-latest",
+                "$($repo):4.2-ubuntu-arm32v7-latest"
+            )
+            break;
+        }
+        Default {
+            throw "Arch not supported."
+        }
+    }
+        
+}

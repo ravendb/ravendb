@@ -385,6 +385,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new MachineProcessorCount());
             store.Add(new MachineAssignedProcessorCount());
 
+            store.Add(new ServerBackupsCurrent(server.ServerStore));
+            store.Add(new ServerBackupsMax(server.ServerStore));
+
             return store;
         }
 
