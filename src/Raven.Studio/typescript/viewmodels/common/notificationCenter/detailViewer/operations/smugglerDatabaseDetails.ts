@@ -108,11 +108,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
                 result.push(this.mapToExportListItem("Counters", status.Counters));
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
+                result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries));
                 
                 if (this.op.taskType() === "DatabaseImport") {
                     result.push(this.mapToExportListItem("Tombstones", status.Tombstones));
                     result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
-                    result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries));
                 }
             }
 
@@ -334,7 +334,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
     }
 
     private showSpeed(name: string) {
-        return name === "Documents" || name === "Revisions" || name === "Counters";
+        return name === "Documents" || name === "Revisions" || name === "Counters" || name === "TimeSeries";
     }
     
     private calcSpeedText(count: number, startTime: string) {
