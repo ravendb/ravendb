@@ -21,6 +21,8 @@ class genUtils {
 
     static dateFormat = "YYYY MMMM Do, h:mm A";
     
+    static readonly utcFullDateFormat = "YYYY-MM-DD[T]HH:mm:ss.SSS[Z]";
+    
     /***  IP Address Methods  ***/
 
     static isLocalhostIpAddress(ip: string): boolean {

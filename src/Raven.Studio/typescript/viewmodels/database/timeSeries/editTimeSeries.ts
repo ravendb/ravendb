@@ -32,6 +32,11 @@ class editTimeSeries extends viewModelBase {
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
     private columnPreview = new columnPreviewPlugin<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>();
     
+    private columnsCacheInfo = {
+        hasTag: false,
+        valuesCount: 0
+    };
+    
     constructor() {
         super();
         
@@ -67,23 +72,50 @@ class editTimeSeries extends viewModelBase {
         const grid = this.gridController();
         grid.headerVisible(true);
 
+        const check = new checkedColumn(true);
+        
         const editColumn = new actionColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(
             grid, item => this.editItem(item), "Edit", `<i class="icon-edit"></i>`, "70px",
             {
                 title: () => 'Edit item'
             });
+
+        const timestampColumn = new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%");
         
-        grid.init((s, t) => this.fetchSeries(s, t), () => {
-            const columns = timeSeriesModel.aggregationColumns.join(", ")
-            const valuesHeader = this.isAggregation() ? "Values (" + columns + ")" : "Values";
+        grid.init((s, t) => this.fetchSeries(s, t).done(result => this.checkColumns(result)), () => {
+            const { valuesCount, hasTag } = this.columnsCacheInfo;
             
-            return [
-                new checkedColumn(true),
-                editColumn,
-                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => formatTimeSeriesDate(x.Timestamp), "Date", "20%"),
-                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Tag, "Tag", "20%"),
-                new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Values.join(", "), valuesHeader, "40%")
-            ]
+            let columnNames: string[];
+            
+            if (this.isAggregation()) {
+                const aggregationColumnNames = timeSeriesModel.aggregationColumns;
+                const aggregationsCount = aggregationColumnNames.length;
+                if (valuesCount > aggregationsCount) {
+                    // looks like we have aggregation on more than one value - include value index 
+                    columnNames = _.range(0, valuesCount)
+                        .map(idx => aggregationColumnNames[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount)  + ")");
+                } else {
+                    columnNames = aggregationColumnNames;    
+                }
+            } else {
+                columnNames = _.range(0, valuesCount)
+                    .map(idx => "Value #" + idx);
+            }
+
+            const valueColumns = columnNames
+                .map((name, idx) => 
+                    new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(
+                        grid, x => x.Values[idx] ?? "n/a", name, "130px"));
+            
+            const columns = [ check, editColumn, timestampColumn ];
+
+            columns.push(...valueColumns);
+            
+            if (hasTag) {
+                columns.push(new textColumn<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>(grid, x => x.Tag, "Tag", "20%"));
+            }
+                        
+            return columns;
         });
 
         this.columnPreview.install("virtual-grid", ".js-time-series-tooltip",
@@ -143,6 +175,28 @@ class editTimeSeries extends viewModelBase {
         
         return fetchTask;
     }
+    
+    private checkColumns(result: pagedResult<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>) {
+        let dirty = false;
+        
+        if (!this.columnsCacheInfo.hasTag) {
+            const hasTag = result.items.find(x => !!x.Tag);
+            if (hasTag) {
+                this.columnsCacheInfo.hasTag = true;
+                dirty = true;
+            }
+        }
+        
+        const valuesCount = _.max(result.items.map(x => x.Values.length));
+        if (valuesCount > this.columnsCacheInfo.valuesCount) {
+            this.columnsCacheInfo.valuesCount = valuesCount;
+            dirty = true;
+        }
+
+        if (dirty) {
+            this.gridController().markColumnsDirty();
+        }
+    }
 
     private refresh(hard = false) {
         this.gridController().reset(hard);
@@ -188,7 +242,16 @@ class editTimeSeries extends viewModelBase {
         this.documentId(args.docId);
     }
     
+    private cleanColumnsCache() {
+        this.columnsCacheInfo = {
+            valuesCount: 0,
+            hasTag: false
+        };
+    }
+    
     changeCurrentSeries(name: string) {
+        this.cleanColumnsCache();
+        
         this.timeSeriesName(name);
         
         router.navigate(appUrl.forEditTimeSeries(name, this.documentId(), this.activeDatabase()), false);

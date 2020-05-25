@@ -8,6 +8,8 @@ interface virtualGridController<T> {
 
     init(fetcher: (skip: number, pageSize: number) => JQueryPromise<pagedResult<T>>, columnsProvider: (containerWidth:number, results: pagedResult<T>) => virtualColumn[]): void;
 
+    markColumnsDirty: () => void;
+    
     headerVisible(value: boolean): void;
 
     reset(hard?: boolean, retainSort?: boolean): void;
