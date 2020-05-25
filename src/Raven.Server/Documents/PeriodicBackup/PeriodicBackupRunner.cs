@@ -263,8 +263,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     message += $", error: {e.Message}";
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info(message);
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations(message);
 
                     _database.NotificationCenter.Add(AlertRaised.Create(
                         _database.Name,
@@ -334,8 +334,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (BackupDelayException e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Backup task will be retried in {(int)e.DelayPeriod.TotalSeconds} seconds.", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup task will be retried in {(int)e.DelayPeriod.TotalSeconds} seconds, Reason: {e.Message}");
 
                 // we'll retry in one minute
                 var backupTaskDetails = new NextBackup
@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     };
                 }
 
-                _serverStore.ConcurrentBackupsCounter.StartBackup(periodicBackup.Configuration.Name);
+                _serverStore.ConcurrentBackupsCounter.StartBackup(periodicBackup.Configuration.Name, _logger);
 
                 try
                 {
@@ -522,11 +522,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                         periodicBackup.BackupStatus.LastIncrementalBackupInternal = startTimeInUtc;
 
                     BackupTask.SaveBackupStatus(periodicBackup.BackupStatus, _database, _logger);
-                    ScheduleNextBackup(periodicBackup);
 
                     var message = $"Failed to start the backup task: '{periodicBackup.Configuration.Name}'";
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations(message, e);
+
+                    ScheduleNextBackup(periodicBackup, null);
 
                     _database.NotificationCenter.Add(AlertRaised.Create(
                         _database.Name,
@@ -550,6 +551,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, Action<IOperationProgress> onProgress, TaskCompletionSource<IOperationResult> tcs)
         {
+            BackupResult backupResult = null;
+
             try
             {
                 Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
@@ -557,7 +560,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 using (_database.PreventFromUnloading())
                 {
-                    tcs.SetResult(backupTask.RunPeriodicBackup(onProgress));
+                    backupResult = (BackupResult)backupTask.RunPeriodicBackup(onProgress);
+                    tcs.SetResult(backupResult);
                 }
             }
             catch (OperationCanceledException)
@@ -573,15 +577,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             finally
             {
-                ScheduleNextBackup(periodicBackup);
+                ScheduleNextBackup(periodicBackup, backupResult?.Elapsed);
             }
         }
 
-        private void ScheduleNextBackup(PeriodicBackup periodicBackup)
+        private void ScheduleNextBackup(PeriodicBackup periodicBackup, TimeSpan? elapsed)
         {
             try
             {
-                _serverStore.ConcurrentBackupsCounter.FinishBackup();
+                _serverStore.ConcurrentBackupsCounter.FinishBackup(periodicBackup.Configuration.Name, elapsed, _logger);
 
                 periodicBackup.RunningTask = null;
                 periodicBackup.RunningBackupTaskId = null;
@@ -879,8 +883,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             catch (Exception e)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info("Error when disposing periodic backup runner task", e);
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations("Error when disposing periodic backup runner task", e);
             }
         }
 

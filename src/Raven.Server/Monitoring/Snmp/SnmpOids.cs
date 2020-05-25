@@ -137,6 +137,12 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of assigned processors on the machine")]
             public const string MachineAssignedProcessorCount = "1.12.2";
 
+            [Description("Number of backups currently running")]
+            public const string ServerBackupsCurrent = "1.13.1";
+
+            [Description("Max number of backups that can run concurrently")]
+            public const string ServerBackupsMax = "1.13.2";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();
