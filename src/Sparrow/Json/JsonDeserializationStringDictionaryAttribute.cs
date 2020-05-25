@@ -3,11 +3,11 @@
 namespace Sparrow.Json
 {
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    internal sealed class JsonDeserializationDictionaryAttribute : Attribute
+    internal sealed class JsonDeserializationStringDictionaryAttribute : Attribute
     {
         public readonly StringComparison StringComparison;
 
-        public JsonDeserializationDictionaryAttribute(StringComparison stringComparison)
+        public JsonDeserializationStringDictionaryAttribute(StringComparison stringComparison)
         {
             StringComparison = stringComparison;
         }

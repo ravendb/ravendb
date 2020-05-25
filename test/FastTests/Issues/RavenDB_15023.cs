@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -51,6 +52,15 @@ namespace FastTests.Issues
                 Assert.Equal(StringComparer.Ordinal, GetComparer(myClass.InterfaceDictionary));
                 Assert.Equal(StringComparer.InvariantCultureIgnoreCase, GetComparer(myClass.RegularDictionaryWithAttribute));
                 Assert.Equal(StringComparer.OrdinalIgnoreCase, GetComparer(myClass.InterfaceDictionaryWithAttribute));
+
+                myClass = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<MyClass>(json);
+
+                var dictionary = new Dictionary<string, object>();
+
+                Assert.Equal(GetComparer(dictionary), GetComparer(myClass.RegularDictionary));
+                Assert.Equal(GetComparer(dictionary), GetComparer(myClass.InterfaceDictionary));
+                Assert.Equal(StringComparer.InvariantCultureIgnoreCase, GetComparer(myClass.RegularDictionaryWithAttribute));
+                Assert.Equal(StringComparer.OrdinalIgnoreCase, GetComparer(myClass.InterfaceDictionaryWithAttribute));
             }
         }
 
@@ -65,10 +75,10 @@ namespace FastTests.Issues
 
             public IDictionary<string, object> InterfaceDictionary { get; set; }
 
-            [JsonDeserializationDictionary(StringComparison.InvariantCultureIgnoreCase)]
+            [JsonDeserializationStringDictionary(StringComparison.InvariantCultureIgnoreCase)]
             public Dictionary<string, object> RegularDictionaryWithAttribute { get; set; }
 
-            [JsonDeserializationDictionary(StringComparison.OrdinalIgnoreCase)]
+            [JsonDeserializationStringDictionary(StringComparison.OrdinalIgnoreCase)]
             public IDictionary<string, object> InterfaceDictionaryWithAttribute { get; set; }
         }
     }
