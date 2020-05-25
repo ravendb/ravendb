@@ -1,15 +1,38 @@
 using System;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
     public class ConcurrentBackupsCounter
     {
+        private readonly object _locker = new object();
+
         private readonly LicenseManager _licenseManager;
         private int _concurrentBackups;
         private int _maxConcurrentBackups;
         private readonly bool _skipModifications;
+
+        public int MaxNumberOfConcurrentBackups
+        {
+            get
+            {
+                lock (_locker)
+                {
+                    return _maxConcurrentBackups;
+                }
+            }
+        }
+
+        public int CurrentNumberOfBackups
+        {
+            get
+            {
+                lock (_locker)
+                {
+                    return _maxConcurrentBackups - _concurrentBackups;
+                }
+            }
+        }
 
         public ConcurrentBackupsCounter(int? maxNumberOfConcurrentBackupsConfiguration, LicenseManager licenseManager)
         {
@@ -34,7 +57,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void StartBackup(string backupName)
         {
-            lock (this)
+            lock (_locker)
             {
                 if (_concurrentBackups <= 0)
                 {
@@ -53,7 +76,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void FinishBackup()
         {
-            lock (this)
+            lock (_locker)
             {
                 _concurrentBackups++;
             }
@@ -67,7 +90,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var utilizedCores = _licenseManager.GetCoresLimitForNode();
             var newMaxConcurrentBackups = GetNumberOfCoresToUseForBackup(utilizedCores);
 
-            lock (this)
+            lock (_locker)
             {
                 var diff = newMaxConcurrentBackups - _maxConcurrentBackups;
                 _maxConcurrentBackups = newMaxConcurrentBackups;
