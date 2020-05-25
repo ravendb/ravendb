@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
@@ -21,15 +20,15 @@ namespace FastTests.Server.Documents.TimeSeries
             using (var db = CreateDocumentDatabase())
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             {
-                var toAppend = new List<TimeSeriesStorage.Reader.SingleResult>();
+                var toAppend = new List<SingleResult>();
                 var baseline = DateTime.UtcNow;
                 for (int i = 0; i < 256; i++)
                 {
-                    toAppend.Add(new TimeSeriesStorage.Reader.SingleResult
+                    toAppend.Add(new SingleResult
                     {
                         Timestamp = baseline.AddMinutes(i),
                         Tag = ctx.GetLazyString(i.ToString()),
-                        Values = new double[]{1}
+                        Values = new double[] { 1 }
                     });
                 }
                 using (var tx = ctx.OpenWriteTransaction())
