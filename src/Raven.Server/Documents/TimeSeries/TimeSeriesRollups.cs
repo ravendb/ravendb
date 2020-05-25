@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (_isFirstInTopology == false)
                         continue; // we execute the actual rollup only on the primary node to avoid conflicts
 
-                    var rollupEnd = new DateTime(NextRollup(_now.Add(-policy.AggregationTime), policy));
+                    var rollupEnd = new DateTime(NextRollup(_now, policy)).Add(-policy.AggregationTime).AddMilliseconds(-1);
                     var reader = tss.GetReader(context, item.DocId, item.Name, rollupStart, rollupEnd);
 
                     if (previouslyAggregated)
@@ -572,7 +572,7 @@ namespace Raven.Server.Documents.TimeSeries
             AggregationType.Count
         };
 
-        public struct TimeSeriesAggregation
+        public readonly struct TimeSeriesAggregation
         {
             private readonly AggregationMode _mode;
             public bool Any => Values.Count > 0;
@@ -692,6 +692,7 @@ namespace Raven.Server.Documents.TimeSeries
                     case AggregationType.Count:
                         if (double.IsNaN(Values[i]))
                             Values[i] = 0;
+
                         if (mode == AggregationMode.FromAggregated)
                             Values[i] = Values[i] + val;
                         else
@@ -794,7 +795,7 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 results.Add(new SingleResult
                 {
-                    Timestamp = rangeSpec.End.AddTicks(-1),
+                    Timestamp = rangeSpec.Start,
                     Values = new Memory<double>(aggStates.Values.ToArray()),
                     Status = TimeSeriesValuesSegment.Live,
                     Type = SingleResultType.RolledUp
@@ -813,7 +814,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     results.Add(new SingleResult
                     {
-                        Timestamp = rangeSpec.End.AddTicks(-1),
+                        Timestamp = rangeSpec.Start,
                         Values = new Memory<double>(aggStates.Values.ToArray()),
                         Status = TimeSeriesValuesSegment.Live,
                         Type = SingleResultType.RolledUp

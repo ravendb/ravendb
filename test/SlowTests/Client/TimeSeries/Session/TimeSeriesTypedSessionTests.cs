@@ -638,14 +638,11 @@ select out()
                         .AddParameter("end", now.AddDays(1));
 
 
-                    var result = query.First();
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By1Day'
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    Assert.Equal(expected, result.Count);
+                    Assert.Equal(5, result.Results[count - 1440].Values.Length);
+                    Assert.Equal(5 * 6, result.Results[count - 1441].Values.Length);
 
                     foreach (var res in result.Results)
                     {

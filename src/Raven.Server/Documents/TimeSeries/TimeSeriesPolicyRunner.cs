@@ -323,6 +323,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (config.Disabled)
                         continue;
                 
+
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
@@ -333,7 +334,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         foreach (var policy in config.Policies)
                         {
-                            await ApplyRetention(context, collectionName, policy, now);
+                            await ApplyRetention(context, collectionName, policy, now.Add(-policy.AggregationTime));
                         }
                     }
                 }

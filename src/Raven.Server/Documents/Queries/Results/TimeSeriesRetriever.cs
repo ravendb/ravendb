@@ -63,7 +63,6 @@ namespace Raven.Server.Documents.Queries.Results
 
             var reader = new TimeSeriesMultiReader(_context, documentId, source, collection, min, max, offset);
 
-            long count = 0;
             var array = new DynamicJsonArray();
 
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
@@ -103,7 +102,6 @@ namespace Raven.Server.Documents.Queries.Results
                     if (ShouldFilter(cur, timeSeriesFunction.Where))
                         continue;
 
-                    count++;
                     for (int i = 0; i < aggStates.Length; i++)
                     {
                         aggStates[i].Step(cur.Values.Span, reader.CurrentIsRaw);
@@ -131,6 +129,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             BlittableJsonReaderObject GetRawValues()
             {
+                var count = 0L;
                 foreach (var singleResult in reader.AllValues())
                 {
                     if (ShouldFilter(singleResult, timeSeriesFunction.Where))
@@ -149,12 +148,10 @@ namespace Raven.Server.Documents.Queries.Results
                         [nameof(TimeSeriesEntry.Values)] = vals,
                         [nameof(TimeSeriesEntry.IsRollup)] = singleResult.Type == SingleResultType.RolledUp,
                     });
-
-                    count++;
+                    count += reader.CurrentIsRaw ? 1 : (long)singleResult.Values.Span[(int)AggregationType.Count];
                 }
 
                 _argumentValuesDictionary.Clear();
-
                 return GetFinalResult(array, count, addProjectionToResult);
             }
 
@@ -186,8 +183,6 @@ namespace Raven.Server.Documents.Queries.Results
                             {
                                 aggStates[i].Segment(span, reader.CurrentIsRaw);
                             }
-
-                            count += span[0].Count;
                         }
                     }
                 }
@@ -199,7 +194,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 _argumentValuesDictionary?.Clear();
 
-                return GetFinalResult(array, count, addProjectionToResult);
+                return GetFinalResult(array, aggStates[0].TotalCount, addProjectionToResult);
             }
 
             bool ShouldFilter(SingleResult singleResult, QueryExpression filter)
@@ -951,9 +946,9 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (func.GroupBy != null)
             {
-                result["From"] = start;
-                result["To"] = next;
-                result["Count"] = new DynamicJsonArray(aggStates[0].Count);
+                result[nameof(TimeSeriesRangeAggregation.From)] = start;
+                result[nameof(TimeSeriesRangeAggregation.To)] = next;
+                result[nameof(TimeSeriesRangeAggregation.Count)] = new DynamicJsonArray(aggStates[0].Count);
             }
 
             for (int i = 0; i < aggStates.Length; i++)

@@ -520,7 +520,7 @@ namespace Raven.Server.Documents.Queries.AST
     }
 
 
-    public struct TimeSeriesAggregation
+    public class TimeSeriesAggregation
     {
         public AggregationType Aggregation;
         public bool Any => _values.Count > 0;
@@ -529,6 +529,7 @@ namespace Raven.Server.Documents.Queries.AST
         private readonly List<long> _count;
 
         public IEnumerable<object> Count => _count.Cast<object>();
+        public long TotalCount;
 
         public TimeSeriesAggregation(AggregationType type)
         {
@@ -596,6 +597,7 @@ namespace Raven.Server.Documents.Queries.AST
 
                 _count[i] += values[i].Count;
             }
+            TotalCount += _count[0];
         }
 
 
@@ -650,9 +652,10 @@ namespace Raven.Server.Documents.Queries.AST
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
-
                 _count[i]++;
             }
+
+            TotalCount++;
         }
 
         private void SegmentOnRollup(Span<StatefulTimestampValue> values)
@@ -710,6 +713,7 @@ namespace Raven.Server.Documents.Queries.AST
                 val = values[index + (int)AggregationType.Count];
                 _count[i] += val.Count;
             }
+            TotalCount += _count[0];
         }
 
         private void StepOnRollup(Span<double> values)
@@ -767,6 +771,8 @@ namespace Raven.Server.Documents.Queries.AST
 
                 _count[i] += (long)values[index + (int)AggregationType.Count];
             }
+
+            TotalCount += (long)values[(int)AggregationType.Count];
         }
 
         public IEnumerable<object> GetFinalValues()
