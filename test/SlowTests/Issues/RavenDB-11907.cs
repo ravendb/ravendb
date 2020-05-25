@@ -21,7 +21,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonDeserializer = des => des.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
                     };

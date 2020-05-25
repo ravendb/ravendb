@@ -156,7 +156,7 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         public DocumentConventions()
         {
-            Serialization = new JsonNetSerializationConventions();
+            Serialization = new NewtonsoftJsonSerializationConventions();
 
             _topologyCacheLocation = AppContext.BaseDirectory;
 

@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = x => x.Conventions = new DocumentConventions
                 {
-                    Serialization = new JsonNetSerializationConventions
+                    Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = s =>
                         {

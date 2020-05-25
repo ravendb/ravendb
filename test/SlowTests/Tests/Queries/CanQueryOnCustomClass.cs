@@ -27,7 +27,7 @@ namespace SlowTests.Tests.Queries
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer => serializer.Converters.Add(new MoneyConverter())
                     };

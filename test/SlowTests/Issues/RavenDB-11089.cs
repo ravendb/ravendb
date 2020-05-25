@@ -55,7 +55,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -94,7 +94,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -131,7 +131,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -167,7 +167,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -221,7 +221,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -270,7 +270,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -325,7 +325,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -370,7 +370,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -425,7 +425,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -674,7 +674,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -755,7 +755,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -812,7 +812,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -853,7 +853,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -1025,7 +1025,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -1073,7 +1073,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -1144,7 +1144,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -1192,7 +1192,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {
@@ -1247,7 +1247,7 @@ from 'Users' as user select output(user)", queryAsString);
             {
                 ModifyDocumentStore = ss =>
                 {
-                    ss.Conventions.Serialization = new JsonNetSerializationConventions
+                    ss.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer =>
                         {

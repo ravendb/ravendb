@@ -20,7 +20,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = x =>
                 {
-                    x.Conventions.Serialization = new JsonNetSerializationConventions
+                    x.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonDeserializer = s =>
                         {
@@ -57,7 +57,7 @@ namespace SlowTests.Issues
                 {
                     NeverNullStringConverter converter = new NeverNullStringConverter();
 
-                    x.Conventions.Serialization = new JsonNetSerializationConventions
+                    x.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = s =>
                         {

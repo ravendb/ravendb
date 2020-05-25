@@ -26,7 +26,7 @@ namespace SlowTests.SlowTests.MailingList
             {
                 ModifyDocumentStore = s =>
                 {
-                    s.Conventions.Serialization = new JsonNetSerializationConventions
+                    s.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = serializer => serializer.ReferenceLoopHandling = ReferenceLoopHandling.Ignore
                     };

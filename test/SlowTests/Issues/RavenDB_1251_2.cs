@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = str =>
                 {
-                    str.Conventions.Serialization = new JsonNetSerializationConventions
+                    str.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter())
                     };
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
             {
                 ModifyDocumentStore = str =>
                 {
-                    str.Conventions.Serialization = new JsonNetSerializationConventions
+                    str.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                     {
                         CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter())
                     };

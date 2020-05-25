@@ -6,14 +6,14 @@ using Sparrow.Threading;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class JsonNetBlittableEntitySerializer
+    internal class NewtonsoftJsonBlittableEntitySerializer
     {
         private readonly LightWeightThreadLocal<BlittableJsonReader> _reader;
         private readonly LightWeightThreadLocal<IJsonSerializer> _deserializer;
 
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
-        public JsonNetBlittableEntitySerializer(ISerializationConventions conventions)
+        public NewtonsoftJsonBlittableEntitySerializer(ISerializationConventions conventions)
         {
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, null);
             _deserializer = new LightWeightThreadLocal<IJsonSerializer>(() => conventions.CreateDeserializer());

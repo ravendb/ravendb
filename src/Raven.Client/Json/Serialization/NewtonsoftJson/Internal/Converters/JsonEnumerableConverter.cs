@@ -11,11 +11,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
     {
         private readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
 
-        private readonly JsonNetSerializationConventions _conventions;
+        private readonly NewtonsoftJsonSerializationConventions _conventions;
 
         public override bool CanRead => false;
 
-        public JsonEnumerableConverter(JsonNetSerializationConventions conventions)
+        public JsonEnumerableConverter(NewtonsoftJsonSerializationConventions conventions)
         {
             if (conventions is null)
                 throw new ArgumentNullException(nameof(conventions));

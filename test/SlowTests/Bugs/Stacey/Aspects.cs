@@ -21,7 +21,7 @@ namespace SlowTests.Bugs.Stacey
         {
             ModifyDocumentStore = documentStore =>
             {
-                documentStore.Conventions.Serialization = new JsonNetSerializationConventions
+                documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
                     CustomizeJsonSerializer = serializer => serializer.TypeNameHandling = TypeNameHandling.All
                 };
