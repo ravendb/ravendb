@@ -14,15 +14,28 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
     {
         private readonly ClusterTransactionOperationsBase _clusterSession;
         private readonly DocumentConventions _conventions;
+        private readonly string _startsWith;
+        private readonly int _start;
+        private readonly int _pageSize;
         private readonly string[] _keys;
 
         public LazyGetCompareExchangeValuesOperation(ClusterTransactionOperationsBase clusterSession, DocumentConventions conventions, string[] keys)
         {
             if (keys == null || keys.Length == 0)
                 throw new ArgumentNullException(nameof(keys));
+
             _clusterSession = clusterSession ?? throw new ArgumentNullException(nameof(clusterSession));
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _keys = keys;
+        }
+
+        public LazyGetCompareExchangeValuesOperation(ClusterTransactionOperationsBase clusterSession, DocumentConventions conventions, string startsWith, int start, int pageSize)
+        {
+            _clusterSession = clusterSession ?? throw new ArgumentNullException(nameof(clusterSession));
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _startsWith = startsWith;
+            _start = start;
+            _pageSize = pageSize;
         }
 
         public object Result { get; private set; }
@@ -33,20 +46,33 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
-            StringBuilder queryBuilder = null;
+            StringBuilder pathBuilder = null;
 
-            foreach (var key in _keys)
+            if (_keys != null)
             {
-                if (_clusterSession.IsTracked(key))
-                    continue;
+                foreach (var key in _keys)
+                {
+                    if (_clusterSession.IsTracked(key))
+                        continue;
 
-                if (queryBuilder == null)
-                    queryBuilder = new StringBuilder("?");
+                    if (pathBuilder == null)
+                        pathBuilder = new StringBuilder("?");
 
-                queryBuilder.Append("&key=").Append(Uri.EscapeDataString(key));
+                    pathBuilder.Append("&key=").Append(Uri.EscapeDataString(key));
+                }
+            }
+            else
+            {
+                pathBuilder = new StringBuilder("?");
+
+                if (string.IsNullOrEmpty(_startsWith) == false)
+                    pathBuilder.Append("&startsWith=").Append(Uri.EscapeDataString(_startsWith));
+
+                pathBuilder.Append("&start=").Append(_start);
+                pathBuilder.Append("&pageSize=").Append(_pageSize);
             }
 
-            if (queryBuilder == null)
+            if (pathBuilder == null)
             {
                 Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out _);
                 return null;
@@ -56,7 +82,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             {
                 Url = "/cmpxchg",
                 Method = HttpMethods.Get,
-                Query = queryBuilder.ToString()
+                Query = pathBuilder.ToString()
             };
         }
 
@@ -80,12 +106,19 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 }
             }
 
-            foreach (var key in _keys)
+            if (_keys != null)
             {
-                if (_clusterSession.IsTracked(key))
-                    continue;
+                foreach (var key in _keys)
+                {
+                    if (_clusterSession.IsTracked(key))
+                        continue;
 
-                _clusterSession.RegisterMissingCompareExchangeValue(key);
+                    _clusterSession.RegisterMissingCompareExchangeValue(key);
+                }
+            }
+            else
+            {
+
             }
 
             Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out var notTrackedKeys);
