@@ -307,7 +307,7 @@ namespace Sparrow.Json
 
             static ConstantExpression GetJsonDeserializationDictionaryAttribute(List<Attribute> customAttributes)
             {
-                return Expression.Constant(customAttributes.SingleOrDefault(x => x is JsonDeserializationDictionaryAttribute) as JsonDeserializationDictionaryAttribute, typeof(JsonDeserializationDictionaryAttribute));
+                return Expression.Constant(customAttributes.SingleOrDefault(x => x is JsonDeserializationStringDictionaryAttribute) as JsonDeserializationStringDictionaryAttribute, typeof(JsonDeserializationStringDictionaryAttribute));
             }
         }
 
@@ -338,7 +338,7 @@ namespace Sparrow.Json
             return value;
         }
 
-        private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
             where T : struct
         {
             var dic = new Dictionary<string, T>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
@@ -358,7 +358,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
+        private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, TV> converter)
         {
             var isStringKey = typeof(TK) == typeof(string);
             var dictionary = new Dictionary<TK, TV>((IEqualityComparer<TK>)GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.Ordinal)); // we need to deserialize it as we got it, keys could be case sensitive - RavenDB-8713
@@ -424,7 +424,7 @@ namespace Sparrow.Json
             return (T)methodToCall.Invoke(null, new[] { obj });
         }
 
-        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static Dictionary<string, TEnum> ToDictionaryOfEnum<TEnum>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, TEnum>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -464,7 +464,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static Dictionary<string, string> ToDictionaryOfString(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, string>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -484,7 +484,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, T> converter)
+        private static Dictionary<string, List<T>> ToDictionaryOfList<T>(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute, Func<BlittableJsonReaderObject, T> converter)
         {
             var dic = new Dictionary<string, List<T>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -509,7 +509,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static Dictionary<string, List<string>> ToDictionaryOfStringList(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, List<string>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -534,7 +534,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static Dictionary<string, string[]> ToDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, string[]>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 
@@ -559,7 +559,7 @@ namespace Sparrow.Json
             return dic;
         }
 
-        private static Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationDictionaryAttribute jsonDeserializationDictionaryAttribute)
+        private static Dictionary<string, Dictionary<string, string[]>> ToDictionaryOfDictionaryOfStringArray(BlittableJsonReaderObject json, string name, JsonDeserializationStringDictionaryAttribute jsonDeserializationDictionaryAttribute)
         {
             var dic = new Dictionary<string, Dictionary<string, string[]>>(GetStringComparer(jsonDeserializationDictionaryAttribute?.StringComparison ?? StringComparison.OrdinalIgnoreCase));
 

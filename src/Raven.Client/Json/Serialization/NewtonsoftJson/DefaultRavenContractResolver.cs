@@ -9,9 +9,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson
@@ -148,6 +150,19 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             return true;
         }
 
+        protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+        {
+            var property = base.CreateProperty(member, memberSerialization);
+            if (property.Converter == null)
+            {
+                var jsonDeserializationDictionaryAttribute = member.GetCustomAttribute<JsonDeserializationStringDictionaryAttribute>();
+                if (jsonDeserializationDictionaryAttribute != null)
+                    property.Converter = StringDictionaryConverter.For(jsonDeserializationDictionaryAttribute.StringComparison);
+            }
+
+            return property;
+        }
+
         /// <summary>
         /// Gets the serializable members for the type.
         /// </summary>
@@ -170,9 +185,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             if (info is EventInfo)
                 return true;
             var fieldInfo = info as FieldInfo;
-            if (fieldInfo != null && !fieldInfo.IsPublic)
+            if (fieldInfo?.IsPublic == false)
                 return true;
-            return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Any();
+            return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Length > 0;
         }
     }
 }
