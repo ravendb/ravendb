@@ -5,7 +5,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
     internal class SessionBlittableJsonConverter : BlittableJsonConverterBase, ISessionBlittableJsonConverter
     {

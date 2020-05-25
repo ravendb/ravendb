@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
     internal class JsonNetJsonSerializer : JsonSerializer, IJsonSerializer
     {

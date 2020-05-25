@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using NodaTime;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json.Serialization.JsonNet;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
 

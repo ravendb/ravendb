@@ -8,7 +8,7 @@ using System;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
     /// <summary>
     /// Convert a lucene data format to and from json values

@@ -16,7 +16,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Json.Serialization.JsonNet;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;

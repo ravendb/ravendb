@@ -14,7 +14,7 @@ using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Serialization.JsonNet
+namespace Raven.Client.Json.Serialization.NewtonsoftJson
 {
     /// <summary>
     /// The default json contract will serialize all properties and all public fields

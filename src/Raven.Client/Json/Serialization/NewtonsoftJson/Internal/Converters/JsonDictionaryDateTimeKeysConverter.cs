@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 using Sparrow;
 using Sparrow.Extensions;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
     internal sealed class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
     {

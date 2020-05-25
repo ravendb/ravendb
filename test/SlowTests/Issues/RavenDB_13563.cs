@@ -2,7 +2,7 @@
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Json.Serialization.JsonNet.Internal;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;

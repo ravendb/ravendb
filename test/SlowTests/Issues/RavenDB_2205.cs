@@ -7,7 +7,7 @@
 using System;
 using System.Globalization;
 using FastTests;
-using Raven.Client.Json.Serialization.JsonNet.Internal.Converters;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 using Xunit;
 using Xunit.Abstractions;
 

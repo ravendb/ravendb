@@ -3,10 +3,9 @@ using System.Collections;
 using System.Collections.Concurrent;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
     internal class JsonEnumerableConverter : RavenJsonConverter
     {

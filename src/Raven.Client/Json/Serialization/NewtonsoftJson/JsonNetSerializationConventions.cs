@@ -4,11 +4,11 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json.Serialization.JsonNet.Internal;
-using Raven.Client.Json.Serialization.JsonNet.Internal.Converters;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Serialization.JsonNet
+namespace Raven.Client.Json.Serialization.NewtonsoftJson
 {
     public class JsonNetSerializationConventions : ISerializationConventions
     {
