@@ -1,6 +1,6 @@
 using System;
-using Raven.Client.Util;
 using Raven.Server.Commercial;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _skipModifications = skipModifications;
         }
 
-        public void StartBackup(string backupName)
+        public void StartBackup(string backupName, Logger logger)
         {
             lock (this)
             {
@@ -49,13 +49,25 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 _concurrentBackups--;
             }
+
+            if (logger.IsOperationsEnabled)
+                logger.Operations($"Starting backup task '{backupName}'");
         }
 
-        public void FinishBackup()
+        public void FinishBackup(string backupName, TimeSpan? elapsed, Logger logger)
         {
             lock (this)
             {
                 _concurrentBackups++;
+            }
+
+            if (logger.IsOperationsEnabled)
+            {
+                var message = $"Finished backup task '{backupName}'";
+                if (elapsed != null)
+                    message += $", took: {elapsed}";
+
+                logger.Operations(message);
             }
         }
 
