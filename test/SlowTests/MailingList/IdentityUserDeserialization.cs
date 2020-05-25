@@ -10,7 +10,7 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json.Serialization.JsonNet;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
 

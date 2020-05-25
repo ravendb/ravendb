@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Json.Serialization.JsonNet.Internal;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;

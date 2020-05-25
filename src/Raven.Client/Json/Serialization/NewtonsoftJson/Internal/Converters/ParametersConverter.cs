@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 using Sparrow.Extensions;
 using Sparrow.Json;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal.Converters
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
     internal sealed class ParametersConverter : RavenJsonConverter
     {

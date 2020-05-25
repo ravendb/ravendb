@@ -9,7 +9,7 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
     internal class BlittableJsonWriter : JsonWriter, IJsonWriter
     {

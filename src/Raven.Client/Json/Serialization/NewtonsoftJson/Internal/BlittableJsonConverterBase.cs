@@ -11,7 +11,7 @@ using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
     internal abstract class BlittableJsonConverterBase : IBlittableJsonConverterBase
     {
@@ -93,7 +93,7 @@ namespace Raven.Client.Json.Serialization.JsonNet.Internal
             writer.FinalizeDocument();
             var reader = writer.CreateReader();
 
-            if (willUseDefaultContractResolver == false || (hasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false))
+            if (willUseDefaultContractResolver == false || hasIdentityProperty && DefaultRavenContractResolver.RemovedIdentityProperty == false)
             {
                 //This is to handle the case when user defined it's own contract resolver
                 //or we are serializing dynamic object

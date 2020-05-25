@@ -1,7 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Json.Serialization.JsonNet.Internal;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 
 namespace Raven.Server.Json.Converters
 {

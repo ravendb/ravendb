@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
-using Raven.Client.Json.Serialization.JsonNet;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;

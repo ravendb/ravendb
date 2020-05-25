@@ -4,7 +4,7 @@ using Raven.Client.Documents.Identity;
 using Sparrow.Json;
 using Sparrow.Threading;
 
-namespace Raven.Client.Json.Serialization.JsonNet.Internal
+namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
     internal class JsonNetBlittableEntitySerializer
     {
