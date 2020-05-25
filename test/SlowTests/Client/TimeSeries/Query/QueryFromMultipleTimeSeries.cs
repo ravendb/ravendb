@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
@@ -88,19 +89,12 @@ select out()
                         .AddParameter("start", baseline.AddDays(-1))
                         .AddParameter("end", now.AddDays(1));
 
-                    var result = query.First();
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By1Day'
-
-                    Assert.Equal(expected, result.Count);
-
-
+                    Assert.Equal(1, result.Results[count - 1440].Values.Length);
+                    Assert.Equal(6, result.Results[count - 1441].Values.Length);
                 }
-
             }
         }
 
@@ -135,9 +129,6 @@ select out()
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
-                var nowMinutes = now.Minute;
-                now = now.AddMinutes(-nowMinutes);
-                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
@@ -147,8 +138,8 @@ select out()
                     session.Store(new User { Name = "Karmel" }, "users/karmel");
                     for (int i = 0; i <= total; i++)
                     {
-                        session.TimeSeriesFor("users/karmel", "Heartrate")
-                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                        var ts = session.TimeSeriesFor("users/karmel", "Heartrate");
+                        ts.Append(baseline.AddMinutes(i), i, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -174,19 +165,15 @@ select out()
                         .AddParameter("start", baseline.AddDays(-1))
                         .AddParameter("end", now.AddDays(1));
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By24Hours'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
-
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(6, days.Count);
                 }
-
             }
         }
 
@@ -255,19 +242,12 @@ select timeseries(
                         .AddParameter("start", baseline.AddDays(-1))
                         .AddParameter("end", now.AddDays(1));
 
-                    var result = query.First();
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By1Day'
-
-                    Assert.Equal(expected, result.Count);
-
-
+                    Assert.Equal(1, result.Results[count - 1440].Values.Length);
+                    Assert.Equal(6, result.Results[count - 1441].Values.Length);
                 }
-
             }
         }
 
@@ -338,19 +318,15 @@ select timeseries(
                         .AddParameter("start", baseline.AddDays(-1))
                         .AddParameter("end", now.AddDays(1));
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By24Hours'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
-
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(6, days.Count);
                 }
-
             }
         }
 
@@ -424,21 +400,16 @@ select out(u)
                         .AddParameter("start", baseline.AddDays(-1))
                         .AddParameter("end", now.AddDays(1));
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By24Hours'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
-
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(6, days.Count);
                 }
-
             }
-
         }
 
         [Fact]
@@ -514,15 +485,14 @@ select out(u)
                         .AddParameter("start", baseline.AddDays(-1))
                         .AddParameter("end", now.AddDays(1));
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By24Hours'
-
-                    Assert.Equal(expected, aggregationResult.Count);
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(6, days.Count);
                 }
             }
         }
@@ -598,7 +568,7 @@ select out(u)
 
                     var aggregationResult = query.First();
 
-                    Assert.Equal(1, aggregationResult.Count);
+                    Assert.Equal(24, aggregationResult.Count);
 
                     var result = aggregationResult.Results[0];
                     Assert.Equal(1, result.Count.Length);
@@ -682,18 +652,12 @@ select out('Heartrate')
 ")
                         .AddParameter("start", now.AddDays(-3))
                         .AddParameter("end", now.AddDays(-1));
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    var result = query.First();
-
-                    var expected = (2 * 24) // first day of 'By30Minutes'
-                                   + 24; // first day of 'By1Hour for 3Days'
-
-
-                    Assert.Equal(expected, result.Count);
-
-
+                    Assert.Equal(6, result.Results[0].Values.Length);
+                    Assert.Equal(6, result.Results[count - 1].Values.Length);
                 }
-
             }
         }
 
@@ -766,11 +730,8 @@ select out()
                         .AddParameter("start", now.AddDays(-7))
                         .AddParameter("end", now);
 
-                    var result = query.First();
-
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (6 * (2 * 24)); // 6 days of 'By30Minutes'
-
+                    var result = query.Single();
+                    var expected = 7 * 24 * 60;
                     Assert.Equal(expected, result.Count);
                 }
             }
@@ -846,13 +807,14 @@ select out('Heartrate')
                         .AddParameter("start", now.AddDays(-3))
                         .AddParameter("end", now.AddDays(-1));
 
-                    var result = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (2 * 24) // first day of 'By30Minutes'
-                                   + 24; // first day of 'By1Hour for 3Days'
-
-
-                    Assert.Equal(expected, result.Count);
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(3, days.Count);
                 }
             }
         }
@@ -928,16 +890,15 @@ select out()
                         .AddParameter("start", now.AddDays(-7))
                         .AddParameter("end", now);
 
-                    var result = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (6 * (2 * 24)); // 6 days of 'By30Minutes'
-
-                    Assert.Equal(expected, result.Count);
-
-
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(8, days.Count);
                 }
-
             }
         }
 
@@ -1001,15 +962,11 @@ select out()
                         .Select(u => RavenQuery.TimeSeries(u, "Heartrate", baseline.AddDays(-1), now.AddDays(1))
                                 .ToList());
 
-                    var result = query.First();
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By1Day'
-
-                    Assert.Equal(expected, result.Count);
+                    Assert.Equal(1, result.Results[count - 1440].Values.Length);
+                    Assert.Equal(6, result.Results[count - 1441].Values.Length);
                 }
             }
         }
@@ -1080,19 +1037,15 @@ select out()
                             })
                             .ToList());
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By24Hours'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
-
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(6, days.Count);
                 }
-
             }
         }
 
@@ -1256,15 +1209,14 @@ select out()
                                 };
 
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By24Hours'
-
-                    Assert.Equal(expected, aggregationResult.Series.Count);
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Series.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(6, days.Count);
 
                     foreach (var rangeAggregation in aggregationResult.Series.Results)
                     {
@@ -1272,9 +1224,6 @@ select out()
                         Assert.Equal(1, rangeAggregation.Min.Length);
                         Assert.Equal(1, rangeAggregation.Average.Length);
                         Assert.Equal(1, rangeAggregation.Count.Length);
-
-                        var expectedAvg = (rangeAggregation.Max[0] + rangeAggregation.Min[0]) / 2;
-                        Assert.Equal(rangeAggregation.Average[0], expectedAvg);
                     }
 
                     var totalMax = aggregationResult.Series.Results.Max(range => range.Max[0]);
@@ -1358,16 +1307,12 @@ select out()
                             .Where(entry => entry.Value > tenDaysInMinutes)
                             .ToList());
 
-                    var aggregationResult = query.First();
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    // only the last two days have Value > 14400
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24); // first day of 'By30Minutes'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
+                    Assert.Equal(1, result.Results[count - 1440].Values.Length);
+                    Assert.Equal(6, result.Results[count - 1441].Values.Length);
                 }
-
             }
         }
 
@@ -1446,16 +1391,15 @@ select out()
                             })
                             .ToList());
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    // only the last two days have Value > 14400
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24); // first day of 'By30Minutes'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(3, days.Count);
                 }
-
             }
         }
 
@@ -1527,14 +1471,11 @@ select out()
                             .Where(entry => entry.Values[1] > tenDaysInMinutes)
                             .ToList());
 
-                    var aggregationResult = query.First();
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    // only the last two days have Value > 14400
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24); // first day of 'By30Minutes'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
+                    Assert.Equal(3, result.Results[count - 1440].Values.Length);
+                    Assert.Equal(6 * 3, result.Results[count - 1441].Values.Length);
                 }
             }
         }
@@ -1614,16 +1555,15 @@ select out()
                             })
                             .ToList());
 
-                    var aggregationResult = query.First();
+                    var aggregationResult = query.Single();
 
-                    // only the last two days have Value > 14400
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24); // first day of 'By30Minutes'
-
-                    Assert.Equal(expected, aggregationResult.Count);
-
+                    var days = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        days.Add(g.Key);
+                    } 
+                    Assert.Equal(3, days.Count);
                 }
-
             }
         }
 
