@@ -92,6 +92,7 @@ class virtualGrid<T> {
             getSelectedItems: () => this.getSelectedItems(),
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
             dirtyResults: this.dirtyResults,
+            markColumnsDirty: () => this.markColumnsDirty(),
             resultEtag: () => this.previousResultsEtag(),
             scrollDown: () => this.scrollDown(),
             setDefaultSortBy: (columnIndex, mode) => this.setDefaultSortBy(columnIndex, mode)
@@ -538,7 +539,6 @@ class virtualGrid<T> {
         return (containerWidth * parseFloat(woPercentage) / 100) + 'px';
     }
 
-    //TODO: investigate if we fetch this properly
     private chunkFetched(results: pagedResult<T>, skip: number, take: number) {
 
         if (results.totalResultCount === -1) {
@@ -549,6 +549,9 @@ class virtualGrid<T> {
         }
 
         if (!this.columns() || this.columns().length === 0) {
+            // make sure we discard 
+            this.virtualRows.forEach(r => r.reset());
+            
             const clientWidth = this.$viewportElement.prop("clientWidth");
             const columns = this.settings.columnsProvider(clientWidth, results);
             columns
@@ -730,6 +733,10 @@ class virtualGrid<T> {
                 totalCount: totalCount
             });
         }
+    }
+
+    private markColumnsDirty() {
+        this.columns([]);
     }
 
     private findItem(predicate: (item: T, idx: number) => boolean): T {

@@ -1,4 +1,5 @@
 import timeSeriesValue = require("models/database/timeSeries/timeSeriesValue");
+import generalUtils = require("common/generalUtils");
 
 class timeSeriesModel {
     
@@ -58,7 +59,7 @@ class timeSeriesModel {
     public toDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation {
         return {
             Tag: this.tag(),
-            Timestamp: this.timestamp().utc().format(),
+            Timestamp: this.timestamp().utc().format(generalUtils.utcFullDateFormat),
             Values: this.values().map(x => x.value())
         }
     }

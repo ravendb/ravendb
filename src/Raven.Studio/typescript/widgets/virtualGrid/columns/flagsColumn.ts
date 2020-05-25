@@ -16,7 +16,7 @@ class flagsColumn implements virtualColumn {
         return false;
     }
 
-    width = "65px";
+    width = "70px";
     
     header = `<div style="padding-left: 8px;"><i class="icon-flag"></i></div>`;
 
