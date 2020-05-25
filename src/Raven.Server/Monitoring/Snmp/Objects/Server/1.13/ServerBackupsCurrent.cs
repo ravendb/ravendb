@@ -15,7 +15,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override Integer32 GetData()
         {
-            return new Integer32(_serverStore.ConcurrentBackupsCounter.CurrentNumberOfBackups);
+            return new Integer32(_serverStore.ConcurrentBackupsCounter.CurrentNumberOfRunningBackups);
         }
     }
 }

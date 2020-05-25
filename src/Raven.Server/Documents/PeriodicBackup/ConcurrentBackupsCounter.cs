@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public int CurrentNumberOfBackups
+        public int CurrentNumberOfRunningBackups
         {
             get
             {
