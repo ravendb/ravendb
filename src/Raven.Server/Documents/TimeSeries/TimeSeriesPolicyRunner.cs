@@ -150,10 +150,13 @@ namespace Raven.Server.Documents.TimeSeries
             if (status == TimeSeriesValuesSegment.Dead)
             {
                 var currentPolicy = config.GetPolicy(currentIndex);
-                var now = context.DocumentDatabase.Time.GetUtcNow();
-                var startRollup = new DateTime(TimeSeriesRollups.NextRollup(timestamp, nextPolicy)).Add(-currentPolicy.RetentionTime);
-                if (startRollup.Add(currentPolicy.RetentionTime) < now)
-                    return; // ignore this value since it is outside our retention frame
+                if (currentPolicy.RetentionTime < TimeValue.MaxValue)
+                {
+                    var now = context.DocumentDatabase.Time.GetUtcNow();
+                    var startRollup = new DateTime(TimeSeriesRollups.NextRollup(timestamp, nextPolicy)).Add(-currentPolicy.RetentionTime);
+                    if (startRollup.Add(currentPolicy.RetentionTime) < now)
+                        return; // ignore this value since it is outside our retention frame
+                }
             }
 
             _database.DocumentsStorage.TimeSeriesStorage.Rollups.MarkForPolicy(context, slicerHolder, nextPolicy, timestamp);

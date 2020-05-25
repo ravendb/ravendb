@@ -451,17 +451,20 @@ namespace Raven.Server.Documents.TimeSeries
                         if (hasPriorValues == false) 
                         {
                             table.DeleteByKey(item.Key);
-                            // if the 'from' time-series doesn't have any values it is retained.
-                            // so we need to aggregate only from the next time frame
-                            var first = tss.GetReader(context, item.DocId, item.Name, item.NextRollup, DateTime.MaxValue).First();
+                            var first = tss.GetReader(context, item.DocId, item.Name, rollupStart, DateTime.MaxValue).First();
                             if (first == default)
                                 continue; // nothing we can do here
 
-                            using (var slicer = new TimeSeriesSliceHolder(context, item.DocId, item.Name, item.Collection))
+                            if (first.Timestamp > item.NextRollup)
                             {
-                                tss.Rollups.MarkForPolicy(context, slicer, policy, first.Timestamp);
+                                // if the 'source' time-series doesn't have any values it is retained.
+                                // so we need to aggregate only from the next time frame
+                                using (var slicer = new TimeSeriesSliceHolder(context, item.DocId, item.Name, item.Collection))
+                                {
+                                    tss.Rollups.MarkForPolicy(context, slicer, policy, first.Timestamp);
+                                }
+                                continue;
                             }
-                            continue;
                         }
                     }
 
@@ -507,8 +510,8 @@ namespace Raven.Server.Documents.TimeSeries
                     if (stats.End > rollupEnd)
                     {
                         // we know that we have values after the current rollup and we need to mark them
-                        var nextRollup = new DateTime(NextRollup(rollupEnd, policy));
-                        intoReader = tss.GetReader(context, item.DocId, intoTimeSeries, nextRollup, DateTime.MaxValue);
+                        var nextRollup = rollupEnd.AddMilliseconds(1);
+                        intoReader = tss.GetReader(context, item.DocId, item.Name, nextRollup, DateTime.MaxValue);
                         if (intoReader.Init() == false)
                         {
                             Debug.Assert(false,"We have values but no segment?");
@@ -517,7 +520,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         using (var slicer = new TimeSeriesSliceHolder(context, item.DocId, item.Name, item.Collection))
                         {
-                            tss.Rollups.MarkForPolicy(context, slicer, policy, nextRollup);
+                            tss.Rollups.MarkForPolicy(context, slicer, policy, intoReader.First().Timestamp);
                         }
                     }
                 }

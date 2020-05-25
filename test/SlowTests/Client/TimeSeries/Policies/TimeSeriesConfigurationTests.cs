@@ -1288,5 +1288,211 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
             }
         }
+
+
+        [Fact]
+        public async Task CanAddNewPolicyForExistingTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+
+                    session.Store(new Company(), "companies/1");
+                    session.TimeSeriesFor("companies/1", "Heartrate")
+                        .Append(DateTime.UtcNow.AddYears(-1), new[] {29d}, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                var p = new TimeSeriesPolicy("ByYear", TimeValue.FromYears(1), TimeValue.MaxValue);
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p
+                            }
+                        },
+                        ["Companies"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p
+                            }
+                        },
+                    },
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/karmel", "Heartrate")
+                        .Append(DateTime.UtcNow, new[] {29d}, "watches/fitbit");
+                    session.SaveChanges();
+                }
+                
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
+                    Assert.Equal(6, res.Values.Length);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanReRollAfterRemoval()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var t = DateTime.UtcNow.AddYears(-1);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company(), "companies/1");
+                    session.TimeSeriesFor("companies/1", "Heartrate")
+                        .Append(t, new[] {29d}, "watches/fitbit");
+                    session.TimeSeriesFor("companies/1", "Heartrate")
+                        .Append(t.AddMinutes(1), new[] {31d}, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                var p = new TimeSeriesPolicy("ByYear", TimeValue.FromYears(1));
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Companies"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p
+                            }
+                        },
+                    },
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
+                    Assert.Equal(2, raw.Count);
+
+                    var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
+                    Assert.Equal(30, res.Values[4] / 2);
+                    Assert.Equal(2, res.Values[5]);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company(), "companies/1");
+                    var ts = session.TimeSeriesFor("companies/1", "Heartrate");
+                    ts.Remove(t);
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
+                    Assert.Equal(1, raw.Count);
+
+                    var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
+                    Assert.Equal(31, res.Values[4]);
+                    Assert.Equal(1, res.Values[5]);
+                }
+            }
+        }
+
+
+        [Fact]
+        public async Task CanReRollAfterUpdate()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var t = DateTime.UtcNow.AddYears(-1);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company(), "companies/1");
+                    session.TimeSeriesFor("companies/1", "Heartrate")
+                        .Append(t, new[] {29d}, "watches/fitbit");
+                    session.TimeSeriesFor("companies/1", "Heartrate")
+                        .Append(t.AddMinutes(1), new[] {31d}, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                var p = new TimeSeriesPolicy("ByYear", TimeValue.FromYears(1));
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Companies"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p
+                            }
+                        },
+                    },
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
+                    Assert.Equal(2, raw.Count);
+
+                    var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
+                    Assert.Equal(30, res.Values[4] / 2);
+                    Assert.Equal(2, res.Values[5]);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company(), "companies/1");
+                    var ts = session.TimeSeriesFor("companies/1", "Heartrate");
+                    ts.Append(t, 27d);
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
+                    Assert.Equal(2, raw.Count);
+
+                    var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
+                    Assert.Equal(29, res.Values[4] / 2);
+                    Assert.Equal(2, res.Values[5]);
+                }
+            }
+        }
     }
 }
