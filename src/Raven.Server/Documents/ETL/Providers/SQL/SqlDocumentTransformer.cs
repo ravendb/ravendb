@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<TimeSeriesStorage.Reader.SingleResult> entries)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }
 
         private SqlTableWithRecords GetOrAdd(string tableName)

@@ -289,10 +289,10 @@ namespace Raven.Server.Documents.TimeSeries
                 slicer.SetBaselineToKey(stats.Start > from ? stats.Start : from);
 
                 // first try to find the previous segment containing from value
-                if (table.SeekOneBackwardByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice1, slicer.TimeSeriesKeySlice, out var segmentValueReader) == false)
+                if (table.SeekOneBackwardByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out var segmentValueReader) == false)
                 {
                     // or the first segment _after_ the from value
-                    if (table.SeekOnePrimaryKeyWithPrefix(slicer.TimeSeriesPrefixSlice1, slicer.TimeSeriesKeySlice, out segmentValueReader) == false)
+                    if (table.SeekOnePrimaryKeyWithPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, out segmentValueReader) == false)
                         return null;
                 }
 
@@ -417,7 +417,7 @@ namespace Raven.Server.Documents.TimeSeries
                     var offset = slicer.TimeSeriesKeySlice.Size - sizeof(long);
                     *(long*)(slicer.TimeSeriesKeySlice.Content.Ptr + offset) = Bits.SwapBytes(baseline.Ticks / 10_000);
 
-                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice1, slicer.TimeSeriesKeySlice, 0))
+                    foreach (var (_, tvh) in table.SeekByPrimaryKeyPrefix(slicer.TimeSeriesPrefixSlice, slicer.TimeSeriesKeySlice, 0))
                     {
                         return GetBaseline(tvh.Reader);
                     }
@@ -573,9 +573,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(_from))
                 {
-                    if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice1, holder.TimeSeriesKeySlice, out _tvr) == false)
+                    if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
                     {
-                        return _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice1, holder.TimeSeriesKeySlice, out _tvr);
+                        return _table.SeekOnePrimaryKeyWithPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr);
                     }
 
                     return true;
@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(date))
                     {
-                        if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice1, holder.TimeSeriesKeySlice, out _tvr) == false)
+                        if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
                             return null;
                     }
 
@@ -1070,7 +1070,7 @@ namespace Raven.Server.Documents.TimeSeries
         private static DateTime? BaselineOfNextSegment(TimeSeriesSegmentHolder segmentHolder, DateTime myDate)
         {
             var table = segmentHolder.Table;
-            var prefix = segmentHolder.SliceHolder.TimeSeriesPrefixSlice1;
+            var prefix = segmentHolder.SliceHolder.TimeSeriesPrefixSlice;
             var key = segmentHolder.SliceHolder.TimeSeriesKeySlice;
 
             return BaselineOfNextSegment(table, prefix, key, myDate);
@@ -1317,7 +1317,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             public bool LoadCurrentSegment()
             {
-                if (Table.SeekOneBackwardByPrimaryKeyPrefix(SliceHolder.TimeSeriesPrefixSlice1, SliceHolder.TimeSeriesKeySlice, out _tvr))
+                if (Table.SeekOneBackwardByPrimaryKeyPrefix(SliceHolder.TimeSeriesPrefixSlice, SliceHolder.TimeSeriesKeySlice, out _tvr))
                 {
                     Initialize();
                     return true;
@@ -2391,7 +2391,7 @@ namespace Raven.Server.Documents.TimeSeries
             To = 6,
         }
 
-        public long GetNumberOfCounterGroupsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount)
+        public long GetNumberOfTimeSeriesSegmentsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)

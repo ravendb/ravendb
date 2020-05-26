@@ -173,17 +173,17 @@ namespace Raven.Server.Documents.ETL
             const int paramsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.ParamsCount;
             const string signature = Transformation.TimeSeriesTransformation.LoadTimeSeries.Signature;
             
-            if (args.Length == paramsCount)
+            if (args.Length != paramsCount)
                 ThrowInvalidScriptMethodCall($"{signature} must have {paramsCount} arguments");
                 
             if(args[0].IsString() == false)
                 ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be string");
             var timeSeriesName = args[0].AsString();
 
-            var from = GetDateArg(args[1], signature, "from"); 
-            var to = GetDateArg(args[2], signature, "to"); 
+            var from = ScriptRunner.GetDateArg(args[1], signature, "from"); 
+            var to = ScriptRunner.GetDateArg(args[2], signature, "to"); 
                 
-            JsValue loadCounterReference = (JsValue)Transformation.TimeSeriesTransformation.Marker + timeSeriesName;
+            JsValue loadTimeSeriesReference = (JsValue)Transformation.TimeSeriesTransformation.Marker + timeSeriesName;
 
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries)
             {
@@ -192,39 +192,15 @@ namespace Raven.Server.Documents.ETL
                 // if (reader == null)
                     // return JsValue.Null;
 
-                AddLoadedTimeSeries(loadCounterReference, timeSeriesName, reader.AllValues());
+                AddLoadedTimeSeries(loadTimeSeriesReference, timeSeriesName, reader.AllValues());
             }
             else
             {
                 return JsValue.Null;
             }
 
-            return loadCounterReference;
+            return loadTimeSeriesReference;
         }
-        
-        //TODO Same code as in ScriptRunner
-        private static unsafe DateTime GetDateArg(JsValue arg, string signature, string argName)
-        {
-            if (arg.IsDate())
-                return arg.AsDate().ToDateTime();
-
-            if (arg.IsString() == false)
-                ThrowInvalidDateArgument();
-
-            var s = arg.AsString();
-            fixed (char* pValue = s)
-            {
-                var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
-                if (result != LazyStringParser.Result.DateTime)
-                    ThrowInvalidDateArgument();
-
-                return dt;
-            }
-
-            void ThrowInvalidDateArgument() =>
-                throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
-        }
-        private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
         
         private JsValue GetAttachments(JsValue self, JsValue[] args)
         {

@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly List<ICommandData> _commands = new List<ICommandData>();
         private PropertyDescriptor _addAttachmentMethod;
         private PropertyDescriptor _addCounterMethod;
+        private PropertyDescriptor _addTimeSeriesMethod;
         private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
@@ -55,6 +56,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (_transformation.Counters.IsAddingCounters)
                 _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addCounter", AddCounter), null, null, null);
+            
+            if (_transformation.TimeSeries.IsAddingTimeSeries)
+                _addTimeSeriesMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.TimeSeriesTransformation.AddTimeSeries.Name, AddTimeSeries), null, null, null);
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -112,7 +116,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addCounterMethod);
+                docInstance.DefinePropertyOrThrow(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod);
             }
         }
 
@@ -186,9 +190,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private JsValue AddTimeSeries(JsValue self, JsValue[] args)
         {
             if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
+            {
                 ThrowInvalidScriptMethodCall(
                     $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} must have one arguments. " +
-                    $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Name}`");
+                    $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
+            }
 
             var timeSeriesReference = args[0];
 
@@ -271,7 +277,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             if (_script.HasLoadCounterBehaviors == false)
                                 break;
 
-                            if (_script.TryGetLoadTimeSeriesBehaviorFunctionFor(item.Collection, out var function) == false)
+                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
                                 break;
 
                             AddSingleCounterGroup(item.DocumentId, item.CounterGroupDocument, function);
@@ -425,44 +431,36 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (function != null && FilterSingleTimeSeriesSegmentByScript(ref timeSeriesEntries, docId, segmentEntry, function))
                 return;
 
-            (DateTime from, DateTime to) toRemove = (default, default);
+            (DateTime begin, DateTime end) toRemove = (default, default);
             foreach (var entry in timeSeriesEntries)
             {
-                if (entry.Status == TimeSeriesValuesSegment.Live)
+                switch (entry.Status)
                 {
-                    _currentRun.AddTimeSeries(docId, segmentEntry.Name, entry);
-                    CheckAndAddToRemovals();
-                }
-                else if (entry.Status == TimeSeriesValuesSegment.Dead)
-                {
-                    if (toRemove.from == default)
-                        toRemove.from = entry.Timestamp;
-                    toRemove.to = entry.Timestamp;
+                    case TimeSeriesValuesSegment.Live:
+                        _currentRun.AddTimeSeries(docId, segmentEntry.Name, entry);
+                        CheckAndAddToRemovals();
+                        break;
+                    case TimeSeriesValuesSegment.Dead:
+                    {
+                        if (toRemove.begin == default)
+                            toRemove.begin = entry.Timestamp;
+                        toRemove.end = entry.Timestamp;
+                        break;
+                    }
+                    default:
+                        throw new ArgumentOutOfRangeException(
+                            $"Time series entry status should be {TimeSeriesValuesSegment.Live} or {TimeSeriesValuesSegment.Dead} but got {entry.Status}");
                 }
             }
             CheckAndAddToRemovals();
             
             void CheckAndAddToRemovals()
             {
-                if (toRemove.@from == default)
+                if (toRemove.begin == default)
                     return;
-                _currentRun.RemoveTimeSeries(docId, segmentEntry.Name, toRemove.@from, toRemove.to);
-                toRemove.@from = default;
+                _currentRun.RemoveTimeSeries(docId, segmentEntry.Name, toRemove.begin, toRemove.end);
+                toRemove.begin = default;
             }
-
-            // var prop = new BlittableJsonReaderObject.PropertyDetails();
-            // for (var i = 0; i < counters.Count; i++)
-            // {
-            //     counters.GetPropertyByIndex(i, ref prop);
-            //
-            // if (GetCounterValueAndCheckIfShouldSkip(docId, function, prop, out long value, out bool delete))
-            //         continue;
-            //
-            //     if (delete)
-            //         _currentRun.DeleteCounter(docId, prop.Name);
-            //     else
-            //         _currentRun.AddCounter(docId, prop.Name, value);
-            // }
         }
 
         private bool FilterSingleTimeSeriesSegmentByScript(
@@ -471,19 +469,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             TimeSeriesSegmentEntry segmentEntry, 
             string function)
         {
-            if (ShouldFilterByScriptAndGetParams(docId, segmentEntry.Name, function, out (DateTime @from, DateTime to) toLoad)) 
+            if (ShouldFilterByScriptAndGetParams(docId, segmentEntry.Name, function, out (DateTime begin, DateTime end)? toLoad)) 
                 return true;
 
-            if (toLoad.from == default)
+            if (toLoad == null)
                 return false;
             
             var lastTimestamp = segmentEntry.Segment.GetLastTimestamp(segmentEntry.Start);
-            if (segmentEntry.Start > toLoad.to || lastTimestamp < toLoad.@from)
+            if (segmentEntry.Start > toLoad.Value.end || lastTimestamp < toLoad.Value.begin)
                 return true;
 
-            if (toLoad.@from > segmentEntry.Start)
+            if (toLoad.Value.begin > segmentEntry.Start)
             {
-                timeSeriesEntries = SkipUntilFrom(timeSeriesEntries, toLoad.@from);
+                timeSeriesEntries = SkipUntilFrom(timeSeriesEntries, toLoad.Value.begin);
 
                 static IEnumerable<TimeSeriesStorage.Reader.SingleResult> SkipUntilFrom(IEnumerable<TimeSeriesStorage.Reader.SingleResult> origin, DateTime from)
                 {
@@ -496,9 +494,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
             }
 
-            if (toLoad.to < lastTimestamp)
+            if (toLoad.Value.end < lastTimestamp)
             {
-                timeSeriesEntries = BreakOnTo(timeSeriesEntries, toLoad.to);
+                timeSeriesEntries = BreakOnTo(timeSeriesEntries, toLoad.Value.end);
 
                 static IEnumerable<TimeSeriesStorage.Reader.SingleResult> BreakOnTo(IEnumerable<TimeSeriesStorage.Reader.SingleResult> origin, DateTime to)
                 {
@@ -513,9 +511,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return false;
         }
 
-        private bool ShouldFilterByScriptAndGetParams(string docId, string timeSeriesName, string function, out (DateTime From, DateTime To) toLoad)
+        private bool ShouldFilterByScriptAndGetParams(string docId, string timeSeriesName, string function, out (DateTime From, DateTime To)? toLoad)
         {
-            toLoad = (default, default);
+            toLoad = null;
             using (var scriptRunnerResult = BehaviorsScript.Run(Context, Context, function, new object[] {docId, timeSeriesName}))
             {
                 if (scriptRunnerResult.BooleanValue != null)
@@ -529,30 +527,37 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
                 else if (scriptRunnerResult.Instance.IsObject() == false)
                 {
-                    throw new InvalidOperationException($"");
+                    throw new InvalidOperationException($"Return type of `{function}` function should be a boolean or object. docId({docId}), timeSeriesName({timeSeriesName})");
                 }
                 else
                 {
-                    toLoad = (DateTime.MinValue, DateTime.MaxValue);
+                    var toLoadLocal = (From: DateTime.MinValue, To: DateTime.MaxValue);
                     foreach ((JsValue jsValue, PropertyDescriptor propertyDescriptor) in scriptRunnerResult.Instance.AsObject().GetOwnProperties())
                     {
                         var key = jsValue.AsString();
                         switch (key)
                         {
                             case "from":
-                                toLoad.From = propertyDescriptor.Value.AsDate().ToDateTime();
+                            case "From":
+                                if (toLoadLocal.From != DateTime.MinValue)
+                                    throw new InvalidOperationException($"Duplicate of property `From`/`from`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                                toLoadLocal.From = propertyDescriptor.Value.AsDate().ToDateTime();
                                 break;
                             case "to":
-                                toLoad.To = propertyDescriptor.Value.AsDate().ToDateTime();
+                            case "To":
+                                if (toLoadLocal.To != DateTime.MinValue)
+                                    throw new InvalidOperationException($"Duplicate of property `To`/`to`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                                toLoadLocal.To = propertyDescriptor.Value.AsDate().ToDateTime();
                                 break;
                             default:
-                                throw new InvalidOperationException($"");
+                                throw new InvalidOperationException($"Returned object should contain only `from` and `to` property but contain `{key}`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
                         }
                     }
 
-                    if (toLoad.To < toLoad.From)
+                    if (toLoadLocal.To < toLoadLocal.From)
                         throw new InvalidOperationException($"The property `from` is bigger the the `to` property. " +
-                                                            $"docId{docId} timeSeries{timeSeriesName} from({toLoad.From}) to({toLoad.To})");
+                                                            $"docId{docId} timeSeries{timeSeriesName} from({toLoadLocal.From}) to({toLoadLocal.To})");
+                    toLoad = toLoadLocal;
                 }
             }
 
@@ -618,12 +623,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var ret = new Dictionary<string, IEnumerable<TimeSeriesStorage.Reader.SingleResult>>();
             foreach (LazyStringValue timeSeriesName in timeSeriesNames)
             {
-                if(ShouldFilterByScriptAndGetParams(item.DocumentId, timeSeriesName, function, out (DateTime @from, DateTime to) toLoad))
+                if(ShouldFilterByScriptAndGetParams(item.DocumentId, timeSeriesName, function, out (DateTime @from, DateTime to)? toLoad))
                     continue;
-                if (toLoad.from == default)
-                    toLoad = (DateTime.MinValue, DateTime.MaxValue);
+                toLoad ??= (DateTime.MinValue, DateTime.MaxValue);
                 
-                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, item.DocumentId, timeSeriesName, toLoad.from, toLoad.to);
+                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, item.DocumentId, timeSeriesName, toLoad.Value.from, toLoad.Value.to);
                 ret[timeSeriesName] = reader.AllValues();
             }
             return ret;

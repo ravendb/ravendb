@@ -19,7 +19,7 @@ namespace FastTests.Issues
             {
                 GetConfiguration(
                     unsecuredAccessAddressRange: UnsecuredAccessAddressRange.Local,
-                    serverUrl: "http://192.168.1.24");
+                    serverUrl: "http://192.168.0.109");
             }
             catch (InvalidOperationException exception)
             {

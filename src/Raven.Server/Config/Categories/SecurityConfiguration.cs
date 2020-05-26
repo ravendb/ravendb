@@ -130,7 +130,7 @@ namespace Raven.Server.Config.Categories
         public TimeSetting MasterKeyExecTimeout { get; set; }
 
         [Description("If authentication is disabled, set address range type for which server access is unsecured (None | Local | PrivateNetwork | PublicNetwork).")]
-        [DefaultValue(UnsecuredAccessAddressRange.PrivateNetwork)]
+        [DefaultValue(UnsecuredAccessAddressRange.Local)]
         [ConfigurationEntry("Security.UnsecuredAccessAllowed", ConfigurationEntryScope.ServerWideOnly)]
         public UnsecuredAccessAddressRange UnsecuredAccessAllowed { get; set; }
 

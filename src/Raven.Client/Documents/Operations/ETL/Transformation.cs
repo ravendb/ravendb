@@ -109,13 +109,13 @@ namespace Raven.Client.Documents.Operations.ETL
         internal readonly TimeSeriesTransformation TimeSeries;
         internal class TimeSeriesTransformation
         {
-            internal const string Marker = "timeSeries/";
+            internal const string Marker = "$timeSeries/";
             
             internal static class AddTimeSeries
             {
                 internal const string Name = "addTimeSeries";
-                public const string Signature  = "addTimeSeries(timeSeriesName, from, to)";
-                public const int ParamsCount = 2;
+                public const string Signature  = "addTimeSeries(timeSeriesReference)";
+                public const int ParamsCount = 1;
                 internal static readonly Regex Regex = new Regex(Name, RegexOptions.Compiled);
             }
             internal static class LoadTimeSeries
@@ -145,18 +145,26 @@ namespace Raven.Client.Documents.Operations.ETL
             internal void Validate(List<string> errors, EtlType type)
             {
                 IsAddingTimeSeries = AddTimeSeries.Regex.Matches(_parent.Script).Count > 0;
-
+                if (IsAddingTimeSeries && type == EtlType.Sql)
+                    errors.Add("Adding time series isn't supported by SQL ETL");
+                
                 FillCollectionToLoadTimeSeriesBehaviorFunction(errors, type);
             }
 
             private void FillCollectionToLoadTimeSeriesBehaviorFunction(List<string> errors, EtlType type)
             {
-                var counterBehaviors = LoadTimeSeriesOfCollectionBehavior.Regex.Matches(_parent.Script);
-                if (counterBehaviors.Count == 0) 
+                var timeSeriesBehaviors = LoadTimeSeriesOfCollectionBehavior.Regex.Matches(_parent.Script);
+                if (timeSeriesBehaviors.Count == 0) 
                     return;
             
+                if (type == EtlType.Sql)
+                {
+                    errors.Add("Load time series behavior functions aren't supported by SQL ETL");
+                    return;
+                }
+                
                 CollectionToLoadTimeSeriesBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (Match counterBehaviorFunction in counterBehaviors)
+                foreach (Match counterBehaviorFunction in timeSeriesBehaviors)
                 {
                     var functionName = counterBehaviorFunction.Groups["func_name"].Value;
                     var collection = counterBehaviorFunction.Groups["collection"].Value;
@@ -173,7 +181,7 @@ namespace Raven.Client.Documents.Operations.ETL
                         errors.Add(
                             $"There is '{functionName}' function defined in '{_parent.Name}' script while the processed collections " +
                             $"({scriptCollections}) doesn't include '{collection}'. " +
-                            $"{LoadTimeSeriesOfCollectionBehavior.Signature} function is meant to be defined only for counters of docs from collections that " +
+                            $"{LoadTimeSeriesOfCollectionBehavior.Signature} function is meant to be defined only for time series of docs from collections that " +
                             "are loaded to the same collection on a destination side");
                     }
                     else if(CollectionToLoadTimeSeriesBehaviorFunction.ContainsKey(functionName))

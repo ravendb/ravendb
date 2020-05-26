@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (timeSeriesOperations.TryGetValue(name, out var timeSeriesOperation) == false)
             {
-                timeSeriesOperation = new TimeSeriesOperation();
+                timeSeriesOperation = new TimeSeriesOperation {Name = name};
                 timeSeriesOperations.Add(name, timeSeriesOperation);
             }
 
@@ -364,6 +364,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     {
                         foreach (var (_, operation) in timeSeriesOperations)
                         {
+                            var removeOperations = new List<TimeSeriesOperation.RemoveOperation>{new TimeSeriesOperation.RemoveOperation{From = DateTime.MinValue, To = DateTime.MaxValue}};
+                            commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, null, removeOperations));
                             commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Removals));
                         }
                     }

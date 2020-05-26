@@ -1129,7 +1129,7 @@ namespace Raven.Server.Documents.ETL
                 
                 if (ShouldTrackTimeSeries())
                 {
-                    timeSeriesSegmentsToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfCounterGroupsToProcess(documentsContext, collection, lastProcessedEtag, out total);
+                    timeSeriesSegmentsToProcess += Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsToProcess(documentsContext, collection, lastProcessedEtag, out total);
                     totalTimeSeriesSegmentsCount += total;
                 }
             }

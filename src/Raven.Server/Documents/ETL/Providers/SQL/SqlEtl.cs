@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override IEnumerator<ToSqlItem> ConvertTimeSeriesEnumerator(IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }
 
 

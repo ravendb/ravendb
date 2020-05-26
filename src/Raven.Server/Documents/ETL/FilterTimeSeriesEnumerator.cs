@@ -43,9 +43,9 @@ namespace Raven.Server.Documents.ETL
                     return true;
                 }
 
-                // counter has lower etag than its document - we skip it to avoid
-                // sending a counter of document that can not exist on the destination side
-
+                //TODO check relevant to time series 
+                // Time series has lower etag than its document - we skip it to avoid
+                // sending a time series of document that can not exist on the destination side
                 
                 _stats.RecordChangeVector(current.ChangeVector);
                 _stats.RecordLastFilteredOutEtag(current.Etag, EtlItemType.TimeSeriesSegment);
