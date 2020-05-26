@@ -152,12 +152,14 @@ class timeSeriesPolicy {
     }
     
     copyFrom(incoming: timeSeriesPolicy): this {
-        this.name(incoming.name());
-        
-        this.hasRetention(incoming.hasRetention());
-        this.retention(incoming.retention().clone());
-        
-        this.aggregation(incoming.aggregation().clone());
+        if (incoming) {
+            this.name(incoming.name());
+
+            this.hasRetention(incoming.hasRetention());
+            this.retention(incoming.retention().clone());
+
+            this.aggregation(incoming.aggregation().clone());
+        }
                 
         return this;
     }

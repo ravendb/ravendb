@@ -102,13 +102,15 @@
                         </div>
                     </div>
 
-
                     <div class="hr-title">
-                        <h5>Aggregation Policies</h5><hr>
+                        <h5>Aggregation Policies</h5>
+                        <hr>
+                        <a href="#" class="aggregation-info" data-toggle="tooltip">
+                            <i class="icon-info text-info"></i>    
+                        </a>
                     </div>
 
-
-                    <div>
+                    <div class="margin-bottom">
                         <div data-bind="foreach: policies">
                             <div class="form-group" data-bind="validationElement: name">
                                 <label class="control-label">Policy Name</label>
@@ -174,36 +176,81 @@
                                 <hr><i class="icon-arrow-filled-down margin-left margin-right" data-bind="visible: $index() < $parent.policies().length - 1"></i><hr>
                             </div>
                         </div>
-                        <button class="btn btn-default" data-bind="click: addPolicy">
+                        <div class="margin-left margin-left-lg">
+                            <button class="btn btn-default" data-bind="click: addPolicy">
+                                <i class="icon-plus"></i>
+                                <span>Add Policy</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="hr-title">
+                        <h5>Named Values</h5>
+                        <hr>
+                        <a href="#" class="named-values-info" data-toggle="tooltip">
+                            <i class="icon-info text-info"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="margin-left margin-left-lg margin-bottom">
+                        <!-- ko foreach: namedValues -->
+                        <div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    Time Series Name
+                                </div>
+                                <div class="col-md-6">
+                                    Values Names
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: timeSeriesName">
+                                            <input class="form-control" placeholder="Time Series Name" data-bind="textInput: timeSeriesName, hasFocus: hasFocus" />
+                                        </div>
+                                        <button class="btn btn-danger" title="Delete this entry" data-bind="click: _.partial($parent.removeNamedValues, $data)">
+                                            <i class="icon-trash"> </i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="margin-right margin-right-lg">
+                                        <!-- ko foreach: namedValues -->
+                                        <div class="form-group">
+                                            <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: name">
+                                                <input class="form-control" data-bind="textInput: name, hasFocus: hasFocus" />
+                                            </div>
+                                            <button class="btn btn-danger" title="Delete this entry" data-bind="click: _.partial($parent.removeMapping, $data)">
+                                                <i class="icon-trash"> </i>
+                                            </button>
+                                        </div>
+                                        <!-- /ko -->
+                                    </div>
+
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: namedValues">
+                                        <div class="help-block margin-bottom" data-bind="validationMessage: namedValues"></div>
+                                    </div>
+
+                                    <button class="btn btn-default" data-bind="click: addMapping">
+                                        <i class="icon-plus"> </i><span>Add entry</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <hr />
+                        </div>
+                        <!-- /ko -->
+                        
+                        
+                        <button class="btn btn-default" data-bind="click: addNamedValues">
                             <i class="icon-plus"></i>
-                            <span>Add Policy</span>
+                            <span>Add Named Values</span>
                         </button>
                     </div>
 
-                    <div class="bg-info padding margin-bottom margin-top">
-                        <div class="flex-horizontal">
-                            <div class="flex-start"><i class="icon-info"></i></div>
-                            <div>
-                                <small>Note:</small>
-                                <ol>
-                                    <li>
-                                        <small>
-                                            <strong>New time-series data</strong> is created for each aggregation policy that is defined.
-                                            <br />
-                                            Its name will be &lt;original-time-series-name&gt;_&lt;additional-policy-name&gt;
-                                        </small>
-                                    </li>
-                                    <li>
-                                        <small>
-                                            The time-series data generated by the <strong>first</strong> aggregation policy is based on the Raw time-series data.
-                                            After that, the input data for each a aggregation policy will be the time-series data that was generated by the <strong>previous</strong> policy. <br />
-                                            The first Aggregation Rule is based on the Time Series data.<br />
-                                            Each of the following Aggregation Rules is based on data from its <strong>preceding</strong> rule.
-                                        </small>
-                                    </li>
-                                </ol>
-                            </div>
-                        </div>
+                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: namedValues">
+                        <div class="help-block" data-bind="validationMessage: namedValues"></div>
                     </div>
 
                     <div class="text-right margin-top">
@@ -218,9 +265,9 @@
 
 <script type="text/html" id="time-series-config-item-template">
     <div class="panel panel-state configuration-item" data-bind="css: { active: $data === $root.currentBackingItem() }">
-        <div class="state" data-bind="attr: { 'data-state-text': disabled() ? 'disabled' : 'enabled' }, css: { 'state-success': !disabled(), 'state-warning': disabled() }"></div>
+        <div class="state" data-bind="attr: { 'data-state-text': hasRetentionConfig() && disabled() ? 'disabled' : 'enabled' }, css: { 'state-success': !hasRetentionConfig() || !disabled(), 'state-warning': hasRetentionConfig() && disabled() }"></div>
         <div class="padding padding-sm flex-horizontal">
-            <div class="checkbox">
+            <div class="checkbox" data-bind="visible: hasRetentionConfig">
                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedItems, checkedValue: $data">
                 <label></label>
             </div>
@@ -232,10 +279,10 @@
             </div>
             <div class="actions-container">
                 <div class="actions">
-                    <button class="btn btn-default" data-bind="visible: !disabled(), click: $root.disableConfiguration">
+                    <button class="btn btn-default" data-bind="visible: hasRetentionConfig() && !disabled(), click: $root.disableConfiguration">
                         <i class="icon-stop"></i><span>Disable</span>
                     </button>
-                    <button class="btn btn-success" data-bind="visible: disabled, click: $root.enableConfiguration">
+                    <button class="btn btn-success" data-bind="visible: hasRetentionConfig() && disabled(), click: $root.enableConfiguration">
                         <i class="icon-play"></i><span>Enable</span>
                     </button>
                     <button class="btn btn-default" data-bind="click: $root.editItem" title="Edit configuration"><i class="icon-edit"></i></button>
@@ -245,7 +292,7 @@
         </div>
 
         <div class="panel-addon padding padding-sm">
-            <div class="aggregation-flow">
+            <div class="aggregation-flow" data-bind="if: hasRetentionConfig">
                 <div class="item">
                     <div class="item-content">
                         <div class="small-label item-name"><strong>Raw Data</strong></div>
@@ -276,6 +323,17 @@
                     <div class="arrow" data-bind="visible: $index() < $parent.policies().length - 1"></div>
                 </div>
                 
+                <!-- /ko -->
+            </div>
+            <div data-bind="if: namedValues().length">
+                Named Values:
+                
+                <!-- ko foreach: namedValues -->
+                <div>
+                    <span data-bind="text: timeSeriesName"></span>
+                    --->
+                    <span data-bind="text: namedValuesAsText"></span>
+                </div>
                 <!-- /ko -->
             </div>
         </div>

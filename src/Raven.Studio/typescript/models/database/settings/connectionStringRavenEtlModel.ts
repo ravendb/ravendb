@@ -65,7 +65,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             validation: [
                 {
                     validator: () => this.topologyDiscoveryUrls().length > 0,
-                    message: "All least one discovery url is required"
+                    message: "At least one discovery url is required"
                 }
             ]
         });
