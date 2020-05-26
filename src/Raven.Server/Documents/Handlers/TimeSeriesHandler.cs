@@ -500,14 +500,27 @@ namespace Raven.Server.Documents.Handlers
                     {
                         timeSeriesCollection[collection.Key] = collection.Value.ToJson();
                     }
+                    
+                    var configJson = new DynamicJsonValue
+                    {
+                        [nameof(timeSeriesConfig.Collections)] = timeSeriesCollection,
+                        [nameof(timeSeriesConfig.PolicyCheckFrequency)] = timeSeriesConfig.PolicyCheckFrequency
+                    };
+                                        
+                    if (timeSeriesConfig.NamedValues != null)
+                    {
+                        var namedValues = new DynamicJsonValue();
+                        foreach (var collection in timeSeriesConfig.NamedValues)
+                        {
+                            namedValues[collection.Key] = DynamicJsonValue.Convert(collection.Value);
+                        }
 
+                        configJson[nameof(timeSeriesConfig.NamedValues)] = namedValues;
+                    }
+                                      
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            [nameof(timeSeriesConfig.Collections)] = timeSeriesCollection,
-                            [nameof(timeSeriesConfig.PolicyCheckFrequency)] = timeSeriesConfig.PolicyCheckFrequency
-                        });
+                        context.Write(writer, configJson);
                     }
                 }
                 else
@@ -527,9 +540,17 @@ namespace Raven.Server.Documents.Handlers
                 GetRaftRequestIdFromQuery(),
                 beforeSetupConfiguration: (string name, ref BlittableJsonReaderObject configuration, JsonOperationContext context) =>
                 {
-                    if (configuration == null || 
-                        configuration.TryGet(nameof(TimeSeriesConfiguration.Collections), out BlittableJsonReaderObject collections) == false ||
-                        collections?.Count > 0 == false)
+                    if (configuration == null)
+                    {
+                        return;
+                    }
+
+                    var hasCollectionsConfig = configuration.TryGet(nameof(TimeSeriesConfiguration.Collections), out BlittableJsonReaderObject collections) &&
+                                               collections?.Count > 0;
+
+                    var hasNamedValuesConfig = configuration.TryGet(nameof(TimeSeriesConfiguration.NamedValues), out BlittableJsonReaderObject namedValues);
+                    
+                    if (hasCollectionsConfig == false && hasNamedValuesConfig == false)
                         return;
 
                     var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

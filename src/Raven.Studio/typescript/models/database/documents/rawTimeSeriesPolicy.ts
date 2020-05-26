@@ -11,10 +11,7 @@ class rawTimeSeriesPolicy extends timeSeriesPolicy {
     static empty() {
         return new rawTimeSeriesPolicy({
             AggregationTime: null,
-            RetentionTime: {
-                Value: 0,
-                Unit: "Month"
-            },
+            RetentionTime: null,
             Name: null
         });
     }

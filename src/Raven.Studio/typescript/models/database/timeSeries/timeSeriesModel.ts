@@ -43,7 +43,7 @@ class timeSeriesModel {
             validation: [
                 {
                     validator: () => this.values().length > 0,
-                    message: "All least one value is required"
+                    message: "At least one value is required"
                 }
             ]
         });

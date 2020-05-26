@@ -1,31 +1,50 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import rawTimeSeriesPolicy = require("models/database/documents/rawTimeSeriesPolicy");
 import timeSeriesPolicy = require("models/database/documents/timeSeriesPolicy");
+import timeSeriesNamedValues = require("models/database/documents/timeSeriesNamedValues");
 
 class timeSeriesConfigurationEntry {
 
-    disabled = ko.observable<boolean>();
+    disabled = ko.observable<boolean>(false);
     collection = ko.observable<string>();
     
-    rawPolicy = ko.observable<rawTimeSeriesPolicy>();
+    rawPolicy = ko.observable<rawTimeSeriesPolicy>(rawTimeSeriesPolicy.empty());
     policies = ko.observableArray<timeSeriesPolicy>([]);
     
+    namedValues = ko.observableArray<timeSeriesNamedValues>([]);
+
+    hasRetentionConfig: KnockoutComputed<boolean>;
+    hasNamedValuesConfig: KnockoutComputed<boolean>;
+    
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
-        collection: this.collection
+        collection: this.collection,
+        namedValues: this.namedValues
     });
 
-    constructor(collection: string, dto: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration) {
+    constructor(collection: string) {
         this.collection(collection);
+
+        this.hasRetentionConfig = ko.pureComputed(() => this.policies().length > 0 || (this.rawPolicy() && this.rawPolicy().hasRetention()));
+        this.hasNamedValuesConfig = ko.pureComputed(() => this.namedValues().length > 0);
+
+        this.initValidation();
+       
+        _.bindAll(this, "addPolicy", "removePolicy", "addNamedValues", "removeNamedValues");
+    }
+    
+    withRetention(dto: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration) {
         this.disabled(dto.Disabled);
-        
+
         this.rawPolicy(new rawTimeSeriesPolicy(dto.RawPolicy));
         this.policies(dto.Policies.map(x => new timeSeriesPolicy(x)));
-
+ 
         this.linkPolicies();
-        
-        this.initValidation();
-        
-        _.bindAll(this, "addPolicy", "removePolicy");
+    }
+    
+    withNamedValues(dto: System.Collections.Generic.Dictionary<string, string[]>) {
+        this.namedValues(_.map(dto, (configuration, tsName) => {
+            return new timeSeriesNamedValues(tsName, configuration);
+        }))
     }
     
     linkPolicies() {
@@ -41,6 +60,24 @@ class timeSeriesConfigurationEntry {
         this.collection.extend({
             required: true
         });
+        
+        this.namedValues.extend({
+            validation: [
+                {
+                    validator: () => this.hasRetentionConfig() || this.hasNamedValuesConfig(),
+                    message: "Please define retention configuration or at least one named values"
+                }, {
+                    validator: () => {
+                        const nonEmptyNames = this.namedValues()
+                            .map(x => x.timeSeriesName())
+                            .filter(x => x);
+                        
+                        return nonEmptyNames.length === 0 || _.union(nonEmptyNames).length === nonEmptyNames.length;
+                    },
+                    message: "Time Series names must be unique"
+                }
+            ]
+        });
     }
 
     copyFrom(incoming: timeSeriesConfigurationEntry): this {
@@ -51,6 +88,8 @@ class timeSeriesConfigurationEntry {
         this.policies(incoming.policies().map(x => timeSeriesPolicy.empty().copyFrom(x)));
         
         this.linkPolicies();
+        
+        this.namedValues(incoming.namedValues().map(x => timeSeriesNamedValues.empty().copyFrom(x)));
         
         return this;
     }
@@ -68,7 +107,17 @@ class timeSeriesConfigurationEntry {
         this.linkPolicies();
     }
 
-    toDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration {
+    addNamedValues() {
+        const newValues = timeSeriesNamedValues.empty();
+        newValues.hasFocus(true);
+        this.namedValues.push(newValues);
+    }
+    
+    removeNamedValues(item: timeSeriesNamedValues) {
+        this.namedValues.remove(item);
+    }
+
+    toRetentionDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration {
         return {
             Disabled: this.disabled(),
             Policies: this.policies().map(x => x.toDto()),
@@ -76,17 +125,31 @@ class timeSeriesConfigurationEntry {
         };
     }
 
+    toNamedValuesDto(): System.Collections.Generic.Dictionary<string, string[]> {
+        const result = {} as System.Collections.Generic.Dictionary<string, string[]>;
+
+        this.namedValues().forEach(entry => {
+            result[entry.timeSeriesName()] = entry.namedValues().map(x => x.name());
+        });
+        
+        return result;
+    }
+
     static empty() {
-        return new timeSeriesConfigurationEntry("",
-        {
+        const emptyRetentionDto: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration = {
             Disabled: false,
             RawPolicy: {
                 RetentionTime: null,
                 AggregationTime: null,
                 Name: null
             },
-            Policies: [] 
-        });
+            Policies: []
+        };
+        const entry = new timeSeriesConfigurationEntry("");
+        entry.withRetention(emptyRetentionDto);
+        entry.withNamedValues({});
+        return entry;
+        
     }
 }
 
