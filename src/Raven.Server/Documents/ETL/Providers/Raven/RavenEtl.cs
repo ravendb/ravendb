@@ -61,6 +61,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             oldRequestExecutor?.Dispose();
         }
 
+        internal Action<RavenEtl> BeforeActualLoad = null;
+
         private static RequestExecutor CreateNewRequestExecutor(RavenEtlConfiguration configuration, ServerStore serverStore)
         {
             var certificate = serverStore.Server.Certificate.Certificate;
@@ -141,6 +143,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             try
             {
+                BeforeActualLoad?.Invoke(this);
+
                 AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
                 _recentUrl = _requestExecutor.Url;
 
@@ -153,7 +157,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     ThrowTimeoutException(commands.Count, duration.Elapsed, e);
                 }
 
-                return 0;
+                throw;
             }
         }
 

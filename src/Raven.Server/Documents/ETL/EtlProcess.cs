@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.ETL
         internal const int MinBatchSize = 64;
 
         private readonly ManualResetEventSlim _waitForChanges = new ManualResetEventSlim();
-        private readonly CancellationTokenSource _cts;
+        private CancellationTokenSource _cts;
         private readonly HashSet<string> _collections;
 
         private readonly ConcurrentQueue<EtlStatsAggregator> _lastEtlStats =
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        public void Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope stats)
+        public bool Load(IEnumerable<TTransformed> items, DocumentsOperationContext context, EtlStatsScope stats)
         {
             using (stats.For(EtlOperations.Load))
             {
@@ -369,17 +369,24 @@ namespace Raven.Server.Documents.ETL
                     Statistics.LoadSuccess(stats.NumberOfTransformedItems.Sum(x => x.Value));
 
                     stats.RecordLoadSuccess(count);
+
+                    return true;
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Failed to load transformed data for '{Name}'", e);
+                    if (CancellationToken.IsCancellationRequested == false)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Failed to load transformed data for '{Name}'", e);
 
-                    stats.RecordLoadFailure();
+                        stats.RecordLoadFailure();
 
-                    EnterFallbackMode();
+                        EnterFallbackMode();
 
-                    Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems.Sum(x => x.Value));
+                        Statistics.RecordLoadError(e.ToString(), documentId: null, count: stats.NumberOfExtractedItems.Sum(x => x.Value));
+                    }
+
+                    return false;
                 }
             }
         }
@@ -549,6 +556,8 @@ namespace Raven.Server.Documents.ETL
             if (Transformation.Disabled || Configuration.Disabled)
                 return;
 
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
+
             var threadName = $"{Tag} process: {Name}";
             _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
             {
@@ -653,12 +662,14 @@ namespace Raven.Server.Documents.ETL
                                             transformations.AddRange(transformed);
                                     }
 
+                                    var successfulLoad = false;
+
                                     if (transformations.Count > 0)
-                                        Load(transformations, context, stats);
+                                        successfulLoad = Load(transformations, context, stats);
 
                                     var lastProcessed = Math.Max(stats.LastLoadedEtag, stats.LastFilteredOutEtags.Values.Max());
 
-                                    if (lastProcessed > Statistics.LastProcessedEtag)
+                                    if (lastProcessed > Statistics.LastProcessedEtag && successfulLoad)
                                     {
                                         didWork = true;
                                         Statistics.LastProcessedEtag = lastProcessed;
