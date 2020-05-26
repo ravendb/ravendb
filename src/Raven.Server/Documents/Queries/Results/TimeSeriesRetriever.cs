@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Lucene.Net.Store;
+using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
@@ -51,7 +52,7 @@ namespace Raven.Server.Documents.Queries.Results
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
         }
 
-        public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args)
+        public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, bool addProjectionToResult = false)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
 
@@ -154,11 +155,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 _argumentValuesDictionary.Clear();
 
-                return _context.ReadObject(new DynamicJsonValue
-                {
-                    ["Count"] = count,
-                    ["Results"] = array
-                }, "timeseries/value");
+                return GetFinalResult(array, count, addProjectionToResult);
             }
 
             BlittableJsonReaderObject GetAggregatedValues()
@@ -202,11 +199,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 _argumentValuesDictionary?.Clear();
 
-                return _context.ReadObject(new DynamicJsonValue
-                {
-                    ["Count"] = count,
-                    ["Results"] = array
-                }, "timeseries/value");
+                return GetFinalResult(array, count, addProjectionToResult);
             }
 
             bool ShouldFilter(SingleResult singleResult, QueryExpression filter)
@@ -725,6 +718,25 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return field.FieldValueWithoutAlias;
             }
+        }
+
+        private BlittableJsonReaderObject GetFinalResult(DynamicJsonArray array, long count, bool addProjectionToResult)
+        {
+            var result = new DynamicJsonValue
+            {
+                ["Count"] = count, 
+                ["Results"] = array
+            };
+
+            if (addProjectionToResult)
+            {
+                result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Projection] = true
+                };
+            }
+
+            return _context.ReadObject(result, "timeseries/value");
         }
 
         private (DateTime Min, DateTime Max) GetMinAndMax(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
