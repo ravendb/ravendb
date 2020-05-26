@@ -51,7 +51,10 @@ namespace Raven.Abstractions.Linq
 
                 for (int i = 0; i < count; i++)
                 {
-                    array.SetValue(Convert.ChangeType(this[i], elementType), i);
+                    var v = elementType == typeof(object) ? 
+                        this[i] : 
+                        Convert.ChangeType(this[i], elementType);
+                    array.SetValue(v, i);
                 }
 
                 result = array;
