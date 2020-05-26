@@ -85,7 +85,7 @@ namespace SlowTests.Issues
             int s4Ctx = -1;
             using (var s4 = store.OpenSession())
             {
-                s4.Advanced.SessionInfo.SetSessionContext("monkey");
+                s4.Advanced.SessionInfo.SetContext("monkey");
                 
                 var sessionInfo = s4.Advanced.SessionInfo;
                 s3Ctx = sessionInfo.SessionId;

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Sparrow;
@@ -10,8 +9,10 @@ namespace Raven.Client.Documents.Session
     {
         [ThreadStatic]
         private static int _clientSessionIdCounter;
+
         private int _clientSessionId;
         private bool _sessionIdUsed;
+        private readonly int _loadBalancerContextSeed;
 
         public int SessionId
         {
@@ -28,28 +29,34 @@ namespace Raven.Client.Documents.Session
 
         public bool NoCaching { get; set; }
 
-        public SessionInfo(string sessionContextKey, int writeBalanceSeed, bool asyncCommandRunning, long? lastClusterTransactionIndex = null, bool noCaching = false)
+        public SessionInfo(string sessionKey, int loadBalancerContextSeed, bool asyncCommandRunning, long? lastClusterTransactionIndex = null, bool noCaching = false)
         {
-            SetSessionContext(sessionContextKey, writeBalanceSeed);
+            SetContext(sessionKey, loadBalancerContextSeed);
+
+            _loadBalancerContextSeed = loadBalancerContextSeed;
 
             LastClusterTransactionIndex = lastClusterTransactionIndex;
             AsyncCommandRunning = asyncCommandRunning;
             NoCaching = noCaching;
         }
 
-        public void SetSessionContext(string sessionKey, int loadBalancerContextSeed = 0)
+        public void SetContext(string sessionKey)
         {
-            if(_sessionIdUsed)
+            SetContext(sessionKey, _loadBalancerContextSeed);
+        }
+
+        private void SetContext(string sessionKey, int loadBalancerContextSeed)
+        {
+            if (_sessionIdUsed)
                 throw new InvalidOperationException("Unable to set the session context after it has already been used. The session context can only be modified before it is utliziedn");
-            
+
             if (sessionKey == null)
             {
                 _clientSessionId = ++_clientSessionIdCounter;
             }
             else
             {
-                _clientSessionId = (int)Hashing.XXHash32.Calculate(sessionKey,
-                    (uint)loadBalancerContextSeed);
+                _clientSessionId = (int)Hashing.XXHash32.Calculate(sessionKey, (uint)loadBalancerContextSeed);
             }
         }
 
@@ -63,7 +70,7 @@ namespace Raven.Client.Documents.Session
                     result = await requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
                     return result.Node;
             }
-            
+
             switch (requestExecutor.Conventions.ReadBalanceBehavior)
             {
                 case ReadBalanceBehavior.None:
