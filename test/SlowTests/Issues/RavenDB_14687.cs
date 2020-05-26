@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Jint.Constraints;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
                 var indexInstance1 = (MapIndex)database.IndexStore.GetIndex(index.IndexName);
                 var compiled1 = (JavaScriptIndex)indexInstance1._compiled;
 
-                Assert.Equal(initialMaxStepsForScript, compiled1._engine.MaxStatements);
+                Assert.Equal(initialMaxStepsForScript, compiled1._engine.FindConstraint<MaxStatements>().Max);
 
                 const int maxStepsForScript = 1000;
                 index = new MyJSIndex(maxStepsForScript);
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
                 Assert.NotEqual(indexInstance1, indexInstance2);
                 Assert.NotEqual(compiled1, compiled2);
 
-                Assert.Equal(maxStepsForScript, compiled2._engine.MaxStatements);
+                Assert.Equal(maxStepsForScript, compiled2._engine.FindConstraint<MaxStatements>().Max);
 
                 using (var session = store.OpenSession())
                 {
