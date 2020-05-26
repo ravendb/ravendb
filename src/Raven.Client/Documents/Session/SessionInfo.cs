@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Sparrow;
@@ -9,9 +10,17 @@ namespace Raven.Client.Documents.Session
     {
         [ThreadStatic]
         private static int _clientSessionIdCounter;
-        protected int _clientSessionId;
+        private int _clientSessionId;
+        private bool _sessionIdUsed;
 
-        public int SessionId { get;}
+        public int SessionId
+        {
+            get
+            {
+                _sessionIdUsed = true;
+                return _clientSessionId;
+            }
+        }
 
         public long? LastClusterTransactionIndex { get; set; }
 
@@ -28,8 +37,11 @@ namespace Raven.Client.Documents.Session
             NoCaching = noCaching;
         }
 
-        public void SetSessionContext(string sessionKey, int writeBalanceSeed = 0)
+        public void SetSessionContext(string sessionKey, int loadBalancerContextSeed = 0)
         {
+            if(_sessionIdUsed)
+                throw new InvalidOperationException("Unable to set the session context after it has already been used. The session context can only be modified before it is utliziedn");
+            
             if (sessionKey == null)
             {
                 _clientSessionId = ++_clientSessionIdCounter;
@@ -37,11 +49,11 @@ namespace Raven.Client.Documents.Session
             else
             {
                 _clientSessionId = (int)Hashing.XXHash32.Calculate(sessionKey,
-                    (uint)writeBalanceSeed);
+                    (uint)loadBalancerContextSeed);
             }
         }
 
-        public async Task<ServerNode> GetCurrentSessionNode(RequestExecutor requestExecutor)
+        internal async Task<ServerNode> GetCurrentSessionNode(RequestExecutor requestExecutor)
         {
             (int Index, ServerNode Node) result;
 
