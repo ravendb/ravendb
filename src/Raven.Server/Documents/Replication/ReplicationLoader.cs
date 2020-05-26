@@ -1101,13 +1101,14 @@ namespace Raven.Server.Documents.Replication
                         if (_log.IsInfoEnabled)
                             _log.Info($"Failed to execute {nameof(GetRemoteTaskTopologyCommand)} for {pullReplicationAsSink.Name}", e);
 
+                        // failed to connect, will retry later
+                        throw;
+                    }
+                    finally
+                    {
                         // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
                         pullReplicationAsSink.Url = requestExecutor.Url;
                         pullReplicationAsSink.Database = database;
-
-                        // failed to connect, will retry later
-                        if (cmd.Result == null)
-                            return null;
                     }
 
                     remoteDatabaseUrls = cmd.Result;
