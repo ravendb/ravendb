@@ -1272,6 +1272,21 @@ namespace Raven.Server.Documents.Indexes
                                         throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
                                 }
                                 break;
+                            case IndexSourceType.Counters:
+                                switch (staticIndexDefinition.Type)
+                                {
+                                    case IndexType.Map:
+                                    case IndexType.JavaScriptMap:
+                                        index = MapCountersIndex.CreateNew(staticIndexDefinition, _documentDatabase);
+                                        break;
+                                    case IndexType.MapReduce:
+                                    case IndexType.JavaScriptMapReduce:
+                                        index = MapReduceIndex.CreateNew<MapReduceCountersIndex>(staticIndexDefinition, _documentDatabase, isIndexReset: true);
+                                        break;
+                                    default:
+                                        throw new NotSupportedException($"Cannot create {staticIndexDefinition.Type} index from IndexDefinition");
+                                }
+                                break;
                             case IndexSourceType.TimeSeries:
                                 switch (staticIndexDefinition.Type)
                                 {
