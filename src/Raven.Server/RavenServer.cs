@@ -191,7 +191,6 @@ namespace Raven.Server
                             });
                         }
 
-                        ServerCertificateChanged += UpdateCertificateExpirationAlert;
                         _refreshClusterCertificate = new Timer(RefreshClusterCertificateTimerCallback);
                     }
                 }
@@ -345,7 +344,7 @@ namespace Raven.Server
             }
         }
 
-        private void UpdateCertificateExpirationAlert(object sender = null, EventArgs args = null)
+        private void UpdateCertificateExpirationAlert()
         {
             var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
             if (remainingDays <= 0)
@@ -412,6 +411,16 @@ namespace Raven.Server
             {
                 // the .Wait() can throw as well, so we'll ignore any
                 // errors here, it all goes to the log anyway
+            }
+
+            try
+            {
+                UpdateCertificateExpirationAlert();
+            }
+            catch (Exception exception)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to check the expiration date of the new server certificate '{Certificate.Certificate?.Subject} ({Certificate.Certificate?.Thumbprint})'", exception);
             }
         }
 
@@ -890,7 +899,16 @@ namespace Raven.Server
         public void RefreshClusterCertificateTimerCallback(object state)
         {
             RefreshClusterCertificate(state, RaftIdGenerator.NewId());
-            UpdateCertificateExpirationAlert();
+            
+            try
+            {
+                UpdateCertificateExpirationAlert();
+            }
+            catch (Exception exception)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Periodic check of the server certificate expiration date failed.", exception);
+            }
         }
 
         public bool RefreshClusterCertificate(object state, string raftRequestId)
