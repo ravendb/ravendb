@@ -43,13 +43,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
-        [ThreadStatic]
-        private static int _clientSessionIdCounter;
-
         internal long _asyncTasksCounter;
-
-        protected readonly int _clientSessionId;
-
         protected readonly RequestExecutor _requestExecutor;
         private OperationExecutor _operationExecutor;
         private readonly IDisposable _releaseOperationContext;
@@ -101,25 +95,7 @@ namespace Raven.Client.Documents.Session
         public async Task<ServerNode> GetCurrentSessionNode()
         {
             using (AsyncTaskHolder())
-            {
-                (int Index, ServerNode Node) result;
-                switch (RequestExecutor.Conventions.ReadBalanceBehavior)
-                {
-                    case ReadBalanceBehavior.None:
-                        result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
-                        break;
-                    case ReadBalanceBehavior.RoundRobin:
-                        result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
-                        break;
-                    case ReadBalanceBehavior.FastestNode:
-                        result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException(RequestExecutor.Conventions.ReadBalanceBehavior.ToString());
-                }
-
-                return result.Node;
-            }
+                return await SessionInfo.GetCurrentSessionNode(_requestExecutor).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -246,17 +222,7 @@ namespace Raven.Client.Documents.Session
 
             string sessionKey = documentStore.Conventions.WriteBalanceSessionContextSelector?.Invoke(DatabaseName);
 
-            if (sessionKey == null)
-            {
-                _clientSessionId = ++_clientSessionIdCounter;
-            }
-            else
-            {
-                _clientSessionId = (int)Hashing.XXHash32.Calculate(sessionKey,
-                    (uint)documentStore.Conventions.WriteBalanceSeed);
-            }
-
-
+   
 
             _documentStore = documentStore;
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
@@ -266,7 +232,8 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
-            _sessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
+            _sessionInfo = new SessionInfo(sessionKey, documentStore.Conventions.WriteBalanceSeed,false,
+                _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(

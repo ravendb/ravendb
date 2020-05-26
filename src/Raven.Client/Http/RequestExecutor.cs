@@ -534,9 +534,9 @@ namespace Raven.Client.Http
                 }
             }
 
-            switch (Conventions.WriteBalanceBehavior)
+            switch (Conventions.LoadBalanceBehavior)
             {
-                case WriteBalanceBehavior.ClientContextSelection:
+                case LoadBalanceBehavior.UseSessionContext:
                     int? id = sessionInfo?.SessionId;
                     if(id != null)
                         return _nodeSelector.GetNodeBySessionId(id.Value);
