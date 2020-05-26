@@ -220,7 +220,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, string, string, string, string> _findPropertyNameForDynamicIndex;
         private Func<Type, string, string, string, string> _findPropertyNameForIndex;
         private Func<Type, string, string, string, string> _findProjectedPropertyNameForIndex;
-        private Func<string, string> _writeBalanceSessionContextSelector;
+        private Func<string, string> _loadBalancerPerSessionContextSelector;
 
         private Func<dynamic, string> _findCollectionNameForDynamic;
         private Func<dynamic, string> _findClrTypeNameForDynamic;
@@ -237,7 +237,7 @@ namespace Raven.Client.Documents.Conventions
         private TimeSpan _secondBroadcastAttemptTimeout;
         private TimeSpan _firstBroadcastAttemptTimeout;
 
-        private int _writeBalanceSeed;
+        private int _loadBalancerContextSeed;
         private LoadBalanceBehavior _loadBalanceBehavior;
         private ReadBalanceBehavior _readBalanceBehavior;
         private bool _preserveDocumentPropertiesNotFoundOnModel;
@@ -373,13 +373,13 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        public int WriteBalanceSeed
+        public int LoadBalancerContextSeed
         {
-            get => _writeBalanceSeed;
+            get => _loadBalancerContextSeed;
             set
             {
                 AssertNotFrozen();
-                _writeBalanceSeed = value;
+                _loadBalancerContextSeed = value;
             }
         }
 
@@ -387,7 +387,7 @@ namespace Raven.Client.Documents.Conventions
         {
             // We have to make this check so if admin activated this, but client code did not provide the selector,
             // it is still disabled. Relevant if we have multiple clients / versions at once.
-            get => _writeBalanceSessionContextSelector == null ? LoadBalanceBehavior.None : _loadBalanceBehavior;
+            get => _loadBalancerPerSessionContextSelector == null ? LoadBalanceBehavior.None : _loadBalanceBehavior;
             set
             {
                 AssertNotFrozen();
@@ -471,13 +471,13 @@ namespace Raven.Client.Documents.Conventions
         /// selection for a particular session. Used in load balancing
         /// scenarios.
         /// </summary>
-        public Func<string, string> WriteBalanceSessionContextSelector
+        public Func<string, string> LoadBalancerPerSessionContextSelector
         {
-            get => _writeBalanceSessionContextSelector;
+            get => _loadBalancerPerSessionContextSelector;
             set
             {
                 AssertNotFrozen();
-                _writeBalanceSessionContextSelector = value;
+                _loadBalancerPerSessionContextSelector = value;
             }
         }
 
@@ -993,7 +993,7 @@ namespace Raven.Client.Documents.Conventions
                     _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
                     _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
                     _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
-                    _loadBalanceBehavior = _originalConfiguration.WriteBalanceBehavior ?? _loadBalanceBehavior;
+                    _loadBalanceBehavior = _originalConfiguration.LoadBalanceBehavior ?? _loadBalanceBehavior;
 
                     _originalConfiguration = null;
                     return;
@@ -1006,12 +1006,12 @@ namespace Raven.Client.Documents.Conventions
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
                         ReadBalanceBehavior = ReadBalanceBehavior,
                         IdentityPartsSeparator = IdentityPartsSeparator,
-                        WriteBalanceBehavior = _loadBalanceBehavior,
+                        LoadBalanceBehavior = _loadBalanceBehavior,
                     };
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
-                _loadBalanceBehavior = configuration.WriteBalanceBehavior ?? _originalConfiguration.WriteBalanceBehavior ?? _loadBalanceBehavior;
+                _loadBalanceBehavior = configuration.LoadBalanceBehavior ?? _originalConfiguration.LoadBalanceBehavior ?? _loadBalanceBehavior;
                 _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
             }
         }
@@ -1156,9 +1156,9 @@ namespace Raven.Client.Documents.Conventions
         internal void Freeze()
         {
             if (_loadBalanceBehavior == LoadBalanceBehavior.UseSessionContext && 
-                _writeBalanceSessionContextSelector == null)
+                _loadBalancerPerSessionContextSelector == null)
             {
-                throw new NotSupportedException($"Cannot set {nameof(LoadBalanceBehavior)} to {LoadBalanceBehavior.UseSessionContext} without also providing a value for {nameof(WriteBalanceSessionContextSelector)}");
+                throw new NotSupportedException($"Cannot set {nameof(LoadBalanceBehavior)} to {LoadBalanceBehavior.UseSessionContext} without also providing a value for {nameof(LoadBalancerPerSessionContextSelector)}");
             }
 
             _frozen = true;

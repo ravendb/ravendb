@@ -220,7 +220,7 @@ namespace Raven.Client.Documents.Session
             if (string.IsNullOrWhiteSpace(DatabaseName))
                 ThrowNoDatabase();
 
-            string sessionKey = documentStore.Conventions.WriteBalanceSessionContextSelector?.Invoke(DatabaseName);
+            string sessionKey = documentStore.Conventions.LoadBalancerPerSessionContextSelector?.Invoke(DatabaseName);
 
    
 
@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
-            _sessionInfo = new SessionInfo(sessionKey, documentStore.Conventions.WriteBalanceSeed,false,
+            _sessionInfo = new SessionInfo(sessionKey, documentStore.Conventions.LoadBalancerContextSeed,false,
                 _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 

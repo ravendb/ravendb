@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                 {
                     ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin,
                     LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext,
-                    WriteBalanceSessionContextSelector = db => context
+                    LoadBalancerPerSessionContextSelector = db => context
                 }
             }.Initialize();
             
@@ -82,6 +82,16 @@ namespace SlowTests.Issues
             
             Assert.NotEqual(s2Ctx, s3Ctx);
 
+            int s4Ctx = -1;
+            using (var s4 = store.OpenSession())
+            {
+                s4.Advanced.SessionInfo.SetSessionContext("monkey");
+                
+                var sessionInfo = s4.Advanced.SessionInfo;
+                s3Ctx = sessionInfo.SessionId;
+            }
+            
+            Assert.NotEqual(s4Ctx, s3Ctx);
 
         }
 
