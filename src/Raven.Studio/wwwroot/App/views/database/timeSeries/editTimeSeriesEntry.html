@@ -60,9 +60,9 @@
                         <div class="flex-grow">
                             <div data-bind="foreach: values">
                                 <div class="input-group margin-bottom margin-bottom-xs">
-                                    <div class="form-control-static margin-right margin-right-sm aggregation-name" data-bind="text: $root.constructor.aggregationColumns[$index() % 6], visible: $root.isAggregation">
+                                    <div class="form-control-static margin-right margin-right-sm aggregation-name" data-bind="text: $root.getColumnName($index()), visible: $root.getColumnName($index())">
                                     </div>
-                                    <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: value">
+                                    <div class="" data-bind="validationOptions: { insertMessages: false }, validationElement: value">
                                         <input type="text" class="form-control" data-bind="textInput: value" style="width: 100%" />
                                         <div data-bind="validationElement: value">
                                             <div class="help-block" data-bind="validationMessage: value"></div>
