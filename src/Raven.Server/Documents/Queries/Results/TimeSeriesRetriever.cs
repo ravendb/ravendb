@@ -724,8 +724,8 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var result = new DynamicJsonValue
             {
-                ["Count"] = count, 
-                ["Results"] = array
+                [nameof(TimeSeriesQueryResult.Count)] = count,
+                [nameof(TimeSeriesAggregationResult.Results)] = array
             };
 
             if (addProjectionToResult)
