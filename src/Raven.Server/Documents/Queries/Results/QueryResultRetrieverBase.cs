@@ -254,8 +254,8 @@ namespace Raven.Server.Documents.Queries.Results
                 var array = new DynamicJsonArray();
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i] is Document d3)
-                        array.Add(d3.Data);
+                    if (list[i] is Document d)
+                        array.Add(d.Data);
                     else
                         array.Add(list[i]);
                 }
@@ -726,7 +726,7 @@ namespace Raven.Server.Documents.Queries.Results
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
             {
                 _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
-                return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args);
+                return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, addProjectionToResult: FieldsToFetch.SingleBodyOrMethodWithNoAlias);
             }
 
             var key = new QueryKey(query.DeclaredFunctions);
