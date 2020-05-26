@@ -349,11 +349,24 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexSourceType DetectStaticIndexSourceType()
         {
-            var firstMap = Maps.FirstOrDefault();
-            if (firstMap == null)
-                throw new ArgumentNullException("Index definitions contains no Maps");
+            if (Maps == null || Maps.Count == 0)
+                throw new ArgumentNullException("Index definition contains no Maps");
 
-            return IndexDefinitionHelper.DetectStaticIndexSourceType(firstMap);
+            var sourceType = IndexSourceType.None;
+            foreach (var map in Maps)
+            {
+                var mapSourceType = IndexDefinitionHelper.DetectStaticIndexSourceType(map);
+                if (sourceType == IndexSourceType.None)
+                {
+                    sourceType = mapSourceType;
+                    continue;
+                }
+
+                if (sourceType != mapSourceType)
+                    throw new InvalidOperationException("Index definition cannot contain Maps with different source types.");
+            }
+
+            return sourceType;
         }
 
         public IndexType DetectStaticIndexType()
