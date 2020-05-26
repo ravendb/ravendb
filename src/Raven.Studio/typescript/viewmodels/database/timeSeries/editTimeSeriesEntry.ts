@@ -29,7 +29,11 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
     
-    constructor(private documentId: string, private db: database, private timeSeriesName: string, private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
+    constructor(private documentId: string, 
+                private db: database, 
+                private timeSeriesName: string,
+                private columnNames: string[],
+                private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         super();
         
         this.lockTimeStamp = !!editDto;
@@ -59,6 +63,21 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             const name = this.model().name();
             return name && name.includes("@");
         });
+    }
+    
+    getColumnName(idx: number) {
+        if (this.columnNames.length && idx < this.columnNames.length) {
+            return this.columnNames[idx];
+        } 
+        
+        const aggregationsCount = editTimeSeriesEntry.aggregationColumns.length;
+        
+        if (this.isAggregation()) {
+            return editTimeSeriesEntry.aggregationColumns[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")"
+        }
+        
+        // don't display any name!
+        return null;
     }
     
     save() {
