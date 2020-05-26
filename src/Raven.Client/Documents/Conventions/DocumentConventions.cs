@@ -238,7 +238,7 @@ namespace Raven.Client.Documents.Conventions
         private TimeSpan _firstBroadcastAttemptTimeout;
 
         private int _writeBalanceSeed;
-        private WriteBalanceBehavior _writeBalanceBehavior;
+        private LoadBalanceBehavior _loadBalanceBehavior;
         private ReadBalanceBehavior _readBalanceBehavior;
         private bool _preserveDocumentPropertiesNotFoundOnModel;
         private Size _maxHttpCacheSize;
@@ -383,15 +383,15 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
-        public WriteBalanceBehavior WriteBalanceBehavior
+        public LoadBalanceBehavior LoadBalanceBehavior
         {
             // We have to make this check so if admin activated this, but client code did not provide the selector,
             // it is still disabled. Relevant if we have multiple clients / versions at once.
-            get => _writeBalanceSessionContextSelector == null ? WriteBalanceBehavior.None : _writeBalanceBehavior;
+            get => _writeBalanceSessionContextSelector == null ? LoadBalanceBehavior.None : _loadBalanceBehavior;
             set
             {
                 AssertNotFrozen();
-                _writeBalanceBehavior = value;
+                _loadBalanceBehavior = value;
             }
         }
         /// <summary>
@@ -993,7 +993,7 @@ namespace Raven.Client.Documents.Conventions
                     _maxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
                     _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
                     _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
-                    _writeBalanceBehavior = _originalConfiguration.WriteBalanceBehavior ?? _writeBalanceBehavior;
+                    _loadBalanceBehavior = _originalConfiguration.WriteBalanceBehavior ?? _loadBalanceBehavior;
 
                     _originalConfiguration = null;
                     return;
@@ -1006,12 +1006,12 @@ namespace Raven.Client.Documents.Conventions
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
                         ReadBalanceBehavior = ReadBalanceBehavior,
                         IdentityPartsSeparator = IdentityPartsSeparator,
-                        WriteBalanceBehavior = _writeBalanceBehavior,
+                        WriteBalanceBehavior = _loadBalanceBehavior,
                     };
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
-                _writeBalanceBehavior = configuration.WriteBalanceBehavior ?? _originalConfiguration.WriteBalanceBehavior ?? _writeBalanceBehavior;
+                _loadBalanceBehavior = configuration.WriteBalanceBehavior ?? _originalConfiguration.WriteBalanceBehavior ?? _loadBalanceBehavior;
                 _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
             }
         }
@@ -1155,10 +1155,10 @@ namespace Raven.Client.Documents.Conventions
 
         internal void Freeze()
         {
-            if (_writeBalanceBehavior == WriteBalanceBehavior.ClientContextSelection && 
+            if (_loadBalanceBehavior == LoadBalanceBehavior.UseSessionContext && 
                 _writeBalanceSessionContextSelector == null)
             {
-                throw new NotSupportedException($"Cannot set {nameof(WriteBalanceBehavior)} to {WriteBalanceBehavior.ClientContextSelection} without also providing a value for {nameof(WriteBalanceSessionContextSelector)}");
+                throw new NotSupportedException($"Cannot set {nameof(LoadBalanceBehavior)} to {LoadBalanceBehavior.UseSessionContext} without also providing a value for {nameof(WriteBalanceSessionContextSelector)}");
             }
 
             _frozen = true;

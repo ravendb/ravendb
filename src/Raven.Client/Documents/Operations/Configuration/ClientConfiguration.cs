@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
         
-        public WriteBalanceBehavior? WriteBalanceBehavior { get; set; }
+        public LoadBalanceBehavior? WriteBalanceBehavior { get; set; }
 
         public char? IdentityPartsSeparator
         {

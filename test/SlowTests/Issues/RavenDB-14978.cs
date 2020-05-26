@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                 Conventions = new DocumentConventions
                 {
                     ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin,
-                    WriteBalanceBehavior = WriteBalanceBehavior.ClientContextSelection,
+                    LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext,
                     WriteBalanceSessionContextSelector = db => context
                 }
             }.Initialize();
@@ -59,14 +59,14 @@ namespace SlowTests.Issues
             using (var s1 = store.OpenSession())
             {
                 var sessionInfo = s1.Advanced.SessionInfo;
-                s1Ctx = sessionInfo.SessionId.Value;
+                s1Ctx = sessionInfo.SessionId;
             }
 
             int s2Ctx = -1;
             using (var s2 = store.OpenSession())
             {
                 var sessionInfo = s2.Advanced.SessionInfo;
-                s2Ctx = sessionInfo.SessionId.Value;
+                s2Ctx = sessionInfo.SessionId;
             }
             
             Assert.Equal(s2Ctx, s1Ctx);
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
             using (var s3 = store.OpenSession())
             {
                 var sessionInfo = s3.Advanced.SessionInfo;
-                s3Ctx = sessionInfo.SessionId.Value;
+                s3Ctx = sessionInfo.SessionId;
             }
             
             Assert.NotEqual(s2Ctx, s3Ctx);
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
 
         }
 
-        public class User
+        internal class User
         {
             
         }
