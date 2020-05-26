@@ -1303,7 +1303,15 @@ namespace Raven.Database.Prefetching
             if (addFutureBatch == false)
             {
                 log.Info($"A future batch starting with {nextEtag} etag is already running");
-                cts.Cancel();
+
+                try
+                {
+                    cts.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // this is an expected race with the actual task, this is fine
+                }
             }
 
             return addFutureBatch;
