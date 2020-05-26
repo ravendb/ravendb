@@ -156,15 +156,16 @@ class editPullReplicationHubTask extends viewModelBase {
             .topology()
             .nodes()
             .map(x => x.serverUrl());
-        
+
+        const databaseName = this.activeDatabase().name;
         const configurationToExport = {
-            Database: this.activeDatabase().name,
+            Database: databaseName,
             HubDefinitionName: item.taskName(),
             Certificate: item.getCertificate(),
             TopologyUrls: topologyUrls,
         } as pullReplicationExportFileFormat;
         
-        const fileName = "configFile-" + item.taskName() + ".json";
+        const fileName = `configFile-${item.taskName()}-${databaseName}.json`;
         
         this.editedItem().certificateExported(true);
         
