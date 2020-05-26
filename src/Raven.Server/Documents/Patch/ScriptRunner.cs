@@ -1637,8 +1637,7 @@ namespace Raven.Server.Documents.Patch
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
                 ScriptEngine.ResetCallStack();
-                ScriptEngine.ResetStatementsCount();
-                ScriptEngine.ResetTimeoutTicks();
+                ScriptEngine.ResetConstraints();
             }
 
             public object Translate(JsonOperationContext context, object o)

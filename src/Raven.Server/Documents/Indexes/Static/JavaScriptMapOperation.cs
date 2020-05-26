@@ -45,8 +45,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var item in items)
                 {
                     _engine.ResetCallStack();
-                    _engine.ResetStatementsCount();
-                    _engine.ResetTimeoutTicks();
+                    _engine.ResetConstraints();
 
                     if (JavaScriptIndexUtils.GetValue(_engine, item, out JsValue jsItem) == false)
                         continue;
@@ -133,12 +132,15 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     foreach (var prop in oe.Properties)
                     {
-                        var fieldName = prop.GetKey(engine);
-                        var fieldNameAsString = fieldName.AsString();
-                        if (fieldName == "_")
-                            HasDynamicReturns = true;
+                        if (prop is Property property)
+                        {
+                            var fieldName = property.GetKey(engine);
+                            var fieldNameAsString = fieldName.AsString();
+                            if (fieldName == "_")
+                                HasDynamicReturns = true;
 
-                        Fields.Add(fieldNameAsString);
+                            Fields.Add(fieldNameAsString);
+                        }
                     }
                 }
                 else if (CompareFields(oe) == false)
@@ -180,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
 
             var functionExp = new FunctionExpression(
-                function.Id, 
+                function.Id,
                 NodeList.Create(new List<Expression> { new Identifier("self") }),
                 new BlockStatement(NodeList.Create(new List<Statement>
                 {

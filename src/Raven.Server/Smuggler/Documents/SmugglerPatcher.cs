@@ -3,6 +3,7 @@
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
@@ -24,25 +25,22 @@ namespace Raven.Server.Smuggler.Documents
         public Document Transform(Document document, JsonOperationContext context)
         {
             object translatedResult;
-            var oldMaxStatements = _run.ScriptEngine.MaxStatements;
 
-            try
+            using (_run.ScriptEngine.ChangeMaxStatements(_options.MaxStepsForTransformScript))
             {
-                _run.ScriptEngine.MaxStatements = _options.MaxStepsForTransformScript;
-                using (document.Data)
-                using (var result = _run.Run(context, null, "execute", new object[] { document }))
-                    translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            }
-            catch (Raven.Client.Exceptions.Documents.Patching.JavaScriptException e)
-            {
-                if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
-                    return null;
+                try
+                {
+                    using (document.Data)
+                    using (var result = _run.Run(context, null, "execute", new object[] { document }))
+                        translatedResult = _run.Translate(result, context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
+                catch (Raven.Client.Exceptions.Documents.Patching.JavaScriptException e)
+                {
+                    if (e.InnerException is Jint.Runtime.JavaScriptException innerException && string.Equals(innerException.Message, "skip", StringComparison.OrdinalIgnoreCase))
+                        return null;
 
-                throw;
-            }
-            finally
-            {
-                _run.ScriptEngine.MaxStatements = oldMaxStatements;
+                    throw;
+                }
             }
 
             if (translatedResult is BlittableJsonReaderObject == false)

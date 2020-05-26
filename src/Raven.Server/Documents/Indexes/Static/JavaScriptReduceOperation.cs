@@ -157,8 +157,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 foreach (var item in _groupedItems.Values)
                 {
                     Engine.ResetCallStack();
-                    Engine.ResetStatementsCount();
-                    Engine.ResetTimeoutTicks();
+                    Engine.ResetConstraints();
 
                     _oneItemArray[0] = ConstructGrouping(item);
                     JsValue jsItem;
@@ -331,12 +330,15 @@ namespace Raven.Server.Documents.Indexes.Static
                     var cur = new HashSet<CompiledIndexField>();
                     foreach (var prop in oe.Properties)
                     {
-                        string[] path = null;
-                        if (prop is MemberExpression me)
-                            path = GetPropertyPath(me).ToArray();
+                        if (prop is Property property)
+                        {
+                            string[] path = null;
+                            if (property.Value is MemberExpression me)
+                                path = GetPropertyPath(me).ToArray();
 
-                        var propertyName = prop.GetKey(Engine, false);
-                        cur.Add(CreateField(propertyName.AsString(), path));
+                            var propertyName = property.GetKey(Engine);
+                            cur.Add(CreateField(propertyName.AsString(), path));
+                        }
                     }
 
                     _groupByFields = cur.ToArray();

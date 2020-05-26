@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Esprima.Ast;
 using Jint;
+using Jint.Constraints;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Runtime.Descriptors;
@@ -23,15 +24,21 @@ namespace Raven.Server.Extensions
             }
         }
 
+        public static IDisposable ChangeMaxStatements(this Engine engine, int value)
+        {
+            var maxStatements = engine.FindConstraint<MaxStatements>();
+            if (maxStatements == null)
+                return null;
+
+            var oldMaxStatements = maxStatements.Max;
+            maxStatements.Change(value);
+
+            return new DisposableAction(() => maxStatements.Change(oldMaxStatements));
+        }
+
         public static IDisposable DisableMaxStatements(this Engine engine)
         {
-            var oldMaxStatements = engine.MaxStatements;
-            engine.MaxStatements = int.MaxValue;
-
-            return new DisposableAction(() =>
-            {
-                engine.MaxStatements = oldMaxStatements;
-            });
+            return ChangeMaxStatements(engine, int.MaxValue);
         }
 
         public static void ExecuteWithReset(this Engine engine, string source)
@@ -43,8 +50,7 @@ namespace Raven.Server.Extensions
             finally
             {
                 engine.ResetCallStack();
-                engine.ResetStatementsCount();
-                engine.ResetTimeoutTicks();
+                engine.ResetConstraints();
             }
         }
 
@@ -57,8 +63,7 @@ namespace Raven.Server.Extensions
             finally
             {
                 engine.ResetCallStack();
-                engine.ResetStatementsCount();
-                engine.ResetTimeoutTicks();
+                engine.ResetConstraints();
             }
         }
 
