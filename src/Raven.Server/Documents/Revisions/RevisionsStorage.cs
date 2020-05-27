@@ -524,7 +524,8 @@ namespace Raven.Server.Documents.Revisions
                     return;
                 }
                 _documentsStorage.Put(context, id, null, document, lastModifiedTicks, changeVector,
-                    flags.Strip(DocumentFlags.Revision), nonPersistentFlags | NonPersistentDocumentFlags.SkipRevisionCreation);
+                    flags.Strip(DocumentFlags.Revision | DocumentFlags.HasCounters | DocumentFlags.HasTimeSeries ) | DocumentFlags.HasRevisions, 
+                    nonPersistentFlags | NonPersistentDocumentFlags.SkipRevisionCreation);
             }
         }
 

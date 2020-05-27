@@ -124,6 +124,22 @@ namespace Tests.Infrastructure
 
             return null;
         }
+        
+        protected bool WaitForDocumentDeletion(IDocumentStore store, string id, int timeout = 10000)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds <= timeout)
+            {
+                using (var session = store.OpenSession(store.Database))
+                {
+                    if (session.Advanced.Exists(id) == false)
+                        return true;
+                }
+                Thread.Sleep(100);
+            }
+
+            return false;
+        }
 
         public async Task RemoveDatabaseNode(List<RavenServer> cluster, string database, string toDeleteTag)
         {
