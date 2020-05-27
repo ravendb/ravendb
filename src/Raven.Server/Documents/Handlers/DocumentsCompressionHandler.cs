@@ -1,5 +1,5 @@
 ﻿// -----------------------------------------------------------------------
-//  <copyright file="CompressionHandler.cs" company="Hibernating Rhinos LTD">
+//  <copyright file="DocumentsCompressionHandler.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
@@ -13,10 +13,10 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-    public class CompressionHandler : DatabaseRequestHandler
+    public class DocumentsCompressionHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/compression/config", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetCompressionConfig()
+        [RavenAction("/databases/*/documents-compression/config", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetDocumentsCompressionConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -42,8 +42,8 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/admin/compression/config", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task ConfigCompression()
+        [RavenAction("/databases/*/admin/documents-compression/config", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ConfigDocumentsCompression()
         {
             await DatabaseConfigurations(ServerStore.ModifyDocumentsCompression, "write-compression-config", GetRaftRequestIdFromQuery());
         }
