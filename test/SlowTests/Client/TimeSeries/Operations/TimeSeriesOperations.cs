@@ -6,7 +6,6 @@ using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
@@ -1211,6 +1210,184 @@ namespace SlowTests.Client.TimeSeries.Operations
                 get = store.Operations.Send(new GetTimeSeriesOperation(docId, "BodyTemperature"));
                 Assert.Equal(80, get.Entries.Length);
 
+            }
+        }
+
+        [Fact]
+        public async Task GetOperationShouldIncludeValuesFromRollUpsInResult()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
+
+                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
+                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
+                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,p2,p3,p4
+                            }
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Core.Utils.Entities.User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var result = store.Operations.Send(new GetTimeSeriesOperation("users/karmel", "Heartrate"));
+
+                var expected = (60 * 24) // entire raw policy for 1 day 
+                               + (2 * 24) // first day of 'By30Minutes'
+                               + 24 // first day of 'By1Hour'
+                               + 4  // first day of 'By6Hours'
+                               + 1; // first day of 'By1Day'
+
+                Assert.Equal(expected, result.Entries.Length);
+            }
+        }
+
+        [Fact]
+        public async Task GetMultipleRangesOperationShouldIncludeValuesFromRollUpsInResult()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
+
+                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
+                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
+                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,p2,p3,p4
+                            }
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = DateTime.UtcNow;
+                var nowMinutes = now.Minute;
+                now = now.AddMinutes(-nowMinutes);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Core.Utils.Entities.User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                        session.TimeSeriesFor("users/karmel", "BloodPressure")
+                            .Append(baseline.AddMinutes(i), i);
+                    }
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var result = store.Operations.Send(new GetMultipleTimeSeriesOperation("users/karmel", new List<TimeSeriesRange>
+                {
+                    new TimeSeriesRange
+                    {
+                        Name = "Heartrate",
+                        From = DateTime.MinValue,
+                        To = now
+                    },
+                    new TimeSeriesRange
+                    {
+                        Name = "BloodPressure"
+                    }
+                }));
+
+                var expected = (60 * 24) // entire raw policy for 1 day 
+                               + (2 * 24) // first day of 'By30Minutes'
+                               + 24 // first day of 'By1Hour'
+                               + 4  // first day of 'By6Hours'
+                               + 1; // first day of 'By1Day'
+
+                Assert.True(result.Values.TryGetValue("Heartrate", out var rangeResult));
+                Assert.Equal(1, rangeResult.Count);
+                Assert.Equal(expected, rangeResult[0].Entries.Length);
+
+                var rollupsCount = expected - (60 * 24);
+
+                for (int i = 0; i < rollupsCount; i++)
+                {
+                    Assert.True(rangeResult[0].Entries[i].IsRollup);
+                    Assert.Equal(6, rangeResult[0].Entries[i].Values.Length);
+                }
+
+                for (int i = rollupsCount; i < expected; i++)
+                {
+                    Assert.False(rangeResult[0].Entries[i].IsRollup);
+                    Assert.Equal(1, rangeResult[0].Entries[i].Values.Length);
+                }
+
+                Assert.True(result.Values.TryGetValue("BloodPressure", out rangeResult));
+                Assert.Equal(1, rangeResult.Count);
+                Assert.Equal(expected, rangeResult[0].Entries.Length);
+
+                for (int i = 0; i < rollupsCount; i++)
+                {
+                    Assert.True(rangeResult[0].Entries[i].IsRollup);
+                    Assert.Equal(6, rangeResult[0].Entries[i].Values.Length);
+                }
+
+                for (int i = rollupsCount; i < expected; i++)
+                {
+                    Assert.False(rangeResult[0].Entries[i].IsRollup);
+                    Assert.Equal(1, rangeResult[0].Entries[i].Values.Length);
+                }
             }
         }
     }
