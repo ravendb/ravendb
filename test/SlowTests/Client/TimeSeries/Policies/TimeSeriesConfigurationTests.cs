@@ -14,6 +14,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.TimeSeries.Query;
 using SlowTests.Client.TimeSeries.Session;
 using Sparrow;
 using Sparrow.Json;
@@ -802,7 +803,11 @@ namespace SlowTests.Client.TimeSeries.Policies
                 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate")?
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
+                        .Where(entry => entry.IsRollup == false)
+                        .ToList();
+                    Assert.NotNull(ts);
                     Assert.Equal(30, ts.Count);
                     var ts2 = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(((TimeSpan)p.RetentionTime).TotalMinutes / ((TimeSpan)p.AggregationTime).TotalMinutes, ts2.Count);
@@ -857,7 +862,12 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate")?
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
+                        .Where(entry => entry.IsRollup == false)
+                        .ToList();
+
+                    Assert.NotNull(ts);
                     Assert.Equal(960, ts.Count);
                     var ts2 = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(12, ts2.Count);
@@ -989,7 +999,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                await VerifyFullPolicyExecution(store, config.Collections["Users"]);
+                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
             }
         }
 
@@ -1209,32 +1219,10 @@ namespace SlowTests.Client.TimeSeries.Policies
                         ModifyDatabaseName = _ => store.Database
                     }))
                     {
-                       await VerifyFullPolicyExecution(nodeStore, config.Collections["Users"]); 
+                       await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(nodeStore, config.Collections["Users"]); 
                     }
                 }
             }
-        }
-
-        private async Task VerifyFullPolicyExecution(DocumentStore store, TimeSeriesCollectionConfiguration configuration)
-        {
-            var raw = configuration.RawPolicy;
-            configuration.ValidateAndInitialize();
-
-            await WaitForValueAsync(() =>
-            {
-                using (var session = store.OpenSession())
-                {
-                    var ts = session.TimeSeriesFor("users/karmel","Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(((TimeSpan)raw.RetentionTime).TotalMinutes, ts.Count);
-
-                    foreach (var policy in configuration.Policies)
-                    {
-                        ts = session.TimeSeriesFor("users/karmel",policy.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                        Assert.Equal(((TimeSpan)policy.RetentionTime).TotalMinutes / ((TimeSpan)policy.AggregationTime).TotalMinutes, ts.Count);
-                    }
-                }
-                return true;
-            }, true);
         }
 
         [Fact]

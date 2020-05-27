@@ -1627,7 +1627,7 @@ select out()
             }
         }
 
-        private async Task VerifyFullPolicyExecution(DocumentStore store, TimeSeriesCollectionConfiguration configuration)
+        internal static async Task VerifyFullPolicyExecution(DocumentStore store, TimeSeriesCollectionConfiguration configuration)
         {
             var raw = configuration.RawPolicy;
             configuration.ValidateAndInitialize();
@@ -1636,18 +1636,27 @@ select out()
             {
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate")
+                        .Get(DateTime.MinValue, DateTime.MaxValue)?
+                        .Where(entry => entry.IsRollup == false)
+                        .ToList();
+
+                    Assert.NotNull(ts);
                     Assert.Equal(((TimeSpan)raw.RetentionTime).TotalMinutes, ts.Count);
 
                     foreach (var policy in configuration.Policies)
                     {
-                        ts = session.TimeSeriesFor("users/karmel", policy.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                        ts = session.TimeSeriesFor("users/karmel", policy.GetTimeSeriesName("Heartrate"))
+                            .Get(DateTime.MinValue, DateTime.MaxValue)?
+                            .ToList();
+
                         TimeValue retentionTime = policy.RetentionTime;
                         if (retentionTime == TimeValue.MaxValue)
                         {
                             retentionTime = TimeSpan.FromDays(12);
                         }
 
+                        Assert.NotNull(ts);
                         Assert.Equal(((TimeSpan)retentionTime).TotalMinutes / ((TimeSpan)policy.AggregationTime).TotalMinutes, ts.Count);
                     }
                 }
