@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Graph;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
@@ -421,6 +422,60 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
         
+        [Fact]
+        public async Task Patch_ReuseTimeSeriesEntries()
+        {
+            const string timeseries = "Heartrate";
+            const string documentId = "users/1";
+            var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
+            
+            var baseline = DateTime.UtcNow.EnsureMilliseconds();
+            
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), documentId);
+                    session.TimeSeriesFor(documentId, timeseries).Append(baseline, values);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = @"var ts = timeseries(this, args.timeseries);
+                                       var entries = ts.get(args.from, args.to);
+                                        for (var i = 0; i < entries.length; i++)
+                                        {
+                                            var e = entries[i];
+                                            ts.append(e.Timestamp,e.Values,'Taggy');
+                                        }",
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                                { "from", DateTime.MinValue },
+                                { "to", DateTime.MaxValue },
+                            }
+                        }, null));
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var u = await session.LoadAsync<User>(documentId);
+                    var ts = session.TimeSeriesFor(u, timeseries);
+                    var result = (await ts.GetAsync()).Single();
+
+                    Assert.Equal(result.Timestamp, baseline);
+                    Assert.Equal(result.Values, values);
+                    Assert.Equal(result.Tag,"Taggy");
+                }
+            }
+        }
+
         [Fact]
         public async Task PatchTimestamp_IntegrationTest()
         {

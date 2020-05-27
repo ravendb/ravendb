@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
@@ -45,8 +46,21 @@ namespace Raven.Server.Web.Studio
                         }
                     }
                 }, Database.Name, GetRaftRequestIdFromQuery());
-
                 var (index, _) = await ServerStore.SendToLeaderAsync(editRevisions);
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
+
+                var tsConfig = new TimeSeriesConfiguration
+                {
+                    NamedValues = new Dictionary<string, Dictionary<string, string[]>>
+                    {
+                        ["Companies"] = new Dictionary<string, string[]>
+                        {
+                            ["StockPrice"] = new[] {"Open", "Close", "High", "Low", "Volume"}
+                        }
+                    }
+                };
+                var editTimeSeries = new EditTimeSeriesConfigurationCommand(tsConfig, Database.Name, GetRaftRequestIdFromQuery());
+                (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
 
                 using (var sampleData = typeof(SampleDataHandler).Assembly

@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
@@ -228,6 +229,13 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Revisions));
                     WriteRevisions(databaseRecord.Revisions);
+                }
+
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.TimeSeries))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.TimeSeries));
+                    WriteTimeSeries(databaseRecord.TimeSeries);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Expiration))
@@ -542,6 +550,16 @@ namespace Raven.Server.Smuggler.Documents
                     return;
                 }
                 _context.Write(_writer, revisions.ToJson());
+            }
+
+            private void WriteTimeSeries(TimeSeriesConfiguration timeSeries)
+            {
+                if (timeSeries == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, timeSeries.ToJson());
             }
 
             private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)

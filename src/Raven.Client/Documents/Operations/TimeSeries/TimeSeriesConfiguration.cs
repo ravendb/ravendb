@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         
         internal void InitializeRollupAndRetention()
         {
-            if (Collections == null) 
+            if (Collections == null || Collections.Count == 0) 
                 return;
 
             PolicyCheckFrequency ??= TimeSpan.FromMinutes(10);
