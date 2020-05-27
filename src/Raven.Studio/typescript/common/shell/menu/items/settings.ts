@@ -15,7 +15,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/databaseRecord',
             title: 'Database Record',
             nav: access.showDatabaseRecordMenuItem,
-            css: 'icon-database-settings',
+            css: 'icon-database-record',
             dynamicHash: appUrls.databaseRecord
         }),
         new leafMenuItem({
@@ -23,7 +23,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/databaseSettings',
             title: 'Database Settings',
             nav: access.showDatabaseSettingsMenuItem,
-            css: 'icon-settings',
+            css: 'icon-database-settings',
             dynamicHash: appUrls.databaseSettings
         }),
         new leafMenuItem({
@@ -96,7 +96,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/settings/documentsCompression',
             title: 'Document Compression',
             nav: true,
-            css: 'icon-compact',
+            css: 'icon-documents-compression',
             dynamicHash: appUrls.documentsCompression
         }),
         new leafMenuItem({
