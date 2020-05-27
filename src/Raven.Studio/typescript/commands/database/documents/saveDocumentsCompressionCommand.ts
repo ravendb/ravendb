@@ -9,7 +9,7 @@ class saveDocumentsCompressionCommand extends commandBase {
 
     execute(): JQueryPromise<updateDatabaseConfigurationsResult> {
 
-        const url = endpoint.databases.compression.adminCompressionConfig;
+        const url = endpoint.databases.documentsCompression.adminDocumentsCompressionConfig;
         const args = ko.toJSON(this.documentsCompressionConfiguration);
         
         return this.post<updateDatabaseConfigurationsResult>(url, args, this.db)
