@@ -8,6 +8,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -421,6 +422,11 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<SubscriptionState> GetSubscriptions()
         {
             return Enumerable.Empty<SubscriptionState>();
+        }
+
+        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates()
+        {
+            return Enumerable.Empty<(string Hub, ReplicationHubAccess Access)>();
         }
 
         public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)

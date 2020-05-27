@@ -75,8 +75,11 @@ namespace Raven.Server.Documents.Replication
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
+            string[] incomingPaths,
             string pullReplicationName)
         {
+            if(incomingPaths != null && incomingPaths.Length > 0)
+                _allowedPathsValidator = new AllowedPathsValidator(incomingPaths);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             _connectionOptions = options;
@@ -89,6 +92,7 @@ namespace Raven.Server.Documents.Replication
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
             PullReplicationName = pullReplicationName;
+            CertificateThumbprint = options.Certificate?.Thumbprint;
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
@@ -504,6 +508,13 @@ namespace Raven.Server.Documents.Replication
                         ReadAttachmentStreamsFromSource(attachmentStreamCount, documentsContext, dataForReplicationCommand, reader, networkStats);
                     }
 
+                    if (_allowedPathsValidator != null)
+                    {
+                        // if the other side sends us any information that we shouldn't get from them,
+                        // we abort the connection and send an error back
+                        ValidateIncomingReplicationItemsPaths(dataForReplicationCommand);
+                    }
+
                     if (_log.IsInfoEnabled)
                     {
                         _log.Info(
@@ -583,6 +594,39 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void ValidateIncomingReplicationItemsPaths(DataForReplicationCommand dataForReplicationCommand)
+        {
+            HashSet<Slice> expectedAttachmentStreams = null;
+            foreach (var item in dataForReplicationCommand.ReplicatedItems)
+            {
+                if (_allowedPathsValidator.ShouldAllow(item) == false)
+                {
+                    throw new InvalidOperationException("Attempted to replicate " + _allowedPathsValidator.GetItemInformation(item) +
+                                                        ", which is not allowed, according to the allowed paths policy. Replication aborted");
+                }
+
+                switch (item)
+                {
+                    case AttachmentReplicationItem a:
+                        expectedAttachmentStreams ??= new HashSet<Slice>(SliceComparer.Instance);
+                        expectedAttachmentStreams.Add(a.Key);
+                        break;
+                }
+            }
+
+            if (dataForReplicationCommand.ReplicatedAttachmentStreams != null)
+            {
+                foreach (var kvp in dataForReplicationCommand.ReplicatedAttachmentStreams)
+                {
+                    if (expectedAttachmentStreams == null || expectedAttachmentStreams.Contains(kvp.Key))
+                    {
+                        throw new InvalidOperationException("Attempted to attachment with hash: " + kvp.Key +
+                                                            ", but without a matching attachment key.");
+                    }
+                }
+            }
+        }
+
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
             AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeatAcknowledge);
@@ -636,6 +680,8 @@ namespace Raven.Server.Documents.Replication
         private readonly ConflictManager _conflictManager;
         private IDisposable _connectionOptionsDisposable;
         private (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
+        private AllowedPathsValidator _allowedPathsValidator;
+        public string CertificateThumbprint;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
         private void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context, DataForReplicationCommand data, Reader reader,
@@ -857,8 +903,16 @@ namespace Raven.Server.Documents.Replication
                         // expected if the thread hasn't been started yet
                     }
                 }
-
                 _incomingWork = null;
+
+                try
+                {
+                    _allowedPathsValidator?.Dispose();
+                }
+                catch
+                {
+                    // nothing to do
+                }
                 _cts.Dispose();
 
                 _attachmentStreamsTempFile.Dispose();

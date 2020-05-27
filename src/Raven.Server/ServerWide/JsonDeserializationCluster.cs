@@ -30,6 +30,8 @@ namespace Raven.Server.ServerWide
 {
     public class JsonDeserializationCluster : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, DetailedReplicationHubAccess> DetailedReplicationHubAccess = GenerateJsonDeserializationRoutine<DetailedReplicationHubAccess>();
+        
         public static readonly Func<BlittableJsonReaderObject, UpdateClusterIdentityCommand> UpdateClusterIdentityCommand = GenerateJsonDeserializationRoutine<UpdateClusterIdentityCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, IncrementClusterIdentityCommand> IncrementClusterIdentityCommand = GenerateJsonDeserializationRoutine<IncrementClusterIdentityCommand>();
@@ -47,9 +49,7 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, DatabaseRecord> DatabaseRecord = GenerateJsonDeserializationRoutine<DatabaseRecord>();
 
         public static readonly Func<BlittableJsonReaderObject, DatabaseTopology> DatabaseTopology = GenerateJsonDeserializationRoutine<DatabaseTopology>();
-
-        public static readonly Func<BlittableJsonReaderObject, PullReplicationDefinition> PullReplicationDefinition = GenerateJsonDeserializationRoutine<PullReplicationDefinition>();
-
+        
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromDatabaseCommand> RemoveNodeFromDatabaseCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, RemoveNodeFromClusterCommand> RemoveNodeFromClusterCommand = GenerateJsonDeserializationRoutine<RemoveNodeFromClusterCommand>();
@@ -121,6 +121,9 @@ namespace Raven.Server.ServerWide
 
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
+            [nameof(UnregisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<UnregisterReplicationHubAccessCommand>(),
+            [nameof(RegisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<RegisterReplicationHubAccessCommand>(),
+            [nameof(BulkRegisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<BulkRegisterReplicationHubAccessCommand>(),
             [nameof(AddOrUpdateCompareExchangeBatchCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeBatchCommand>(),
             [nameof(CleanCompareExchangeTombstonesCommand)] = GenerateJsonDeserializationRoutine<CleanCompareExchangeTombstonesCommand>(),
             [nameof(DeleteExpiredCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<DeleteExpiredCompareExchangeCommand>(),

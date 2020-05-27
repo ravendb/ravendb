@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.Replication;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -22,7 +23,13 @@ namespace Raven.Server.ServerWide.Commands
             }
             else
             {
-                PullReplicationDefinition.RemoveHub(record.HubPullReplications, Definition.TaskId);
+                foreach (var task in record.HubPullReplications)
+                {
+                    if (task.TaskId != Definition.TaskId)
+                        continue;
+                    record.HubPullReplications.Remove(task);
+                    break;
+                }
             }
             
             record.EnsureTaskNameIsNotUsed(Definition.Name);

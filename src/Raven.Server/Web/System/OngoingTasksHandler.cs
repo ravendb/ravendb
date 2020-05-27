@@ -1048,20 +1048,16 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     var clusterTopology = ServerStore.GetClusterTopology(context);
-                    List<PullReplicationDefinition> hubPullReplications;
+                    PullReplicationDefinition def;
                     using (var rawRecord = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
                     {
                         if (rawRecord == null)
                             throw new DatabaseDoesNotExistException(Database.Name);
 
-                        hubPullReplications = rawRecord.HubPullReplications;
-                        if (hubPullReplications == null)
-                            throw new InvalidOperationException($"{Database.Name} does not have {nameof(DatabaseRecord.HubPullReplications)}");
+                        def = rawRecord.GetHubPullReplicationById(key);
                     }
 
-                    var hubReplicationDefinition = hubPullReplications.FirstOrDefault(x => x.TaskId == key);
-
-                    if (hubReplicationDefinition == null)
+                    if (def == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         return Task.CompletedTask;
@@ -1073,7 +1069,7 @@ namespace Raven.Server.Web.System
 
                     var response = new PullReplicationDefinitionAndCurrentConnections
                     {
-                        Definition = hubReplicationDefinition,
+                        Definition = def,
                         OngoingTasks = currentHandlers
                     };
                             
