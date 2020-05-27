@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
@@ -310,14 +311,13 @@ namespace Raven.Client.ServerWide
         HardDelete
     }
 
-    public class DocumentsCompressionConfiguration
+    public class DocumentsCompressionConfiguration : IDynamicJson
     {
-        public string[] Collections;
-        public bool CompressRevisions;
+        public string[] Collections { get; set; }
+        public bool CompressRevisions { get; set; }
 
         public DocumentsCompressionConfiguration()
         {
-            
         }
 
         public DocumentsCompressionConfiguration(bool compressRevisions, params string[] collections)
@@ -353,6 +353,15 @@ namespace Raven.Client.ServerWide
 
             hash = 31 * hash + CompressRevisions.GetHashCode();
             return hash;
+        }
+        
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Collections)] =  new DynamicJsonArray(Collections),
+                [nameof(CompressRevisions)] = CompressRevisions
+            };
         }
     }
 }

@@ -1692,6 +1692,14 @@ namespace Raven.Server.ServerWide
             var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
         }
+        
+        public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var documentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(configurationJson);
+            
+            var editDocumentsCompression = new EditDocumentsCompressionCommand(documentsCompression, databaseName, raftRequestId);
+            return SendToLeaderAsync(editDocumentsCompression);
+        }
 
         public Task<(long Index, object Result)> ModifyDatabaseRefresh(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {

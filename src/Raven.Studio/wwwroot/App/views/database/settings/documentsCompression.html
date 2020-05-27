@@ -1,0 +1,70 @@
+<form role="form" id="documentsCompression" class="flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" autocomplete="off">
+    <div class="toolbar">
+        <button type="submit" class="btn btn-primary" title="Save Changes" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save() }">
+            <i class="icon-save"></i> <span>Save</span>
+        </button>
+    </div>
+    <div class="row">
+        <div class="col-sm-12 col-lg-6">
+            <div class="panel">
+                <div class="padding padding-lg">
+                    <div class="flex-horizontal">
+                        <div class="dropdown btn-group flex-grow">
+                            <input class="form-control dropdown-toggle" placeholder="Select collection (or enter new collection)" data-toggle="dropdown"
+                                   data-bind="textInput: collectionToAdd, attr: { id: 'collectionNameInput' }" />
+                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter()">
+                                <li role="presentation" data-bind="click: _.partial($root.addWithBlink, $data)">
+                                    <a role="menuitem" tabindex="-1" href="#">
+                                        <span data-bind="text: $data"></span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-success" data-bind="click: $root.addCollection, enable: collectionToAdd, attr: { title: collectionToAdd() ? 'Click to add collection to the compressed collections list' : '' }">
+                            <i class="icon-plus"></i>
+                            <span>Add</span>
+                        </button>
+                        <div class=" margin-left margin-left-sm">
+                            <button class="btn btn-info" data-bind="click: $root.addAllCollections, enable: canAddAllCollections, attr: { title: canAddAllCollections() ? 'Add all collections in the database to the compressed collecions list' : '' }">
+                                <i class="icon-plus"></i>
+                                <span>Add All</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <div data-bind="visible: collectionsToCompress().length" class="margin-top">
+                            <label><strong>Collections Selected:</strong></label>
+                            <ul class="well collection-list" data-bind="foreach: collectionsToCompress">
+                                <li>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove collection" href="#" data-bind="click: $parent.removeCollection.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="padding padding-lg">
+                    <div class="toggle toggle-primary" title="All revisions for all collections will be compressed when toggled on.">
+                        <input id="revisionsToggle" class="styled" type="checkbox" data-bind="checked: compressRevisions">
+                        <label for="revisionsToggle">
+                            Compress Revisions
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12 col-lg-6">
+            <div data-bind="visible: collectionsToCompress().length === 0">
+                <div class="text-muted text-center margin-top margin-top-lg">
+                    <i class="icon-xl icon-empty-set"></i>
+                    <h2 class="">No collections have been selected</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
