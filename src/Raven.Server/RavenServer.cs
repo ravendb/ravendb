@@ -1835,7 +1835,7 @@ namespace Raven.Server
                                 return;
                             }
 
-                            await DispatchDatabaseTcpConnection(tcp, header, buffer);
+                            await DispatchDatabaseTcpConnection(tcp, header, buffer, cert);
                         }
                         catch (Exception e)
                         {
@@ -2191,7 +2191,8 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.MemoryBuffer bufferToCopy)
+        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header,
+            JsonOperationContext.MemoryBuffer bufferToCopy, X509Certificate2 cert)
         {
             var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
             if (databaseLoadingTask == null)
@@ -2228,7 +2229,7 @@ namespace Raven.Server
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
-                    documentReplicationLoader.AcceptIncomingConnection(tcp, header.Operation, bufferToCopy);
+                    documentReplicationLoader.AcceptIncomingConnection(tcp, cert, bufferToCopy);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);

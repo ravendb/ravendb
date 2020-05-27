@@ -1,10 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client;
 using FastTests.Client.Indexing;
 using FastTests.Issues;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
@@ -24,29 +30,20 @@ namespace Tryouts
         
         public static async Task Main(string[] args)
         {
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            for (int i = 0; i < 10_000; i++)
+            using var store = new DocumentStore
             {
-                Console.WriteLine($"Starting to run {i}");
-                try
-                {
-                    using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new BenchmarkTests.Storing.Session(testOutputHelper))
-                    {
-                        var sw = Stopwatch.StartNew();
-                        await test.Store_500k_Batch_Size_10();
-                        Console.WriteLine($"Took: {sw.Elapsed.TotalSeconds} seconds.");
-                    }
-                    return;
-                }
-                catch (Exception e)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e);
-                    Console.ForegroundColor = ConsoleColor.White;
-                   // Console.ReadLine();
-                }
-            }
+                Certificate = new X509Certificate2(@"C:\Users\ayende\Downloads\snark.Cluster.Settings\admin.client.certificate.snark.pfx"),
+                Urls = new[] {"https://a.snark.development.run"},
+                Database = "test"
+            }.Initialize();
+
+            var res = store.Maintenance.Send(new GetPullReplicationTasksInfoOperation(5));
+            res.Definition.Filters = new Dictionary<string, PullReplicationDefinition.FilteringOptions>();
+            res.Definition.Filters[res.Definition.Certificates.First().Key] = new    PullReplicationDefinition.FilteringOptions
+            {
+                AllowedPaths = new []{"users/ayende/*", "user/ayende"}
+            };
+            store.Maintenance.Send(new PutPullReplicationAsHubOperation(res.Definition));
         }
     }
 }

@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
-            TcpConnectionHeaderMessage.OperationTypes headerOperation,
+            X509Certificate2 certificate,
             JsonOperationContext.MemoryBuffer buffer)
         {
             var supportedVersions =
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Replication
                     var initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
                     if (initialRequest.PullReplicationDefinitionName != null)
                     {
-                        CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions);
+                        CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, certificate);
                         return;
                     }
                 }
@@ -208,7 +208,8 @@ namespace Raven.Server.Documents.Replication
             CreateIncomingInstance(tcpConnectionOptions, buffer);
         }
 
-        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
+        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
+            TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, X509Certificate2 certificate)
         {
             PullReplicationDefinition pullReplicationDefinition;
             using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -223,6 +224,23 @@ namespace Raven.Server.Documents.Replication
             {
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
             };
+
+            if (certificate != null)
+            {
+                // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do 
+                // any filtering. That means that the certificate has global access to the database, so there is not point
+                if (pullReplicationDefinition.Certificates?.ContainsKey(certificate.Thumbprint) == true &&
+                    (pullReplicationDefinition.Filters?.Count) > 0)
+                {
+                    if (pullReplicationDefinition.Filters.TryGetValue(certificate.Thumbprint, out var options) == false)
+                    {
+                        throw new InvalidOperationException(
+                            $"Unable to find filters for {certificate.Thumbprint}, but other filters exists. Filtered replication must have filters defined for all certificates on the pull replication hub.");
+                    }
+
+                    outgoingReplication.AllowedPaths = options.AllowedPaths;
+                }
+            }
 
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;

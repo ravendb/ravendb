@@ -351,7 +351,7 @@ namespace Raven.Server.Documents.Replication
 
         private void Replicate()
         {
-            var documentSender = new ReplicationDocumentSender(_stream, this, _log);
+            using var documentSender = new ReplicationDocumentSender(_stream, this, _log, AllowedPaths);
 
             while (_cts.IsCancellationRequested == false)
             {
@@ -512,6 +512,14 @@ namespace Raven.Server.Documents.Replication
                     //The first time we start replication we need to register the destination current CV
                     case ReplicationMessageReply.ReplyType.Ok:
                         LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
+                        // AllowedPaths will have a locally provided value for filtered pull replication.
+                        // In that case, we prefer the local value over the one from the remote server
+                        if (AllowedPaths == null)
+                        {
+                            // this is used when the other side lets us know what 
+                            // paths it is going to accept from us
+                            AllowedPaths = response.Reply.AllowedPaths;
+                        }
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
                         var exception = new InvalidOperationException(response.Reply.Exception);
@@ -1052,6 +1060,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
+        public string[] AllowedPaths;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 
         public void Dispose()

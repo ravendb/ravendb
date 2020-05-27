@@ -17,13 +17,16 @@ using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationDocumentSender
+    public class ReplicationDocumentSender : IDisposable
     {
         private readonly Logger _log;
+        private readonly List<LazyStringValue> _allowedPaths;
+        private readonly List<LazyStringValue> _allowedPathsPrefixes;
         private long _lastEtag;
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
@@ -33,11 +36,33 @@ namespace Raven.Server.Documents.Replication
         private readonly OutgoingReplicationHandler _parent;
         private OutgoingReplicationStatsScope _statsInstance;
         private readonly ReplicationStats _stats = new ReplicationStats();
+        private readonly JsonOperationContext _allowedPathsContext;
         public bool MissingAttachmentsInLastBatch { get; private set; }
 
-        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
+        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log, string[] allowedPaths)
         {
             _log = log;
+            if (allowedPaths != null && allowedPaths.Length > 0)
+            {
+                _allowedPathsContext = JsonOperationContext.ShortTermSingleUse();
+                _allowedPaths = new List<LazyStringValue>();
+                _allowedPathsPrefixes = new List<LazyStringValue>();
+                foreach (var t in allowedPaths)
+                {
+                    var lazyStringValue = _allowedPathsContext.GetLazyString(t);
+                    if (lazyStringValue.Size == 0)
+                        continue;// shouldn't happen, but let's be safe
+                    if (lazyStringValue[lazyStringValue.Size - 1] == '*')
+                    {
+                        lazyStringValue.Truncate(lazyStringValue.Size - 1);
+                        _allowedPathsPrefixes.Add(lazyStringValue);
+                    }
+                    else
+                    {
+                        _allowedPaths.Add(lazyStringValue);
+                    }
+                }
+            }
             _stream = stream;
             _parent = parent;
         }
@@ -535,6 +560,28 @@ namespace Raven.Server.Documents.Replication
 
         private bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
+            if (_allowedPaths != null)
+            {
+                bool allow = item switch
+                {
+                    AttachmentReplicationItem a => AllowId(GetDocumentId(a.Key)),
+                    AttachmentTombstoneReplicationItem at => AllowId(GetDocumentId(at.Key)),
+                    CounterReplicationItem c => AllowId(c.Id),
+                    DocumentReplicationItem d => AllowId(d.Id),
+                    RevisionTombstoneReplicationItem r => AllowId(r.Id),
+                    TimeSeriesDeletedRangeItem td => AllowId(GetDocumentId(td.Key)),
+                    TimeSeriesReplicationItem t => AllowId(GetDocumentId(t.Key)),
+                    _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
+                };
+
+                if (allow == false)
+                {
+                    stats.RecordArtificialDocumentSkip();
+                    skippedReplicationItemsInfo.Update(item);
+                    return true;
+                }
+            }
+            
             switch (item)
             {
                 case DocumentReplicationItem doc:
@@ -571,6 +618,36 @@ namespace Raven.Server.Documents.Replication
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
                 return true;
+            }
+
+            return false;
+        }
+
+        private unsafe LazyStringValue _tmpLazyStringInstance;
+        
+        public unsafe LazyStringValue GetDocumentId(Slice key)
+        {
+            var sepIdx = key.Content.IndexOf(SpecialChars.RecordSeparator);
+            if(_tmpLazyStringInstance == null)
+                _tmpLazyStringInstance = new LazyStringValue(null, null, 0, _allowedPathsContext);
+            _tmpLazyStringInstance.Renew(null, key.Content.Ptr, sepIdx);
+            return _tmpLazyStringInstance;
+        }
+
+        private bool AllowId(LazyStringValue id)
+        {
+            foreach (LazyStringValue path in _allowedPaths)
+            {
+                if (path.EqualsOrdinalIgnoreCase(id))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var prefix in _allowedPathsPrefixes)
+            {
+                if (id.StartsWithOrdinalNoCase(prefix))
+                    return true;
             }
 
             return false;
@@ -699,6 +776,11 @@ namespace Raven.Server.Documents.Replication
             public OutgoingReplicationStatsScope AttachmentRead;
             public OutgoingReplicationStatsScope CounterRead;
             public OutgoingReplicationStatsScope TimeSeriesRead;
+        }
+
+        public void Dispose()
+        {
+            _allowedPathsContext?.Dispose();
         }
     }
 }

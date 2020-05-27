@@ -3,6 +3,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
@@ -10,6 +11,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
     public class AttachmentTombstoneReplicationItem : ReplicationBatchItem
     {
         public Slice Key;
+        
+        public unsafe void GetDocumentId(LazyStringValue str)
+        {
+            var sepIdx = Key.Content.IndexOf(SpecialChars.RecordSeparator);
+            str.Renew(null, Key.Content.Ptr, sepIdx);
+        }
+
 
         public override long AssertChangeVectorSize()
         {
