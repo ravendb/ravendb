@@ -8,7 +8,7 @@ import saveDocumentsCompressionCommand = require("commands/database/documents/sa
 
 class documentsCompression extends viewModelBase {
 
-    allExistingCollections:KnockoutComputed<Array<string>>;
+    allExistingCollections: KnockoutComputed<Array<string>>;
     collectionsToCompress = ko.observableArray<string>();
     compressRevisions = ko.observable<boolean>();
     
@@ -122,7 +122,7 @@ class documentsCompression extends viewModelBase {
 
     toDto(): Raven.Client.ServerWide.DocumentsCompressionConfiguration {
         return {
-            Collections: this.collectionsToCompress().sort(),
+            Collections: this.collectionsToCompress(),
             CompressRevisions: this.compressRevisions()
         }
     }
