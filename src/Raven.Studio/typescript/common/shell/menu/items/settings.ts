@@ -11,20 +11,20 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
     
     const items: menuItem[] = [
         new leafMenuItem({
-            route: ['databases/settings/databaseSettings'],
-            moduleId: 'viewmodels/database/settings/databaseSettings',
-            title: 'Database Settings',
-            nav: access.showDatabaseSettingsMenuItem,
-            css: 'icon-settings',
-            dynamicHash: appUrls.databaseSettings
-        }),
-        new leafMenuItem({
             route: ['databases/record', 'databases/settings/databaseRecord'],
             moduleId: 'viewmodels/database/settings/databaseRecord',
             title: 'Database Record',
             nav: access.showDatabaseRecordMenuItem,
             css: 'icon-database-settings',
             dynamicHash: appUrls.databaseRecord
+        }),
+        new leafMenuItem({
+            route: ['databases/settings/databaseSettings'],
+            moduleId: 'viewmodels/database/settings/databaseSettings',
+            title: 'Database Settings',
+            nav: access.showDatabaseSettingsMenuItem,
+            css: 'icon-settings',
+            dynamicHash: appUrls.databaseSettings
         }),
         new leafMenuItem({
             route: 'databases/settings/connectionStrings',
@@ -90,6 +90,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-document-expiration',
             dynamicHash: appUrls.expiration
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/documentsCompression',
+            moduleId: 'viewmodels/database/settings/documentsCompression',
+            title: 'Document Compression',
+            nav: true,
+            css: 'icon-compact',
+            dynamicHash: appUrls.documentsCompression
         }),
         new leafMenuItem({
             route: 'databases/settings/timeSeries',

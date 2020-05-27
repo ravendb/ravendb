@@ -178,6 +178,22 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private DocumentsCompressionConfiguration _documentsCompressionConfiguration;
+
+        public DocumentsCompressionConfiguration DocumentsCompressionConfiguration
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.DocumentsCompression;
+
+                if (_documentsCompressionConfiguration == null && _record.TryGet(nameof(DatabaseRecord.DocumentsCompression), out BlittableJsonReaderObject config) && config != null)
+                    _documentsCompressionConfiguration = JsonDeserializationCluster.DocumentsCompressionConfiguration(config);
+
+                return _documentsCompressionConfiguration;
+            }
+        }
+        
         private ConflictSolver _conflictSolverConfiguration;
 
         public ConflictSolver ConflictSolverConfiguration

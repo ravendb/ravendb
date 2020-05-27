@@ -290,6 +290,9 @@ namespace TypingsGenerator
             // expiration 
             scripter.AddType(typeof(ExpirationConfiguration));
             
+            // documents compression
+            scripter.AddType(typeof(DocumentsCompressionConfiguration));
+            
             // refresh
             scripter.AddType(typeof(RefreshConfiguration));
 
