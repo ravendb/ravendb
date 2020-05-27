@@ -21,12 +21,12 @@
                                 </li>
                             </ul>
                         </div>
-                        <button class="btn btn-success" data-bind="click: $root.addCollection, enable: collectionToAdd, attr: { title: collectionToAdd() ? 'Click to add collection to the compressed collections list' : '' }">
+                        <button class="btn btn-success" data-bind="click: $root.addCollection, enable: collectionToAdd" title="Click to add collection to the compressed collections list">
                             <i class="icon-plus"></i>
                             <span>Add</span>
                         </button>
                         <div class=" margin-left margin-left-sm">
-                            <button class="btn btn-info" data-bind="click: $root.addAllCollections, enable: canAddAllCollections, attr: { title: canAddAllCollections() ? 'Add all collections in the database to the compressed collecions list' : '' }">
+                            <button class="btn btn-info" data-bind="click: $root.addAllCollections, enable: canAddAllCollections" title="Add all collections in the database to the compressed collections list">
                                 <i class="icon-plus"></i>
                                 <span>Add All</span>
                             </button>
@@ -47,10 +47,10 @@
             </div>
             <div class="panel">
                 <div class="padding padding-lg">
-                    <div class="toggle toggle-primary" title="All revisions for all collections will be compressed when toggled on.">
+                    <div class="toggle toggle-primary">
                         <input id="revisionsToggle" class="styled" type="checkbox" data-bind="checked: compressRevisions">
                         <label for="revisionsToggle">
-                            Compress Revisions
+                            Compress Revisions for All Collections
                         </label>
                     </div>
                 </div>
