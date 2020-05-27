@@ -260,98 +260,79 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.RavenConnectionStrings));
-                            WriteRavenConnectionStrings(databaseRecord.RavenConnectionStrings);
+                            WriteJsonDictionary(databaseRecord.RavenConnectionStrings);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.SqlConnectionStrings))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.SqlConnectionStrings));
-                            WriteSqlConnectionStrings(databaseRecord.SqlConnectionStrings);
+                            WriteJsonDictionary(databaseRecord.SqlConnectionStrings);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.PeriodicBackups))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.PeriodicBackups));
-                            WritePeriodicBackups(databaseRecord.PeriodicBackups);
+                            WriteJsonArray(databaseRecord.PeriodicBackups);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.ExternalReplications))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.ExternalReplications));
-                            WriteExternalReplications(databaseRecord.ExternalReplications);
+                            WriteJsonArray(databaseRecord.ExternalReplications);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.RavenEtls))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.RavenEtls));
-                            WriteRavenEtls(databaseRecord.RavenEtls);
+                            WriteJsonArray(databaseRecord.RavenEtls);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.SqlEtls))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.SqlEtls));
-                            WriteSqlEtls(databaseRecord.SqlEtls);
+                            WriteJsonArray(databaseRecord.SqlEtls);
                         }
 
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.HubPullReplications))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.HubPullReplications));
-                            WriteHubPullReplications(databaseRecord.HubPullReplications);
+                            WriteJsonArray(databaseRecord.HubPullReplications);
                         }
-
+                        
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.SinkPullReplications))
                         {
                             _writer.WriteComma();
                             _writer.WritePropertyName(nameof(databaseRecord.SinkPullReplications));
-                            WriteSinkPullReplications(databaseRecord.SinkPullReplications);
+                            WriteJsonArray(databaseRecord.SinkPullReplications);
                         }
 
                         break;
                 }
             }
-
-            private void WriteHubPullReplications(List<PullReplicationDefinition> hubPullReplications)
+            
+            private void WriteJsonArray<T>(List<T> items)
+                where T : IDynamicJsonValueConvertible
             {
-                if (hubPullReplications == null)
+                if (items == null)
                 {
                     _writer.WriteNull();
                     return;
                 }
                 _writer.WriteStartArray();
                 var first = true;
-                foreach (var pullReplication in hubPullReplications)
+                foreach (var i in items)
                 {
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
 
-                    _context.Write(_writer, pullReplication.ToJson());
-                }
-                _writer.WriteEndArray();
-            }
-
-            private void WriteSinkPullReplications(List<PullReplicationAsSink> sinkPullReplications)
-            {
-                if (sinkPullReplications == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _writer.WriteStartArray();
-                var first = true;
-                foreach (var pullReplication in sinkPullReplications)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-
-                    _context.Write(_writer, pullReplication.ToJson());
+                    _context.Write(_writer, i.ToJson());
 
                 }
                 _writer.WriteEndArray();
@@ -418,90 +399,6 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteSqlEtls(List<SqlEtlConfiguration> sqlEtlConfiguration)
-            {
-                if (sqlEtlConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _writer.WriteStartArray();
-
-                var first = true;
-                foreach (var etl in sqlEtlConfiguration)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-                    _context.Write(_writer, etl.ToJson());
-                }
-
-                _writer.WriteEndArray();
-            }
-
-            private void WriteRavenEtls(List<RavenEtlConfiguration> ravenEtlConfiguration)
-            {
-                if (ravenEtlConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _writer.WriteStartArray();
-
-                var first = true;
-                foreach (var etl in ravenEtlConfiguration)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-                    _context.Write(_writer, etl.ToJson());
-                }
-
-                _writer.WriteEndArray();
-            }
-
-            private void WriteExternalReplications(List<ExternalReplication> externalReplication)
-            {
-                if (externalReplication == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _writer.WriteStartArray();
-
-                var first = true;
-                foreach (var replication in externalReplication)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-
-                    _context.Write(_writer, replication.ToJson());
-                }
-
-                _writer.WriteEndArray();
-            }
-
-            private void WritePeriodicBackups(List<PeriodicBackupConfiguration> periodicBackup)
-            {
-                if (periodicBackup == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _writer.WriteStartArray();
-
-                var first = true;
-
-                foreach (var backup in periodicBackup)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-                    _context.Write(_writer, backup.ToJson());
-                }
-                _writer.WriteEndArray();
-            }
 
             private void WriteConflictSolver(ConflictSolver conflictSolver)
             {
@@ -544,39 +441,21 @@ namespace Raven.Server.Smuggler.Documents
                 _context.Write(_writer, revisions.ToJson());
             }
 
-            private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)
+            private void WriteJsonDictionary<T>(Dictionary<string, T> items)
+                where T : IDynamicJsonValueConvertible
             {
                 _writer.WriteStartObject();
 
                 var first = true;
-                foreach (var ravenConnectionString in connections)
+                foreach (var item in items)
                 {
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
 
-                    _writer.WritePropertyName(ravenConnectionString.Key);
+                    _writer.WritePropertyName(item.Key);
 
-                    _context.Write(_writer, ravenConnectionString.Value.ToJson());
-                }
-
-                _writer.WriteEndObject();
-            }
-
-            private void WriteSqlConnectionStrings(Dictionary<string, SqlConnectionString> connections)
-            {
-                _writer.WriteStartObject();
-
-                var first = true;
-                foreach (var sqlConnectionString in connections)
-                {
-                    if (first == false)
-                        _writer.WriteComma();
-                    first = false;
-
-                    _writer.WritePropertyName(sqlConnectionString.Key);
-
-                    _context.Write(_writer, sqlConnectionString.Value.ToJson());
+                    _context.Write(_writer, item.Value.ToJson());
                 }
 
                 _writer.WriteEndObject();
