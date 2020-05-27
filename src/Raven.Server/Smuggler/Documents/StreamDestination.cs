@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
@@ -27,6 +29,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Web.System;
@@ -175,6 +178,12 @@ namespace Raven.Server.Smuggler.Documents
         {
             return new StreamSubscriptionActions(_writer, _context, nameof(DatabaseItemType.Subscriptions));
         }
+        
+        public IReplicationHubCertificateActions ReplicationHubCertificates()
+        {
+            return new StreamReplicationHubCertificateActions(_writer, _context, nameof(DatabaseItemType.ReplicationHubCertificates));
+        }
+
 
         public ITimeSeriesActions TimeSeries()
         {
@@ -797,6 +806,29 @@ namespace Raven.Server.Smuggler.Documents
                 First = false;
 
                 _context.Write(_writer, subscriptionState.ToJson());
+            }
+        }
+        
+        private class StreamReplicationHubCertificateActions : StreamActionsBase, IReplicationHubCertificateActions
+        {
+            private readonly DocumentsOperationContext _context;
+            private readonly BlittableJsonTextWriter _writer;
+
+            public StreamReplicationHubCertificateActions(BlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName) : base(writer, propertyName)
+            {
+                _context = context;
+                _writer = writer;
+            }
+
+            public void WriteReplicationHubCertificate(string hub, ReplicationHubAccess access)
+            {
+                if (First == false)
+                    Writer.WriteComma();
+                First = false;
+
+                var djv = access.ToJson();
+                djv[nameof(RegisterReplicationHubAccessCommand.HubDefinitionName)] = hub;
+                _context.Write(_writer, djv);
             }
         }
 

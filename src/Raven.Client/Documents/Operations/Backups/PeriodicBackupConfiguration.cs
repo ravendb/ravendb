@@ -7,11 +7,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class PeriodicBackupConfiguration : IDatabaseTask
+    public class PeriodicBackupConfiguration : IDatabaseTask, IDynamicJsonValueConvertible
     {
         public long TaskId { get; set; } 
         public bool Disabled { get; set; } 

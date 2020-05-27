@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Org.BouncyCastle.Asn1.Esf;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -24,6 +25,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -156,7 +158,76 @@ namespace Raven.Server.Documents.Replication
                 null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
             database.TombstoneCleaner.Subscribe(this);
+            server.Cluster.Changes.DatabaseChanged+=DatabaseValueChanged;
         }
+
+        private Task DatabaseValueChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState)
+        {
+            var documentDatabase = Database;
+            if (documentDatabase == null)
+                return Task.CompletedTask;
+            
+            if (string.Equals(documentDatabase.Name, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                return Task.CompletedTask;
+
+            switch (changeState)
+            {
+                case UpdatePullReplicationAsHubCommand put:
+                    DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
+                    break;
+                case UnregisterReplicationHubAccessCommand del:
+                    DisposeRelatedPullReplication(del.HubDefinitionName, del.CertThumbprint);
+                    break;
+                case RegisterReplicationHubAccessCommand reg:
+                    DisposeRelatedPullReplication(reg.HubDefinitionName, reg.CertThumbprint);
+                    break;
+            }
+            return Task.CompletedTask;
+
+            void DisposeRelatedPullReplication(string hub, string certThumbprint)
+            {
+                if (hub == null)
+                    return;
+                
+                foreach (var  (_, repl) in _incoming)
+                {
+                    if (string.Equals(repl.PullReplicationName, hub, StringComparison.OrdinalIgnoreCase) == false) 
+                        continue;
+                    
+                    if(certThumbprint!= null && repl.CertificateThumbprint != certThumbprint)
+                        continue;
+                    
+                    try
+                    {
+                        if(_log.IsInfoEnabled)
+                            _log.Info("Resetting ");
+                        repl.Dispose();
+                    }
+                    catch 
+                    {
+                    }
+                }
+
+                foreach (var repl in _outgoing)
+                {
+                    if (string.Equals(repl.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false) 
+                        continue;
+                    
+                    if(certThumbprint!= null && repl.CertificateThumbprint != certThumbprint)
+                        continue;
+
+                    try
+                    {
+                        repl.Dispose();
+                    }
+                    catch 
+                    {
+                    }
+
+                }
+            }
+        }
+
 
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
             => _outgoingFailureInfo;
@@ -180,49 +251,100 @@ namespace Raven.Server.Documents.Replication
         }
 
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions,
-            TcpConnectionHeaderMessage.OperationTypes headerOperation,
+            TcpConnectionHeaderMessage header,
+            X509Certificate2 certificate,
             JsonOperationContext.MemoryBuffer buffer)
         {
             var supportedVersions =
                 TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
+            
+            string[] incomingPaths =default;
+            string pullDefinitionName = null;
 
-            if (supportedVersions.Replication.PullReplication)
+            switch (header.AuthorizeInfo?.AuthorizeAs)
             {
-                // wait for replication type
-                using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                using (var readerObject = context.ParseToMemory(
-                    tcpConnectionOptions.Stream,
-                    "initial-replication-message",
-                    BlittableJsonDocumentBuilder.UsageMode.None,
-                    buffer))
-                {
-                    var initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
-                    if (initialRequest.PullReplicationDefinitionName != null)
+                case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
+                case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
+                    if (supportedVersions.Replication.PullReplication == false)
+                        throw new InvalidOperationException("Unable to use Pull Replication, because the other side doesn't have it as a supported feature");
+
+                    if (header.AuthorizeInfo.AuthorizationFor == null)
+                        throw new InvalidOperationException("Pull replication requires that the AuthorizationFor field will be set, but it wasn't provided");
+
+                    PullReplicationDefinition pullReplicationDefinition;
+                    using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
                     {
-                        CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions);
-                        return;
+                        pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, header.AuthorizeInfo.AuthorizationFor, ctx);
+
+                        if (pullReplicationDefinition.Disabled)
+                            throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
                     }
-                }
+
+                    pullDefinitionName = header.AuthorizeInfo.AuthorizationFor;
+                    
+                    switch (header.AuthorizeInfo.AuthorizeAs)
+                    {
+                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Outgoing) != PullReplicationMode.Outgoing)
+                                throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
+                            CreatePullReplicationAsHub(tcpConnectionOptions, buffer, supportedVersions, pullReplicationDefinition, header);
+                            return;
+                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Incoming) != PullReplicationMode.Incoming)
+                                throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
+                            if (certificate == null)
+                                throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
+                            if(pullReplicationDefinition.Certificates != null && pullReplicationDefinition.Certificates.Count > 0)
+                                throw new InvalidOperationException("Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " + pullReplicationDefinition.Name);
+
+                            incomingPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.Incoming, header.ReplicationHubAccess.Outgoing);
+                            
+                            // same as normal incoming replication, just using the filtering
+                            break;
+                        default:
+                            throw new InvalidOperationException("Unknown AuthroizeAs value: " + header.AuthorizeInfo.AuthorizeAs);
+                    }
+                    break;
+                case null:
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown AuthroizeAs value" + header.AuthorizeInfo?.AuthorizeAs);
             }
 
-            CreateIncomingInstance(tcpConnectionOptions, buffer);
+            CreateIncomingInstance(tcpConnectionOptions, incomingPaths, pullDefinitionName, buffer);
         }
 
-        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
+        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
+            TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, 
+            PullReplicationDefinition pullReplicationDefinition, TcpConnectionHeaderMessage header)
         {
-            PullReplicationDefinition pullReplicationDefinition;
-            using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
+            ReplicationInitialRequest initialRequest;
+
+            using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var readerObject = context.ParseToMemory(tcpConnectionOptions.Stream, "initial-replication-message",
+                BlittableJsonDocumentBuilder.UsageMode.None, buffer))
             {
-                pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, initialRequest.PullReplicationDefinitionName, ctx);
+                initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
             }
+
+            if (string.Equals(initialRequest.PullReplicationDefinitionName, pullReplicationDefinition.Name, StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException($"PullReplicationDefinitionName '{initialRequest.PullReplicationDefinitionName}' does not match the pull replication definition name: {pullReplicationDefinition.Name}");
 
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info)
             {
-                PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
+                PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName,
+                CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint
             };
+
+            if (header.ReplicationHubAccess != null)
+            {
+                // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do 
+                // any filtering. That means that the certificate has global access to the database, so there is not point
+                outgoingReplication.MyOutgoingPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.Outgoing, header.ReplicationHubAccess.Incoming);
+            }
 
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
@@ -235,7 +357,7 @@ namespace Raven.Server.Documents.Replication
 
         public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationAsSink destination)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.HubDefinitionName);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.Incoming, destination.HubDefinitionName);
             newIncoming.Failed += RetryPullReplication;
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
@@ -263,9 +385,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public IncomingReplicationHandler CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
+        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] incomingPaths, string pullReplicationName,
+            JsonOperationContext.MemoryBuffer buffer)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPaths, pullReplicationName);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
@@ -286,29 +409,29 @@ namespace Raven.Server.Documents.Replication
                 }
                 newIncoming.Dispose();
             }
-
-            return newIncoming;
         }
 
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.MemoryBuffer buffer,
-            string pullReplicationName = null)
+            string[] incomingPaths,
+            string pullReplicationName)
         {
-            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, buffer);
+            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, incomingPaths, buffer);
 
             var newIncoming = new IncomingReplicationHandler(
                 tcpConnectionOptions,
                 getLatestEtagMessage,
                 this,
                 buffer,
+                incomingPaths, 
                 pullReplicationName);
 
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
             return newIncoming;
         }
 
-        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
+        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, string[] incomingPaths, JsonOperationContext.MemoryBuffer buffer)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -363,7 +486,8 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                         [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
-                        [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector
+                        [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector,
+                        [nameof(ReplicationMessageReply.IncomingPaths)] = incomingPaths,
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -737,15 +861,44 @@ namespace Raven.Server.Documents.Replication
 
         private void SetExternalReplicationProperties(DatabaseRecord newRecord, List<ExternalReplicationBase> externalReplications)
         {
-            foreach (var externalReplication in externalReplications)
+            for (var i = 0; i < externalReplications.Count; i++)
             {
+                var externalReplication = externalReplications[i];
                 if (ValidateConnectionString(newRecord, externalReplication, out var connectionString) == false)
                 {
                     continue;
                 }
-
+                
                 externalReplication.Database = connectionString.Database;
                 externalReplication.ConnectionString = connectionString;
+
+                if (externalReplication is PullReplicationAsSink sink && 
+                    sink.Mode == (PullReplicationMode.Incoming | PullReplicationMode.Outgoing))
+                {
+                    // we have dual mode here, need to split it
+                    sink.Mode = PullReplicationMode.Incoming;
+                    
+                    var other = new PullReplicationAsSink
+                    {
+                        Database = sink.Database,
+                        Disabled = sink.Disabled,
+                        Incoming = sink.Incoming,
+                        Mode = PullReplicationMode.Outgoing,
+                        Name = sink.Name,
+                        Url = sink.Url,
+                        ConnectionString = sink.ConnectionString,
+                        CertificatePassword = sink.CertificatePassword,
+                        Outgoing = sink.Outgoing,
+                        MentorNode = sink.MentorNode,
+                        TaskId = sink.TaskId,
+                        ConnectionStringName = sink.ConnectionStringName,
+                        HubDefinitionName = sink.HubDefinitionName,
+                        CertificateWithPrivateKey = sink.CertificateWithPrivateKey
+                    };
+
+                    i += 1;
+                    externalReplications.Insert(i, other);
+                }
             }
         }
 
@@ -968,6 +1121,11 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
+            if (node is PullReplicationAsSink sink)
+            {
+                outgoingReplication.MyOutgoingPaths = sink.Outgoing ?? sink.Incoming ?? Array.Empty<string>();
+            }
+
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
@@ -991,29 +1149,31 @@ namespace Raven.Server.Documents.Replication
             {
                 var certificate = GetCertificateForReplication(node, out _);
 
-                if (node is ExternalReplicationBase exNode)
+                switch (node)
                 {
-                    var database = exNode.ConnectionString.Database;
-                    if (node is PullReplicationAsSink sink)
+                    case ExternalReplicationBase exNode:
                     {
-                        return GetPullReplicationTcpInfo(sink, certificate, database);
+                        var database = exNode.ConnectionString.Database;
+                        if (node is PullReplicationAsSink sink)
+                        {
+                            return GetPullReplicationTcpInfo(sink, certificate, database);
+                        }
+
+                        // normal external replication
+                        return GetExternalReplicationTcpInfo(exNode, certificate, database);
                     }
-
-                    // normal external replication
-                    return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                }
-
-                if (node is InternalReplication internalNode)
-                {
-                    using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                    case InternalReplication internalNode:
                     {
-                        return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
-                            certificate, cts.Token);
+                        using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                        {
+                            return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
+                                certificate, cts.Token);
+                        }
                     }
+                    default:
+                        throw new InvalidOperationException(
+                            $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
                 }
-
-                throw new InvalidOperationException(
-                    $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
             }
             catch (Exception e)
             {
@@ -1136,7 +1296,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private static readonly string ExternalReplicationTag = "external-replication";
-        private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
+        private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplicationBase exNode, X509Certificate2 certificate, string database)
         {
             using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
                 DocumentConventions.DefaultForServer))
@@ -1169,7 +1329,13 @@ namespace Raven.Server.Documents.Replication
                 case PullReplicationAsSink sink:
                     authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
                     {
-                        AuthorizeAs = TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                        AuthorizeAs = sink.Mode switch
+                        {
+                            PullReplicationMode.Outgoing => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                            PullReplicationMode.Incoming => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
+                            PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node),"Replication mode should be set to pull or push"),
+                            _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)   
+                        },
                         AuthorizationFor = sink.HubDefinitionName
                     };
 
@@ -1288,6 +1454,8 @@ namespace Raven.Server.Documents.Replication
         {
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
 
+            ea.Execute(() => _server.Cluster.Changes.DatabaseChanged -= DatabaseValueChanged);
+            
             ea.Execute(() =>
             {
                 using (var waitHandle = new ManualResetEvent(false))

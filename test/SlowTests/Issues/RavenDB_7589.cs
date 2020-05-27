@@ -29,7 +29,7 @@ namespace SlowTests.Issues
 
             var mre = new ManualResetEventSlim();
 
-            Server.ServerStore.Cluster.Changes.DatabaseChanged += (arg1,arg2,arg3,arg4) =>
+            Server.ServerStore.Cluster.Changes.DatabaseChanged += (arg1,arg2,arg3,arg4, _) =>
             {
                 if (arg3 != nameof(RemoveNodeFromDatabaseCommand))
                     return Task.CompletedTask;

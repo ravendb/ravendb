@@ -12,6 +12,11 @@ namespace Raven.Client.Documents.Operations.Replication
         public string HubDefinitionName;
         public PullReplicationAsSink() { }
 
+        public PullReplicationMode Mode = PullReplicationMode.Outgoing;
+
+        public string[] Incoming;
+        public string[] Outgoing;
+
         public PullReplicationAsSink(string database, string connectionStringName, string hubDefinitionName) : base(database, connectionStringName)
         {
             HubDefinitionName = hubDefinitionName;
@@ -45,9 +50,12 @@ namespace Raven.Client.Documents.Operations.Replication
 
             var djv = base.ToJson();
 
+            djv[nameof(Mode)] = Mode;
             djv[nameof(HubDefinitionName)] = HubDefinitionName;
             djv[nameof(CertificateWithPrivateKey)] = CertificateWithPrivateKey;
             djv[nameof(CertificatePassword)] = CertificatePassword;
+            djv[nameof(Incoming)] = Incoming;
+            djv[nameof(Outgoing)] = Outgoing;
 
             return djv;
         }

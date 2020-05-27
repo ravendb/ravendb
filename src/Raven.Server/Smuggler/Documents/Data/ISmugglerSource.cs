@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -31,6 +32,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions);
         IEnumerable<CounterDetail> GetLegacyCounterValues();
         IEnumerable<SubscriptionState> GetSubscriptions();
+        IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates();
         IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport);
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);

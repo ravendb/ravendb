@@ -230,6 +230,9 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Subscriptions:
                     counts = ProcessSubscriptions(result);
                     break;
+                case DatabaseItemType.ReplicationHubCertificates:
+                    counts = ProcessReplicationHubCertificates(result);
+                    break;
                 case DatabaseItemType.TimeSeries:
                     counts = ProcessTimeSeries(result);
                     break;
@@ -300,6 +303,9 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.TimeSeries:
                     counts = result.TimeSeries;
+                    break;
+                case DatabaseItemType.ReplicationHubCertificates:
+                    counts = result.ReplicationHubCertificates;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -1023,6 +1029,27 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Subscriptions;
+        }
+        
+        private SmugglerProgressBase.Counts ProcessReplicationHubCertificates(SmugglerResult result)
+        {
+            result.ReplicationHubCertificates.Start();
+            
+            using (var actions = _destination.ReplicationHubCertificates())
+            {
+                foreach (var (hub,access) in _source.GetReplicationHubCertificates())
+                {
+                    _token.ThrowIfCancellationRequested();
+                    result.ReplicationHubCertificates.ReadCount++;
+
+                    if (result.ReplicationHubCertificates.ReadCount % 1000 == 0)
+                        AddInfoToSmugglerResult(result, $"Read {result.ReplicationHubCertificates.ReadCount:#,#;;0} subscription.");
+
+                    actions.WriteReplicationHubCertificate(hub, access);
+                }
+            }
+
+            return result.ReplicationHubCertificates;
         }
 
         private SmugglerProgressBase.Counts ProcessTimeSeries(SmugglerResult result)

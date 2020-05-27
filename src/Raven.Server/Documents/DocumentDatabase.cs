@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
@@ -1483,6 +1484,16 @@ namespace Raven.Server.Documents
             using (context.OpenReadTransaction())
             {
                 return ServerStore.Cluster.ReadDatabase(context, Name);
+            }
+        }
+
+        public PullReplicationDefinition GetPullReplicationDefinition(string name)
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var record = ServerStore.Cluster.ReadRawDatabaseRecord(context, Name);
+                return record?.GetHubPullReplicationByName(name);
             }
         }
 

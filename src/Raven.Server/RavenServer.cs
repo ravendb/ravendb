@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -1669,7 +1670,10 @@ namespace Raven.Server
                 return false;
             }
 
-            for (var i = 0; i < userChain.ChainElements.Count; i++)
+            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
+                return false;
+            
+            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
             {
                 // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
                 var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
@@ -1893,6 +1897,7 @@ namespace Raven.Server
                             ContextPool = _tcpContextPool,
                             Stream = stream,
                             TcpClient = tcpClient,
+                            Certificate = cert
                         };
 
                         var remoteEndPoint = tcpClient.Client.RemoteEndPoint;
@@ -1914,7 +1919,7 @@ namespace Raven.Server
                                 return;
                             }
 
-                            await DispatchDatabaseTcpConnection(tcp, header, buffer);
+                            await DispatchDatabaseTcpConnection(tcp, header, buffer, cert);
                         }
                         catch (Exception e)
                         {
@@ -2270,7 +2275,8 @@ namespace Raven.Server
             return false;
         }
 
-        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, JsonOperationContext.MemoryBuffer bufferToCopy)
+        private async Task<bool> DispatchDatabaseTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header,
+            JsonOperationContext.MemoryBuffer bufferToCopy, X509Certificate2 cert)
         {
             var databaseLoadingTask = ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(header.DatabaseName);
             if (databaseLoadingTask == null)
@@ -2307,7 +2313,7 @@ namespace Raven.Server
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
-                    documentReplicationLoader.AcceptIncomingConnection(tcp, header.Operation, bufferToCopy);
+                    documentReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
@@ -2407,24 +2413,96 @@ namespace Raven.Server
                     return false;
                 case AuthenticationStatus.UnfamiliarCertificate:
                     var info = header.AuthorizeInfo;
-                    if (info != null && info.AuthorizeAs == TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication)
+                    switch (info?.AuthorizeAs)
                     {
-                        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication)
-                                && pullReplication.CanAccess(certificate.Thumbprint))
-                                return true;
+                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
+                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
+                            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
+                            {
+                                if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication))
+                                {
+                                    var expectedMode = info.AuthorizeAs switch
+                                    {
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => PullReplicationMode.Outgoing,
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.Incoming,
+                                        _ => PullReplicationMode.None
+                                    };
+                                    
+                                    if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)// legacy
+                                    { 
+                                        return pullReplication.Certificates.ContainsKey(certificate.Thumbprint) && 
+                                            expectedMode == PullReplicationMode.Outgoing;
+                                    }
 
-                            msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor}";
-                            return false;
-                        }
+                                    if ((pullReplication.Mode & expectedMode) != expectedMode || expectedMode == PullReplicationMode.None)
+                                    {
+                                        msg = "The expected replication mode does not match the replication mode on the replication hub";
+                                        return false;
+                                    }
+
+                                    if (ServerStore.Cluster.IsReplicationCertificate(ctx, header.DatabaseName, info.AuthorizationFor, certificate, out header.ReplicationHubAccess))
+                                        return true;
+
+                                    if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate,
+                                        out header.ReplicationHubAccess))
+                                    {
+                                        RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(tcpClient.Client.RemoteEndPoint.ToString() , header.DatabaseName, info.AuthorizationFor, header.ReplicationHubAccess, certificate);
+                                        
+                                        return true;
+                                    }
+                                }   
+
+                                msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor} ({info.AuthorizeAs})";
+                                return false;
+                            }
+
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException("AuthorizeAs", "Unknown value for AuthorizeAs: " + info?.AuthorizeAs);
                     }
-                    goto default;
+                    break;                    
                 default:
                     msg = "Cannot allow access to a certificate with status: " + auth.Status;
                     return false;
             }
+        }
+
+        private void RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(
+            string remoteAddress,
+            string database, string hub,
+            DetailedReplicationHubAccess replicationHubAccess, X509Certificate2 certificate)
+        {
+            // This command will discard leftover certificates after the new certificate is saved.
+            GC.KeepAlive(Task.Run(async () =>
+            {
+                try
+                {
+                    await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub,new ReplicationHubAccess
+                        {
+                            Incoming = replicationHubAccess.Incoming,
+                            Outgoing = replicationHubAccess.Outgoing,
+                            Name = replicationHubAccess.Name,
+                            CertificateBas64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                            
+                        }, certificate.GetPublicKeyPinningHash(),certificate.Thumbprint, RaftIdGenerator.NewId(), certificate.Issuer, certificate.Subject, certificate.NotBefore, certificate.NotAfter)
+                        {
+                            RegisteringSamePublicKeyPinningHash = true
+                        })
+                        .ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Failed to run command '{nameof(RegisterReplicationHubAccessCommand)}'.", e);
+                }
+            }, ServerStore.ServerShutdown));
+
+            if (_authAuditLog.IsInfoEnabled)
+                _authAuditLog.Info(
+                    $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                    $"Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the replication hub. Old certificate: {replicationHubAccess.Thumbprint} ");
+
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)

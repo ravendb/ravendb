@@ -7,7 +7,7 @@
     <OutputType>Exe</OutputType>
     <PackageId>Tryouts</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>8</LangVersion>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />

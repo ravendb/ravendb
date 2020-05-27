@@ -7,6 +7,7 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents;
@@ -56,6 +57,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.CounterGroups,
             DatabaseItemType.Subscriptions,
             DatabaseItemType.TimeSeries,
+            DatabaseItemType.ReplicationHubCertificates, 
             DatabaseItemType.None
         };
 
@@ -452,6 +454,11 @@ namespace Raven.Server.Smuggler.Documents
         {
             // used only in StreamSource
             return Enumerable.Empty<CounterDetail>();
+        }
+
+        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates()
+        {
+            return _database.ServerStore.Cluster.GetReplicationHubCertificateForDatabase(_serverContext, _database.Name);
         }
 
         public IEnumerable<SubscriptionState> GetSubscriptions()

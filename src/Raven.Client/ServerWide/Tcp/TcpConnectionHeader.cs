@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using Raven.Client.Documents.Operations.Replication;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Tcp
@@ -24,7 +26,8 @@ namespace Raven.Client.ServerWide.Tcp
             public enum AuthorizeMethod
             {
                 Server,
-                PullReplication
+                PullReplication,
+                PushReplication
             }
 
             public AuthorizeMethod AuthorizeAs;
@@ -52,6 +55,8 @@ namespace Raven.Client.ServerWide.Tcp
         public string Info { get; set; }
 
         public AuthorizationInfo AuthorizeInfo { get; set; }
+
+        public DetailedReplicationHubAccess ReplicationHubAccess;
 
         public static readonly int PingBaseLine = -1;
         public static readonly int NoneBaseLine = -1;

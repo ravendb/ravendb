@@ -180,16 +180,40 @@ namespace FastTests
             TestCertificatesHolder Generate()
             {
                 var log = new StringBuilder();
-                byte[] certBytes;
-                try
+                byte[] certBytes;                  
+                string serverCertificatePath = null;
+                serverCertificatePath = Path.Combine(Path.GetTempPath(), "Server-" + DateTime.Today.ToString("yyyy-MM-dd")+".pfx");
+                if (File.Exists(serverCertificatePath) == false)
                 {
-                    certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
-                }
-                catch (Exception e)
-                {
-                    throw new CryptographicException($"Unable to generate the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
-                }
+                    
+                    try
+                    {
+                        certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new CryptographicException($"Unable to generate the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
+                    }
 
+                    if (certBytes.Length == 0)
+                        throw new CryptographicException($"Test certificate length is 0 bytes. Machine: '{Environment.MachineName}', Log: {log}");
+
+                    try
+                    {
+                        File.WriteAllBytes(serverCertificatePath, certBytes);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
+                                                            $"tempFileName = {serverCertificatePath}" +
+                                                            $"certBytes.Length = {certBytes.Length}" +
+                                                            $"MachineName = {Environment.MachineName}.", e);
+                    }
+                }
+                else
+                {
+                    certBytes = File.ReadAllBytes(serverCertificatePath);
+                }
                 X509Certificate2 serverCertificate;
                 try
                 {
@@ -199,26 +223,7 @@ namespace FastTests
                 {
                     throw new CryptographicException($"Unable to load the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
                 }
-
-                if (certBytes.Length == 0)
-                    throw new CryptographicException($"Test certificate length is 0 bytes. Machine: '{Environment.MachineName}', Log: {log}");
-
-                string serverCertificatePath = null;
-                try
-                {
-                    serverCertificatePath = Path.GetTempFileName();
-                    File.WriteAllBytes(serverCertificatePath, certBytes);
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
-                                                        $"tempFileName = {serverCertificatePath}" +
-                                                        $"certBytes.Length = {certBytes.Length}" +
-                                                        $"MachineName = {Environment.MachineName}.", e);
-                }
-
-                GlobalPathsToDelete.Add(serverCertificatePath);
-
+                
                 SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
 
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
@@ -230,31 +235,33 @@ namespace FastTests
 
             string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
             {
-                CertificateUtils.CreateSelfSignedClientCertificate(
-                    $"{Environment.MachineName}_CC_{index}",
-                    new RavenServer.CertificateHolder
+                string name = $"{Environment.MachineName}_CC_{index}_{DateTime.Today:yyyy-MM-DD}";
+                string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx") ;
+
+                if (File.Exists(clientCertificatePath) == false)
+                {
+                    CertificateUtils.CreateSelfSignedClientCertificate(
+                        name,
+                        new RavenServer.CertificateHolder
+                        {
+                            Certificate = serverCertificate,
+                            PrivateKey = pk
+                        },
+                        out var certBytes, DateTime.UtcNow.Date.AddYears(5));
+
+                    try
                     {
-                        Certificate = serverCertificate,
-                        PrivateKey = pk
-                    },
-                    out var certBytes, DateTime.UtcNow.Date.AddYears(5));
-
-                string clientCertificatePath = null;
-                try
-                {
-                    clientCertificatePath = Path.GetTempFileName();
-                    File.WriteAllBytes(clientCertificatePath, certBytes);
+                        File.WriteAllBytes(clientCertificatePath, certBytes);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
+                                                            $"tempFileName = {clientCertificatePath}" +
+                                                            $"certBytes.Length = {certBytes.Length}" +
+                                                            $"MachineName = {Environment.MachineName}.", e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Failed to write the test certificate to a temp file." +
-                                                        $"tempFileName = {clientCertificatePath}" +
-                                                        $"certBytes.Length = {certBytes.Length}" +
-                                                        $"MachineName = {Environment.MachineName}.", e);
-                }
-
-                GlobalPathsToDelete.Add(clientCertificatePath);
-
+                
                 return clientCertificatePath;
             }
         }

@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
@@ -27,6 +29,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         ICompareExchangeActions CompareExchangeTombstones(JsonOperationContext context);
         ICounterActions Counters(SmugglerResult result);
         ISubscriptionActions Subscriptions();
+        IReplicationHubCertificateActions ReplicationHubCertificates();
         ITimeSeriesActions TimeSeries();
     }
 
@@ -60,6 +63,11 @@ namespace Raven.Server.Smuggler.Documents.Data
     public interface ISubscriptionActions : IDisposable
     {
         void WriteSubscription(SubscriptionState subscriptionState);
+    }
+    
+    public interface IReplicationHubCertificateActions : IDisposable
+    {
+        void WriteReplicationHubCertificate(string hub, ReplicationHubAccess access);
     }
 
     public interface IKeyValueActions<in T> : IDisposable

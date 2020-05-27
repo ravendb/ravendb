@@ -1,23 +1,64 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Replication.Messages;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class PullReplicationDefinition : FeatureTaskDefinition
+    public class PullReplicationDefinition : IDynamicJsonValueConvertible
     {
+        [Obsolete("You cannot use Certificates on the PullReplicationDefinition any more, please use the dedicated commands: RegisterReplicationHubAccessOperation and UnregisterReplicationHubAccessOperation")]
+        public Dictionary<string, string> Certificates; // <thumbprint, base64 cert>
+
         public TimeSpan DelayReplicationFor;
+        public bool Disabled;
+
         public string MentorNode;
+
+        public PullReplicationMode Mode = PullReplicationMode.Outgoing;
+
+        public string Name;
+        public long TaskId;
 
         public PullReplicationDefinition() { }
 
-        public PullReplicationDefinition(string name, TimeSpan delay = default, string mentor = null) : base(name)
+        public PullReplicationDefinition(string name, TimeSpan delay = default, string mentor = null)
         {
+            Name = name;
             MentorNode = mentor;
             DelayReplicationFor = delay;
         }
 
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(Certificates)] = DynamicJsonValue.Convert(Certificates),
+                [nameof(TaskId)] = TaskId,
+                [nameof(Disabled)] = Disabled,
+                [nameof(MentorNode)] = MentorNode,
+                [nameof(DelayReplicationFor)] = DelayReplicationFor,
+                [nameof(Mode)] = Mode
+            };
+        }
+
+        public void Validate(bool useSsl)
+        {
+            if (string.IsNullOrEmpty(Name))
+                throw new ArgumentNullException(nameof(Name));
+
+            if (useSsl == false)
+            {
+                if (Certificates?.Count > 0)
+                {
+                    throw new InvalidOperationException("Your server is unsecured and therefore you can't define pull replication with a certificate.");
+                }
+            }
+        }
+        
         public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
         {
             return new ExternalReplication
@@ -30,25 +71,5 @@ namespace Raven.Client.Documents.Operations.Replication
                 TaskId = taskId
             };
         }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var djv = base.ToJson();
-            djv[nameof(MentorNode)] = MentorNode;
-            djv[nameof(DelayReplicationFor)] = DelayReplicationFor;
-            return djv;
-        }
-        
-        public static void RemoveHub<T>(List<T> hubTasks, long taskId) where T : PullReplicationDefinition
-        {
-            foreach (var task in hubTasks)
-            {
-                if (task.TaskId != taskId)
-                    continue;
-                hubTasks.Remove(task);
-                return;
-            }
-        }
     }
-    
 }

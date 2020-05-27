@@ -5,12 +5,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Org.BouncyCastle.Crypto.Tls;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
@@ -112,6 +115,11 @@ namespace Raven.Server.Smuggler.Documents
         public ISubscriptionActions Subscriptions()
         {
             return new SubscriptionActions(_database);
+        }
+
+        public IReplicationHubCertificateActions ReplicationHubCertificates()
+        {
+            return new ReplicationHubCertificateActions(_database);
         }
 
         public ITimeSeriesActions TimeSeries()
@@ -1603,6 +1611,54 @@ namespace Raven.Server.Smuggler.Documents
                     _database.ServerStore.SendToLeaderAsync(new PutSubscriptionBatchCommand(_subscriptionCommands, RaftIdGenerator.DontCareId)));
 
                 _subscriptionCommands.Clear();
+            }
+        }
+        
+        private class ReplicationHubCertificateActions : IReplicationHubCertificateActions
+        {
+            private readonly DocumentDatabase _database;
+            private readonly List<RegisterReplicationHubAccessCommand> _commands = new List<RegisterReplicationHubAccessCommand>();
+
+            public ReplicationHubCertificateActions(DocumentDatabase database)
+            {
+                _database = database;
+            }
+
+            public void Dispose()
+            {
+                if (_commands.Count == 0)
+                    return;
+
+                SendCommands();
+            }
+
+            public void WriteReplicationHubCertificate(string hub, ReplicationHubAccess access)
+            {
+                const int batchSize = 128;
+                
+                byte[] buffer = Convert.FromBase64String(access.CertificateBas64);
+                using var cert = new X509Certificate2(buffer);
+
+                _commands.Add(new RegisterReplicationHubAccessCommand(_database.Name,hub,access, cert.GetPublicKeyPinningHash(),
+                    cert.Thumbprint,RaftIdGenerator.DontCareId,cert.Issuer, cert.Subject, cert.NotBefore, cert.NotAfter));
+
+                if (_commands.Count < batchSize)
+                    return;
+
+                SendCommands();
+            }
+
+            private void SendCommands()
+            {
+                AsyncHelpers.RunSync(() =>
+                    _database.ServerStore.SendToLeaderAsync(new BulkRegisterReplicationHubAccessCommand
+                    {
+                        Commands = _commands,
+                        Database =_database.Name,
+                        UniqueRequestId = RaftIdGenerator.DontCareId
+                    }));
+
+                _commands.Clear();
             }
         }
 

@@ -11,6 +11,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
@@ -72,6 +73,7 @@ namespace Raven.Server.ServerWide
         public static readonly TableSchema TransactionCommandsSchema;
         public static readonly TableSchema IdentitiesSchema;
         public static readonly TableSchema CertificatesSchema;
+        public static readonly TableSchema ReplicationCertificatesSchema;
 
         public static string ServerWideBackupConfigurationsKey = "server-wide/backup/configurations";
 
@@ -109,12 +111,21 @@ namespace Raven.Server.ServerWide
         public static readonly Slice CompareExchangeTombstoneIndex;
         public static readonly Slice CertificatesSlice;
         public static readonly Slice CertificatesHashSlice;
-
+        public static readonly Slice ReplicationCertificatesSlice;
+        public static readonly Slice ReplicationCertificatesHashSlice;
         public enum CertificatesTable
         {
             Thumbprint = 0,
             PublicKeyHash = 1,
             Data = 2
+        }
+
+        public enum ReplicationCertificatesTable
+        {
+            Thumbprint = 0,
+            PublicKeyHash = 1,
+            Certificate = 2,
+            Access = 3
         }
 
         static ClusterStateMachine()
@@ -132,6 +143,8 @@ namespace Raven.Server.ServerWide
                 Slice.From(ctx, "CompareExchangeTombstoneIndex", out CompareExchangeTombstoneIndex);
                 Slice.From(ctx, "CertificatesSlice", out CertificatesSlice);
                 Slice.From(ctx, "CertificatesHashSlice", out CertificatesHashSlice);
+                Slice.From(ctx, "ReplicationCertificatesSlice", out ReplicationCertificatesSlice);
+                Slice.From(ctx, "ReplicationCertificatesHashSlice", out ReplicationCertificatesHashSlice);
             }
 
             ItemsSchema = new TableSchema();
@@ -208,6 +221,24 @@ namespace Raven.Server.ServerWide
                 Count = 1,
                 IsGlobal = false,
                 Name = CertificatesHashSlice
+            });
+
+            // We use the follow format for the replication certificates data
+            // { thumbprint, public key hash, data}
+            ReplicationCertificatesSchema = new TableSchema();
+            ReplicationCertificatesSchema.DefineKey(new TableSchema.SchemaIndexDef()
+            {
+                StartIndex = (int)ReplicationCertificatesTable.Thumbprint,
+                Count = 1,
+                IsGlobal = false,
+                Name = ReplicationCertificatesSlice
+            });
+            ReplicationCertificatesSchema.DefineIndex(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = (int)ReplicationCertificatesTable.PublicKeyHash,
+                Count = 1,
+                IsGlobal = false,
+                Name = ReplicationCertificatesHashSlice
             });
         }
 
@@ -377,6 +408,15 @@ namespace Raven.Server.ServerWide
                     case nameof(ConfirmServerCertificateReplacedCommand):
                         ConfirmServerCertificateReplaced(context, cmd, index, serverStore);
                         break;
+                    case nameof(BulkRegisterReplicationHubAccessCommand):
+                        BulkPutReplicationCertificate(context, type, cmd, index, serverStore);
+                        break;
+                    case nameof(RegisterReplicationHubAccessCommand):
+                        PutReplicationCertificate(context, type, cmd, index, serverStore);
+                        break;
+                    case nameof(UnregisterReplicationHubAccessCommand):
+                        RemoveReplicationCertificate(context, type, cmd, index, serverStore);
+                        break;
                     case nameof(UpdateSnmpDatabasesMappingCommand):
                         UpdateValue<List<string>>(context, type, cmd, index);
                         break;
@@ -507,7 +547,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     actionsByDatabase[database].Add(() =>
-                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
+                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null));
                 }
 
                 foreach (var action in actionsByDatabase)
@@ -698,7 +738,7 @@ namespace Raven.Server.ServerWide
                         ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
                         : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
 
-                    NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify);
+                    NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
                     return null;
                 }
@@ -967,7 +1007,7 @@ namespace Raven.Server.ServerWide
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
                                 tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
-                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
 
                                 continue;
                             }
@@ -990,7 +1030,7 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
 
-                    tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                    tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
                 }
 
                 ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), tasks);
@@ -1123,7 +1163,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
-                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
+                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null);
             }
         }
 
@@ -1154,7 +1194,7 @@ namespace Raven.Server.ServerWide
                     {
                         items.DeleteByKey(lowerKey);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                         return;
                     }
 
@@ -1165,7 +1205,7 @@ namespace Raven.Server.ServerWide
                     {
                         DeleteDatabaseRecord(context, index, items, lowerKey, databaseName, serverStore);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                         return;
                     }
 
@@ -1175,7 +1215,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
             }
             catch (Exception e)
             {
@@ -1195,6 +1235,7 @@ namespace Raven.Server.ServerWide
 
             // delete all values linked to database record - for subscription, etl etc.
             CleanupDatabaseRelatedValues(context, items, databaseName, serverStore);
+            CleanupDatabaseReplicationCertificate(context, databaseName);
 
             var transactionsCommands = context.Transaction.InnerTransaction.OpenTable(TransactionCommandsSchema, TransactionCommands);
             var commandsCountPerDatabase = context.Transaction.InnerTransaction.ReadTree(TransactionCommandsCountPerDatabase);
@@ -1204,6 +1245,16 @@ namespace Raven.Server.ServerWide
                 commandsCountPerDatabase.Delete(prefixSlice);
                 transactionsCommands.DeleteByPrimaryKeyPrefix(prefixSlice);
             }
+        }
+
+        private static void CleanupDatabaseReplicationCertificate(ClusterOperationContext context, string databaseName)
+        {
+           using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+        
+            string prefixString = (databaseName  +"/").ToLowerInvariant();
+            using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
+
+            certs.DeleteByPrimaryKeyPrefix(prefix);
         }
 
         private static void CleanupDatabaseRelatedValues(ClusterOperationContext context, Table items, string databaseName, ServerStore serverStore)
@@ -1389,7 +1440,7 @@ namespace Raven.Server.ServerWide
             {
                 LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
-                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
             }
         }
 
@@ -1681,6 +1732,123 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private void BulkPutReplicationCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        {
+            var command = (BulkRegisterReplicationHubAccessCommand)CommandBase.CreateFrom(cmd);
+            try
+            {
+                var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+
+                foreach (RegisterReplicationHubAccessCommand inner in command.Commands)
+                {
+                    PutRegisterReplicationHubAccessInternal(context, inner, certs);
+                }
+            }
+            finally
+            {
+                NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, command);
+            }
+        }
+        
+        private void PutReplicationCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        {
+            var command = (RegisterReplicationHubAccessCommand)CommandBase.CreateFrom(cmd);
+            try
+            {
+                var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+
+                PutRegisterReplicationHubAccessInternal(context, command, certs);
+            }
+            finally
+            {
+                NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, command);
+            }
+        }
+
+
+        private unsafe void PutRegisterReplicationHubAccessInternal(ClusterOperationContext context, RegisterReplicationHubAccessCommand command, Table certs)
+        {
+            using (Slice.From(context.Allocator, (command.Database + "/" + command.HubDefinitionName + "/" + command.CertThumbprint).ToLowerInvariant(), out var keySlice))
+            using (Slice.From(context.Allocator, (command.Database + "/" + command.HubDefinitionName + "/" + command.CertPublicKeyHash).ToLowerInvariant(),
+                out var publicKeySlice))
+            using (var obj = context.ReadObject(new DynamicJsonValue
+            {
+                [nameof(command.Incoming)] = command.Incoming,
+                [nameof(command.Outgoing)] = command.Outgoing,
+                [nameof(command.HubDefinitionName)] = command.HubDefinitionName,
+                [nameof(command.Issuer)] = command.Issuer,
+                [nameof(command.NotBefore)] = command.NotBefore,
+                [nameof(command.NotAfter)] = command.NotAfter,
+                [nameof(command.Subject)] = command.Subject,
+                [nameof(command.Name)] = command.Name,
+            }, "inner-val"))
+            {
+                if (_clusterAuditLog.IsInfoEnabled)
+                    _clusterAuditLog.Info(
+                        $"Registering new replication certificate {command.Name} = '{command.CertThumbprint}' for replication in {command.Database} using {command.HubDefinitionName} " +
+                        $"Allowed read paths: {string.Join(", ", command.Incoming)}, Allowed write paths: {string.Join(", ", command.Outgoing)}.");
+
+
+                var certificate = Convert.FromBase64String(command.CertificateBase64);
+                fixed (byte* pCert = certificate)
+                {
+                    using (certs.Allocate(out TableValueBuilder builder))
+                    {
+                        builder.Add(keySlice);
+                        builder.Add(publicKeySlice);
+                        builder.Add(pCert, certificate.Length);
+                        builder.Add(obj.BasePointer, obj.Size);
+
+                        certs.Set(builder);
+                    }
+                }
+
+                if (!command.RegisteringSamePublicKeyPinningHash)
+                    return;
+
+                // here we'll clear the old values 
+                var samePublicKeyHash = new SortedList<DateTime, long>();
+                foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeySlice, publicKeySlice, 0))
+                {
+                    using var accessBlittable = new BlittableJsonReaderObject(result.Result.Reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
+
+                    accessBlittable.TryGet(nameof(command.NotAfter), out DateTime notAfter);
+
+                    samePublicKeyHash.Add(notAfter, result.Result.Reader.Id);
+                }
+
+                while (samePublicKeyHash.Count > Constants.Certificates.MaxNumberOfCertsWithSameHash)
+                {
+                    certs.Delete(samePublicKeyHash.Values[0]);
+                    samePublicKeyHash.RemoveAt(0);
+                }
+            }
+        }
+
+        private void RemoveReplicationCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
+        {
+            var command = (UnregisterReplicationHubAccessCommand)CommandBase.CreateFrom(cmd);
+            try
+            {
+                var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+
+                using (Slice.From(context.Allocator, (command.Database + "/" + command.HubDefinitionName + "/" + command.CertThumbprint).ToLowerInvariant(), out var keySlice))
+                {
+
+                    if (certs.DeleteByKey(keySlice) == false)
+                        return;
+
+                    if (_clusterAuditLog.IsInfoEnabled)
+                        _clusterAuditLog.Info($"Removed replication certificate '{command.CertThumbprint}' for replication in {command.Database} using {command.HubDefinitionName}.");
+                }
+            }
+            finally
+            {
+                NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, command);
+            }
+        }
+
+
         private void DiscardLeftoverCertsWithSamePinningHash(ClusterOperationContext context, string hash, string type, long index)
         {
             var certsWithSameHash = GetCertificatesByPinningHashSortedByExpiration(context, hash);
@@ -1729,8 +1897,10 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void NotifyDatabaseAboutChanged(ClusterOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
+        private void NotifyDatabaseAboutChanged(ClusterOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change, object changeState)
         {
+            Debug.Assert(changeState.ContainsBlittableObject() == false, "You cannot use a blittable in the command state, since this is handled outside of the transaction");
+
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
                 // we do this under the write tx lock before we update the last applied index
@@ -1738,7 +1908,7 @@ namespace Raven.Server.ServerWide
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
-                    ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change));
+                    ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change, changeState));
                 };
             };
         }
@@ -1838,7 +2008,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
-                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, updateCommand);
             }
         }
 
@@ -1956,6 +2126,7 @@ namespace Raven.Server.ServerWide
             TransactionCommandsSchema.Create(context.Transaction.InnerTransaction, TransactionCommands, 32);
             IdentitiesSchema.Create(context.Transaction.InnerTransaction, Identities, 32);
             CertificatesSchema.Create(context.Transaction.InnerTransaction, CertificatesSlice, 32);
+            ReplicationCertificatesSchema.Create(context.Transaction.InnerTransaction, ReplicationCertificatesSlice, 32);
             context.Transaction.InnerTransaction.CreateTree(TransactionCommandsCountPerDatabase);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
             context.Transaction.InnerTransaction.CreateTree(CompareExchangeExpirationStorage.CompareExchangeByExpiration);
@@ -2104,7 +2275,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
 
-                tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
@@ -2417,7 +2588,7 @@ namespace Raven.Server.ServerWide
 
                 var items = context.Transaction.InnerTransaction.OpenTable(CompareExchangeSchema, CompareExchange);
 
-               return CompareExchangeExpirationStorage.DeleteExpiredCompareExchange(context, items, ticks, take);
+                return CompareExchangeExpirationStorage.DeleteExpiredCompareExchange(context, items, ticks, take);
             }
             finally
             {
@@ -2445,7 +2616,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
+                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null);
             }
         }
 
@@ -2706,13 +2877,7 @@ namespace Raven.Server.ServerWide
                     throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
                 }
 
-                var hubPullReplications = databaseRecord.HubPullReplications;
-                if (hubPullReplications == null)
-                {
-                    throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
-                }
-
-                var definition = hubPullReplications.Find(x => string.Equals(x.Name, definitionName));
+                var definition = databaseRecord.GetHubPullReplicationByName(definitionName);
                 if (definition == null)
                 {
                     throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
@@ -3228,7 +3393,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
 
-                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
@@ -3264,7 +3429,7 @@ namespace Raven.Server.ServerWide
                         {
                             var t = Task.Run(async () =>
                             {
-                                await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                                await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                             }, token);
                         }
 
@@ -3289,6 +3454,153 @@ namespace Raven.Server.ServerWide
         protected override RachisVersionValidation InitializeValidator()
         {
             return new ClusterValidator();
+        }
+
+        public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(TransactionOperationContext context, string database, string hub, int start, int pageSize)
+        {
+            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+
+            string prefixString = (database + "/" + hub + "/").ToLowerInvariant();
+            using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
+
+            foreach (var (key, val) in certs.SeekByPrimaryKeyPrefix(prefix, Slices.Empty, start))
+            {
+                if (pageSize-- < 0)
+                    break;
+                var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
+                blittable.Modifications = new DynamicJsonValue(blittable)
+                {
+                    ["CertificateThumbprint"] = key.ToString().Substring(prefixString.Length),
+                    ["HubDefinitionName"] = hub,
+                    ["Database"] = database
+                };
+                yield return blittable;
+            }
+        }
+        
+        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificateForDatabase(TransactionOperationContext context, string database)
+        {
+            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+
+            string prefixString = (database + "/" ).ToLowerInvariant();
+            using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
+
+            foreach (var (key, val) in certs.SeekByPrimaryKeyPrefix(prefix, Slices.Empty, 0))
+            {
+                var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
+
+                blittable.TryGet(nameof(RegisterReplicationHubAccessCommand.HubDefinitionName), out string hub);
+                var details = JsonDeserializationCluster.DetailedReplicationHubAccess(blittable);
+
+                string certBase64 = GetCertificateAsBase64(val);
+
+                yield return (hub, new ReplicationHubAccess
+                {
+                    Incoming = details.Incoming,
+                    Outgoing = details.Outgoing,
+                    Name = details.Name,
+                    CertificateBas64 = certBase64,
+                });
+            }
+
+            unsafe string GetCertificateAsBase64(Table.TableValueHolder val)
+            {
+                var buffer = val.Reader.Read((int)ReplicationCertificatesTable.Certificate, out var size);
+                string certBase64 = Convert.ToBase64String(new ReadOnlySpan<byte>(buffer, size));
+                return certBase64;
+            }
+        }
+
+        unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(TransactionOperationContext context, ref TableValueReader reader)
+        {
+            return new BlittableJsonReaderObject(reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
+        }
+
+        public bool IsReplicationCertificate(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert, out DetailedReplicationHubAccess access)
+        {
+            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+
+            using var __ = Slice.From(context.Allocator, (database + "/" + hub + "/" + userCert.Thumbprint).ToLowerInvariant(), out var key);
+
+            if (certs.ReadByKey(key, out var v))
+            {
+                var b = GetReplicationCertificateAccessObject(context, ref v);
+                access = JsonDeserializationCluster.DetailedReplicationHubAccess(b);
+                return true;
+            }
+
+            access = default;
+
+            return false;
+        }
+
+        public unsafe bool IsReplicationCertificateByPublicKeyPinningHash(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert,
+            out DetailedReplicationHubAccess access)
+        {
+
+            using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
+            // maybe we need to check by public key hash?
+            string publicKeyPinningHash = userCert.GetPublicKeyPinningHash();
+
+            using var ___ = Slice.From(context.Allocator, (database + "/" + hub + "/" + publicKeyPinningHash).ToLowerInvariant(), out var publicKeyHash);
+
+            access = default;
+            
+            foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeyHash, publicKeyHash, 0))
+            {
+                var obj = GetReplicationCertificateAccessObject(context, ref result.Result.Reader);
+
+                // this is a cheap check, not sufficient for real 
+                if (obj.TryGet(nameof(userCert.Issuer), out string issuer) == false || issuer != userCert.Issuer)
+                    continue;
+
+                // now we need to do an actual check
+
+                var p = result.Result.Reader.Read((int)ReplicationCertificatesTable.Certificate, out var size);
+                var buffer = new byte[size];
+                new Span<byte>(p, size).CopyTo(buffer);
+                using var knownCert = new X509Certificate2(buffer);
+
+                var userChain = new X509Chain();
+                var knownCertChain = new X509Chain();
+                try
+                {
+                    userChain.Build(userCert);
+                }
+                catch (Exception e)
+                {
+                    return false;
+                }
+
+                try
+                {
+                    knownCertChain.Build(knownCert);
+                }
+                catch (Exception e)
+                {
+                    return false;
+                }
+
+                if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
+                {
+                    return false;
+                }
+
+                for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
+                {
+                    // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
+                    var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
+                    if (currentElementPinningHash != knownCertChain.ChainElements[i].Certificate.GetPublicKeyPinningHash())
+                    {
+                        return false;
+                    }
+                }
+
+                access = JsonDeserializationCluster.DetailedReplicationHubAccess(obj);
+                return true;
+            }
+
+            return false;
         }
     }
 

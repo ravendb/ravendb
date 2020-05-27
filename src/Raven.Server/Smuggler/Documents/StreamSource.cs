@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -20,6 +21,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Processors;
@@ -305,7 +307,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         try
                         {
-                            var hub = JsonDeserializationCluster.PullReplicationDefinition(pullReplication);
+                            var hub = JsonDeserializationClient.PullReplicationDefinition(pullReplication);
                             databaseRecord.HubPullReplications.Add(hub);
                         }
                         catch (Exception e)
@@ -462,6 +464,27 @@ namespace Raven.Server.Smuggler.Documents
                         CounterName = name,
                         TotalValue = value
                     };
+                }
+            }
+        }
+
+        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates()
+        {
+            foreach (var reader in ReadArray())
+            {
+                using (reader)
+                {
+                    if (reader.TryGet(nameof(RegisterReplicationHubAccessCommand.HubDefinitionName), out string hub) == false)
+                    {
+                        _result.ReplicationHubCertificates.ErroredCount++;
+                        _result.AddWarning("Could not read replication hub certificate entry.");
+
+                        continue;
+                    }
+
+                    var access = JsonDeserializationClient.ReplicationHubAccess(reader);
+
+                    yield return (hub, access);
                 }
             }
         }
@@ -1576,6 +1599,9 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals(nameof(DatabaseItemType.CompareExchangeTombstones), StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.CompareExchangeTombstones;
+
+            if (type.Equals(nameof(DatabaseItemType.ReplicationHubCertificates), StringComparison.OrdinalIgnoreCase))
+                return DatabaseItemType.ReplicationHubCertificates;
 
             if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.LegacyAttachments;

@@ -17,14 +17,15 @@ using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Server.Utils;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
 {
-    public class ReplicationDocumentSender
+    public class ReplicationDocumentSender : IDisposable
     {
         private readonly Logger _log;
-        private long _lastEtag;
+       private long _lastEtag;
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
         private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>();
@@ -35,9 +36,13 @@ namespace Raven.Server.Documents.Replication
         private readonly ReplicationStats _stats = new ReplicationStats();
         public bool MissingAttachmentsInLastBatch { get; private set; }
 
-        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
+        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log, string[] myPaths, string[] theirPaths)
         {
             _log = log;
+            if (myPaths != null && myPaths.Length > 0)
+                _myPaths  = new AllowedPathsValidator(myPaths);
+            if (theirPaths != null && theirPaths.Length > 0)
+                _theirPaths  = new AllowedPathsValidator(theirPaths);
             _stream = stream;
             _parent = parent;
         }
@@ -535,6 +540,9 @@ namespace Raven.Server.Documents.Replication
 
         private bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
+            if (ValidatorSaysToSkip(_myPaths) || ValidatorSaysToSkip(_theirPaths))
+                return true;
+            
             switch (item)
             {
                 case DocumentReplicationItem doc:
@@ -574,7 +582,29 @@ namespace Raven.Server.Documents.Replication
             }
 
             return false;
+
+            bool ValidatorSaysToSkip(AllowedPathsValidator validator)
+            {
+                if (validator == null)
+                    return false;
+
+                if (validator.ShouldAllow(item))
+                    return false;
+                
+                stats.RecordArtificialDocumentSkip();
+                skippedReplicationItemsInfo.Update(item);
+               
+                if (_log.IsInfoEnabled)
+                {
+                    string key = validator.GetItemInformation(item);
+                    _log.Info($"Will skip sending {key} ({item.Type}) because it was not allowed according to the incoming .");
+                }
+
+                return true;
+            }
         }
+
+        private readonly AllowedPathsValidator _myPaths, _theirPaths;
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
@@ -629,49 +659,6 @@ namespace Raven.Server.Documents.Replication
 
         }
 
-/*        private void WriteItemToServer(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
-        {
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
-            {
-                WriteAttachmentTombstoneToServer(context, item);
-                stats.RecordAttachmentTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment)
-            {
-                WriteTimeSeriesSegmentToServer(context, item);
-                stats.RecordTimeSeriesOutput(item.Segment.NumberOfBytes);
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
-            {
-                WriteRevisionTombstoneToServer(context, item);
-                stats.RecordRevisionTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
-            {
-                WriteDocumentToServer(context, item);
-                stats.RecordDocumentTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
-            {
-                item.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
-                stats.RecordCountersOutput(counters?.Count ?? 0);
-                WriteCountersToServer(context, item);
-                return;
-            }
-
-            WriteDocumentToServer(context, item);
-            stats.RecordDocumentOutput(item.Data?.Size ?? 0);
-        }*/
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(OutgoingReplicationStatsScope stats)
@@ -699,6 +686,12 @@ namespace Raven.Server.Documents.Replication
             public OutgoingReplicationStatsScope AttachmentRead;
             public OutgoingReplicationStatsScope CounterRead;
             public OutgoingReplicationStatsScope TimeSeriesRead;
+        }
+
+        public void Dispose()
+        {
+            _myPaths?.Dispose();
+            _theirPaths?.Dispose();
         }
     }
 }
