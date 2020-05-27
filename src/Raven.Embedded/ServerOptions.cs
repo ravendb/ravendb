@@ -55,10 +55,10 @@ namespace Raven.Embedded
             return this;
         }
 
-        public ServerOptions Secured(string certExec, string certExecArgs, string serverCertThumbprint, X509Certificate2 clientCert)
+        public ServerOptions Secured(string certLoadExec, string certExecArgs, string serverCertThumbprint, X509Certificate2 clientCert)
         {
-            if (certExec == null)
-                throw new ArgumentNullException(nameof(certExec));
+            if (certLoadExec == null)
+                throw new ArgumentNullException(nameof(certLoadExec));
             if (certExecArgs == null)
                 throw new ArgumentNullException(nameof(certExecArgs));
             if (serverCertThumbprint == null)
@@ -72,8 +72,8 @@ namespace Raven.Embedded
             Security = new SecurityOptions
             {
                 ClientCertificate = clientCert,
-                CertificateExec = certExec,
-                CertificateArguments = certExecArgs,
+                CertificateLoadExec = certLoadExec,
+                CertificateLoadExecArguments = certExecArgs,
                 ServerCertificateThumbprint = serverCertThumbprint
             };
 
@@ -88,8 +88,8 @@ namespace Raven.Embedded
             public string CertificatePath { get; internal set; }
             public string CertificatePassword { get; internal set; }
             public X509Certificate2 ClientCertificate { get; internal set; }
-            public string CertificateExec { get; internal set; }
-            public string CertificateArguments { get; internal set; }
+            public string CertificateLoadExec { get; internal set; }
+            public string CertificateLoadExecArguments { get; internal set; }
             public string ServerCertificateThumbprint { get; internal set; }
         }
     }
