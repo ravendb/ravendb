@@ -52,7 +52,7 @@ namespace Raven.Server.Utils
 
             var type = obj.GetType();
 
-            if (type.IsPointer || type.IsEnum || type.IsCOMObject) //obviously not what we are looking for
+            if (type.IsPointer || type.IsEnum || type.IsCOMObject || type.IsValueType || type == typeof(string)) //obviously not what we are looking for
                 return false;
 
             if (obj is BlittableJsonReaderObject || obj is BlittableJsonReaderArray)

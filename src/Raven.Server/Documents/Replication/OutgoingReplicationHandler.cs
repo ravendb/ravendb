@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -169,7 +170,7 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
 
             var certificate = _parent.GetCertificateForReplication(Destination, out var authorizationInfo);
-
+            CertificateThumbprint = certificate?.Thumbprint;
             var database = _parent.Database;
             if (database == null)
                 throw new InvalidOperationException("The database got disposed. Stopping the replication.");
@@ -206,14 +207,13 @@ namespace Raven.Server.Documents.Replication
                 using (context.GetMemoryBuffer(out _buffer))
                 {
                     var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                    if (supportedFeatures.Replication.PullReplication)
+                    if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.Outgoing) == PullReplicationMode.Outgoing)
                     {
+                        if( supportedFeatures.Replication.PullReplication == false)
+                            throw new InvalidOperationException("Other side does not support pull replication " + Destination);
                         SendPreliminaryData();
-                        if (Destination is PullReplicationAsSink)
-                        {
-                            InitiatePullReplicationAsSink(supportedFeatures);
-                            return;
-                        }
+                        InitiatePullReplicationAsSink(supportedFeatures, certificate);
+                        return;
                     }
 
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void InitiatePullReplicationAsSink(TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
+        private void InitiatePullReplicationAsSink(TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures, X509Certificate2 certificate)
         {
             var tcpOptions = new TcpConnectionOptions
             {
@@ -268,12 +268,13 @@ namespace Raven.Server.Documents.Replication
                 Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
                 DocumentDatabase = _database,
                 ProtocolVersion = supportedFeatures.ProtocolVersion,
+                Certificate = certificate
             };
 
             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
             using (ctx.GetMemoryBuffer(out _buffer))
             {
-                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink);
+                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, (PullReplicationAsSink)Destination);
             }
         }
 
@@ -362,7 +363,7 @@ namespace Raven.Server.Documents.Replication
 
         private void Replicate()
         {
-            var documentSender = new ReplicationDocumentSender(_stream, this, _log);
+            using var documentSender = new ReplicationDocumentSender(_stream, this, _log, MyOutgoingPaths, TheirsIncomingPaths);
 
             while (_cts.IsCancellationRequested == false)
             {
@@ -524,6 +525,9 @@ namespace Raven.Server.Documents.Replication
                     //The first time we start replication we need to register the destination current CV
                     case ReplicationMessageReply.ReplyType.Ok:
                         LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
+                        // this is used when the other side lets us know what paths it is going to accept from us
+                        // it supplements (but does not extend) what we are willing to send out 
+                        TheirsIncomingPaths = response.Reply.IncomingPaths;
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
                         var exception = new InvalidOperationException(response.Reply.Exception);
@@ -1064,6 +1068,8 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
+        public string[] MyOutgoingPaths, TheirsIncomingPaths;
+        public string CertificateThumbprint;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 
         public void Dispose()

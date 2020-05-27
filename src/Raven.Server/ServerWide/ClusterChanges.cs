@@ -9,7 +9,7 @@ namespace Raven.Server.ServerWide
     {
         public event Action<CompareExchangeChange> OnCompareExchangeChange;
 
-        public delegate Task DatabaseChangedDelegate(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType);
+        public delegate Task DatabaseChangedDelegate(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState);
 
         public delegate Task ValueChangedDelegate(long index, string type);
 
@@ -45,12 +45,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task OnDatabaseChanges(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType)
+        public async Task OnDatabaseChanges(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState)
         {
             var changes = _onDatabaseChanged;
             foreach (var act in changes)
             {
-                await act(databaseName, index, type, changeType);
+                await act(databaseName, index, type, changeType, changeState);
             }
         }
 

@@ -3,12 +3,17 @@
     public class DatabaseSmugglerOptions : IDatabaseSmugglerOptions
     {
         public const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes |
-                                                              DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments |
+                                                              DatabaseItemType.Documents |
+                                                              DatabaseItemType.RevisionDocuments |
                                                               DatabaseItemType.Conflicts |
                                                               DatabaseItemType.DatabaseRecord |
-                                                              DatabaseItemType.Identities | DatabaseItemType.CompareExchange |
-                                                              DatabaseItemType.Attachments | DatabaseItemType.CounterGroups |
-                                                              DatabaseItemType.Subscriptions | DatabaseItemType.TimeSeries;
+                                                              DatabaseItemType.ReplicationHubCertificates |
+                                                              DatabaseItemType.Identities |
+                                                              DatabaseItemType.CompareExchange |
+                                                              DatabaseItemType.Attachments |
+                                                              DatabaseItemType.CounterGroups |
+                                                              DatabaseItemType.Subscriptions |
+                                                              DatabaseItemType.TimeSeries;
 
         public const DatabaseRecordItemType DefaultOperateOnDatabaseRecordTypes = DatabaseRecordItemType.Client |
                                                                                   DatabaseRecordItemType.ConflictSolverConfig |

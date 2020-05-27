@@ -53,7 +53,7 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"The pull replication '{remoteTask}' is disabled.");
 
                 var topology = ServerStore.Cluster.ReadDatabaseTopology(context, database);
-                nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication);
+                nodes = GetResponsibleNodes(topology, databaseGroupId, pullReplication.MentorNode);
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -132,8 +132,19 @@ namespace Raven.Server.Web.System
                         if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))
                         {
                             var cert = httpContext.Connection.ClientCertificate;
-                            if (pullReplication.CanAccess(cert?.Thumbprint))
-                                return true;
+                            if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)
+                            {
+                                if (pullReplication.Certificates.ContainsKey(cert.Thumbprint))
+                                    return true;
+                            }
+                            else
+                            {
+                                if (serverStore.Cluster.IsReplicationCertificate(context, database, remoteTask, cert, out _))
+                                    return true;
+                                
+                                if (serverStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(context, database, remoteTask, cert, out _))
+                                    return true;
+                            }
                         }
 
                         RequestRouter.UnlikelyFailAuthorization(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);
@@ -145,7 +156,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, PullReplicationDefinition pullReplication)
+        private List<string> GetResponsibleNodes(DatabaseTopology topology, string databaseGroupId, string mentorNode)
         {
             var list = new List<string>();
             // we distribute connections to have load balancing when many sinks are connected.
@@ -153,7 +164,7 @@ namespace Raven.Server.Web.System
             // for that we create a dummy IDatabaseTask.
             var mentorNodeTask = new PullNodeTask
             {
-                Mentor = pullReplication.MentorNode,
+                Mentor = mentorNode,
                 DatabaseGroupId = databaseGroupId
             };
 

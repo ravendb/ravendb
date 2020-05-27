@@ -38,6 +38,7 @@ namespace Raven.Client.Documents.Smuggler
             Counters = new CountsWithLastEtag();
             CompareExchangeTombstones = new Counts();
             Subscriptions = new Counts();
+            ReplicationHubCertificates = new Counts();
             TimeSeries = new CountsWithLastEtag();
             _progress = new SmugglerProgress(this);
         }
@@ -119,6 +120,7 @@ namespace Raven.Client.Documents.Smuggler
                 CompareExchangeTombstones = _result?.CompareExchangeTombstones;
                 Subscriptions = _result?.Subscriptions;
                 TimeSeries = _result?.TimeSeries;
+                ReplicationHubCertificates = _result?.ReplicationHubCertificates;
             }
 
             private string Message { get; set; }
@@ -184,6 +186,8 @@ namespace Raven.Client.Documents.Smuggler
 
         public Counts Subscriptions { get; set; }
         
+        public Counts ReplicationHubCertificates { get; set; }
+        
         public CountsWithLastEtag Counters { get; set; }
 
         public CountsWithLastEtag TimeSeries { get; set; }
@@ -205,7 +209,8 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(Subscriptions)] = Subscriptions.ToJson(),
                 [nameof(Counters)] = Counters.ToJson(),
                 [nameof(CompareExchangeTombstones)] = CompareExchangeTombstones.ToJson(),
-                [nameof(TimeSeries)] = TimeSeries.ToJson()
+                [nameof(TimeSeries)] = TimeSeries.ToJson(),
+                [nameof(ReplicationHubCertificates)] = ReplicationHubCertificates.ToJson(),
             };
         }
 
