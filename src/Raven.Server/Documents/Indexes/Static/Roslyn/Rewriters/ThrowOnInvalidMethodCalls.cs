@@ -57,7 +57,7 @@ Using {0} invalidate that premise, and is not allowed")
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var expression = node.Expression.ToString();
-            if (expression.EndsWith("OrderBy") == false)
+            if (expression.EndsWith("OrderBy") == false && expression.EndsWith("OrderByDescending") == false)
                 return base.VisitInvocationExpression(node);
 
             var parent = node.Ancestors().FirstOrDefault(x => x.IsKind(SyntaxKind.InvocationExpression) || x.IsKind(SyntaxKind.QueryExpression));

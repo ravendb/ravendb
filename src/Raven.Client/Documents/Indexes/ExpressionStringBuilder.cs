@@ -38,15 +38,17 @@ namespace Raven.Client.Documents.Indexes
         private readonly Dictionary<string, object> _duplicatedParams = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         private bool _castLambdas;
         private bool _isDictionary;
+        private bool _isReduce;
 
         // Methods
         private ExpressionStringBuilder(DocumentConventions conventions, bool translateIdentityProperty, Type queryRoot,
-                                        string queryRootName)
+            string queryRootName, bool isReduce)
         {
             _conventions = conventions;
             _translateIdentityProperty = translateIdentityProperty;
             _queryRoot = queryRoot;
             _queryRootName = queryRootName;
+            _isReduce = isReduce;
         }
 
         private int GetLabelId(LabelTarget label)
@@ -91,9 +93,9 @@ namespace Raven.Client.Documents.Indexes
         ///   Convert the expression to a string
         /// </summary>
         public static string ExpressionToString(DocumentConventions conventions, bool translateIdentityProperty, Type queryRoot,
-                                                string queryRootName, Expression node)
+            string queryRootName, Expression node, bool isReduce)
         {
-            var builder = new ExpressionStringBuilder(conventions, translateIdentityProperty, queryRoot, queryRootName);
+            var builder = new ExpressionStringBuilder(conventions, translateIdentityProperty, queryRoot, queryRootName, isReduce);
             builder.Visit(node, ExpressionOperatorPrecedence.ParenthesisNotNeeded);
             return builder.ToString();
         }
@@ -1842,7 +1844,7 @@ namespace Raven.Client.Documents.Indexes
             return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
         }
 
-        private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
+        private bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
         {
             var declaringType = node.Method.DeclaringType;
             if (declaringType == null)
@@ -1864,9 +1866,10 @@ namespace Raven.Client.Documents.Indexes
                     case "Union":
                     case "Concat":
                     case "Intersect":
+                        return true;
                     case nameof(Enumerable.OrderBy):
                     case nameof(Enumerable.OrderByDescending):
-                        return true;
+                        return _isReduce;
                 }
             }
 
