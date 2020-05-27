@@ -423,7 +423,8 @@ namespace Raven.Server.Documents.TimeSeries
             _names = new SortedList<long, string>();
 
             var policyRunner = _context.DocumentDatabase.TimeSeriesPolicyRunner;
-            if (policyRunner == null ||
+            if (_source.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ||
+                policyRunner == null ||
                 policyRunner.Configuration.Collections.TryGetValue(collection, out var config) == false ||
                 config.Disabled || config.Policies.Count == 0)
             {
@@ -431,6 +432,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
             }
 
+            DateTime rawStart = default;
             for (var i = 0; i < config.Policies.Count + 1; i++)
             {
                 var name = i == 0
@@ -438,7 +440,14 @@ namespace Raven.Server.Documents.TimeSeries
                     : config.Policies[i - 1].GetTimeSeriesName(_source);
 
                 var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, _docId, name);
-                if (stats.End < _min || stats.Start > _max || stats.Count == 0)
+                if (i == 0)
+                    rawStart = stats.Start;
+                
+                if (stats.Start > rawStart ||
+                    _names.ContainsKey(stats.Start.Ticks) || 
+                    stats.End < _min || 
+                    stats.Start > _max || 
+                    stats.Count == 0)
                     continue;
 
                 _names[stats.Start.Ticks] = name;
