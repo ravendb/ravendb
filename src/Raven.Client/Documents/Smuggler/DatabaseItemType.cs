@@ -49,6 +49,7 @@ namespace Raven.Client.Documents.Smuggler
         Client = 1 << 11,
         Sorters = 1 << 12,
         SinkPullReplications = 1 << 13,
-        HubPullReplications = 1 << 14
+        HubPullReplications = 1 << 14,
+        TimeSeries = 1 << 15
     }
 }

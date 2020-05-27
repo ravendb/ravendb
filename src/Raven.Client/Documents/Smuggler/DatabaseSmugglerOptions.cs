@@ -23,7 +23,8 @@
                                                                                   DatabaseRecordItemType.Sorters |
                                                                                   DatabaseRecordItemType.SqlEtls |
                                                                                   DatabaseRecordItemType.HubPullReplications |
-                                                                                  DatabaseRecordItemType.SinkPullReplications;
+                                                                                  DatabaseRecordItemType.SinkPullReplications |
+                                                                                  DatabaseRecordItemType.TimeSeries;
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 
         public DatabaseSmugglerOptions()

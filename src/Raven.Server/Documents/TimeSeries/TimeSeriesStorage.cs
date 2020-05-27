@@ -494,8 +494,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             using (data)
             {
-                var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                storage.Put(ctx, docId, null, newDocumentData, flags: flags,
+                var newDocumentData = ctx.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                storage.Put(ctx, doc.Id, null, newDocumentData, flags: flags,
                     nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
             }
         }

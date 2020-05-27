@@ -467,20 +467,28 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
-                AssertValidDatabaseContext("timeseries(doc, name).get");
+                AssertValidDatabaseContext("get");
 
-                const string signature = "timeseries(doc, name).get(from, to)";
-                const int requiredArgs = 2;
-
-                if (args.Length != requiredArgs)
-                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
+                const string getRangeSignature = "get(from, to)";
+                const string getAllSignature = "get()";
 
                 var id = GetIdFromArg(document, _timeSeriesSignature);
+                var timeseries = GetStringArg(name, _timeSeriesSignature, "name");
 
-                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
-
-                var from = GetDateArg(args[0], signature, "from");
-                var to = GetDateArg(args[1], signature, "to");
+                DateTime from, to;
+                switch (args.Length)
+                {
+                    case 0:
+                        from = DateTime.MinValue;
+                        to = DateTime.MaxValue;
+                        break;
+                    case 2:
+                        from = GetDateArg(args[0], getRangeSignature, "from");
+                        to = GetDateArg(args[1], getRangeSignature, "to");
+                        break;
+                    default:
+                        throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
+                }
 
                 var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeseries, from, to);
 
@@ -498,15 +506,13 @@ namespace Raven.Server.Documents.Patch
                     ScriptEngine.Array.PrototypeObject.Push(jsValues, v);
 
                     var entry = new ObjectInstance(ScriptEngine);
-                    entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat());
+                    entry.Set(nameof(TimeSeriesEntry.Timestamp), singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true));
                     entry.Set(nameof(TimeSeriesEntry.Tag), singleResult.Tag?.ToString());
                     entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
                     entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
-
                     entries.Add(entry);
                 }
                 return ScriptEngine.Array.Construct(entries.ToArray());
-                ;
             }
 
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)

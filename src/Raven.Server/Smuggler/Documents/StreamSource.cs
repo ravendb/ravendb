@@ -138,6 +138,20 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.TimeSeries), out BlittableJsonReaderObject timeseries) &&
+                    timeseries != null)
+                {
+                    try
+                    {
+                        databaseRecord.TimeSeries = JsonDeserializationCluster.TimeSeriesConfiguration(timeseries);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the timeseries configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
                 if (reader.TryGet(nameof(databaseRecord.Expiration), out BlittableJsonReaderObject expiration) &&
                     expiration != null)
                 {
