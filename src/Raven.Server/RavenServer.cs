@@ -134,7 +134,7 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
-            Certificate = LoadCertificate() ?? new CertificateHolder();
+            Certificate = LoadCertificateAtStartup() ?? new CertificateHolder();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
@@ -1349,13 +1349,32 @@ namespace Raven.Server
             return Configuration.Core.ServerUrls[0];
         }
 
+        private CertificateHolder LoadCertificateAtStartup()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false &&
+                    (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) || string.IsNullOrEmpty(Configuration.Security.CertificateChangeExec)))
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"You are using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', without specifying '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. This configuration requires you to renew the certificate manually across the entire cluster.");
+                }
+                
+                return LoadCertificate();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Unable to start the server.", e);
+            }
+        }
+
         private CertificateHolder LoadCertificate()
         {
             try
             {
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
                 {
-                    throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
+                    throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'.");
                 }
 
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
@@ -1367,7 +1386,7 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Unable to start the server due to invalid certificate configuration! Admin assistance required.", e);
+                throw new InvalidOperationException("Unable to load the server certificate due to invalid configuration! Admin assistance required.", e);
             }
         }
 
