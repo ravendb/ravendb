@@ -10,7 +10,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
 {
-    public abstract class EtlConfiguration<T> : IDatabaseTask where T : ConnectionString
+    public abstract class EtlConfiguration<T> : IDynamicJsonValueConvertible, IDatabaseTask where T : ConnectionString
     {
         private bool _initialized;
 

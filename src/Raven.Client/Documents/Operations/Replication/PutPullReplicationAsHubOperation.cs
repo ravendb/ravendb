@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public class PutPullReplicationAsHubOperation : IMaintenanceOperation<ModifyOngoingTaskResult>
     {
-        private readonly FeatureTaskDefinition _pullReplicationDefinition;
+        private readonly PullReplicationDefinition _pullReplicationDefinition;
 
         public PutPullReplicationAsHubOperation(string name)
         {
@@ -39,9 +39,9 @@ namespace Raven.Client.Documents.Operations.Replication
 
         private class UpdatePullReplicationDefinitionCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
         {
-            private readonly FeatureTaskDefinition _pullReplicationDefinition;
+            private readonly PullReplicationDefinition _pullReplicationDefinition;
 
-            public UpdatePullReplicationDefinitionCommand(FeatureTaskDefinition pullReplicationDefinition)
+            public UpdatePullReplicationDefinitionCommand(PullReplicationDefinition pullReplicationDefinition)
             {
                 _pullReplicationDefinition = pullReplicationDefinition;
             }

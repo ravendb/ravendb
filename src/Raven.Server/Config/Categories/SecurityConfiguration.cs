@@ -136,7 +136,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Well known certificate thumbprints that will be trusted by the server as cluster admins.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public string[] WellKnownAdminCertificates { get; set; }
 
         [Description("Well known issuer 'Public Key Pinning Hashes' that will be used to validate a new client certificate when the issuer's certificate has changed.")]

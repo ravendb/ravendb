@@ -13,6 +13,7 @@ namespace Raven.Client.Documents.Replication.Messages
         public string SourceTag { get; set; }
 
         public string SourceMachineName { get; set; }
+        
     }
 
     public class ReplicationInitialRequest
