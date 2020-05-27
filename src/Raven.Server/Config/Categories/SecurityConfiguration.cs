@@ -172,8 +172,7 @@ namespace Raven.Server.Config.Categories
 
         public bool IsCertificateConfigured =>
             string.IsNullOrWhiteSpace(CertificatePath) == false ||
-            string.IsNullOrWhiteSpace(CertificateLoadExec) == false ||
-            string.IsNullOrWhiteSpace(CertificateExec) == false;
+            string.IsNullOrWhiteSpace(CertificateLoadExec) == false;
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 

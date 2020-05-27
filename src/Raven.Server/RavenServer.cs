@@ -1358,12 +1358,6 @@ namespace Raven.Server
                     throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
                 }
 
-                if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false &&
-                    (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) || string.IsNullOrEmpty(Configuration.Security.CertificateChangeExec)))
-                {
-                    throw new InvalidOperationException($"Invalid certificate configuration. When using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', it must be accompanied by '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/4.2.");
-                }
-
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
                     return ServerStore.Secrets.LoadCertificateFromPath(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword, ServerStore);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false)
