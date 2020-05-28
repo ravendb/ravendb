@@ -24,7 +24,8 @@ namespace Raven.Client.ServerWide.Tcp
             public enum AuthorizeMethod
             {
                 Server,
-                PullReplication
+                PullReplication,
+                PushReplication
             }
 
             public AuthorizeMethod AuthorizeAs;

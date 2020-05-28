@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Org.BouncyCastle.Pkcs;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -2229,7 +2230,7 @@ namespace Raven.Server
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
-                    documentReplicationLoader.AcceptIncomingConnection(tcp, cert, bufferToCopy);
+                    documentReplicationLoader.AcceptIncomingConnection(tcp, header, cert, bufferToCopy);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
@@ -2329,20 +2330,35 @@ namespace Raven.Server
                     return false;
                 case AuthenticationStatus.UnfamiliarCertificate:
                     var info = header.AuthorizeInfo;
-                    if (info != null && info.AuthorizeAs == TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication)
+                    switch (info?.AuthorizeAs)
                     {
-                        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                        using (ctx.OpenReadTransaction())
-                        {
-                            if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication)
-                                && pullReplication.CanAccess(certificate.Thumbprint))
-                                return true;
+                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
+                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
+                            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                            using (ctx.OpenReadTransaction())
+                            {
+                                if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication))
+                                {
+                                    var expectedMode = info.AuthorizeAs switch
+                                    {
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => ReplicationMode.Pull,
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => ReplicationMode.Push,
+                                        _ => ReplicationMode.Invalid
+                                    };
+                                 
+                                    if(pullReplication.CanAccess(certificate.Thumbprint) && (pullReplication.Mode & expectedMode) == expectedMode)
+                                        return true;
+                                }   
 
-                            msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor}";
-                            return false;
-                        }
+                                msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor} ({info.AuthorizeAs})";
+                                return false;
+                            }
+
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException("AuthorizeAs", "Unknown value for AuthorizeAs: " + info?.AuthorizeAs);
                     }
-                    goto default;
+                    break;                    
                 default:
                     msg = "Cannot allow access to a certificate with status: " + auth.Status;
                     return false;

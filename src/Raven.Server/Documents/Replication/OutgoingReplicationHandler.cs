@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Replication
                         if (supportedFeatures.Replication.PullReplication)
                         {
                             SendPreliminaryData();
-                            if (Destination is PullReplicationAsSink)
+                            if (Destination is PullReplicationAsSink sink && sink.Mode == ReplicationMode.Pull)
                             {
                                 InitiatePullReplicationAsSink(supportedFeatures);
                                 return;
@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.Replication
             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
             using (ctx.GetMemoryBuffer(out _buffer))
             {
-                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, Destination as PullReplicationAsSink);
+                _parent.RunPullReplicationAsSink(tcpOptions, _buffer, (PullReplicationAsSink)Destination);
             }
         }
 

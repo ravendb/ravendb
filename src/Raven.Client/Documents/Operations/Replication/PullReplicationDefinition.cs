@@ -20,6 +20,8 @@ namespace Raven.Client.Documents.Operations.Replication
         public string Name;
         public long TaskId;
 
+        public ReplicationMode Mode = ReplicationMode.Pull;
+
         public PullReplicationDefinition() { }
 
         public PullReplicationDefinition(string name, TimeSpan delay = default, string mentor = null)
@@ -38,7 +40,8 @@ namespace Raven.Client.Documents.Operations.Replication
                 [nameof(Disabled)] = Disabled,
                 [nameof(MentorNode)] = MentorNode,
                 [nameof(DelayReplicationFor)] = DelayReplicationFor,
-                [nameof(Filters)] = DynamicJsonValue.Convert(Filters)
+                [nameof(Filters)] = DynamicJsonValue.Convert(Filters),
+                [nameof(Mode)] = Mode,
             };
         }
 

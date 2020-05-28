@@ -159,7 +159,6 @@ namespace SlowTests.Issues
         {
             [TimeSeriesValue(0)] public double HeartRate;
         }
-        
         [Fact]
         public async Task Can_pull_via_filtered_replication()
         {
@@ -231,6 +230,7 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
+                Mode = ReplicationMode.Push | ReplicationMode.Pull,
                 Certificates = new Dictionary<string, string>
                 {
                     [pullCert.Thumbprint] = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
@@ -272,6 +272,151 @@ namespace SlowTests.Issues
                 Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
                 
                 WaitForUserToContinueTheTest(storeA);
+                
+                Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
+                Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
+                
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
+                Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
+                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+            }
+
+            using (var s = storeA.OpenAsyncSession())
+            {
+                s.Delete("users/ayende/dogs/arava");
+                await s.SaveChangesAsync();
+            }
+
+            WaitForDocumentDeletion(storeB, "users/ayende/dogs/arava");
+            
+            using (var s = storeB.OpenAsyncSession())
+            {
+                Assert.Null(await s.LoadAsync<object>("users/pheobe")); 
+                Assert.Null(await s.LoadAsync<object>("users/ayende/dogs/arava"));
+                
+                Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
+                
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
+                Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
+                Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
+            }
+        }
+        
+        [Fact]
+        public async Task Can_push_via_filtered_replication()
+        {
+            var certificates = SetupServerAuthentication();
+            var dbNameA = GetDatabaseName();
+            var dbNameB = GetDatabaseName();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var storeA = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbNameA
+            });
+            using var storeB = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbNameB
+            });
+
+            using (var s = storeA.OpenAsyncSession())
+            {
+                await s.StoreAsync(new {Breed = "German Shepherd"}, "users/ayende/dogs/arava");
+                await s.StoreAsync(new {Color = "Gray/White"}, "users/pheobe");
+                await s.StoreAsync(new {Name = "Oren"}, "users/ayende");
+                s.CountersFor("users/ayende").Increment("test");
+                s.CountersFor("users/pheobe").Increment("test");
+                s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
+                {
+                    HeartRate = 34
+                },"test/things/out");
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today,  new HeartRateMeasure
+                {
+                    HeartRate = 55
+                },"test/things/out");
+                s.Advanced.Attachments.Store("users/ayende", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
+                s.Advanced.Attachments.Store("users/pheobe", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende",ForceRevisionStrategy.None);
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe",ForceRevisionStrategy.None);
+                await s.SaveChangesAsync();
+            }
+
+            using (var s = storeA.OpenAsyncSession())
+            {
+                await s.LoadAsync<object>("users/pheobe");
+                await s.LoadAsync<object>("users/ayende");
+            }
+            
+            using (var s = storeA.OpenAsyncSession())
+            {
+                await s.StoreAsync(new {Color = "Gray/White 2"}, "users/pheobe");
+                await s.StoreAsync(new {Name = "Oren 2"}, "users/ayende");
+              
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende");
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe");
+                await s.SaveChangesAsync();
+            }
+            
+            using (var s = storeA.OpenAsyncSession())
+            {
+                await s.LoadAsync<object>("users/pheobe");
+                await s.LoadAsync<object>("users/ayende");
+            }
+            
+            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+            await storeB.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "push",
+                Mode = ReplicationMode.Push | ReplicationMode.Pull,
+                Certificates = new Dictionary<string, string>
+                {
+                    [pullCert.Thumbprint] = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                },
+                Filters = new Dictionary<string, PullReplicationDefinition.FilteringOptions>
+                {
+                    [pullCert.Thumbprint] = new PullReplicationDefinition.FilteringOptions
+                    {
+                        AllowedPaths = new[]
+                        {
+                            "users/ayende",
+                            "users/ayende/*"
+                        }
+                    }
+                }
+            }));
+            
+            await storeA.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = dbNameB,
+                Name = dbNameB + "ConStr",
+                TopologyDiscoveryUrls =  storeA.Urls
+            }));
+            await storeA.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = dbNameB + "ConStr",
+                Mode = ReplicationMode.Push,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubDefinitionName = "push"
+            }));
+
+            WaitForDocument(storeB, "users/ayende", timeout: 10000*100);
+
+            using (var s = storeB.OpenAsyncSession())
+            {
+                Assert.Null(await s.LoadAsync<object>("users/pheobe")); 
+                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe",DateTime.Today.AddDays(1)));
+                Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
+                Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
+                Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
                 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
