@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
@@ -23,20 +22,21 @@ namespace SlowTests.Issues
                 {
                     for (var i = 0; i < 1040; i++)
                     {
-                        var id = "orders/" + i+ "-A";
+                        var id = "orders/" + i + "-A";
                         bulk.Store(new Order
                         {
                             Name = id
                         }, id);
                     }
                 }
-                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
                     var e = Assert.Throws<RavenException>(() =>
                     {
                         var q = session.Advanced.DocumentQuery<Order>()
-                            .WhereLucene("Name", string.Join(" OR ", Enumerable.Range(0, 1040).Select(i => "Name:"+i)))
+                            .WaitForNonStaleResults()
+                            .WhereLucene("Name", string.Join(" OR ", Enumerable.Range(0, 1040).Select(i => "Name:" + i)))
                             .ToList();
                     });
                     Assert.Contains("maxClauseCount is set to", e.Message);
@@ -47,7 +47,6 @@ namespace SlowTests.Issues
         private class Order
         {
             public string Name { get; set; }
-
         }
     }
 }
