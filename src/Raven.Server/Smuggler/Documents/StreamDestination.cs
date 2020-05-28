@@ -238,6 +238,13 @@ namespace Raven.Server.Smuggler.Documents
                     WriteTimeSeries(databaseRecord.TimeSeries);
                 }
 
+                if (databaseRecordItemType.Contain(DatabaseRecordItemType.DocumentCompression))
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.DocumentsCompression));
+                    WriteDocumentCompression(databaseRecord.DocumentsCompression);
+                }
+
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Expiration))
                 {
                     _writer.WriteComma();
@@ -560,6 +567,16 @@ namespace Raven.Server.Smuggler.Documents
                     return;
                 }
                 _context.Write(_writer, timeSeries.ToJson());
+            }
+
+            private void WriteDocumentCompression(DocumentsCompressionConfiguration compressionConfiguration)
+            {
+                if (compressionConfiguration == null)
+                {
+                    _writer.WriteNull();
+                    return;
+                }
+                _context.Write(_writer, compressionConfiguration.ToJson());
             }
 
             private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)
