@@ -11,6 +11,8 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
+using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
 
@@ -248,28 +250,63 @@ namespace Raven.Server.ServerWide
                 return _externalReplications;
             }
         }
+        
+        private List<RawPullReplicationDefinition> _hubPullReplications;
 
-        private List<PullReplicationDefinition> _hubPullReplications;
-
-        public List<PullReplicationDefinition> HubPullReplications
+        public List<RawPullReplicationDefinition> RawHubPullReplications
         {
             get
             {
-                if (_materializedRecord != null)
-                    return _materializedRecord.HubPullReplications;
-
                 if (_hubPullReplications == null)
                 {
-                    _hubPullReplications = new List<PullReplicationDefinition>();
+                    _hubPullReplications = new List<RawPullReplicationDefinition>();
                     if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
                         foreach (BlittableJsonReaderObject element in bjra)
-                            _hubPullReplications.Add(JsonDeserializationCluster.PullReplicationDefinition(element));
+                            _hubPullReplications.Add(JsonDeserializationClient.RawPullReplicationDefinition(element));
                     }
                 }
 
                 return _hubPullReplications;
             }
+        }
+        
+        
+        public RawPullReplicationDefinition GetHubPullReplicationByName(string name)
+        {
+            if (_hubPullReplications == null)
+            {
+                _hubPullReplications = new List<RawPullReplicationDefinition>();
+                if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
+                {
+                    foreach (BlittableJsonReaderObject element in bjra)
+                    {
+                        if(element.TryGet(nameof(RawPullReplicationDefinition.Name), out string n) && n == name)
+                            return JsonDeserializationClient.RawPullReplicationDefinition(element);
+                    }
+                }
+            }
+
+            return null;
+        }
+        
+        
+        public PullReplicationDefinition GetHubPullReplicationById(in long key)
+        {
+            if (_hubPullReplications == null)
+            {
+                _hubPullReplications = new List<RawPullReplicationDefinition>();
+                if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
+                {
+                    foreach (BlittableJsonReaderObject element in bjra)
+                    {
+                        if(element.TryGet(nameof(RawPullReplicationDefinition.TaskId), out long id) && id == key)
+                            return JsonDeserializationClient.PullReplicationDefinition(element);
+                    }
+                }
+            }
+
+            return null;
         }
 
         private List<long> _periodicBackupsTaskIds;
@@ -685,5 +722,6 @@ namespace Raven.Server.ServerWide
                 return _materializedRecord;
             }
         }
+
     }
 }

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
@@ -277,7 +278,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         try
                         {
-                            var hub = JsonDeserializationCluster.PullReplicationDefinition(pullReplication);
+                            var hub = JsonDeserializationClient.PullReplicationDefinition(pullReplication);
                             databaseRecord.HubPullReplications.Add(hub);
                         }
                         catch (Exception e)

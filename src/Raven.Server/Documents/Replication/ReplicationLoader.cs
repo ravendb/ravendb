@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Replication
                     if (initialRequest.PullReplicationDefinitionName == null)
                         throw new InvalidOperationException("Pull replication must specify the PullReplicationDefinitionName, but none was specified");
 
-                    PullReplicationDefinition pullReplicationDefinition;
+                    RawPullReplicationDefinition pullReplicationDefinition;
                     using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Replication
 
         private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
             TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, X509Certificate2 certificate, 
-            PullReplicationDefinition pullReplicationDefinition)
+            RawPullReplicationDefinition pullReplicationDefinition)
         {
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);

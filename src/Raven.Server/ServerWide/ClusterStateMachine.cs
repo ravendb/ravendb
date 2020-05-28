@@ -2682,7 +2682,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool TryReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context, out PullReplicationDefinition pullReplication)
+        public bool TryReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context, out RawPullReplicationDefinition pullReplication)
         {
             pullReplication = null;
             try
@@ -2696,7 +2696,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public PullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
+        public RawPullReplicationDefinition ReadPullReplicationDefinition(string database, string definitionName, TransactionOperationContext context)
         {
             using (var databaseRecord = ReadRawDatabaseRecord(context, database))
             {
@@ -2705,13 +2705,7 @@ namespace Raven.Server.ServerWide
                     throw new DatabaseDoesNotExistException($"The database '{database}' doesn't exists.");
                 }
 
-                var hubPullReplications = databaseRecord.HubPullReplications;
-                if (hubPullReplications == null)
-                {
-                    throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");
-                }
-
-                var definition = hubPullReplications.Find(x => string.Equals(x.Name, definitionName));
+                var definition = databaseRecord.GetHubPullReplicationByName(definitionName);
                 if (definition == null)
                 {
                     throw new InvalidOperationException($"Pull replication with the name '{definitionName}' isn't defined for the database '{database}'.");

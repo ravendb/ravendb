@@ -17,10 +17,10 @@ namespace Raven.Client.Documents.Operations.Replication
         public Dictionary<string, FilteringOptions> Filters;
         public string MentorNode;
 
+        public ReplicationMode Mode = ReplicationMode.Pull;
+
         public string Name;
         public long TaskId;
-
-        public ReplicationMode Mode = ReplicationMode.Pull;
 
         public PullReplicationDefinition() { }
 
@@ -41,32 +41,8 @@ namespace Raven.Client.Documents.Operations.Replication
                 [nameof(MentorNode)] = MentorNode,
                 [nameof(DelayReplicationFor)] = DelayReplicationFor,
                 [nameof(Filters)] = DynamicJsonValue.Convert(Filters),
-                [nameof(Mode)] = Mode,
+                [nameof(Mode)] = Mode
             };
-        }
-
-        public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
-        {
-            return new ExternalReplication
-            {
-                Url = request.SourceUrl,
-                Database = request.Database,
-                Name = request.PullReplicationSinkTaskName,
-                DelayReplicationFor = DelayReplicationFor,
-                MentorNode = MentorNode,
-                TaskId = taskId
-            };
-        }
-
-
-        public bool CanAccess(string thumbprint)
-        {
-            if (string.IsNullOrEmpty(thumbprint)) return false;
-
-            if (Certificates?.ContainsKey(thumbprint) == true)
-                return true; // we will authenticate the certificate later on the tcp level.
-
-            return false;
         }
 
         public void Validate(bool useSsl)
@@ -93,14 +69,12 @@ namespace Raven.Client.Documents.Operations.Replication
                     "When using filtered replication, each certificate must have its own filter configuration, " +
                     $"but found: {Certificates.Count:#,#;;0} certificates and only {Filters.Count:#,#;;0} filters");
 
-            foreach (var kvp in Certificates.Where(kvp => Filters.ContainsKey(kvp.Key) == false))
-            {
+            foreach (KeyValuePair<string, string> kvp in Certificates.Where(kvp => Filters.ContainsKey(kvp.Key) == false))
                 throw new InvalidOperationException(
                     "When using filtered replication, each certificate must have its own filter configuration, " +
                     $"but there is no filter defined for certificate: {kvp.Key}");
-            }
 
-            foreach (var kvp in Filters)
+            foreach (KeyValuePair<string, FilteringOptions> kvp in Filters)
             {
                 if ((kvp.Value?.AllowedPaths?.Length ?? 0) == 0)
                     throw new InvalidOperationException($"Filter for {kvp} has a null or empty filter definition");
@@ -123,13 +97,51 @@ namespace Raven.Client.Documents.Operations.Replication
         public class FilteringOptions : IDynamicJson
         {
             public string[] AllowedPaths;
+
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue
-                {
-                    [nameof(AllowedPaths)] = AllowedPaths
-                };
+                return new DynamicJsonValue {[nameof(AllowedPaths)] = AllowedPaths};
             }
+        }
+    }
+
+    public class RawPullReplicationDefinition
+    {
+        public Dictionary<string, LazyStringValue> Certificates; // <thumbprint, base64 cert>
+
+        public TimeSpan DelayReplicationFor;
+        public bool Disabled;
+
+        public Dictionary<string, PullReplicationDefinition.FilteringOptions> Filters;
+        public string MentorNode;
+
+        public ReplicationMode Mode = ReplicationMode.Pull;
+
+        public string Name;
+        public long TaskId;
+
+        public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
+        {
+            return new ExternalReplication
+            {
+                Url = request.SourceUrl,
+                Database = request.Database,
+                Name = request.PullReplicationSinkTaskName,
+                DelayReplicationFor = DelayReplicationFor,
+                MentorNode = MentorNode,
+                TaskId = taskId
+            };
+        }
+
+
+        public bool CanAccess(string thumbprint)
+        {
+            if (string.IsNullOrEmpty(thumbprint)) return false;
+
+            if (Certificates?.ContainsKey(thumbprint) == true)
+                return true; // we will authenticate the certificate later on the tcp level.
+
+            return false;
         }
     }
 }
