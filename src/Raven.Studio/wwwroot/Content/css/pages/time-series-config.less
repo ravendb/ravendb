@@ -36,8 +36,6 @@
         }
 
         .name {
-            width: 150px;
-
             h3 {
                 margin: 0;
             }
@@ -93,13 +91,14 @@
                 .aggregation, .retention {
                     display: flex;
 
+
                     strong {
                         margin-left: @gutter-xs;
                         font-size: 11px;
                     }
                 }
 
-                border-left: 4px solid @color-time-series;
+                border-left: @gutter-xxs solid @color-time-series;
             }
 
             .arrow {
@@ -140,6 +139,67 @@
             &:nth-of-type(6) {
                 .item-content {
                     border-color: @color-1;
+                }
+            }
+        }
+    }
+
+    .named-values-inputs {
+        counter-reset: named-values-counter -1;
+
+        .item .counter::before {
+            counter-increment: named-values-counter;
+            content: "#" counter(named-values-counter);
+        }
+    }
+
+    .named-values {
+        background-color: @panel-bg;
+        margin: @gutter-xs/2;
+        padding: @gutter-xs @gutter-sm;
+
+        h4 {
+            margin-top: @gutter-xxs;
+            text-transform: uppercase;
+            font-weight: bold;
+            font-size: 13px;
+            letter-spacing: .1em;
+        }
+
+        .item {
+            display: flex;
+            border-top: 1px solid @hr-border;
+            margin-top: @gutter-xxs;
+            padding-top: @gutter-xxs;
+            align-items: center;
+            counter-reset: named-values-counter -1;
+            font-size: 12px;
+
+            .time-series-name {
+                flex-shrink: 0;
+                margin-right: @gutter;
+            }
+
+            .time-series-values {
+                display: flex;
+                flex-grow: 1;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                margin: -@gutter-xs/2;
+
+                .value {
+                    padding: @gutter-xs/2;
+                    margin-left: @gutter;
+                    font-weight: bold;
+                    color: @text-emphasis;
+
+                    &::before {
+                        counter-increment: named-values-counter;
+                        content: "#" counter(named-values-counter);
+                        color: @text-muted;
+                        margin-right: @gutter-xxs;
+                        font-weight: normal;
+                    }
                 }
             }
         }
