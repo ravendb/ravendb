@@ -248,7 +248,7 @@ class timeSeries extends viewModelBase {
 
         return {
             Collections: collectionsDto,
-            PolicyCheckFrequency: generalUtils.formatAsTimeSpan(this.policyCheckFrequency() * 1000),
+            PolicyCheckFrequency: this.policyCheckFrequency() ? generalUtils.formatAsTimeSpan(this.policyCheckFrequency() * 1000) : null,
             NamedValues : namedValuesDto
         }
     }
