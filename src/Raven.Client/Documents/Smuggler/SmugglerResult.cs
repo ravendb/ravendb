@@ -228,6 +228,8 @@ namespace Raven.Client.Documents.Smuggler
             public bool ConflictSolverConfigUpdated { get; set; }
 
             public bool TimeSeriesConfigurationUpdated { get; set; }
+            
+            public bool DocumentCompressionConfigurationUpdated { get; set;  }
 
             public bool RevisionsConfigurationUpdated { get; set; }
 
@@ -247,6 +249,9 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (TimeSeriesConfigurationUpdated)
                     json[nameof(TimeSeriesConfigurationUpdated)] = TimeSeriesConfigurationUpdated;
+
+                if (DocumentCompressionConfigurationUpdated)
+                    json[nameof(DocumentCompressionConfigurationUpdated)] = DocumentCompressionConfigurationUpdated;
 
                 if (RevisionsConfigurationUpdated)
                     json[nameof(RevisionsConfigurationUpdated)] = RevisionsConfigurationUpdated;
@@ -337,6 +342,12 @@ namespace Raven.Client.Documents.Smuggler
 
                 if (ClientConfigurationUpdated)
                     sb.AppendLine("- Client");
+
+                if (TimeSeriesConfigurationUpdated)
+                    sb.AppendLine("- Time Series");
+
+                if (DocumentCompressionConfigurationUpdated)
+                    sb.AppendLine("- Document Compression");
 
                 if (sb.Length == 0)
                     return string.Empty;

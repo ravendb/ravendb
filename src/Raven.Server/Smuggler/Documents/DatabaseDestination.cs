@@ -759,6 +759,33 @@ namespace Raven.Server.Smuggler.Documents
                     progress.TimeSeriesConfigurationUpdated = true;
                 }
 
+                if (databaseRecord?.DocumentsCompression != null)
+                {
+                    if (currentDatabaseRecord?.DocumentsCompression != null)
+                    {
+
+                        var collectionsToAdd = new List<string>();
+                        
+                        foreach (var collection in currentDatabaseRecord.DocumentsCompression.Collections)
+                        {
+                            if (databaseRecord.DocumentsCompression.Collections.Contains(collection) == false)
+                            {
+                                collectionsToAdd.Add(collection);
+                            }
+                        }
+
+                        if (collectionsToAdd.Count > 0)
+                        {
+                            databaseRecord.DocumentsCompression.Collections = collectionsToAdd.Concat(currentDatabaseRecord.DocumentsCompression.Collections).ToArray();
+                        }
+                    }
+                    
+                    if (_log.IsInfoEnabled)
+                        _log.Info("Configuring document compression from smuggler");
+                    tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDocumentsCompressionCommand(databaseRecord.DocumentsCompression, _database.Name, RaftIdGenerator.DontCareId)));
+                    progress.DocumentCompressionConfigurationUpdated = true;
+                }
+                
                 if (databaseRecord?.Revisions != null)
                 {
                     if (currentDatabaseRecord?.Revisions != null)

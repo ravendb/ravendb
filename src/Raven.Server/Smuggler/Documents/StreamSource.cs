@@ -152,6 +152,20 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.DocumentsCompression), out BlittableJsonReaderObject documentCompression) 
+                    && documentCompression != null)
+                {
+                    try
+                    {
+                        databaseRecord.DocumentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(documentCompression);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the document compression configuration from smuggler file. Skipping.", e);
+                    }
+                }
+
                 if (reader.TryGet(nameof(databaseRecord.Expiration), out BlittableJsonReaderObject expiration) &&
                     expiration != null)
                 {

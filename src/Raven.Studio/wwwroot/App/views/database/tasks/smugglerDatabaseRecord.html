@@ -64,6 +64,10 @@
                         <label data-bind="attr: { for: 'includeConflictSolverConfig_' + instanceCounter }" class="margin-right margin-right-sm">Conflict Solver Configuration</label>
                     </div>
                     <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeClient, attr: { id: 'includeClient_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeClient_' + instanceCounter }" class="margin-right margin-right-sm">Client Configuration</label>
+                    </div>
+                    <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeRevisions, attr: { id: 'includeRevisions_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeRevisions_' + instanceCounter }" class="margin-right margin-right-sm">Revisions Configuration</label>
                     </div>
@@ -72,8 +76,12 @@
                         <label data-bind="attr: { for: 'includeExpiration_' + instanceCounter }" class="margin-right margin-right-sm">Document Expiration</label>
                     </div>
                     <div class="toggle">
-                        <input type="checkbox" data-bind="checked: includeClient, attr: { id: 'includeClient_' + instanceCounter }">
-                        <label data-bind="attr: { for: 'includeClient_' + instanceCounter }" class="margin-right margin-right-sm">Client Configuration</label>
+                        <input type="checkbox" data-bind="checked: includeDocumentCompression, attr: { id: 'includeDocumentCompression_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeDocumentCompression_' + instanceCounter }" class="margin-right margin-right-sm">Document Compression</label>
+                    </div>
+                    <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeTimeSeries, attr: { id: 'includeTimeSeries_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeTimeSeries_' + instanceCounter }" class="margin-right margin-right-sm">Time Series Configuration</label>
                     </div>
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeSorters, attr: { id: 'includeSorters_' + instanceCounter }">
