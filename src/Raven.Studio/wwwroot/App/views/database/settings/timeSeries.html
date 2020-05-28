@@ -215,9 +215,10 @@
                                     </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <div class="margin-right margin-right-lg">
+                                    <div class="margin-right margin-right-lg named-values-inputs">
                                         <!-- ko foreach: namedValues -->
-                                        <div class="form-group">
+                                        <div class="form-group item">
+                                            <span class="input-group-addon"><span class="text-muted counter"></span></span>
                                             <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: name">
                                                 <input class="form-control" data-bind="textInput: name, hasFocus: hasFocus" />
                                             </div>
@@ -325,16 +326,18 @@
                 
                 <!-- /ko -->
             </div>
-            <div data-bind="if: namedValues().length">
-                Named Values:
+            <div class="named-values" data-bind="if: namedValues().length">
+                <h4>Named Values:</h4>
                 
                 <!-- ko foreach: namedValues -->
-                <div>
-                    <span data-bind="text: timeSeriesName"></span>
-                    --->
-                    <span data-bind="text: namedValuesAsText"></span>
+                <div class="item">
+                    <div class="time-series-name"><i class="icon-etag"></i> <span data-bind="text: timeSeriesName"></span></div>
+                    <div class="time-series-values" data-bind="foreach: namedValues">
+                        <div class="value" data-bind="text: name"></div>
+                    </div>
                 </div>
                 <!-- /ko -->
+                
             </div>
         </div>
     </div>
