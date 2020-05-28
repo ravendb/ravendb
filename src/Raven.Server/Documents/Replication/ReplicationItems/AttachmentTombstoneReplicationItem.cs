@@ -11,13 +11,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
     public class AttachmentTombstoneReplicationItem : ReplicationBatchItem
     {
         public Slice Key;
-        
-        public unsafe void GetDocumentId(LazyStringValue str)
-        {
-            var sepIdx = Key.Content.IndexOf(SpecialChars.RecordSeparator);
-            str.Renew(null, Key.Content.Ptr, sepIdx);
-        }
-
 
         public override long AssertChangeVectorSize()
         {
