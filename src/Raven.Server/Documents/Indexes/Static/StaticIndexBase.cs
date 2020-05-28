@@ -180,6 +180,76 @@ namespace Raven.Server.Documents.Indexes.Static
             funcs.Add(map);
         }
 
+        public T? TryConvert<T>(object value)
+            where T : struct
+        {
+            if (value == null || value is DynamicNullObject)
+                return null;
+
+            var type = typeof(T);
+            if (type == typeof(double) || type == typeof(float))
+            {
+                var dbl = TryConvertToDouble(value);
+                if (dbl.HasValue == false)
+                    return null;
+
+                if (type == typeof(float))
+                    return (T)(object)Convert.ToSingle(dbl.Value);
+
+                return (T)(object)dbl.Value;
+            }
+
+            if (type == typeof(long) || type == typeof(int))
+            {
+                var lng = TryConvertToLong(value);
+                if (lng.HasValue == false)
+                    return null;
+
+                if (type == typeof(int))
+                    return (T)(object)Convert.ToInt32(lng.Value);
+
+                return (T)(object)lng.Value;
+            }
+
+            return null;
+
+            static double? TryConvertToDouble(object v)
+            {
+                if (v is double d)
+                    return d;
+                if (v is LazyNumberValue lnv)
+                    return lnv;
+                if (v is int i)
+                    return i;
+                if (v is long l)
+                    return l;
+                if (v is float f)
+                    return f;
+                if (v is LazyStringValue lsv && double.TryParse(lsv, out var r))
+                    return r;
+
+                return null;
+            }
+
+            static long? TryConvertToLong(object v)
+            {
+                if (v is double d)
+                    return (long)d;
+                if (v is LazyNumberValue lnv)
+                    return lnv;
+                if (v is int i)
+                    return i;
+                if (v is long l)
+                    return l;
+                if (v is float f)
+                    return (long)f;
+                if (v is LazyStringValue lsv && long.TryParse(lsv, out var r))
+                    return r;
+
+                return null;
+            }
+        }
+
         public dynamic LoadDocument<TIgnored>(object keyOrEnumerable, string collectionName)
         {
             return LoadDocument(keyOrEnumerable, collectionName);

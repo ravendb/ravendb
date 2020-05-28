@@ -359,6 +359,11 @@ namespace Raven.Client.Documents.Indexes
             throw new NotSupportedException("This can only be run on the server side");
         }
 
+        protected T? TryConvert<T>(object value) where T : struct
+        {
+            throw new NotSupportedException("This can only be run on the server side");
+        }
+
         /// <summary>
         /// Add additional sources to be compiled with the index on the server.
         /// </summary>
