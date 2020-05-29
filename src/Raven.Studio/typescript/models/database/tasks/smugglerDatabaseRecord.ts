@@ -11,7 +11,7 @@ class smugglerDatabaseRecord {
     customizeDatabaseRecordTypes = ko.observable<boolean>(false);
     
     includeConflictSolverConfig = ko.observable<boolean>(true);
-    includeDocumentCompression = ko.observable<boolean>(true);
+    includeDocumentsCompression = ko.observable<boolean>(true);
     includeTimeSeries = ko.observable<boolean>(true);
     includeSettings = ko.observable<boolean>(true);
     includeRevisions = ko.observable<boolean>(true);
@@ -107,8 +107,8 @@ class smugglerDatabaseRecord {
         if (this.includeHubPullReplications()) {
             result.push("HubPullReplications");
         }
-        if (this.includeDocumentCompression()) {
-            result.push("DocumentCompression");
+        if (this.includeDocumentsCompression()) {
+            result.push("DocumentsCompression");
         }
         if (this.includeTimeSeries()) {
             result.push("TimeSeries")

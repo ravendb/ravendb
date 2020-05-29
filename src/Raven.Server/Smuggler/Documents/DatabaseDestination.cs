@@ -781,9 +781,9 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     
                     if (_log.IsInfoEnabled)
-                        _log.Info("Configuring document compression from smuggler");
+                        _log.Info("Configuring documents compression from smuggler");
                     tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDocumentsCompressionCommand(databaseRecord.DocumentsCompression, _database.Name, RaftIdGenerator.DontCareId)));
-                    progress.DocumentCompressionConfigurationUpdated = true;
+                    progress.DocumentsCompressionConfigurationUpdated = true;
                 }
                 
                 if (databaseRecord?.Revisions != null)

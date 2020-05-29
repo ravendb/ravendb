@@ -1191,7 +1191,7 @@ namespace Raven.Server.Commercial
             var externalReplicationCount = 0;
             var delayedExternalReplicationCount = 0;
             var pullReplicationAsHubCount = 0;
-            var documentCompressionCount = 0;
+            var documentsCompressionCount = 0;
             var pullReplicationAsSinkCount = 0;
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
@@ -1225,7 +1225,7 @@ namespace Raven.Server.Commercial
 
                     if (databaseRecord.DocumentsCompression?.CompressRevisions == true ||
                         databaseRecord.DocumentsCompression?.Collections?.Length > 0)
-                        documentCompressionCount++;
+                        documentsCompressionCount++;
 
                     if (databaseRecord.SinkPullReplications != null &&
                         databaseRecord.SinkPullReplications.Count > 0)
@@ -1317,9 +1317,9 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.DynamicNodeDistribution, message);
             }
 
-            if (documentCompressionCount > 0 && newLicenseStatus.HasDocumentsCompression == false)
+            if (documentsCompressionCount > 0 && newLicenseStatus.HasDocumentsCompression == false)
             {
-                var message = GenerateDetails(documentCompressionCount, "documents compression");
+                var message = GenerateDetails(documentsCompressionCount, "documents compression");
                 throw GenerateLicenseLimit(LimitType.DocumentsCompression, message);
             }
         }

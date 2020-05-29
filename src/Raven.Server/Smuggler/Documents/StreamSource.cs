@@ -152,17 +152,17 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.DocumentsCompression), out BlittableJsonReaderObject documentCompression) 
-                    && documentCompression != null)
+                if (reader.TryGet(nameof(databaseRecord.DocumentsCompression), out BlittableJsonReaderObject documentsCompression) 
+                    && documentsCompression != null)
                 {
                     try
                     {
-                        databaseRecord.DocumentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(documentCompression);
+                        databaseRecord.DocumentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(documentsCompression);
                     }
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the document compression configuration from smuggler file. Skipping.", e);
+                            _log.Info("Wasn't able to import the documents compression configuration from smuggler file. Skipping.", e);
                     }
                 }
 
