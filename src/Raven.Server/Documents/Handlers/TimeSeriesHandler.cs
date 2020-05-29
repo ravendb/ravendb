@@ -495,32 +495,9 @@ namespace Raven.Server.Documents.Handlers
 
                 if (timeSeriesConfig != null)
                 {
-                    var timeSeriesCollection = new DynamicJsonValue();
-                    foreach (var collection in timeSeriesConfig.Collections)
-                    {
-                        timeSeriesCollection[collection.Key] = collection.Value.ToJson();
-                    }
-                    
-                    var configJson = new DynamicJsonValue
-                    {
-                        [nameof(timeSeriesConfig.Collections)] = timeSeriesCollection,
-                        [nameof(timeSeriesConfig.PolicyCheckFrequency)] = timeSeriesConfig.PolicyCheckFrequency
-                    };
-                                        
-                    if (timeSeriesConfig.NamedValues != null)
-                    {
-                        var namedValues = new DynamicJsonValue();
-                        foreach (var collection in timeSeriesConfig.NamedValues)
-                        {
-                            namedValues[collection.Key] = DynamicJsonValue.Convert(collection.Value);
-                        }
-
-                        configJson[nameof(timeSeriesConfig.NamedValues)] = namedValues;
-                    }
-                                      
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        context.Write(writer, configJson);
+                        context.Write(writer, timeSeriesConfig.ToJson());
                     }
                 }
                 else
