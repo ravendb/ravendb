@@ -45,7 +45,7 @@ namespace Raven.Server.Web.Studio
                             Disabled = false
                         }
                     }
-                }, Database.Name, GetRaftRequestIdFromQuery());
+                }, Database.Name, GetRaftRequestIdFromQuery() + "/revisions");
                 var (index, _) = await ServerStore.SendToLeaderAsync(editRevisions);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
 
@@ -56,10 +56,14 @@ namespace Raven.Server.Web.Studio
                         ["Companies"] = new Dictionary<string, string[]>
                         {
                             ["StockPrice"] = new[] {"Open", "Close", "High", "Low", "Volume"}
+                        },
+                        ["Employees"] = new Dictionary<string, string[]>
+                        {
+                            ["HeartRate"] = new []{"BPM"}
                         }
                     }
                 };
-                var editTimeSeries = new EditTimeSeriesConfigurationCommand(tsConfig, Database.Name, GetRaftRequestIdFromQuery());
+                var editTimeSeries = new EditTimeSeriesConfigurationCommand(tsConfig, Database.Name, GetRaftRequestIdFromQuery() + "/time-series");
                 (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
 

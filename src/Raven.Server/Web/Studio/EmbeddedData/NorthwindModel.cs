@@ -116,6 +116,11 @@ namespace Orders
         public string ReportsTo { get; set; }
         public List<string> Notes { get; set; }
         public List<string> Territories { get; set; }
+
+        public class HeartRate
+        {
+            [TimeSeriesValue(0)] public double BPM { get; set; }
+        }
     }
 
     public class Region
