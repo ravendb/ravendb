@@ -252,8 +252,8 @@ namespace Raven.Server.Documents.Handlers
         private static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
             List<TimeSeriesEntry> values = new List<TimeSeriesEntry>();
-            var collection = ExecuteTimeSeriesBatchCommand.GetDocumentCollection(context.DocumentDatabase, context, docId, false);
-            var reader = new TimeSeriesMultiReader(context, docId, name, collection, from, to, null);
+            var collection = ExecuteTimeSeriesBatchCommand.GetDocumentCollection(context.DocumentDatabase, context, docId, fromEtl: false);
+            var reader = new TimeSeriesMultiReader(context, docId, name, collection, from, to, offset: null);
 
             // init hash 
             var size = Sodium.crypto_generichash_bytes();
