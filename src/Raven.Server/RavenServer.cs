@@ -2341,12 +2341,14 @@ namespace Raven.Server
                                 {
                                     var expectedMode = info.AuthorizeAs switch
                                     {
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => ReplicationMode.Pull,
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => ReplicationMode.Push,
-                                        _ => ReplicationMode.Invalid
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => PullReplicationMode.Read,
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.Write,
+                                        _ => PullReplicationMode.None
                                     };
                                  
-                                    if(pullReplication.CanAccess(certificate.Thumbprint) && (pullReplication.Mode & expectedMode) == expectedMode)
+                                    if(pullReplication.CanAccess(certificate.Thumbprint) && 
+                                       (pullReplication.Mode & expectedMode) == expectedMode && 
+                                       expectedMode != PullReplicationMode.None)
                                         return true;
                                 }   
 

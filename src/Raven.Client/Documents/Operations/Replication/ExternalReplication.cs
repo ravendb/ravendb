@@ -13,14 +13,12 @@ namespace Raven.Client.Documents.Operations.Replication
             
         }
 
-        public string HubDefinitionName;
         public TimeSpan DelayReplicationFor;
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DelayReplicationFor)] = DelayReplicationFor;
-            json[nameof(HubDefinitionName)] = HubDefinitionName;
             return json;
         }
 

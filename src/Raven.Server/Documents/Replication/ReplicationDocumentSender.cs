@@ -542,6 +542,12 @@ namespace Raven.Server.Documents.Replication
             {
                 stats.RecordArtificialDocumentSkip();
                 skippedReplicationItemsInfo.Update(item);
+                if (_log.IsInfoEnabled)
+                {
+                    
+                    string key = _allowedPathsValidator.GetItemInformation(item);
+                    _log.Info($"Will skip sending {key} ({item.Type}) because it was not allowed according to the allows paths specifications.");
+                }
                 return true;
             }
             
@@ -640,49 +646,6 @@ namespace Raven.Server.Documents.Replication
             _parent._lastDocumentSentTime = DateTime.UtcNow;
 
         }
-
-/*        private void WriteItemToServer(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
-        {
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
-            {
-                WriteAttachmentTombstoneToServer(context, item);
-                stats.RecordAttachmentTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment)
-            {
-                WriteTimeSeriesSegmentToServer(context, item);
-                stats.RecordTimeSeriesOutput(item.Segment.NumberOfBytes);
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
-            {
-                WriteRevisionTombstoneToServer(context, item);
-                stats.RecordRevisionTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
-            {
-                WriteDocumentToServer(context, item);
-                stats.RecordDocumentTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
-            {
-                item.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
-                stats.RecordCountersOutput(counters?.Count ?? 0);
-                WriteCountersToServer(context, item);
-                return;
-            }
-
-            WriteDocumentToServer(context, item);
-            stats.RecordDocumentOutput(item.Data?.Size ?? 0);
-        }*/
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

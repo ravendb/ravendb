@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public Dictionary<string, FilteringOptions> Filters;
         public string MentorNode;
 
-        public ReplicationMode Mode = ReplicationMode.Pull;
+        public PullReplicationMode Mode = PullReplicationMode.Read;
 
         public string Name;
         public long TaskId;
@@ -76,10 +76,16 @@ namespace Raven.Client.Documents.Operations.Replication
 
             foreach (KeyValuePair<string, FilteringOptions> kvp in Filters)
             {
-                if ((kvp.Value?.AllowedPaths?.Length ?? 0) == 0)
-                    throw new InvalidOperationException($"Filter for {kvp} has a null or empty filter definition");
+                ValidateAllowedPaths(kvp.Key,kvp.Value?.AllowedReadPaths);
+                ValidateAllowedPaths(kvp.Key,kvp.Value?.AllowedWritePaths);
+            }
 
-                foreach (string path in kvp.Value.AllowedPaths)
+            void ValidateAllowedPaths(string name, string[] allowedPaths)
+            {
+                if ((allowedPaths?.Length ?? 0) == 0)
+                    return;
+
+                foreach (string path in allowedPaths)
                 {
                     if (string.IsNullOrEmpty(path))
                         throw new InvalidOperationException("Filtered replication AllowedPaths cannot have an empty / null filter");
@@ -89,18 +95,23 @@ namespace Raven.Client.Documents.Operations.Replication
 
                     if (path.Length > 1 && path[path.Length - 2] != '/' && path[path.Length - 2] != '-')
                         throw new InvalidOperationException(
-                            $"When using '*' at the end of the allowed path, the previous character must be '/' or '-', but got: {path} for {kvp.Key}");
+                            $"When using '*' at the end of the allowed path, the previous character must be '/' or '-', but got: {path} for {name}");
                 }
             }
         }
 
         public class FilteringOptions : IDynamicJson
         {
-            public string[] AllowedPaths;
+            public string[] AllowedReadPaths;
+            public string[] AllowedWritePaths;
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue {[nameof(AllowedPaths)] = AllowedPaths};
+                return new DynamicJsonValue
+                {
+                    [nameof(AllowedReadPaths)] = AllowedReadPaths,
+                    [nameof(AllowedWritePaths)] = AllowedWritePaths
+                };
             }
         }
     }
@@ -115,7 +126,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public Dictionary<string, PullReplicationDefinition.FilteringOptions> Filters;
         public string MentorNode;
 
-        public ReplicationMode Mode = ReplicationMode.Pull;
+        public PullReplicationMode Mode = PullReplicationMode.Read;
 
         public string Name;
         public long TaskId;

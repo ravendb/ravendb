@@ -3,11 +3,10 @@ using System;
 namespace Raven.Client.Documents.Operations.Replication
 {
     [Flags]
-    public enum ReplicationMode
+    public enum PullReplicationMode
     {
         None = 0,
-        Pull = 1,
-        Push = 2,
-        Invalid = 4
+        Read = 1,
+        Write = 2,
     }
 }

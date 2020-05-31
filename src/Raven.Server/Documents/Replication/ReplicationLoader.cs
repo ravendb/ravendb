@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Replication
             var supportedVersions =
                 TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
             
-            string[] allowedPaths = null;
+            string[] allowedWritePaths =default;
             string pullDefinitionName = null;
 
             switch (header.AuthorizeInfo?.AuthorizeAs)
@@ -221,19 +221,19 @@ namespace Raven.Server.Documents.Replication
                     switch (header.AuthorizeInfo.AuthorizeAs)
                     {
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                            if ((pullReplicationDefinition.Mode & ReplicationMode.Pull) != ReplicationMode.Pull)
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Read) != PullReplicationMode.Read)
                                 throw new InvalidOperationException($"Replication hub {initialRequest.PullReplicationDefinitionName} does not support Pull Replication");
                             CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, certificate, pullReplicationDefinition);
                             return;
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                            if ((pullReplicationDefinition.Mode & ReplicationMode.Push) != ReplicationMode.Push)
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Write) != PullReplicationMode.Write)
                                 throw new InvalidOperationException($"Replication hub {initialRequest.PullReplicationDefinitionName} does not support Push Replication");
                             if (certificate != null && pullReplicationDefinition.Certificates.ContainsKey(certificate.Thumbprint))
                             {
                                 if (pullReplicationDefinition.Filters.TryGetValue(certificate.Thumbprint, out var filteringOptions) == false || filteringOptions == null)
                                     throw new InvalidOperationException(
                                         $"Certificate {certificate.Thumbprint} was found in the replication hub certificates, but no matching filtering option was specified for it. Cannot allow replication in this mode.");
-                                allowedPaths = filteringOptions.AllowedPaths;
+                                allowedWritePaths = filteringOptions.AllowedWritePaths;
                             }
 
                             // same as normal incoming replication, just using the filtering
@@ -242,9 +242,13 @@ namespace Raven.Server.Documents.Replication
                             throw new InvalidOperationException("Unknown AuthroizeAs value");
                     }
                     break;
+                case null:
+                    break;
+                default:
+                    throw new InvalidOperationException("Unknown AuthroizeAs value" + header.AuthorizeInfo?.AuthorizeAs);
             }
 
-            CreateIncomingInstance(tcpConnectionOptions, allowedPaths, pullDefinitionName, buffer);
+            CreateIncomingInstance(tcpConnectionOptions, allowedWritePaths, pullDefinitionName, buffer);
         }
 
         private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
@@ -271,7 +275,7 @@ namespace Raven.Server.Documents.Replication
                             $"Unable to find filters for {certificate.Thumbprint}, but other filters exists. Filtered replication must have filters defined for all certificates on the pull replication hub.");
                     }
 
-                    outgoingReplication.AllowedPaths = options.AllowedPaths;
+                    outgoingReplication.AllowedReadPaths = options.AllowedReadPaths;
                 }
             }
 
@@ -314,10 +318,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] allowedPaths, string pullReplicationName,
+        public void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] allowedWritePaths, string pullReplicationName,
             JsonOperationContext.MemoryBuffer buffer)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, allowedPaths, pullReplicationName);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, allowedWritePaths, pullReplicationName);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
@@ -343,24 +347,24 @@ namespace Raven.Server.Documents.Replication
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.MemoryBuffer buffer,
-            string[] allowedPaths,
+            string[] allowedWritePaths,
             string pullReplicationName)
         {
-            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, allowedPaths, buffer);
+            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, allowedWritePaths, buffer);
 
             var newIncoming = new IncomingReplicationHandler(
                 tcpConnectionOptions,
                 getLatestEtagMessage,
                 this,
                 buffer,
-                allowedPaths, 
+                allowedWritePaths, 
                 pullReplicationName);
 
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
             return newIncoming;
         }
 
-        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, string[] allowedPaths, JsonOperationContext.MemoryBuffer buffer)
+        private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, string[] allowedWritePaths, JsonOperationContext.MemoryBuffer buffer)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -416,7 +420,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                         [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
                         [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector,
-                        [nameof(ReplicationMessageReply.AllowedPaths)] = allowedPaths,
+                        [nameof(ReplicationMessageReply.AllowedWritePaths)] = allowedWritePaths,
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -1218,9 +1222,9 @@ namespace Raven.Server.Documents.Replication
                     {
                         AuthorizeAs = sink.Mode switch
                         {
-                            ReplicationMode.Pull => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
-                            ReplicationMode.Push => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
-                            ReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node),"Replication mode should be set to pull or push"),
+                            PullReplicationMode.Read => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                            PullReplicationMode.Write => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
+                            PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node),"Replication mode should be set to pull or push"),
                             _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)   
                         },
                         AuthorizationFor = sink.HubDefinitionName

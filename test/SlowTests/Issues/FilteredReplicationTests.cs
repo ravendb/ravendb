@@ -105,7 +105,7 @@ namespace SlowTests.Issues
                 {
                     [pullCert.Thumbprint] = new PullReplicationDefinition.FilteringOptions
                     {
-                        AllowedPaths = new[]
+                        AllowedReadPaths  = new[]
                         {
                             "users/ayende",
                             "users/ayende/*"
@@ -144,7 +144,7 @@ namespace SlowTests.Issues
                 {
                     [pullCertA.Thumbprint] = new PullReplicationDefinition.FilteringOptions
                     {
-                        AllowedPaths = new[]
+                        AllowedReadPaths = new[]
                         {
                             "users/ayende",
                             "users/ayende/*"
@@ -230,7 +230,7 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
-                Mode = ReplicationMode.Push | ReplicationMode.Pull,
+                Mode = PullReplicationMode.Write | PullReplicationMode.Read,
                 Certificates = new Dictionary<string, string>
                 {
                     [pullCert.Thumbprint] = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
@@ -239,7 +239,7 @@ namespace SlowTests.Issues
                 {
                     [pullCert.Thumbprint] = new PullReplicationDefinition.FilteringOptions
                     {
-                        AllowedPaths = new[]
+                        AllowedReadPaths  = new[]
                         {
                             "users/ayende",
                             "users/ayende/*"
@@ -376,7 +376,7 @@ namespace SlowTests.Issues
             await storeB.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "push",
-                Mode = ReplicationMode.Push | ReplicationMode.Pull,
+                Mode = PullReplicationMode.Write | PullReplicationMode.Read,
                 Certificates = new Dictionary<string, string>
                 {
                     [pullCert.Thumbprint] = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
@@ -385,7 +385,7 @@ namespace SlowTests.Issues
                 {
                     [pullCert.Thumbprint] = new PullReplicationDefinition.FilteringOptions
                     {
-                        AllowedPaths = new[]
+                        AllowedWritePaths  = new[]
                         {
                             "users/ayende",
                             "users/ayende/*"
@@ -403,7 +403,7 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
                 ConnectionStringName = dbNameB + "ConStr",
-                Mode = ReplicationMode.Push,
+                Mode = PullReplicationMode.Write,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
                 HubDefinitionName = "push"
             }));

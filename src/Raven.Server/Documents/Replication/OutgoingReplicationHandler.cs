@@ -26,6 +26,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Renci.SshNet.Security;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -197,14 +198,15 @@ namespace Raven.Server.Documents.Replication
                     using (context.GetMemoryBuffer(out _buffer))
                     {
                         var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                        if (supportedFeatures.Replication.PullReplication)
+                        if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.Read) == PullReplicationMode.Read)
                         {
+                            
+                            if( supportedFeatures.Replication.PullReplication == false)
+                                throw new InvalidOperationException("Other side does not support pull replication " + Destination);
+                            
                             SendPreliminaryData();
-                            if (Destination is PullReplicationAsSink sink && sink.Mode == ReplicationMode.Pull)
-                            {
-                                InitiatePullReplicationAsSink(supportedFeatures);
-                                return;
-                            }
+                            InitiatePullReplicationAsSink(supportedFeatures);
+                            return;
                         }
 
                         AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
@@ -351,7 +353,7 @@ namespace Raven.Server.Documents.Replication
 
         private void Replicate()
         {
-            using var documentSender = new ReplicationDocumentSender(_stream, this, _log, AllowedPaths);
+            using var documentSender = new ReplicationDocumentSender(_stream, this, _log, AllowedReadPaths);
 
             while (_cts.IsCancellationRequested == false)
             {
@@ -514,11 +516,11 @@ namespace Raven.Server.Documents.Replication
                         LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
                         // AllowedPaths will have a locally provided value for filtered pull replication.
                         // In that case, we prefer the local value over the one from the remote server
-                        if (AllowedPaths == null)
+                        if (AllowedReadPaths == null)
                         {
                             // this is used when the other side lets us know what 
                             // paths it is going to accept from us
-                            AllowedPaths = response.Reply.AllowedPaths;
+                            AllowedReadPaths = response.Reply.AllowedWritePaths;
                         }
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
@@ -1060,7 +1062,7 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
-        public string[] AllowedPaths;
+        public string[] AllowedReadPaths;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 
         public void Dispose()
