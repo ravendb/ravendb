@@ -8,6 +8,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.TimeSeries.Session;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -1610,6 +1611,60 @@ namespace SlowTests.Client.TimeSeries.Query
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries(p, "Heartrate")
+                                .GroupBy(g => g.Months(1))
+                                .Select(x => new
+                                {
+                                    Max = x.Max(),
+                                    Min = x.Min()
+                                })
+                        });
+
+                    var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
+                    Assert.Contains(msg, ex.Message);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => new
+                        {
+                            HeartRate = RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
+                        });
+
+                    var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
+                    Assert.Contains(msg, ex.Message);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
+                            .LoadTag<Watch>());
+
+                    var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
+                    Assert.Contains(msg, ex.Message);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => new
+                        {
+                            HeartRate = RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
+                                .Where(ts => ts.Tag != "watches/fitbit")
+                                .GroupBy(g => g.Months(1))
+                        });
+
+                    var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
+                    Assert.Contains(msg, ex.Message);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Select(p => new
+                        {
+                            HeartRate = RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
                                 .GroupBy(g => g.Months(1))
                                 .Select(x => new
                                 {

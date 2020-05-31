@@ -7,7 +7,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
-using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TimeSeries;
@@ -241,8 +240,6 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
-
-        
 
         [Fact]
         public unsafe void CanQueryTimeSeriesAggregation_DeclareSyntax_AllDocsQuery()
@@ -484,18 +481,17 @@ select out(doc)
                 {
                     var query = session.Query<User>()
                         .Where(u => u.Age > 21)
-                        .Select(u => RavenQuery.TimeSeries(u, "Heartrate")
+                        .Select(u => RavenQuery.TimeSeries<HeartRateMeasure>(u, "Heartrate")
                             .Where(ts => ts.Tag == "watches/fitbit")
                             .GroupBy("1 month")
                             .Select(g => new
                             {
                                 Avg = g.Average(),
                                 Max = g.Max()
-                            }).ToList<HeartRateMeasure>()
+                            }).ToList()
                         );
 
                     var result = query.ToList();
-
                     Assert.Equal(1, result.Count);
                     Assert.Equal(6, result[0].Count);
 
@@ -512,7 +508,7 @@ select out(doc)
         }
 
         [Fact]
-        public void CanQueryTimeSeriesRaw_WhereOnValue()
+        public void CanQueryTimeSeriesRaw_UsingLinq()
         {
             using (var store = GetDocumentStore())
             {
@@ -542,9 +538,9 @@ select out(doc)
                 {
                     var query = session.Query<User>()
                         .Where(p => p.Age > 21)
-                        .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
+                        .Select(p => RavenQuery.TimeSeries<HeartRateMeasure>(p, "Heartrate", baseline, baseline.AddMonths(2))
                             .Where(ts => ts.Value > 75 && ts.Value < 175)
-                            .ToList<HeartRateMeasure>());
+                            .ToList());
 
                     var result = query.First();
                     Assert.Equal(3, result.Count);
@@ -637,6 +633,43 @@ select out()
                         .AddParameter("start", baseline.AddDays(-1))
                         .AddParameter("end", now.AddDays(1));
 
+
+                    var result = query.First();
+                    var expected = (60 * 24) // entire raw policy for 1 day 
+                                   + (2 * 24) // first day of 'By30Minutes'
+                                   + 24 // first day of 'By1Hour'
+                                   + 4  // first day of 'By6Hours'
+                                   + 1; // first day of 'By1Day'
+
+                    Assert.Equal(expected, result.Count);
+
+                    foreach (var res in result.Results)
+                    {
+                        if (res.IsRollup)
+                        {
+                            Assert.Equal(30, res.Values.Length);
+
+                            var rolled = res.AsRollupEntry();
+                            Assert.Equal(res.Value.Close, rolled.First.Close);
+                            Assert.Equal(res.Value.High, rolled.First.High);
+                            Assert.Equal(res.Value.Low, rolled.First.Low);
+                            Assert.Equal(res.Value.Open, rolled.First.Open);
+                            Assert.Equal(res.Value.Volume, rolled.First.Volume);
+                            continue;
+                        }
+
+                        Assert.Equal(5, res.Values.Length);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    // test the same query using linq
+
+                    var query = session.Query<User>()
+                        .Select(u =>
+                            RavenQuery.TimeSeries<StockPrice>(u, "StockPrice", baseline.AddDays(-1), now.AddDays(1))
+                                .ToList());
 
                     var result = query.First();
                     var expected = (60 * 24) // entire raw policy for 1 day 
