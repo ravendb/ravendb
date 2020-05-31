@@ -54,6 +54,20 @@ Using {0} invalidate that premise, and is not allowed")
             return node;
         }
 
+        private static bool TryCheckForDictionary(SyntaxNode node)
+        {
+            foreach (SyntaxNode leaf in node.ChildNodes())
+            {
+                if (leaf.IsKind(SyntaxKind.ArgumentList) == false && leaf.ToString().EndsWith("ToDictionary"))
+                    return true;
+
+                if (TryCheckForDictionary(leaf))
+                    return true;
+            }
+
+            return false;
+        }
+
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
         {
             var expression = node.Expression.ToString();
@@ -62,6 +76,9 @@ Using {0} invalidate that premise, and is not allowed")
 
             var parent = node.Ancestors().FirstOrDefault(x => x.IsKind(SyntaxKind.InvocationExpression) || x.IsKind(SyntaxKind.QueryExpression));
             if (parent != _root)
+                return base.VisitInvocationExpression(node);
+
+            if (TryCheckForDictionary(node))
                 return base.VisitInvocationExpression(node);
 
             ThrowOrderByException(node.ToString());
