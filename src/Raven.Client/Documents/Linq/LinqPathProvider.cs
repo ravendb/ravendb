@@ -489,9 +489,18 @@ namespace Raven.Client.Documents.Linq
 
         public static bool IsTimeSeriesCall(MethodCallExpression mce)
         {
-            if (mce.Method.DeclaringType == typeof(ITimeSeriesQueryable) ||
-                mce.Method.DeclaringType == typeof(ITimeSeriesAggregationQueryable) ||
-                mce.Method.ReturnType == typeof(ITimeSeriesQueryable)) // not a valid TimeSeries call expression
+            var type = mce.Method.DeclaringType;
+
+            if (type != null && type.IsGenericType)
+                type = type.GetGenericTypeDefinition();
+            
+            if (type == typeof(ITimeSeriesQueryable) ||
+                type == typeof(ITimeSeriesAggregationQueryable) ||
+                type == typeof(ITimeSeriesQueryable<>) ||
+                type == typeof(ITimeSeriesAggregationQueryable<>) ||
+                mce.Method.ReturnType == typeof(ITimeSeriesQueryable) || // not a valid TimeSeries call expression
+                mce.Method.ReturnType.IsGenericType &&
+                mce.Method.ReturnType.GetGenericTypeDefinition() == typeof(ITimeSeriesQueryable<>)) // not a valid TimeSeries call expression
             {
                 if (mce.Method.ReturnType == typeof(TimeSeriesRawResult) ||
                     mce.Method.ReturnType.IsSubclassOf(typeof(TimeSeriesRawResult)) ||
