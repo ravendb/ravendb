@@ -47,6 +47,7 @@ namespace SlowTests.Issues
                     {
                         GroupBy = e.CustomFields.GroupBy(kvp => kvp.Value),
                         OrderByDescending = e.CustomFields.OrderByDescending(kvp => kvp.Value),
+                        OrderBy = e.CustomFields.OrderBy(kvp => kvp.Value),
                         DefaultIfEmpty = e.CustomFields.DefaultIfEmpty(),
                         Reverse = e.CustomFields.Reverse(),
                         Take = e.CustomFields.Take(1),
