@@ -68,8 +68,6 @@ namespace SlowTests.Issues
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
-                WaitForUserToContinueTheTest(store);
-
                 WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
@@ -79,7 +77,7 @@ namespace SlowTests.Issues
                     var count = session
                         .TimeSeriesFor(user, "Heartrate")
                         .Get(DateTime.MinValue, DateTime.MaxValue)
-                        .Count();
+                        .Count(entry => entry.IsRollup == false);
 
                     count += session
                         .TimeSeriesFor(user, "Heartrate@By6Hours")
