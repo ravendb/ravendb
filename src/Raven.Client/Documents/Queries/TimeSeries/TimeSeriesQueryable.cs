@@ -6,15 +6,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 {
     public interface ITimeSeriesQueryable
     {
-        ITimeSeriesLoadQueryable<TTag> LoadTag<TTag>();
-
         ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, bool>> predicate);
-
-        ITimeSeriesAggregationQueryable GroupBy(string s);
-
-        ITimeSeriesAggregationQueryable GroupBy(Action<ITimePeriodBuilder> timePeriod);
-
-        ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
         ITimeSeriesQueryable Offset(TimeSpan offset);
 
@@ -22,14 +14,36 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod);
 
-        TimeSeriesRawResult ToList();
+        ITimeSeriesLoadQueryable<TTag> LoadTag<TTag>();
 
-        TimeSeriesRawResult<T> ToList<T>() where T : new();
+        ITimeSeriesAggregationQueryable GroupBy(string s);
+
+        ITimeSeriesAggregationQueryable GroupBy(Action<ITimePeriodBuilder> timePeriod);
+
+        ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
+
+        TimeSeriesRawResult ToList();
     }
 
-    public interface ITimeSeriesLoadQueryable<T> : ITimeSeriesQueryable
+    public interface ITimeSeriesQueryable<T> where T : new()
     {
-        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, T, bool>> predicate);
+        ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesEntry, bool>> predicate);
+
+        ITimeSeriesQueryable<T> Offset(TimeSpan offset);
+
+        ITimeSeriesQueryable<T> FromLast(Action<ITimePeriodBuilder> timePeriod);
+
+        ITimeSeriesQueryable<T> FromFirst(Action<ITimePeriodBuilder> timePeriod);
+
+        ITimeSeriesLoadQueryable<T, TTag> LoadTag<TTag>();
+
+        ITimeSeriesAggregationQueryable<T> GroupBy(string s);
+
+        ITimeSeriesAggregationQueryable<T> GroupBy(Action<ITimePeriodBuilder> timePeriod);
+
+        ITimeSeriesAggregationQueryable<T> Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
+
+        TimeSeriesRawResult<T> ToList();
     }
 
     public interface ITimeSeriesAggregationQueryable
@@ -39,8 +53,25 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         ITimeSeriesAggregationQueryable Offset(TimeSpan offset);
 
         TimeSeriesAggregationResult ToList();
+    }
 
-        TimeSeriesAggregationResult<T> ToList<T>() where T : new();
+    public interface ITimeSeriesAggregationQueryable<T> where T : new()
+    {
+        ITimeSeriesAggregationQueryable<T> Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
+
+        ITimeSeriesAggregationQueryable<T> Offset(TimeSpan offset);
+
+        TimeSeriesAggregationResult<T> ToList();
+    }
+
+    public interface ITimeSeriesLoadQueryable<TTag> : ITimeSeriesQueryable
+    {
+        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, TTag, bool>> predicate);
+    }
+
+    public interface ITimeSeriesLoadQueryable<T, TTag> : ITimeSeriesQueryable where T : new()
+    {
+        ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesEntry, TTag, bool>> predicate);
     }
 
     public interface ITimeSeriesGrouping
@@ -58,7 +89,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         double[] Last();
 
         long[] Count();
-
     }
 
     public interface ITimePeriodBuilder
@@ -78,7 +108,5 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         void Quarters(int duration);
 
         void Years(int duration);
-
     }
-
 }
