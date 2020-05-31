@@ -44,6 +44,99 @@ namespace Raven.Server.Documents.Handlers
                     json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
                 }, statusCode: HttpStatusCode.Created);
         }
+        
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "PUT", AuthorizationStatus.Operator)]
+        public async Task RegisterHubAccess()
+        {
+            var hub = GetStringQueryString("hub", true);
+            
+            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+            
+            ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
+            
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "register-hub-access");
+                var access = JsonDeserializationClient.ReplicationHubAccess(blittableJson);
+                access.Validate();
+
+                var definition = Database.GetPullReplicationDefinition(hub);
+                if (definition == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                if (definition.Certificates != null && definition.Certificates.Count > 0)
+                {
+                    // this handles the backward compact aspect
+                    throw new InvalidOperationException("Cannot register hub access to a replication hub that already has inline certificates: " + hub  +
+                                                        ". Create a new replication hub and try again");
+                }
+
+                using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBas64));
+                var publicKeyPinningHash = cert.GetPublicKeyPinningHash();
+
+                var command = new RegisterReplicationHubAccessCommand(Database.Name, hub, access, publicKeyPinningHash, cert.Thumbprint, GetRaftRequestIdFromQuery());
+                await Server.ServerStore.SendToLeaderAsync(command);
+            }
+        }
+        
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE", AuthorizationStatus.Operator)]
+        public async Task UnegisterHubAccess()
+        {
+            // if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            //     throw new BadRequestException(errorMessage);
+            //
+            // ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
+            //
+            // PullReplicationDefinition pullReplication = null;
+            // await DatabaseConfigurations((_, databaseName, blittableJson, guid) =>
+            //     {
+            //         pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
+            //         
+            //         pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
+            //         var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName, guid)
+            //         {
+            //             Definition = pullReplication
+            //         };
+            //         return ServerStore.SendToLeaderAsync(updatePullReplication);
+            //     }, "update-hub-pull-replication", 
+            //     GetRaftRequestIdFromQuery(),
+            //     fillJson: (json, _, index) =>
+            //     {
+            //         json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
+            //     }, statusCode: HttpStatusCode.Created);
+        }
+
+        [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET", AuthorizationStatus.Operator)]
+        public async Task ListHubAccess()
+        {
+            // if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            //     throw new BadRequestException(errorMessage);
+            //
+            // ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
+            //
+            // PullReplicationDefinition pullReplication = null;
+            // await DatabaseConfigurations((_, databaseName, blittableJson, guid) =>
+            //     {
+            //         pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
+            //         
+            //         pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
+            //         var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName, guid)
+            //         {
+            //             Definition = pullReplication
+            //         };
+            //         return ServerStore.SendToLeaderAsync(updatePullReplication);
+            //     }, "update-hub-pull-replication", 
+            //     GetRaftRequestIdFromQuery(),
+            //     fillJson: (json, _, index) =>
+            //     {
+            //         json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
+            //     }, statusCode: HttpStatusCode.Created);
+        }
 
         [RavenAction("/databases/*/admin/tasks/sink-pull-replication", "POST", AuthorizationStatus.Operator)]
         public async Task UpdatePullReplicationOnSinkNode()

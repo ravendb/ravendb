@@ -376,6 +376,9 @@ namespace Raven.Server.ServerWide
                     case nameof(ConfirmServerCertificateReplacedCommand):
                         ConfirmServerCertificateReplaced(context, cmd, index, serverStore);
                         break;
+                    case nameof(RegisterReplicationHubAccessCommand):
+                        // fix me here
+                        break;
                     case nameof(UpdateSnmpDatabasesMappingCommand):
                         UpdateValue<List<string>>(context, type, cmd, index);
                         break;
