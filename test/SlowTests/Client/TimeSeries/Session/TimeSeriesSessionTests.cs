@@ -8,6 +8,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.TimeSeries.Operations;
 using SlowTests.Client.TimeSeries.Query;
 using Sparrow;
 using Xunit;
@@ -541,10 +542,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
-                var nowMinutes = now.Minute;
-                now = now.AddMinutes(-nowMinutes);
-                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
-
+                
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -567,16 +565,8 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     var result = session.TimeSeriesFor("users/karmel", "Heartrate").Get()?.ToList();
-
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By1Day'
-
-                    Assert.Equal(expected, result?.Count);
+                    TimeSeriesOperations.ValidateResults(result.ToArray(), now);
                 }
-
             }
         }
 
