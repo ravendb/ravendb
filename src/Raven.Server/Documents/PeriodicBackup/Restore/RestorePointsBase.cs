@@ -119,11 +119,28 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 })
                 .OrderBy(x => Path.GetFileNameWithoutExtension(x.FullPath))
                 .ThenBy(x => Path.GetExtension(x.FullPath), PeriodicBackupFileExtensionComparer.Instance)
-                .ThenBy(x => x.LastModified);
+                .ThenBy(x => x.LastModified)
+                .GroupBy(x => x.DirectoryPath);
 
+            foreach (var fileInfo in fileInfos)
+            {
+                await UpdateRestorePoints(fileInfo.ToList());
+            }
+
+            foreach (var restorePointGroup in _sortedList.Values.GroupBy(x => x.Location))
+            {
+                var count = restorePointGroup.Count();
+                foreach (var restorePoint in restorePointGroup)
+                    restorePoint.FilesToRestore = count--;
+            }
+        }
+
+        private async Task UpdateRestorePoints(List<FileInfoDetails> fileInfos)
+        {
             var firstFile = true;
             var snapshotRestore = false;
             var isEncrypted = false;
+
             foreach (var fileInfo in fileInfos)
             {
                 var extension = Path.GetExtension(fileInfo.FullPath);
@@ -172,13 +189,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         DatabaseName = folderDetails.DatabaseName,
                         NodeTag = folderDetails.NodeTag
                     });
-            }
-
-            foreach (var restorePointGroup in _sortedList.Values.GroupBy(x => x.Location))
-            {
-                var count = restorePointGroup.Count();
-                foreach (var restorePoint in restorePointGroup)
-                    restorePoint.FilesToRestore = count--;
             }
         }
 
