@@ -286,6 +286,7 @@ namespace Raven.Server.Documents
                     BlittableJsonReaderObject data;
                     exists = false;
                     var value = delta;
+                    var lowerName = Encodings.Utf8.GetString(counterName.Content.Ptr, counterName.Content.Length);
 
                     Slice countersGroupKey;
                     if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var existing))
@@ -311,12 +312,12 @@ namespace Raven.Server.Documents
 
                         var counterEtag = _documentsStorage.GenerateNextEtag();
 
-                        counters.TryGetMember(name, out object existingCounter);
+                        counters.TryGetMember(lowerName, out object existingCounter); //todo aviv 
 
                         if (existingCounter is BlittableJsonReaderObject.RawBlob blob &&
                             overrideExisting == false)
                         {
-                            exists = IncrementExistingCounter(context, documentId, name, delta,
+                            exists = IncrementExistingCounter(context, documentId, lowerName, delta,
                                 blob, dbIdIndex, counterEtag, counters, ref value);
                         }
                         else
@@ -338,7 +339,7 @@ namespace Raven.Server.Documents
                                 return PutOrIncrementCounter(context, documentId, collection, name, delta, out exists, overrideExisting);
                             }
 
-                            CreateNewCounterOrOverrideExisting(context, name, dbIdIndex, value, counterEtag, counters);
+                            CreateNewCounterOrOverrideExisting(context, lowerName, dbIdIndex, value, counterEtag, counters);
                         }
 
                         if (counters.Modifications != null)
@@ -351,7 +352,7 @@ namespace Raven.Server.Documents
                     }
                     else
                     {
-                        data = WriteNewCountersDocument(context, name, value);
+                        data = WriteNewCountersDocument(context, lowerName, value);
                         countersGroupKey = documentKeyPrefix;
                     }
 
@@ -1239,8 +1240,10 @@ namespace Raven.Server.Documents
 
                 var data = GetCounterValuesData(context, ref tvr);
                 etag = GetCounterEtag(ref tvr);
+                var lowerName = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length);
+
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGetMember(counterName, out object counterValues) == false ||
+                    counters.TryGetMember(lowerName, out object counterValues) == false ||
                     counterValues is LazyStringValue)
                     return false;
 
@@ -1271,9 +1274,10 @@ namespace Raven.Server.Documents
 
                 var data = GetCounterValuesData(context, ref tvr);
                 var etag = GetCounterEtag(ref tvr);
+                var lowerName = counterNameSlice.ToString();
                 if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
                     data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
-                    counters.TryGetMember(counterName, out object counterValues) == false ||
+                    counters.TryGetMember(lowerName, out object counterValues) == false ||
                     counterValues is LazyStringValue)
                     yield break;
 
