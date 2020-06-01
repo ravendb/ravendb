@@ -28,8 +28,9 @@
                     <div class="panel padding">
                         <div class="row">
                             <div class="col-sm-6">
-                                <div class="toggle toggle-primary">
-                                    <input id="useSessionContextToggle" type="checkbox" data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior'">
+                                <div class="checkbox">
+                                    <input id="useSessionContextToggle" type="checkbox" 
+                                           data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', disable: _.includes(model.isDefined() , 'readBalanceBehavior')">
                                     <label for="useSessionContextToggle">
                                         Use Session Context for Load Balancing
                                     </label>
@@ -40,7 +41,7 @@
                             <div class="col-sm-6">
                                 <div class="checkbox">
                                     <input id="checkboxReadBalance" type="checkbox"
-                                           data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: !_.includes(model.isDefined() , 'useSessionContextForLoadBehavior')">
+                                           data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', disable: _.includes(model.isDefined() , 'useSessionContextForLoadBehavior')">
                                     <label for="checkboxReadBalance">
                                         Read balance behavior
                                     </label>

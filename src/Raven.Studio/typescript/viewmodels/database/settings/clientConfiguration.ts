@@ -13,7 +13,7 @@ class clientConfiguration extends viewModelBase {
     globalConfigUrl = appUrl.forGlobalClientConfiguration();
     
     overrideServer = ko.observable<boolean>(false);
-    canEditSettings: KnockoutComputed<boolean>;    
+    canEditSettings: KnockoutComputed<boolean>;
     
     effectiveReadBalanceBehavior: KnockoutComputed<string>;
     effectiveMaxNumberOfRequestsPerSession: KnockoutComputed<string>;
@@ -80,7 +80,7 @@ class clientConfiguration extends viewModelBase {
             const configToUse = this.overrideServer() ? this.model : this.globalModel;
             const maxRequests = configToUse.maxNumberOfRequestsPerSession();
 
-            return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") && maxRequests ? maxRequests.toLocaleString() :  '<Client Default>';
+            return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") && maxRequests ? maxRequests.toLocaleString() :  "<Client Default>";
         });
 
         this.canEditSettings = ko.pureComputed(() => {

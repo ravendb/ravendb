@@ -12,7 +12,7 @@ class clientConfigurationModel {
     maxNumberOfRequestsPerSession = ko.observable<number>();
     useSessionContextForLoadBehavior = ko.observable<Raven.Client.Http.LoadBalanceBehavior>();
     
-    readBalanceBehavior = ko.observable<Raven.Client.Http.ReadBalanceBehavior>('None');
+    readBalanceBehavior = ko.observable<Raven.Client.Http.ReadBalanceBehavior>("None");
     readBalanceBehaviorLabel: KnockoutComputed<string>;
 
     disabled = ko.observable<boolean>();
@@ -50,12 +50,6 @@ class clientConfigurationModel {
             const kv = clientConfigurationModel.readModes;
             return value ? kv.find(x => x.value === value).label : "None";
         });
-
-        this.isDefined.subscribe(() => {
-            if (this.isDefined().find(x => x === "useSessionContextForLoadBehavior")) {
-                this.isDefined.remove("readBalanceBehavior");
-            }
-        })
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.maxNumberOfRequestsPerSession,
