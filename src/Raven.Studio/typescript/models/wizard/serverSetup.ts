@@ -152,7 +152,8 @@ class serverSetup {
             RegisterClientCert: this.registerClientCertificate(), 
             NodeSetupInfos: nodesInfo,
             Certificate: this.certificate().certificate(),
-            Password: this.certificate().certificatePassword()
+            Password: this.certificate().certificatePassword(),
+            ClientCertNotAfter: this.certificate().expirationDateFormatted()
         };
     }
     

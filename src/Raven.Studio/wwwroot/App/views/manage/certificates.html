@@ -32,7 +32,6 @@
             </div>
         </div>
     </div>
-
     <div class="row flex-row flex-grow flex-stretch-items" data-bind="visible: usingHttps">
         <div class="col-sm-12 col-lg-7 flex-vertical">
             <div class="margin-bottom flex-horizontal">
@@ -84,7 +83,6 @@
                         </li>
                     </ul>
                 </div>
-
                 <div class="dropdown">
                     <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
                             aria-expanded="true">
@@ -107,7 +105,6 @@
                     </ul>
                 </div>
             </div>
-            
             <div class="scroll flex-grow">
                 <div class="panel panel-info certificate-item" data-bind="visible: wellKnownAdminCertsVisible">
                     <div class="padding padding-sm flex-horizontal">
@@ -196,7 +193,6 @@
                                             None
                                         </strong>
                                     </div>
-                                    
                                 </div>
                             </div>
                         </div>
@@ -280,15 +276,16 @@
                                 </label>
                                 <input class="form-control" type="password" data-bind="textInput: certificatePassphrase">
                             </div>
-
-                            <!-- TODO
-                            <div class="form-group">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate'">
                                 <label class="control-label">
-                                    Expiration date
+                                    Expire in
                                 </label>
-                                <input class="form-control" type="date" data-bind="textInput: expirationDate">
-                            </div> -->
-
+                                <div class="input-group btn-block">
+                                    <input type="number" min="1" class="form-control" data-bind="numericInput: validityPeriod"
+                                           placeholder="Validity period (Default: 60)" />
+                                    <div class="input-group-addon">months</div>
+                                </div>
+                            </div>
                             <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: thumbprints().length > 1">
                                 <div>
                                     <i class="icon-info"></i>

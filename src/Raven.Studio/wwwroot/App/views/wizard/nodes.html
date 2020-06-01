@@ -15,7 +15,7 @@
                     <i class="icon-plus"></i> <span>Add node</span>
                 </button>
             </span>
-        </div>        
+        </div>
         <div class="row">
             <div class="col-md-6">
                 <div class="nodes-list margin-bottom" data-bind="foreach: model.nodes">
@@ -154,7 +154,6 @@
                                            data-bind="textInput: externalIpAddress">
                                 </div>
                             </div>
-                            
                             <div class="form-group" data-bind="validationElement: externalHttpsPort">
                                 <label class="control-label">External HTTPS Port</label>
                                 <div class="flex-grow">
@@ -162,7 +161,6 @@
                                            data-bind="textInput: externalHttpsPort">
                                 </div>
                             </div>
-                            
                             <div class="form-group" data-bind="validationElement: externalTcpPort">
                                 <label class="control-label">External TCP Port</label>
                                 <div class="flex-grow">
@@ -172,7 +170,6 @@
                             </div>
                         </div>
                     </div>
-                    
                     <div data-bind="if: $root.canCustomizeExternalTcpPorts()">
                         <div class="checkbox">
                             <input id="customize2" type="checkbox" data-bind="checked: advancedSettingsCheckBox">
@@ -186,7 +183,6 @@
                                            data-bind="textInput: externalHttpsPort">
                                 </div>
                             </div>
-                            
                             <div class="form-group" data-bind="validationElement: externalTcpPort">
                                 <label class="control-label">External TCP Port</label>
                                 <div class="flex-grow">
@@ -200,41 +196,53 @@
             </div>
         </div>
         <div class="panel padding">
+            <h3>Studio Configuration</h3>
             <div class="form-group" data-bind="validationElement: model.environment, with: $root.model">
-                <label for="port" class="control-label">Environment</label>
-                <div style="position: relative">
-                    <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
-                        <span data-bind="text: environment"></span>
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" data-bind="foreach: $root.constructor.environments">
-                        <li><a href="#" data-bind="text: $data, click: $parent.environment.bind($parent.environment, $data)"></a></li>
-                    </ul>
-                    <span class="help-block" data-bind="validationMessage: environment"></span>
+                <label class="control-label"></label>
+                <div class="flex-horizontal">
+                    <label class="form-control-static">Environment</label>
+                    <div style="position: relative" class="margin-left">
+                        <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
+                            <span data-bind="text: environment"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: $root.constructor.environments">
+                            <li><a href="#" data-bind="text: $data, click: $parent.environment.bind($parent.environment, $data)"></a></li>
+                        </ul>
+                        <span class="help-block" data-bind="validationMessage: environment"></span>
+                    </div>
                 </div>
             </div>
-            
             <hr />
-
+            <h3>Admin Client Certificate</h3>
             <div class="form-group">
-                <label class="control-label"> &nbsp; </label>
+                <label class="control-label"></label>
                 <div class="flex-grow">
                     <div class="checkbox">
                         <input id="installClientCertificate" type="checkbox" data-bind="checked: model.registerClientCertificate()">
-                        <label for="installClientCertificate">Automatically register the admin client certificate in this (local) OS</label>
+                        <label for="installClientCertificate">Automatically register the certificate in this (local) OS</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group" data-bind="if: showCertificateExpiration, visible: showCertificateExpiration, validationElement: validityPeriod">
+                <label class="control-label"></label>
+                <div class="flex-grow flex-horizontal">
+                    <label for="monthsInput" class="form-control-static">Expire in</label>
+                    <div class="input-group margin-top margin-top-sm" style="flex-grow: 0.1;">
+                        <input type="number" min="1" class="form-control margin-left" id="monthsInput" data-bind="numericInput: validityPeriod"
+                               placeholder="Validity period (Default: 60)" />
+                        <div class="input-group-addon">months</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="panel padding" data-bind="if: showAgreement, visible: showAgreement">
-            <div>
-                <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
-                    <input id="agree" type="checkbox" data-bind="checked: confirmation">
-                    <label for="agree">I accept <a target="_blank" data-bind="attr: { href: model.agreementUrl }">Let's Encrypt Subscriber Agreement</a></label>
-                </div>
-                <div data-bind="validationElement: confirmation">
-                    <div class="help-block" data-bind="validationMessage: confirmation"></div>
-                </div>
+            <div class="checkbox" data-bind="validationOptions: { insertMessages: false }">
+                <input id="agree" type="checkbox" data-bind="checked: confirmation">
+                <label for="agree">I accept <a target="_blank" data-bind="attr: { href: model.agreementUrl }">Let's Encrypt Subscriber Agreement</a></label>
+            </div>
+            <div data-bind="validationElement: confirmation">
+                <div class="help-block" data-bind="validationMessage: confirmation"></div>
             </div>
         </div>
         <div class="navigation padding padding-lg flex-horizontal">

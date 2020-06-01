@@ -13,11 +13,6 @@ class nodes extends setupStep {
     currentStep: number;
     
     remoteNodeIpOptions = ko.observableArray<string>(['0.0.0.0']);
-
-    confirmation = ko.observable<boolean>(false);
-    confirmationValidationGroup = ko.validatedObservable({
-        confirmation: this.confirmation
-    });
     
     editedNode = ko.observable<nodeInfo>();
         
@@ -31,21 +26,26 @@ class nodes extends setupStep {
    
     maxNodesAddedMsg: KnockoutComputed<string>;
     showNodeTagInUrl: KnockoutComputed<boolean>;
+
+    confirmation = ko.observable<boolean>(false);
+
+    showCertificateExpiration: KnockoutComputed<boolean>;
+    validityPeriod = ko.observable<number>();
+    
+    validationGroup = ko.validatedObservable({
+        confirmation: this.confirmation,
+        validityPeriod: this.validityPeriod
+    });
     
     constructor() {
         super();
-        
         this.bindToCurrentInstance("removeNode", "editNode", "addIpAddressFromNode", "removeIpFromNode");
-
-        this.confirmation.extend({
-            validation: [
-                {
-                    validator: (val: boolean) => val === true,
-                    message: "You must accept Let's Encrypt Subscriber Agreement"
-                }
-            ]
-        });
         
+        this.initObservables();
+        this.initValidation();
+    }
+
+    private initObservables() {
         this.defineServerUrl = ko.pureComputed(() => {
             return this.model.mode() === "Secured" && !this.model.certificate().wildcardCertificate();
         });
@@ -53,11 +53,12 @@ class nodes extends setupStep {
         this.showDnsInfo = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.showFullDomain = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.showAgreement = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
+        this.showCertificateExpiration = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.requirePublicIpWhenBindAllUsed = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.canCustomizeExternalIpsAndPorts = ko.pureComputed(() => this.model.mode() === "LetsEncrypt");
         this.canCustomizeExternalTcpPorts = ko.pureComputed(() => this.model.mode() === "Secured");
        
-        this.maxNodesAddedMsg = ko.pureComputed(() => {   
+        this.maxNodesAddedMsg = ko.pureComputed(() => {
             const numberOfNodesAdded = this.model.nodes().length;
             const maxNodesAllowed = this.model.license().maxClusterSize();
             
@@ -73,8 +74,33 @@ class nodes extends setupStep {
         });
         
         this.showNodeTagInUrl = ko.pureComputed(() => this.model.mode() !== "Secured" || this.model.certificate().wildcardCertificate());
-    }
 
+        this.model.certificate().expirationDateFormatted = ko.pureComputed(() => {
+            const validMonths = this.validityPeriod();
+            
+            if (!validMonths) {
+                return null;
+            }
+            
+            return moment.utc().add(validMonths, "months").format();
+        });
+    }
+    
+    private initValidation() {
+        this.confirmation.extend({
+            validation: [
+                {
+                    validator: (val: boolean) => !this.showAgreement() || val,
+                    message: "You must accept Let's Encrypt Subscriber Agreement"
+                }
+            ]
+        });
+
+        this.validityPeriod.extend({
+            digit: true
+        });
+    }
+    
     canActivate(): JQueryPromise<canActivateResultDto> {
         const mode = this.model.mode();
 
@@ -123,10 +149,8 @@ class nodes extends setupStep {
         const nodes = this.model.nodes();
         let isValid = true;
         
-        if (this.showAgreement()) {
-            if (!this.isValid(this.confirmationValidationGroup)) {
+        if (!this.isValid(this.validationGroup)) {
                 isValid = false;
-            }
         }
         
         let focusedOnInvalidNode = false;
