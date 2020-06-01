@@ -55,11 +55,11 @@ namespace Raven.Server.Web.Studio
                     {
                         ["Companies"] = new Dictionary<string, string[]>
                         {
-                            ["StockPrice"] = new[] {"Open", "Close", "High", "Low", "Volume"}
+                            ["StockPrices"] = new[] {"Open", "Close", "High", "Low", "Volume"}
                         },
                         ["Employees"] = new Dictionary<string, string[]>
                         {
-                            ["HeartRate"] = new []{"BPM"}
+                            ["HeartRates"] = new []{"BPM"}
                         }
                     }
                 };

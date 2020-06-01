@@ -44,14 +44,14 @@ namespace SlowTests.Client.TimeSeries.Session
             using (var store = GetDocumentStore())
             {
                 await store.TimeSeries.RegisterAsync<User, StockPrice>();
-                await store.TimeSeries.RegisterAsync("Users", nameof(HeartRateMeasure), new[] {nameof(HeartRateMeasure.HeartRate)});
+                await store.TimeSeries.RegisterAsync("Users", nameof(HeartRateMeasure) + "s", new[] {nameof(HeartRateMeasure.HeartRate)});
 
                 var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
-                var heartrate = updated.GetNames("users",  nameof(HeartRateMeasure));
+                var heartrate = updated.GetNames("users",  nameof(HeartRateMeasure) + "s");
                 Assert.Equal(1, heartrate.Length);
                 Assert.Equal(nameof(HeartRateMeasure.HeartRate), heartrate[0]);
 
-                var stock = updated.GetNames("users",  nameof(StockPrice));
+                var stock = updated.GetNames("users",  nameof(StockPrice) + "s");
                 Assert.Equal(5, stock.Length);
                 Assert.Equal(nameof(StockPrice.Open), stock[0]);
                 Assert.Equal(nameof(StockPrice.Close), stock[1]);
@@ -138,7 +138,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
 
-                    var tsf = session.TimeSeriesFor("users/ayende", nameof(HeartRateMeasure));
+                    var tsf = session.TimeSeriesFor("users/ayende", nameof(HeartRateMeasure) + "s");
 
                     tsf.Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
                     tsf.Append(baseline.AddMinutes(2), new[] { 60d }, "watches/fitbit");
@@ -167,7 +167,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
-                    var tsf = session.TimeSeriesFor("users/ayende", nameof(HeartRateMeasure));
+                    var tsf = session.TimeSeriesFor("users/ayende", nameof(HeartRateMeasure) + "s");
                     tsf.Append(baseline, new[] { 58d }, "watches/fitbit");
                     tsf.Append(baseline.AddMinutes(10), new[] { 60d }, "watches/fitbit");
 
@@ -225,8 +225,8 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(2, tsNames.Count);
 
                     // should be sorted
-                    Assert.Equal(nameof(HeartRateMeasure), tsNames[0]);
-                    Assert.Equal(nameof(StockPrice), tsNames[1]);
+                    Assert.Equal(nameof(HeartRateMeasure) + "s", tsNames[0]);
+                    Assert.Equal(nameof(StockPrice) + "s", tsNames[1]);
 
                     var heartRateMeasures = session.TimeSeriesFor<HeartRateMeasure>(user).Get().Single();
                     Assert.Equal(66, heartRateMeasures.Value.HeartRate);
@@ -274,7 +274,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<HeartRateMeasure>>(@"
     declare timeseries out(u) 
     {
-        from u.HeartRateMeasure between $start and $end
+        from u.HeartRateMeasures between $start and $end
         group by 1h
         select min(), max(), first(), last()
     }
@@ -293,7 +293,7 @@ namespace SlowTests.Client.TimeSeries.Session
                         using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                         using (ctx.OpenReadTransaction())
                         {
-                            var reader = tss.GetReader(ctx, "users/ayende", nameof(HeartRateMeasure), baseline, baseline.AddDays(1));
+                            var reader = tss.GetReader(ctx, "users/ayende", nameof(HeartRateMeasure) + "s", baseline, baseline.AddDays(1));
 
                             Assert.True(reader.Init());
 
@@ -304,7 +304,7 @@ namespace SlowTests.Client.TimeSeries.Session
                             TimeSeriesValuesSegment.ParseTimeSeriesKey(key, size, ctx, out var docId, out var name, out DateTime baseline2);
 
                             Assert.Equal("users/ayende", docId);
-                            Assert.Equal(nameof(HeartRateMeasure), name, StringComparer.InvariantCultureIgnoreCase);
+                            Assert.Equal(nameof(HeartRateMeasure) + "s", name, StringComparer.InvariantCultureIgnoreCase);
                             Assert.Equal(baseline.AddMinutes(61), baseline2, RavenTestHelper.DateTimeComparer.Instance);
 
                             Assert.Equal(1, reader.SegmentsOrValues().Count());
@@ -384,7 +384,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult<HeartRateMeasure>>(@"
 declare timeseries out(x) 
 {
-    from x.HeartRateMeasure between $start and $end
+    from x.HeartRateMeasures between $start and $end
 }
 from Users as doc
 where doc.Age > 49
@@ -624,7 +624,7 @@ select out(doc)
                     var query = session.Advanced.RawQuery<TimeSeriesRawResult<StockPrice>>(@"
 declare timeseries out() 
 {
-    from StockPrice 
+    from StockPrices
     between $start and $end
 }
 from Users as u
@@ -665,17 +665,14 @@ select out()
 
                     var query = session.Query<User>()
                         .Select(u =>
-                            RavenQuery.TimeSeries<StockPrice>(u, "StockPrice", baseline.AddDays(-1), now.AddDays(1))
+                            RavenQuery.TimeSeries<StockPrice>(u, "StockPrices", baseline.AddDays(-1), now.AddDays(1))
                                 .ToList());
 
-                    var result = query.First();
-                    var expected = (60 * 24) // entire raw policy for 1 day 
-                                   + (2 * 24) // first day of 'By30Minutes'
-                                   + 24 // first day of 'By1Hour'
-                                   + 4  // first day of 'By6Hours'
-                                   + 1; // first day of 'By1Day'
+                    var result = query.Single();
+                    var count = result.Results.Length;
 
-                    Assert.Equal(expected, result.Count);
+                    Assert.Equal(5, result.Results[count - 1440].Values.Length);
+                    Assert.Equal(5 * 6, result.Results[count - 1441].Values.Length);
 
                     foreach (var res in result.Results)
                     {

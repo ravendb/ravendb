@@ -230,9 +230,9 @@ namespace Raven.Client.Documents.TimeSeries
             AsyncHelpers.RunSync(() => RemovePolicyAsync<TCollection>(name));
         }
 
-        internal static string GetTimeSeriesName<TTimeSeriesEntry>()
+        internal string GetTimeSeriesName<TTimeSeriesEntry>()
         {
-            return typeof(TTimeSeriesEntry).Name;
+            return _store.Conventions.GetCollectionName(typeof(TTimeSeriesEntry));
         }
 
         public TimeSeriesOperations ForDatabase(string database)
