@@ -12,6 +12,11 @@ class clientConfiguration extends viewModelBase {
         save: ko.observable<boolean>(false)
     };
     
+    isSaveEnabled = ko.pureComputed(() => {
+        const isDirty = this.model.dirtyFlag().isDirty();
+        return isDirty && !this.spinners.save();
+    });
+    
     activate(args: any) {
         super.activate(args);
         
@@ -56,6 +61,7 @@ class clientConfiguration extends viewModelBase {
         
         new saveGlobalClientConfigurationCommand(this.model.toDto())
             .execute()
+            .done(() => this.model.dirtyFlag().reset())
             .always(() => this.spinners.save(false));
     }
 

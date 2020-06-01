@@ -1,78 +1,96 @@
-<div class="content-container">
+<div class="content-container" id="client-configuration-view">
     <form data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
-            <div class="toolbar">
-                <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
-                    <i class="icon-save"></i> <span>Save</span>
+            <div class="toolbar margin-bottom margin-bottom-lg flex-horizontal">
+                <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-save"></i><span>Save</span>
                 </button>
-            </div>
-            <div class="toggle" data-bind="visible: hasGlobalConfiguration">
-                <input id="toggleOverride" class="styled" type="checkbox" data-bind="checked: overrideServer">
-                <label for="toggleOverride">
-                    Override server configuration
-                </label>
+                <div class="toggle margin-left margin-left-lg" data-bind="visible: hasGlobalConfiguration">
+                    <input id="toggleOverride" type="checkbox" data-bind="checked: overrideServer">
+                    <label for="toggleOverride">
+                        Override server configuration
+                    </label>
+                </div>
             </div>
             <div>
-                <div class="row flex-row row-sm margin-bottom" data-bind="visible: hasGlobalConfiguration">
-                    <div class="col-sm-5">
+                <div class="row" data-bind="visible: hasGlobalConfiguration">
+                    <div class="col-sm-6">
                     </div>
                     <div class="col-sm-2">
+                        <h3><a href="#" data-bind="attr: { href: globalConfigUrl }"><i class="icon-link"></i><span>Server Configuration</span></a></h3>
                     </div>
                     <div class="col-sm-2">
-                        <a href="#" data-bind="attr: { href: globalConfigUrl }"><i class="icon-link"></i> <span>Server configuration</span></a>
-                    </div>
-                    <div class="col-sm-2">
-                        <span>Effective configuration</span>
+                        <h3>Effective Configuration</h3>
                     </div>
                 </div>
-                <div class="panel padding padding-sm">
-                    <div class="row flex-row row-sm">
-                        <div class="col-sm-5">
-                            <div class="checkbox">
-                                <input id="checkboxReadBalance" class="styled" type="checkbox" 
-                                       data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings">
-                                <label for="checkboxReadBalance">
-                                    Read balance behavior
-                                </label>
+                <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
+                    <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
+                        <div class="panel padding">
+                            <div class="row">
+                                <div data-bind="css: { 'col-sm-4': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
+                                    <div class="checkbox">
+                                        <input id="checkboxMaxRequests" type="checkbox" min="0"
+                                               data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings, validationElement: model.maxNumberOfRequestsPerSession">
+                                        <label for="checkboxMaxRequests">
+                                            Maximum number of requests per session
+                                        </label>
+                                    </div>
+                                </div>
+                                <div data-bind="validationElement: model.maxNumberOfRequestsPerSession, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-4': !hasGlobalConfiguration() }">
+                                    <input class="form-control" type="number" min="0" placeholder="Enter requests number"
+                                           data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
+                                </div>
+                                <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
+                                    <input class="form-control" disabled data-bind="value: globalModel.maxNumberOfRequestsPerSession" />
+                                </div>
+                                <div class="col-sm-2 effective-text" data-bind="visible: hasGlobalConfiguration">
+                                    <h3 data-bind="text: effectiveMaxNumberOfRequestsPerSession"></h3>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-sm-2">
-                            <div class="dropdown" style="display:block;">
-                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
-                                        data-bind="enable: _.includes(model.isDefined(), 'readBalanceBehavior')">
-                                    <span data-bind="text: model.readBalanceBehaviorLabel"></span> <span class="caret"></span>
-                                </button>
-                                <ul class="dropdown-menu" data-bind="foreach: model.constructor.readModes">
-                                    <li><a href="#" data-bind="text: label, click: _.partial($root.setReadMode, value)"></a></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
-                            <input class="form-control" disabled data-bind="value: globalModel.readBalanceBehaviorLabel" />
-                        </div>
-                        <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, text: effectiveReadBalanceBehavior">
                         </div>
                     </div>
                 </div>
-                <div class="panel padding padding-sm">
-                    <div class="row flex-row row-sm">
-                        <div class="col-sm-5">
-                            <div class="checkbox">
-                                <input id="checkboxMaxRequests" class="styled" type="checkbox" min="0"
-                                       data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings, validationElement: model.maxNumberOfRequestsPerSession">
-                                <label for="checkboxMaxRequests">
-                                    Maximum number of requests per session
-                                </label>
+                <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
+                    <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
+                        <div class="panel padding">
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="toggle toggle-primary">
+                                        <input id="useSessionContextToggle" type="checkbox" data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', enable: canEditSettings">
+                                        <label for="useSessionContextToggle">
+                                            Use Session Context for Load Balancing
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-sm-2" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
-                            <input class="form-control" type="number"
-                                   data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
-                        </div>
-                        <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
-                            <input class="form-control" disabled data-bind="value: globalModel.maxNumberOfRequestsPerSession" />
-                        </div>
-                        <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, text: effectiveMaxNumberOfRequestsPerSession">
+                            <div class="row margin-top margin-top-sm">
+                                <div data-bind="css: { 'col-sm-4': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
+                                    <div class="checkbox">
+                                        <input id="checkboxReadBalance" type="checkbox"
+                                               data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings && !_.includes(model.isDefined() , 'useSessionContextForLoadBehavior')">
+                                        <label for="checkboxReadBalance">
+                                            Read balance behavior
+                                        </label>
+                                    </div>
+                                </div>
+                                <div data-bind="css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-4': !hasGlobalConfiguration() }">
+                                    <div class="dropdown flex-vertical">
+                                        <button class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
+                                                data-bind="enable: _.includes(model.isDefined(), 'readBalanceBehavior')">
+                                            <span data-bind="text: model.readBalanceBehaviorLabel"></span><span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: model.constructor.readModes">
+                                            <li><a href="#" data-bind="text: label, click: _.partial($root.setReadMode, value)"></a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
+                                    <input class="form-control" disabled data-bind="value: globalModel.readBalanceBehaviorLabel" />
+                                </div>
+                                <div class="col-sm-2 effective-text" data-bind="visible: hasGlobalConfiguration()">
+                                    <h3 data-bind="text: effectiveReadBalanceBehavior"></h3>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

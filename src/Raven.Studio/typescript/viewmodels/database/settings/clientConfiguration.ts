@@ -10,48 +10,19 @@ class clientConfiguration extends viewModelBase {
     model: clientConfigurationModel;
     globalModel: clientConfigurationModel;
     hasGlobalConfiguration = ko.observable<boolean>(false);
-    overrideServer = ko.observable<boolean>(false);
-    
     globalConfigUrl = appUrl.forGlobalClientConfiguration();
+    
+    overrideServer = ko.observable<boolean>(false);
+    canEditSettings: KnockoutComputed<boolean>;    
     
     effectiveReadBalanceBehavior: KnockoutComputed<string>;
     effectiveMaxNumberOfRequestsPerSession: KnockoutComputed<string>;
-    canEditSettings: KnockoutComputed<boolean>;
-    
+     
     spinners = {
         save: ko.observable<boolean>(false)
     };
-    
-    constructor() {
-        super();
-        
-        this.effectiveReadBalanceBehavior = ko.pureComputed(() => {
-            if (!this.hasGlobalConfiguration()) {
-                return "";
-            }
-            
-            const configToUse = this.overrideServer() ? this.model : this.globalModel;
-            const label = configToUse.readBalanceBehaviorLabel();
-            return _.includes(configToUse.isDefined(), "readBalanceBehavior") ? label : "<use client default>";
-        });
-        
-        this.effectiveMaxNumberOfRequestsPerSession = ko.pureComputed(() => {
-            if (!this.hasGlobalConfiguration()) {
-                return "";
-            }
-            
-            const configToUse = this.overrideServer() ? this.model : this.globalModel;
-            const maxRequests = configToUse.maxNumberOfRequestsPerSession();
-            
-            return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") && maxRequests ? maxRequests.toLocaleString() :  '<use client default>';            
-        });
-        
-        this.canEditSettings = ko.pureComputed(() => {
-            const hasGlobal = this.hasGlobalConfiguration();
-            const override = this.overrideServer();
-            return !hasGlobal || override;
-        })
-    }
+
+    isSaveEnabled: KnockoutComputed<boolean>;
 
     activate(args: any) {
         super.activate(args);
@@ -66,15 +37,11 @@ class clientConfiguration extends viewModelBase {
             });
         
         const localTask = new getClientConfigurationCommand(this.activeDatabase())
-            .execute()  
-            .done((dto) => {
-                this.model = new clientConfigurationModel(dto);
-            });
+            .execute()
+            .done((dto) => this.model = new clientConfigurationModel(dto));
         
         return $.when<any>(localTask, globalTask)
-            .done(() => {
-                this.overrideServer(this.hasGlobalConfiguration() && !this.model.disabled());
-            });
+            .done(() => this.initObservables());
     }
 
     compositionComplete() {
@@ -90,6 +57,51 @@ class clientConfiguration extends viewModelBase {
         });
     }
 
+    private initObservables() {
+        this.effectiveReadBalanceBehavior = ko.pureComputed(() => {
+            if (!this.hasGlobalConfiguration()) {
+                return "";
+            }
+
+            const configToUse = this.overrideServer() ? this.model : this.globalModel;
+            const label = configToUse.readBalanceBehaviorLabel();
+
+            const usingSessionContext = _.includes(configToUse.isDefined(), "useSessionContextForLoadBehavior");
+            
+            return usingSessionContext ? "<Session Context>" :
+                _.includes(configToUse.isDefined(), "readBalanceBehavior") ? label : "<Client Default>";
+        });
+
+        this.effectiveMaxNumberOfRequestsPerSession = ko.pureComputed(() => {
+            if (!this.hasGlobalConfiguration()) {
+                return "";
+            }
+
+            const configToUse = this.overrideServer() ? this.model : this.globalModel;
+            const maxRequests = configToUse.maxNumberOfRequestsPerSession();
+
+            return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") && maxRequests ? maxRequests.toLocaleString() :  '<Client Default>';
+        });
+
+        this.canEditSettings = ko.pureComputed(() => {
+            const hasGlobal = this.hasGlobalConfiguration();
+            const override = this.overrideServer();
+            return !hasGlobal || override;
+        })
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.model,
+            this.overrideServer
+        ], false);
+
+        this.isSaveEnabled = ko.pureComputed(() => {
+            const isDirty = this.dirtyFlag().isDirty();
+            return isDirty && !this.spinners.save();
+        });
+
+        this.overrideServer(this.hasGlobalConfiguration() && !this.model.disabled());
+    }
+    
     private initValidation() {
         this.model.readBalanceBehavior.extend({
             required: {
@@ -117,6 +129,7 @@ class clientConfiguration extends viewModelBase {
 
         new saveClientConfigurationCommand(this.model.toDto(), this.activeDatabase())
             .execute()
+            .done(() => this.dirtyFlag().reset())
             .always(() => this.spinners.save(false));
     }
 
