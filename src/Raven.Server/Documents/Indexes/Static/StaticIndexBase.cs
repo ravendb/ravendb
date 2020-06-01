@@ -180,18 +180,18 @@ namespace Raven.Server.Documents.Indexes.Static
             funcs.Add(map);
         }
 
-        public T? TryConvert<T>(object value)
+        protected dynamic TryConvert<T>(object value)
             where T : struct
         {
             if (value == null || value is DynamicNullObject)
-                return null;
+                return DynamicNullObject.Null;
 
             var type = typeof(T);
             if (type == typeof(double) || type == typeof(float))
             {
                 var dbl = TryConvertToDouble(value);
                 if (dbl.HasValue == false)
-                    return null;
+                    return DynamicNullObject.Null;
 
                 if (type == typeof(float))
                     return (T)(object)Convert.ToSingle(dbl.Value);
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 var lng = TryConvertToLong(value);
                 if (lng.HasValue == false)
-                    return null;
+                    return DynamicNullObject.Null;
 
                 if (type == typeof(int))
                     return (T)(object)Convert.ToInt32(lng.Value);
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return (T)(object)lng.Value;
             }
 
-            return null;
+            return DynamicNullObject.Null;
 
             static double? TryConvertToDouble(object v)
             {
