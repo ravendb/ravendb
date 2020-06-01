@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
@@ -1244,10 +1245,6 @@ namespace SlowTests.Client.TimeSeries.Operations
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
-                var nowMinutes = now.Minute;
-                now = now.AddMinutes(-nowMinutes);
-                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
-
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
 
@@ -1269,14 +1266,56 @@ namespace SlowTests.Client.TimeSeries.Operations
 
                 var result = store.Operations.Send(new GetTimeSeriesOperation("users/karmel", "Heartrate"));
 
-                var expected = (60 * 24) // entire raw policy for 1 day 
-                               + (2 * 24) // first day of 'By30Minutes'
-                               + 24 // first day of 'By1Hour'
-                               + 4  // first day of 'By6Hours'
-                               + 1; // first day of 'By1Day'
-
-                Assert.Equal(expected, result.Entries.Length);
+                ValidateResults(result.Entries, now);
             }
+        }
+
+        public static void ValidateResults(TimeSeriesEntry[] results, DateTime now)
+        {
+            var byDay = 0;
+            var by6Hours = 0;
+            var by1Hour = 0;
+            var by30Min = 0;
+            var rawCount = 0;
+            foreach (var entry in results)
+            {
+                if (entry.IsRollup)
+                {
+                    switch (entry.Values[5])
+                    {
+                        case 1440:
+                            byDay++;
+                            break;
+                        case 360:
+                            by6Hours++;
+                            break;
+                        case 60:
+                            by1Hour++;
+                            break;
+                        case 30:
+                            by30Min++;
+                            break;
+                        default:
+                            throw new AggregateException($"Wrong number of minutes {entry.Values[5]}");
+                    }
+
+                    continue;
+                }
+
+                rawCount++;
+            }
+
+            var expectedByDay = 1 + (now.Hour >= 6 ? 1 : 0); // first day of 'By1Day'
+            var expectedBy6Hours = 4 + (now.Hour >= 6 ? 0 : 1); // first day of 'By6Hours'
+            var expectedBy1Hour = 24 + (now.Minute / 30); // first day of 'By1Hour'
+            var expectedBy30Min = 24 * 2 + 1; // first day of 'By30Minutes'
+            var expectedRawCount = 1440; // entire raw policy for 1 day 
+
+            Assert.Equal(expectedRawCount, rawCount);
+            Assert.Equal(expectedBy30Min, by30Min);
+            Assert.Equal(expectedBy1Hour, by1Hour);
+            Assert.Equal(expectedBy6Hours, by6Hours);
+            Assert.Equal(expectedByDay, byDay);
         }
 
         [Fact]
@@ -1349,45 +1388,11 @@ namespace SlowTests.Client.TimeSeries.Operations
                     }
                 }));
 
-                var expected = (60 * 24) // entire raw policy for 1 day 
-                               + (2 * 24) // first day of 'By30Minutes'
-                               + 24 // first day of 'By1Hour'
-                               + 4  // first day of 'By6Hours'
-                               + 1; // first day of 'By1Day'
-
                 Assert.True(result.Values.TryGetValue("Heartrate", out var rangeResult));
-                Assert.Equal(1, rangeResult.Count);
-                Assert.Equal(expected, rangeResult[0].Entries.Length);
-
-                var rollupsCount = expected - (60 * 24);
-
-                for (int i = 0; i < rollupsCount; i++)
-                {
-                    Assert.True(rangeResult[0].Entries[i].IsRollup);
-                    Assert.Equal(6, rangeResult[0].Entries[i].Values.Length);
-                }
-
-                for (int i = rollupsCount; i < expected; i++)
-                {
-                    Assert.False(rangeResult[0].Entries[i].IsRollup);
-                    Assert.Equal(1, rangeResult[0].Entries[i].Values.Length);
-                }
+                ValidateResults(rangeResult.SelectMany(x => x.Entries).ToArray(), now);
 
                 Assert.True(result.Values.TryGetValue("BloodPressure", out rangeResult));
-                Assert.Equal(1, rangeResult.Count);
-                Assert.Equal(expected, rangeResult[0].Entries.Length);
-
-                for (int i = 0; i < rollupsCount; i++)
-                {
-                    Assert.True(rangeResult[0].Entries[i].IsRollup);
-                    Assert.Equal(6, rangeResult[0].Entries[i].Values.Length);
-                }
-
-                for (int i = rollupsCount; i < expected; i++)
-                {
-                    Assert.False(rangeResult[0].Entries[i].IsRollup);
-                    Assert.Equal(1, rangeResult[0].Entries[i].Values.Length);
-                }
+                ValidateResults(rangeResult.SelectMany(x => x.Entries).ToArray(), now);
             }
         }
     }

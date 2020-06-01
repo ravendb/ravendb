@@ -1269,7 +1269,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(288, ts.Count);
+                    Assert.Equal(289, ts.Count);
 
                     ts = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get( DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(12, ts.Count);
@@ -1378,7 +1378,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
-                    Assert.Equal(2, raw.Count);
+                    Assert.Equal(3, raw.Count);
 
                     var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
                     Assert.Equal(30, res.Values[4] / 2);
@@ -1402,7 +1402,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
-                    Assert.Equal(1, raw.Count);
+                    Assert.Equal(2, raw.Count);
 
                     var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
                     Assert.Equal(31, res.Values[4]);
@@ -1453,7 +1453,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
-                    Assert.Equal(2, raw.Count);
+                    Assert.Equal(3, raw.Count);
 
                     var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
                     Assert.Equal(30, res.Values[4] / 2);
@@ -1474,7 +1474,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var raw = session.TimeSeriesFor("companies/1", "Heartrate").Get().ToList();
-                    Assert.Equal(2, raw.Count);
+                    Assert.Equal(3, raw.Count);
 
                     var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
                     Assert.Equal(29, res.Values[4] / 2);
