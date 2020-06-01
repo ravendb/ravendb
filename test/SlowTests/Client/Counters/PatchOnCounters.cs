@@ -122,6 +122,55 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
+        public void CounterDeletionShouldUpdateMetadata()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Aviv"
+                    }, "users/1-A");
+
+                    var countersFor = session.CountersFor("users/1-A");
+                    countersFor.Increment("Downloads", 100);
+                    countersFor.Increment("Likes", 200);
+
+                    session.SaveChanges();
+                }
+
+                store.Operations.Send(new PatchOperation("users/1-A", null, new PatchRequest
+                {
+                    Script = "deleteCounter(this, args.name)",
+                    Values =
+                    {
+                        { "name", "Downloads" }
+                    }
+                }));
+
+                using (var session = store.OpenSession())
+                {
+                    var countersFor = session.CountersFor("users/1-A");
+                    var val = countersFor.Get("Likes");
+                    Assert.Equal(200, val);
+
+                    val = countersFor.Get("Downloads");
+                    Assert.Null(val);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var u = session.Load<User>("users/1-A");
+                    var counters = session.Advanced.GetCountersFor(u);
+
+                    Assert.Equal(1, counters.Count);
+                    Assert.Equal("Likes", counters[0]);
+                }
+            }
+        }
+
+        [Fact]
         public void CanGetCounterNameFromMetadataAndIncrement()
         {
             using (var store = GetDocumentStore())

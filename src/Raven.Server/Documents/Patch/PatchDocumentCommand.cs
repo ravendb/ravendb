@@ -150,33 +150,33 @@ namespace Raven.Server.Documents.Patch
                             UpdateOriginalDocument();
                         }
 
-                        if (run.UpdatedDocumentCounterIds != null)
+                        var nonPersistentFlags = NonPersistentDocumentFlags.None;
+                        if (run.DocumentCountersToUpdate != null)
                         {
-                            foreach (var docId in run.UpdatedDocumentCounterIds)
+                            foreach (var kvp in run.DocumentCountersToUpdate)
                             {
+                                var docId = kvp.Key;
+                                var counterToAdd = kvp.Value.CountersToAdd;
+                                var countersToRemove = kvp.Value.CountersToRemove;
+
                                 if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
                                 {
                                     Debug.Assert(originalDocument != null);
-                                    using (var old = result.ModifiedDocument)
+
+                                    var newData = CountersStorage.ApplyCounterUpdatesToMetadata(context, result.ModifiedDocument, docId,
+                                        counterToAdd, countersToRemove, ref originalDocument.Flags);
+                                    if (newData != null)
                                     {
-                                        result.ModifiedDocument = UpdateCountersInMetadata(context, result.ModifiedDocument, docId, ref originalDocument.Flags);
+                                        result.ModifiedDocument = newData;
+                                        nonPersistentFlags |= NonPersistentDocumentFlags.ByCountersUpdate;
                                     }
                                 }
-                                else
+                                else if (_isTest == false)
                                 {
                                     var docToUpdate = _database.DocumentsStorage.Get(context, docId);
-                                    var docBlittableToUpdate = UpdateCountersInMetadata(context, docToUpdate.Data, docId, ref docToUpdate.Flags);
-                                    if (_isTest == false)
-                                    {
-                                        _database.DocumentsStorage.Put(
-                                            context,
-                                            docId,
-                                            docToUpdate.ChangeVector,
-                                            docBlittableToUpdate,
-                                            null,
-                                            null,
-                                            docToUpdate.Flags);
-                                    }
+
+                                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, docToUpdate, docId, counterToAdd, countersToRemove,
+                                        NonPersistentDocumentFlags.ByCountersUpdate);
                                 }
                             }
                         }
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Patch
                         if (originalDoc == null)
                         {
                             if (_isTest == false || run.PutOrDeleteCalled)
-                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument);
+                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, nonPersistentFlags: nonPersistentFlags);
 
                             result.Status = PatchStatus.Created;
                         }
@@ -213,9 +213,10 @@ namespace Raven.Server.Documents.Patch
                                         id,
                                         originalDocument.ChangeVector,
                                         result.ModifiedDocument,
-                                        null,
-                                        null,
-                                        originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                                        lastModifiedTicks: null,
+                                        changeVector: null,
+                                        originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction),
+                                        nonPersistentFlags);
                                 }
 
                                 result.Status = PatchStatus.Patched;
@@ -307,34 +308,6 @@ namespace Raven.Server.Documents.Patch
         }
 
         public abstract string HandleReply(DynamicJsonArray reply, HashSet<string> modifiedCollections);
-
-        private static BlittableJsonReaderObject UpdateCountersInMetadata(
-            DocumentsOperationContext context,
-            BlittableJsonReaderObject modifiedDocument,
-            string id, ref DocumentFlags flags)
-        {
-            var metadata = modifiedDocument.GetMetadata();
-            if (metadata.Modifications == null)
-                metadata.Modifications = new DynamicJsonValue(metadata);
-
-            var countersFromStorage = context.DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersForDocument(context, id).ToList();
-            if (countersFromStorage.Count == 0)
-            {
-                metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                flags &= ~DocumentFlags.HasCounters;
-            }
-            else
-            {
-                metadata.Modifications[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(countersFromStorage);
-                flags |= DocumentFlags.HasCounters;
-            }
-
-            modifiedDocument.Modifications = new DynamicJsonValue(modifiedDocument)
-            { [Constants.Documents.Metadata.Key] = metadata };
-
-            modifiedDocument = context.ReadObject(modifiedDocument, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            return modifiedDocument;
-        }
     }
 
     public class BatchPatchDocumentCommand : PatchDocumentCommandBase

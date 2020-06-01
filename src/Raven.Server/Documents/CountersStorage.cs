@@ -1487,13 +1487,23 @@ namespace Raven.Server.Documents
             return context.AllocateStringValue(null, p, sizeOfDocId);
         }
 
-        public string UpdateDocumentCounters(DocumentsOperationContext context, Document doc, string docId,
+        public string UpdateDocumentCounters(DocumentsOperationContext context, Document document, string docId,
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, NonPersistentDocumentFlags nonPersistentDocumentFlags)
+        {
+            var newData = ApplyCounterUpdatesToMetadata(context, document.Data, docId, countersToAdd, countersToRemove, ref document.Flags);
+            if (newData == null) 
+                return null;
+
+            var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: document.Flags, nonPersistentFlags: nonPersistentDocumentFlags);
+            return putResult.ChangeVector;
+        }
+
+        internal static BlittableJsonReaderObject ApplyCounterUpdatesToMetadata(DocumentsOperationContext context, BlittableJsonReaderObject data, string docId,
+            SortedSet<string> countersToAdd, HashSet<string> countersToRemove, ref DocumentFlags flags)
         {
             if ((countersToRemove == null || countersToRemove.Count == 0) && countersToAdd.Count == 0)
                 return null;
 
-            var data = doc.Data;
             BlittableJsonReaderArray metadataCounters = null;
             if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
             {
@@ -1504,7 +1514,7 @@ namespace Raven.Server.Documents
             if (hadModifications == false)
                 return null;
 
-            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+            flags = flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
             if (counters.Count == 0)
             {
                 flags = flags.Strip(DocumentFlags.HasCounters);
@@ -1512,10 +1522,7 @@ namespace Raven.Server.Documents
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata);
                     metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                    data.Modifications = new DynamicJsonValue(data)
-                    {
-                        [Constants.Documents.Metadata.Key] = metadata
-                    };
+                    data.Modifications = new DynamicJsonValue(data) {[Constants.Documents.Metadata.Key] = metadata};
                 }
             }
             else
@@ -1524,26 +1531,18 @@ namespace Raven.Server.Documents
                 data.Modifications = new DynamicJsonValue(data);
                 if (metadata == null)
                 {
-                    data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                    {
-                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
-                    };
+                    data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)};
                 }
                 else
                 {
-                    metadata.Modifications = new DynamicJsonValue(metadata)
-                    {
-                        [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)
-                    };
+                    metadata.Modifications = new DynamicJsonValue(metadata) {[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)};
                     data.Modifications[Constants.Documents.Metadata.Key] = metadata;
                 }
             }
 
             using (data)
             {
-                var newDocumentData = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, null, newDocumentData, flags: flags, nonPersistentFlags: nonPersistentDocumentFlags);
-                return putResult.ChangeVector;
+                return context.ReadObject(data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
         }
 
