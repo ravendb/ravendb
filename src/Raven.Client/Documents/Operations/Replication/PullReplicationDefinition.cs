@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public string MentorNode;
 
-        public PullReplicationMode Mode = PullReplicationMode.Read;
+        public PullReplicationMode Mode = PullReplicationMode.Outgoing;
 
         public string Name;
         public long TaskId;
@@ -25,6 +25,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public PullReplicationDefinition(string name, TimeSpan delay = default, string mentor = null)
         {
+            Name = name;
             MentorNode = mentor;
             DelayReplicationFor = delay;
         }
@@ -55,6 +56,19 @@ namespace Raven.Client.Documents.Operations.Replication
                     throw new InvalidOperationException("Your server is unsecured and therefore you can't define pull replication with a certificate.");
                 }
             }
+        }
+        
+        public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
+        {
+            return new ExternalReplication
+            {
+                Url = request.SourceUrl,
+                Database = request.Database,
+                Name = request.PullReplicationSinkTaskName,
+                DelayReplicationFor = DelayReplicationFor,
+                MentorNode = MentorNode,
+                TaskId = taskId
+            };
         }
     }
 }

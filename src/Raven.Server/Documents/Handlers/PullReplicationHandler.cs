@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Raven.Client.Json.Serialization;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -55,8 +57,7 @@ namespace Raven.Server.Documents.Handlers
             
             ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
             
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "register-hub-access");
                 var access = JsonDeserializationClient.ReplicationHubAccess(blittableJson);
@@ -79,63 +80,59 @@ namespace Raven.Server.Documents.Handlers
                 using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBas64));
                 var publicKeyPinningHash = cert.GetPublicKeyPinningHash();
 
-                var command = new RegisterReplicationHubAccessCommand(Database.Name, hub, access, publicKeyPinningHash, cert.Thumbprint, GetRaftRequestIdFromQuery());
-                await Server.ServerStore.SendToLeaderAsync(command);
+                var command = new RegisterReplicationHubAccessCommand(Database.Name, hub, access, publicKeyPinningHash, cert.Thumbprint, GetRaftRequestIdFromQuery(),
+                    cert.Issuer, cert.Subject,cert.NotBefore, cert.NotAfter);
+                var result = await Server.ServerStore.SendToLeaderAsync(command);
+                await WaitForIndexToBeApplied(context, result.Index);
             }
         }
-        
+
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE", AuthorizationStatus.Operator)]
-        public async Task UnegisterHubAccess()
+        public async Task UnregisterHubAccess()
         {
-            // if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-            //     throw new BadRequestException(errorMessage);
-            //
-            // ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-            //
-            // PullReplicationDefinition pullReplication = null;
-            // await DatabaseConfigurations((_, databaseName, blittableJson, guid) =>
-            //     {
-            //         pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
-            //         
-            //         pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
-            //         var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName, guid)
-            //         {
-            //             Definition = pullReplication
-            //         };
-            //         return ServerStore.SendToLeaderAsync(updatePullReplication);
-            //     }, "update-hub-pull-replication", 
-            //     GetRaftRequestIdFromQuery(),
-            //     fillJson: (json, _, index) =>
-            //     {
-            //         json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
-            //     }, statusCode: HttpStatusCode.Created);
+            var hub = GetStringQueryString("hub", true);
+            var thumbprint = GetStringQueryString("thumbprint", true);
+
+            if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var command = new UnregisterReplicationHubAccessCommand(Database.Name, hub, thumbprint, GetRaftRequestIdFromQuery());
+                var result = await Server.ServerStore.SendToLeaderAsync(command);
+                await WaitForIndexToBeApplied(context, result.Index);
+            }
         }
 
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET", AuthorizationStatus.Operator)]
-        public async Task ListHubAccess()
+        public Task ListHubAccess()
         {
-            // if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-            //     throw new BadRequestException(errorMessage);
-            //
-            // ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-            //
-            // PullReplicationDefinition pullReplication = null;
-            // await DatabaseConfigurations((_, databaseName, blittableJson, guid) =>
-            //     {
-            //         pullReplication = JsonDeserializationClient.PullReplicationDefinition(blittableJson);
-            //         
-            //         pullReplication.Validate(ServerStore.Server.Certificate?.Certificate != null);
-            //         var updatePullReplication = new UpdatePullReplicationAsHubCommand(databaseName, guid)
-            //         {
-            //             Definition = pullReplication
-            //         };
-            //         return ServerStore.SendToLeaderAsync(updatePullReplication);
-            //     }, "update-hub-pull-replication", 
-            //     GetRaftRequestIdFromQuery(),
-            //     fillJson: (json, _, index) =>
-            //     {
-            //         json[nameof(OngoingTask.TaskId)] = pullReplication.TaskId == 0 ? index : pullReplication.TaskId;
-            //     }, statusCode: HttpStatusCode.Created);
+            var hub = GetStringQueryString("hub", true);
+            int pageSize = GetPageSize();
+            var start = GetStart();
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using(context.OpenReadTransaction())
+            {
+                var results = Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, Database.Name, hub, start, pageSize);
+             
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WriteArray(nameof(ReplicationHubAccessList.Results), results);
+                    
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(ReplicationHubAccessList.Skip));
+                    writer.WriteInteger(start);
+
+                    writer.WriteEndObject();
+                }
+                
+                return Task.CompletedTask;
+            }
         }
 
         [RavenAction("/databases/*/admin/tasks/sink-pull-replication", "POST", AuthorizationStatus.Operator)]

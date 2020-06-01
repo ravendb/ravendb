@@ -1591,7 +1591,10 @@ namespace Raven.Server
                 return false;
             }
 
-            for (var i = 0; i < userChain.ChainElements.Count; i++)
+            if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
+                return false;
+            
+            for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
             {
                 // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
                 var currentElementPinningHash = userChain.ChainElements[i].Certificate.GetPublicKeyPinningHash();
@@ -2341,14 +2344,24 @@ namespace Raven.Server
                                 {
                                     var expectedMode = info.AuthorizeAs switch
                                     {
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => PullReplicationMode.Read,
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.Write,
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => PullReplicationMode.Outgoing,
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.Incoming,
                                         _ => PullReplicationMode.None
                                     };
-                                 
-                                    if(pullReplication.CanAccess(certificate.Thumbprint) && 
-                                       (pullReplication.Mode & expectedMode) == expectedMode && 
-                                       expectedMode != PullReplicationMode.None)
+                                    
+                                    if (pullReplication.Certificates != null )// legacy
+                                    { 
+                                        return pullReplication.Certificates.ContainsKey(certificate.Thumbprint) && 
+                                            expectedMode == PullReplicationMode.Outgoing;
+                                    }
+
+                                    if ((pullReplication.Mode & expectedMode) != expectedMode || expectedMode == PullReplicationMode.None)
+                                    {
+                                        msg = "The expected replication mode does not match the replication mode on the replication hub";
+                                        return false;
+                                    }
+
+                                    if (ServerStore.Cluster.IsReplicationCertificate(ctx, header.DatabaseName, info.AuthorizationFor, certificate, out header.ReplicationHubAccess))
                                         return true;
                                 }   
 

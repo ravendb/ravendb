@@ -25,9 +25,10 @@ namespace Raven.Client.Documents.Operations.Replication
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(CertificateBas64)] = CertificateBas64,
                 [nameof(AllowedReadPaths)] = AllowedReadPaths,
-                [nameof(AllowedWritePaths)] = AllowedWritePaths
+                [nameof(AllowedWritePaths)] = AllowedWritePaths,
+                [nameof(CertificateBas64)] = CertificateBas64,
+                
             };
         }
 
@@ -79,7 +80,6 @@ namespace Raven.Client.Documents.Operations.Replication
 
     public class ReplicationHubAccessList : IEnumerable<DetailedReplicationHubAccess>
     {
-        public int TotalResults;
         public int Skip;
         public List<DetailedReplicationHubAccess> Results = new List<DetailedReplicationHubAccess>();
         

@@ -1,10 +1,13 @@
 using System;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using FastTests.Client;
 using FastTests.Client.Indexing;
 using FastTests.Issues;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Replication;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
@@ -24,29 +27,19 @@ namespace Tryouts
         
         public static async Task Main(string[] args)
         {
-            Console.WriteLine(Process.GetCurrentProcess().Id);
-            for (int i = 0; i < 10_000; i++)
-            {
-                Console.WriteLine($"Starting to run {i}");
-                try
-                {
-                    using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new BenchmarkTests.Storing.Session(testOutputHelper))
-                    {
-                        var sw = Stopwatch.StartNew();
-                        await test.Store_500k_Batch_Size_10();
-                        Console.WriteLine($"Took: {sw.Elapsed.TotalSeconds} seconds.");
-                    }
-                    return;
-                }
-                catch (Exception e)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e);
-                    Console.ForegroundColor = ConsoleColor.White;
-                   // Console.ReadLine();
-                }
-            }
+          using var store = new DocumentStore
+          {
+              Urls = new[] { "https://a.snark.development.run/" },
+              Database = "test",
+              Certificate = new X509Certificate2(@"C:\Users\ayende\Downloads\abc\abc.pfx")
+          }.Initialize();
+
+          store.Maintenance.Send(new RegisterReplicationHubAccessOperation("arava",new ReplicationHubAccess
+          {
+              Name = "Oscar",
+              AllowedReadPaths = new[] { "users/ayende" },
+              CertificateBas64 = Convert.ToBase64String(store.Certificate.Export(X509ContentType.Cert))
+          }));
         }
     }
 }

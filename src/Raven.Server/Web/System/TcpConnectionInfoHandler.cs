@@ -132,8 +132,10 @@ namespace Raven.Server.Web.System
                         if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))
                         {
                             var cert = httpContext.Connection.ClientCertificate;
-                            if (pullReplication.CanAccess(cert?.Thumbprint))
-                                return true;
+                            if (pullReplication.Certificates != null)
+                                return pullReplication.Certificates.ContainsKey(cert.Thumbprint);
+
+                            return serverStore.Cluster.IsReplicationCertificate(context, database, remoteTask, cert, out _);
                         }
 
                         RequestRouter.UnlikelyFailAuthorization(httpContext, database, feature, AuthorizationStatus.RestrictedAccess);

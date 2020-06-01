@@ -209,11 +209,14 @@ namespace Raven.Server.Documents.Replication
                     if (initialRequest.PullReplicationDefinitionName == null)
                         throw new InvalidOperationException("Pull replication must specify the PullReplicationDefinitionName, but none was specified");
 
-                    RawPullReplicationDefinition pullReplicationDefinition;
+                    PullReplicationDefinition pullReplicationDefinition;
                     using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, initialRequest.PullReplicationDefinitionName, ctx);
+
+                        if (pullReplicationDefinition.Disabled)
+                            throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
                     }
 
                     pullDefinitionName = initialRequest.PullReplicationDefinitionName;
@@ -221,25 +224,24 @@ namespace Raven.Server.Documents.Replication
                     switch (header.AuthorizeInfo.AuthorizeAs)
                     {
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Read) != PullReplicationMode.Read)
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Outgoing) != PullReplicationMode.Outgoing)
                                 throw new InvalidOperationException($"Replication hub {initialRequest.PullReplicationDefinitionName} does not support Pull Replication");
-                            CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, certificate, pullReplicationDefinition);
+                            CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, certificate, pullReplicationDefinition, header);
                             return;
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Write) != PullReplicationMode.Write)
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Incoming) != PullReplicationMode.Incoming)
                                 throw new InvalidOperationException($"Replication hub {initialRequest.PullReplicationDefinitionName} does not support Push Replication");
-                            if (certificate != null && pullReplicationDefinition.Certificates.ContainsKey(certificate.Thumbprint))
-                            {
-                                if (pullReplicationDefinition.Filters.TryGetValue(certificate.Thumbprint, out var filteringOptions) == false || filteringOptions == null)
-                                    throw new InvalidOperationException(
-                                        $"Certificate {certificate.Thumbprint} was found in the replication hub certificates, but no matching filtering option was specified for it. Cannot allow replication in this mode.");
-                                allowedWritePaths = filteringOptions.AllowedWritePaths;
-                            }
+                            if (certificate == null)
+                                throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
+                            if(pullReplicationDefinition.Certificates != null)
+                                throw new InvalidOperationException("Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " + pullReplicationDefinition.Name);
 
+                            allowedWritePaths = header.ReplicationHubAccess.AllowedWritePaths ?? Array.Empty<string>();
+                            
                             // same as normal incoming replication, just using the filtering
                             break;
                         default:
-                            throw new InvalidOperationException("Unknown AuthroizeAs value");
+                            throw new InvalidOperationException("Unknown AuthroizeAs value: " + header.AuthorizeInfo.AuthorizeAs);
                     }
                     break;
                 case null:
@@ -252,8 +254,8 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
-            TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, X509Certificate2 certificate, 
-            RawPullReplicationDefinition pullReplicationDefinition)
+            TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, X509Certificate2 certificate,
+            PullReplicationDefinition pullReplicationDefinition, TcpConnectionHeaderMessage header)
         {
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
@@ -262,21 +264,11 @@ namespace Raven.Server.Documents.Replication
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
             };
 
-            if (certificate != null)
+            if (header.ReplicationHubAccess != null)
             {
                 // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do 
                 // any filtering. That means that the certificate has global access to the database, so there is not point
-                if (pullReplicationDefinition.Certificates?.ContainsKey(certificate.Thumbprint) == true &&
-                    (pullReplicationDefinition.Filters?.Count) > 0)
-                {
-                    if (pullReplicationDefinition.Filters.TryGetValue(certificate.Thumbprint, out var options) == false)
-                    {
-                        throw new InvalidOperationException(
-                            $"Unable to find filters for {certificate.Thumbprint}, but other filters exists. Filtered replication must have filters defined for all certificates on the pull replication hub.");
-                    }
-
-                    outgoingReplication.AllowedReadPaths = options.AllowedReadPaths;
-                }
+                outgoingReplication.AllowedReadPaths = header.ReplicationHubAccess.AllowedReadPaths ?? Array.Empty<string>();
             }
 
             outgoingReplication.Failed += OnOutgoingSendingFailed;
@@ -318,7 +310,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] allowedWritePaths, string pullReplicationName,
+        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] allowedWritePaths, string pullReplicationName,
             JsonOperationContext.MemoryBuffer buffer)
         {
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, allowedWritePaths, pullReplicationName);
@@ -1222,8 +1214,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         AuthorizeAs = sink.Mode switch
                         {
-                            PullReplicationMode.Read => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
-                            PullReplicationMode.Write => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
+                            PullReplicationMode.Outgoing => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                            PullReplicationMode.Incoming => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
                             PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node),"Replication mode should be set to pull or push"),
                             _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)   
                         },

@@ -251,26 +251,6 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        private List<RawPullReplicationDefinition> _hubPullReplications;
-
-        public List<RawPullReplicationDefinition> RawHubPullReplications
-        {
-            get
-            {
-                if (_hubPullReplications == null)
-                {
-                    _hubPullReplications = new List<RawPullReplicationDefinition>();
-                    if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
-                    {
-                        foreach (BlittableJsonReaderObject element in bjra)
-                            _hubPullReplications.Add(JsonDeserializationClient.RawPullReplicationDefinition(element));
-                    }
-                }
-
-                return _hubPullReplications;
-            }
-        }
-        
         
         public PullReplicationDefinition GetHubPullReplicationByName(string name)
         {
@@ -289,15 +269,12 @@ namespace Raven.Server.ServerWide
         
         public PullReplicationDefinition GetHubPullReplicationById(in long key)
         {
-            if (_hubPullReplications == null)
+            if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
             {
-                if (_record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && bjra != null)
+                foreach (BlittableJsonReaderObject element in bjra)
                 {
-                    foreach (BlittableJsonReaderObject element in bjra)
-                    {
-                        if(element.TryGet(nameof(PullReplicationDefinition.TaskId), out long id) && id == key)
-                            return JsonDeserializationClient.PullReplicationDefinition(element);
-                    }
+                    if (element.TryGet(nameof(PullReplicationDefinition.TaskId), out long id) && id == key)
+                        return JsonDeserializationClient.PullReplicationDefinition(element);
                 }
             }
 

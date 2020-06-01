@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public string HubDefinitionName;
         public PullReplicationAsSink() { }
 
-        public PullReplicationMode Mode = PullReplicationMode.Read;
+        public PullReplicationMode Mode = PullReplicationMode.Outgoing;
 
         public PullReplicationAsSink(string database, string connectionStringName, string hubDefinitionName) : base(database, connectionStringName)
         {

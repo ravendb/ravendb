@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Replication
                     using (context.GetMemoryBuffer(out _buffer))
                     {
                         var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                        if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.Read) == PullReplicationMode.Read)
+                        if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.Outgoing) == PullReplicationMode.Outgoing)
                         {
                             
                             if( supportedFeatures.Replication.PullReplication == false)

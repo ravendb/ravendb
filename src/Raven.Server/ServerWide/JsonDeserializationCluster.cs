@@ -30,6 +30,8 @@ namespace Raven.Server.ServerWide
 {
     public class JsonDeserializationCluster : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, DetailedReplicationHubAccess> DetailedReplicationHubAccess = GenerateJsonDeserializationRoutine<DetailedReplicationHubAccess>();
+        
         public static readonly Func<BlittableJsonReaderObject, UpdateClusterIdentityCommand> UpdateClusterIdentityCommand = GenerateJsonDeserializationRoutine<UpdateClusterIdentityCommand>();
 
         public static readonly Func<BlittableJsonReaderObject, IncrementClusterIdentityCommand> IncrementClusterIdentityCommand = GenerateJsonDeserializationRoutine<IncrementClusterIdentityCommand>();
@@ -119,6 +121,8 @@ namespace Raven.Server.ServerWide
 
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
+            [nameof(UnregisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<UnregisterReplicationHubAccessCommand>(),
+            [nameof(RegisterReplicationHubAccessCommand)] = GenerateJsonDeserializationRoutine<RegisterReplicationHubAccessCommand>(),
             [nameof(AddOrUpdateCompareExchangeBatchCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeBatchCommand>(),
             [nameof(CleanCompareExchangeTombstonesCommand)] = GenerateJsonDeserializationRoutine<CleanCompareExchangeTombstonesCommand>(),
             [nameof(DeleteExpiredCompareExchangeCommand)] = GenerateJsonDeserializationRoutine<DeleteExpiredCompareExchangeCommand>(),

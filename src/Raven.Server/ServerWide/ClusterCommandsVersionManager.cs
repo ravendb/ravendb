@@ -113,7 +113,10 @@ namespace Raven.Server.ServerWide
             [nameof(EditRevisionsForConflictsConfigurationCommand)] = 42_004,
             [nameof(ToggleDatabasesStateCommand)] = 42_005,
             [nameof(EditTimeSeriesConfigurationCommand)] = 50_000,
-            [nameof(DeleteExpiredCompareExchangeCommand)] = 50_000
+            [nameof(DeleteExpiredCompareExchangeCommand)] = 50_000,
+            
+            [nameof(RegisterReplicationHubAccessCommand)] = 50_001,
+            [nameof(UnregisterReplicationHubAccessCommand)] = 50_001
         };
 
         public static bool CanPutCommand(string command)
