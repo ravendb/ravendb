@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Patch
             public string OriginalDocumentId;
             public bool RefreshOriginalDocument;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
-            public HashSet<string> UpdatedDocumentCounterIds;
+            public Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)> DocumentCountersToUpdate;
             public JavaScriptUtils JavaScriptUtils;
 
             private const string _timeSeriesSignature = "timeseries(doc, name)";
@@ -1078,11 +1078,73 @@ namespace Raven.Server.Documents.Patch
 
                 if (exists == false)
                 {
-                    if (UpdatedDocumentCounterIds == null)
-                        UpdatedDocumentCounterIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    if (DocumentCountersToUpdate == null)
+                        DocumentCountersToUpdate = new Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)>();
+                    if (DocumentCountersToUpdate.TryGetValue(id, out var tuple) == false)
+                        tuple = (new SortedSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
 
-                    UpdatedDocumentCounterIds.Add(id);
+                    tuple.CountersToAdd.Add(name);
+                    tuple.CountersToRemove?.Remove(name);
+
+                    DocumentCountersToUpdate[id] = tuple;
                 }
+
+                return JsBoolean.True;
+            }
+
+            private JsValue DeleteCounter(JsValue self, JsValue[] args)
+            {
+                AssertValidDatabaseContext("deleteCounter");
+
+                if (args.Length != 2)
+                {
+                    ThrowInvalidDeleteCounterArgs();
+                }
+
+                string id = null;
+                BlittableJsonReaderObject docBlittable = null;
+
+                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
+                {
+                    id = doc.DocumentId;
+                    docBlittable = doc.Blittable;
+                }
+                else if (args[0].IsString())
+                {
+                    id = args[0].AsString();
+                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
+                    if (document == null)
+                    {
+                        ThrowMissingDocument(id);
+                        Debug.Assert(false); // never hit
+                    }
+
+                    docBlittable = document.Data;
+                }
+                else
+                {
+                    ThrowInvalidDeleteCounterDocumentArg();
+                }
+
+                Debug.Assert(id != null && docBlittable != null);
+
+                if (args[1].IsString() == false)
+                {
+                    ThrowDeleteCounterNameArg();
+                }
+
+                var name = args[1].AsString();
+                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
+
+                if (DocumentCountersToUpdate == null)
+                    DocumentCountersToUpdate = new Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)>();
+                if (DocumentCountersToUpdate.TryGetValue(id, out var tuple) == false)
+                    tuple = (new SortedSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+                tuple.CountersToRemove.Add(name);
+                tuple.CountersToAdd?.Remove(name);
+
+                DocumentCountersToUpdate[id] = tuple;
 
                 return JsBoolean.True;
             }
@@ -1193,58 +1255,6 @@ namespace Raven.Server.Documents.Patch
             private static void ThrowMissingDocument(string id)
             {
                 throw new DocumentDoesNotExistException(id, "Cannot operate on counters of a missing document.");
-            }
-
-            private JsValue DeleteCounter(JsValue self, JsValue[] args)
-            {
-                AssertValidDatabaseContext("deleteCounter");
-
-                if (args.Length != 2)
-                {
-                    ThrowInvalidDeleteCounterArgs();
-                }
-
-                string id = null;
-                BlittableJsonReaderObject docBlittable = null;
-
-                if (args[0].IsObject() && args[0].AsObject() is BlittableObjectInstance doc)
-                {
-                    id = doc.DocumentId;
-                    docBlittable = doc.Blittable;
-                }
-                else if (args[0].IsString())
-                {
-                    id = args[0].AsString();
-                    var document = _database.DocumentsStorage.Get(_docsCtx, id);
-                    if (document == null)
-                    {
-                        ThrowMissingDocument(id);
-                        Debug.Assert(false); // never hit
-                    }
-
-                    docBlittable = document.Data;
-                }
-                else
-                {
-                    ThrowInvalidDeleteCounterDocumentArg();
-                }
-
-                Debug.Assert(id != null && docBlittable != null);
-
-                if (args[1].IsString() == false)
-                {
-                    ThrowDeleteCounterNameArg();
-                }
-
-                if (UpdatedDocumentCounterIds == null)
-                    UpdatedDocumentCounterIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                UpdatedDocumentCounterIds.Add(id);
-
-                var name = args[1].AsString();
-                _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
-
-                return JsBoolean.True;
             }
 
             private static void ThrowDeleteCounterNameArg()
@@ -1659,7 +1669,7 @@ namespace Raven.Server.Documents.Patch
 
                 Includes?.Clear();
                 CompareExchangeValueIncludes?.Clear();
-                UpdatedDocumentCounterIds?.Clear();
+                DocumentCountersToUpdate?.Clear();
                 PutOrDeleteCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
@@ -1732,7 +1742,7 @@ namespace Raven.Server.Documents.Patch
                 _run.OriginalDocumentId = null;
                 _run.RefreshOriginalDocument = false;
 
-                _run.UpdatedDocumentCounterIds?.Clear();
+                _run.DocumentCountersToUpdate?.Clear();
 
                 _holder.Parent._cache.Enqueue(_holder);
                 _run = null;
