@@ -514,15 +514,21 @@ namespace Raven.Server.Commercial
 
         private void SetLicense(Guid id, Dictionary<string, object> attributes)
         {
-            _previousLicenseCores = _licenseStatus.MaxCores;
-
-            _licenseStatus = new LicenseStatus
+            var newLicenseStatus = new LicenseStatus
             {
                 Id = id,
                 ErrorMessage = null,
                 Attributes = attributes,
                 FirstServerStartDate = _licenseStatus.FirstServerStartDate
             };
+
+            if (newLicenseStatus.MaxCores != _licenseStatus.MaxCores)
+            {
+                // it should be updated only if license cores were changed
+                _previousLicenseCores = _licenseStatus.MaxCores;
+            }
+
+            _licenseStatus = newLicenseStatus;
         }
 
         private async Task<bool> ContinueActivatingLicense(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive, LicenseStatus newLicenseStatus)
