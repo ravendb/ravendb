@@ -139,10 +139,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         isEncrypted = true;
                     }
-                    else
+                    else if (isSnapshot && this is LocalRestorePoints)
                     {
-                        if (isSnapshot)
-                            isEncrypted = await CheckIfSnapshotIsEncrypted(fileInfo.FullPath);
+                        // checking legacy encrypted snapshot backups, it was saved with the same extension as the non-encrypted one
+                        // local only since this might require the download of the whole file
+                        isEncrypted = await CheckIfSnapshotIsEncrypted(fileInfo.FullPath);
                     }
                 }
                 else if (isSnapshot)
