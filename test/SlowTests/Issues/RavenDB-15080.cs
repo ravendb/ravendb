@@ -96,7 +96,6 @@ namespace SlowTests.Issues
                     }
                 });
                 await Task.WhenAll(t1, t2);
-//                await Task.Delay(5_000);
                 EnsureReplicating(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
                 await EnsureNoReplicationLoop(Server, storeA.Database);
