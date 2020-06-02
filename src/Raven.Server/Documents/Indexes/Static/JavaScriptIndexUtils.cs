@@ -5,6 +5,7 @@ using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Raven.Client;
+using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             // here we only traverse the single statement, we don't try to traverse into
             // complex expression, etc. This is to avoid too much complexity such as:
-            // return (function() { return { a: 1})();, etc. 
+            // return (function() { return { a: 1})();, etc.
             switch (stmt?.Type)
             {
                 case null:
@@ -56,7 +57,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 case Nodes.WhileStatement:
                     return GetReturnStatements(((WhileStatement)stmt).Body);
 
-
                 case Nodes.WithStatement:
                     return GetReturnStatements(((WithStatement)stmt).Body);
 
@@ -90,38 +90,44 @@ namespace Raven.Server.Documents.Indexes.Static
             jsItem = null;
             string changeVector = null;
             DateTime? lastModified = null;
-            if (!(item is DynamicBlittableJson dbj))
+
+            switch (item)
             {
-                //This is the case for map-reduce
-                if (item is BlittableJsonReaderObject bjr)
-                {
-                    jsItem = new BlittableObjectInstance(engine, null, bjr, null, null, null);
+                case DynamicBlittableJson dbj:
+                    var id = dbj.GetId();
+                    if (isMapReduce == false && id == DynamicNullObject.Null)
+                        return false;
+
+                    dbj.EnsureMetadata();
+
+                    if (dbj.TryGetDocument(out var doc))
+                    {
+                        jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, doc);
+                    }
+                    else
+                    {
+                        if (dbj[Constants.Documents.Metadata.LastModified] is DateTime lm)
+                            lastModified = lm;
+
+                        if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
+                            changeVector = cv;
+
+                        jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, lastModified, changeVector);
+                    }
+
                     return true;
-                }
-                return false;
-            }
-            var id = dbj.GetId();
-            if (isMapReduce == false && id == DynamicNullObject.Null)
-                return false;
 
-            dbj.EnsureMetadata();
+                case DynamicTimeSeriesSegment dtss:
+                    jsItem = new TimeSeriesSegmentObjectInstance(engine, dtss);
+                    return true;
 
-            if (dbj.TryGetDocument(out var doc))
-            {
-                jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, doc);
-            }
-            else
-            {
-                if (dbj[Constants.Documents.Metadata.LastModified] is DateTime lm)
-                    lastModified = lm;
-
-                if (dbj[Constants.Documents.Metadata.ChangeVector] is string cv)
-                    changeVector = cv;
-
-                jsItem = new BlittableObjectInstance(engine, null, dbj.BlittableJson, id, lastModified, changeVector);
+                case BlittableJsonReaderObject bjro:
+                    //This is the case for map-reduce
+                    jsItem = new BlittableObjectInstance(engine, null, bjro, null, null, null);
+                    return true;
             }
 
-            return true;
+            return false;
         }
 
         [ThreadStatic]

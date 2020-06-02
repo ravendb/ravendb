@@ -107,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 case IndexType.JavaScriptMap:
                     _converter = _index.SourceType == IndexSourceType.Documents
                         ? (LuceneDocumentConverterBase)new JintLuceneDocumentConverter((MapIndex)index)
-                        : new TimeSeriesJintLuceneDocumentConverter((MapIndex)index);
+                        : new TimeSeriesJintLuceneDocumentConverter((MapTimeSeriesIndex)index);
                     break;
                 case IndexType.JavaScriptMapReduce:
                     _converter = new JintLuceneDocumentConverter((MapReduceIndex)index, storeValue: true);

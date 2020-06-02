@@ -20,25 +20,25 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static AbstractStaticIndexBase GetIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
         {
+            var type = definition.DetectStaticIndexType();
+            if (type.IsJavaScript())
+                return GenerateIndex(definition, configuration, type);
+
             switch (definition.SourceType)
             {
                 case IndexSourceType.Documents:
-                    return GetDocumentsIndexInstance(definition, configuration);
+                    return GetDocumentsIndexInstance(definition, configuration, type);
                 case IndexSourceType.TimeSeries:
-                    return GetIndexInstance<StaticTimeSeriesIndexBase>(definition, configuration);
+                    return GetIndexInstance<StaticTimeSeriesIndexBase>(definition, configuration, type);
                 case IndexSourceType.Counters:
-                    return GetIndexInstance<StaticCountersIndexBase>(definition, configuration);
+                    return GetIndexInstance<StaticCountersIndexBase>(definition, configuration, type);
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
         }
 
-        private static StaticIndexBase GetDocumentsIndexInstance(IndexDefinition definition, RavenConfiguration configuration)
+        private static StaticIndexBase GetDocumentsIndexInstance(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
         {
-            var type = definition.DetectStaticIndexType();
-            if (type.IsJavaScript())
-                return (StaticIndexBase)GenerateIndex(definition, configuration, type);
-
             var key = GetCacheKey(definition);
 
             Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
@@ -54,16 +54,9 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static TIndexBase GetIndexInstance<TIndexBase>(IndexDefinition definition, RavenConfiguration configuration)
+        private static TIndexBase GetIndexInstance<TIndexBase>(IndexDefinition definition, RavenConfiguration configuration, IndexType type)
             where TIndexBase : AbstractStaticIndexBase
         {
-            var type = definition.DetectStaticIndexType();
-            if (type.IsJavaScript())
-            {
-                throw new NotImplementedException("TODO ppekrol");
-                //return GenerateIndex(definition, configuration, type);
-            }
-
             var key = GetCacheKey(definition);
 
             Lazy<AbstractStaticIndexBase> result = _indexCache.GetOrAdd(key, _ => new Lazy<AbstractStaticIndexBase>(() => GenerateIndex(definition, configuration, type)));
@@ -111,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return IndexCompiler.Compile(definition);
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
-                    return new JavaScriptIndex(definition, configuration);
+                    return AbstractJavaScriptIndex.Create(definition, configuration);
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }

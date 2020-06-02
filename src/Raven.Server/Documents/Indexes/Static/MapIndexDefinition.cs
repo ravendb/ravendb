@@ -87,7 +87,9 @@ namespace Raven.Server.Documents.Indexes.Static
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var definition = IndexDefinition.Clone();
+            var definition = new IndexDefinition();
+            IndexDefinition.CopyTo(definition);
+
             definition.Name = Name;
             definition.Type = IndexDefinition.Type;
             definition.LockMode = LockMode;

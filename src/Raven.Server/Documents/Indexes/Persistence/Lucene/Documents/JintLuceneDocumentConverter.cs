@@ -54,6 +54,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 newFields++;
             }
 
+            if (sourceDocumentId != null)
+            {
+                instance.Add(GetOrCreateSourceDocumentIdField(sourceDocumentId));
+                newFields++;
+            }
+
             if (_storeValue)
             {
                 var storedValue = JsBlittableBridge.Translate(indexContext,
