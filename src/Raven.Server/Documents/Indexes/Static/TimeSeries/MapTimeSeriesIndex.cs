@@ -23,13 +23,13 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly StaticTimeSeriesIndexBase _compiled;
+        protected internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleTimeSeriesReferences _handleReferences;
         private HandleCompareExchangeTimeSeriesReferences _handleCompareExchangeReferences;
 
-        protected MapTimeSeriesIndex(MapIndexDefinition definition, StaticTimeSeriesIndexBase compiled)
+        protected MapTimeSeriesIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         private static MapTimeSeriesIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
-            var staticIndex = (StaticTimeSeriesIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
             var instance = new MapTimeSeriesIndex(staticMapIndexDefinition, staticIndex);

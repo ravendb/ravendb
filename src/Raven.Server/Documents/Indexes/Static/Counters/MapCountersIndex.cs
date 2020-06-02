@@ -23,13 +23,13 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly StaticCountersIndexBase _compiled;
+        protected internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleCountersReferences _handleReferences;
         private HandleCompareExchangeCountersReferences _handleCompareExchangeReferences;
 
-        protected MapCountersIndex(MapIndexDefinition definition, StaticCountersIndexBase compiled)
+        protected MapCountersIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
@@ -223,7 +223,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 
         private static MapCountersIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
-            var staticIndex = (StaticCountersIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
             var instance = new MapCountersIndex(staticMapIndexDefinition, staticIndex);

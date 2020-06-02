@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _suggestionsActive = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal readonly StaticIndexBase _compiled;
+        protected internal readonly AbstractStaticIndexBase _compiled;
         private bool? _isSideBySide;
 
         private HandleDocumentReferences _handleReferences;
         private HandleCompareExchangeReferences _handleCompareExchangeReferences;
 
-        protected MapIndex(MapIndexDefinition definition, StaticIndexBase compiled)
+        protected MapIndex(MapIndexDefinition definition, AbstractStaticIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
             _compiled = compiled;
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MapIndex CreateIndexInstance(IndexDefinition definition, RavenConfiguration configuration, long indexVersion)
         {
-            var staticIndex = (StaticIndexBase)IndexCompilationCache.GetIndexInstance(definition, configuration);
+            var staticIndex = IndexCompilationCache.GetIndexInstance(definition, configuration);
 
             var staticMapIndexDefinition = new MapIndexDefinition(definition, staticIndex.Maps.Keys, staticIndex.OutputFields, staticIndex.HasDynamicFields, staticIndex.CollectionsWithCompareExchangeReferences.Count > 0, indexVersion);
             var instance = new MapIndex(staticMapIndexDefinition, staticIndex);

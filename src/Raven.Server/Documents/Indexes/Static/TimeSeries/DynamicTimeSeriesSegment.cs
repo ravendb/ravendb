@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
     public class DynamicTimeSeriesSegment : AbstractDynamicObject
     {
-        private TimeSeriesSegmentEntry _segmentEntry;
+        internal TimeSeriesSegmentEntry _segmentEntry;
         private DynamicArray _entries;
         private DynamicArray _min;
         private DynamicArray _max;
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public class DynamicTimeSeriesEntry : AbstractDynamicObject
         {
-            private SingleResult _entry;
+            internal SingleResult _entry;
             private DynamicArray _values;
 
             public DynamicTimeSeriesEntry(SingleResult entry)

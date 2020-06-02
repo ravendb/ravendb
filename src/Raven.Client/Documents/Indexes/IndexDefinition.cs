@@ -410,7 +410,7 @@ namespace Raven.Client.Documents.Indexes
             return Name;
         }
 
-        internal IndexDefinition Clone()
+        internal void CopyTo(IndexDefinition definition)
         {
             Dictionary<string, IndexFieldOptions> fields = null;
             if (_fields != null)
@@ -435,31 +435,26 @@ namespace Raven.Client.Documents.Indexes
                 }
             }
 
-            var definition = new IndexDefinition
-            {
-                LockMode = LockMode,
-                Fields = fields,
-                Name = Name,
-                Priority = Priority,
-                Reduce = Reduce,
-                Maps = new HashSet<string>(Maps),
-                Configuration = new IndexConfiguration(),
+            definition.LockMode = LockMode;
+            definition.Fields = fields;
+            definition.Name = Name;
+            definition.Priority = Priority;
+            definition.Reduce = Reduce;
+            definition.Maps = new HashSet<string>(Maps);
+            definition.Configuration = new IndexConfiguration();
 #if FEATURE_TEST_INDEX
-                IsTestIndex = IsTestIndex,
+                definition.IsTestIndex = IsTestIndex;
 #endif
-                OutputReduceToCollection = OutputReduceToCollection,
-                ReduceOutputIndex = ReduceOutputIndex,
-                PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
-                PatternReferencesCollectionName = PatternReferencesCollectionName
-            };
+            definition.OutputReduceToCollection = OutputReduceToCollection;
+            definition.ReduceOutputIndex = ReduceOutputIndex;
+            definition.PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences;
+            definition.PatternReferencesCollectionName = PatternReferencesCollectionName;
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;
 
             foreach (var kvp in _additionalSources)
                 definition.AdditionalSources[kvp.Key] = kvp.Value;
-
-            return definition;
         }
     }
 

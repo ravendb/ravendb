@@ -278,7 +278,10 @@ namespace Raven.Client.Documents.Indexes
             map = StripComments(map);
             map = UnifyWhiteSpace(map);
 
-            if (map.StartsWith("from") || map.StartsWith("docs") || map.StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase) || map.StartsWith("counters", StringComparison.OrdinalIgnoreCase))
+            if (map.StartsWith("from") 
+                || map.StartsWith("docs") 
+                || (map.StartsWith("timeSeries", StringComparison.OrdinalIgnoreCase) && map.StartsWith("timeSeries.map", StringComparison.OrdinalIgnoreCase) == false) 
+                || (map.StartsWith("counters", StringComparison.OrdinalIgnoreCase) && map.StartsWith("counters.map", StringComparison.OrdinalIgnoreCase) == false))
             {
                 // C# indexes must start with "from" for query syntax or
                 // "docs" for method syntax

@@ -17,9 +17,9 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
     {
         private readonly HashSet<string> _referencedCollections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        protected internal new readonly StaticCountersIndexBase _compiled;
+        protected internal new readonly AbstractStaticIndexBase _compiled;
 
-        public MapReduceCountersIndex(MapReduceIndexDefinition definition, StaticCountersIndexBase compiled) : base(definition, compiled)
+        public MapReduceCountersIndex(MapReduceIndexDefinition definition, AbstractStaticIndexBase compiled) : base(definition, compiled)
         {
             _compiled = compiled;
 

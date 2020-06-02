@@ -27,7 +27,9 @@ namespace Raven.Server.Documents.Indexes.Errors
 
         protected internal override IndexDefinition GetOrCreateIndexDefinitionInternal()
         {
-            var definition = _definition.Clone();
+            var definition = new IndexDefinition();
+            _definition.CopyTo(definition);
+
             definition.Name = Name;
             definition.LockMode = LockMode;
             definition.Priority = Priority;

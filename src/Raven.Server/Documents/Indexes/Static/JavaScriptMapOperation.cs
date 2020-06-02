@@ -10,13 +10,11 @@ using Jint.Native.Function;
 using Jint.Runtime;
 using Jint.Runtime.Environments;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-
     public class JavaScriptMapOperation
     {
         public FunctionInstance MapFunc;
@@ -30,7 +28,6 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly JsValue[] _oneItemArray = new JsValue[1];
 
         public string IndexName { get; set; }
-
 
         public JavaScriptMapOperation(Engine engine, JintPreventResolvingTasksReferenceResolver resolver)
         {
@@ -83,7 +80,6 @@ namespace Raven.Server.Documents.Indexes.Static
                     }
 
                     _resolver.ExplodeArgsOn(null, null);
-
                 }
             }
             finally
@@ -176,7 +172,6 @@ namespace Raven.Server.Documents.Indexes.Static
                     {
                         properties.Add(new Property(PropertyKind.Data, new Identifier(field), false,
                         new StaticMemberExpression(new Identifier("self"), new Identifier(field)), false, false));
-
                     }
                 }
             }
@@ -218,5 +213,4 @@ namespace Raven.Server.Documents.Indexes.Static
             return true;
         }
     }
-
 }
