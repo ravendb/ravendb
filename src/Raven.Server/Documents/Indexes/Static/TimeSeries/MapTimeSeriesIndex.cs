@@ -29,8 +29,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private HandleTimeSeriesReferences _handleReferences;
         private HandleCompareExchangeTimeSeriesReferences _handleCompareExchangeReferences;
 
-        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1 || x.Value.Any(y => y.Value.Count > 1));
-
         protected MapTimeSeriesIndex(MapIndexDefinition definition, StaticTimeSeriesIndexBase compiled)
             : base(definition.IndexDefinition.Type, definition.IndexDefinition.SourceType, definition)
         {
@@ -45,6 +43,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                     _referencedCollections.Add(referencedCollection.Name);
             }
         }
+
+        public override bool HasBoostedFields => _compiled.HasBoostedFields;
+
+        public override bool IsMultiMap => _compiled.Maps.Count > 1 || _compiled.Maps.Any(x => x.Value.Count > 1 || x.Value.Any(y => y.Value.Count > 1));
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
         {
