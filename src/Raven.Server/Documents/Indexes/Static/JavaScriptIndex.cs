@@ -47,6 +47,10 @@ function map() {{
         collectionArg = arguments[0];
         nameArg = '{Constants.TimeSeries.All}';
         lambdaArg = arguments[1];
+    }} else if (arguments.length == 1) {{
+        collectionArg = '{Constants.Documents.Collections.AllDocumentsCollection}';
+        nameArg = '{Constants.TimeSeries.All}';
+        lambdaArg = arguments[0];
     }}
 
     var map = {{

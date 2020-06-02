@@ -53,6 +53,24 @@ return ts.Entries.map(entry => ({
             }
         }
 
+        private class MyTsIndex_AllDocs : AbstractJavaScriptTimeSeriesIndexCreationTask
+        {
+            public MyTsIndex_AllDocs()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"timeSeries.map(function (ts) {
+return ts.Entries.map(entry => ({
+        HeartBeat: entry.Values[0],
+        Name: ts.Name,
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        User: ts.DocumentId
+    }));
+})"
+                };
+            }
+        }
+
         private class MyTsIndex_Load : AbstractJavaScriptTimeSeriesIndexCreationTask
         {
             public MyTsIndex_Load()
@@ -934,5 +952,195 @@ return ts.Entries.map(entry => ({
             }
         }
 
+        [Fact]
+        public void CanMapAllTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var now1 = DateTime.Now;
+                var now2 = now1.AddSeconds(1);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+                    session.TimeSeriesFor(company, "HeartRate").Append(now1, new double[] { 7 }, "tag1");
+                    session.TimeSeriesFor(company, "Likes").Append(now1, new double[] { 3 }, "tag2");
+
+                    var employee = new Employee();
+                    session.Store(employee, "employees/1");
+                    session.TimeSeriesFor(employee, "Dislikes").Append(now1, new double[] { 1 }, "tag3");
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                new MyTsIndex_AllDocs().Execute(store);
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.False(staleness.IsStale);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("7", terms);
+                Assert.Contains("3", terms);
+                Assert.Contains("1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "Name", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("likes", terms);
+                Assert.Contains("dislikes", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.TimeSeriesFor(company, "HeartRate").Append(now2, new double[] { 2 }, "tag");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
+                Assert.Equal(4, terms.Length);
+                Assert.Contains("7", terms);
+                Assert.Contains("3", terms);
+                Assert.Contains("1", terms);
+                Assert.Contains("2", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "Name", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("likes", terms);
+                Assert.Contains("dislikes", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.TimeSeriesFor(company, "Likes").Remove(now1, now2);
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
+                Assert.Equal(3, terms.Length);
+                Assert.Contains("7", terms);
+                Assert.Contains("1", terms);
+                Assert.Contains("2", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "Name", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("dislikes", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("companies/1");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("1", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("dislikes", terms);
+
+                // now checking live updates (not stopping indexing)
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("employees/1");
+                    session.TimeSeriesFor(company, "Dislikes").Append(now2, new double[] { 9 }, "tag");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("1", terms);
+                Assert.Contains("9", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "Name", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("dislikes", terms);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Delete("employees/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex/AllDocs"));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "HeartBeat", null));
+                Assert.Equal(0, terms.Length);
+
+                terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "Name", null));
+                Assert.Equal(0, terms.Length);
+            }
+        }
     }
 }

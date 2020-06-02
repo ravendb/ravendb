@@ -14,9 +14,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
     {
         private readonly DynamicTimeSeriesSegment _segment;
 
-        private TimeSeriesSegmentEntriesPropertyDescriptor _entries;
-
-        private PropertyDescriptor _documentId;
+        private Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
 
         public TimeSeriesSegmentObjectInstance(Engine engine, DynamicTimeSeriesSegment segment) : base(engine)
         {
@@ -32,20 +30,31 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
         public override PropertyDescriptor GetOwnProperty(JsValue property)
         {
+            if (_properties.TryGetValue(property, out var value) == false)
+                _properties[property] = value = GetPropertyValue(property);
+
+            return value;
+        }
+
+        private PropertyDescriptor GetPropertyValue(JsValue property)
+        {
             if (property == nameof(DynamicTimeSeriesSegment.Entries))
-            {
-                if (_entries == null)
-                    _entries = new TimeSeriesSegmentEntriesPropertyDescriptor(Engine, _segment);
+                return new TimeSeriesSegmentEntriesPropertyDescriptor(Engine, _segment);
 
-                return _entries;
-            }
-            else if (property == nameof(TimeSeriesSegment.DocumentId))
-            {
-                if (_documentId == null)
-                    _documentId = new PropertyDescriptor(_segment._segmentEntry.DocId.ToString(), writable: false, enumerable: false, configurable: false);
+            if (property == nameof(TimeSeriesSegment.DocumentId))
+                return new PropertyDescriptor(_segment._segmentEntry.DocId.ToString(), writable: false, enumerable: false, configurable: false);
 
-                return _documentId;
-            }
+            if (property == nameof(DynamicTimeSeriesSegment.Name))
+                return new PropertyDescriptor(_segment._segmentEntry.Name.ToString(), writable: false, enumerable: false, configurable: false);
+
+            if (property == nameof(DynamicTimeSeriesSegment.Count))
+                return new PropertyDescriptor(_segment.Count, writable: false, enumerable: false, configurable: false);
+
+            if (property == nameof(DynamicTimeSeriesSegment.End))
+                return new PropertyDescriptor(_engine.Date.Construct(_segment.End), writable: false, enumerable: false, configurable: false);
+
+            if (property == nameof(DynamicTimeSeriesSegment.Start))
+                return new PropertyDescriptor(_engine.Date.Construct(_segment.Start), writable: false, enumerable: false, configurable: false);
 
             return PropertyDescriptor.Undefined;
         }
