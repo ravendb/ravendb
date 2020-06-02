@@ -56,9 +56,9 @@ namespace Raven.Server.Documents
 
         public CatastrophicFailureHandler CatastrophicFailureHandler { get; }
 
-        public Task ClusterOnDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
+        public Task ClusterOnDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
         {
-            return HandleClusterDatabaseChanged(databaseName, index, type, changeType);
+            return HandleClusterDatabaseChanged(databaseName, index, type, changeType, changeState);
         }
 
         internal TestingStuff ForTestingPurposes;
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents
             internal Action<ServerStore> BeforeHandleClusterDatabaseChanged;
         }
 
-        private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType)
+        private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
         {
             ForTestingPurposes?.BeforeHandleClusterDatabaseChanged?.Invoke(_serverStore);
 

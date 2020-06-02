@@ -543,7 +543,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     actionsByDatabase[database].Add(() =>
-                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged));
+                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null));
                 }
 
                 foreach (var action in actionsByDatabase)
@@ -734,7 +734,7 @@ namespace Raven.Server.ServerWide
                         ? DatabasesLandlord.ClusterDatabaseChangeType.PendingClusterTransactions
                         : DatabasesLandlord.ClusterDatabaseChangeType.ClusterTransactionCompleted;
 
-                    NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify);
+                    NotifyDatabaseAboutChanged(context, clusterTransaction.DatabaseName, index, nameof(ClusterTransactionCommand), notify, null);
 
                     return null;
                 }
@@ -1003,7 +1003,7 @@ namespace Raven.Server.ServerWide
                             {
                                 DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName, serverStore);
                                 tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster),
-                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
 
                                 continue;
                             }
@@ -1026,7 +1026,7 @@ namespace Raven.Server.ServerWide
                         UpdateValue(index, items, lowerKey, key, updated);
                     }
 
-                    tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                    tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
                 }
 
                 ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), tasks);
@@ -1159,7 +1159,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
-                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
+                NotifyDatabaseAboutChanged(context, updateCommand?.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null);
             }
         }
 
@@ -1190,7 +1190,7 @@ namespace Raven.Server.ServerWide
                     {
                         items.DeleteByKey(lowerKey);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                         return;
                     }
 
@@ -1201,7 +1201,7 @@ namespace Raven.Server.ServerWide
                     {
                         DeleteDatabaseRecord(context, index, items, lowerKey, databaseName, serverStore);
                         NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                            DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                         return;
                     }
 
@@ -1211,7 +1211,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 NotifyDatabaseAboutChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand),
-                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
             }
             catch (Exception e)
             {
@@ -1425,7 +1425,7 @@ namespace Raven.Server.ServerWide
             {
                 LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
-                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
             }
         }
 
@@ -1759,7 +1759,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
+                NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, command);
             }
         }
 
@@ -1782,7 +1782,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
+                NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, command);
             }
         }
 
@@ -1835,7 +1835,7 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        private void NotifyDatabaseAboutChanged(ClusterOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change)
+        private void NotifyDatabaseAboutChanged(ClusterOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change, object changeState)
         {
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
@@ -1844,7 +1844,7 @@ namespace Raven.Server.ServerWide
 
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
                 {
-                    ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change));
+                    ExecuteAsyncTask(index, () => Changes.OnDatabaseChanges(databaseName, index, type, change, changeState));
                 };
             };
         }
@@ -1944,7 +1944,7 @@ namespace Raven.Server.ServerWide
             finally
             {
                 LogCommand(type, index, exception, updateCommand?.AdditionalDebugInformation(exception));
-                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, updateCommand);
             }
         }
 
@@ -2211,7 +2211,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, updatedDatabaseBlittable);
                 }
 
-                tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                tasks.Add(() => Changes.OnDatabaseChanges(record.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
@@ -2552,7 +2552,7 @@ namespace Raven.Server.ServerWide
             }
             finally
             {
-                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged);
+                NotifyDatabaseAboutChanged(context, databaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null);
             }
         }
 
@@ -3329,7 +3329,7 @@ namespace Raven.Server.ServerWide
                     UpdateValue(index, items, valueNameLowered, valueName, update.DatabaseRecord);
                 }
 
-                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
+                tasks.Add(() => Changes.OnDatabaseChanges(update.DatabaseName, index, type, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null));
             }
 
             ExecuteManyOnDispose(context, index, type, tasks);
@@ -3365,7 +3365,7 @@ namespace Raven.Server.ServerWide
                         {
                             var t = Task.Run(async () =>
                             {
-                                await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                                await Changes.OnDatabaseChanges(db, lastIncludedIndex, SnapshotInstalled, DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                             }, token);
                         }
 

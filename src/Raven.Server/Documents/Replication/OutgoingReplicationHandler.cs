@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.Replication;
@@ -168,6 +169,7 @@ namespace Raven.Server.Documents.Replication
 
             var certificate = _parent.GetCertificateForReplication(Destination, out var authorizationInfo);
 
+            CertificateThumbprint = certificate.Thumbprint;
             using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -205,7 +207,7 @@ namespace Raven.Server.Documents.Replication
                                 throw new InvalidOperationException("Other side does not support pull replication " + Destination);
                             
                             SendPreliminaryData();
-                            InitiatePullReplicationAsSink(supportedFeatures);
+                            InitiatePullReplicationAsSink(supportedFeatures, certificate);
                             return;
                         }
 
@@ -249,7 +251,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void InitiatePullReplicationAsSink(TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures)
+        private void InitiatePullReplicationAsSink(TcpConnectionHeaderMessage.SupportedFeatures supportedFeatures, X509Certificate2 certificate)
         {
             var tcpOptions = new TcpConnectionOptions
             {
@@ -259,6 +261,7 @@ namespace Raven.Server.Documents.Replication
                 Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,
                 DocumentDatabase = _database,
                 ProtocolVersion = supportedFeatures.ProtocolVersion,
+                Certificate = certificate
             };
 
             using (_parent._server.Server._tcpContextPool.AllocateOperationContext(out var ctx))
@@ -1063,6 +1066,7 @@ namespace Raven.Server.Documents.Replication
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
         public string[] AllowedReadPaths;
+        public string CertificateThumbprint;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 
         public void Dispose()

@@ -815,7 +815,7 @@ namespace Raven.Server.ServerWide
                         {
                             try
                             {
-                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                                await DatabasesLandlord.ClusterOnDatabaseChanged(db, 0, "Init", DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged, null);
                             }
                             catch (Exception e)
                             {
@@ -1010,7 +1010,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Task OnDatabaseChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType _)
+        private Task OnDatabaseChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType _, object __)
         {
             switch (type)
             {

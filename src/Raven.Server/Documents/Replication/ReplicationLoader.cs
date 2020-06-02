@@ -24,6 +24,7 @@ using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -156,7 +157,72 @@ namespace Raven.Server.Documents.Replication
                 null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
             database.TombstoneCleaner.Subscribe(this);
+            server.Cluster.Changes.DatabaseChanged+=DatabaseValueChanged;
         }
+
+        private Task DatabaseValueChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState)
+        {
+            if (string.Equals(Database.Name, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                return Task.CompletedTask;
+
+            switch (changeState)
+            {
+                case UpdatePullReplicationAsHubCommand put:
+                    DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
+                    break;
+                case UnregisterReplicationHubAccessCommand del:
+                    DisposeRelatedPullReplication(del.HubDefinitionName, del.CertThumbprint);
+                    break;
+                case RegisterReplicationHubAccessCommand reg:
+                    DisposeRelatedPullReplication(reg.HubDefinitionName, reg.CertThumbprint);
+                    break;
+            }
+            return Task.CompletedTask;
+
+            void DisposeRelatedPullReplication(string hub, string certThumbprint)
+            {
+                if (hub == null)
+                    return;
+                
+                foreach (var  (_, repl) in _incoming)
+                {
+                    if (string.Equals(repl.PullReplicationName, hub, StringComparison.OrdinalIgnoreCase) == false) 
+                        continue;
+                    
+                    if(certThumbprint!= null && repl.CertificateThumbprint != certThumbprint)
+                        continue;
+                    
+                    try
+                    {
+                        if(_log.IsInfoEnabled)
+                            _log.Info("Resetting ");
+                        repl.Dispose();
+                    }
+                    catch 
+                    {
+                    }
+                }
+
+                foreach (var repl in _outgoing)
+                {
+                    if (string.Equals(repl.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false) 
+                        continue;
+                    
+                    if(certThumbprint!= null && repl.CertificateThumbprint != certThumbprint)
+                        continue;
+
+                    try
+                    {
+                        repl.Dispose();
+                    }
+                    catch 
+                    {
+                    }
+
+                }
+            }
+        }
+
 
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
             => _outgoingFailureInfo;
@@ -264,7 +330,8 @@ namespace Raven.Server.Documents.Replication
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info)
             {
-                PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
+                PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName,
+                CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint
             };
 
             if (header.ReplicationHubAccess != null)
@@ -1341,6 +1408,8 @@ namespace Raven.Server.Documents.Replication
         {
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
 
+            ea.Execute(() => _server.Cluster.Changes.DatabaseChanged -= DatabaseValueChanged);
+            
             ea.Execute(() =>
             {
                 using (var waitHandle = new ManualResetEvent(false))

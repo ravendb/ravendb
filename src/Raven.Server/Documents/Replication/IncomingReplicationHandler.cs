@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Replication
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
             PullReplicationName = pullReplicationName;
+            CertificateThumbprint = options.Certificate?.Thumbprint;
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
             _cts = CancellationTokenSource.CreateLinkedTokenSource(_database.DatabaseShutdown);
@@ -683,6 +684,7 @@ namespace Raven.Server.Documents.Replication
         private IDisposable _connectionOptionsDisposable;
         private (IDisposable ReleaseBuffer, JsonOperationContext.MemoryBuffer Buffer) _copiedBuffer;
         private AllowedPathsValidator _allowedPathsValidator;
+        public string CertificateThumbprint;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; set; }
 
         private void ReadItemsFromSource(int replicatedDocs, DocumentsOperationContext context, DataForReplicationCommand data, Reader reader,

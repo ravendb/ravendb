@@ -1818,6 +1818,7 @@ namespace Raven.Server
                             ContextPool = _tcpContextPool,
                             Stream = stream,
                             TcpClient = tcpClient,
+                            Certificate = cert
                         };
 
                         var remoteEndPoint = tcpClient.Client.RemoteEndPoint;
