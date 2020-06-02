@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -160,6 +161,46 @@ return ts.Entries.map(entry => ({
                                  City: g.key.City
                                  Count: g.values.reduce((total, val) => val.Count + total, 0)
                              }))";
+            }
+        }
+
+        private class MyMultiMapTsIndex : AbstractJavaScriptTimeSeriesIndexCreationTask
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public DateTime Date { get; set; }
+
+                public string User { get; set; }
+            }
+
+            public MyMultiMapTsIndex()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"timeSeries.map('Companies', 'HeartRate', function (ts) {
+return ts.Entries.map(entry => ({
+        HeartBeat: entry.Values[0],
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        User: ts.DocumentId
+    }));
+})",
+                    @"timeSeries.map('Companies', 'HeartRate2', function (ts) {
+return ts.Entries.map(entry => ({
+        HeartBeat: entry.Values[0],
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        User: ts.DocumentId
+    }));
+})",
+                    @"timeSeries.map('Users', 'HeartRate', function (ts) {
+return ts.Entries.map(entry => ({
+        HeartBeat: entry.Values[0],
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        User: ts.DocumentId
+    }));
+})",
+                };
             }
         }
 
@@ -1140,6 +1181,67 @@ return ts.Entries.map(entry => ({
 
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex/AllDocs", "Name", null));
                 Assert.Equal(0, terms.Length);
+            }
+        }
+
+        [Fact]
+        public async Task BasicMultiMapIndex()
+        {
+            var now = DateTime.UtcNow.Date;
+
+            using (var store = GetDocumentStore())
+            {
+                var timeSeriesIndex = new MyMultiMapTsIndex();
+                await timeSeriesIndex.ExecuteAsync(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company);
+
+                    session.TimeSeriesFor(company, "HeartRate").Append(now, new[] { 2.5d }, "tag1");
+                    session.TimeSeriesFor(company, "HeartRate2").Append(now, new[] { 3.5d }, "tag2");
+
+                    var user = new User();
+                    session.Store(user);
+                    session.TimeSeriesFor(user, "HeartRate").Append(now, new[] { 4.5d }, "tag3");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<MyMultiMapTsIndex.Result, MyMultiMapTsIndex>()
+                        .ToList();
+
+                    Assert.Equal(3, results.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var results = await session.Query<MyMultiMapTsIndex.Result, MyMultiMapTsIndex>()
+                        .ToListAsync();
+
+                    Assert.Equal(3, results.Count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.DocumentQuery<MyMultiMapTsIndex.Result, MyMultiMapTsIndex>()
+                        .ToList();
+
+                    Assert.Equal(3, results.Count);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var results = await session.Advanced.AsyncDocumentQuery<MyMultiMapTsIndex.Result, MyMultiMapTsIndex>()
+                        .ToListAsync();
+
+                    Assert.Equal(3, results.Count);
+                }
             }
         }
     }
