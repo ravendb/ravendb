@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -35,7 +36,7 @@ namespace Raven.Client.Documents.TimeSeries
         /// <typeparam name="TTimeSeriesEntry">Time-series type</typeparam>
         public Task RegisterAsync<TCollection, TTimeSeriesEntry>(string name = null)
         {
-            name ??= GetTimeSeriesName<TTimeSeriesEntry>();
+            name ??= GetTimeSeriesName<TTimeSeriesEntry>(_store.Conventions);
 
             var mapping = TimeSeriesValuesHelper.GetMembersMapping(typeof(TTimeSeriesEntry));
             if (mapping == null)
@@ -45,7 +46,7 @@ namespace Raven.Client.Documents.TimeSeries
 
             return RegisterAsync(collection, name, mapping.Values.Select(f => f.Name).ToArray());
         }
-        
+
         /// <summary>
         /// Register value names of a time-series
         /// </summary>
@@ -91,14 +92,14 @@ namespace Raven.Client.Documents.TimeSeries
         /// <param name="name">Policy name</param>
         /// <param name="aggregation">Aggregation time</param>
         /// <param name="retention">Retention time</param>
-        public Task SetPolicyAsync(string collection, string name, TimeValue aggregation, TimeValue retention)        
+        public Task SetPolicyAsync(string collection, string name, TimeValue aggregation, TimeValue retention)
         {
             var p = new TimeSeriesPolicy(name, aggregation, retention);
             return _executor.SendAsync(new ConfigureTimeSeriesPolicyOperation(collection, p));
         }
 
         /// <summary>
-        /// Set raw retention policy 
+        /// Set raw retention policy
         /// </summary>
         /// <typeparam name="TCollection">Collection type</typeparam>
         /// <param name="retention">Retention time</param>
@@ -149,7 +150,7 @@ namespace Raven.Client.Documents.TimeSeries
         {
             AsyncHelpers.RunSync(() => RegisterAsync<TCollection, TTimeSeriesEntry>(name));
         }
-        
+
         /// <summary>
         /// Register value names of a time-series
         /// </summary>
@@ -185,13 +186,13 @@ namespace Raven.Client.Documents.TimeSeries
         /// <param name="name">Policy name</param>
         /// <param name="aggregation">Aggregation time</param>
         /// <param name="retention">Retention time</param>
-        public void SetPolicy(string collection, string name, TimeValue aggregation, TimeValue retention)        
+        public void SetPolicy(string collection, string name, TimeValue aggregation, TimeValue retention)
         {
             AsyncHelpers.RunSync(() => SetPolicyAsync(collection, name, aggregation, retention));
         }
 
         /// <summary>
-        /// Set raw retention policy 
+        /// Set raw retention policy
         /// </summary>
         /// <typeparam name="TCollection">Collection type</typeparam>
         /// <param name="retention">Retention time</param>
@@ -230,9 +231,9 @@ namespace Raven.Client.Documents.TimeSeries
             AsyncHelpers.RunSync(() => RemovePolicyAsync<TCollection>(name));
         }
 
-        internal string GetTimeSeriesName<TTimeSeriesEntry>()
+        internal static string GetTimeSeriesName<TTimeSeriesEntry>(DocumentConventions conventions)
         {
-            return _store.Conventions.GetCollectionName(typeof(TTimeSeriesEntry));
+            return conventions.GetCollectionName(typeof(TTimeSeriesEntry));
         }
 
         public TimeSeriesOperations ForDatabase(string database)
