@@ -1270,6 +1270,71 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(12)]
+        [InlineData(123)]
+        [InlineData(456)]
+        [InlineData(720)]
+        [InlineData(789)]
+        [InlineData(1421)]
+        public async Task ValidateCorrectRetentionAndGet(int minutesOffset)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
+
+                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
+                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
+                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,p2,p3,p4
+                            }
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = new DateTime(2020, 4, 2).AddMinutes(minutesOffset);
+                database.Time.UtcDateTime = () => now.AddMilliseconds(1);
+
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Core.Utils.Entities.User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var result = store.Operations.Send(new GetTimeSeriesOperation("users/karmel", "Heartrate"));
+
+                ValidateResults(result.Entries, now);
+            }
+        }
+
         public static void ValidateResults(TimeSeriesEntry[] results, DateTime now)
         {
             var byDay = 0;
@@ -1305,11 +1370,21 @@ namespace SlowTests.Client.TimeSeries.Operations
                 rawCount++;
             }
 
-            var expectedByDay = 1 + (now.Hour >= 6 ? 1 : 0); // first day of 'By1Day'
-            var expectedBy6Hours = 4 + (now.Hour >= 6 ? 0 : 1); // first day of 'By6Hours'
-            var expectedBy1Hour = 24 + (now.Minute / 30); // first day of 'By1Hour'
+            var expectedByDay = 1; // first day of 'By1Day'
+            var expectedBy6Hours = 4; // first day of 'By6Hours'
+            var expectedBy1Hour = 24; // first day of 'By1Hour'
             var expectedBy30Min = 24 * 2 + 1; // first day of 'By30Minutes'
             var expectedRawCount = 1440; // entire raw policy for 1 day 
+
+            if (now.Hour >= 6)
+                expectedByDay++;
+
+            if (now.Hour >= 1 && now.Hour % 6 != 0)
+                expectedBy6Hours++;
+
+            if (now.Minute >= 30)
+                expectedBy1Hour++;
+
 
             Assert.Equal(expectedRawCount, rawCount);
             Assert.Equal(expectedBy30Min, by30Min);
