@@ -32,16 +32,32 @@ namespace Raven.Server.Documents.Indexes.Static
         {
         }
 
-        protected override string MapCode => @"
-function map(collection, name, lambda) {
-    var map = {
-        collection: collection,
-        name: name,
-        method: lambda,
-        moreArgs: Array.prototype.slice.call(arguments, 3)
-    };
+        protected override string MapCode => @$"
+function map() {{
+
+    var collectionArg = null;
+    var nameArg = null;
+    var lambdaArg = null;
+    
+    if (arguments.length == 3) {{
+        collectionArg = arguments[0];
+        nameArg = arguments[1];
+        lambdaArg = arguments[2];
+    }} else if (arguments.length == 2) {{
+        collectionArg = arguments[0];
+        nameArg = '{Constants.TimeSeries.All}';
+        lambdaArg = arguments[1];
+    }}
+
+    var map = {{
+        collection: collectionArg,
+        name: nameArg,
+        method: lambdaArg,
+        moreArgs: Array.prototype.slice.call(arguments, arguments.length)
+    }};
+
     globalDefinition.maps.push(map);
-}";
+}}";
 
         protected override List<string> GetMappingFunctions()
         {
