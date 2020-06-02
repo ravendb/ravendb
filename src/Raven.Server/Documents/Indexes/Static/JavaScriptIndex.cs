@@ -57,6 +57,10 @@ function map(collection, name, lambda) {
             return maps;
         }
 
+        protected override void OnInitializeEngine(Engine engine)
+        {
+        }
+
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
         {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
@@ -152,6 +156,12 @@ function map(name, lambda) {
     globalDefinition.maps.push(map);
 }";
 
+        protected override void OnInitializeEngine(Engine engine)
+        {
+            engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", GetMetadata));
+            engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
+        }
+
         protected override void ProcessMaps(ObjectInstance definitions, JintPreventResolvingTasksReferenceResolver resolver, List<string> mapList, List<MapMetadata> mapReferencedCollections, out Dictionary<string, Dictionary<string, List<JavaScriptMapOperation>>> collectionFunctions)
         {
             var mapsArray = definitions.GetProperty(MapsProperty).Value;
@@ -220,6 +230,22 @@ function map(name, lambda) {
 
                 list.Add(operation);
             }
+        }
+
+        private JsValue GetDocumentId(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+
+            return _javaScriptUtils.GetDocumentId(self, args);
+        }
+
+        private JsValue GetMetadata(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+
+            return _javaScriptUtils.GetMetadata(self, args);
         }
     }
 
@@ -384,12 +410,15 @@ function map(name, lambda) {
             };
         }
 
+        protected abstract void OnInitializeEngine(Engine engine);
+
         private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps)
         {
+            OnInitializeEngine(_engine);
+
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
             _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
-            _engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", GetMetadata));
-            _engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
+
             _engine.ExecuteWithReset(Code);
             _engine.ExecuteWithReset(MapCode);
 
@@ -419,22 +448,6 @@ function map(name, lambda) {
             }
 
             return mapReferencedCollections;
-        }
-
-        private JsValue GetDocumentId(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.GetDocumentId(self, args);
-        }
-
-        private JsValue GetMetadata(JsValue self, JsValue[] args)
-        {
-            var scope = CurrentIndexingScope.Current;
-            scope.RegisterJavaScriptUtils(_javaScriptUtils);
-
-            return _javaScriptUtils.GetMetadata(self, args);
         }
 
         protected void ThrowIndexCreationException(string message)
@@ -557,7 +570,7 @@ function createSpatialField(lat, lng) {
 
         protected readonly IndexDefinition Definition;
         internal readonly Engine _engine;
-        private readonly JavaScriptUtils _javaScriptUtils;
+        protected readonly JavaScriptUtils _javaScriptUtils;
 
         public JavaScriptReduceOperation ReduceOperation { get; private set; }
 
