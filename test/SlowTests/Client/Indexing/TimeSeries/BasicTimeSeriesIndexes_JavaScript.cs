@@ -91,6 +91,43 @@ return ts.Entries.map(entry => ({
             }
         }
 
+        private class AverageHeartRateDaily_ByDateAndCity : AbstractJavaScriptTimeSeriesIndexCreationTask
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public DateTime Date { get; set; }
+
+                public string City { get; set; }
+
+                public long Count { get; set; }
+            }
+
+            public AverageHeartRateDaily_ByDateAndCity()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"timeSeries.map('Users', 'HeartRate', function (ts) {
+return ts.Entries.map(entry => ({
+        HeartBeat: entry.Value,
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        City: load(entry.Tag, 'Addresses').City,
+        Count: 1
+    }));
+})"
+                };
+
+                Reduce = @"groupBy(r => ({ Date: r.Date, City: r.City }))
+                             .aggregate(g => ({
+                                 HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
+                                 Date: g.key.Date,
+                                 City: g.key.City
+                                 Count: g.values.reduce((total, val) => val.Count + total, 0)
+                             }))";
+            }
+        }
+
         [Fact]
         public void BasicMapIndex()
         {
@@ -584,6 +621,153 @@ return ts.Entries.map(entry => ({
                 Assert.Equal(0, terms.Length);
 
                 WaitForUserToContinueTheTest(store);
+            }
+        }
+
+        [Fact]
+        public async Task BasicMapReduceIndexWithLoad()
+        {
+            {
+                using (var store = GetDocumentStore())
+                {
+                    var today = RavenTestHelper.UtcToday;
+
+                    using (var session = store.OpenSession())
+                    {
+                        var address = new Address { City = "NY" };
+
+                        session.Store(address, "addresses/1");
+
+                        var user = new User();
+
+                        user.AddressId = address.Id;
+
+                        session.Store(user, "users/1");
+
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.TimeSeriesFor(user, "HeartRate").Append(today.AddHours(i), new double[] { 180 + i }, address.Id);
+                        }
+
+                        session.SaveChanges();
+                    }
+
+                    store.Maintenance.Send(new StopIndexingOperation());
+
+                    var timeSeriesIndex = new AverageHeartRateDaily_ByDateAndCity();
+                    var indexName = timeSeriesIndex.IndexName;
+                    var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+
+                    timeSeriesIndex.Execute(store);
+
+                    var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                    Assert.True(staleness.IsStale);
+                    Assert.Equal(1, staleness.StalenessReasons.Count);
+                    Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                    store.Maintenance.Send(new StartIndexingOperation());
+
+                    WaitForIndexing(store);
+
+                    staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                    Assert.False(staleness.IsStale);
+
+                    var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("184.5", terms);
+
+                    terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
+
+                    terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("ny", terms);
+
+                    terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Count", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Equal("10", terms[0]);
+
+                    store.Maintenance.Send(new StopIndexingOperation());
+
+                    using (var session = store.OpenSession())
+                    {
+                        var address = session.Load<Address>("addresses/1");
+                        address.City = "LA";
+
+                        session.SaveChanges();
+                    }
+
+                    staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                    Assert.True(staleness.IsStale);
+                    Assert.Equal(1, staleness.StalenessReasons.Count);
+                    Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                    store.Maintenance.Send(new StartIndexingOperation());
+
+                    WaitForIndexing(store);
+
+                    staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                    Assert.False(staleness.IsStale);
+
+                    terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Contains("la", terms);
+
+                    store.Maintenance.Send(new StopIndexingOperation());
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("addresses/1");
+
+                        session.SaveChanges();
+                    }
+
+                    staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                    Assert.True(staleness.IsStale);
+                    Assert.Equal(1, staleness.StalenessReasons.Count);
+                    Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                    store.Maintenance.Send(new StartIndexingOperation());
+
+                    WaitForIndexing(store);
+
+                    terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                    Assert.Equal(1, terms.Length);
+                    Assert.Equal("NULL_VALUE", terms[0]);
+
+                    // delete source document
+
+                    store.Maintenance.Send(new StopIndexingOperation());
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("users/1");
+
+                        session.SaveChanges();
+                    }
+
+                    staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                    Assert.True(staleness.IsStale);
+                    Assert.Equal(1, staleness.StalenessReasons.Count);
+                    Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                    store.Maintenance.Send(new StartIndexingOperation());
+
+                    WaitForIndexing(store);
+
+                    var database = await GetDatabase(store.Database);
+                    var index = database.IndexStore.GetIndex(indexName);
+
+                    using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (var tx = context.OpenReadTransaction())
+                    {
+                        var counts = index._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                        Assert.Equal(0, counts.ReferenceTableCount);
+                        Assert.Equal(0, counts.CollectionTableCount);
+                    }
+                }
             }
         }
     }
