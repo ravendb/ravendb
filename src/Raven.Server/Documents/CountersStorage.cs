@@ -1182,28 +1182,16 @@ namespace Raven.Server.Documents
 
         public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId)
         {
-            var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
+            var doc = _documentsStorage.Get(context, docId);
+            if (doc == null ||
+                doc.TryGetMetadata(out var metadata) == false || 
+                metadata.TryGet(Constants.Documents.Metadata.Counters, out BlittableJsonReaderArray metadataCounters) == false ||
+                metadataCounters == null) 
+                yield break;
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
+            foreach (var ctr in metadataCounters)
             {
-                foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
-                {
-                    var data = GetCounterValuesData(context, ref counterGroup.Value.Reader);
-                    if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
-                    {
-                        throw new InvalidDataException($"Counter-Group document ({docId}) '{counterGroup.Key}' is missing '{Values}' property. Shouldn't happen");
-                    }
-
-                    var prop = new BlittableJsonReaderObject.PropertyDetails();
-                    for (var i = 0; i < counters.Count; i++)
-                    {
-                        counters.GetPropertyByIndex(i, ref prop);
-                        if (prop.Value is LazyStringValue)
-                            continue; //deleted
-
-                        yield return prop.Name;
-                    }
-                }
+                yield return ctr.ToString();
             }
         }
 
@@ -1939,15 +1927,16 @@ namespace Raven.Server.Documents
                                 // we try to take the counter name from the document's metadata,
                                 // in order to index the counter in it's original casing.
                                 // if we didn't mange to get 'countersFromMetadata' we keep the (lowered) name 'propertyDetails.Name'
+
                                 if (countersFromMetadata != null)
                                 {
-
                                     var searchResult = countersFromMetadata.BinarySearch(propertyDetails.Name, StringComparison.OrdinalIgnoreCase);
                                     if (searchResult >= 0)
                                     {
                                         var ctrStr = countersFromMetadata[searchResult].ToString();
                                         counterName = context.GetLazyString(ctrStr);
                                     }
+
                                     // if the counter was deleted (and therefore removed from document's metadata) 
                                     // we keep the (lowered) name 'propertyDetails.Name' 
                                 }

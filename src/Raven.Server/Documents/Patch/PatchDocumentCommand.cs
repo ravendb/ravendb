@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

@@ -1,9 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client;
-using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.MapReduce;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Workers.Counters
 {

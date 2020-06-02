@@ -258,6 +258,48 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void GetCountersForDocumentShouldReturnNamesInTheirOriginalCasing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/1");
+
+                    var countersFor = session.CountersFor("users/1");
+                    countersFor.Increment("AviV");
+                    countersFor.Increment("Karmel");
+                    countersFor.Increment("PAWEL");
+
+                    session.SaveChanges();
+                }
+
+                var db = GetDocumentDatabaseInstanceFor(store).Result;
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var all = db.DocumentsStorage.CountersStorage.GetCountersForDocument(ctx, "users/1")?.ToList();
+                    Assert.Equal(3, all?.Count);
+                    Assert.Equal("AviV", all[0]);
+                    Assert.Equal("Karmel", all[1]);
+                    Assert.Equal("PAWEL", all[2]);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    // GetAll should return counter names in their original casing
+                    var all = session.CountersFor("users/1").GetAll();
+                    Assert.Equal(3, all?.Count);
+
+                    var keys = all.Keys.ToList();
+                    Assert.True(keys.Contains("AviV"));
+                    Assert.True(keys.Contains("Karmel"));
+                    Assert.True(keys.Contains("PAWEL"));
+                }
+            }
+        }
+
         private static string RandomString(int size, Random random)
         {
             var builder = new StringBuilder();

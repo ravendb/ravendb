@@ -9,7 +9,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
-using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Replication.ReplicationItems;

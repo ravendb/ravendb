@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Includes;
@@ -10,7 +9,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes
 {
