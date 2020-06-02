@@ -1360,31 +1360,16 @@ namespace Raven.Server.Documents
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                     return null;
 
-                var propertyIndex = -1;
-                var property = new BlittableJsonReaderObject.PropertyDetails();
-
-                for (var i = 0; i < counters.Count; i++)
-                {
-                    counters.GetPropertyByIndex(i, ref property);
-
-                    if (string.Equals(property.Name, counterName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (property.Value is LazyNumberValue) // already deleted
-                            return null;
-
-                        propertyIndex = i;
-                        break;
-                    }
-                }
-
-                if (propertyIndex == -1)
+                var lowered = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length); // lowered cased name 
+                if (counters.TryGetMember(lowered, out object counterToDelete) == false)
+                    return null; // not found
+                if (counterToDelete is LazyNumberValue) // already deleted
                     return null;
 
-                counterName = property.Name; // lowered cased name 
-                var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, property.Value as BlittableJsonReaderObject.RawBlob);
+                var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, counterToDelete as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters)
                 {
-                    [counterName] = deleteCv
+                    [lowered] = deleteCv
                 };
 
                 using (var old = data)
