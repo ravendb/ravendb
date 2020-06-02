@@ -452,12 +452,13 @@ namespace Raven.Server.Documents
 
                 using (context.Allocator.Allocate(documentKeyPrefix.Size + firstChange + 1, out ByteString newCounterKey))
                 using (Slice.From(context.Allocator, cv2, out cv))
-                using (table.Allocate(out TableValueBuilder tvb))
                 {
                     documentKeyPrefix.CopyTo(newCounterKey.Ptr);
                     Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, firstPropertySnd.Name.Buffer, firstChange + 1);
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(newCounterKey);
 
-                    tvb.Add(newCounterKey);
                     tvb.Add(Bits.SwapBytes(etag));
                     tvb.Add(cv);
                     tvb.Add(snd.BasePointer, snd.Size);
@@ -1379,7 +1380,7 @@ namespace Raven.Server.Documents
                 if (propertyIndex == -1)
                     return null;
 
-                counterName = property.Name; // use original casing
+                counterName = property.Name; // lowered cased name 
                 var deleteCv = GenerateDeleteChangeVectorFromRawBlob(data, property.Value as BlittableJsonReaderObject.RawBlob);
                 counters.Modifications = new DynamicJsonValue(counters)
                 {
@@ -1929,16 +1930,43 @@ namespace Raven.Server.Documents
                     {
                         size /= values.Count; // just 'estimating'
 
+                        BlittableJsonReaderArray countersFromMetadata = default;
+                        using (var id = ExtractDocId())
+                        {
+                            // try to get the counter-names array from document's metadata
+                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, id);
+                            if (doc?.Data != null)
+                            {
+                                doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
+                                metadata?.TryGet(Constants.Documents.Metadata.Counters, out countersFromMetadata);
+                            }
+                        }
+
                         var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
                         for (var i = 0; i < values.Count; i++)
                         {
                             var docId = ExtractDocId();
-
                             using (ToDocumentIdPrefix(docId, out var documentIdPrefix))
                             {
                                 values.GetPropertyByIndex(i, ref propertyDetails);
+                                LazyStringValue counterName = propertyDetails.Name;
 
-                                var counterName = propertyDetails.Name;
+                                // we try to take the counter name from the document's metadata,
+                                // in order to index the counter in it's original casing.
+                                // if we didn't mange to get 'countersFromMetadata' we keep the (lowered) name 'propertyDetails.Name'
+                                if (countersFromMetadata != null)
+                                {
+
+                                    var searchResult = countersFromMetadata.BinarySearch(propertyDetails.Name, StringComparison.OrdinalIgnoreCase);
+                                    if (searchResult >= 0)
+                                    {
+                                        var ctrStr = countersFromMetadata[searchResult].ToString();
+                                        counterName = context.GetLazyString(ctrStr);
+                                    }
+                                    // if the counter was deleted (and therefore removed from document's metadata) 
+                                    // we keep the (lowered) name 'propertyDetails.Name' 
+                                }
+
                                 var keyScope = ToKey(documentIdPrefix, counterName, out var key);
                                 var luceneKey = ToLuceneKey(docId, counterName);
 
