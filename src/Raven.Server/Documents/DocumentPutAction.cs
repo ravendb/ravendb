@@ -427,7 +427,12 @@ namespace Raven.Server.Documents
                 if (RecreateIfNeeded(context, id, oldDoc, document, ref flags, nonPersistentFlags, type))
                 {
                     ValidateDocumentHash(id, document, documentDebugHash);
-                    document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    using (var old = document) // we can dispose the old data
+                    {
+                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    }
+
                     ValidateDocument(id, document, ref documentDebugHash);
 #if DEBUG
                     type.Assert(id, document, flags);
@@ -477,9 +482,10 @@ namespace Raven.Server.Documents
 
             bool RecreatePreserveCasing(BlittableJsonReaderArray currentMetadata, ref DocumentFlags documentFlags)
             {
-                if (type is RecreateTimeSeries && currentMetadata == null && old != null)
+                if ((type is RecreateTimeSeries || type is RecreateCounters) && 
+                    currentMetadata == null && old != null)
                 {
-                    // use the '@timeseries' from old document's metadata
+                    // use the '@counters'/'@timeseries' from old document's metadata
 
                     if (metadata == null)
                     {

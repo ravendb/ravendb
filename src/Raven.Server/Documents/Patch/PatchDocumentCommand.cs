@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Patch
                             foreach (var kvp in run.DocumentCountersToUpdate)
                             {
                                 var docId = kvp.Key;
-                                var counterToAdd = kvp.Value.CountersToAdd;
+                                var countersToAdd = kvp.Value.CountersToAdd;
                                 var countersToRemove = kvp.Value.CountersToRemove;
 
                                 if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Patch
                                     Debug.Assert(originalDocument != null);
 
                                     var newData = CountersStorage.ApplyCounterUpdatesToMetadata(context, result.ModifiedDocument, docId,
-                                        counterToAdd, countersToRemove, ref originalDocument.Flags);
+                                        countersToAdd, countersToRemove, ref originalDocument.Flags);
                                     if (newData != null)
                                     {
                                         result.ModifiedDocument = newData;
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Patch
                                 {
                                     var docToUpdate = _database.DocumentsStorage.Get(context, docId);
 
-                                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, docToUpdate, docId, counterToAdd, countersToRemove,
+                                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, docToUpdate, docId, countersToAdd, countersToRemove,
                                         NonPersistentDocumentFlags.ByCountersUpdate);
                                 }
                             }
