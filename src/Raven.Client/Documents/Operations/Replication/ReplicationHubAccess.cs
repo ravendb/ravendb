@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -174,6 +176,7 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 _hubDefinitionName = hubDefinitionName;
                 _access = access;
+                ResponseType = RavenCommandResponseType.Raw;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -192,6 +195,16 @@ namespace Raven.Client.Documents.Operations.Replication
                 };
 
                 return request;
+            }
+
+            public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+            {
+                using (stream)
+                {
+                    if (response.StatusCode == HttpStatusCode.NotFound)
+                        throw new InvalidOperationException("The replication hub " + _hubDefinitionName +
+                                                            " was not found on the database. Did you forgot to define it first?");
+                }
             }
 
             public string RaftUniqueRequestId { get; } =  RaftIdGenerator.NewId();

@@ -124,7 +124,8 @@ namespace SlowTests.Issues
             
             var pullCertA = certificates.ClientCertificate2.Value;
             var pullCertB = certificates.ClientCertificate3.Value;
-            var hubOperation = new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+
+            await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
                 Certificates = new Dictionary<string, string>
@@ -132,7 +133,8 @@ namespace SlowTests.Issues
                     [pullCertA.Thumbprint] = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert)),
                     [pullCertB.Thumbprint] = Convert.ToBase64String(pullCertB.Export(X509ContentType.Cert)),
                 },
-            });
+            }));
+            
             await Assert.ThrowsAsync<RavenException>(async () => await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
                 new ReplicationHubAccess
                 {
@@ -220,7 +222,7 @@ namespace SlowTests.Issues
                 Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
             }));
             
-            await storeB.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
+            await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
             {
                 Name = "Arava",
                 AllowedReadPaths =  new[]
@@ -356,9 +358,8 @@ namespace SlowTests.Issues
             
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
-          
             
-            await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            await storeB.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "push",
                 Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
@@ -389,7 +390,7 @@ namespace SlowTests.Issues
                 HubDefinitionName = "push"
             }));
 
-            WaitForDocument(storeB, "users/ayende", timeout: 10000);
+            WaitForDocument(storeB, "users/ayende");
 
             using (var s = storeB.OpenAsyncSession())
             {
@@ -398,6 +399,8 @@ namespace SlowTests.Issues
                 Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
                 Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
                 Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
+                
+                WaitForUserToContinueTheTest(storeA);
                 
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));

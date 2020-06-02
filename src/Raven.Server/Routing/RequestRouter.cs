@@ -239,7 +239,7 @@ namespace Raven.Server.Routing
 
         private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database, out RavenServer.AuthenticationStatus authenticationStatus)
         {
-            var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var feature = (RavenServer.AuthenticateConnection)context.Features.Get<IHttpAuthenticationFeature>();
 
             if (feature.WrittenToAuditLog == 0) // intentionally racy, we'll check it again later
             {
@@ -282,7 +282,12 @@ namespace Raven.Server.Routing
                 }
             }
 
-            authenticationStatus = feature?.Status ?? RavenServer.AuthenticationStatus.None;
+#if DEBUG
+            if (AllowDebugOnlyBypassOfCertificateCheck(context, feature, out authenticationStatus)) 
+                return true;
+#endif
+
+            authenticationStatus = feature.Status;
             switch (route.AuthorizationStatus)
             {
                 case AuthorizationStatus.UnauthenticatedClients:
@@ -351,6 +356,32 @@ namespace Raven.Server.Routing
                     return false; // never hit
             }
         }
+
+#if DEBUG
+        public static bool AllowDebugOnlyBypassOfCertificateCheck(HttpContext context, RavenServer.AuthenticateConnection feature,
+            out RavenServer.AuthenticationStatus authenticationStatus)
+        {
+            // This is useful when we are using secured servers in testing, where each test has a different server.
+            // The feature used explicitly only for that, required a env variable to enable and only runs on debug.
+            // We limit it to browser only (via the Mozilla check) to ensure that inter API calls aren't affected. 
+            if (Environment.GetEnvironmentVariable("Raven_DEBUG_ONLY_Allow_Local_Connection_Bypass_Certificate_Check") == "1")
+            {
+                if (context.Request.Headers.TryGetValue("User-Agent", out var agent) && agent[0].Contains("Mozilla"))
+                {
+                    if (IPAddress.IsLoopback(context.Connection.RemoteIpAddress) ||
+                        Equals(context.Connection.RemoteIpAddress, context.Connection.LocalIpAddress))
+                    {
+                        feature.Status = RavenServer.AuthenticationStatus.ClusterAdmin;
+                        authenticationStatus = RavenServer.AuthenticationStatus.ClusterAdmin;
+                        return true;
+                    }
+                }
+            }
+
+            authenticationStatus = default;
+            return false;
+        }
+#endif
 
         private static void ThrowUnknownAuthStatus(RouteInformation route)
         {

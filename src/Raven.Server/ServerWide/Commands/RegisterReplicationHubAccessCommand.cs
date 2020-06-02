@@ -74,8 +74,7 @@ namespace Raven.Server.ServerWide.Commands
     {
         public string Database;
         public string HubDefinitionName;
-        public readonly string CertThumbprint;
-
+        public string CertThumbprint;
 
         public UnregisterReplicationHubAccessCommand()
         {

@@ -2349,7 +2349,7 @@ namespace Raven.Server
                                         _ => PullReplicationMode.None
                                     };
                                     
-                                    if (pullReplication.Certificates != null )// legacy
+                                    if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)// legacy
                                     { 
                                         return pullReplication.Certificates.ContainsKey(certificate.Thumbprint) && 
                                             expectedMode == PullReplicationMode.Outgoing;

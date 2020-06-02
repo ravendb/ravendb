@@ -27,19 +27,8 @@ namespace Tryouts
         
         public static async Task Main(string[] args)
         {
-          using var store = new DocumentStore
-          {
-              Urls = new[] { "https://a.snark.development.run/" },
-              Database = "test",
-              Certificate = new X509Certificate2(@"C:\Users\ayende\Downloads\abc\abc.pfx")
-          }.Initialize();
-
-          store.Maintenance.Send(new RegisterReplicationHubAccessOperation("arava",new ReplicationHubAccess
-          {
-              Name = "Oscar",
-              AllowedReadPaths = new[] { "users/ayende" },
-              CertificateBas64 = Convert.ToBase64String(store.Certificate.Export(X509ContentType.Cert))
-          }));
+            using var filteredReplicationTests = new FilteredReplicationTests(new ConsoleTestOutputHelper());
+            await filteredReplicationTests.Can_push_via_filtered_replication();
         }
     }
 }

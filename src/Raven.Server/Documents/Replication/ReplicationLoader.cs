@@ -197,43 +197,34 @@ namespace Raven.Server.Documents.Replication
                     if (supportedVersions.Replication.PullReplication == false)
                         throw new InvalidOperationException("Unable to use Pull Replication, because the other side doesn't have it as a supported feature");
 
-                    ReplicationInitialRequest initialRequest;
-
-                    using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                    using (var readerObject = context.ParseToMemory(tcpConnectionOptions.Stream, "initial-replication-message",
-                        BlittableJsonDocumentBuilder.UsageMode.None, buffer))
-                    {
-                        initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
-                    }
-
-                    if (initialRequest.PullReplicationDefinitionName == null)
-                        throw new InvalidOperationException("Pull replication must specify the PullReplicationDefinitionName, but none was specified");
+                    if (header.AuthorizeInfo.AuthorizationFor == null)
+                        throw new InvalidOperationException("Pull replication requires that the AuthorizationFor field will be set, but it wasn't provided");
 
                     PullReplicationDefinition pullReplicationDefinition;
                     using (_server.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
-                        pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, initialRequest.PullReplicationDefinitionName, ctx);
+                        pullReplicationDefinition = _server.Cluster.ReadPullReplicationDefinition(Database.Name, header.AuthorizeInfo.AuthorizationFor, ctx);
 
                         if (pullReplicationDefinition.Disabled)
                             throw new InvalidOperationException("The replication hub " + pullReplicationDefinition.Name + " is disabled and cannot be used currently");
                     }
 
-                    pullDefinitionName = initialRequest.PullReplicationDefinitionName;
+                    pullDefinitionName = header.AuthorizeInfo.AuthorizationFor;
                     
                     switch (header.AuthorizeInfo.AuthorizeAs)
                     {
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
                             if ((pullReplicationDefinition.Mode & PullReplicationMode.Outgoing) != PullReplicationMode.Outgoing)
-                                throw new InvalidOperationException($"Replication hub {initialRequest.PullReplicationDefinitionName} does not support Pull Replication");
-                            CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, certificate, pullReplicationDefinition, header);
+                                throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
+                            CreatePullReplicationAsHub(tcpConnectionOptions, buffer, supportedVersions, pullReplicationDefinition, header);
                             return;
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
                             if ((pullReplicationDefinition.Mode & PullReplicationMode.Incoming) != PullReplicationMode.Incoming)
-                                throw new InvalidOperationException($"Replication hub {initialRequest.PullReplicationDefinitionName} does not support Push Replication");
+                                throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
                             if (certificate == null)
                                 throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
-                            if(pullReplicationDefinition.Certificates != null)
+                            if(pullReplicationDefinition.Certificates != null && pullReplicationDefinition.Certificates.Count > 0)
                                 throw new InvalidOperationException("Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " + pullReplicationDefinition.Name);
 
                             allowedWritePaths = header.ReplicationHubAccess.AllowedWritePaths ?? Array.Empty<string>();
@@ -253,10 +244,22 @@ namespace Raven.Server.Documents.Replication
             CreateIncomingInstance(tcpConnectionOptions, allowedWritePaths, pullDefinitionName, buffer);
         }
 
-        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
-            TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, X509Certificate2 certificate,
+        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
+            TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, 
             PullReplicationDefinition pullReplicationDefinition, TcpConnectionHeaderMessage header)
         {
+            ReplicationInitialRequest initialRequest;
+
+            using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var readerObject = context.ParseToMemory(tcpConnectionOptions.Stream, "initial-replication-message",
+                BlittableJsonDocumentBuilder.UsageMode.None, buffer))
+            {
+                initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
+            }
+
+            if (string.Equals(initialRequest.PullReplicationDefinitionName, pullReplicationDefinition.Name, StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException($"PullReplicationDefinitionName '{initialRequest.PullReplicationDefinitionName}' does not match the pull replication definition name: {pullReplicationDefinition.Name}");
+
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info)
@@ -1152,6 +1155,7 @@ namespace Raven.Server.Documents.Replication
                         // we want to set node Url even if we fail to connect to destination, so they can be used in replication stats
                         pullReplicationAsSink.Url = requestExecutor.Url;
                         pullReplicationAsSink.Database = database;
+                        throw;
                     }
 
                     remoteDatabaseUrls = cmd.Result;
