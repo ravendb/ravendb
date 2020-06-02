@@ -6,7 +6,9 @@ class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
     useCustomS3Host = ko.observable<boolean>();
     customServerUrl = ko.observable<string>();    
-    
+    accessKeyPropertyName: KnockoutComputed<string>;
+    secretKeyPropertyName: KnockoutComputed<string>;
+
     constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>) {
         super(dto, "S3", allowedRegions);
 
@@ -35,6 +37,14 @@ class s3Settings extends amazonSettings {
                 this.testConnectionResult(null);
             }
         });
+
+        this.accessKeyPropertyName = ko.pureComputed(() => this.isBackBlaze() ? "Application Key ID" : "Access key");
+        this.secretKeyPropertyName = ko.pureComputed(() => this.isBackBlaze() ? "Application Key" : "Secret key");
+    }
+
+    private isBackBlaze() {
+        const customServerUrl = this.customServerUrl();
+        return this.useCustomS3Host() && customServerUrl && customServerUrl.toLowerCase().endsWith(".backblazeb2.com");
     }
 
     initValidation() {

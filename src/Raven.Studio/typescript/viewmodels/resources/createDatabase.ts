@@ -15,7 +15,6 @@ import eventsCollector = require("common/eventsCollector");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import popoverUtils = require("common/popoverUtils");
 import notificationCenter = require("common/notifications/notificationCenter");
-import license = require("models/auth/licenseModel");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import viewHelpers = require("common/helpers/view/viewHelpers");
@@ -240,7 +239,7 @@ class createDatabase extends dialogViewModelBase {
         });
 
         this.showDynamicDatabaseDistributionWarning = ko.pureComputed(() => {
-            const hasDynamicDatabaseDistribution = license.licenseStatus().HasDynamicNodesDistribution;
+            const hasDynamicDatabaseDistribution = licenseModel.licenseStatus().HasDynamicNodesDistribution;
             if (!hasDynamicDatabaseDistribution) {
                 this.databaseModel.replication.dynamicMode(false);
             }
