@@ -147,12 +147,11 @@ namespace Sparrow.Json
                 var bufferBefore = BufferInstance;
                 BufferInstance = null;
                 Buffer = new ArraySegment<byte>();
-                if (_handle.IsAllocated)
-                    _handle.Free();
+               
+                UnpinMemory();
 
                 Length = 0;
                 Valid = Used = 0;
-                Pointer = null;
 
                 if (bufferBefore != null)
                 {
@@ -167,8 +166,7 @@ namespace Sparrow.Json
 
             ~ManagedPinnedBuffer()
             {
-                if (_handle.IsAllocated)
-                    _handle.Free();
+                UnpinMemory();
             }
 
             public (IDisposable ReleaseBuffer, ManagedPinnedBuffer Buffer) Clone<T>(JsonContextPoolBase<T> pool)
@@ -218,20 +216,35 @@ namespace Sparrow.Json
                 GC.SuppressFinalize(this); // we only want finalization if we have values
             }
 
-            private void Init(BufferSegment buffer, byte* pointer, GCHandle handle)
+            private void Init(BufferSegment buffer)
             {
                 BufferInstance = buffer;
                 Buffer = new ArraySegment<byte>(buffer.Array, buffer.Offset, buffer.Count);
                 Length = buffer.Count;
-                Pointer = pointer;
-                _handle = handle;
                 GC.ReRegisterForFinalize(this);
             }
 
-            private static ObjectPool<ManagedPinnedBuffer> _pinnedBufferPool = new ObjectPool<ManagedPinnedBuffer>(() => new ManagedPinnedBuffer());
-            private static ObjectPool<BufferSegment> _smallBufferSegments = new ObjectPool<BufferSegment>(CreateSmallBuffers);
+            public void PinMemory()
+            {
+                Debug.Assert(_handle.IsAllocated == false, "_handle.IsAllocated == false");
 
-            private static ObjectPool<BufferSegment> _largeBufferSegments = new ObjectPool<BufferSegment>(() => new BufferSegment
+                _handle = GCHandle.Alloc(BufferInstance.Array, GCHandleType.Pinned);
+                Pointer = (byte*)_handle.AddrOfPinnedObject() + BufferInstance.Offset;
+            }
+
+            public void UnpinMemory()
+            {
+                if (_handle.IsAllocated)
+                {
+                    _handle.Free();
+                    Pointer = null;
+                }
+            }
+
+            private static readonly ObjectPool<ManagedPinnedBuffer> _pinnedBufferPool = new ObjectPool<ManagedPinnedBuffer>(() => new ManagedPinnedBuffer());
+            private static readonly ObjectPool<BufferSegment> _smallBufferSegments = new ObjectPool<BufferSegment>(CreateSmallBuffers);
+
+            private static readonly ObjectPool<BufferSegment> _largeBufferSegments = new ObjectPool<BufferSegment>(() => new BufferSegment
             {
                 Array = new byte[LargeBufferSize],
                 Count = LargeBufferSize,
@@ -276,17 +289,18 @@ namespace Sparrow.Json
             private static ManagedPinnedBuffer AllocateInstance(ObjectPool<BufferSegment> pool)
             {
                 var buffer = pool.Allocate();
-                var handle = GCHandle.Alloc(buffer.Array, GCHandleType.Pinned);
+               
                 try
                 {
-                    var ptr = (byte*)handle.AddrOfPinnedObject();
                     var mpb = _pinnedBufferPool.Allocate();
-                    mpb.Init(buffer, ptr + buffer.Offset, handle);
+
+                    mpb.Init(buffer);
+                    mpb.PinMemory();
+
                     return mpb;
                 }
                 catch (Exception)
                 {
-                    handle.Free();
                     pool.Free(buffer);
                     throw;
                 }
@@ -397,9 +411,13 @@ namespace Sparrow.Json
             if (_managedBuffers.Count == 0)
                 buffer = ManagedPinnedBuffer.ShortLivedInstance();
             else
+            {
                 buffer = _managedBuffers.Pop();
+                buffer.PinMemory();
+            }
 
             buffer.Valid = buffer.Used = 0;
+
             return new ReturnBuffer(buffer, this);
         }
 
@@ -424,6 +442,7 @@ namespace Sparrow.Json
                 if (_parent.Disposed)
                     ThrowParentWasDisposed();
 
+                _buffer.UnpinMemory();
                 _parent._managedBuffers.Push(_buffer);
                 _buffer = null;
             }
