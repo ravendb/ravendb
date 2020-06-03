@@ -2464,14 +2464,17 @@ namespace Raven.Server.ServerWide
             if (licenseLimits == null)
                 return;
 
-            if (licenseLimits.NodeLicenseDetails.TryGetValue(NodeTag, out _) == false)
+            if (licenseLimits.NodeLicenseDetails.TryGetValue(NodeTag, out var existingDetailsPerNode) == false)
                 return;
 
             var nodeInfo = GetNodeInfo();
+            var detailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo);
+            detailsPerNode.Modified = existingDetailsPerNode.Modified;
+
             var nodeLicenseLimits = new NodeLicenseLimits
             {
                 NodeTag = NodeTag,
-                DetailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo),
+                DetailsPerNode = detailsPerNode,
                 LicensedCores = maxLicenseCores,
                 AllNodes = GetClusterTopology().AllNodes.Keys.ToList()
             };

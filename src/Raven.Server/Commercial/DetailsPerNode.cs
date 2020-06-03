@@ -18,6 +18,8 @@ namespace Raven.Server.Commercial
 
         public OsInfo OsInfo;
 
+        public bool Modified;
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -27,7 +29,8 @@ namespace Raven.Server.Commercial
                 [nameof(InstalledMemoryInGb)] = InstalledMemoryInGb,
                 [nameof(UsableMemoryInGb)] = UsableMemoryInGb,
                 [nameof(BuildInfo)] = BuildInfo,
-                [nameof(OsInfo)] = OsInfo
+                [nameof(OsInfo)] = OsInfo,
+                [nameof(Modified)] = Modified
             };
         }
 
@@ -40,7 +43,8 @@ namespace Raven.Server.Commercial
                 InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
                 UsableMemoryInGb = nodeInfo.UsableMemoryInGb,
                 BuildInfo = nodeInfo.BuildInfo,
-                OsInfo = nodeInfo.OsInfo
+                OsInfo = nodeInfo.OsInfo,
+                Modified = false
             };
         }
     }

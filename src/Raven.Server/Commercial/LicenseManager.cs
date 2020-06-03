@@ -358,7 +358,8 @@ namespace Raven.Server.Commercial
                         InstalledMemoryInGb = installedMemoryInGb,
                         UsableMemoryInGb = usableMemoryInGb,
                         BuildInfo = buildInfo,
-                        OsInfo = osInfo
+                        OsInfo = osInfo,
+                        Modified = newAssignedCores != _licenseStatus.MaxCores
                     };
                 }
 
@@ -514,6 +515,7 @@ namespace Raven.Server.Commercial
 
         private void SetLicense(Guid id, Dictionary<string, object> attributes)
         {
+            var oldStatus = _licenseStatus;
             var newLicenseStatus = new LicenseStatus
             {
                 Id = id,
@@ -522,10 +524,10 @@ namespace Raven.Server.Commercial
                 FirstServerStartDate = _licenseStatus.FirstServerStartDate
             };
 
-            if (newLicenseStatus.MaxCores != _licenseStatus.MaxCores)
+            if (oldStatus.MaxCores != newLicenseStatus.MaxCores)
             {
                 // it should be updated only if license cores were changed
-                _previousLicenseCores = _licenseStatus.MaxCores;
+                _previousLicenseCores = oldStatus.MaxCores;
             }
 
             _licenseStatus = newLicenseStatus;
@@ -823,7 +825,8 @@ namespace Raven.Server.Commercial
                     InstalledMemoryInGb = newNodeDetails.InstalledMemoryInGb,
                     UsableMemoryInGb = newNodeDetails.UsableMemoryInGb,
                     BuildInfo = newNodeDetails.BuildInfo,
-                    OsInfo = newNodeDetails.OsInfo
+                    OsInfo = newNodeDetails.OsInfo,
+                    Modified = false
                 };
             }
 
@@ -887,7 +890,8 @@ namespace Raven.Server.Commercial
                         InstalledMemoryInGb = installedMemoryInGb,
                         UsableMemoryInGb = usableMemoryInGb,
                         BuildInfo = buildInfo,
-                        OsInfo = osInfo
+                        OsInfo = osInfo,
+                        Modified = nodeDetailsExist && nodeDetails.Modified
                     };
 
                     if (nodeDetailsExist == false)
@@ -961,7 +965,7 @@ namespace Raven.Server.Commercial
 
             if (licenseChanged && _licenseStatus.MaxCores > _previousLicenseCores)
             {
-                changedNodes = detailsPerNode.Select(x => x.Key).ToList();
+                changedNodes = detailsPerNode.Where(x=>x.Value.Modified == false).Select(x => x.Key).ToList();
             }
 
             if (changedNodes.Count == 0)
