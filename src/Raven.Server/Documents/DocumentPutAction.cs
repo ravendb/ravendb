@@ -428,10 +428,7 @@ namespace Raven.Server.Documents
                 {
                     ValidateDocumentHash(id, document, documentDebugHash);
 
-                    using (var old = document) // we can dispose the old data
-                    {
-                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                    }
+                    document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                     ValidateDocument(id, document, ref documentDebugHash);
 #if DEBUG
