@@ -27,6 +27,8 @@ namespace Voron.Impl.Paging
 
         public void PinMemory()
         {
+            Debug.Assert(_tempPageHandle.IsAllocated == false, "_tempPageHandle.IsAllocated == false");
+
             _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
             _tempPage = _tempPageHandle.AddrOfPinnedObject();
         }
