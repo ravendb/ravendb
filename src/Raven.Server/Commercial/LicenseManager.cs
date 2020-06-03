@@ -351,6 +351,7 @@ namespace Raven.Server.Commercial
                         throw new ArgumentException($"The new assigned cores count: {newAssignedCores} " +
                                                     $"is larger than the number of cores in the node: {numberOfCores}");
 
+                    var modified = utilizedCores != _licenseStatus.MaxCores;
                     licenseLimits.NodeLicenseDetails[nodeTag] = new DetailsPerNode
                     {
                         UtilizedCores = newAssignedCores,
@@ -359,8 +360,16 @@ namespace Raven.Server.Commercial
                         UsableMemoryInGb = usableMemoryInGb,
                         BuildInfo = buildInfo,
                         OsInfo = osInfo,
-                        Modified = newAssignedCores != _licenseStatus.MaxCores
+                        Modified = modified
                     };
+
+                    if (modified == false)
+                    {
+                        foreach (var node in licenseLimits.NodeLicenseDetails)
+                        {
+                            node.Value.Modified = false;
+                        }
+                    }
                 }
 
                 await _serverStore.PutLicenseLimitsAsync(licenseLimits, raftRequestId);
@@ -973,6 +982,16 @@ namespace Raven.Server.Commercial
 
             // we have spare cores to distribute
             var freeCoresToDistribute = maxCores - utilizedCores;
+            freeCoresToDistribute = RedistributeAvailableCores(detailsPerNode, changedNodes, freeCoresToDistribute, balanced: true);
+            if (freeCoresToDistribute != 0)
+            {
+                RedistributeAvailableCores(detailsPerNode, changedNodes, freeCoresToDistribute);
+            }
+        }
+
+        private static int RedistributeAvailableCores(Dictionary<string, DetailsPerNode> detailsPerNode, List<string> changedNodes, int freeCoresToDistribute, bool balanced = false)
+        {
+            var freeCores = balanced ? freeCoresToDistribute / changedNodes.Count : freeCoresToDistribute;
 
             foreach (var node in changedNodes)
             {
@@ -985,10 +1004,12 @@ namespace Raven.Server.Commercial
                 if (availableCoresToAssignForNode <= 0)
                     continue;
 
-                var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, freeCoresToDistribute);
+                var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, freeCores);
                 nodeDetails.UtilizedCores += numberOfCoresToAdd;
                 freeCoresToDistribute -= numberOfCoresToAdd;
             }
+
+            return freeCoresToDistribute;
         }
 
         private void AssignMissingCoresForMissingNodes(
