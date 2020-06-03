@@ -1508,7 +1508,24 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = new Company();
-                    session.Store(company);
+                    session.Store(company, "companies/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
+                Assert.Equal(0, terms.Length);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("true", terms);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
 
                     session.TimeSeriesFor(company, "HeartRate").Append(now, new[] { 2.5d }, "tag1");
                     session.TimeSeriesFor(company, "HeartRate2").Append(now, new[] { 3.5d }, "tag2");
@@ -1519,10 +1536,14 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 WaitForIndexing(store);
                 RavenTestHelper.AssertNoIndexErrors(store);
 
-                var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
                 Assert.Equal(2, terms.Length);
                 Assert.Contains("heartrate", terms);
                 Assert.Contains("heartrate2", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("true", terms);
             }
         }
 
