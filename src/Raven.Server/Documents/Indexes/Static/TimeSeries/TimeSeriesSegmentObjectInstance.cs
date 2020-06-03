@@ -99,13 +99,15 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 
             private static ArrayInstance CreateValue(Engine engine, DynamicTimeSeriesSegment segment)
             {
-                var items = new List<PropertyDescriptor>();
+                var items = new PropertyDescriptor[segment._segmentEntry.Segment.NumberOfLiveEntries];
+                var i = 0;
                 foreach (DynamicTimeSeriesSegment.DynamicTimeSeriesEntry entry in segment.Entries)
                 {
-                    items.Add(new TimeSeriesSegmentEntryPropertyDescriptor(engine, entry));
+                    items[i] = new TimeSeriesSegmentEntryPropertyDescriptor(engine, entry);
+                    i++;
                 }
 
-                var jsArray = new ArrayInstance(engine, items.ToArray()); // TODO ppekrol - avoid ToArray
+                var jsArray = new ArrayInstance(engine, items);
                 jsArray.SetPrototypeOf(engine.Array.PrototypeObject);
 
                 return jsArray;
