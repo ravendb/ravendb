@@ -317,7 +317,7 @@ namespace Raven.Server.Documents
                         if (existingCounter is BlittableJsonReaderObject.RawBlob blob &&
                             overrideExisting == false)
                         {
-                            exists = IncrementExistingCounter(context, documentId, lowerName, delta,
+                            exists = IncrementExistingCounter(context, documentId, lowerName, name, delta,
                                 blob, dbIdIndex, counterEtag, counters, ref value);
                         }
                         else
@@ -511,7 +511,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        private bool IncrementExistingCounter(DocumentsOperationContext context, string documentId, string name, long delta,
+        private bool IncrementExistingCounter(DocumentsOperationContext context, string documentId, string lowerName, string originalName, long delta,
             BlittableJsonReaderObject.RawBlob existingCounter,
             int dbIdIndex, long newETag, BlittableJsonReaderObject counters, ref long value)
         {
@@ -528,7 +528,7 @@ namespace Raven.Server.Documents
                 }
                 catch (OverflowException e)
                 {
-                    CounterOverflowException.ThrowFor(documentId, name, counter->Value, delta, e);
+                    CounterOverflowException.ThrowFor(documentId, originalName, counter->Value, delta, e);
                 }
 
                 return true;
@@ -540,7 +540,7 @@ namespace Raven.Server.Documents
 
             counters.Modifications = new DynamicJsonValue(counters)
             {
-                [name] = existingCounter
+                [lowerName] = existingCounter
             };
 
             return false;
