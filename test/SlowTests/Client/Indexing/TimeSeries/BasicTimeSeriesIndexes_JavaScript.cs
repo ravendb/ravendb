@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
@@ -200,6 +201,21 @@ return ts.Entries.map(entry => ({
         User: ts.DocumentId
     }));
 })",
+                };
+            }
+        }
+
+        private class Companies_ByTimeSeriesNames : AbstractJavaScriptIndexCreationTask
+        {
+            public Companies_ByTimeSeriesNames()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Companies', function (company) {
+return ({
+    Names: timeSeriesNamesFor(company)
+})
+})"
                 };
             }
         }
@@ -1242,6 +1258,58 @@ return ts.Entries.map(entry => ({
 
                     Assert.Equal(3, results.Count);
                 }
+            }
+        }
+
+        [Fact]
+        public void TimeSeriesNamesFor()
+        {
+            var now = DateTime.UtcNow.Date;
+
+            using (var store = GetDocumentStore())
+            {
+                var index = new Companies_ByTimeSeriesNames();
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company();
+                    session.Store(company, "companies/1");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
+                Assert.Equal(0, terms.Length);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("true", terms);
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+
+                    session.TimeSeriesFor(company, "HeartRate").Append(now, new[] { 2.5d }, "tag1");
+                    session.TimeSeriesFor(company, "HeartRate2").Append(now, new[] { 3.5d }, "tag2");
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("heartrate", terms);
+                Assert.Contains("heartrate2", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, "Names_IsArray", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("true", terms);
             }
         }
     }

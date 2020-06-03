@@ -178,7 +178,9 @@ function map(name, lambda) {
 
         protected override void OnInitializeEngine(Engine engine)
         {
-            engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", GetMetadata));
+            engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", MetadataFor));
+            engine.SetValue("metadataFor", new ClrFunctionInstance(_engine, "metadataFor", MetadataFor));
+            engine.SetValue("timeSeriesNamesFor", new ClrFunctionInstance(_engine, "timeSeriesNamesFor", TimeSeriesNamesFor));
             engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
         }
 
@@ -260,12 +262,20 @@ function map(name, lambda) {
             return _javaScriptUtils.GetDocumentId(self, args);
         }
 
-        private JsValue GetMetadata(JsValue self, JsValue[] args)
+        private JsValue MetadataFor(JsValue self, JsValue[] args)
         {
             var scope = CurrentIndexingScope.Current;
             scope.RegisterJavaScriptUtils(_javaScriptUtils);
 
             return _javaScriptUtils.GetMetadata(self, args);
+        }
+
+        private JsValue TimeSeriesNamesFor(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+
+            return _javaScriptUtils.GetTimeSeriesNamesFor(self, args);
         }
     }
 

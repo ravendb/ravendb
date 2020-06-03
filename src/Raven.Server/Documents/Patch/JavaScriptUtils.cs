@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Jint;
 using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Object;
 using Lucene.Net.Store;
 using Raven.Client;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Patch
         internal JsValue GetMetadata(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
-                throw new InvalidOperationException("getMetadata(doc) must be called with a single entity argument");
+                throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                 return JsValue.Null;
@@ -60,6 +61,29 @@ namespace Raven.Server.Documents.Patch
 
             metadata = Context.ReadObject(metadata, boi.DocumentId);
             return TranslateToJs(_scriptEngine, Context, metadata);
+        }
+
+        internal JsValue GetTimeSeriesNamesFor(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
+                throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
+
+            if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
+                return EmptyArray(_scriptEngine);
+
+            if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeries) == false)
+                return EmptyArray(_scriptEngine);
+
+            JsValue[] timeSeriesArray = new JsValue[timeSeries.Length];
+            for (var i = 0; i < timeSeries.Length; i++)
+                timeSeriesArray[i] = timeSeries[i]?.ToString();
+
+            return _scriptEngine.Array.Construct(timeSeriesArray);
+
+            static ArrayInstance EmptyArray(Engine engine)
+            {
+                return engine.Array.Construct(0);
+            }
         }
 
         internal JsValue GetDocumentId(JsValue self, JsValue[] args)
@@ -200,9 +224,9 @@ namespace Raven.Server.Documents.Patch
             var noCache = origin.NoCache;
             origin.NoCache = true;
             // RavenDB-8286
-            // here we need to make sure that we aren't sending a value to 
+            // here we need to make sure that we aren't sending a value to
             // the js engine that might be modified by the actions of the js engine
-            // for example, calling put() might cause the original data to change 
+            // for example, calling put() might cause the original data to change
             // because we defrag the data that we looked at. We are handling this by
             // ensuring that we have our own, safe, copy.
             var cloned = origin.Clone(context);
