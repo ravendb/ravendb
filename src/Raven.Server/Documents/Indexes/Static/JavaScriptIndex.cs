@@ -336,7 +336,7 @@ function map(name, lambda) {
         protected virtual List<string> GetMappingFunctions()
         {
             if (Definition.Maps == null || Definition.Maps.Count == 0)
-                ThrowIndexCreationException("TODO ppekrol");
+                ThrowIndexCreationException("does not contain any mapping functions to process.");
 
             return Definition.Maps.ToList();
         }
