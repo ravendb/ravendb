@@ -720,7 +720,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.True(backupResult.TimeSeries.Processed);
-                Assert.Equal(1, backupResult.TimeSeries.ReadCount);
+                Assert.Equal(360, backupResult.TimeSeries.ReadCount);
 
                 using (var session = store.OpenAsyncSession())
                 {
