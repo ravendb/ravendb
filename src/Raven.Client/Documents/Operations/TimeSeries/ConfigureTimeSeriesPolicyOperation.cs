@@ -105,7 +105,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/timeseries/policy?collection={_collection}&name={_name}";
+                url = $"{node.Url}/databases/{node.Database}/admin/timeseries/policy?collection={Uri.EscapeDataString(_collection)}&name={Uri.EscapeDataString(_name)}";
 
                 var request = new HttpRequestMessage
                 {
