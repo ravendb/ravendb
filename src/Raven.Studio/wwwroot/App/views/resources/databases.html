@@ -212,8 +212,9 @@
                                                 <i class="icon-play"></i> Enable indexing
                                             </a>
                                         </li>
+                                        <li class="divider"></li>
                                         <li data-bind="visible: $root.accessManager.canCompactDatabase">
-                                            <a data-bind="click: $root.compactDatabase, visible: disabled" title="Database is disabled" class="has-disable-reason disabled" data-placement="left">
+                                            <a data-bind="visible: disabled" title="The database is disabled" class="has-disable-reason disabled" data-placement="top">
                                                 <i class="icon-compact"></i> Compact database
                                             </a>
                                             <a href="#" data-bind="click: $root.compactDatabase, visible: !disabled()">

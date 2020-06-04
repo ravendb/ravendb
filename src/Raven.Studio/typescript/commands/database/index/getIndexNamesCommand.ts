@@ -14,7 +14,8 @@ class getIndexNamesCommand extends commandBase {
             pageSize: 1024
         };
         const url = endpoints.databases.index.indexes;
-        return this.query(url, args, this.db, (x: resultsDto<string>) => x.Results);
+        return this.query(url, args, this.db, (x: resultsDto<string>) => x.Results)
+            .fail((response: JQueryXHR) => this.reportError("Failed to get the database indexes", response.responseText, response.statusText));
     }
 } 
 
