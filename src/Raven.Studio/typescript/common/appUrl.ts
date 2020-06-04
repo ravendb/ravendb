@@ -181,8 +181,9 @@ class appUrl {
         return "#admin/settings/editServerWideBackup" + backupNamePart;
     }
 
-    static forDatabases(): string {
-        return "#databases";
+    static forDatabases(databaseToCompact?: string): string {
+        const compactPart = databaseToCompact ? "?compact=" + encodeURIComponent(databaseToCompact) : "";
+        return "#databases" + compactPart;
     }
 
     static forAbout(): string {

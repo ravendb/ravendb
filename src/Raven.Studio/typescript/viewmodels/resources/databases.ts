@@ -66,6 +66,8 @@ class databases extends viewModelBase {
     environmentClass = (source: KnockoutObservable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>) => 
         database.createEnvironmentColorComputed("label", source);
    
+    databaseToCompact: string;
+    
     constructor() {
         super();
 
@@ -101,6 +103,11 @@ class databases extends viewModelBase {
     activate(args: any): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         super.activate(args);
 
+        // When coming here from Storage Report View
+        if (args && args.compact) {
+            this.databaseToCompact = args.compact;
+        }
+        
         // we can't use createNotifications here, as it is called after *database changes API* is connected, but user
         // can enter this view and never select database
 
@@ -137,7 +144,6 @@ class databases extends viewModelBase {
                 this.statsSubscription = null;
             }
         }
-        
     }
 
     attached() {
@@ -152,6 +158,13 @@ class databases extends viewModelBase {
         this.initTooltips();
         this.initDatabaseNameResize();
         this.setupDisableReasons();
+       
+        if (this.databaseToCompact) {
+            const dbInfo = this.databases().getByName(this.databaseToCompact);
+            
+            this.activateDatabase(dbInfo);
+            this.compactDatabase(dbInfo);
+        }
     }
     
     deactivate() {
@@ -565,6 +578,7 @@ class databases extends viewModelBase {
     
     compactDatabase(db: databaseInfo) {
         eventsCollector.default.reportEvent("databases", "compact");
+        this.changesContext.disconnectIfCurrent(db.asDatabase(),"DatabaseDisabled");
         app.showBootstrapDialog(new compactDatabaseDialog(db));
     }
 
