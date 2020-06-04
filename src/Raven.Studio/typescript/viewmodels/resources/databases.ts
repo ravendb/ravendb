@@ -161,8 +161,6 @@ class databases extends viewModelBase {
        
         if (this.databaseToCompact) {
             const dbInfo = this.databases().getByName(this.databaseToCompact);
-            
-            this.activateDatabase(dbInfo);
             this.compactDatabase(dbInfo);
         }
     }
@@ -578,7 +576,7 @@ class databases extends viewModelBase {
     
     compactDatabase(db: databaseInfo) {
         eventsCollector.default.reportEvent("databases", "compact");
-        this.changesContext.disconnectIfCurrent(db.asDatabase(),"DatabaseDisabled");
+        this.changesContext.disconnectIfCurrent(db.asDatabase(), "DatabaseDisabled");
         app.showBootstrapDialog(new compactDatabaseDialog(db));
     }
 
