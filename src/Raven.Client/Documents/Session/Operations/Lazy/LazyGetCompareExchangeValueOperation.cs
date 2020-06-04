@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             var queryBuilder = new StringBuilder("?key=")
-                .Append(_key);
+                .Append(Uri.EscapeDataString(_key));
 
             return new GetRequest
             {
