@@ -1034,7 +1034,7 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (var ts in _source.GetTimeSeries(_options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
-                    result.TimeSeries.ReadCount++;
+                    result.TimeSeries.ReadCount += ts.Segment.NumberOfEntries;
 
                     if (result.TimeSeries.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
