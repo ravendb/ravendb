@@ -134,7 +134,7 @@ namespace Raven.Server
         public void Initialize()
         {
             var sp = Stopwatch.StartNew();
-            Certificate = LoadCertificate() ?? new CertificateHolder();
+            Certificate = LoadCertificateAtStartup() ?? new CertificateHolder();
 
             CpuUsageCalculator = string.IsNullOrEmpty(Configuration.Monitoring.CpuUsageMonitorExec)
                 ? CpuHelper.GetOSCpuUsageCalculator()
@@ -344,6 +344,52 @@ namespace Raven.Server
             }
         }
 
+        private void UpdateCertificateExpirationAlert()
+        {
+            var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
+            if (remainingDays <= 0)
+            {
+                string msg = $"The server certificate has expired on {Certificate.Certificate.NotAfter.ToShortDateString()}.";
+
+                if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
+                {
+                    msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support@ravendb.net.";
+                }
+                
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, NotificationSeverity.Error));
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+            }
+            else if (remainingDays <= 20)
+            {
+                string msg = $"The server certificate will expire on {Certificate.Certificate.NotAfter.ToShortDateString()}. There are only {(int)remainingDays} days left for renewal.";
+
+                if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
+                {
+                    if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate)
+                    {
+                        msg += " You are using a Let's Encrypt server certificate which was supposed to renew automatically. Please check the logs for errors and contact support@ravendb.net.";
+                    }
+                    else
+                    {
+                        msg += " You are using a Let's Encrypt server certificate but automatic renewal is not supported by your license. Go to the certificate page in the studio and trigger the renewal manually.";
+                    }
+                }
+
+                var severity = remainingDays < 3 ? NotificationSeverity.Error : NotificationSeverity.Warning;
+
+                ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, severity));
+
+                if (Logger.IsOperationsEnabled) 
+                    Logger.Operations(msg);
+            }
+            else
+            {
+                ServerStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_Expiration, null));
+            }
+        }
+
         private void OnServerCertificateChanged(object sender, EventArgs e)
         {
             if (RequestExecutor.HasServerCertificateCustomValidationCallback)
@@ -365,6 +411,16 @@ namespace Raven.Server
             {
                 // the .Wait() can throw as well, so we'll ignore any
                 // errors here, it all goes to the log anyway
+            }
+
+            try
+            {
+                UpdateCertificateExpirationAlert();
+        }
+            catch (Exception exception)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Failed to check the expiration date of the new server certificate '{Certificate.Certificate?.Subject} ({Certificate.Certificate?.Thumbprint})'", exception);
             }
         }
 
@@ -843,6 +899,16 @@ namespace Raven.Server
         public void RefreshClusterCertificateTimerCallback(object state)
         {
             RefreshClusterCertificate(state, RaftIdGenerator.NewId());
+            
+            try
+            {
+                UpdateCertificateExpirationAlert();
+        }
+            catch (Exception exception)
+            {
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations("Periodic check of the server certificate expiration date failed.", exception);
+            }
         }
 
         public bool RefreshClusterCertificate(object state, string raftRequestId)
@@ -1283,19 +1349,32 @@ namespace Raven.Server
             return Configuration.Core.ServerUrls[0];
         }
 
+        private CertificateHolder LoadCertificateAtStartup()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false &&
+                    (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) || string.IsNullOrEmpty(Configuration.Security.CertificateChangeExec)))
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"You are using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', without specifying '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. This configuration requires you to renew the certificate manually across the entire cluster.");
+                }
+
+                return LoadCertificate();
+            }
+            catch (Exception e)
+                {
+                throw new InvalidOperationException("Unable to start the server.", e);
+                }
+        }
+
         private CertificateHolder LoadCertificate()
         {
             try
             {
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
                 {
-                    throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/5.0.");
-                }
-
-                if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false &&
-                    (string.IsNullOrEmpty(Configuration.Security.CertificateRenewExec) || string.IsNullOrEmpty(Configuration.Security.CertificateChangeExec)))
-                {
-                    throw new InvalidOperationException($"Invalid certificate configuration. When using the configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}', it must be accompanied by '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'. For more information, refer to the online documentation at https://ravendb.net/l/4554RZ/5.0.");
+                    throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'.");
                 }
 
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
@@ -1307,7 +1386,7 @@ namespace Raven.Server
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Unable to start the server due to invalid certificate configuration! Admin assistance required.", e);
+                throw new InvalidOperationException("Unable to load the server certificate due to invalid configuration! Admin assistance required.", e);
             }
         }
 

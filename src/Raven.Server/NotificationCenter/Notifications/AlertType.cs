@@ -25,6 +25,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         LicenseManager_LicenseLimit,
         LicenseManager_AGPL3,
 
+        Certificates_Expiration,
         Certificates_DeveloperLetsEncryptRenewal,
         Certificates_EntireClusterReplaceSuccess,
         Certificates_ReplaceSuccess,

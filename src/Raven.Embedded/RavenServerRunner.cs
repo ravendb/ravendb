@@ -47,8 +47,8 @@ namespace Raven.Embedded
                 }
                 else
                 {
-                    commandLineArgs.Add($"--Security.Certificate.Exec={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateExec)}");
-                    commandLineArgs.Add($"--Security.Certificate.Exec.Arguments={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateArguments)}");
+                    commandLineArgs.Add($"--Security.Certificate.Load.Exec={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateLoadExec)}");
+                    commandLineArgs.Add($"--Security.Certificate.Load.Exec.Arguments={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.CertificateLoadExecArguments)}");
                 }
                 commandLineArgs.Add($"--Security.WellKnownCertificates.Admin={CommandLineArgumentEscaper.EscapeSingleArg(options.Security.ClientCertificate.Thumbprint)}");
             }

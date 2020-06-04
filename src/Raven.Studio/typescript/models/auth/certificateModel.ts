@@ -23,7 +23,10 @@ class certificateModel {
     
     certificateAsBase64 = ko.observable<string>();
     certificatePassphrase = ko.observable<string>();
-    expirationDate = ko.observable<string>();
+
+    validityPeriod = ko.observable<number>();
+    expirationDateFormatted: KnockoutComputed<string>;
+    
     thumbprint = ko.observable<string>(); // primary cert thumbprint
     thumbprints = ko.observableArray<string>(); // all thumbprints
     
@@ -36,7 +39,8 @@ class certificateModel {
     
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         name: this.name,
-        certificateAsBase64: this.certificateAsBase64
+        certificateAsBase64: this.certificateAsBase64,
+        validityPeriod: this.validityPeriod
     });
     
     private constructor(mode: certificateMode) {
@@ -59,6 +63,16 @@ class certificateModel {
         });
         
         this.canEditClearance = ko.pureComputed(() => this.securityClearance() !== "ClusterNode");
+
+        this.expirationDateFormatted = ko.pureComputed(() => {
+            const validMonths = this.validityPeriod();
+
+            if (!validMonths) {
+                return null;
+            }
+
+            return moment.utc().add(validMonths, "months").format();
+        });
     }
     
     static clearanceLabelFor(input: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
@@ -95,6 +109,10 @@ class certificateModel {
                 onlyIf: () => this.mode() === "upload" || this.mode() === 'replace'
             } 
         });
+
+        this.validityPeriod.extend({
+            digit: true
+        });
     }
 
     setClearanceMode(mode: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
@@ -107,8 +125,8 @@ class certificateModel {
             Name: this.name(),
             Password: this.certificatePassphrase(),
             Permissions: this.serializePermissions(),
-            SecurityClearance: this.securityClearance()
-            //TODO: expiration
+            SecurityClearance: this.securityClearance(),
+            NotAfter: this.expirationDateFormatted()
         }
     }
     
@@ -125,8 +143,8 @@ class certificateModel {
             Certificate: this.certificateAsBase64(),
             Password: this.certificatePassphrase(),
             Permissions: this.serializePermissions(),
-            SecurityClearance: this.securityClearance()
-            //TODO: expiration
+            SecurityClearance: this.securityClearance(),
+            NotAfter: this.expirationDateFormatted()
         }
     }
 

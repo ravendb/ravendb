@@ -109,6 +109,7 @@ namespace Raven.Server.Documents.Queries
                 if (cache.TryGetMetadata(result, out var metadataHash, out var metadata))
                 {
                     result.Metadata = metadata;
+                    SetupPagingFromQueryMetadata();
                     return result;
                 }
 
@@ -116,21 +117,7 @@ namespace Raven.Server.Documents.Queries
                 if (result.Metadata.HasTimings)
                     result.Timings = new QueryTimingsScope(start: false);
 
-                if (result.Metadata.Query.Offset != null)
-                {
-                    var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
-                    result.Offset = start;
-                    result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
-                        ? Math.Min(start, result.Start)
-                        : start;
-                }
-
-                if (result.Metadata.Query.Limit != null)
-                {
-                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
-                    result.Limit = limit;
-                    result.PageSize = Math.Min(limit, result.PageSize);
-                }
+                SetupPagingFromQueryMetadata();
 
                 if (tracker != null)
                     tracker.Query = result.Query;
@@ -156,6 +143,25 @@ namespace Raven.Server.Documents.Queries
                     AddStringToHttpContext(httpContext, errorMessage, TrafficWatchChangeType.Queries);
 
                 throw;
+            }
+
+            void SetupPagingFromQueryMetadata()
+            {
+                if (result.Metadata.Query.Offset != null)
+                {
+                    var start = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Offset, 0);
+                    result.Offset = start;
+                    result.Start = result.Start != 0 || json.TryGet(nameof(Start), out int _)
+                        ? Math.Min(start, result.Start)
+                        : start;
+                }
+
+                if (result.Metadata.Query.Limit != null)
+                {
+                    var limit = (int)QueryBuilder.GetLongValue(result.Metadata.Query, result.Metadata, result.QueryParameters, result.Metadata.Query.Limit, int.MaxValue);
+                    result.Limit = limit;
+                    result.PageSize = Math.Min(limit, result.PageSize);
+                }
             }
         }
 
