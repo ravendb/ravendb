@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Exceptions;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Operations;
@@ -77,6 +78,32 @@ namespace SlowTests.Client.TimeSeries.Session
                         .Get(DateTime.MinValue, DateTime.MaxValue)
                         .ToList();
                     Assert.Equal(2, val.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void ThrowIfAppendIsLessThen1Ms()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1).AddTicks(10), 60d, "watches/fitbit");
+
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1).AddTicks(20), 61d, "watches/fitbit");
+
+                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
+                    Assert.Contains("TimeSeries entries must be sorted by their timestamps", e.Message);
                 }
             }
         }
