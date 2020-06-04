@@ -526,9 +526,7 @@ namespace Raven.Server.Documents.Handlers
                     var hasCollectionsConfig = configuration.TryGet(nameof(TimeSeriesConfiguration.Collections), out BlittableJsonReaderObject collections) &&
                                                collections?.Count > 0;
 
-                    var hasNamedValuesConfig = configuration.TryGet(nameof(TimeSeriesConfiguration.NamedValues), out BlittableJsonReaderObject namedValues);
-                    
-                    if (hasCollectionsConfig == false && hasNamedValuesConfig == false)
+                    if (hasCollectionsConfig == false)
                         return;
 
                     var uniqueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
