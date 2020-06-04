@@ -761,9 +761,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 if (databaseRecord?.DocumentsCompression != null)
                 {
-                    if (currentDatabaseRecord?.DocumentsCompression != null)
+                    if (currentDatabaseRecord?.DocumentsCompression?.Collections?.Length > 0)
                     {
-
                         var collectionsToAdd = new List<string>();
                         
                         foreach (var collection in currentDatabaseRecord.DocumentsCompression.Collections)
@@ -779,7 +778,7 @@ namespace Raven.Server.Smuggler.Documents
                             databaseRecord.DocumentsCompression.Collections = collectionsToAdd.Concat(currentDatabaseRecord.DocumentsCompression.Collections).ToArray();
                         }
                     }
-                    
+
                     if (_log.IsInfoEnabled)
                         _log.Info("Configuring documents compression from smuggler");
                     tasks.Add(_database.ServerStore.SendToLeaderAsync(new EditDocumentsCompressionCommand(databaseRecord.DocumentsCompression, _database.Name, RaftIdGenerator.DontCareId)));
