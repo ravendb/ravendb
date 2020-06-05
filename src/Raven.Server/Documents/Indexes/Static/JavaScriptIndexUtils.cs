@@ -5,6 +5,7 @@ using Esprima.Ast;
 using Jint;
 using Jint.Native;
 using Raven.Client;
+using Raven.Server.Documents.Indexes.Static.Counters;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Patch;
 using Sparrow.Json;
@@ -119,6 +120,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 case DynamicTimeSeriesSegment dtss:
                     jsItem = new TimeSeriesSegmentObjectInstance(engine, dtss);
+                    return true;
+
+                case DynamicCounterEntry dce:
+                    jsItem = new CounterEntryObjectInstance(engine, dce);
                     return true;
 
                 case BlittableJsonReaderObject bjro:
