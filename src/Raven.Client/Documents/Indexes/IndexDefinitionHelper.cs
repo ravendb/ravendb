@@ -28,6 +28,7 @@ namespace Raven.Client.Documents.Indexes
             var expression = expr.Body;
 
             string queryRootName = null;
+            bool isReduce = false;
             switch (expression.NodeType)
             {
                 case ExpressionType.ConvertChecked:
@@ -44,11 +45,14 @@ namespace Raven.Client.Documents.Indexes
                         case "SelectMany":
                             queryRootName = TryCaptureQueryRoot(methodCallExpression.Arguments[1]);
                             break;
+                        case "GroupBy":
+                            isReduce = true;
+                            break;
                     }
                     break;
             }
 
-            var linqQuery = ExpressionStringBuilder.ExpressionToString(conventions, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression);
+            var linqQuery = ExpressionStringBuilder.ExpressionToString(conventions, translateIdentityProperty, typeof(TQueryRoot), queryRootName, expression, isReduce);
 
             return FormatLinqQuery(expr, querySource, linqQuery);
         }

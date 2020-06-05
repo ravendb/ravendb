@@ -9,12 +9,16 @@ class certificateInfo {
     certificateCNs = ko.observableArray<string>([]);
 
     wildcardCertificate: KnockoutComputed<boolean>;
-
+    expirationDateFormatted: KnockoutComputed<string>;
+    
     validationGroup: KnockoutValidationGroup;
 
     constructor() {
         this.initValidation();
-        
+        this.initObservables();
+    }
+    
+    private initObservables() {
         this.wildcardCertificate = ko.pureComputed(() => {
             const cns = this.certificateCNs();
             return _.some(cns, x => x.startsWith("*"));
@@ -23,7 +27,6 @@ class certificateInfo {
             // 1. pfx file with Single Wildcard value (*.someDomain)
             // 2. pfx file with Single -or- Multiple values of Non-Wildcard values (localhost, localhost2...)
             // For all other cases, the server should throw an exception (Also, the two types should not be mixed)
-            
         });
     }
 

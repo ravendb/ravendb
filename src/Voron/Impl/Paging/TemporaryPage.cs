@@ -17,8 +17,6 @@ namespace Voron.Impl.Paging
         {
             PageSize = pageSize ?? Constants.Storage.PageSize;
             _tempPageBuffer = new byte[PageSize];
-            _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
-            _tempPage = _tempPageHandle.AddrOfPinnedObject();
         }
 
         public TemporaryPage(byte* ptr, int pageSize)
@@ -27,12 +25,26 @@ namespace Voron.Impl.Paging
             SetPointer(ptr);
         }
 
-        public void Dispose()
+        public void PinMemory()
+        {
+            Debug.Assert(_tempPageHandle.IsAllocated == false, "_tempPageHandle.IsAllocated == false");
+
+            _tempPageHandle = GCHandle.Alloc(_tempPageBuffer, GCHandleType.Pinned);
+            _tempPage = _tempPageHandle.AddrOfPinnedObject();
+        }
+
+        public void UnpinMemory()
         {
             if (_tempPageHandle.IsAllocated)
             {
                 _tempPageHandle.Free();
+                _tempPage = IntPtr.Zero;
             }
+        }
+
+        public void Dispose()
+        {
+            UnpinMemory();
         }
 
         public void SetPointer(byte* ptr)

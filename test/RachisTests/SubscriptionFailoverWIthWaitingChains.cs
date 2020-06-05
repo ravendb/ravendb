@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -129,15 +130,17 @@ namespace RachisTests
                 });
 
                 var dbNodesCountToToggle = Math.Max(Math.Min(dBGroupSize - 1, dBGroupSize / 2 + 1), 1);
-                var nodesToToggle = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).Take(dbNodesCountToToggle);
+                var nodesToToggle = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).Take(dbNodesCountToToggle).ToList();
 
+                _toggled = true;
                 foreach (var node in nodesToToggle)
                 {
                     var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == node);
                     await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, nodeIndex, shouldTrapRevivedNodesIntoCandidate);
                 }
+                _toggled = false;
 
-                Assert.All(cdeArray.GetArray(), cde => Assert.Equal(SubscriptionsCount, cde.CurrentCount));
+                Assert.All(cdeArray.GetArray(), cde => Assert.True(SubscriptionsCount == cde.CurrentCount, PrintTestInfo(nodesToToggle, cluster)));
 
                 foreach (var cde in cdeArray.GetArray())
                 {
@@ -150,6 +153,37 @@ namespace RachisTests
                 }
 
                 await Task.WhenAll(workerTasks);
+            }
+        }
+
+        private static string PrintTestInfo(List<string> nodesToToggle, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Leader: {cluster.Leader.ServerStore.NodeTag}");
+            sb.AppendLine($"ToggledNodes: {string.Join(", ", nodesToToggle)}");
+            sb.AppendLine("Exceptions on signal:");
+            foreach ((SubscriptionWorker<dynamic> subscriptionWorker, Exception exception) in _testInfo)
+            {
+                AddInfo(sb, subscriptionWorker, exception);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Exceptions on retry connection:");
+
+            foreach ((SubscriptionWorker<dynamic> subscriptionWorker, Exception exception) in _testInfoOnRetry)
+            {
+                AddInfo(sb, subscriptionWorker, exception);
+            }
+
+            _testInfo.Clear();
+            _testInfoOnRetry.Clear();
+            return sb.ToString();
+
+            static void AddInfo(StringBuilder stringBuilder, SubscriptionWorker<dynamic> subscriptionWorker, Exception exception)
+            {
+                stringBuilder.AppendLine($"SubscriptionName: {subscriptionWorker.SubscriptionName}, CurrentNodeTag: {subscriptionWorker.CurrentNodeTag}");
+                stringBuilder.AppendLine(exception == null ? "Exception: None" : $"Exception: {exception}");
+                stringBuilder.AppendLine("-----------------------");
             }
         }
 
@@ -247,7 +281,7 @@ namespace RachisTests
 
         private static async Task GenerateWaitingSubscriptions(CountdownEvent[] cdes, DocumentStore store, int index, List<Task> workerTasks)
         {
-            var subsId = store.Subscriptions.Create(new Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions
+            var subsId = store.Subscriptions.Create(new SubscriptionCreationOptions
             {
                 Query = "from Users",
                 Name = "Subscription" + index
@@ -258,23 +292,38 @@ namespace RachisTests
                 await Task.Delay(1000);
             }
         }
+        private static List<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new List<(SubscriptionWorker<dynamic>, Exception)>();
+        private static List<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new List<(SubscriptionWorker<dynamic>, Exception)>();
 
         private static Task GenerateSubscriptionThatSignalsToCDEUponCompletion(CountdownEvent mainSubscribersCompletionCDE, DocumentStore store, string subsId)
         {
-            return store.Subscriptions.GetSubscriptionWorker(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
+            var subsWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId)
             {
-                Strategy = Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy.WaitForFree
-            })
-                        .Run(s => { })
-                        .ContinueWith(res =>
-                        {
-                            mainSubscribersCompletionCDE.Signal();
-                            if (res.Exception == null)
-                                return;
-                            if (res.Exception != null && res.Exception is AggregateException agg && agg.InnerException is SubscriptionClosedException sce && sce.Message.Contains("Dropped by Test"))
-                                return;
-                            throw res.Exception;
-                        });
+                Strategy = SubscriptionOpeningStrategy.WaitForFree
+            });
+            var t = subsWorker.Run(s => { }).ContinueWith(res =>
+                 {
+                     mainSubscribersCompletionCDE.Signal();
+                     if (res.Exception == null)
+                     {
+                         _testInfo.Add((subsWorker, null));
+                         return;
+                     }
+                     _testInfo.Add((subsWorker, res.Exception));
+                     if (res.Exception != null && res.Exception is AggregateException agg && agg.InnerException is SubscriptionClosedException sce &&
+                         sce.Message.Contains("Dropped by Test"))
+                         return;
+                     throw res.Exception;
+                 });
+
+            subsWorker.OnSubscriptionConnectionRetry += ex =>
+            {
+                if (ex is SubscriptionDoesNotBelongToNodeException == false)
+                {
+                    _testInfoOnRetry.Add((subsWorker, ex));
+                }
+            };
+            return t;
         }
 
         private async Task ToggleClusterNodeOnAndOffAndWaitForRehab(string databaseName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, int index, bool shouldTrapRevivedNodesIntoCandidate)
@@ -285,12 +334,10 @@ namespace RachisTests
             cluster.Nodes[index] = node;
 
             await Task.Delay(5000);
-            _toggled = true;
             node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
             await WaitForRehab(databaseName, index, cluster);
-            _toggled = false;
         }
 
         private async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Json;
-using Raven.Server.Rachis;
 using Raven.Server.Rachis.Remote;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
@@ -17,7 +16,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    class NodeDebugHandler : RequestHandler
+    public class NodeDebugHandler : RequestHandler
     {
         [RavenAction("/admin/debug/node/remote-connections", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task ListRemoteConnections()
@@ -118,8 +117,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public string Url;
             public long TcpInfoTime;
             public long SendTime;
-            public long RecieveTime;
+            public long ReceiveTime;
             public string Error;
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     [nameof(Url)] = Url,
                     [nameof(TcpInfoTime)] = TcpInfoTime,
                     [nameof(SendTime)] = SendTime,
-                    [nameof(RecieveTime)] = RecieveTime,
+                    [nameof(ReceiveTime)] = ReceiveTime,
                     [nameof(Error)] = Error
                 };
             }
@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
                         {
                             JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                            result.RecieveTime = sp.ElapsedMilliseconds;
+                            result.ReceiveTime = sp.ElapsedMilliseconds;
                         }
                     }
                 }

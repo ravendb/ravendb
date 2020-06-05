@@ -6,7 +6,6 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Queries;
-using Sparrow.Json.Parsing;
 using Spatial4n.Core.Distance;
 using Spatial4n.Core.Shapes;
 
@@ -106,6 +105,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                     Value = CalculateDistance(doc, state)
                 };
             }
+
             private double CalculateDistance(int doc, IState state)
             {
                 var actualDocId = doc + _currentDocBase;
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                     var radlat2 = DistanceUtils.DEGREES_TO_RADIANS * lat2;
                     var theta = lng1 - lng2;
                     var radtheta = DistanceUtils.DEGREES_TO_RADIANS * theta;
-                    var dist = Math.Sin(radlat1) * Math.Sin(radlat2) + Math.Cos(radlat1) * Math.Cos(radlat2) 
+                    var dist = Math.Sin(radlat1) * Math.Sin(radlat2) + Math.Cos(radlat1) * Math.Cos(radlat2)
                         * Math.Cos(radtheta);
                     if (dist > 1)
                     {
@@ -211,10 +211,10 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
                 double v = lat1 - lat2;
                 result += (v * v);
 
-                v = lng2 - lng2;
+                v = lng1 - lng2;
                 result += (v * v);
 
-                return result;
+                return Math.Sqrt(result);
             }
 
             public override void SetNextReader(IndexReader reader, int docBase, IState state)
@@ -243,5 +243,4 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             }
         }
     }
-
 }
