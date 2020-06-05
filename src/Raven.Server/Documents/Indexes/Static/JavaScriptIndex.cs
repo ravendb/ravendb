@@ -26,11 +26,13 @@ namespace Raven.Server.Documents.Indexes.Static
     public sealed class JavaScriptIndex : AbstractJavaScriptIndex
     {
         public JavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
-            : base(definition, configuration)
+            : base(definition, configuration, modifyMappingFunctions: null, GetMapCode())
         {
         }
 
-        protected override string MapCode => @"
+        private static string GetMapCode()
+        {
+            return @"
 function map(name, lambda) {
     var map = {
         collection: name,
@@ -39,6 +41,7 @@ function map(name, lambda) {
     };
     globalDefinition.maps.push(map);
 }";
+        }
 
         protected override void OnInitializeEngine(Engine engine)
         {
@@ -156,7 +159,7 @@ function map(name, lambda) {
         private const string AggregateByProperty = "aggregateBy";
         private const string KeyProperty = "key";
 
-        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration)
+        protected AbstractJavaScriptIndex(IndexDefinition definition, RavenConfiguration configuration, Action<List<string>> modifyMappingFunctions, string mapCode)
         {
             Definition = definition;
 
@@ -181,9 +184,9 @@ function map(name, lambda) {
 
             using (_engine.DisableMaxStatements())
             {
-                var maps = GetMappingFunctions();
+                var maps = GetMappingFunctions(modifyMappingFunctions);
 
-                var mapReferencedCollections = InitializeEngine(definition, maps);
+                var mapReferencedCollections = InitializeEngine(definition, maps, mapCode);
 
                 var definitions = GetDefinitions();
 
@@ -197,12 +200,15 @@ function map(name, lambda) {
             _javaScriptUtils = new JavaScriptUtils(null, _engine);
         }
 
-        protected virtual List<string> GetMappingFunctions()
+        private List<string> GetMappingFunctions(Action<List<string>> modifyMappingFunctions)
         {
             if (Definition.Maps == null || Definition.Maps.Count == 0)
                 ThrowIndexCreationException("does not contain any mapping functions to process.");
 
-            return Definition.Maps.ToList();
+            var mappingFunctions = Definition.Maps.ToList();;
+            modifyMappingFunctions?.Invoke(mappingFunctions);
+
+            return mappingFunctions;
         }
 
         internal static AbstractJavaScriptIndex Create(IndexDefinition definition, RavenConfiguration configuration)
@@ -308,7 +314,7 @@ function map(name, lambda) {
 
         protected abstract void OnInitializeEngine(Engine engine);
 
-        private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps)
+        private List<MapMetadata> InitializeEngine(IndexDefinition definition, List<string> maps, string mapCode)
         {
             OnInitializeEngine(_engine);
 
@@ -316,7 +322,7 @@ function map(name, lambda) {
             _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
 
             _engine.ExecuteWithReset(Code);
-            _engine.ExecuteWithReset(MapCode);
+            _engine.ExecuteWithReset(mapCode);
 
             var sb = new StringBuilder();
             if (definition.AdditionalSources != null)
@@ -435,8 +441,6 @@ function map(name, lambda) {
                 throw new InvalidOperationException($"Argument '{value}' was of type '{value.Type}', but '{expectedType}' was expected.");
             }
         }
-
-        protected abstract string MapCode { get; }
 
         private const string Code = @"
 var globalDefinition =

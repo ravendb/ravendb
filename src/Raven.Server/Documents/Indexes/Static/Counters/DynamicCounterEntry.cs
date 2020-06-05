@@ -6,9 +6,9 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
 {
     public class DynamicCounterEntry : AbstractDynamicObject
     {
-        private CounterGroupItemMetadata _counterItemMetadata;
+        internal CounterGroupItemMetadata _counterItemMetadata;
 
-        private long _value;
+        internal long _value;
 
         public override dynamic GetId()
         {
