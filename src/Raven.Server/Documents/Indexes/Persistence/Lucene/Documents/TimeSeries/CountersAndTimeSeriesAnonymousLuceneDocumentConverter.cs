@@ -2,9 +2,9 @@
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.TimeSeries
 {
-    public sealed class TimeSeriesAnonymousLuceneDocumentConverter : AnonymousLuceneDocumentConverterBase
+    public sealed class CountersAndTimeSeriesAnonymousLuceneDocumentConverter : AnonymousLuceneDocumentConverterBase
     {
-        public TimeSeriesAnonymousLuceneDocumentConverter(Index index)
+        public CountersAndTimeSeriesAnonymousLuceneDocumentConverter(Index index)
             : base(index, numberOfBaseFields: 3, keyFieldName: Constants.Documents.Indexing.Fields.DocumentIdFieldName, storeValue: true, storeValueFieldName: Constants.Documents.Indexing.Fields.ValueFieldName)
         {
         }

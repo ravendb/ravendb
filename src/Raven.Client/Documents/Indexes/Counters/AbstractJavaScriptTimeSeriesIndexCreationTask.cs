@@ -1,12 +1,12 @@
 ﻿using System.Collections.Generic;
 
-namespace Raven.Client.Documents.Indexes.TimeSeries
+namespace Raven.Client.Documents.Indexes.Counters
 {
-    public class AbstractJavaScriptTimeSeriesIndexCreationTask : AbstractTimeSeriesIndexCreationTask
+    public class AbstractJavaScriptCountersIndexCreationTask : AbstractCountersIndexCreationTask
     {
-        private readonly TimeSeriesIndexDefinition _definition = new TimeSeriesIndexDefinition();
+        private readonly CountersIndexDefinition _definition = new CountersIndexDefinition();
 
-        public AbstractJavaScriptTimeSeriesIndexCreationTask()
+        public AbstractJavaScriptCountersIndexCreationTask()
         {
             _definition.LockMode = IndexLockMode.Unlock;
             _definition.Priority = IndexPriority.Normal;
@@ -64,13 +64,13 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
         }
 
         /// <inheritdoc />
-        public override TimeSeriesIndexDefinition CreateIndexDefinition()
+        public override CountersIndexDefinition CreateIndexDefinition()
         {
             _definition.Type = IsMapReduce ? IndexType.JavaScriptMapReduce : IndexType.JavaScriptMap;
             _definition.AdditionalSources = AdditionalSources ?? (_definition.AdditionalSources = new Dictionary<string, string>());
             _definition.Configuration = Configuration;
 
-            var definition = new TimeSeriesIndexDefinition();
+            var definition = new CountersIndexDefinition();
             _definition.CopyTo(definition);
 
             return definition;

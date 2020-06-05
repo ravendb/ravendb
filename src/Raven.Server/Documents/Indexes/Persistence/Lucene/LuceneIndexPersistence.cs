@@ -100,14 +100,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     _converter = new AnonymousLuceneDocumentConverter(index, storeValue: true);
                     break;
                 case IndexType.Map:
-                    _converter = _index.SourceType == IndexSourceType.Documents
-                        ? (LuceneDocumentConverterBase)new AnonymousLuceneDocumentConverter(index)
-                        : new TimeSeriesAnonymousLuceneDocumentConverter(index);
+                    switch (_index.SourceType)
+                    {
+                        case IndexSourceType.Documents:
+                            _converter = new AnonymousLuceneDocumentConverter(index);
+                            break;
+                        case IndexSourceType.TimeSeries:
+                        case IndexSourceType.Counters:
+                            _converter = new CountersAndTimeSeriesAnonymousLuceneDocumentConverter(index);
+                            break;
+                    }
                     break;
                 case IndexType.JavaScriptMap:
-                    _converter = _index.SourceType == IndexSourceType.Documents
-                        ? (LuceneDocumentConverterBase)new JintLuceneDocumentConverter((MapIndex)index)
-                        : new TimeSeriesJintLuceneDocumentConverter((MapTimeSeriesIndex)index);
+                    switch (_index.SourceType)
+                    {
+                        case IndexSourceType.Documents:
+                            _converter = new JintLuceneDocumentConverter((MapIndex)index);
+                            break;
+                        case IndexSourceType.TimeSeries:
+                            _converter = new CountersAndTimeSeriesJintLuceneDocumentConverter((MapTimeSeriesIndex)index);
+                            break;
+                        case IndexSourceType.Counters:
+                            _converter = new CountersAndTimeSeriesJintLuceneDocumentConverter((MapCountersIndex)index);
+                            break;
+                    }
                     break;
                 case IndexType.JavaScriptMapReduce:
                     _converter = new JintLuceneDocumentConverter((MapReduceIndex)index, storeValue: true);
