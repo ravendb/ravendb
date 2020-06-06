@@ -65,13 +65,23 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue GetTimeSeriesNamesFor(JsValue self, JsValue[] args)
         {
+            return GetNamesFor(self, args, Constants.Documents.Metadata.TimeSeries, "timeSeriesNamesFor");
+        }
+
+        internal JsValue GetCounterNamesFor(JsValue self, JsValue[] args)
+        {
+            return GetNamesFor(self, args, Constants.Documents.Metadata.Counters, "counterNamesFor");
+        }
+
+        private JsValue GetNamesFor(JsValue self, JsValue[] args, string metadataKey, string methodName)
+        {
             if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
-                throw new InvalidOperationException("metadataFor(doc) must be called with a single entity argument");
+                throw new InvalidOperationException($"{methodName}(doc) must be called with a single entity argument");
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                 return EmptyArray(_scriptEngine);
 
-            if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeries) == false)
+            if (metadata.TryGet(metadataKey, out BlittableJsonReaderArray timeSeries) == false)
                 return EmptyArray(_scriptEngine);
 
             JsValue[] timeSeriesArray = new JsValue[timeSeries.Length];
