@@ -88,6 +88,41 @@ return {
             }
         }
 
+        private class AverageHeartRate_WithLoad : AbstractJavaScriptCountersIndexCreationTask
+        {
+            public class Result
+            {
+                public double HeartBeat { get; set; }
+
+                public string City { get; set; }
+
+                public long Count { get; set; }
+            }
+
+            public AverageHeartRate_WithLoad()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"counters.map('Users', 'HeartRate', function (counter) {
+var user = load(counter.DocumentId, 'Users');
+var address = load(user.AddressId, 'Addresses');
+return {
+    HeartBeat: counter.Value,
+    Count: 1,
+    City: address.City
+};
+})"
+                };
+
+                Reduce = @"groupBy(r => ({ City: r.City }))
+                             .aggregate(g => ({
+                                 HeartBeat: g.values.reduce((total, val) => val.HeartBeat + total, 0) / g.values.reduce((total, val) => val.Count + total, 0),
+                                 City: g.key.City,
+                                 Count: g.values.reduce((total, val) => val.Count + total, 0)
+                             }))";
+            }
+        }
+
         [Fact]
         public void BasicMapIndex()
         {
@@ -610,5 +645,152 @@ return {
                 Assert.Equal(0, terms.Length);
             }
         }
+
+        [Fact]
+        public async Task BasicMapReduceIndexWithLoad()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var address = new Address { City = "NY" };
+                        session.Store(address, $"addresses/{i}");
+
+                        var user = new User { AddressId = address.Id };
+                        session.Store(user, $"users/{i}");
+
+                        session.CountersFor(user).Increment("HeartRate", 180 + i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                var timeSeriesIndex = new AverageHeartRate_WithLoad();
+                var indexName = timeSeriesIndex.IndexName;
+                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+
+                timeSeriesIndex.Execute(store);
+
+                var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("184.5", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Count", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("10", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Contains("ny", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        var address = session.Load<Address>($"addresses/{i}");
+                        address.City = "LA";
+                    }
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("ny", terms);
+                Assert.Contains("la", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 5; i < 10; i++)
+                        session.Delete($"addresses/{i}");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(1, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.Any(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.False(staleness.IsStale);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(2, terms.Length);
+                Assert.Contains("la", terms);
+                Assert.Contains("NULL_VALUE", terms);
+
+                store.Maintenance.Send(new StopIndexingOperation());
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 10; i++)
+                        session.Delete($"users/{i}");
+
+                    session.SaveChanges();
+                }
+
+                staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
+                Assert.True(staleness.IsStale);
+                Assert.Equal(2, staleness.StalenessReasons.Count);
+                Assert.True(staleness.StalenessReasons.All(x => x.Contains("There are still")));
+
+                store.Maintenance.Send(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
+                Assert.Equal(0, terms.Length);
+
+                var database = await GetDatabase(store.Database);
+                var index = database.IndexStore.GetIndex(indexName);
+
+                using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var tx = context.OpenReadTransaction())
+                {
+                    var counts = index._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
+
+                    Assert.Equal(0, counts.ReferenceTableCount);
+                    Assert.Equal(0, counts.CollectionTableCount);
+                }
+            }
+        }
+
     }
 }
