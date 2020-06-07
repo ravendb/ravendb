@@ -108,6 +108,7 @@ namespace TypingsGenerator
                 });
 
             scripter
+                .WithTypeMapping(TsPrimitive.String, typeof(Char))
                 .WithTypeMapping(TsPrimitive.String, typeof(Guid))
                 .WithTypeMapping(TsPrimitive.String, typeof(TimeSpan))
                 .WithTypeMapping(TsPrimitive.Number, typeof(Size))

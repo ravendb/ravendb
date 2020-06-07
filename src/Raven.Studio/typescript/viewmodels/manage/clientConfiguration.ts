@@ -28,26 +28,6 @@ class clientConfiguration extends viewModelBase {
                 this.model = new clientConfigurationModel(dto);
             });
     }
-
-    compositionComplete() {
-        super.compositionComplete();
-        this.initValidation();
-    }
-
-    private initValidation() {
-        this.model.readBalanceBehavior.extend({
-            required: {
-                onlyIf: () => _.includes(this.model.isDefined(), "readBalanceBehavior")
-            }
-        });
-        
-        this.model.maxNumberOfRequestsPerSession.extend({
-            required: {
-                onlyIf: () => _.includes(this.model.isDefined(), "maxNumberOfRequestsPerSession")
-            },
-            digit: true
-        })
-    }
     
     saveConfiguration() {
         if (!this.isValid(this.model.validationGroup)) {
