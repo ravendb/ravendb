@@ -48,7 +48,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         this.dateFormattedAsUtc = ko.pureComputed(() => {
             if (model.timestamp()) {
                 const date = moment(model.timestamp());
-                if (date.utc().format() === "Invalid date") {
+                if (!date.isValid()) {
                     return "Invalid date";
                 }
                 return date.utc().format(editTimeSeriesEntry.utcTimeFormat) + "Z (UTC)";

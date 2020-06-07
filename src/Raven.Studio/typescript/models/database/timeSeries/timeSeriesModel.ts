@@ -39,7 +39,7 @@ class timeSeriesModel {
             required: true,
             validation: [
                 {
-                    validator: () => this.timestamp().utc().format() !== "Invalid date",
+                    validator: () => this.timestamp().isValid(),
                     message: "Please enter a valid date"
                 }
             ]

@@ -59,13 +59,25 @@ class deleteTimeSeries extends dialogViewModelBase {
         this.startDate.extend({
             required: {
                 onlyIf: () => !this.useMinStartDate()
-            }
+            },
+            validation: [
+                {
+                    validator: () => !this.useMinStartDate() && this.startDate().isValid(),
+                    message: "Please enter a valid date"
+                }
+            ]
         });
         
         this.endDate.extend({
             required: {
                 onlyIf: () => !this.useMaxEndDate()
-            }
+            },
+            validation: [
+                {
+                    validator: () => !this.useMaxEndDate() && this.endDate().isValid(),
+                    message: "Please enter a valid date"
+                }
+            ]
         });
         
         this.validationGroup = ko.validatedObservable({
