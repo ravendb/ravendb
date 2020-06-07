@@ -18,13 +18,25 @@ import timeSeriesModel = require("models/database/timeSeries/timeSeriesModel");
 import getTimeSeriesConfigurationCommand = require("commands/database/documents/timeSeries/getTimeSeriesConfigurationCommand");
 import getDocumentMetadataCommand = require("commands/database/documents/getDocumentMetadataCommand");
 
+class timeSeriesInfo {
+    name = ko.observable<string>();
+    numberOfEntries = ko.observable<number>();
+    
+    constructor(name: string, numberOfEntries: number) {
+        this.name(name);
+        this.numberOfEntries(numberOfEntries);
+    }
+}
+
 class editTimeSeries extends viewModelBase {
     static timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     
     documentId = ko.observable<string>();
     documentCollection = ko.observable<string>();
+    
     timeSeriesName = ko.observable<string>();
-    timeSeriesNames = ko.observableArray<string>([]);
+    timeSeriesNameText: KnockoutComputed<string>;
+    timeSeriesList = ko.observableArray<timeSeriesInfo>([]);
     
     urlForDocument: KnockoutComputed<string>;
     canDeleteSelected: KnockoutComputed<boolean>;
@@ -215,6 +227,11 @@ class editTimeSeries extends viewModelBase {
                 .done(result => {
                     const items = result.Entries;
                     const totalResultCount = result.TotalResults || 0;
+                    
+                    const series = this.getSeriesFromList(timeSeriesName);
+                    if (series) {
+                        series.numberOfEntries(result.TotalResults);
+                    }
 
                     fetchTask.resolve({
                         items,
@@ -267,8 +284,7 @@ class editTimeSeries extends viewModelBase {
     private activateByCreateNew(docId: string) {
         return this.loadTimeSeries(docId)
             .then(stats => {
-                const names = stats.TimeSeries.map(x => x.Name);
-                this.timeSeriesNames(names);
+                this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
                 this.timeSeriesName(null);
                 return { can: true };
             });
@@ -277,11 +293,9 @@ class editTimeSeries extends viewModelBase {
     private activateById(docId: string, timeSeriesName: string) {
         return this.loadTimeSeries(docId)
             .then(stats => {
-                const names = stats.TimeSeries.map(x => x.Name);
-                
-                if (_.includes(names, timeSeriesName)) {
+                if (this.getSeriesFromList(timeSeriesName)) {
                     this.timeSeriesName(timeSeriesName);
-                    this.timeSeriesNames(names);
+                    this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
                     return { can: true };
                 } else {
                     messagePublisher.reportWarning("Unable to find time series with name: " + timeSeriesName);
@@ -294,7 +308,7 @@ class editTimeSeries extends viewModelBase {
         return new getTimeSeriesStatsCommand(docId, this.activeDatabase())
             .execute()
             .done(stats => {
-                this.timeSeriesNames(stats.TimeSeries.map(x => x.Name));
+                this.timeSeriesList(stats.TimeSeries.map(x => new timeSeriesInfo(x.Name, x.NumberOfEntries)));
             });
     }
 
@@ -376,15 +390,22 @@ class editTimeSeries extends viewModelBase {
     }
 
     private onTimeSeriesAdded(seriesName: string) {
-        if (_.includes(this.timeSeriesNames(), seriesName)) {
+        const series = this.getSeriesFromList(seriesName);
+        if (series) {
+            // New Entry - for an existing time series
             this.changeCurrentSeries(seriesName);
+            series.numberOfEntries(series.numberOfEntries() + 1);
         } else {
-            // looks like user create new time series - need to reload data from server
+            // New Time Series - reload data from server
             this.loadTimeSeries(this.documentId())
                 .done(() => {
                     this.changeCurrentSeries(seriesName);
                 });
         }
+    }
+
+    private getSeriesFromList(seriesName: string) {
+        return this.timeSeriesList().find(ts => ts.name() === seriesName);
     }
 
     private initObservables() {
@@ -459,6 +480,16 @@ class editTimeSeries extends viewModelBase {
                 case "selection":
                     return "Delete selection";
             }
+        });
+        
+        this.timeSeriesNameText = ko.pureComputed(() => {
+            const tsInfo = this.getSeriesFromList(this.timeSeriesName());
+            
+            if (!tsInfo) {
+                return "<creating new>";
+            }
+            
+            return `${tsInfo.name()} (${tsInfo.numberOfEntries()})`;
         });
     }
 }

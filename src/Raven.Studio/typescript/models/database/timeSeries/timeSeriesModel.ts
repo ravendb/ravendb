@@ -36,7 +36,13 @@ class timeSeriesModel {
         });
         
         this.timestamp.extend({
-            required: true
+            required: true,
+            validation: [
+                {
+                    validator: () => this.timestamp().utc().format() !== "Invalid date",
+                    message: "Please enter a valid date"
+                }
+            ]
         });
 
         this.values.extend({

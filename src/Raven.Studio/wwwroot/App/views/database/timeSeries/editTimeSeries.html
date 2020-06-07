@@ -7,11 +7,11 @@
         <div class="btn-group-label" data-label="Time Series">
             <div class="dropdown dropdown-right">
                 <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown">
-                    <span data-bind="text: timeSeriesName() || '<creating new>'"></span>
+                    <span data-bind="text: timeSeriesNameText"></span>
                     <span class="caret"></span>
                 </button>
-                <ul class="dropdown-menu" data-bind="foreach: timeSeriesNames">
-                    <li><a href="#" data-bind="text: $data, click: _.partial($root.changeCurrentSeries, $data)"></a></li>
+                <ul class="dropdown-menu" data-bind="foreach: timeSeriesList">
+                    <li><a href="#" data-bind="text: $data.name() + ' (' + $data.numberOfEntries() + ')', click: _.partial($root.changeCurrentSeries, $data.name())"></a></li>
                 </ul>
             </div>
         </div>
@@ -19,7 +19,7 @@
     <div class="flex-horizontal flex-noshrink">
         <div class="btn-bar toolbar">
             <div class="btn-group">
-                <button class="btn btn-primary" type="button" data-bind="click: _.partial($root.createTimeSeries, false)">
+                <button class="btn btn-primary" type="button" data-bind="click: _.partial($root.createTimeSeries, false), attr: { title: 'Add a new entry to time series ' + timeSeriesName()}">
                     <i class="icon-plus"></i>
                     <span>New Entry</span>
                 </button>
@@ -35,7 +35,6 @@
                     </li>
                 </ul>
             </div>
-            
             <button class="btn btn-danger" type="button" data-bind="click: deleteTimeSeries, enable: canDeleteSelected">
                 <i class="icon-trash"></i>
                 <span data-bind="text: deleteButtonText"></span>
