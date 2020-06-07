@@ -496,16 +496,11 @@ namespace Raven.Server.Documents.Handlers
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
 
-                        var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
-                        if (commandData.Type == CommandType.TimeSeriesBulkInsert)
+                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
                         {
-                            // this is a long running operation and we won't to dispose of the blittable as soon as possible
-                            commandData.TimeSeries = TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations);
-                            timeSeriesOperations.Dispose();
-                        }
-                        else
-                        {
-                            commandData.TimeSeries = TimeSeriesOperation.Parse(timeSeriesOperations);
+                            commandData.TimeSeries = commandData.Type == CommandType.TimeSeriesBulkInsert ? 
+                                TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations) : 
+                                TimeSeriesOperation.Parse(timeSeriesOperations);
                         }
 
                         break;

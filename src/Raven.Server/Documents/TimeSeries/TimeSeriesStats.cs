@@ -229,7 +229,11 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (baseline <= end && end <= last)
                 {
-                    end = tss.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).Last().Timestamp;
+                    var lastEntry = tss.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).Last();
+                    if (lastEntry == default)
+                        return false;
+
+                    end = lastEntry.Timestamp;
                 }
 
                 return true;
