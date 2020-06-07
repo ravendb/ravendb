@@ -219,8 +219,6 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, CounterBatch> CounterBatch = GenerateJsonDeserializationRoutine<CounterBatch>();
 
-        internal static readonly Func<BlittableJsonReaderObject, TimeSeriesOperation> TimeSeriesOperation = GenerateJsonDeserializationRoutine<TimeSeriesOperation>();
-
         internal static readonly Func<BlittableJsonReaderObject, IndexDefinition> IndexDefinition = GenerateJsonDeserializationRoutine<IndexDefinition>();
 
         internal static readonly Func<BlittableJsonReaderObject, TimeSeriesIndexDefinition> TimeSeriesIndexDefinition = GenerateJsonDeserializationRoutine<TimeSeriesIndexDefinition>();

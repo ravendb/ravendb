@@ -24,9 +24,23 @@ namespace Raven.Client.Documents.Commands.Batches
             TimeSeries = new TimeSeriesOperation
             {
                 Name = name,
-                Appends = appends,
-                Removals = removals
             };
+
+            if (appends != null)
+            {
+                foreach (var appendOperation in appends)
+                {
+                    TimeSeries.Append(appendOperation);
+                }
+            }
+
+            if (removals != null)
+            {
+                foreach (var removeOperation in removals)
+                {
+                    TimeSeries.Remove(removeOperation);
+                }
+            }
         }
 
         public string Id { get; set; }

@@ -50,9 +50,10 @@ namespace SlowTests.Client.TimeSeries
                 var a = new TimeSeriesOperation 
                 { 
                     Name = "test",
-                    Appends = new List<TimeSeriesOperation.AppendOperation> {op3, op2,op}
                 };
-
+                a.Append(op3);
+                a.Append(op2);
+                a.Append(op);
                 store.Operations.Send(new TimeSeriesBatchOperation("users/1-A", a));
 
                 var opDelete = new TimeSeriesOperation.RemoveOperation
@@ -64,25 +65,15 @@ namespace SlowTests.Client.TimeSeries
                 var ab = new TimeSeriesOperation
                 {
                     Name = "test",
-                    Removals = new List<TimeSeriesOperation.RemoveOperation> {opDelete }
                 };
-
+                ab.Remove(opDelete);
                 store.Operations.Send(new TimeSeriesBatchOperation("users/1-A", ab));
 
                 var abc = new TimeSeriesOperation
                 {
                     Name = "test",
-                    Removals = new List<TimeSeriesOperation.RemoveOperation>
-                    {
-                        new TimeSeriesOperation.RemoveOperation
-                        {
-                            From = DateTime.MinValue,
-                            To = DateTime.MaxValue
-
-                        }
-                    }
                 };
-
+                abc.Remove(new TimeSeriesOperation.RemoveOperation {From = DateTime.MinValue, To = DateTime.MaxValue});
                 store.Operations.Send(new TimeSeriesBatchOperation("users/1-A", abc));
                 var ts = store.Operations.Send(new GetTimeSeriesOperation("users/1-A", "test", DateTime.MinValue, DateTime.MaxValue));
 

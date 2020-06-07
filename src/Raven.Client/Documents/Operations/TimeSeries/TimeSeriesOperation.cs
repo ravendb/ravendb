@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -9,11 +10,42 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 {
     public class TimeSeriesOperation
     {
-        public List<AppendOperation> Appends;
+        internal IList<AppendOperation> Appends
+        {
+            get
+            {
+                return _appends?.Values;
+            }
+            private set
+            {
+                _appends ??= new SortedList<long, AppendOperation>();
+                foreach (var appendOperation in value)
+                {
+                    _appends[appendOperation.Timestamp.Ticks] = appendOperation;
+                }
+            }
+        }
 
-        public List<RemoveOperation> Removals;
+        internal List<RemoveOperation> Removals;
 
         public string Name;
+        
+        private SortedList<long, AppendOperation> _appends;
+
+        public void Append(AppendOperation appendOperation)
+        {
+            _appends ??= new SortedList<long, AppendOperation>();
+            appendOperation.Timestamp = appendOperation.Timestamp.EnsureUtc().EnsureMilliseconds();
+            _appends[appendOperation.Timestamp.Ticks] = appendOperation; // on duplicate values the last one overrides
+        }
+
+        public void Remove(RemoveOperation removeOperation)
+        {
+            Removals ??= new List<RemoveOperation>();
+            removeOperation.To = removeOperation.To?.EnsureUtc();
+            removeOperation.From = removeOperation.From?.EnsureUtc();
+            Removals.Add(removeOperation);
+        }
 
         internal static TimeSeriesOperation Parse(BlittableJsonReaderObject input)
         {
@@ -42,7 +74,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                     sorted[append.Timestamp.Ticks] = append;
                 }
 
-                result.Appends = new List<AppendOperation>(sorted.Values);
+                result._appends = sorted;
             }
 
             if (input.TryGet(nameof(Removals), out operations) && operations != null)
@@ -168,7 +200,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 sorted[append.Timestamp.Ticks] = append;
             }
 
-            result.Appends = new List<AppendOperation>(sorted.Values);
+            result._appends = sorted;
 
             return result;
 

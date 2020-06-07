@@ -33,19 +33,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                 var timeSeriesOp = new TimeSeriesOperation
                 {
                     Name = "Heartrate",
-                    Appends = new List<TimeSeriesOperation.AppendOperation>()
-                    {
-                        new TimeSeriesOperation.AppendOperation
-                        {
-                            Timestamp = baseline.AddSeconds(1),
-                            Values = new[]
-                            {
-                                59d
-                            }
-                        }
-                    }
                 };
-
+                timeSeriesOp.Append(new TimeSeriesOperation.AppendOperation {Timestamp = baseline.AddSeconds(1), Values = new[] {59d}});
                 var timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);

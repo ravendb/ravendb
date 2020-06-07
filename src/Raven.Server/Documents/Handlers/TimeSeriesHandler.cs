@@ -462,7 +462,7 @@ namespace Raven.Server.Documents.Handlers
                 var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
 
                 var blittable = await context.ReadForMemoryAsync(RequestBodyStream(), "timeseries");
-                var operation = JsonDeserializationClient.TimeSeriesOperation(blittable);
+                var operation = TimeSeriesOperation.Parse(blittable);
 
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(blittable.ToString(), TrafficWatchChangeType.TimeSeries);
