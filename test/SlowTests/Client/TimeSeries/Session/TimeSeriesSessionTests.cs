@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Operations;
@@ -83,7 +86,7 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         [Fact]
-        public void ThrowIfAppendIsLessThen1Ms()
+        public async Task ThrowIfAppendIsLessThen1Ms()
         {
             using (var store = GetDocumentStore())
             {
@@ -92,18 +95,22 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
 
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenWriteTransaction())
+                {
+                    var appends = new[]
+                    {
+                        new SingleResult {Timestamp = baseline.AddMinutes(1), Tag = ctx.GetLazyString("watches/fitbit"), Values = new Memory<double>(new double[] {59})},
+                        new SingleResult {Timestamp = baseline.AddMinutes(1).AddTicks(10), Tag = ctx.GetLazyString("watches/fitbit"), Values = new Memory<double>(new double[] {60})},
+                        new SingleResult {Timestamp = baseline.AddMinutes(1).AddTicks(20), Tag = ctx.GetLazyString("watches/fitbit"), Values = new Memory<double>(new double[] {61})},
+                    };
 
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Append(baseline.AddMinutes(1).AddTicks(10), 60d, "watches/fitbit");
-
-                    session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Append(baseline.AddMinutes(1).AddTicks(20), 61d, "watches/fitbit");
-
-                    var e = Assert.Throws<RavenException>(() => session.SaveChanges());
-                    Assert.Contains("TimeSeries entries must be sorted by their timestamps", e.Message);
+                    var e = Assert.Throws<InvalidDataException>(() => database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(ctx, "users/ayende", "users", "heartrate", appends));
+                    Assert.Contains("must be sorted by their timestamps, and cannot contain duplicate timestamps.", e.Message);
                 }
             }
         }
@@ -568,7 +575,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.UtcNow;
+                var now = DateTime.UtcNow.EnsureMilliseconds();
                 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;

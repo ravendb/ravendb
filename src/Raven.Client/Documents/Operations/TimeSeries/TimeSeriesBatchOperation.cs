@@ -34,30 +34,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 _documentId = documentId;
                 _operation = operation;
-
-                if (_operation.Appends != null)
-                {
-                    var sorted = new SortedList<long, TimeSeriesOperation.AppendOperation>();
-
-                    foreach (var append in _operation.Appends)
-                    {
-                        append.Timestamp = append.Timestamp.EnsureUtc().EnsureMilliseconds();
-                        sorted[append.Timestamp.Ticks] = append; // on duplicate values the last one overrides
-                    }
-
-                    _operation.Appends = new List<TimeSeriesOperation.AppendOperation>(sorted.Values);
-                }
-
-                if (_operation.Removals != null)
-                {
-                    foreach (var removal in _operation.Removals)
-                    {
-                        removal.To = removal.To?.EnsureUtc();
-                        removal.From = removal.From?.EnsureUtc();
-                    }
-                }
             }
-
+            
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/timeseries?docId={Uri.EscapeDataString(_documentId)}";
@@ -68,8 +46,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_operation, ctx);
-                        ctx.Write(stream, config);
+                        var op = ctx.ReadObject(_operation.ToJson(), "convert-time-series-operation");
+                        ctx.Write(stream, op);
                     })
                 };
             }

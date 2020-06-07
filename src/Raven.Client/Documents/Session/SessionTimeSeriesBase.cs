@@ -85,11 +85,7 @@ namespace Raven.Client.Documents.Session
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
             {
                 var tsCmd = (TimeSeriesBatchCommandData)command;
-
-                if (tsCmd.TimeSeries.Appends == null)
-                    tsCmd.TimeSeries.Appends = new List<TimeSeriesOperation.AppendOperation>();
-
-                tsCmd.TimeSeries.Appends.Add(op);
+                tsCmd.TimeSeries.Append(op);
             }
             else
             {
@@ -117,11 +113,7 @@ namespace Raven.Client.Documents.Session
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
             {
                 var tsCmd = (TimeSeriesBatchCommandData)command;
-
-                if (tsCmd.TimeSeries.Removals == null)
-                    tsCmd.TimeSeries.Removals = new List<TimeSeriesOperation.RemoveOperation>();
-
-                tsCmd.TimeSeries.Removals.Add(op);
+                tsCmd.TimeSeries.Remove(op);
             }
             else
             {

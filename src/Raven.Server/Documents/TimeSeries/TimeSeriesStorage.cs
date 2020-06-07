@@ -1016,12 +1016,16 @@ namespace Raven.Server.Documents.TimeSeries
 
         private class AppendEnumerator : IEnumerator<SingleResult>
         {
+            private readonly string _documentId;
+            private readonly string _name;
             private readonly bool _fromReplication;
             private readonly IEnumerator<SingleResult> _toAppend;
             private SingleResult _current;
 
-            public AppendEnumerator(IEnumerable<SingleResult> toAppend, bool fromReplication)
+            public AppendEnumerator(string documentId, string name, IEnumerable<SingleResult> toAppend, bool fromReplication)
             {
+                _documentId = documentId;
+                _name = name;
                 _fromReplication = fromReplication;
                 _toAppend = toAppend.GetEnumerator();
             }
@@ -1039,7 +1043,7 @@ namespace Raven.Server.Documents.TimeSeries
                 next.Timestamp = EnsureMillisecondsPrecision(next.Timestamp);
 
                 if (currentTimestamp >= next.Timestamp)
-                    throw new InvalidDataException("TimeSeries entries must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
+                    throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
                                                    $"Got: current '{currentTimestamp:O}', next '{next.Timestamp:O}', make sure your measures have at least 1ms interval.");
 
                 if (_fromReplication == false)
@@ -1089,7 +1093,7 @@ namespace Raven.Server.Documents.TimeSeries
                 VerifyLegalName(name);
             }
 
-            using (var appendEnumerator = new AppendEnumerator(toAppend, changeVectorFromReplication != null))
+            using (var appendEnumerator = new AppendEnumerator(documentId, name, toAppend, changeVectorFromReplication != null))
             {
                 while (appendEnumerator.MoveNext())
                 {
