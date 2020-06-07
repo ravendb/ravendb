@@ -15,9 +15,13 @@ class clientConfiguration extends viewModelBase {
     overrideServer = ko.observable<boolean>(false);
     canEditSettings: KnockoutComputed<boolean>;
     
+    effectiveIdentityPartsSeparator: KnockoutComputed<string>;
     effectiveReadBalanceBehavior: KnockoutComputed<string>;
     effectiveMaxNumberOfRequestsPerSession: KnockoutComputed<string>;
      
+    separatorPlaceHolderInSettings: KnockoutComputed<string>;
+    requestsNumberPlaceHolderInSettings: KnockoutComputed<string>;
+    
     spinners = {
         save: ko.observable<boolean>(false)
     };
@@ -46,11 +50,10 @@ class clientConfiguration extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-        this.initValidation();
 
         this.overrideServer.subscribe(override => {
             if (override) {
-                this.model.isDefined(this.globalModel.isDefined());
+                this.model.isDefined([...this.globalModel.isDefined()]);
             } else {
                 this.model.isDefined.removeAll();
             }
@@ -58,18 +61,39 @@ class clientConfiguration extends viewModelBase {
     }
 
     private initObservables() {
+        this.effectiveIdentityPartsSeparator = ko.pureComputed(() => {
+            if (!this.hasGlobalConfiguration()) {
+                return "";
+            }
+
+            if (this.overrideServer()) {
+                const configToUse = this.model;
+                const separator = this.model.identityPartsSeparator();
+                return _.includes(configToUse.isDefined(), "identityPartsSeparator") && separator ? separator :  "'/' (default)";
+            } else {
+                const separator = this.globalModel.identityPartsSeparator();
+                return separator || "'/' (default)"; 
+            }
+        });
+
         this.effectiveReadBalanceBehavior = ko.pureComputed(() => {
             if (!this.hasGlobalConfiguration()) {
                 return "";
             }
 
             const configToUse = this.overrideServer() ? this.model : this.globalModel;
-            const label = configToUse.readBalanceBehaviorLabel();
-
             const usingSessionContext = _.includes(configToUse.isDefined(), "useSessionContextForLoadBehavior");
             
-            return usingSessionContext ? "<Session Context>" :
-                _.includes(configToUse.isDefined(), "readBalanceBehavior") ? label : "<Client Default>";
+            if (usingSessionContext) {
+                return "Session Context";
+            }
+
+            const label = configToUse.readBalanceBehaviorLabel();
+            if (this.overrideServer()) {
+                return _.includes(configToUse.isDefined(), "readBalanceBehavior") ? label : "None (default)";
+            } else {
+                return label || "None (default)";
+            }
         });
 
         this.effectiveMaxNumberOfRequestsPerSession = ko.pureComputed(() => {
@@ -77,10 +101,14 @@ class clientConfiguration extends viewModelBase {
                 return "";
             }
 
-            const configToUse = this.overrideServer() ? this.model : this.globalModel;
-            const maxRequests = configToUse.maxNumberOfRequestsPerSession();
-
-            return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") && maxRequests ? maxRequests.toLocaleString() :  "<Client Default>";
+            if (this.overrideServer()) {
+                const configToUse = this.model;
+                const maxRequests = this.model.maxNumberOfRequestsPerSession();
+                return _.includes(configToUse.isDefined(), "maxNumberOfRequestsPerSession") && maxRequests ? maxRequests.toLocaleString() : "30 (default)";
+            } else {
+                const maxRequests = this.globalModel.maxNumberOfRequestsPerSession();
+                return maxRequests ? maxRequests.toLocaleString() : "30 (default)";
+            }
         });
 
         this.canEditSettings = ko.pureComputed(() => {
@@ -100,20 +128,21 @@ class clientConfiguration extends viewModelBase {
         });
 
         this.overrideServer(this.hasGlobalConfiguration() && !this.model.disabled());
-    }
-    
-    private initValidation() {
-        this.model.readBalanceBehavior.extend({
-            required: {
-                onlyIf: () => _.includes(this.model.isDefined(), "readBalanceBehavior")
+        
+        this.separatorPlaceHolderInSettings = ko.pureComputed(() => {
+            if (!this.hasGlobalConfiguration() || this.overrideServer()) {
+                return this.model.separatorPlaceHolder();
             }
-        });
+            
+            return "";
+        })
 
-        this.model.maxNumberOfRequestsPerSession.extend({
-            required: {
-                onlyIf: () => _.includes(this.model.isDefined(), "maxNumberOfRequestsPerSession")
-            },
-            digit: true
+        this.requestsNumberPlaceHolderInSettings = ko.pureComputed(() => {
+            if (!this.hasGlobalConfiguration() || this.overrideServer()) {
+                return this.model.requestsNumberPlaceHolder();
+            }
+
+            return "";
         })
     }
 

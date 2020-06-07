@@ -5,29 +5,63 @@
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
                     <i class="icon-save"></i><span>Save</span>
                 </button>
-                <div class="toggle margin-left margin-left-lg" data-bind="visible: hasGlobalConfiguration">
-                    <input id="toggleOverride" type="checkbox" data-bind="checked: overrideServer">
-                    <label for="toggleOverride">
-                        Override server configuration
-                    </label>
-                </div>
             </div>
             <div>
-                <div class="row" data-bind="visible: hasGlobalConfiguration">
-                    <div class="col-sm-6">
-                    </div>
-                    <div class="col-sm-2">
-                        <h3><a href="#" data-bind="attr: { href: globalConfigUrl }"><i class="icon-link"></i><span>Server Configuration</span></a></h3>
-                    </div>
-                    <div class="col-sm-2">
-                        <h3 class="margin-top margin-top-sm">Effective Configuration</h3>
+                <div class="panel">
+                    <div class="row" data-bind="visible: hasGlobalConfiguration">
+                        <div class="col-sm-3 margin-top margin-top-sm">
+                            <div class="toggle margin-left margin-left-lg" data-bind="visible: hasGlobalConfiguration">
+                                <input id="toggleOverride" type="checkbox" data-bind="checked: overrideServer">
+                                <label for="toggleOverride">
+                                    Override Server Configuration
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-sm-2 margin-top">
+                            <h3 class="margin-left margin-left-sm">Database Configuration</h3>
+                        </div>
+                        <div class="col-sm-2 flex-horizontal">
+                            <div class="margin-top margin-top-sm" title="Navigate to server-wide client configuration"><a href="#" data-bind="attr: { href: globalConfigUrl }"><i class="icon-link"></i></a></div>
+                            <div class="margin-top"><h3>Server Configuration</h3></div>
+                        </div>
+                        <div class="col-sm-2 margin-top">
+                            <h3><strong>Effective Configuration</strong></h3>
+                        </div>
                     </div>
                 </div>
                 <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
                     <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
                         <div class="panel padding">
                             <div class="row">
-                                <div data-bind="css: { 'col-sm-4': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
+                                <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
+                                    <div class="checkbox">
+                                        <input id="checkboxSeparator" type="checkbox"
+                                               data-bind="checked: model.isDefined, checkedValue: 'identityPartsSeparator', enable: canEditSettings, validationElement: model.identityPartsSeparator">
+                                        <label for="checkboxSeparator">
+                                            Identity parts separator
+                                        </label>
+                                    </div>
+                                </div>
+                                <div data-bind="validationElement: model.identityPartsSeparator, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-4': !hasGlobalConfiguration() }">
+                                    <input class="form-control" type="text"
+                                           data-bind="textInput: model.identityPartsSeparator, enable: _.includes(model.isDefined(), 'identityPartsSeparator'), 
+                                                      attr: { placeholder: separatorPlaceHolderInSettings }" />
+                                </div>
+                                <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
+                                    <input class="form-control" disabled data-bind="value: globalModel.identityPartsSeparator" />
+                                </div>
+                                <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration">
+                                    <h3 class="margin-top margin-top-sm" data-bind="text: effectiveIdentityPartsSeparator"></h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="css: { 'row': !hasGlobalConfiguration() }">
+                    <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
+                        <div class="panel padding">
+                            <div class="row">
+                                <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="checkboxMaxRequests" type="checkbox" min="0"
                                                data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', enable: canEditSettings, validationElement: model.maxNumberOfRequestsPerSession">
@@ -38,7 +72,8 @@
                                 </div>
                                 <div data-bind="validationElement: model.maxNumberOfRequestsPerSession, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-4': !hasGlobalConfiguration() }">
                                     <input class="form-control" type="number" min="0" placeholder="Enter requests number"
-                                           data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
+                                           data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession'),
+                                                      attr: { placeholder: requestsNumberPlaceHolderInSettings }" />
                                 </div>
                                 <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
                                     <input class="form-control" disabled data-bind="value: globalModel.maxNumberOfRequestsPerSession" />
@@ -65,7 +100,7 @@
                                 </div>
                             </div>
                             <div class="row margin-top margin-top-sm">
-                                <div data-bind="css: { 'col-sm-4': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
+                                <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="checkboxReadBalance" type="checkbox"
                                                data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings() && !_.includes(model.isDefined() , 'useSessionContextForLoadBehavior')">

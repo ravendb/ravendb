@@ -9,7 +9,12 @@ class clientConfigurationModel {
         { value: "FastestNode", label: "Fastest node"}
     ] as Array<valueAndLabelItem<Raven.Client.Http.ReadBalanceBehavior, string>>;
 
+    identityPartsSeparator = ko.observable<string>();
+    separatorPlaceHolder: KnockoutComputed<string>;
+        
     maxNumberOfRequestsPerSession = ko.observable<number>();
+    requestsNumberPlaceHolder: KnockoutComputed<string>;
+    
     useSessionContextForLoadBehavior = ko.observable<Raven.Client.Http.LoadBalanceBehavior>();
     
     readBalanceBehavior = ko.observable<Raven.Client.Http.ReadBalanceBehavior>("None");
@@ -24,6 +29,11 @@ class clientConfigurationModel {
     constructor(dto: Raven.Client.Documents.Operations.Configuration.ClientConfiguration) {
 
         if (dto) {
+            if(dto.IdentityPartsSeparator) {
+                this.isDefined.push("identityPartsSeparator");
+                this.identityPartsSeparator(dto.IdentityPartsSeparator);
+            }
+            
             if (dto.LoadBalanceBehavior === "UseSessionContext") {
                 this.isDefined.push("useSessionContextForLoadBehavior");
                 this.useSessionContextForLoadBehavior("UseSessionContext");
@@ -50,21 +60,71 @@ class clientConfigurationModel {
             const kv = clientConfigurationModel.readModes;
             return value ? kv.find(x => x.value === value).label : "None";
         });
+        
+        this.separatorPlaceHolder = ko.pureComputed(() => {
+            return _.includes(this.isDefined(), "identityPartsSeparator") ? "Enter separator char" : "Default is '/'";
+        });
+
+        this.requestsNumberPlaceHolder = ko.pureComputed(() => {
+            return _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? "Enter requests number" : "Default is 30";
+        });
+        
+        this.isDefined.subscribe(() => {
+            if (!_.includes(this.isDefined(), "identityPartsSeparator")) {
+                this.identityPartsSeparator(null);
+            }
+
+            if (!_.includes(this.isDefined(), "maxNumberOfRequestsPerSession")) {
+                this.maxNumberOfRequestsPerSession(null);
+            }
+
+            if (!_.includes(this.isDefined(), "readBalanceBehavior")) {
+                this.readBalanceBehavior("None");
+            }
+        });
 
         this.dirtyFlag = new ko.DirtyFlag([
+            this.identityPartsSeparator,
             this.maxNumberOfRequestsPerSession,
             this.useSessionContextForLoadBehavior,
             this.readBalanceBehavior,
             this.isDefined
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
-
+    
     private initValidation() {
+        this.identityPartsSeparator.extend({
+            required: {
+                onlyIf: () => _.includes(this.isDefined(), "identityPartsSeparator")
+            },
+            validation: [
+                {
+                    validator: (val: string) => !_.includes(this.isDefined(), "identityPartsSeparator") || val.length === 1,
+                    message: "Enter one character only"
+                },
+                {
+                    validator: (val: string) => !_.includes(this.isDefined(), "identityPartsSeparator") || val !== "|",
+                    message: "Identity parts separator cannot be set to '|'"
+                }
+            ]
+        });
+
+        this.readBalanceBehavior.extend({
+            required: {
+                onlyIf: () => _.includes(this.isDefined(), "readBalanceBehavior")
+            }
+        });
+        
         this.maxNumberOfRequestsPerSession.extend({
-            min: 0
+            required: {
+                onlyIf: () => _.includes(this.isDefined(), "maxNumberOfRequestsPerSession")
+            },
+            min: 0,
+            digit: true
         });
         
         this.validationGroup = ko.validatedObservable({
+            identityPartsSeparator: this.identityPartsSeparator,
             readBalanceBehavior: this.readBalanceBehavior,
             maxNumberOfRequestsPerSession: this.maxNumberOfRequestsPerSession
         });
@@ -77,6 +137,7 @@ class clientConfigurationModel {
     
     toDto() {
         return {
+            IdentityPartsSeparator: _.includes(this.isDefined(), "identityPartsSeparator") ? this.identityPartsSeparator() : null,
             LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? "UseSessionContext" : null,
             ReadBalanceBehavior: _.includes(this.isDefined(), "readBalanceBehavior") ? this.readBalanceBehavior() : null,
             MaxNumberOfRequestsPerSession: _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? this.maxNumberOfRequestsPerSession() : null,

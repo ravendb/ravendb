@@ -12,16 +12,17 @@
                         <div class="row">
                             <div class="col-sm-6">
                                 <div class="checkbox">
-                                    <input id="checkboxMaxRequests" type="checkbox"
-                                           data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession', validationElement: model.maxNumberOfRequestsPerSession">
-                                    <label for="checkboxMaxRequests">
-                                        Maximum number of requests per session
+                                    <input id="checkboxSeparator" type="checkbox"
+                                           data-bind="checked: model.isDefined, checkedValue: 'identityPartsSeparator'" />
+                                    <label for="checkboxSeparator">
+                                        Identity parts separator
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-sm-4" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
-                                <input class="form-control" type="number" min="0" placeholder="Enter requests number"
-                                       data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
+                            <div class="col-sm-4" data-bind="validationElement: model.identityPartsSeparator">
+                                <input class="form-control" type="text"
+                                       data-bind="textInput: model.identityPartsSeparator, enable: _.includes(model.isDefined(), 'identityPartsSeparator'), 
+                                                  attr: { placeholder: model.separatorPlaceHolder }" />
                             </div>
                         </div>
                     </div>
@@ -29,9 +30,27 @@
                         <div class="row">
                             <div class="col-sm-6">
                                 <div class="checkbox">
-                                    <input id="useSessionContextToggle" type="checkbox" 
-                                           data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', disable: _.includes(model.isDefined() , 'readBalanceBehavior')">
-                                    <label for="useSessionContextToggle">
+                                    <input id="checkboxMaxRequests" type="checkbox"
+                                           data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession'" />
+                                    <label for="checkboxMaxRequests">
+                                        Maximum number of requests per session
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-sm-4" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
+                                <input class="form-control" type="number" min="0"
+                                       data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession'), 
+                                                  attr: { placeholder: model.requestsNumberPlaceHolder }" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel padding">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <div class="checkbox">
+                                    <input id="checkboxUseSessionContext" type="checkbox"
+                                           data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', disable: _.includes(model.isDefined() , 'readBalanceBehavior')" />
+                                    <label for="checkboxUseSessionContext">
                                         Use Session Context for Load Balancing
                                     </label>
                                 </div>
@@ -41,7 +60,7 @@
                             <div class="col-sm-6">
                                 <div class="checkbox">
                                     <input id="checkboxReadBalance" type="checkbox"
-                                           data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', disable: _.includes(model.isDefined() , 'useSessionContextForLoadBehavior')">
+                                           data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', disable: _.includes(model.isDefined() , 'useSessionContextForLoadBehavior')" />
                                     <label for="checkboxReadBalance">
                                         Read balance behavior
                                     </label>
