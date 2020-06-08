@@ -11,7 +11,7 @@
                     <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu" data-bind="foreach: timeSeriesList">
-                    <li><a href="#" data-bind="text: $data.name() + ' (' + $data.numberOfEntries() + ')', click: _.partial($root.changeCurrentSeries, $data.name())"></a></li>
+                    <li><a href="#" data-bind="text: $data.nameAndNumberFormatted, click: _.partial($root.changeCurrentSeries, $data.name())"></a></li>
                 </ul>
             </div>
         </div>

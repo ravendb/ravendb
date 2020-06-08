@@ -21,10 +21,15 @@ import getDocumentMetadataCommand = require("commands/database/documents/getDocu
 class timeSeriesInfo {
     name = ko.observable<string>();
     numberOfEntries = ko.observable<number>();
+    nameAndNumberFormatted: KnockoutComputed<string>;
     
     constructor(name: string, numberOfEntries: number) {
         this.name(name);
         this.numberOfEntries(numberOfEntries);
+        
+        this.nameAndNumberFormatted = ko.pureComputed(() => {
+           return `${this.name()} (${generalUtils.formatNumberToStringFixed(this.numberOfEntries(), 0)})`;
+        });
     }
 }
 
@@ -484,12 +489,7 @@ class editTimeSeries extends viewModelBase {
         
         this.timeSeriesNameText = ko.pureComputed(() => {
             const tsInfo = this.getSeriesFromList(this.timeSeriesName());
-            
-            if (!tsInfo) {
-                return "<creating new>";
-            }
-            
-            return `${tsInfo.name()} (${tsInfo.numberOfEntries()})`;
+            return tsInfo ? tsInfo.nameAndNumberFormatted() : "<creating new>";
         });
     }
 }
