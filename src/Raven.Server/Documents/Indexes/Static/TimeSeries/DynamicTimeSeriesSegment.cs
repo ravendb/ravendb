@@ -5,7 +5,6 @@ using System.Diagnostics;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Utils;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static.TimeSeries
 {
@@ -17,6 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
         private DynamicArray _max;
         private DynamicArray _sum;
         private TimeSeriesSegmentSummary? _summary;
+        private string _name;
 
         public override dynamic GetId()
         {
@@ -40,13 +40,19 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return true;
         }
 
-        public LazyStringValue Name
+        public string Name
         {
             get
             {
                 AssertSegment();
 
-                return _segmentEntry.Name;
+                if (_name == null)
+                {
+                    var context = CurrentIndexingScope.Current.QueryContext;
+                    _name = TimeSeriesStorage.GetOriginalName(context.Documents, _segmentEntry.DocId, _segmentEntry.Name);
+                }
+
+                return _name;
             }
         }
 
