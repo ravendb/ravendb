@@ -288,26 +288,6 @@ namespace Raven.Server.Documents.Handlers
 
             private readonly Dictionary<string, DocumentUpdates> _documentsToUpdate = new Dictionary<string, DocumentUpdates>(StringComparer.OrdinalIgnoreCase);
 
-            private class DocumentUpdates
-            {
-                public bool Attachments;
-
-                public SortedSet<string> Counters;
-
-                public void AddCounter(string counterName)
-                {
-                    if (Counters == null)
-                        Counters = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                    Counters.Add(counterName);
-                }
-
-                public void AddAttachment()
-                {
-                    Attachments = true;
-                }
-            }
-
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 for (int i = 0; i < NumberOfCommands; i++)
@@ -435,6 +415,26 @@ namespace Raven.Server.Documents.Handlers
                     _documentsToUpdate[documentId] = update = new DocumentUpdates();
 
                 return update;
+            }
+
+            private class DocumentUpdates
+            {
+                public bool Attachments;
+
+                public SortedSet<string> Counters;
+
+                public void AddCounter(string counterName)
+                {
+                    if (Counters == null)
+                        Counters = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    Counters.Add(counterName);
+                }
+
+                public void AddAttachment()
+                {
+                    Attachments = true;
+                }
             }
         }
     }
