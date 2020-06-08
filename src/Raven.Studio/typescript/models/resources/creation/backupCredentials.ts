@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
 import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
+import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import commandBase = require("commands/commandBase");
@@ -82,13 +83,8 @@ export class amazonS3Credentials extends restoreSettings {
     secretKey = ko.observable<string>();
     regionName = ko.observable<string>();
     bucketName = ko.observable<string>();
-    accessKeyPropertyName = ko.pureComputed(() => this.isBackBlaze() ? "Application Key ID" : "Access key");
-    secretKeyPropertyName = ko.pureComputed(() => this.isBackBlaze() ? "Application Key" : "Secret key");
-
-    private isBackBlaze() {
-        const customServerUrl = this.customServerUrl();
-        return this.useCustomS3Host() && customServerUrl && customServerUrl.toLowerCase().endsWith(".backblazeb2.com");
-    }
+    accessKeyPropertyName = ko.pureComputed(() => s3Settings.getAccessKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
+    secretKeyPropertyName = ko.pureComputed(() => s3Settings.getSecretKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
 
     toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
         let selectedRegion = _.trim(this.regionName()).toLowerCase();
