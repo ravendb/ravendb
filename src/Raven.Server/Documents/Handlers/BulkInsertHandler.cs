@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.Handlers
             var progress = new BulkInsertProgress();
             try
             {
-
                 var logger = LoggingSource.Instance.GetLogger<MergedInsertBulkCommand>(Database.Name);
                 IDisposable currentCtxReset = null, previousCtxReset = null;
 
@@ -216,7 +215,7 @@ namespace Raven.Server.Documents.Handlers
                     foreach (var operation in commandData.Counters.Operations)
                     {
                         size += operation.CounterName.Length
-                                + sizeof(long) // etag 
+                                + sizeof(long) // etag
                                 + sizeof(long) // counter value
                                 + GetChangeVectorSizeInternal() // estimated change vector size
                                 + 10; // estimated collection name size
@@ -237,11 +236,10 @@ namespace Raven.Server.Documents.Handlers
                         size += append.Values.Length * sizeof(double);
                     }
 
-                    return size;                
+                    return size;
                 default:
                     throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
             }
-
 
             int GetChangeVectorSizeInternal()
             {
@@ -264,9 +262,9 @@ namespace Raven.Server.Documents.Handlers
                 return null;
 
             var disposable = ContextPool.AllocateOperationContext(out JsonOperationContext tempCtx);
-            // the docsCtx is currently in use, so we 
+            // the docsCtx is currently in use, so we
             // cannot pass it to the tx merger, we'll just
-            // copy the documents to a temporary ctx and 
+            // copy the documents to a temporary ctx and
             // use that ctx instead. Copying the documents
             // is safe, because they are immutables
 
@@ -287,7 +285,9 @@ namespace Raven.Server.Documents.Handlers
             public BatchRequestParser.CommandData[] Commands;
             public int NumberOfCommands;
             public long TotalSize;
-            private readonly HashSet<string> _documentsToUpdate = new HashSet<string>();
+
+            private Dictionary<string, SortedSet<string>> _documentsToUpdateAfterCounterChange = null;
+            private readonly HashSet<string> _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -306,11 +306,11 @@ namespace Raven.Server.Documents.Handlers
                             }
                             catch (VoronConcurrencyErrorException)
                             {
-                                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                                // RavenDB-10581 - If we have a concurrency error on "doc-id/"
                                 // this means that we have existing values under the current etag
-                                // we'll generate a new (random) id for them. 
+                                // we'll generate a new (random) id for them.
 
-                                // The TransactionMerger will re-run us when we ask it to as a 
+                                // The TransactionMerger will re-run us when we ask it to as a
                                 // separate transaction
 
                                 for (; i < NumberOfCommands; i++)
@@ -331,48 +331,73 @@ namespace Raven.Server.Documents.Handlers
 
                             break;
                         case CommandType.Counters:
-                        {
-                            var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
-
-                            foreach (var counterOperation in cmd.Counters.Operations)
                             {
-                                counterOperation.DocumentId = cmd.Counters.DocumentId;
-                                Database.DocumentsStorage.CountersStorage.IncrementCounter(
-                                    context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
-                            }
+                                var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
 
-                            break;
-                        }
+                                if (_documentsToUpdateAfterCounterChange == null)
+                                    _documentsToUpdateAfterCounterChange = new Dictionary<string, SortedSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+                                foreach (var counterOperation in cmd.Counters.Operations)
+                                {
+                                    counterOperation.DocumentId = cmd.Counters.DocumentId;
+                                    Database.DocumentsStorage.CountersStorage.IncrementCounter(context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
+
+                                    if (_documentsToUpdateAfterCounterChange.TryGetValue(cmd.Id, out var counters) == false)
+                                        _documentsToUpdateAfterCounterChange[cmd.Id] = counters = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                                    counters.Add(counterOperation.CounterName);
+                                }
+
+                                break;
+                            }
                         case CommandType.TimeSeries:
                         case CommandType.TimeSeriesBulkInsert:
-                        {
-                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
-                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
-                                cmd.Id,
-                                docCollection,
-                                cmd.TimeSeries.Name,
-                                cmd.TimeSeries.Appends
-                            );
-                            break;
-                        }
-                        case CommandType.AttachmentPUT:
-                        {
-                            using (cmd.AttachmentStream.Stream)
                             {
-                                Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                    cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
+                                var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.Id, fromEtl: false);
+                                Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                                    cmd.Id,
+                                    docCollection,
+                                    cmd.TimeSeries.Name,
+                                    cmd.TimeSeries.Appends
+                                );
+                                break;
                             }
+                        case CommandType.AttachmentPUT:
+                            {
+                                using (cmd.AttachmentStream.Stream)
+                                {
+                                    Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
+                                        cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
+                                }
 
-                            _documentsToUpdate.Add(cmd.Id);
+                                _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
 
-                            break;
-                        }
+                                break;
+                            }
                     }
                 }
 
-                foreach (var id in _documentsToUpdate)
+                foreach (var id in _documentsToUpdateAfterAttachmentChange)
                 {
                     Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, id);
+                }
+
+                if (_documentsToUpdateAfterCounterChange != null && _documentsToUpdateAfterCounterChange.Count > 0)
+                {
+                    foreach (var kvp in _documentsToUpdateAfterCounterChange)
+                    {
+                        var documentId = kvp.Key;
+                        var countersToAdd = kvp.Value;
+
+                        if (countersToAdd.Count == 0)
+                            continue;
+
+                        var docToUpdate = Database.DocumentsStorage.Get(context, documentId);
+                        if (docToUpdate == null)
+                            continue;
+
+                        Database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, docToUpdate, documentId, countersToAdd, countersToRemove: null, NonPersistentDocumentFlags.ByCountersUpdate);
+                    }
                 }
 
                 if (Logger.IsInfoEnabled)

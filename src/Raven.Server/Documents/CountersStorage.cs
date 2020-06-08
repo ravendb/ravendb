@@ -1476,7 +1476,7 @@ namespace Raven.Server.Documents
         public string UpdateDocumentCounters(DocumentsOperationContext context, Document doc, string docId,
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, NonPersistentDocumentFlags nonPersistentDocumentFlags)
         {
-            if (countersToRemove.Count == 0 && countersToAdd.Count == 0)
+            if ((countersToRemove == null || countersToRemove.Count == 0) && countersToAdd.Count == 0)
                 return null;
 
             var data = doc.Data;
@@ -1546,7 +1546,7 @@ namespace Raven.Server.Documents
             foreach (var counter in metadataCounters)
             {
                 var str = counter.ToString();
-                if (countersToRemove.Contains(str))
+                if (countersToRemove?.Contains(str) == true)
                 {
                     modified = true;
                     continue;
