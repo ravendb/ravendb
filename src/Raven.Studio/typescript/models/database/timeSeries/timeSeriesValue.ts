@@ -13,14 +13,13 @@ class timeSeriesValue {
     initValidation() {
         this.value.extend({
             required: true,
-            numberOrNaN: true
+            number: true
         });
         
         this.validationGroup = ko.validatedObservable({
             value: this.value
         });
     }
-    
 }
 
 export = timeSeriesValue;

@@ -84,7 +84,8 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     }
     
     save() {
-        if (!this.isValid(this.model().validationGroup)) {
+        if (!this.isValid(this.model().validationGroup) ||
+            this.model().values().filter(x => !this.isValid(x.validationGroup)).length) {
             return false;
         }
         
