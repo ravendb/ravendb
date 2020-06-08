@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             _min = null;
             _max = null;
             _sum = null;
+            _name = null;
             return true;
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -8,11 +9,9 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
-using System.Collections.Generic;
 
 namespace SlowTests.Client.Indexing.TimeSeries
 {
@@ -74,6 +73,11 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
         private class MyTsIndex_AllDocs : AbstractTimeSeriesIndexCreationTask<object>
         {
+            public class Result
+            {
+                public string Name { get; set; }
+            }
+
             public MyTsIndex_AllDocs()
             {
                 AddMapForAll(timeSeries => from ts in timeSeries
@@ -426,7 +430,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
 
-
                 // delete document - this time don't stop indexing to make sure doc deletion will be noticed by the index
 
                 using (var session = store.OpenSession())
@@ -443,7 +446,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation("MyTsIndex", "HeartBeat", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("9", terms);
-
 
                 using (var session = store.OpenSession())
                 {
@@ -673,7 +675,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Equal(1, terms.Length);
                 Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
 
-
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("users/1", terms);
@@ -721,7 +722,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
                 Assert.Equal(tomorrow.Date, DateTime.Parse(terms[1]), RavenTestHelper.DateTimeComparer.Instance);
 
-
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("users/1", terms);
@@ -730,7 +730,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 Assert.Equal(2, terms.Length);
                 Assert.Contains("10", terms);
                 Assert.Contains("20", terms);
-
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
@@ -768,7 +767,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                 Assert.Equal(1, terms.Length);
                 Assert.Equal(tomorrow.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
-
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "User", null));
                 Assert.Equal(1, terms.Length);
@@ -864,7 +862,6 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "Date", null));
                     Assert.Equal(1, terms.Length);
                     Assert.Equal(today.Date, DateTime.Parse(terms[0]), RavenTestHelper.DateTimeComparer.Instance);
-
 
                     terms = store.Maintenance.Send(new GetTermsOperation(indexName, "City", null));
                     Assert.Equal(1, terms.Length);
@@ -1619,6 +1616,42 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                     Assert.Equal(0, counts.ReferenceTableCount);
                     Assert.Equal(0, counts.CollectionTableCount);
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldUseOriginalTimeSeriesName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var index = new MyTsIndex_AllDocs();
+                index.Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = new User { Name = "U1" };
+
+                    session.Store(user);
+
+                    session.TimeSeriesFor(user, "UPPER").Append(DateTime.UtcNow, 1);
+                    session.TimeSeriesFor(user, "lower").Append(DateTime.UtcNow, 2);
+                    session.TimeSeriesFor(user, "mIxEd").Append(DateTime.UtcNow, 3);
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<MyTsIndex_AllDocs.Result, MyTsIndex_AllDocs>()
+                        .ToList();
+
+                    Assert.Equal(3, results.Count);
+                    Assert.Contains("UPPER", results.Select(x => x.Name));
+                    Assert.Contains("lower", results.Select(x => x.Name));
+                    Assert.Contains("mIxEd", results.Select(x => x.Name));
                 }
             }
         }
