@@ -40,6 +40,36 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return true;
         }
 
+        public LazyStringValue Name
+        {
+            get
+            {
+                AssertSegment();
+
+                return _segmentEntry.Name;
+            }
+        }
+
+        public DateTime Start
+        {
+            get
+            {
+                AssertSegment();
+
+                return _segmentEntry.Start;
+            }
+        }
+
+        public DateTime End
+        {
+            get
+            {
+                AssertSegment();
+
+                return _segmentEntry.Segment.GetLastTimestamp(_segmentEntry.Start);
+            }
+        }
+
         public DynamicArray Min
         {
             get
@@ -96,36 +126,6 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 }
 
                 return _entries;
-            }
-        }
-
-        public LazyStringValue Name
-        {
-            get
-            {
-                AssertSegment();
-
-                return _segmentEntry.Name;
-            }
-        }
-
-        public DateTime Start
-        {
-            get
-            {
-                AssertSegment();
-
-                return _segmentEntry.Start;
-            }
-        }
-
-        public DateTime End
-        {
-            get
-            {
-                AssertSegment();
-
-                return _segmentEntry.Segment.GetLastTimestamp(_segmentEntry.Start);
             }
         }
 
