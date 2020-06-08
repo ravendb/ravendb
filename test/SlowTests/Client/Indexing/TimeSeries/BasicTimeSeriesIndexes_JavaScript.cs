@@ -30,7 +30,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     @"timeSeries.map('Companies', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId
     }));
 })"
@@ -47,7 +47,7 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Companies', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId
     }));
 })"
@@ -65,7 +65,7 @@ return ts.Entries.map(entry => ({
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
         Name: ts.Name,
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId
     }));
 })"
@@ -82,7 +82,7 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Companies', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId,
         Employee: load(entry.Tag, 'Employees').FirstName
     }));
@@ -111,7 +111,7 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Users', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId,
         Count: 1
     }));
@@ -148,7 +148,7 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Users', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Value,
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         City: load(entry.Tag, 'Addresses').City,
         Count: 1
     }));
@@ -183,21 +183,21 @@ return ts.Entries.map(entry => ({
                     @"timeSeries.map('Companies', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId
     }));
 })",
                     @"timeSeries.map('Companies', 'HeartRate2', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId
     }));
 })",
                     @"timeSeries.map('Users', 'HeartRate', function (ts) {
 return ts.Entries.map(entry => ({
         HeartBeat: entry.Values[0],
-        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDay()),
+        Date: new Date(entry.Timestamp.getFullYear(), entry.Timestamp.getMonth(), entry.Timestamp.getDate()),
         User: ts.DocumentId
     }));
 })",
