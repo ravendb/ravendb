@@ -1,7 +1,7 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
+import serverWideBackupConfiguration = require("models/database/tasks/periodicBackup/serverWideBackupConfiguration");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import getServerWideBackupConfigCommand = require("commands/resources/getServerWideBackupConfigCommand");
 import getServerWideBackupsCommand = require("commands/resources/getServerWideBackupCommand");
@@ -16,7 +16,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 class editServerWideBackup extends viewModelBase {
     
     // Using the periodic-backup-configuration-model in this view since there isn't much difference to account for a child class..
-    configuration = ko.observable<periodicBackupConfiguration>();
+    configuration = ko.observable<serverWideBackupConfiguration>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
     
     fullBackupCronEditor = ko.observable<cronEditor>();
@@ -52,7 +52,7 @@ class editServerWideBackup extends viewModelBase {
                                 backupTask.LocalSettings.FolderPath = backupTask.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                             }
 
-                            this.configuration(new periodicBackupConfiguration(dbName, backupTask, this.serverConfiguration(), false, true)); 
+                            this.configuration(new serverWideBackupConfiguration(dbName, backupTask, this.serverConfiguration(), false, true)); 
                             deferred.resolve();
                         } else {
                             deferred.reject();
@@ -68,7 +68,7 @@ class editServerWideBackup extends viewModelBase {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
                 
-                this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), false, true));
+                this.configuration(serverWideBackupConfiguration.empty(dbName, this.serverConfiguration(), false, true));
                 deferred.resolve();
             }
 
