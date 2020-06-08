@@ -286,8 +286,27 @@ namespace Raven.Server.Documents.Handlers
             public int NumberOfCommands;
             public long TotalSize;
 
-            private Dictionary<string, SortedSet<string>> _documentsToUpdateAfterCounterChange = null;
-            private readonly HashSet<string> _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            private readonly Dictionary<string, DocumentUpdates> _documentsToUpdate = new Dictionary<string, DocumentUpdates>(StringComparer.OrdinalIgnoreCase);
+
+            private class DocumentUpdates
+            {
+                public bool Attachments;
+
+                public SortedSet<string> Counters;
+
+                public void AddCounter(string counterName)
+                {
+                    if (Counters == null)
+                        Counters = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                    Counters.Add(counterName);
+                }
+
+                public void AddAttachment()
+                {
+                    Attachments = true;
+                }
+            }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -334,18 +353,13 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 var collection = CountersHandler.ExecuteCounterBatchCommand.GetDocumentCollection(cmd.Id, Database, context, fromEtl: false, out _);
 
-                                if (_documentsToUpdateAfterCounterChange == null)
-                                    _documentsToUpdateAfterCounterChange = new Dictionary<string, SortedSet<string>>(StringComparer.OrdinalIgnoreCase);
-
                                 foreach (var counterOperation in cmd.Counters.Operations)
                                 {
                                     counterOperation.DocumentId = cmd.Counters.DocumentId;
                                     Database.DocumentsStorage.CountersStorage.IncrementCounter(context, cmd.Id, collection, counterOperation.CounterName, counterOperation.Delta, out _);
 
-                                    if (_documentsToUpdateAfterCounterChange.TryGetValue(cmd.Id, out var counters) == false)
-                                        _documentsToUpdateAfterCounterChange[cmd.Id] = counters = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                                    counters.Add(counterOperation.CounterName);
+                                    var updates = GetDocumentUpdates(cmd.Id);
+                                    updates.AddCounter(counterOperation.CounterName);
                                 }
 
                                 break;
@@ -370,33 +384,32 @@ namespace Raven.Server.Documents.Handlers
                                         cmd.ContentType ?? "", cmd.AttachmentStream.Hash, cmd.ChangeVector, cmd.AttachmentStream.Stream, updateDocument: false);
                                 }
 
-                                _documentsToUpdateAfterAttachmentChange.Add(cmd.Id);
+                                var updates = GetDocumentUpdates(cmd.Id);
+                                updates.AddAttachment();
 
                                 break;
                             }
                     }
                 }
 
-                foreach (var id in _documentsToUpdateAfterAttachmentChange)
+                if (_documentsToUpdate.Count > 0)
                 {
-                    Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, id);
-                }
-
-                if (_documentsToUpdateAfterCounterChange != null && _documentsToUpdateAfterCounterChange.Count > 0)
-                {
-                    foreach (var kvp in _documentsToUpdateAfterCounterChange)
+                    foreach (var kvp in _documentsToUpdate)
                     {
                         var documentId = kvp.Key;
-                        var countersToAdd = kvp.Value;
+                        var updates = kvp.Value;
 
-                        if (countersToAdd.Count == 0)
-                            continue;
+                        if (updates.Attachments)
+                            Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId);
 
-                        var docToUpdate = Database.DocumentsStorage.Get(context, documentId);
-                        if (docToUpdate == null)
-                            continue;
-
-                        Database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, docToUpdate, documentId, countersToAdd, countersToRemove: null, NonPersistentDocumentFlags.ByCountersUpdate);
+                        if (updates.Counters != null && updates.Counters.Count > 0)
+                        {
+                            var docToUpdate = Database.DocumentsStorage.Get(context, documentId);
+                            if (docToUpdate != null)
+                            {
+                                Database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, docToUpdate, documentId, updates.Counters, countersToRemove: null, NonPersistentDocumentFlags.ByCountersUpdate);
+                            }
+                        }
                     }
                 }
 
@@ -414,6 +427,14 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Commands = Commands.Take(NumberOfCommands).ToArray()
                 };
+            }
+
+            private DocumentUpdates GetDocumentUpdates(string documentId)
+            {
+                if (_documentsToUpdate.TryGetValue(documentId, out var update) == false)
+                    _documentsToUpdate[documentId] = update = new DocumentUpdates();
+
+                return update;
             }
         }
     }
