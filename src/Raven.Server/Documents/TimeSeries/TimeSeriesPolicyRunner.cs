@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.TimeSeries
             Configuration = configuration;
             if (configuration.Collections != null)
                 Configuration.Collections =
-                    new Dictionary<string, TimeSeriesCollectionConfiguration>(Configuration.Collections, StringComparer.InvariantCultureIgnoreCase);
+                    new Dictionary<string, TimeSeriesCollectionConfiguration>(Configuration.Collections, StringComparer.OrdinalIgnoreCase);
 
             Configuration.InitializeRollupAndRetention();
             _checkFrequency = Configuration.PolicyCheckFrequency ?? TimeSpan.FromMinutes(10);
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.TimeSeries
                         for (int i = 0; i < currentPolicies.Count; i++)
                         {
                             var currentPolicy = currentPolicies[i];
-                            if (string.Equals(currentPolicy, name, StringComparison.InvariantCultureIgnoreCase))
+                            if (string.Equals(currentPolicy, name, StringComparison.OrdinalIgnoreCase))
                             {
                                 currentPolicies.RemoveAt(i);
                                 return true;

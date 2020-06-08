@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
             Policies.Sort(TimeSeriesDownSamplePolicyComparer.Instance);
 
-            var hashSet = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+            var hashSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (var index = 0; index < Policies.Count; index++)
             {
                 var policy = Policies[index];
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
-        private readonly ConcurrentDictionary<string, int> _policyIndexCache = new ConcurrentDictionary<string, int>(StringComparer.InvariantCultureIgnoreCase);
+        private readonly ConcurrentDictionary<string, int> _policyIndexCache = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         internal TimeSeriesPolicy GetPolicyByName(string policy, out int policyIndex)
         {
@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 var p = Policies[index];
                 policyIndex = index + 1;
-                if (policy.IndexOf(p.Name, StringComparison.InvariantCultureIgnoreCase) == 0)
+                if (policy.IndexOf(p.Name, StringComparison.OrdinalIgnoreCase) == 0)
                 {
                     _policyIndexCache[policy] = policyIndex;
                     return p;
@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             return RetentionTime == other.RetentionTime &&
                    AggregationTime == other.AggregationTime &&
-                   string.Equals(Name, other.Name, StringComparison.InvariantCultureIgnoreCase);
+                   string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase);
         }
 
         public int CompareTo(TimeSeriesPolicy other)

@@ -1573,7 +1573,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             foreach (LazyStringValue item in ts)
             {
-                if (string.Equals(item, lowerName, StringComparison.InvariantCultureIgnoreCase))
+                if (string.Equals(item, lowerName, StringComparison.OrdinalIgnoreCase))
                     return item;
             }
 

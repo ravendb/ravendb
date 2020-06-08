@@ -562,7 +562,7 @@ namespace Raven.Server.Documents.Handlers
                     current = ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name).TimeSeriesConfiguration ?? new TimeSeriesConfiguration();
                 }
 
-                current.Collections ??= new Dictionary<string, TimeSeriesCollectionConfiguration>(StringComparer.InvariantCultureIgnoreCase);
+                current.Collections ??= new Dictionary<string, TimeSeriesCollectionConfiguration>(StringComparer.OrdinalIgnoreCase);
 
                 if (current.Collections.ContainsKey(collection) == false)
                     current.Collections[collection] = new TimeSeriesCollectionConfiguration();
