@@ -103,6 +103,10 @@ namespace Raven.Client.Documents.Session.TimeSeries
                     if (attribute == null)
                         continue;
 
+                    var memberType = member.GetMemberType();
+                    if (memberType != typeof(double))
+                        throw new InvalidOperationException($"Cannot create a mapping for '{t}' type, because member '{member.Name}' is not a double.");
+
                     var i = attribute.Index;
                     mapping ??= new SortedDictionary<byte, MemberInfo>();
                     if (mapping.ContainsKey(i))
