@@ -76,6 +76,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
             public class Result
             {
                 public string Name { get; set; }
+
+                public DateTime Date { get; set; }
             }
 
             public MyTsIndex_AllDocs()
@@ -1652,6 +1654,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Assert.Contains("UPPER", results.Select(x => x.Name));
                     Assert.Contains("lower", results.Select(x => x.Name));
                     Assert.Contains("mIxEd", results.Select(x => x.Name));
+
+                    Assert.True(results.All(x => x.Date.Kind == DateTimeKind.Utc));
                 }
             }
         }
