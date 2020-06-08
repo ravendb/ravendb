@@ -514,7 +514,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var bytes = new Span<byte>(ptr, size);
             var ticks = MemoryMarshal.Read<long>(bytes.Slice(bytes.Length - sizeof(long), sizeof(long)));
-            baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000);
+            baseLine = new DateTime(Bits.SwapBytes(ticks) * 10_000, DateTimeKind.Utc);
         }
 
         public static void ParseTimeSeriesKey(Slice key, JsonOperationContext context, out LazyStringValue docId, out LazyStringValue name)
