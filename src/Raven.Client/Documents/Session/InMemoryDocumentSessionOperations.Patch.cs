@@ -133,7 +133,10 @@ namespace Raven.Client.Documents.Session
             var adderScript = arrayAdder.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
-                    new LinqMethods(), extension));
+                    new LinqMethods(),
+                    extension,
+                    JavascriptConversionExtensions.ToStringSupport.Instance,
+                    JavascriptConversionExtensions.ConstantSupport.Instance));
 
             var patchRequest = CreatePatchRequest(arrayAdder, pathScript, adderScript, extension);
 
