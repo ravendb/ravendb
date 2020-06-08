@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime.Descriptors;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -142,17 +143,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private static JsValue TryDetectDynamicFieldCreation(string property, ObjectInstance valueAsObject, IndexField field)
         {
             //We have a field creation here _ = {"$value":val, "$name","$options":{...}}
-            if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName) ||
-                !valueAsObject.HasOwnProperty(CreatedFieldNamePropertyName))
+            if (!valueAsObject.HasOwnProperty(CreatedFieldValuePropertyName))
                 return null;
 
             var value = valueAsObject.GetOwnProperty(CreatedFieldValuePropertyName).Value;
-            var fieldNameObj = valueAsObject.GetOwnProperty(CreatedFieldNamePropertyName).Value;
-            if (fieldNameObj.IsString() == false)
-                throw new ArgumentException($"Dynamic field {property} is expected to have a string {CreatedFieldNamePropertyName} property but got {fieldNameObj}");
+            PropertyDescriptor nameProperty = valueAsObject.GetOwnProperty(CreatedFieldNamePropertyName);
+            if (nameProperty != null)
+            {
+                var fieldNameObj = nameProperty.Value;
+                if (fieldNameObj.IsString() == false)
+                    throw new ArgumentException($"Dynamic field {property} is expected to have a string {CreatedFieldNamePropertyName} property but got {fieldNameObj}");
 
-            field.Name = fieldNameObj.AsString();
-
+                field.Name = fieldNameObj.AsString();
+            }
+            else
+            {
+                field.Name = property;
+            }
+            
             if (valueAsObject.HasOwnProperty(CreatedFieldOptionsPropertyName))
             {
                 var options = valueAsObject.GetOwnProperty(CreatedFieldOptionsPropertyName).Value;
