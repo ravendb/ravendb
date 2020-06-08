@@ -307,7 +307,7 @@ class editTimeSeries extends viewModelBase {
             .execute()
             .done(configuration => {
                 if (configuration) {
-                    this.namedValuesCache = configuration.NamedValues;
+                    this.namedValuesCache = configuration.NamedValues || {};
                 }
             });
         
