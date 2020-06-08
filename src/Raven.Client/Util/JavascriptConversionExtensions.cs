@@ -14,6 +14,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
+using Sparrow;
 using Sparrow.Extensions;
 
 namespace Raven.Client.Util
@@ -1875,6 +1876,47 @@ namespace Raven.Client.Util
             }
         }
 
+        public class ConstantSupport : JavascriptConversionExtension
+        {
+            public static readonly ConstantSupport Instance = new ConstantSupport();
+
+            private ConstantSupport()
+            {
+            }
+
+            public override void ConvertToJavascript(JavascriptConversionContext context)
+            {
+                if (!(context.Node is ConstantExpression ce))
+                    return;
+
+                var isDateTime = ce.Type == typeof(DateTime);
+                var isDateTimeOffset = ce.Type == typeof(DateTimeOffset);
+                if (isDateTime == false && isDateTimeOffset == false &&
+                    ce.Type.IsEnum == false && ce.Type != typeof(Guid) && ce.Type != typeof(TimeSpan))
+                    return;
+                
+                context.PreventDefault();
+
+                var writer = context.GetWriter();
+                writer.Write("\"");
+                if (isDateTime)
+                {
+                    var dateTime = (DateTime)ce.Value;
+                    writer.Write(dateTime.GetDefaultRavenFormat(dateTime.Kind == DateTimeKind.Utc));
+                }
+                else if (isDateTimeOffset)
+                {
+                    var dto = (DateTimeOffset)ce.Value;
+                    writer.Write(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
+                }
+                else
+                {
+                    writer.Write(ce.Value.ToString());
+                }
+                writer.Write("\"");
+            }
+        }
+
         public class NewSupport : JavascriptConversionExtension
         {
             public static readonly NewSupport Instance = new NewSupport();
@@ -2122,7 +2164,7 @@ namespace Raven.Client.Util
             {
                 if (!(context.Node is MethodCallExpression mce) || 
                     mce.Method.DeclaringType != typeof(string))
-                    return; 
+                    return;
 
                 string newName;
                 switch (mce.Method.Name)
