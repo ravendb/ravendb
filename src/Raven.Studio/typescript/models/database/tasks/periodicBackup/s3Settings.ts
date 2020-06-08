@@ -38,13 +38,20 @@ class s3Settings extends amazonSettings {
             }
         });
 
-        this.accessKeyPropertyName = ko.pureComputed(() => this.isBackBlaze() ? "Application Key ID" : "Access key");
-        this.secretKeyPropertyName = ko.pureComputed(() => this.isBackBlaze() ? "Application Key" : "Secret key");
+        this.accessKeyPropertyName = ko.pureComputed(() => s3Settings.getAccessKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
+        this.secretKeyPropertyName = ko.pureComputed(() => s3Settings.getSecretKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
     }
 
-    private isBackBlaze() {
-        const customServerUrl = this.customServerUrl();
-        return this.useCustomS3Host() && customServerUrl && customServerUrl.toLowerCase().endsWith(".backblazeb2.com");
+    static getAccessKeyPropertyName(useCustomS3Host: boolean, customServerUrl: string) {
+        return s3Settings.isBackBlaze(useCustomS3Host, customServerUrl) ? "Application Key ID" : "Access key";
+    }
+
+    static getSecretKeyPropertyName(useCustomS3Host: boolean, customServerUrl: string) {
+        return s3Settings.isBackBlaze(useCustomS3Host, customServerUrl) ? "Application Key" : "Secret key";
+    }
+
+    private static isBackBlaze(useCustomS3Host: boolean, customServerUrl: string) {
+        return useCustomS3Host && customServerUrl && customServerUrl.toLowerCase().endsWith(".backblazeb2.com");
     }
 
     initValidation() {
