@@ -68,6 +68,15 @@ class databaseRecord extends viewModelBase {
         const editorElement = $("#dbDocEditor");
         if (editorElement.length > 0) {
             this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
+
+            let alreadyFolded = false;
+            
+            this.docEditor.getSession().on("tokenizerUpdate", () => {
+                if (!alreadyFolded) {
+                    this.foldAll();
+                    alreadyFolded = true;
+                }
+            });
         }
     }
 
