@@ -60,6 +60,7 @@ namespace SlowTests.Client.Attachments
                 }
             }
         }
+
         [Theory]
         [InlineData(1024)]
         [InlineData(32 * 1024)]
@@ -213,7 +214,6 @@ namespace SlowTests.Client.Attachments
                             }
                             continue;
                         }
-
 
                         Assert.NotNull(attachmentsEnumerator.Current != null);
                         Assert.True(CompareStreams(attachmentsEnumerator.Current.Stream, attachmentDictionary[$"{attachmentsEnumerator.Current.Details.Name}"], compareByteArray: true), $"Skipped Attachments: {string.Join(" ", skippedIndexes)}");
@@ -392,7 +392,8 @@ namespace SlowTests.Client.Attachments
                         {
                             attachmentsEnumerator.Current.Stream.Dispose();
                             Assert.Throws<ObjectDisposedException>(() => attachmentsEnumerator.Current.Stream.Read(new byte[1], 0, 1));
-                        } else if (n == 1)
+                        }
+                        else if (n == 1)
                         {
                             var memoryStream = new MemoryStream();
                             attachmentsEnumerator.Current.Stream.CopyTo(memoryStream);
@@ -405,7 +406,6 @@ namespace SlowTests.Client.Attachments
                             Assert.True(buffer1.SequenceEqual(buffer2));
                         }
                     }
-
                 }
             }
 
@@ -700,7 +700,7 @@ namespace SlowTests.Client.Attachments
 
                 while (r - read1 > 0)
                 {
-                    var r1 =  a.Read(buffer1, read1, r - read1);
+                    var r1 = a.Read(buffer1, read1, r - read1);
                     read1 += r1;
                 }
 
@@ -768,7 +768,7 @@ namespace SlowTests.Client.Attachments
 
                 while (r - read2 > 0)
                 {
-                   var r2 = await b.ReadAsync(buffer2, read2, r - read2);
+                    var r2 = await b.ReadAsync(buffer2, read2, r - read2);
                     read2 += r2;
                 }
 

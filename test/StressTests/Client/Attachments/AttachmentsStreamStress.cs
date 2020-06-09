@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Attachments;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +18,7 @@ namespace StressTests.Client.Attachments
         {
         }
 
-        [Theory]
+        [Theory64Bit]
         [InlineData(3, (long)int.MaxValue + short.MaxValue)]
         public void CanGetListOfHugeAttachmentsAndReadOrdered(int count, long size)
         {
@@ -62,8 +62,7 @@ namespace StressTests.Client.Attachments
                 stream.Dispose();
         }
 
-
-        [Theory]
+        [Theory64Bit]
         [InlineData(14)]
         public void CanGetListOfDifferentAttachmentsAndRead(int count)
         {

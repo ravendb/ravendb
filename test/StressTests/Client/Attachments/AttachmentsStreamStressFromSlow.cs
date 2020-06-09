@@ -12,7 +12,7 @@ namespace StressTests.Client.Attachments
         {
         }
 
-        [Theory]
+        [Theory64Bit]
         [InlineData(1024 * 1024 * 1024)]
         public void CanGetOneAttachment(int size)
         {
@@ -43,7 +43,6 @@ namespace StressTests.Client.Attachments
                 test.CanGetListOfAttachmentsAndReadOrdered(count, size);
             }
         }
-
 
         [Theory]
         [InlineData(1_000, 32768)]
