@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Session
@@ -18,8 +17,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Return the time series values for the provided range
         /// </summary>
-        IEnumerable<TimeSeriesEntry> Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
-
+        TimeSeriesEntry[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
     }
 
     /// <summary>
@@ -30,7 +28,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Return the time series values for the provided range
         /// </summary>
-        IEnumerable<TimeSeriesEntry<TValues>> Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue) ;
+        TimeSeriesEntry<TValues>[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
     }
 
     /// <summary>
@@ -41,6 +39,6 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Return the time series values for the provided range
         /// </summary>
-        IEnumerable<TimeSeriesRollupEntry<TValues>> Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue) ;
+        TimeSeriesRollupEntry<TValues>[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
     }
 }
