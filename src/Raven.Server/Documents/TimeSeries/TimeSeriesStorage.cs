@@ -1591,7 +1591,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal static TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -1700,7 +1700,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static TimeSeriesSegmentEntry CreateTimeSeriesItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal static TimeSeriesSegmentEntry CreateTimeSeriesItem(JsonOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -1725,7 +1725,7 @@ namespace Raven.Server.Documents.TimeSeries
                 Etag = Bits.SwapBytes(etag),
             };
 
-            static LazyStringValue ToLuceneKey(DocumentsOperationContext context, LazyStringValue documentId, LazyStringValue name, DateTime baseline)
+            static LazyStringValue ToLuceneKey(JsonOperationContext context, LazyStringValue documentId, LazyStringValue name, DateTime baseline)
             {
                 var size = documentId.Size
                            + 1 // separator
@@ -1733,9 +1733,10 @@ namespace Raven.Server.Documents.TimeSeries
                            + 1 // separator
                            + FormatD18.Precision; // baseline.Ticks
 
-                using (context.Allocator.Allocate(size, out var buffer))
+                var mem = context.GetMemory(size);
+                try
                 {
-                    var bufferSpan = new Span<byte>(buffer.Ptr, size);
+                    var bufferSpan = new Span<byte>(mem.Address, size);
                     documentId.AsSpan().CopyTo(bufferSpan);
                     var offset = documentId.Size;
                     bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
@@ -1746,7 +1747,11 @@ namespace Raven.Server.Documents.TimeSeries
                     if (Utf8Formatter.TryFormat(baseline.Ticks, bufferSpan.Slice(offset), out var bytesWritten, FormatD18) == false || bytesWritten != FormatD18.Precision)
                         throw new InvalidOperationException($"Could not write '{baseline.Ticks}' ticks. Bytes written {bytesWritten}, but expected {FormatD18.Precision}.");
 
-                    return context.GetLazyString(buffer.Ptr, size);
+                    return context.GetLazyString(mem.Address, size);
+                }
+                finally
+                {
+                    context.ReturnMemory(mem);
                 }
             }
         }
