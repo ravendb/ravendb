@@ -1,7 +1,6 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
 using FastTests;
-using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,79 +12,312 @@ namespace SlowTests.Issues
         {
         }
 
-        private class Document
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-        }
-
-        private class DocumentIndex : AbstractIndexCreationTask<Document>
-        {
-            public class Result
-            {
-                public string Name { get; set; }
-            }
-
-            public DocumentIndex()
-            {
-                Map = doc => from documents in doc
-                             select new Result
-                             {
-                                 Name = documents.Name
-                             };
-            }
-        }
 
         [Fact]
-        public async Task CanSelectIdField()
+        public void Can_Support_Guid_In_Patch_Filter()
         {
             using (var store = GetDocumentStore())
             {
-                new DocumentIndex().Execute(store);
-
-                var doc = new Document
-                {
-                    Id = "myDocuments/123",
-                    Name = "document"
-                };
+                const string docId = "diaries/1";
+                var foodId = Guid.NewGuid();
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(doc);
-                    session.Advanced.WaitForIndexesAfterSaveChanges(indexes: new[] { nameof(DocumentIndex) });
+                    session.Store(new Diary
+                    {
+                        Foods = new List<DiaryFood>
+                        {
+                            new DiaryFood
+                            {
+                                Id = foodId
+                            }
+                        }
+                    }, docId);
+
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    var docs = session.Advanced.DocumentQuery<Document, DocumentIndex>()
-                        .WhereEquals(x => x.Name, "document")
-                        // this would work
-                        //.SelectFields<Document>("Id", "Name")
-                        .SelectFields<Document>("Id")
-                        .ToList();
-
-                    Assert.Equal(1, docs.Count);
-                    Assert.NotNull(docs[0]);
-                    Assert.Equal(doc.Id, docs[0].Id);
-                    Assert.Null(docs[0].Name);
+                    session.Advanced.Patch<Diary, DiaryFood>(docId,
+                        x => x.Foods,
+                        foods => foods.RemoveAll(food => food.Id == foodId));
+                    session.SaveChanges();
                 }
 
-                using (var session = store.OpenAsyncSession())
+                using (var session = store.OpenSession())
                 {
-                    var docs = await session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>()
-                        .WhereEquals(x => x.Name, "document")
-                        // this would work
-                        //.SelectFields<Document>("Id", "Name")
-                        .SelectFields<Document>("Id")
-                        .ToListAsync();
-
-                    Assert.Equal(1, docs.Count);
-                    Assert.NotNull(docs[0]);
-                    Assert.Equal(doc.Id, docs[0].Id);
-                    Assert.Null(docs[0].Name);
+                    var diary = session.Load<Diary>(docId);
+                    Assert.Empty(diary.Foods);
                 }
             }
+        }
+
+        [Fact]
+        public void Can_Support_To_String_In_Patch_Filter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string docId = "diaries/1";
+                var foodId = Guid.NewGuid();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Diary
+                    {
+                        Foods = new List<DiaryFood>
+                        {
+                            new DiaryFood
+                            {
+                                Id = foodId
+                            }
+                        }
+                    }, docId);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Diary, DiaryFood>(docId,
+                        x => x.Foods,
+                        foods => foods.RemoveAll(food => food.Id.ToString() == foodId.ToString()));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var diary = session.Load<Diary>(docId);
+                    Assert.Empty(diary.Foods);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Support_Enum_In_Patch_Filter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string docId = "diaries/1";
+                const Score score = Score.Five;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Diary
+                    {
+                        Foods = new List<DiaryFood>
+                        {
+                            new DiaryFood
+                            {
+                                Score = score
+                            }
+                        }
+                    }, docId);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Diary, DiaryFood>(docId,
+                        x => x.Foods,
+                        foods => foods.RemoveAll(food => food.Score == score));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var diary = session.Load<Diary>(docId);
+                    Assert.Empty(diary.Foods);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Support_DateTime_In_Patch_Filter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string docId = "diaries/1";
+                var dateTime = DateTime.Now;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Diary
+                    {
+                        Foods = new List<DiaryFood>
+                        {
+                            new DiaryFood
+                            {
+                                DateTime = dateTime
+                            }
+                        }
+                    }, docId);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Diary, DiaryFood>(docId,
+                        x => x.Foods,
+                        foods => foods.RemoveAll(food => food.DateTime == dateTime));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var diary = session.Load<Diary>(docId);
+                    Assert.Empty(diary.Foods);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Support_DateTimeOffset_In_Patch_Filter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string docId = "diaries/1";
+                var dateTimeOffset = DateTimeOffset.Now;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Diary
+                    {
+                        Foods = new List<DiaryFood>
+                        {
+                            new DiaryFood
+                            {
+                                DateTimeOffset = dateTimeOffset
+                            }
+                        }
+                    }, docId);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Diary, DiaryFood>(docId,
+                        x => x.Foods,
+                        foods => foods.RemoveAll(food => food.DateTimeOffset == dateTimeOffset));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var diary = session.Load<Diary>(docId);
+                    Assert.Empty(diary.Foods);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Support_TimeSpan_In_Patch_Filter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string docId = "diaries/1";
+                var timeSpan = TimeSpan.FromDays(5);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Diary
+                    {
+                        Foods = new List<DiaryFood>
+                        {
+                            new DiaryFood
+                            {
+                                TimeSpan = timeSpan
+                            }
+                        }
+                    }, docId);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Diary, DiaryFood>(docId,
+                        x => x.Foods,
+                        foods => foods.RemoveAll(food => food.TimeSpan == timeSpan));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var diary = session.Load<Diary>(docId);
+                    Assert.Empty(diary.Foods);
+                }
+            }
+        }
+
+        [Fact]
+        public void Can_Support_DateTime_In_Patch()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string docId = "diaries/1";
+                var now = DateTime.Now;
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Diary
+                    {
+                        DateTime = now
+                    }, docId);
+
+                    session.SaveChanges();
+                }
+
+                var utcNow = DateTime.UtcNow;
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Diary, DateTime>(docId, x => x.DateTime, utcNow);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var diary = session.Load<Diary>(docId);
+                    Assert.Equal(utcNow, diary.DateTime);
+                }
+            }
+        }
+
+        public class Diary
+        {
+            public Diary()
+            {
+                Foods = new List<DiaryFood>();
+
+            }
+
+            public List<DiaryFood> Foods { get; set; }
+
+            public DateTime DateTime { get; set; }
+        }
+
+        public class DiaryFood
+        {
+            public Guid Id { get; set; }
+
+            public Score Score { get; set; }
+
+            public DateTime DateTime { get; set; }
+
+            public DateTimeOffset DateTimeOffset { get; set; }
+
+            public TimeSpan TimeSpan { get; set; }
+        }
+
+        public enum Score
+        {
+            One,
+            Two,
+            Three,
+            Four,
+            Five
         }
     }
 }
