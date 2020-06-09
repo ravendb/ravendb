@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Lambda2Js;
@@ -1889,30 +1890,30 @@ namespace Raven.Client.Util
                 if (!(context.Node is ConstantExpression ce))
                     return;
 
-                var isDateTime = ce.Type == typeof(DateTime);
-                var isDateTimeOffset = ce.Type == typeof(DateTimeOffset);
-                if (isDateTime == false && isDateTimeOffset == false &&
-                    ce.Type.IsEnum == false && ce.Type != typeof(Guid) && ce.Type != typeof(TimeSpan))
+                string toWrite = null;
+                if (ce.Type == typeof(DateTime))
+                {
+                    var dateTime = (DateTime)ce.Value;
+                    toWrite = dateTime.GetDefaultRavenFormat(dateTime.Kind == DateTimeKind.Utc);
+                }
+                else if (ce.Type == typeof(DateTimeOffset))
+                {
+                    var dto = (DateTimeOffset)ce.Value;
+                    toWrite = dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                }
+                else if (ce.Type.IsEnum || ce.Type == typeof(Guid) || ce.Type == typeof(TimeSpan))
+                {
+                    toWrite = ce.Value.ToString();
+                }
+
+                if (toWrite == null)
                     return;
-                
+
                 context.PreventDefault();
 
                 var writer = context.GetWriter();
                 writer.Write("\"");
-                if (isDateTime)
-                {
-                    var dateTime = (DateTime)ce.Value;
-                    writer.Write(dateTime.GetDefaultRavenFormat(dateTime.Kind == DateTimeKind.Utc));
-                }
-                else if (isDateTimeOffset)
-                {
-                    var dto = (DateTimeOffset)ce.Value;
-                    writer.Write(dto.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite));
-                }
-                else
-                {
-                    writer.Write(ce.Value.ToString());
-                }
+                writer.Write(toWrite);
                 writer.Write("\"");
             }
         }
