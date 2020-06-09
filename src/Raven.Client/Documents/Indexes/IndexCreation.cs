@@ -36,21 +36,21 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Creates the indexes found in the specified assembly.
         /// </summary>
-        public static Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default(CancellationToken))
+        public static Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default)
         {
-            var indexes = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan);
+            var indexes = GetAllInstancesOfType<IAbstractIndexCreationTask>(assemblyToScan);
 
             return CreateIndexesAsync(indexes, store, conventions, database, token);
         }
 
-        public static void CreateIndexes(IEnumerable<AbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null)
+        public static void CreateIndexes(IEnumerable<IAbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null)
         {
             AsyncHelpers.RunSync(() => CreateIndexesAsync(indexes, store, conventions, database));
         }
 
-        public static async Task CreateIndexesAsync(IEnumerable<AbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default(CancellationToken))
+        public static async Task CreateIndexesAsync(IEnumerable<IAbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default)
         {
-            var indexesList = indexes?.ToList() ?? new List<AbstractIndexCreationTask>();
+            var indexesList = indexes?.ToList() ?? new List<IAbstractIndexCreationTask>();
 
             if (conventions == null)
                 conventions = store.Conventions;
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Indexes
                 throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);
         }
 
-        internal static IndexDefinition[] CreateIndexesToAdd(IEnumerable<AbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions)
+        internal static IndexDefinition[] CreateIndexesToAdd(IEnumerable<IAbstractIndexCreationTask> indexCreationTasks, DocumentConventions conventions)
         {
             var indexesToAdd = indexCreationTasks
                 .Select(x =>
@@ -114,11 +114,15 @@ namespace Raven.Client.Documents.Indexes
         private static IEnumerable<TType> GetAllInstancesOfType<TType>(Assembly assembly)
         {
             foreach (var type in assembly.GetTypes()
-                .Where(x =>
-                x.IsClass &&
-                x.IsAbstract == false &&
-                x.IsSubclassOf(typeof(TType))))
+                .Where(x => x.IsClass && x.IsAbstract == false))
             {
+                var interfaces = type.GetInterfaces();
+                if (interfaces == null)
+                    continue;
+
+                if (interfaces.Contains(typeof(TType)) == false)
+                    continue;
+
                 yield return (TType)Activator.CreateInstance(type);
             }
         }

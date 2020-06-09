@@ -67,8 +67,33 @@ namespace Raven.Client.Documents.Indexes
     /// The naming convention is that underscores in the inherited class names are replaced by slashed
     /// For example: Posts_ByName will be saved to Posts/ByName
     /// </remarks>
-    public abstract class AbstractIndexCreationTaskBase<TIndexDefinition> : AbstractCommonApiForIndexes where TIndexDefinition : IndexDefinition
+    public abstract class AbstractIndexCreationTaskBase<TIndexDefinition> : AbstractCommonApiForIndexes, IAbstractIndexCreationTask where TIndexDefinition : IndexDefinition
     {
+        IndexPriority? IAbstractIndexCreationTask.Priority => Priority;
+
+        string IAbstractIndexCreationTask.IndexName => IndexName;
+
+        DocumentConventions IAbstractIndexCreationTask.Conventions
+        {
+            get => Conventions;
+            set => Conventions = value;
+        }
+
+        IndexDefinition IAbstractIndexCreationTask.CreateIndexDefinition()
+        {
+            return CreateIndexDefinition();
+        }
+
+        void IAbstractIndexCreationTask.Execute(IDocumentStore store, DocumentConventions conventions, string database)
+        {
+            Execute(store, conventions, database);
+        }
+
+        Task IAbstractIndexCreationTask.ExecuteAsync(IDocumentStore store, DocumentConventions conventions, string database, CancellationToken token)
+        {
+            return ExecuteAsync(store, conventions, database, token);
+        }
+
         /// <summary>
         /// Creates the index definition.
         /// </summary>
@@ -169,6 +194,21 @@ namespace Raven.Client.Documents.Indexes
                 Conventions = oldConventions;
             }
         }
+    }
+
+    public interface IAbstractIndexCreationTask
+    {
+        string IndexName { get; }
+
+        IndexPriority? Priority { get; }
+
+        DocumentConventions Conventions { get; set; }
+
+        IndexDefinition CreateIndexDefinition();
+
+        void Execute(IDocumentStore store, DocumentConventions conventions = null, string database = null);
+
+        Task ExecuteAsync(IDocumentStore store, DocumentConventions conventions = null, string database = null, CancellationToken token = default);
     }
 
     /// <summary>
