@@ -487,6 +487,7 @@ select out(doc)
                             .Select(g => new
                             {
                                 Avg = g.Average(),
+                                Sum = g.Sum(),
                                 Max = g.Max()
                             }).ToList()
                         );
@@ -498,9 +499,11 @@ select out(doc)
                     var agg = result[0].Results;
                     Assert.Equal(2, agg.Length);
                     Assert.Equal(79, agg[0].Max.HeartRate);
+                    Assert.Equal(207, agg[0].Sum.HeartRate);
                     Assert.Equal(69, agg[0].Average.HeartRate);
 
                     Assert.Equal(179, agg[1].Max.HeartRate);
+                    Assert.Equal(507, agg[1].Sum.HeartRate);
                     Assert.Equal(169, agg[1].Average.HeartRate);
 
                 }
