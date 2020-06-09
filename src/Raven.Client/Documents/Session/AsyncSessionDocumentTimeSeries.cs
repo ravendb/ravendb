@@ -27,19 +27,19 @@ namespace Raven.Client.Documents.Session
         {
         }
 
-        public Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
+        public Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
             return GetAsyncInternal<TimeSeriesEntry>(from, to, start, pageSize, token);
         }
 
-        public async Task<IEnumerable<TTValues>> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
+        public async Task<TTValues[]> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
             TimeSeriesRangeResult<TTValues> rangeResult;
             from = from?.EnsureUtc();
             to = to?.EnsureUtc();
 
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
-                cache.TryGetValue(Name, out var ranges) && 
+                cache.TryGetValue(Name, out var ranges) &&
                 ranges.Count > 0)
             {
                 if (ranges[0].From > to || ranges[ranges.Count - 1].To < from)
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Session
 
                     // e.g. if cache is : [[2,3], [4,6], [8,9]]
                     // and requested range is : [12, 15]
-                    // then ranges[ranges.Count - 1].To < from 
+                    // then ranges[ranges.Count - 1].To < from
                     // so we need to get [12,15] from server and place it
                     // at the end of the cache list
 
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Session
                     return rangeResult.Entries;
                 }
 
-                var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) = 
+                var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) =
                     await ServeFromCacheOrGetMissingPartsFromServerAndMerge(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ranges, start, pageSize, token)
                         .ConfigureAwait(false);
 
@@ -79,7 +79,7 @@ namespace Raven.Client.Documents.Session
                     InMemoryDocumentSessionOperations.AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
                 }
 
-                return resultToUser?.Cast<TTValues>();
+                return resultToUser?.Cast<TTValues>().ToArray();
             }
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Session
 
             if (Session.NoTracking == false)
             {
-                if (Session.TimeSeriesByDocId.TryGetValue(DocId, out cache) == false)  
+                if (Session.TimeSeriesByDocId.TryGetValue(DocId, out cache) == false)
                 {
                     Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
                 }
@@ -116,21 +116,21 @@ namespace Raven.Client.Documents.Session
         }
 
         private static IEnumerable<TimeSeriesEntry> SkipAndTrimRangeIfNeeded(
-            DateTime from, 
-            DateTime to, 
-            TimeSeriesRangeResult fromRange, 
-            TimeSeriesRangeResult toRange, 
-            List<TimeSeriesEntry> values, 
-            int skip, 
+            DateTime from,
+            DateTime to,
+            TimeSeriesRangeResult fromRange,
+            TimeSeriesRangeResult toRange,
+            List<TimeSeriesEntry> values,
+            int skip,
             int trim)
         {
             if (fromRange != null && fromRange.To >= from)
             {
-                // need to skip a part of the first range 
+                // need to skip a part of the first range
 
                 if (toRange != null && toRange.From <= to)
                 {
-                    // also need to trim a part of the last range 
+                    // also need to trim a part of the last range
                     return values.Skip(skip).Take(values.Count - skip - trim);
                 }
 
@@ -139,7 +139,7 @@ namespace Raven.Client.Documents.Session
 
             if (toRange != null && toRange.From <= to)
             {
-                // trim a part of the last range 
+                // trim a part of the last range
                 return values.Take(values.Count - trim);
             }
 
@@ -192,7 +192,6 @@ namespace Raven.Client.Documents.Session
                 // add the missing part [f, t] between current range start (or 'from')
                 // and previous range end (or 'to') to the list of ranges we need to get from server
 
-
                 rangesToGetFromServer.Add(new TimeSeriesRange
                 {
                     Name = Name,
@@ -238,7 +237,6 @@ namespace Raven.Client.Documents.Session
                 resultFromServer: details.Values[Name], out resultToUser);
 
             return (false, resultToUser, mergedValues, fromRangeIndex, toRangeIndex);
-
         }
 
         private static TimeSeriesEntry[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges, int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> resultFromServer, out IEnumerable<TimeSeriesEntry> resultToUser)
@@ -259,7 +257,7 @@ namespace Raven.Client.Documents.Session
                     {
                         // requested range [from, to] starts inside 'fromRange'
                         // i.e fromRange.From <= from <= fromRange.To
-                        // so we might need to skip a part of it when we return the 
+                        // so we might need to skip a part of it when we return the
                         // result to the user (i.e. skip [fromRange.From, from])
 
                         if (ranges[i].Entries != null)
@@ -293,7 +291,7 @@ namespace Raven.Client.Documents.Session
                     if (ranges[i].From <= to)
                     {
                         // requested range [from, to] ends inside 'toRange'
-                        // so we might need to trim a part of it when we return the 
+                        // so we might need to trim a part of it when we return the
                         // result to the user (i.e. trim [to, toRange.to])
 
                         for (var index = mergedValues.Count == 0 ? 0 : 1; index < ranges[i].Entries.Length; index++)
@@ -333,7 +331,7 @@ namespace Raven.Client.Documents.Session
 
             return mergedValues.ToArray();
         }
-        
+
         private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
         {
             if (range.Entries == null)
@@ -351,7 +349,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        Task<IEnumerable<TimeSeriesEntry<TValues>>> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token) 
+        Task<TimeSeriesEntry<TValues>[]> IAsyncSessionDocumentTypedTimeSeries<TValues>.GetAsync(DateTime? from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
             return GetAsyncInternal<TimeSeriesEntry<TValues>>(from, to, start, pageSize, token);
         }
@@ -366,7 +364,7 @@ namespace Raven.Client.Documents.Session
             Append(entry.Timestamp, entry.Value, entry.Tag);
         }
 
-        Task<IEnumerable<TimeSeriesRollupEntry<TValues>>> IAsyncSessionDocumentRollupTypedTimeSeries<TValues>.GetAsync(DateTime? @from, DateTime? to, int start, int pageSize, CancellationToken token)
+        Task<TimeSeriesRollupEntry<TValues>[]> IAsyncSessionDocumentRollupTypedTimeSeries<TValues>.GetAsync(DateTime? @from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
             return GetAsyncInternal<TimeSeriesRollupEntry<TValues>>(from, to, start, pageSize, token);
         }

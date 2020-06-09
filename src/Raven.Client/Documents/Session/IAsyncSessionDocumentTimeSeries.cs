@@ -4,9 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System.Collections.Generic;
-using System.Threading;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session.TimeSeries;
 
@@ -17,7 +16,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IAsyncSessionDocumentTimeSeries : ISessionDocumentAppendTimeSeriesBase, ISessionDocumentRemoveTimeSeriesBase
     {
-        Task<IEnumerable<TimeSeriesEntry>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
+        Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
     }
 
@@ -26,7 +25,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IAsyncSessionDocumentTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentRemoveTimeSeriesBase where TValues : new()
     {
-        Task<IEnumerable<TimeSeriesEntry<TValues>>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
+        Task<TimeSeriesEntry<TValues>[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
     }
 
@@ -35,7 +34,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IAsyncSessionDocumentRollupTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentRemoveTimeSeriesBase where TValues : new()
     {
-        Task<IEnumerable<TimeSeriesRollupEntry<TValues>>> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
+        Task<TimeSeriesRollupEntry<TValues>[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
     }
 }
