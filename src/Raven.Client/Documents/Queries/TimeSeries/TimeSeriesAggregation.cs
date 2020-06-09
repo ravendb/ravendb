@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public double[] Max, Min, Last, First, Average, Sum;
         public DateTime To, From;
     }
-   
+
     public class TimeSeriesAggregationResult<T> : TimeSeriesAggregationResult where T : new()
     {
         public new TimeSeriesRangeAggregation<T>[] Results { get; set; }
@@ -43,6 +43,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private T _last;
         private T _first;
         private T _average;
+        private T _sum;
         private T _count;
 
         [JsonIgnore]
@@ -76,7 +77,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [JsonIgnore]
-        public new T First 
+        public new T First
         {
             get
             {
@@ -86,12 +87,22 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         }
 
         [JsonIgnore]
-        public new T Average 
+        public new T Average
         {
             get
             {
                 _average ??= TimeSeriesValuesHelper.SetMembers<T>(base.Average ?? throw new InvalidOperationException($"'{nameof(Average)}' is not found in the results. Maybe you forget to 'select avg()' in the query?"));
                 return _average;
+            }
+        }
+
+        [JsonIgnore]
+        public new T Sum
+        {
+            get
+            {
+                _sum ??= TimeSeriesValuesHelper.SetMembers<T>(base.Sum ?? throw new InvalidOperationException($"'{nameof(Sum)}' is not found in the results. Maybe you forget to 'select sum()' in the query?"));
+                return _sum;
             }
         }
 
@@ -112,7 +123,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     {
         // The order here matters.
         // When executing an aggregation query over rolled-up series,
-        // we take just the appropriate aggregated value from each entry, 
+        // we take just the appropriate aggregated value from each entry,
         // according to the aggregation's position in this enum (e.g. AggregationType.Min => take entry.Values[2])
 
         First = 0,
