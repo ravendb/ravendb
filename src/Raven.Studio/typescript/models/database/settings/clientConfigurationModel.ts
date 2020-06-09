@@ -29,7 +29,7 @@ class clientConfigurationModel {
     constructor(dto: Raven.Client.Documents.Operations.Configuration.ClientConfiguration) {
 
         if (dto) {
-            if(dto.IdentityPartsSeparator) {
+            if (dto.IdentityPartsSeparator) {
                 this.isDefined.push("identityPartsSeparator");
                 this.identityPartsSeparator(dto.IdentityPartsSeparator);
             }
@@ -69,7 +69,21 @@ class clientConfigurationModel {
             return _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? "Enter requests number" : "Default is 30";
         });
         
-        this.isDefined.subscribe(() => {
+        this.isDefined.subscribe((changesList) => {
+            const change = changesList[0];
+            
+            if (_.includes(this.isDefined(), "readBalanceBehavior")) {
+                if (change.status === "added" && change.value === "useSessionContextForLoadBehavior") {
+                    _.remove(this.isDefined(), x => x === "readBalanceBehavior");
+                }
+            }
+
+            if (_.includes(this.isDefined(), "useSessionContextForLoadBehavior")) {
+                if (change.status === "added" && change.value === "readBalanceBehavior") {
+                    _.remove(this.isDefined(), x => x === "useSessionContextForLoadBehavior");
+                }
+            }
+            
             if (!_.includes(this.isDefined(), "identityPartsSeparator")) {
                 this.identityPartsSeparator(null);
             }
@@ -81,7 +95,7 @@ class clientConfigurationModel {
             if (!_.includes(this.isDefined(), "readBalanceBehavior")) {
                 this.readBalanceBehavior("None");
             }
-        });
+        }, null, "arrayChange");
 
         this.dirtyFlag = new ko.DirtyFlag([
             this.identityPartsSeparator,

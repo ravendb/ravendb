@@ -49,7 +49,7 @@
                             <div class="col-sm-6">
                                 <div class="checkbox">
                                     <input id="checkboxUseSessionContext" type="checkbox"
-                                           data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', disable: _.includes(model.isDefined() , 'readBalanceBehavior')" />
+                                           data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior'" />
                                     <label for="checkboxUseSessionContext">
                                         Use Session Context for Load Balancing
                                     </label>
@@ -60,7 +60,7 @@
                             <div class="col-sm-6">
                                 <div class="checkbox">
                                     <input id="checkboxReadBalance" type="checkbox"
-                                           data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', disable: _.includes(model.isDefined() , 'useSessionContextForLoadBehavior')" />
+                                           data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior'" />
                                     <label for="checkboxReadBalance">
                                         Read balance behavior
                                     </label>
