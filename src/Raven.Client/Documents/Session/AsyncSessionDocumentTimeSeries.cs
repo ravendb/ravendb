@@ -84,7 +84,7 @@ namespace Raven.Client.Documents.Session
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
                 document.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray metadataTimeSeries) &&
-                metadataTimeSeries.BinarySearch(Name) < 0)
+                metadataTimeSeries.BinarySearch(Name, StringComparison.OrdinalIgnoreCase) < 0)
             {
                 // the document is loaded in the session, but the metadata says that there is no such timeseries
                 return Array.Empty<TTValues>();
