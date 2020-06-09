@@ -255,11 +255,11 @@ namespace SlowTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                var timeSeriesIndex = new MyCounterIndex();
-                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+                var countersIndex = new MyCounterIndex();
+                var indexDefinition = countersIndex.CreateIndexDefinition();
                 RavenTestHelper.AssertEqualRespectingNewLines("counters.Companies.HeartRate.Select(counter => new {\r\n    HeartBeat = counter.Value,\r\n    Name = counter.Name,\r\n    User = counter.DocumentId\r\n})", indexDefinition.Maps.First());
 
-                timeSeriesIndex.Execute(store);
+                store.ExecuteIndex(countersIndex);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyCounterIndex"));
                 Assert.True(staleness.IsStale);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,9 +10,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.TimeSeries;
@@ -35,6 +32,7 @@ namespace Raven.Client.Documents
         public abstract void Dispose();
 
         public abstract event EventHandler AfterDispose;
+
         public abstract event EventHandler BeforeDispose;
 
         /// <summary>
@@ -51,40 +49,48 @@ namespace Raven.Client.Documents
         public abstract IDatabaseChanges Changes(string database, string nodeTag);
 
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
+
         public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, AggressiveCacheMode mode, string database = null);
+
         public abstract IDisposable DisableAggressiveCaching(string database = null);
 
         public abstract string Identifier { get; set; }
+
         public abstract IDocumentStore Initialize();
+
         public abstract IAsyncDocumentSession OpenAsyncSession();
+
         public abstract IAsyncDocumentSession OpenAsyncSession(string database);
+
         public abstract IAsyncDocumentSession OpenAsyncSession(SessionOptions sessionOptions);
 
         public abstract IDocumentSession OpenSession();
+
         public abstract IDocumentSession OpenSession(string database);
+
         public abstract IDocumentSession OpenSession(SessionOptions sessionOptions);
 
         /// <inheritdoc />
-        public virtual void ExecuteIndex(AbstractIndexCreationTask task, string database = null)
+        public void ExecuteIndex(IAbstractIndexCreationTask task, string database = null)
         {
             AsyncHelpers.RunSync(() => ExecuteIndexAsync(task, database));
         }
 
         /// <inheritdoc />
-        public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask task, string database = null, CancellationToken token = default)
+        public Task ExecuteIndexAsync(IAbstractIndexCreationTask task, string database = null, CancellationToken token = default)
         {
             AssertInitialized();
             return task.ExecuteAsync(this, Conventions, database, token);
         }
 
         /// <inheritdoc />
-        public virtual void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> tasks, string database = null)
+        public void ExecuteIndexes(IEnumerable<IAbstractIndexCreationTask> tasks, string database = null)
         {
             AsyncHelpers.RunSync(() => ExecuteIndexesAsync(tasks, database));
         }
 
         /// <inheritdoc />
-        public virtual Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default)
+        public Task ExecuteIndexesAsync(IEnumerable<IAbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default)
         {
             AssertInitialized();
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, Conventions);
@@ -94,7 +100,6 @@ namespace Raven.Client.Documents
 
         private TimeSeriesOperations _timeSeriesOperation;
         public TimeSeriesOperations TimeSeries => _timeSeriesOperation ??= new TimeSeriesOperations(this);
-
 
         private DocumentConventions _conventions;
 
@@ -151,7 +156,6 @@ namespace Raven.Client.Documents
 
         private string _database;
 
-
         public abstract BulkInsertOperation BulkInsert(string database = null, CancellationToken token = default);
 
         public DocumentSubscriptions Subscriptions { get; }
@@ -199,17 +203,25 @@ namespace Raven.Client.Documents
         }
 
         public event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
+
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
+
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
+
         public event EventHandler<SessionCreatedEventArgs> OnSessionCreated;
 
         public event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
+
         public event EventHandler<AfterConversionToDocumentEventArgs> OnAfterConversionToDocument;
+
         public event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
+
         public event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
         private event EventHandler<FailedRequestEventArgs> _onFailedRequest;
+
         public event EventHandler<FailedRequestEventArgs> OnFailedRequest
         {
             add
@@ -225,6 +237,7 @@ namespace Raven.Client.Documents
         }
 
         private event EventHandler<TopologyUpdatedEventArgs> _onTopologyUpdated;
+
         public event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated
         {
             add

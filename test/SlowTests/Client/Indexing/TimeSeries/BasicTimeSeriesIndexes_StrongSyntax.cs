@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.Indexing.Counters;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -328,7 +329,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
                 RavenTestHelper.AssertEqualRespectingNewLines("timeSeries.Companies.HeartRate.SelectMany(ts => ts.Entries, (ts, entry) => new {\r\n    HeartBeat = entry.Values[0],\r\n    Date = entry.Timestamp.Date,\r\n    User = ts.DocumentId\r\n})", indexDefinition.Maps.First());
 
-                timeSeriesIndex.Execute(store);
+                store.ExecuteIndex(timeSeriesIndex);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation("MyTsIndex"));
                 Assert.True(staleness.IsStale);

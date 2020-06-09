@@ -15,7 +15,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.TimeSeries;
@@ -158,16 +157,16 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Executes the index creation.
         /// </summary>
-        void ExecuteIndex(AbstractIndexCreationTask task, string database = null);
+        void ExecuteIndex(IAbstractIndexCreationTask task, string database = null);
 
-        void ExecuteIndexes(IEnumerable<AbstractIndexCreationTask> tasks, string database = null);
+        void ExecuteIndexes(IEnumerable<IAbstractIndexCreationTask> tasks, string database = null);
 
         /// <summary>
         /// Executes the index creation.
         /// </summary>
-        Task ExecuteIndexAsync(AbstractIndexCreationTask task, string database = null, CancellationToken token = default);
+        Task ExecuteIndexAsync(IAbstractIndexCreationTask task, string database = null, CancellationToken token = default);
 
-        Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default);
+        Task ExecuteIndexesAsync(IEnumerable<IAbstractIndexCreationTask> tasks, string database = null, CancellationToken token = default);
 
         TimeSeriesOperations TimeSeries { get; }
 
