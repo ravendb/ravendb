@@ -91,8 +91,8 @@
                             <div class="row">
                                 <div class="col-sm-6">
                                     <div class="checkbox">
-                                        <input id="useSessionContextToggle" type="checkbox" 
-                                               data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', enable: canEditSettings() && !_.includes(model.isDefined() , 'readBalanceBehavior')">
+                                        <input id="useSessionContextToggle" type="checkbox"
+                                               data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', enable: canEditSettings()">
                                         <label for="useSessionContextToggle">
                                             Use Session Context for Load Balancing
                                         </label>
@@ -103,7 +103,7 @@
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="checkboxReadBalance" type="checkbox"
-                                               data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings() && !_.includes(model.isDefined() , 'useSessionContextForLoadBehavior')">
+                                               data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior', enable: canEditSettings()">
                                         <label for="checkboxReadBalance">
                                             Read balance behavior
                                         </label>
