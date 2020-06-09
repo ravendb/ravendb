@@ -46,10 +46,9 @@ namespace Raven.Client.Documents.Session.TimeSeries
                 throw new InvalidOperationException("Entry has more than one value.");
             }
         }
-
     }
 
-    public class TimeSeriesEntry<T> : TimeSeriesEntry, IPostJsonDeserialization where T : new ()
+    public class TimeSeriesEntry<T> : TimeSeriesEntry, IPostJsonDeserialization where T : new()
     {
         public new T Value { get; set; }
 
@@ -82,6 +81,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
     public class TimeSeriesValueAttribute : Attribute
     {
         public readonly byte Index;
+
         public TimeSeriesValueAttribute(byte index)
         {
             Index = index;
@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
                 if (mapping == null)
                     return null;
 
-                if (mapping.Count == mapping.Keys.Last())
+                if (mapping.Keys.First() != 0 || mapping.Keys.Last() != mapping.Count - 1)
                     throw new InvalidOperationException($"The mapping of '{t}' must contain consecutive values starting from 0.");
 
                 return mapping;
@@ -173,7 +173,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             if (entry.IsRollup == false)
                 throw new InvalidCastException("Not a rolled up entry.");
-            
+
             if (typeof(T) != entry.Value.GetType())
                 throw new InvalidCastException($"Can't cast '{typeof(T).FullName}' to '{entry.GetType().FullName}'");
 
@@ -202,7 +202,6 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
         internal TimeSeriesRollupEntry()
         {
-            
         }
 
         public TimeSeriesRollupEntry(DateTime timestamp)
@@ -335,6 +334,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         }
 
         private bool _innerArrayInitialized;
+
         private void Build2DArray()
         {
             if (IsRollup == false)
@@ -382,7 +382,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
 
         private void SetInternal(TValues entry, int position)
         {
-            if (entry == null) 
+            if (entry == null)
                 return;
 
             var values = TimeSeriesValuesHelper.GetValues(entry).ToArray();
@@ -396,7 +396,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             return new TimeSeriesEntry<TValues>
             {
-                Timestamp = rollupEntry.Timestamp, 
+                Timestamp = rollupEntry.Timestamp,
                 Values = TimeSeriesValuesHelper.GetValues(rollupEntry.First).ToArray()
             };
         }
