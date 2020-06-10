@@ -10,13 +10,14 @@ import eventsCollector = require("common/eventsCollector");
 import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
 
 class databaseRecord extends viewModelBase {
-    autoCollapseMode = ko.observable<boolean>(false);
+    collapseButtonMode = ko.observable<boolean>(false);
     document = ko.observable<document>();
     documentText = ko.observable<string>().extend({ required: true });
     docEditor: AceAjax.Editor;
     isForbidden = ko.observable<boolean>(false);
     
     inEditMode = ko.observable<boolean>(false);
+    refreshWasDone: boolean = false;
 
     static containerId = "#databaseSettingsContainer";
 
@@ -31,7 +32,7 @@ class databaseRecord extends viewModelBase {
             }
         });
         
-        this.bindToCurrentInstance("toggleAutoCollapse", "save", "exitEditMode");
+        this.bindToCurrentInstance("toggleCollapse", "save", "exitEditMode");
     }
 
     canActivate(args: any) {
@@ -64,25 +65,30 @@ class databaseRecord extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
-
-        const editorElement = $("#dbDocEditor");
-        if (editorElement.length > 0) {
-            this.docEditor = ko.utils.domData.get(editorElement[0], "aceEditor");
-
+        
+        this.docEditor = aceEditorBindingHandler.getEditorBySelection($("#dbDocEditor"));
+        
+        if (this.docEditor) {
             let alreadyFolded = false;
-            
+
             this.docEditor.getSession().on("tokenizerUpdate", () => {
                 if (!alreadyFolded) {
-                    this.foldAll();
+                    this.toggleCollapse();
                     alreadyFolded = true;
+                }
+                
+                if (this.refreshWasDone) {
+                    this.foldAll();
+                    this.syncCollapseButton(true);
+                    this.refreshWasDone = false;
                 }
             });
         }
     }
 
-    toggleAutoCollapse() {
-        this.autoCollapseMode.toggle();
-        if (this.autoCollapseMode()) {
+    toggleCollapse() {
+        this.collapseButtonMode.toggle();
+        if (this.collapseButtonMode()) {
             this.foldAll();
         } else {
             this.docEditor.getSession().unfold(null, true);
@@ -100,6 +106,7 @@ class databaseRecord extends viewModelBase {
         eventsCollector.default.reportEvent("database-settings", "refresh");
 
         this.fetchDatabaseSettings(this.activeDatabase(), reportFetchProgress);
+        this.refreshWasDone = true;
     }
 
     enterEditMode() {
@@ -109,6 +116,7 @@ class databaseRecord extends viewModelBase {
                     const docText = this.stringify(this.document().toDto(), false);
                     this.documentText(docText);
                     this.inEditMode(true);
+                    this.syncCollapseButton(false);
                 }
             })
     }
@@ -117,6 +125,17 @@ class databaseRecord extends viewModelBase {
         const docText = this.stringify(this.document().toDto(), true);
         this.documentText(docText);
         this.inEditMode(false);
+        this.syncCollapseButton(false);
+    }
+
+    syncCollapseButton(documentIsCollapsed: boolean) {
+        if (!documentIsCollapsed && this.collapseButtonMode()) {
+            this.collapseButtonMode(false);
+        }
+
+        if (documentIsCollapsed && !this.collapseButtonMode()) {
+            this.collapseButtonMode(true);
+        }
     }
     
     confirm() {
