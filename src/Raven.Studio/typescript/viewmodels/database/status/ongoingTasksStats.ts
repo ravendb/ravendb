@@ -319,6 +319,7 @@ class ongoingTasksStats extends viewModelBase {
             "Storage/TombstoneRead": undefined as string,
             "Storage/AttachmentRead": undefined as string,
             "Storage/CounterRead": undefined as string,
+            "Storage/TimeSeriesRead": undefined as string,
             "ETL": undefined as string,
             "Extract": undefined as string,
             "Transform": undefined as string,
