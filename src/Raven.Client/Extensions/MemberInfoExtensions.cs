@@ -6,6 +6,7 @@
 
 using System;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace Raven.Client.Extensions
 {
@@ -71,21 +72,92 @@ namespace Raven.Client.Extensions
             throw new NotSupportedException("Cannot calculate CanWrite on " + memberInfo);
         }
 
-        public static void SetValue(this MemberInfo memberInfo, object entity, object value)
+        public static void SetValue<T>(this MemberInfo memberInfo, ref T entity, object value)
         {
             if (memberInfo.IsProperty())
             {
-                ((PropertyInfo)memberInfo).SetValue(entity, value);
+                var propertyInfo = (PropertyInfo)memberInfo;
+                if (typeof(T).IsValueType)
+                {
+                    SetStructValue(propertyInfo.Name, propertyInfo.PropertyType, ref entity, value);
+                    return;
+                }
+                propertyInfo.SetValue(entity, value);
                 return;
             }
 
             if (memberInfo.IsField())
             {
-                ((FieldInfo)memberInfo).SetValue(entity, value);
+                var fieldInfo = (FieldInfo)memberInfo;
+                if (typeof(T).IsValueType)
+                {
+                    SetStructValue(fieldInfo.Name, fieldInfo.FieldType, ref entity, value);
+                    return;
+                }
+                fieldInfo.SetValue(entity, value);
                 return;
             }
 
             throw new NotSupportedException("Cannot calculate CanWrite on " + memberInfo);
+        }
+
+        private static unsafe void SetStructValue<T>(string name, Type type, ref T entity, object value)
+        {
+            if (type != value.GetType())
+                throw new InvalidOperationException($"Can't set type {value.GetType()} to the member '{name}' of type {type}");
+
+            if (value.GetType().IsPrimitive == false)
+                throw new InvalidOperationException(
+                    $"For struct types, all the members must be primitives, but we try to set the member '{name}' of type {type} with the type {value.GetType()}");
+
+            var offset = Marshal.OffsetOf<T>(name);
+            int size = Marshal.SizeOf(entity);
+            var arrPtr = stackalloc byte[size];
+            Marshal.StructureToPtr(entity, (IntPtr)arrPtr, true);
+            var memberAddress = arrPtr + offset.ToInt64();
+
+            switch (value)
+            {
+                case bool val:
+                    *(bool*)memberAddress = val;
+                    break;
+                case char val:
+                    *(char*)memberAddress = val;
+                    break;
+                case byte val:
+                    *memberAddress = val;
+                    break;
+                case sbyte val:
+                    *(sbyte*)memberAddress = val;
+                    break;
+                case short val:
+                    *(short*)memberAddress = val;
+                    break;
+                case ushort val:
+                    *(ushort*)memberAddress = val;
+                    break;
+                case int val:
+                    *(int*)memberAddress = val;
+                    break;
+                case uint val:
+                    *(uint*)memberAddress = val;
+                    break;
+                case long val:
+                    *(long*)memberAddress = val;
+                    break;
+                case ulong val:
+                    *(ulong*)memberAddress = val;
+                    break;
+                case float val:
+                    *(float*)memberAddress = val;
+                    break;
+                case double val:
+                    *(double*)memberAddress = val;
+                    break;
+                default:
+                    throw new ArgumentException($"Unsupported primitive type {value.GetType()}");
+            }
+            entity = Marshal.PtrToStructure<T>((IntPtr)arrPtr);
         }
 
         public static object GetValue(this MemberInfo memberInfo, object entity)

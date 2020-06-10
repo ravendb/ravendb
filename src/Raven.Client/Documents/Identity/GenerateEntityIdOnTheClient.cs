@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Identity
                     return;
                 }
 
-                SetPropertyOrField(identityProperty, entity, val => identityProperty.SetValue(entity, val), id);
+                SetPropertyOrField(identityProperty, entity, val => identityProperty.SetValue(ref entity, val), id);
             }
             else
             {
