@@ -405,11 +405,17 @@ namespace Raven.Server.Documents.Handlers
             writer.WriteStartObject();
             {
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.From));
-                writer.WriteDateTime(rangeResult.From, true);
+                if(rangeResult.From == DateTime.MinValue)
+                    writer.WriteNull();
+                else
+                    writer.WriteDateTime(rangeResult.From, true);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.To));
-                writer.WriteDateTime(rangeResult.To, true);
+                if (rangeResult.To == DateTime.MaxValue)
+                    writer.WriteNull();
+                else
+                    writer.WriteDateTime(rangeResult.To, true);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(TimeSeriesRangeResult.Entries));
