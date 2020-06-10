@@ -2160,7 +2160,7 @@ more responsive application.
 
                 if (!prop.CanWrite() || !prop.CanRead() || prop.GetIndexParameters().Length != 0)
                     continue;
-                prop.SetValue(entity, prop.GetValue(documentInfo.Entity));
+                prop.SetValue(ref entity, prop.GetValue(documentInfo.Entity));
             }
         }
 

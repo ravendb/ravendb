@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session.TimeSeries;
 
@@ -51,7 +52,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                _max ??= TimeSeriesValuesHelper.SetMembers<T>(base.Max ?? throw new InvalidOperationException($"'{nameof(Max)}' is not found in the results. Maybe you forget to 'select max()' in the query?"));
+                if (EqualityComparer<T>.Default.Equals(_max, default) == false)
+                    return _max;
+
+                _max = TimeSeriesValuesHelper.SetMembers<T>(
+                    base.Max ?? throw new InvalidOperationException($"'{nameof(Max)}' is not found in the results. Maybe you forget to 'select max()' in the query?"));
                 return _max;
             }
         }
@@ -61,7 +66,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                _min ??= TimeSeriesValuesHelper.SetMembers<T>(base.Min ?? throw new InvalidOperationException($"'{nameof(Min)}' is not found in the results. Maybe you forget to 'select min()' in the query?"));
+                if (EqualityComparer<T>.Default.Equals(_min, default) == false)
+                    return _min;
+
+                _min = TimeSeriesValuesHelper.SetMembers<T>(
+                    base.Min ?? throw new InvalidOperationException($"'{nameof(Min)}' is not found in the results. Maybe you forget to 'select min()' in the query?"));
                 return _min;
             }
         }
@@ -71,7 +80,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                _last ??= TimeSeriesValuesHelper.SetMembers<T>(base.Last ?? throw new InvalidOperationException($"'{nameof(Last)}' is not found in the results. Maybe you forget to 'select last()' in the query?"));
+                if (EqualityComparer<T>.Default.Equals(_last, default) == false)
+                    return _last;
+
+                _last = TimeSeriesValuesHelper.SetMembers<T>(
+                    base.Last ?? throw new InvalidOperationException($"'{nameof(Last)}' is not found in the results. Maybe you forget to 'select last()' in the query?"));
                 return _last;
             }
         }
@@ -81,7 +94,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                _first ??= TimeSeriesValuesHelper.SetMembers<T>(base.First ?? throw new InvalidOperationException($"'{nameof(First)}' is not found in the results. Maybe you forget to 'select first()' in the query?"));
+                if (EqualityComparer<T>.Default.Equals(_first, default) == false)
+                    return _first;
+
+                _first = TimeSeriesValuesHelper.SetMembers<T>(
+                    base.First ?? throw new InvalidOperationException($"'{nameof(First)}' is not found in the results. Maybe you forget to 'select first()' in the query?"));
                 return _first;
             }
         }
@@ -91,7 +108,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                _average ??= TimeSeriesValuesHelper.SetMembers<T>(base.Average ?? throw new InvalidOperationException($"'{nameof(Average)}' is not found in the results. Maybe you forget to 'select avg()' in the query?"));
+                if (EqualityComparer<T>.Default.Equals(_average, default) == false)
+                    return _average;
+
+                _average = TimeSeriesValuesHelper.SetMembers<T>(
+                    base.Average ?? throw new InvalidOperationException($"'{nameof(Average)}' is not found in the results. Maybe you forget to 'select avg()' in the query?"));
                 return _average;
             }
         }
@@ -101,7 +122,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                _sum ??= TimeSeriesValuesHelper.SetMembers<T>(base.Sum ?? throw new InvalidOperationException($"'{nameof(Sum)}' is not found in the results. Maybe you forget to 'select sum()' in the query?"));
+                if (EqualityComparer<T>.Default.Equals(_sum, default) == false)
+                    return _sum;
+
+                _sum = TimeSeriesValuesHelper.SetMembers<T>(
+                    base.Sum ?? throw new InvalidOperationException($"'{nameof(Sum)}' is not found in the results. Maybe you forget to 'select sum()' in the query?"));
                 return _sum;
             }
         }
@@ -111,9 +136,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             get
             {
-                _count ??= TimeSeriesValuesHelper.SetMembers<T>(Array.ConvertAll<long, double>(
-                    base.Count ?? throw new InvalidOperationException(
-                        $"'{nameof(Count)}' is not found in the results. Maybe you forget to 'select count()' in the query?"), x => x));
+                if (EqualityComparer<T>.Default.Equals(_count, default) == false)
+                    return _count;
+
+                _count = TimeSeriesValuesHelper.SetMembers<T>(Array.ConvertAll<long, double>(
+                    base.Count ?? throw new InvalidOperationException($"'{nameof(Count)}' is not found in the results. Maybe you forget to 'select count()' in the query?"), x => x));
                 return _count;
             }
         }

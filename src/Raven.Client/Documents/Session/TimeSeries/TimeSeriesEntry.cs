@@ -157,10 +157,13 @@ namespace Raven.Client.Documents.Session.TimeSeries
             foreach (var memberInfo in mapping)
             {
                 var index = memberInfo.Key;
+                if (index >= values.Length)
+                    continue;
+
                 if (asRollup)
                     index *= 6;
                 var member = memberInfo.Value;
-                member.SetValue(obj, values[index]);
+                member.SetValue(ref obj, values[index]);
             }
 
             return obj;
@@ -218,13 +221,14 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             get
             {
-                if (_first != null)
+                if (EqualityComparer<TValues>.Default.Equals(_first, default) == false)
                     return _first;
 
                 Build2DArray();
                 _first = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.First]);
                 return _first;
             }
+            set => _first = value;
         }
 
         [JsonIgnore]
@@ -232,13 +236,14 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             get
             {
-                if (_last != null)
+                if (EqualityComparer<TValues>.Default.Equals(_last, default) == false)
                     return _last;
 
                 Build2DArray();
                 _last = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Last]);
                 return _last;
             }
+            set => _last = value;
         }
 
         [JsonIgnore]
@@ -246,13 +251,14 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             get
             {
-                if (_min != null)
+                if (EqualityComparer<TValues>.Default.Equals(_min, default) == false)
                     return _min;
 
                 Build2DArray();
                 _min = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Min]);
                 return _min;
             }
+            set => _min = value;
         }
 
         [JsonIgnore]
@@ -260,13 +266,14 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             get
             {
-                if (_max != null)
+                if (EqualityComparer<TValues>.Default.Equals(_max, default) == false)
                     return _max;
 
                 Build2DArray();
                 _max = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Max]);
                 return _max;
             }
+            set => _max = value;
         }
 
         [JsonIgnore]
@@ -274,13 +281,14 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             get
             {
-                if (_sum != null)
+                if (EqualityComparer<TValues>.Default.Equals(_sum, default) == false)
                     return _sum;
 
                 Build2DArray();
                 _sum = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Sum]);
                 return _sum;
             }
+            set => _sum = value;
         }
 
         [JsonIgnore]
@@ -288,13 +296,14 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             get
             {
-                if (_count != null)
+                if (EqualityComparer<TValues>.Default.Equals(_count, default) == false)
                     return _count;
 
                 Build2DArray();
                 _count = TimeSeriesValuesHelper.SetMembers<TValues>(_innerValues[(int)AggregationType.Count]);
                 return _count;
             }
+            set => _count = value;
         }
 
         [JsonIgnore]
@@ -302,7 +311,7 @@ namespace Raven.Client.Documents.Session.TimeSeries
         {
             get
             {
-                if (_average != null)
+                if (EqualityComparer<TValues>.Default.Equals(_average, default) == false)
                     return _average;
 
                 Build2DArray();

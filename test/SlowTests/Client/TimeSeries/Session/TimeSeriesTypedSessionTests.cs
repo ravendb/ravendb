@@ -25,7 +25,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        private class StockPrice
+        private struct StockPrice
         {
             [TimeSeriesValue(0)] public double Open;
             [TimeSeriesValue(1)] public double Close;
@@ -43,7 +43,7 @@ namespace SlowTests.Client.TimeSeries.Session
             [TimeSeriesValue(5)] public double Volume;
         }
 
-        internal class HeartRateMeasure
+        internal struct HeartRateMeasure
         {
             [TimeSeriesValue(0)] public double HeartRate;
         }
@@ -705,8 +705,13 @@ select out()
                 using (var session = store.OpenSession())
                 {
                     var ts = session.TimeSeriesRollupFor<StockPrice>("users/karmel", p1.Name);
-                    var a = new TimeSeriesRollupEntry<StockPrice>(DateTime.Now);
-                    a.Max.Close = 1;
+                    var a = new TimeSeriesRollupEntry<StockPrice>(DateTime.Now)
+                    {
+                        Max = new StockPrice
+                        {
+                            Close = 1
+                        }
+                    };
                     ts.Append(a);
                     session.SaveChanges();
                 }
