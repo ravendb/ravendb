@@ -1652,7 +1652,14 @@ more responsive application.
 
                     foreach (BlittableJsonReaderObject blittableRange in timeseriesRanges)
                     {
-                        var newRange = ParseTimeSeriesRangeResult(blittableRange, id, name);
+                        if (JsonDeserializationClient.CacheForTimeSeriesRangeResult.TryGetValue(typeof(TimeSeriesEntry), out var func) == false)
+                        {
+                            func = JsonDeserializationBase.GenerateJsonDeserializationRoutine<TimeSeriesRangeResult<TimeSeriesEntry>>();
+                            JsonDeserializationClient.CacheForTimeSeriesRangeResult.TryAdd(typeof(TimeSeriesEntry), func);
+                        }
+
+                        var newRange = (TimeSeriesRangeResult<TimeSeriesEntry>)func(blittableRange);
+
                         AddToCache(cache, newRange, name);
                     }
                 }
@@ -1915,59 +1922,6 @@ more responsive application.
             ranges[fromRangeIndex].Entries = values;
 
             ranges.RemoveRange(fromRangeIndex + 1, toRangeIndex - fromRangeIndex);
-        }
-
-        private static TimeSeriesRangeResult ParseTimeSeriesRangeResult(BlittableJsonReaderObject blittableRange, LazyStringValue id, string name)
-        {
-            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.From), out DateTime from) == false ||
-                blittableRange.TryGet(nameof(TimeSeriesRangeResult.To), out DateTime to) == false)
-                throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
-                                               $"Missing '{nameof(TimeSeriesRangeResult.From)}' and/or '{nameof(TimeSeriesRangeResult.To)}' properties");
-
-            if (blittableRange.TryGet(nameof(TimeSeriesRangeResult.Entries), out BlittableJsonReaderArray valuesBlittable) == false)
-                throw new InvalidDataException($"Unable to read time series range result on document : '{id}', timeseries : '{name}'." +
-                                               $"Missing '{nameof(TimeSeriesRangeResult.Entries)}' property");
-
-            var result = new TimeSeriesRangeResult
-            {
-                From = from,
-                To = to
-            };
-
-            if (valuesBlittable != null)
-            {
-                var valuesArray = new TimeSeriesEntry[valuesBlittable.Length];
-
-                for (int j = 0; j < valuesBlittable.Length; j++)
-                {
-                    var timeSeriesValueBlittable = valuesBlittable.GetByIndex<BlittableJsonReaderObject>(j);
-
-                    if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Timestamp), out DateTime timestamp) == false)
-                        throw new InvalidDataException($"Unable to read time series value on document : '{id}', timeseries : '{name}'. " +
-                                                       $"The time series value is missing '{nameof(TimeSeriesEntry.Timestamp)}' property");
-
-                    if (timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Values), out BlittableJsonReaderArray values) == false)
-                        throw new InvalidDataException($"Unable to read time series value on document: '{id}', timeseries: '{name}'. " +
-                                                       $"The time series value is missing '{nameof(TimeSeriesEntry.Values)}' property");
-
-                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.Tag), out string tag); // tag is optional
-                    timeSeriesValueBlittable.TryGet(nameof(TimeSeriesEntry.IsRollup), out bool rollup); 
-
-                    valuesArray[j] = new TimeSeriesEntry
-                    {
-                        Tag = tag,
-                        Timestamp = timestamp,
-                        Values = values.Select(x => x is LazyNumberValue val
-                            ? val.ToDouble(CultureInfo.InvariantCulture)
-                            : (long)x).ToArray(),
-                        IsRollup = rollup
-                    };
-                }
-
-                result.Entries = valuesArray;
-            }
-
-            return result;
         }
 
         private static TimeSeriesEntry[] MergeRanges(int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> localRanges, TimeSeriesRangeResult newRange)
