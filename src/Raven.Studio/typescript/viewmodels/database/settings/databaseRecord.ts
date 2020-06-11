@@ -10,14 +10,15 @@ import eventsCollector = require("common/eventsCollector");
 import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
 
 class databaseRecord extends viewModelBase {
-    collapseButtonMode = ko.observable<boolean>(false);
+    isDocumentCollapsed = ko.observable<boolean>(false);
+    forceFold: boolean = true;
+    
     document = ko.observable<document>();
     documentText = ko.observable<string>().extend({ required: true });
     docEditor: AceAjax.Editor;
     isForbidden = ko.observable<boolean>(false);
     
     inEditMode = ko.observable<boolean>(false);
-    refreshWasDone: boolean = false;
 
     static containerId = "#databaseSettingsContainer";
 
@@ -69,29 +70,24 @@ class databaseRecord extends viewModelBase {
         this.docEditor = aceEditorBindingHandler.getEditorBySelection($("#dbDocEditor"));
         
         if (this.docEditor) {
-            let alreadyFolded = false;
-
             this.docEditor.getSession().on("tokenizerUpdate", () => {
-                if (!alreadyFolded) {
-                    this.toggleCollapse();
-                    alreadyFolded = true;
-                }
-                
-                if (this.refreshWasDone) {
+                if (this.forceFold) {
                     this.foldAll();
-                    this.syncCollapseButton(true);
-                    this.refreshWasDone = false;
+
+                    this.forceFold = false;
+                    this.isDocumentCollapsed(true);
                 }
             });
         }
     }
 
     toggleCollapse() {
-        this.collapseButtonMode.toggle();
-        if (this.collapseButtonMode()) {
-            this.foldAll();
-        } else {
+        if (this.isDocumentCollapsed()) {
             this.docEditor.getSession().unfold(null, true);
+            this.isDocumentCollapsed(false);
+        } else {
+            this.foldAll();
+            this.isDocumentCollapsed(true);
         }
     }
 
@@ -106,7 +102,7 @@ class databaseRecord extends viewModelBase {
         eventsCollector.default.reportEvent("database-settings", "refresh");
 
         this.fetchDatabaseSettings(this.activeDatabase(), reportFetchProgress);
-        this.refreshWasDone = true;
+        this.forceFold = true;
     }
 
     enterEditMode() {
@@ -116,7 +112,7 @@ class databaseRecord extends viewModelBase {
                     const docText = this.stringify(this.document().toDto(), false);
                     this.documentText(docText);
                     this.inEditMode(true);
-                    this.syncCollapseButton(false);
+                    this.isDocumentCollapsed(false);
                 }
             })
     }
@@ -125,17 +121,7 @@ class databaseRecord extends viewModelBase {
         const docText = this.stringify(this.document().toDto(), true);
         this.documentText(docText);
         this.inEditMode(false);
-        this.syncCollapseButton(false);
-    }
-
-    syncCollapseButton(documentIsCollapsed: boolean) {
-        if (!documentIsCollapsed && this.collapseButtonMode()) {
-            this.collapseButtonMode(false);
-        }
-
-        if (documentIsCollapsed && !this.collapseButtonMode()) {
-            this.collapseButtonMode(true);
-        }
+        this.isDocumentCollapsed(false);
     }
     
     confirm() {
