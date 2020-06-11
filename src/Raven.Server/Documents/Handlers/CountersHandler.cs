@@ -226,7 +226,6 @@ namespace Raven.Server.Documents.Handlers
                     _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, doc, docId, countersToAdd, countersToRemove, nonPersistentFlags);
                     doc.Data.Dispose(); // we cloned the data, so we can dispose it.
                 }
-
                 countersToAdd.Clear();
                 countersToRemove.Clear();
             }
