@@ -96,6 +96,9 @@ namespace SlowTests.Issues
                     }
                 });
                 await Task.WhenAll(t1, t2);
+
+                WaitForUserToContinueTheTest(storeA);
+
                 EnsureReplicating(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
                 await EnsureNoReplicationLoop(Server, storeA.Database);
@@ -259,6 +262,55 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void DeletedCounterShouldNotBePresentInMetadataCounters()
+        {
+            // RavenDB-14753
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company
+                    {
+                        Name = "HR"
+                    };
+
+                    session.Store(company, "companies/1");
+                    session.CountersFor(company).Increment("Likes", 999);
+                    session.CountersFor(company).Increment("Cats", 999);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.CountersFor(company).Delete("lIkEs");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    company.Name = "RavenDB";
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    var counters = session.Advanced.GetCountersFor(company);
+
+                    Assert.Equal(1, counters.Count);
+                    Assert.Equal("Cats", counters[0]);
+                }
+
+            }
+        }
+
+        [Fact]
         public void GetCountersForDocumentShouldReturnNamesInTheirOriginalCasing()
         {
             using (var store = GetDocumentStore())
@@ -297,6 +349,73 @@ namespace SlowTests.Issues
                     Assert.True(keys.Contains("Karmel"));
                     Assert.True(keys.Contains("PAWEL"));
                 }
+            }
+        }
+
+        [Fact]
+        public void DeletedAndReInsertCounter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company
+                    {
+                        Name = "HR"
+                    };
+
+                    session.Store(company, "companies/1");
+                    session.CountersFor(company).Increment("Likes", 999);
+                    session.CountersFor(company).Increment("Cats", 999);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    session.CountersFor(company).Delete("Likes");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    var counters = session.Advanced.GetCountersFor(company);
+
+                    Assert.Equal(1, counters.Count);
+                    Assert.Equal("Cats", counters[0]);
+
+                    var counter = session.CountersFor(company).Get("Likes");
+
+                    Assert.Null(counter);
+
+                    var all = session.CountersFor(company).GetAll();
+                    Assert.Equal(1, all.Count);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.CountersFor("companies/1").Increment("Likes");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    var counters = session.Advanced.GetCountersFor(company);
+
+                    Assert.Equal(2, counters.Count);
+                    Assert.Equal("Cats", counters[0]);
+                    Assert.Equal("Likes", counters[1]);
+
+                    var counter = session.CountersFor(company).Get("Likes");
+
+                    Assert.NotNull(counter);
+                    Assert.Equal(1, counter.Value);
+                }
+
             }
         }
 
