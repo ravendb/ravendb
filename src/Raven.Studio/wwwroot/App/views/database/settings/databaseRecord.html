@@ -28,12 +28,10 @@
         </div>
         <div class="flex-horizontal">
             <div class="flex-grow"></div>
-            <div class="btn-group btn-group-sm pull-right" role="group">
-                <button type="button" class="btn btn-default" data-toggle="button" data-bind="click: toggleCollapse">
-                    <i data-bind="attr: { class: collapseButtonMode() ? 'icon-unfold' : 'icon-fold'} "></i>
-                    <span data-bind="text: collapseButtonMode() ? 'Expand record' : 'Collapse record'"></span>
-                </button>
-            </div>
+            <button class="btn btn-default btn-sm" data-bind="click: toggleCollapse, css: { 'active': !isDocumentCollapsed() }">
+                <i data-bind="attr: { class: isDocumentCollapsed() ? 'icon-unfold' : 'icon-fold'} "></i>
+                <span data-bind="text: isDocumentCollapsed() ? 'Expand record' : 'Collapse record'"></span>
+            </button>
         </div>
         <pre id="dbDocEditor" class="form-control flex-grow" data-bind="aceEditor: { code: documentText, lang: 'ace/mode/json', readOnly: !inEditMode() }" style="height: 500px"></pre>
     </form>
