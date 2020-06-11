@@ -32,9 +32,18 @@
                         <i class="icon-recent"></i>
                         <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
                     </p>
-                    <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChange()">
+                    <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChange">
                         <small>
-                            <span class="icon-warning"></span> This document has been modified outside of the studio. <a href="#" data-bind="click: refreshDocument">Click here to refresh.</a>
+                            <i class="icon-warning"></i>
+                            <span>This document has been modified outside of Studio.</span>
+                            <a href="#" data-bind="click: refreshDocument">Click here to refresh.</a>
+                        </small>
+                    </p>
+                    <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentDeleted">
+                        <small>
+                            <i class="icon-warning"></i>
+                            <span>This document has been deleted outside of Studio.</span>
+                            <a href="#" data-bind="click: navigateAfterExternalDelete">Go to recent document.</a>
                         </small>
                     </p>
                 </div>

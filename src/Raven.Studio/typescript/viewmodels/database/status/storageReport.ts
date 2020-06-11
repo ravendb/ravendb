@@ -1,3 +1,5 @@
+import router = require("plugins/router");
+import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import getStorageReportCommand = require("commands/database/debug/getStorageReportCommand");
 import getEnvironmentStorageReportCommand = require("commands/database/debug/getEnvironmentStorageReportCommand");
@@ -259,8 +261,6 @@ class storageReport extends viewModelBase {
         });
 
         return new storageReportItem("Temporary Files", "tempFiles", false, mappedTemps.reduce((p, c) => p + c.size, 0), mappedTemps);
-        
-        
     }
 
     private initGraph() {
@@ -545,7 +545,6 @@ class storageReport extends viewModelBase {
             .style("opacity", 0);	
     }
 
-
     dataSizeFormatted(item: storageReportItem) {
         if (!item.isStorageEnvironment()) {
             return "n/a";
@@ -564,7 +563,10 @@ class storageReport extends viewModelBase {
         const tempFiles = item.internalChildren.find(x => x.type === "tempFiles");
         return generalUtils.formatBytesToSize(tempFiles.size);
     }
-   
+
+    compactDatabase() {
+        router.navigate(appUrl.forDatabases(this.activeDatabase().name));
+    }
 }
 
 export = storageReport;    

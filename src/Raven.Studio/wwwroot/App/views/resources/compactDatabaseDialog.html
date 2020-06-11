@@ -1,0 +1,63 @@
+<div class="modal-dialog modal-lg" role="document" id="compactDatabaseDialog">
+    <form data-bind="submit: compactDatabase" autocomplete="off" novalidate>
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+                <h3 class="modal-title">
+                    <i class="icon-compact"></i><span>Compact Database <strong data-bind="text: database.name"></strong></span>
+                </h3>
+            </div>
+            <div class="modal-body">
+                <div class="margin-left">
+                    <div class="toggle">
+                        <input id="compactDocuments" type="checkbox" data-bind="checked: compactDocuments" />
+                        <label for="compactDocuments">Compact documents</label>
+                    </div>
+                    <div class="toggle" title="Uncheck to select specific indexes">
+                        <input id="allIndexes" type="checkbox" data-bind="checked: compactAllIndexes" />
+                        <label for="allIndexes">Compact all indexes</label><small data-bind="text: numberOfIndexesFormatted"></small>
+                    </div>
+                    <div class="text-center text-muted" data-bind="visible: !allIndexes().length">
+                        <i class="icon-empty-set"></i><small>No Indexes available</small>
+                    </div>
+                    <div id="collapseIndexes" data-bind="collapse: !compactAllIndexes(), visible: allIndexes().length">
+                        <hr>
+                        <div class="row">
+                            <div class="col-sm-offset-1 col-sm-4">
+                                <span>Select indexes:</span>
+                                <small class="margin-left margin-left-sm" data-bind="text: numberOfSelectedIndexesFormatted"></small>
+                            </div>
+                            <div class="col-sm-5 margin-left margin-left-lg no-padding-right">
+                                <div class="input-group">
+                                    <input class="form-control" placeholder="Filter indexes" data-bind="textInput: filterText" />
+                                    <span class="input-group-addon"><small class="glyphicon glyphicon-filter" aria-hidden="true"></small></span>
+                                </div>
+                            </div>
+                            <button class="btn btn-info margin-left margin-left-sm" data-bind="click: selectAllIndexes, enable: selectAllIndexesEnabled">
+                                <span>Select All</span>
+                            </button>
+                        </div>
+                        <div class="row limit-height margin-top margin-top-sm" data-bind="foreach: filteredIndexes">
+                            <div class="col-sm-offset-1 col-sm-11 force-text-wrap">
+                                <div class="toggle toggle-info">
+                                    <input type="checkbox" data-bind="attr: { id: 'index_' + $index() }, value: $data, checked: $parent.indexesToCompact" />
+                                    <label data-bind="attr: { for: 'index_' + $index() }, text: $data"></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="padding text-right">
+                    <button data-dismiss="modal" class="btn btn-default">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                    <button type="submit" class="btn btn-primary" data-bind="enable: compactEnabled">
+                        <i class="icon-compact"></i><span>Compact</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

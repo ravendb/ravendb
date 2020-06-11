@@ -205,6 +205,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        public void Optimize(IState state)
+        {
+            try
+            {
+                _indexWriter.Optimize(state);
+            }
+            catch (SystemException e)
+            {
+                LuceneIndexWriter.TryThrowingBetterException(e, _directory);
+
+                throw;
+            }
+            finally
+            {
+                RecreateIndexWriter(state);
+            }
+        }
+
         public long RamSizeInBytes()
         {
             return _indexWriter.RamSizeInBytes();
