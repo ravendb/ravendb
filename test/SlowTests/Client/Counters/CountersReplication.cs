@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using FastTests.Server.Basic;
 using FastTests.Server.Replication;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -136,14 +135,14 @@ namespace SlowTests.Client.Counters
             {
                 using (var session = storeA.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
-                    session.CountersFor("users/1").Increment("likes", 10);
+                    await session.StoreAsync(new User { Name = "Aviv" }, "users/1");
+                    session.CountersFor("users/1").Increment("Likes", 10);
                     await session.SaveChangesAsync();
                 }
                 using (var session = storeB.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
-                    session.CountersFor("users/1").Increment("dislikes", 10);
+                    session.CountersFor("users/1").Increment("Dislikes", 10);
                     await session.SaveChangesAsync();
                 }
 
@@ -153,9 +152,9 @@ namespace SlowTests.Client.Counters
                 var counters = storeB.Operations
                     .Send(new GetCountersOperation("users/1"));
                 Assert.Equal(2, counters.Counters.Count);
-                Assert.Equal("dislikes", counters.Counters[0].CounterName);
+                Assert.Equal("Dislikes", counters.Counters[0].CounterName);
                 Assert.Equal(10, counters.Counters[0].TotalValue);
-                Assert.Equal("likes", counters.Counters[1].CounterName);
+                Assert.Equal("Likes", counters.Counters[1].CounterName);
                 Assert.Equal(10, counters.Counters[1].TotalValue);
 
                 using (var session = storeB.OpenAsyncSession())
@@ -165,6 +164,9 @@ namespace SlowTests.Client.Counters
                     var list = session.Advanced.GetCountersFor(user);
                     Assert.Equal((DocumentFlags.HasCounters | DocumentFlags.HasRevisions | DocumentFlags.Resolved).ToString(), flags);
                     Assert.Equal(2, list.Count);
+                    Assert.Equal("Dislikes", list[0]);
+                    Assert.Equal("Likes", list[1]);
+
                 }
             }
         }
@@ -274,13 +276,13 @@ namespace SlowTests.Client.Counters
                 using (var session = storeA.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Aviv1" }, "users/1");
-                    session.CountersFor("users/1").Increment("likes", 10);
+                    session.CountersFor("users/1").Increment("Likes", 10);
                     await session.SaveChangesAsync();
                 }
                 using (var session = storeB.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
-                    session.CountersFor("users/1").Increment("likes", 10);
+                    session.CountersFor("users/1").Increment("Likes", 10);
                     await session.SaveChangesAsync();
                 }
 
@@ -289,8 +291,8 @@ namespace SlowTests.Client.Counters
 
                 using (var session = storeB.OpenAsyncSession())
                 {
-                    session.CountersFor("users/1").Increment("likes", 10);
-                    session.CountersFor("users/1").Increment("dislikes", 10);
+                    session.CountersFor("users/1").Increment("Likes", 10);
+                    session.CountersFor("users/1").Increment("Dislikes", 10);
                     await session.SaveChangesAsync();
                 }
 
@@ -315,6 +317,71 @@ namespace SlowTests.Client.Counters
                     var user = await session.LoadAsync<User>("users/1");
                     var list = session.Advanced.GetCountersFor(user);
                     Assert.Equal(2, list.Count);
+                    Assert.Equal("Dislikes", list[0]);
+                    Assert.Equal("Likes", list[1]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task DeleteCounterOnConflictedDocument()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                    };
+                }
+            }))
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Aviv" }, "users/1");
+                    session.CountersFor("users/1").Increment("Likes", 10);
+                    await session.SaveChangesAsync();
+                }
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.CountersFor("users/1").Increment("Likes", 10);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                WaitUntilHasConflict(storeB, "users/1");
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1").Delete("Likes");
+                    session.CountersFor("users/1").Increment("Dislikes", 10);
+                    await session.SaveChangesAsync();
+                }
+
+                var counter = storeB.Operations
+                    .Send(new GetCountersOperation("users/1"));
+
+                Assert.Equal(1, counter.Counters.Count);
+                Assert.Equal(10, counter.Counters[0].TotalValue);
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Resolved"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    var list = session.Advanced.GetCountersFor(user);
+                    Assert.Equal(1, list.Count);
+                    Assert.Equal("Dislikes", list[0]);
                 }
             }
         }
