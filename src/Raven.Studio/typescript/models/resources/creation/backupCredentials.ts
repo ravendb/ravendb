@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
 import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
+import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import getFolderPathOptionsCommand = require("commands/resources/getFolderPathOptionsCommand");
 import commandBase = require("commands/commandBase");
@@ -67,8 +68,8 @@ export class localServerCredentials extends restoreSettings {
 }
 
 export class amazonS3Credentials extends restoreSettings {
-    backupStorageType: restoreSource = 'amazonS3';
-    backupStorageTypeText: string ='Amazon S3';
+    backupStorageType: restoreSource = "amazonS3";
+    backupStorageTypeText = "Amazon S3";
     mandatoryFieldsText = "required fields";
     
     remoteFolder = ko.observable<string>();
@@ -76,11 +77,15 @@ export class amazonS3Credentials extends restoreSettings {
     
     sessionToken = ko.observable<string>("");
     
+    useCustomS3Host = ko.observable<boolean>(false);
+    customServerUrl = ko.observable<string>();
     accessKey = ko.observable<string>();
     secretKey = ko.observable<string>();
     regionName = ko.observable<string>();
     bucketName = ko.observable<string>();
-    
+    accessKeyPropertyName = ko.pureComputed(() => s3Settings.getAccessKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
+    secretKeyPropertyName = ko.pureComputed(() => s3Settings.getSecretKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
+
     toDto(): Raven.Client.Documents.Operations.Backups.S3Settings {
         let selectedRegion = _.trim(this.regionName()).toLowerCase();
         const foundRegion = amazonSettings.availableAwsRegionEndpointsStatic.find(x => amazonSettings.getDisplayRegionName(x).toLowerCase() === selectedRegion);        
@@ -97,8 +102,7 @@ export class amazonS3Credentials extends restoreSettings {
             RemoteFolderName: _.trim(this.remoteFolder()),
             Disabled: false,
             GetBackupConfigurationScript: null,
-            //TODO RavenDB-14716
-            CustomServerUrl: null,
+            CustomServerUrl: this.useCustomS3Host() ? this.customServerUrl() : null,
         }
     };
 
@@ -123,7 +127,7 @@ export class amazonS3Credentials extends restoreSettings {
     fetchRestorePointsCommand = () => getRestorePointsCommand.forS3Backup(this.toDto(), true);
 
     getFolderPathOptions() {
-        return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "S3"))
+        return this.getFolderPathOptionsByCommand(getFolderPathOptionsCommand.forCloudBackup(this.toDto(), "S3"));
     }
 
     getConfigurationForRestoreDatabase(baseConfiguration: Raven.Client.Documents.Operations.Backups.RestoreBackupConfigurationBase,
@@ -136,7 +140,7 @@ export class amazonS3Credentials extends restoreSettings {
     }
 
     isValid(): boolean {
-        return !!_.trim(this.accessKey()) && !!_.trim(this.secretKey()) && !!_.trim(this.regionName()) && !!_.trim(this.bucketName());
+        return !!_.trim(this.accessKey()) && !!_.trim(this.secretKey()) && !!_.trim(this.regionName()) && !!_.trim(this.bucketName()) && (!this.useCustomS3Host() || !!_.trim(this.customServerUrl()));
     }
 
     onCredentialsChange(onChange: () => void) {
@@ -145,6 +149,7 @@ export class amazonS3Credentials extends restoreSettings {
         this.regionName.throttle(300).subscribe(onChange);
         this.bucketName.throttle(300).subscribe(onChange);
         this.remoteFolder.throttle(300).subscribe(onChange);
+        this.customServerUrl.throttle(300).subscribe(onChange);
     }
     
     static empty(): amazonS3Credentials {

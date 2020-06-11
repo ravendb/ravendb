@@ -123,6 +123,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        public void Optimize()
+        {
+            if (_writer != null)
+            {
+                _writer.Optimize(_state);
+
+                if (_hasSuggestions)
+                {
+                    foreach (var item in _suggestionsWriters)
+                        item.Value.Optimize(_state);
+                }
+            }
+        }
+
         public virtual void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats, JsonOperationContext indexContext)
         {
             EnsureValidStats(stats);

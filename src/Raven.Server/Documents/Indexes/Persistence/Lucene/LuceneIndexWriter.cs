@@ -114,7 +114,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void Optimize(IState state)
         {
-            _indexWriter.Optimize(state);
+            try
+            {
+                _indexWriter.Optimize(state);
+            }
+            catch (SystemException e)
+            {
+                TryThrowingBetterException(e, _directory);
+
+                throw;
+            }
+            finally
+            {
+                RecreateIndexWriter(state);
+            }
         }
 
         private void RecreateIndexWriter(IState state)

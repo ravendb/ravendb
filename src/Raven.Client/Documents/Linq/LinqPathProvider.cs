@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -107,18 +108,49 @@ namespace Raven.Client.Documents.Linq
             if (customMemberResult != null)
                 return customMemberResult;
 
-            // we truncate the nullable .Value because in json all values are nullable
-            if (memberExpression.Member.Name == "Value" &&
-                Nullable.GetUnderlyingType(memberExpression.Expression.Type) != null)
+            string path;
+
+            switch (memberExpression.Member.Name)
             {
-                return GetPath(memberExpression.Expression);
+                case "Value":
+                    // we truncate the nullable .Value because in json all values are nullable
+                    if(Nullable.GetUnderlyingType(memberExpression.Expression.Type) != null)
+                        return GetPath(memberExpression.Expression);
+                    break;
+                case "Values":
+                    // if we have a .Keys / .Values we check if we need to omit the dictionary
+
+                    if (memberExpression.Member.DeclaringType != null &&
+                        memberExpression.Member.DeclaringType.IsGenericType &&
+                        (memberExpression.Member.DeclaringType.GetGenericTypeDefinition() == typeof(Dictionary<,>) ||
+                         memberExpression.Member.DeclaringType.GetGenericTypeDefinition() == typeof(IDictionary<,>)))
+                    {
+                        return GetPath(memberExpression.Expression);
+                    }
+                    
+                    break;
+            }
+
+
+            if (memberExpression.Expression is MemberExpression mi && 
+                mi.Member.Name == "Value" &&
+                mi.Member.DeclaringType != null && 
+                mi.Member.DeclaringType.IsGenericType &&
+                mi.Member.DeclaringType.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
+                )
+            {
+                path = mi.Expression + "." + memberExpression.Member.Name;
+            }
+            else
+            {
+                path = memberExpression.ToString();
             }
 
             AssertNoComputation(memberExpression);
 
             var result = new Result
             {
-                Path = memberExpression.ToString(),
+                Path = path,
                 IsNestedPath = memberExpression.Expression is MemberExpression,
                 MemberType = memberExpression.Member.GetMemberType(),
                 MaybeProperty = memberExpression.Member as PropertyInfo

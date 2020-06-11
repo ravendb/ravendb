@@ -11,9 +11,6 @@ import toggleDisableIndexingCommand = require("commands/database/index/toggleDis
 import deleteDatabaseCommand = require("commands/resources/deleteDatabaseCommand");
 import loadDatabaseCommand = require("commands/resources/loadDatabaseCommand");
 import changesContext = require("common/changesContext");
-import compactDatabaseCommand = require("commands/resources/compactDatabaseCommand");
-import notificationCenter = require("common/notifications/notificationCenter");
-import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import databasesInfo = require("models/resources/info/databasesInfo");
 import getDatabasesCommand = require("commands/resources/getDatabasesCommand");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
@@ -23,12 +20,12 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import databaseNotificationCenterClient = require("common/databaseNotificationCenterClient");
 import changeSubscription = require("common/changeSubscription");
-import databasesManager = require("common/shell/databasesManager");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
 import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
+import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDialog");
 
 class databases extends viewModelBase {
     
@@ -69,6 +66,8 @@ class databases extends viewModelBase {
     environmentClass = (source: KnockoutObservable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>) => 
         database.createEnvironmentColorComputed("label", source);
    
+    databaseToCompact: string;
+    
     constructor() {
         super();
 
@@ -104,6 +103,11 @@ class databases extends viewModelBase {
     activate(args: any): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         super.activate(args);
 
+        // When coming here from Storage Report View
+        if (args && args.compact) {
+            this.databaseToCompact = args.compact;
+        }
+        
         // we can't use createNotifications here, as it is called after *database changes API* is connected, but user
         // can enter this view and never select database
 
@@ -140,7 +144,6 @@ class databases extends viewModelBase {
                 this.statsSubscription = null;
             }
         }
-        
     }
 
     attached() {
@@ -155,6 +158,11 @@ class databases extends viewModelBase {
         this.initTooltips();
         this.initDatabaseNameResize();
         this.setupDisableReasons();
+       
+        if (this.databaseToCompact) {
+            const dbInfo = this.databases().getByName(this.databaseToCompact);
+            this.compactDatabase(dbInfo);
+        }
     }
     
     deactivate() {
@@ -567,37 +575,9 @@ class databases extends viewModelBase {
     }
     
     compactDatabase(db: databaseInfo) {
-        if (db.disabled()) {
-            return;
-        }
-        
         eventsCollector.default.reportEvent("databases", "compact");
-        
-        this.confirmationMessage("Are you sure?", `Do you want to compact '${generalUtils.escapeHtml(db.name)}'?`, {
-            buttons: ["No", "Yes, compact"],
-            html: true
-        })
-            .done(result => {
-                if (result.can) {
-                    
-                    new getIndexNamesCommand(databasesManager.default.getDatabaseByName(db.name))
-                        .execute()
-                        .done(indexNames => {
-                            db.inProgressAction("Compacting...");
-
-                            new compactDatabaseCommand(db.name, true, indexNames)
-                                .execute()
-                                .done(result => {
-
-                                    notificationCenter.instance.monitorOperation(null, result.OperationId)
-                                        .always(() => db.inProgressAction(null));
-
-                                    notificationCenter.instance.openDetailsForOperationById(null, result.OperationId);
-                                })
-                                .fail(() => db.inProgressAction(null));
-                        }).fail((response: JQueryXHR) => messagePublisher.reportError("Failed to load indexes for database", response.responseText, response.statusText));
-                }
-            });
+        this.changesContext.disconnectIfCurrent(db.asDatabase(), "DatabaseDisabled");
+        app.showBootstrapDialog(new compactDatabaseDialog(db));
     }
 
     togglePauseDatabaseIndexing(db: databaseInfo) {
