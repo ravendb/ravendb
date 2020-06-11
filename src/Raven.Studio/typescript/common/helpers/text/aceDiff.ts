@@ -20,8 +20,8 @@ class aceDiffEditor {
     private folds = [] as foldItem[];
     private readonly editor: AceAjax.Editor;
     private readonly mode: "left" | "right";
-    private readonly gutterClass: string;
-    private readonly markerClass: string;
+    private gutterClass: string;
+    private markerClass: string;
     private previousAceMode: string;
     private onModeChange: () => void;
     
@@ -67,8 +67,12 @@ class aceDiffEditor {
         }
     }
     
-    refresh() {
+    refresh(gutterClass: string, markerClass: string) {
         this.destroy();
+
+        this.gutterClass = gutterClass;
+        this.markerClass = markerClass;
+        
         this.initEditor();
     }
     
@@ -336,23 +340,53 @@ class aceDiff {
     
     additions = ko.observable<number>(0);
     deletions = ko.observable<number>(0);
-    identicalContent: KnockoutObservable<boolean>;
     
-    constructor(leftEditor: AceAjax.Editor, rightEditor: AceAjax.Editor) {
-        this.leftEditor = new aceDiffEditor(leftEditor, "left", "ace_removed", "ace_code-removed");
-        this.rightEditor = new aceDiffEditor(rightEditor, "right", "ace_added", "ace_code-added");
+    identicalContent: KnockoutComputed<boolean>;
+    leftRevisionIsNewer = ko.observable<boolean>();
+    
+    leftGutterClass: KnockoutComputed<string>;
+    rightGutterClass: KnockoutComputed<string>;
+    leftMarkerClass: KnockoutComputed<string>;
+    rightMarkerClass: KnockoutComputed<string>;
+    
+    constructor(leftEditor: AceAjax.Editor, rightEditor: AceAjax.Editor, leftRevisionIsNewer: boolean) {
+        this.leftRevisionIsNewer(leftRevisionIsNewer);
+
+        this.initObservables();
+
+        this.leftEditor = new aceDiffEditor(leftEditor, "left", this.leftGutterClass(), this.leftMarkerClass());
+        this.rightEditor = new aceDiffEditor(rightEditor, "right", this.rightGutterClass(), this.rightMarkerClass());
+        
+        this.init();
+    }
+    
+    private initObservables() {
+        this.leftGutterClass = ko.pureComputed(() => {
+            return this.leftRevisionIsNewer() ? "ace_added" : "ace_removed";
+        })
+
+        this.rightGutterClass = ko.pureComputed(() => {
+            return this.leftRevisionIsNewer() ? "ace_removed" : "ace_added";
+        })
+
+        this.leftMarkerClass = ko.pureComputed(() => {
+            return this.leftRevisionIsNewer() ? "ace_code-added" : "ace_code-removed";
+        })
+
+        this.rightMarkerClass = ko.pureComputed(() => {
+            return this.leftRevisionIsNewer() ? "ace_code-removed" : "ace_code-added";
+        })
         
         this.identicalContent = ko.pureComputed(() => {
             const a = this.additions();
             const d = this.deletions();
             return a === 0 && d === 0;
         });
-        
-        this.init();
     }
     
     private init() {
         this.computeDifference();
+        
         this.leftEditor.synchronizeScroll(this.rightEditor);
         this.rightEditor.synchronizeScroll(this.leftEditor);
 
@@ -390,13 +424,20 @@ class aceDiff {
         this.leftEditor.update(patch, leftGaps);
         this.rightEditor.update(patch, rightGaps);
 
-        this.additions(this.rightEditor.getHighlightsCount());
-        this.deletions(this.leftEditor.getHighlightsCount());
+        if (this.leftRevisionIsNewer()) {
+            this.additions(this.leftEditor.getHighlightsCount());
+            this.deletions(this.rightEditor.getHighlightsCount());
+        } else {
+            this.additions(this.rightEditor.getHighlightsCount());
+            this.deletions(this.leftEditor.getHighlightsCount());
+        }
     }
 
-    refresh() {
-        this.leftEditor.refresh();
-        this.rightEditor.refresh();
+    refresh(leftRevisionIsNewer: boolean) {
+        this.leftRevisionIsNewer(leftRevisionIsNewer);
+        
+        this.leftEditor.refresh(this.leftGutterClass(), this.leftMarkerClass());
+        this.rightEditor.refresh(this.rightGutterClass(), this.rightMarkerClass());
         
         this.init();
     }

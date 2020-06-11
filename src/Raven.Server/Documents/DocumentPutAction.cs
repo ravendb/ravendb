@@ -217,7 +217,7 @@ namespace Raven.Server.Documents
                     Collection = collectionName,
                     ChangeVector = changeVector,
                     Flags = flags,
-                    LastModified = new DateTime(modifiedTicks)
+                    LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
             }
         }
