@@ -19,7 +19,7 @@
     <PackageReference Include="MongoDB.Driver" Version="2.10.4" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.utility" Version="2.4.1" />
-    <PackageReference Include="XunitLogger" Version="4.0.99" />
+    <PackageReference Include="XunitLogger" Version="4.0.991" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
