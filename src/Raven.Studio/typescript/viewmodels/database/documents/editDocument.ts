@@ -921,7 +921,7 @@ class editDocument extends viewModelBase {
         const revisionChangeVector = item.__metadata.changeVector();
         return new getDocumentAtRevisionCommand(revisionChangeVector, this.activeDatabase())
             .execute()
-            .done((doc: document) => {
+            .done((rightDoc: document) => {
                 const wasDirty = this.dirtyFlag().isDirty();
                 
                 this.documentTextStash(this.documentText());
@@ -930,10 +930,9 @@ class editDocument extends viewModelBase {
                 const leftDocDto = leftDoc.toDiffDto();
                 this.documentText(this.stringify(leftDocDto));
                 
-                if (doc) {
-                    const docDto = doc.toDiffDto();
-                    const docText = this.stringify(docDto);
-                    this.documentTextRight(docText);
+                if (rightDoc) {
+                    const rightDocDto = rightDoc.toDiffDto();
+                    this.documentTextRight(this.stringify(rightDocDto));
                 }
                 
                 if (!wasDirty) {
@@ -1092,9 +1091,9 @@ class editDocument extends viewModelBase {
     private renderDifferences() {
         if (!this.inDiffMode()) {
             this.inDiffMode(true);
-            this.currentDiff(new aceDiff(this.docEditor, this.docEditorRight));    
+            this.currentDiff(new aceDiff(this.docEditor, this.docEditorRight, this.leftRevisionIsNewer()));
         } else {
-            this.currentDiff().refresh();
+            this.currentDiff().refresh(this.leftRevisionIsNewer());
         }
     }
 

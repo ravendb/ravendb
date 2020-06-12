@@ -92,24 +92,22 @@
                 </div>
             </div>
             <div class="row" data-bind="visible: inDiffMode()">
-                <div class="col-md-6 flex-horizontal">
-                    <div>Version:</div>
-                    <div data-bind="text: document().__metadata.lastModified()"></div>
-                    <div class="flex-grow"></div>
-                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
-                        <small class="text-success" data-bind="visible: $root.leftRevisionIsNewer()">Newer version</small>
-                        <small class="text-warning" data-bind="visible: !$root.leftRevisionIsNewer()">Older version</small>
-                    </div>
+                <div class="col-md-6 text-center">
+                    <span data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
+                        <span class="text-success" data-bind="visible: $root.leftRevisionIsNewer()">Newer revision:</span>
+                        <span class="text-warning" data-bind="visible: !$root.leftRevisionIsNewer()">Older revision:</span>
+                    </span>
+                    <span class="margin-left margin-left-sm" data-bind="text: document().__metadata.lastModified()"></span>
                 </div>
-                <div class="col-md-6 flex-horizontal">
-                    <div data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
-                        <small class="text-warning" data-bind="visible: $root.leftRevisionIsNewer()">Older version</small>
-                        <small class="text-success" data-bind="visible: !$root.leftRevisionIsNewer()">Newer version</small>
-                    </div>
-                    <div class="flex-grow"></div>
-                    <div class="dropdown" data-bind="if: comparingWith">
+                <div class="col-md-6 text-center">
+                    <span data-bind="visible: currentDiff() && !currentDiff().identicalContent()">
+                        <span class="text-warning" data-bind="visible: $root.leftRevisionIsNewer()">Older revision:</span>
+                        <span class="text-success" data-bind="visible: !$root.leftRevisionIsNewer()">Newer revision:</span>
+                    </span>
+                    <span class="margin-left margin-left-sm" data-bind="text: $root.comparingWith() ? $root.comparingWith().__metadata.lastModified() : ''"></span>
+                    <div class="dropdown pull-right" data-bind="if: comparingWith">
                         <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown">
-                            Compare with: <span data-bind="text: comparingWith().__metadata.lastModified()"></span> <span class="caret"></span>
+                            Compare with: <span class="caret margin-left margin-left-sm"></span>
                         </button>
                         <ul class="dropdown-menu max-height" data-bind="foreach: revisionsToCompare">
                             <li data-bind="css: { active:  $data === $root.comparingWith() }">
@@ -130,7 +128,8 @@
         <div class="flex-window-scroll editors-container">
             <div class="left-editor">
                 <pre id="docEditor" class="form-control absolute-fill"
-                     data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
+                     data-bind="aceEditor: { code: documentText, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, 
+                                disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
                 <div class="absolute-fill" data-bind="visible: isDeleteRevision()">
                     <div class="absolute-center padding bg-info text-center">
                         <i class="icon-trash icon-xl"></i>
@@ -142,7 +141,8 @@
             </div>
             <div class="right-editor">
                 <pre id="docEditorRight" class="form-control absolute-fill"
-                     data-bind="aceEditor: { code: documentTextRight, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
+                     data-bind="aceEditor: { code: documentTextRight, fontSize:'16px', lang: 'ace/mode/raven_document', readOnly: inReadOnlyMode() || inDiffMode() }, 
+                                disable: isBusy, validationOptions: { errorsAsTitle: false }, validationElement: documentText, visible: !isDeleteRevision()"></pre>
             </div>
         </div>
         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: documentText">

@@ -191,7 +191,8 @@ namespace Raven.Server.Documents
                             }
                         }
                         else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
-                                 property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false)
+                                 property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false &&
+                                 property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
