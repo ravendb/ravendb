@@ -341,6 +341,14 @@ export class doubleEntry extends numberEntry {
     getTemplateType(): settingsTemplateType {
         return "Double";
     }
+
+    initValidation() {
+        super.initValidation();
+
+        this.customizedDatabaseValue.extend({
+            number: true
+        });
+    }
 }
 
 export class sizeEntry extends numberEntry {
