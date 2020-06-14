@@ -1,12 +1,9 @@
 import router = require("plugins/router");
-
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import recentDocumentsCtr = require("models/database/documents/recentDocuments");
-
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import getDocumentRevisionsCommand = require("commands/database/documents/getDocumentRevisionsCommand");
-
 import appUrl = require("common/appUrl");
 import endpoints = require("endpoints");
 import generalUtils = require("common/generalUtils");
@@ -20,8 +17,10 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import downloader = require("common/downloader");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import editDocumentUploader = require("viewmodels/database/documents/editDocumentUploader");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 
 type connectedDocsTabs = "attachments" | "counters" | "revisions" | "related" | "recent" | "timeSeries";
+type connectedItemType = connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem;
 
 interface connectedDocumentItem { 
     id: string;
@@ -75,7 +74,9 @@ class connectedDocuments {
     isArtificialDocument: KnockoutComputed<boolean>;
     isHiloDocument: KnockoutComputed<boolean>;  
 
-    gridController = ko.observable<virtualGridController<connectedDocumentItem | attachmentItem | counterItem | timeSeriesItem>>();
+    gridController = ko.observable<virtualGridController<connectedItemType>>();
+    private columnPreview = new columnPreviewPlugin<connectedItemType>();
+    
     uploader: editDocumentUploader;
 
     constructor(document: KnockoutObservable<document>,
@@ -163,10 +164,8 @@ class connectedDocuments {
         ];
 
         this.countersColumns = [
-            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "160px", 
-                { title: () => "Counter name" }),
-            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.totalCounterValue, "Counter total value", "100px", 
-                { title: (x) => "Total value is: " + x.totalCounterValue.toLocaleString() }),
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "160px"),
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatAsCommaSeperatedString(x.totalCounterValue, 0), "Counter total value", "100px"),
             new actionColumn<counterItem>(this.gridController() as virtualGridController<any>, 
                  x => this.crudActionsProvider().setCounter(x),
                 "Edit",
@@ -182,22 +181,16 @@ class connectedDocuments {
         ];
 
         this.revisionCountersColumns = [
-            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "60%",
-                { title: () => "Counter name" }),
-            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.totalCounterValue, "Counter total value", "40%",
-                { title: (x) => "Total value is: " + x.totalCounterValue.toLocaleString() })
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => x.counterName, "Counter name", "60%"),
+            new textColumn<counterItem>(this.gridController() as virtualGridController<any>, x => generalUtils.formatAsCommaSeperatedString(x.totalCounterValue, 0), "Counter total value", "40%")
         ];
         
         const dateFormatter = (date: string) => moment.utc(date).local().format("YYYY-MM-DD");
         
         this.timeSeriesColumns = [
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Name", "145px",
-                { title: x => "Time Series Name: " + x.name }),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => generalUtils.siFormat(x.numberOfEntries), "Items count", "60px",
-                { title: (x) => "Series items count: " + x.numberOfEntries.toLocaleString() }),
-            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Date range", "170px", {
-                title: x => "Date range: " + generalUtils.formatUtcDateAsLocal(x.startDate) + " - " + generalUtils.formatUtcDateAsLocal(x.endDate)
-            }),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => x.name, "Timeseries Name", "145px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => generalUtils.siFormat(x.numberOfEntries), "Timeseries items count", "60px"),
+            new textColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>, x => dateFormatter(x.startDate) + " - " + dateFormatter(x.endDate), "Timeseries date range", "170px"),
             new actionColumn<timeSeriesItem>(this.gridController() as virtualGridController<any>,
                 x => this.goToTimeSeriesEdit(x),
                 "Details",
@@ -236,6 +229,21 @@ class connectedDocuments {
         });
 
         this.gridResetSubscription = connectedDocuments.currentTab.subscribe(() => this.gridController().reset());
+
+        this.columnPreview.install(".document-items-grid", ".document-items-tooltip",
+                                    (item: connectedItemType, 
+                                     column: virtualColumn, 
+                                     e: JQueryEventObject, 
+                                     onValue: (context: any, valueToCopy?: string) => void) => {
+                                         if (column instanceof textColumn) {
+                                             if (column.header === "Timeseries date range") {
+                                                 onValue((item as timeSeriesItem).startDate + " - " + (item as timeSeriesItem).endDate);
+                                             } else {
+                                                 const value = column.getCellValue(item);
+                                                 onValue(value);
+                                             }
+                                         }
+                                   });
     }
 
     dispose() {

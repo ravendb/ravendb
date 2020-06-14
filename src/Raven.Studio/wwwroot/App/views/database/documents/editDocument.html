@@ -307,7 +307,7 @@
             </div>
             <div class="flex-window-scroll">
                 <div class="objects-list-container">
-                    <virtual-grid params="controller: gridController"></virtual-grid>
+                    <virtual-grid class="resizable document-items-grid" params="controller: gridController"></virtual-grid>
                 </div>
             </div>
         </div>
@@ -331,3 +331,7 @@
         </div>
     </div>
 </script>
+
+<div class="tooltip json-preview document-items-tooltip" style="opacity: 0">
+    <pre><code></code></pre>
+</div>
