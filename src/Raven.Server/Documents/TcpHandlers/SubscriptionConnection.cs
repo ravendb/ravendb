@@ -11,6 +11,8 @@ using Esprima;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Http;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
@@ -20,6 +22,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -30,6 +33,7 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
+using Exception = System.Exception;
 using QueryParser = Raven.Server.Documents.Queries.Parser.QueryParser;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -222,7 +226,8 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
-        public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.ManagedPinnedBuffer buffer)
+        public static void SendSubscriptionDocuments(ServerStore server, TcpConnectionOptions tcpConnectionOptions,
+            JsonOperationContext.ManagedPinnedBuffer buffer)
         {
             var remoteEndPoint = tcpConnectionOptions.TcpClient.Client.RemoteEndPoint;
 
@@ -272,7 +277,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 try
                                 {
-                                    await ReportExceptionToClient(connection, connection.ConnectionException ?? e);
+                                    await ReportExceptionToClient(server, connection, connection.ConnectionException ?? e);
                                 }
                                 catch (Exception)
                                 {
@@ -305,7 +310,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        private static async Task ReportExceptionToClient(SubscriptionConnection connection, Exception ex, int recursionDepth = 0)
+        private static async Task ReportExceptionToClient(ServerStore server, SubscriptionConnection connection, Exception ex, int recursionDepth = 0)
         {
             if (recursionDepth == 2)
                 return;
@@ -353,6 +358,25 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 else if (ex is SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException)
                 {
+                    try
+                    {
+                        using (server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            // check that the subscription exists on AppropriateNode
+                            var clusterTopology = server.GetClusterTopology(ctx);
+                            using (var requester = ClusterRequestExecutor.CreateForSingleNode(
+                                clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode), server.Server.Certificate.Certificate))
+                            {
+                                await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // we let the client try to connect to AppropriateNode
+                    }
+
                     connection.AddToStatusDescription("Redirecting subscription client to different server");
                     if (connection._logger.IsInfoEnabled)
                     {
@@ -391,7 +415,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
                 else if (ex is RachisApplyException commandExecution && commandExecution.InnerException is SubscriptionException)
                 {
-                    await ReportExceptionToClient(connection, commandExecution.InnerException, recursionDepth - 1);
+                    await ReportExceptionToClient(server, connection, commandExecution.InnerException, recursionDepth - 1);
                 }
                 else
                 {

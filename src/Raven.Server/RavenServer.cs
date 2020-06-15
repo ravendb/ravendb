@@ -2303,7 +2303,7 @@ namespace Raven.Server
             switch (header.Operation)
             {
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
-                    SubscriptionConnection.SendSubscriptionDocuments(tcp, bufferToCopy);
+                    SubscriptionConnection.SendSubscriptionDocuments(ServerStore, tcp, bufferToCopy);
                     break;
                 case TcpConnectionHeaderMessage.OperationTypes.Replication:
                     var documentReplicationLoader = tcp.DocumentDatabase.ReplicationLoader;
