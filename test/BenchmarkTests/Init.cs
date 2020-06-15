@@ -34,7 +34,7 @@ namespace BenchmarkTests
                     if (type == typeof(Init))
                         continue;
 
-                    var instance = (BenchmarkTestBase)Activator.CreateInstance(type);
+                    var instance = (BenchmarkTestBase)Activator.CreateInstance(type, Output);
 
                     await instance.InitAsync(store);
                 }
