@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Replication
             var revisionsStorage = _parent._database.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue).Select(DocumentReplicationItem.From);
             var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
-            var counters = _parent._database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1);
+            var counters = _parent._database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, caseInsensitiveNames: _parent.SupportedFeatures.Replication.CaseInsensitiveCounters);
             var timeSeries = _parent._database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);
             var deletedTimeSeriesRanges = _parent._database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(ctx, etag + 1);
 
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Replication
                         foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
                         {
                             _parent.CancellationToken.ThrowIfCancellationRequested();
-                            
+
                             if (lastTransactionMarker != item.TransactionMarker)
                             {
                                 if (delay.Ticks > 0)
