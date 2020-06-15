@@ -164,7 +164,7 @@ namespace Tests.Infrastructure
         TestStarted,
         TestEndedBeforeGc,
         TestEndedAfterGc,
-        Delta
+        TestExecution
     }
 
     public enum TestResult
