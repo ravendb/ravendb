@@ -156,7 +156,7 @@ namespace RachisTests
             }
         }
 
-        private static string PrintTestInfo(List<string> nodesToToggle, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
+        private string PrintTestInfo(List<string> nodesToToggle, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"Leader: {cluster.Leader.ServerStore.NodeTag}");
@@ -181,7 +181,9 @@ namespace RachisTests
 
             static void AddInfo(StringBuilder stringBuilder, SubscriptionWorker<dynamic> subscriptionWorker, Exception exception)
             {
-                stringBuilder.AppendLine($"SubscriptionName: {subscriptionWorker.SubscriptionName}, CurrentNodeTag: {subscriptionWorker.CurrentNodeTag}");
+                stringBuilder.AppendLine(subscriptionWorker == null
+                    ? $"subscriptionWorker is null"
+                    : $"SubscriptionName: {subscriptionWorker.SubscriptionName}, CurrentNodeTag: {subscriptionWorker.CurrentNodeTag}");
                 stringBuilder.AppendLine(exception == null ? "Exception: None" : $"Exception: {exception}");
                 stringBuilder.AppendLine("-----------------------");
             }
@@ -279,9 +281,9 @@ namespace RachisTests
             }
         }
 
-        private static async Task GenerateWaitingSubscriptions(CountdownEvent[] cdes, DocumentStore store, int index, List<Task> workerTasks)
+        private async Task GenerateWaitingSubscriptions(CountdownEvent[] cdes, DocumentStore store, int index, List<Task> workerTasks)
         {
-            var subsId = store.Subscriptions.Create(new SubscriptionCreationOptions
+            var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
             {
                 Query = "from Users",
                 Name = "Subscription" + index
@@ -292,10 +294,10 @@ namespace RachisTests
                 await Task.Delay(1000);
             }
         }
-        private static List<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new List<(SubscriptionWorker<dynamic>, Exception)>();
-        private static List<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new List<(SubscriptionWorker<dynamic>, Exception)>();
+        private List<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new List<(SubscriptionWorker<dynamic>, Exception)>();
+        private List<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new List<(SubscriptionWorker<dynamic>, Exception)>();
 
-        private static Task GenerateSubscriptionThatSignalsToCDEUponCompletion(CountdownEvent mainSubscribersCompletionCDE, DocumentStore store, string subsId)
+        private Task GenerateSubscriptionThatSignalsToCDEUponCompletion(CountdownEvent mainSubscribersCompletionCDE, DocumentStore store, string subsId)
         {
             var subsWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId)
             {
