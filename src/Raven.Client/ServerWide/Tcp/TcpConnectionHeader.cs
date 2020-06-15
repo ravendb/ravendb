@@ -215,6 +215,7 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool MissingAttachments;
                 public bool Counters;
                 public bool CountersBatch;
+                public bool CaseInsensitiveCounters;
                 public bool ClusterTransaction;
                 public bool PullReplication;
                 public bool TimeSeries;
@@ -322,7 +323,8 @@ namespace Raven.Client.ServerWide.Tcp
                             CountersBatch = true,
                             ClusterTransaction = true,
                             MissingAttachments = true,
-                            PullReplication = true
+                            PullReplication = true,
+                            CaseInsensitiveCounters = true
                         }
                     },
                     [ReplicationWithPullOption] = new SupportedFeatures(ReplicationWithPullOption)
