@@ -462,6 +462,81 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task ExportAndImportCountersShouldKeepOriginalCasing()
+        {
+            var file = GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name" }, "users/1");
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.CountersFor("users/1").Increment("Likes", 100);
+                        session.CountersFor("users/1").Increment("Dislikes", 200);
+                        session.CountersFor("users/2").Increment("Downloads", 500);
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfDocuments);
+                    Assert.Equal(2, stats.CountOfCounterEntries);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var user2 = await session.LoadAsync<User>("users/2");
+
+                        Assert.Equal("Name", user1.Name);
+                        Assert.Equal("Name2", user2.Name);
+
+                        var dic = await session.CountersFor(user1).GetAllAsync();
+                        Assert.Equal(2, dic.Count);
+                        Assert.Equal(100, dic["likes"]);
+                        Assert.Equal(200, dic["dislikes"]);
+
+                        var val = await session.CountersFor(user2).GetAsync("downloads");
+                        Assert.Equal(500, val);
+                    }
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        var counterNames = session.Advanced.GetCountersFor(user1);
+                        Assert.NotNull(counterNames);
+                        Assert.Equal(2, counterNames.Count);
+                        Assert.Equal("Dislikes", counterNames[0]);
+                        Assert.Equal("Likes", counterNames[1]);
+
+                        var user2 = await session.LoadAsync<User>("users/2");
+                        counterNames = session.Advanced.GetCountersFor(user2);
+                        Assert.NotNull(counterNames);
+                        Assert.Equal(1, counterNames.Count);
+                        Assert.Equal("Downloads", counterNames[0]);
+                    }
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
 
         private static string RandomString(int size, Random random)
         {

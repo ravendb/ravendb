@@ -258,7 +258,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly List<CounterGroupDetail> _counterGroups;
             private Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>> _legacyDictionary;
 
-            private Dictionary<string, (Document Doc, HashSet<string> CounterNames)> _counterUpdates;
+            private Dictionary<string, Document> _counterUpdates;
 
             private readonly DocumentsOperationContext _context;
 
@@ -278,7 +278,7 @@ namespace Raven.Server.Documents.Handlers
                 _database = database;
                 _result = result;
                 _counterGroups = new List<CounterGroupDetail>();
-                _counterUpdates = new Dictionary<string, (Document, HashSet<string>)>();
+                _counterUpdates = new Dictionary<string, Document>();
 
                 _toDispose = new List<IDisposable>();
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Handlers
 
             public void AddLegacy(string id, CounterDetail counterDetail)
             {
-                _legacyDictionary = _legacyDictionary ?? new Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>>(StringComparer.OrdinalIgnoreCase);
+                _legacyDictionary ??= new Dictionary<string, Dictionary<string, List<(string ChangeVector, long Value)>>>(StringComparer.OrdinalIgnoreCase);
                 var valueToAdd = (counterDetail.ChangeVector, counterDetail.TotalValue);
 
                 if (_legacyDictionary.TryGetValue(counterDetail.DocumentId, out var counters))
@@ -385,10 +385,10 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var toUpdate in _counterUpdates)
                 {
-                    var tuple = toUpdate.Value;
-                    using (tuple.Doc.Data)
+                    var doc = toUpdate.Value;
+                    using (doc.Data)
                     {
-                        UpdateDocumentCountersAfterImportBatch(context, tuple.Doc, tuple.CounterNames);
+                        UpdateDocumentCountersAfterImportBatch(context, toUpdate.Key, doc);
                     }
                 }
             }
@@ -418,31 +418,17 @@ namespace Raven.Server.Documents.Handlers
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(counterGroupDetail.ChangeVector, context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context));
 
 
-                if (doc?.Data != null)
+                if (doc?.Data != null &&
+                    _counterUpdates.ContainsKey(counterGroupDetail.DocumentId) == false)
                 {
-                    counterGroupDetail.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject values);
-                    var names = values.GetPropertyNames();
-
-                    if (_counterUpdates.TryGetValue(counterGroupDetail.DocumentId, out var tuple) == false)
-                    {
-                        tuple = (doc, new HashSet<string>());
-                        _counterUpdates.Add(counterGroupDetail.DocumentId, tuple);
-                    }
-
-                    foreach (var name in names)
-                    {
-                        tuple.CounterNames.Add(name);
-                    }
+                    _counterUpdates.Add(counterGroupDetail.DocumentId, doc);
                 }
 
                 void LoadDocument()
                 {
-                    if (_counterUpdates.TryGetValue(counterGroupDetail.DocumentId, out var tuple))
-                    {
-                        doc = tuple.Doc;
+                    if (_counterUpdates.TryGetValue(counterGroupDetail.DocumentId, out doc))
                         return;
-                    }
-
+                    
                     try
                     {
                         doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
@@ -472,72 +458,31 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            private void UpdateDocumentCountersAfterImportBatch(DocumentsOperationContext context, Document doc, HashSet<string> countersToAdd)
+            private void UpdateDocumentCountersAfterImportBatch(DocumentsOperationContext context, string docId, Document doc)
             {
-                if (countersToAdd.Count == 0)
-                    return;
-
                 var data = doc.Data;
-                BlittableJsonReaderArray metadataCounters = null;
-                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
-                {
-                    metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters);
-                }
+                data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
 
                 var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
                 flags |= DocumentFlags.HasCounters;
 
-                if (metadataCounters == null)
-                {
-                    data.Modifications = new DynamicJsonValue(data);
-                    if (metadata == null)
-                    {
-                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                        {
-                            [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(countersToAdd)
-                        };
-                    }
-                    else
-                    {
-                        metadata.Modifications = new DynamicJsonValue(metadata)
-                        {
-                            [Constants.Documents.Metadata.Counters] = countersToAdd
-                        };
-                        data.Modifications[Constants.Documents.Metadata.Key] = metadata;
-                    }
-                }
+                var counterNames = context.DocumentDatabase.DocumentsStorage.CountersStorage.GetCountersForDocument(context, docId);
 
+                data.Modifications = new DynamicJsonValue(data);
+                if (metadata == null)
+                {
+                    data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Counters] = counterNames
+                    };
+                }
                 else
                 {
-                    var modified = false;
-                    var updates = new List<string>(metadataCounters.Length + countersToAdd.Count);
-                    for (var i = 0; i < metadataCounters.Length; i++)
-                    {
-                        var val = metadataCounters.GetStringByIndex(i);
-                        if (val == null)
-                            continue;
-                        updates.Add(val);
-                    }
-
-                    foreach (var counterName in countersToAdd)
-                    {
-                        var location = metadataCounters.BinarySearch(counterName, StringComparison.Ordinal);
-                        if (location < 0)
-                        {
-                            modified = true;
-                            updates.Insert(~location, counterName);
-                        }
-                    }
-
-                    if (modified == false)
-                        return;
-
-                    data.Modifications = new DynamicJsonValue(data);
-
                     metadata.Modifications = new DynamicJsonValue(metadata)
                     {
-                        [Constants.Documents.Metadata.Counters] = updates
+                        [Constants.Documents.Metadata.Counters] = counterNames
                     };
+
                     data.Modifications[Constants.Documents.Metadata.Key] = metadata;
                 }
 
