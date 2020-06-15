@@ -1,8 +1,11 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -353,7 +356,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void DeletedAndReInsertCounter()
+        public void CanDeleteAndReInsertCounter()
         {
             using (var store = GetDocumentStore())
             {
@@ -418,6 +421,47 @@ namespace SlowTests.Issues
 
             }
         }
+
+        [Fact]
+        public void CountersSessionCacheShouldBeCaseInsensitiveToCounterName()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company
+                    {
+                        Name = "HR"
+                    };
+
+                    session.Store(company, "companies/1");
+                    session.CountersFor(company).Increment("Likes", 333);
+                    session.CountersFor(company).Increment("Cats", 999);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var company = session.Load<Company>("companies/1");
+                    // the document is now tracked by the session,
+                    // so now counters-cache has access to '@counters' from metadata 
+
+                    // searching for the counter's name in '@counters' should be done in a case insensitive manner
+                    // counter name should be found in '@counters' => go to server
+                    var counter = session.CountersFor(company).Get("liKes");
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                    Assert.NotNull(counter);
+                    Assert.Equal(333, counter.Value);
+
+                    counter = session.CountersFor(company).Get("cats");
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.NotNull(counter);
+                    Assert.Equal(999, counter.Value);
+                }
+            }
+        }
+
 
         private static string RandomString(int size, Random random)
         {

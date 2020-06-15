@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
                 if ((Session.DocumentsById.TryGetValue(DocId, out var document) == false && cache.GotAll == false) ||
                     (document != null && document.Metadata.TryGet(Constants.Documents.Metadata.Counters,
                          out BlittableJsonReaderArray metadataCounters) &&
-                     metadataCounters.BinarySearch(counter, StringComparison.Ordinal) >= 0))
+                     metadataCounters.BinarySearch(counter, StringComparison.OrdinalIgnoreCase) >= 0))
 
                 {
                     // we either don't have the document in session and GotAll = false,
