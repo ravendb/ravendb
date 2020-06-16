@@ -1,7 +1,10 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
@@ -61,5 +64,17 @@ namespace Raven.Client.Documents.Operations.Backups
         public string ResponsibleNode { get; set; }
 
         public int OperationId { get; set; }
+
+        public async Task<IOperationResult> WaitForCompletionAsync(DocumentStore store, TimeSpan? timeout = null)
+        {
+            var requestExecutor = store.GetRequestExecutor();
+            var op = new Operation(requestExecutor, () => store.Changes(), requestExecutor.Conventions, OperationId);
+            return await op.WaitForCompletionAsync(timeout).ConfigureAwait(false);
+        }
+
+        public IOperationResult WaitForCompletion(DocumentStore store, TimeSpan? timeout = null)
+        {
+            return AsyncHelpers.RunSync(() => WaitForCompletionAsync(store, timeout));
+        }
     }
 }

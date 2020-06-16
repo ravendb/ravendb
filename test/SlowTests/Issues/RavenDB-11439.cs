@@ -36,25 +36,18 @@ namespace SlowTests.Issues
                 };
 
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var res = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                await res.WaitForCompletionAsync(store, TimeSpan.FromSeconds(15));
 
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(getPeriodicBackupStatus);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
-
+                var getPeriodicBackupResult = store.Maintenance.Send(getPeriodicBackupStatus);
+                Assert.NotNull(getPeriodicBackupResult.Status);
+                Assert.True(getPeriodicBackupResult.Status.LastEtag > 0);
                 var oldFolderName = store.Maintenance.Send(getPeriodicBackupStatus).Status.FolderName;
                 Assert.NotNull(oldFolderName);
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(getPeriodicBackupStatus);
-                    return getPeriodicBackupResult.Status?.LastIncrementalBackup != null;
-                }, TimeSpan.FromSeconds(15));
+                res = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await res.WaitForCompletionAsync(store, TimeSpan.FromSeconds(15));
 
                 var newfolderName = store.Maintenance.Send(getPeriodicBackupStatus).Status.FolderName;
                 Assert.NotNull(newfolderName);
