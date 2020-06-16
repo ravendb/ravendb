@@ -68,6 +68,11 @@ namespace Raven.Client.Documents.Operations
             return AsyncHelpers.RunSync(() => SendAsync(operation));
         }
 
+        public Operation<TResult> Send<TResult>(IMaintenanceOperation<OperationIdResult<TResult>> operation)
+        {
+            return AsyncHelpers.RunSync(() => SendAsync(operation));
+        }
+
         public async Task<Operation> SendAsync(IMaintenanceOperation<OperationIdResult> operation, CancellationToken token = default)
         {
             using (GetContext(out JsonOperationContext context))
@@ -76,6 +81,17 @@ namespace Raven.Client.Documents.Operations
 
                 await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
                 return new Operation(RequestExecutor, () => _store.Changes(_databaseName), RequestExecutor.Conventions, command.Result.OperationId, command.SelectedNodeTag ?? command.Result.OperationNodeTag);
+            }
+        }
+
+        public async Task<Operation<TResult>> SendAsync<TResult>(IMaintenanceOperation<OperationIdResult<TResult>> operation, CancellationToken token = default)
+        {
+            using (GetContext(out JsonOperationContext context))
+            {
+                var command = operation.GetCommand(RequestExecutor.Conventions, context);
+
+                await RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token).ConfigureAwait(false);
+                return new Operation<TResult>(RequestExecutor, () => _store.Changes(_databaseName), RequestExecutor.Conventions, command.Result.Result, command.Result.OperationId, command.SelectedNodeTag ?? command.Result.OperationNodeTag);
             }
         }
 

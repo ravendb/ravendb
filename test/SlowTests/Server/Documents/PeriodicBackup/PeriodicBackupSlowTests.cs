@@ -321,13 +321,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                StartBackupOperationResult newBackupStatus;
+                Operation<StartBackupOperationResult> newBackupStatus;
                 do
                 {
                     newBackupStatus = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 }
                 //Race condition between reading the backup status and creating new backup
-                while (newBackupStatus.OperationId == backupStatus.OperationId);
+                while (newBackupStatus.Id == backupStatus.Id);
 
                 await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
                 value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, 2);
@@ -490,7 +490,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 var backupLocation = Directory.GetDirectories(backupPath).First();
-                
+
                 using (ReadOnly(backupLocation))
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
@@ -802,7 +802,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     for (int i = 0; i < 360; i++)
                     {
                         session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
-                    } 
+                    }
 
                     await session.SaveChangesAsync();
                 }
@@ -902,7 +902,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
                 Assert.Contains("The name 'abc*^&.' is not permitted. Only letters, digits and characters ('_', '-', '.') are allowed.", e.InnerException.Message);
-                
+
                 restoreConfiguration.DatabaseName = store.Database;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Maintenance.Server.Send(restoreBackupTask));
@@ -953,11 +953,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // perform restore with a valid db name
                 var emptyFolder = NewDataPath(suffix: "BackupFolderRestore123");
                 var validDbName = "日本語-שלום-cześć_Привет.123";
-                
+
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(), 
-                    DataDirectory = emptyFolder, 
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DataDirectory = emptyFolder,
                     DatabaseName = validDbName
                 }))
                 {

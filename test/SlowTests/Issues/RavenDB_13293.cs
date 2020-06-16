@@ -139,7 +139,7 @@ namespace SlowTests.Issues
                 foreach (var myBackup in myBackupsList)
                 {
                     var res = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, myBackup.BackupTaskId));
-                    Assert.True(myBackup.NodeTag == res.ResponsibleNode, $"myBackup.NodeTag({myBackup.NodeTag}) == res.ResponsibleNode({res.ResponsibleNode})");
+                    Assert.True(myBackup.NodeTag == res.Result.ResponsibleNode, $"myBackup.NodeTag({myBackup.NodeTag}) == res.ResponsibleNode({res.Result.ResponsibleNode})");
                     var operation = new GetPeriodicBackupStatusOperation(myBackup.BackupTaskId);
                     PeriodicBackupStatus status = null;
                     var value = WaitForValue(() =>

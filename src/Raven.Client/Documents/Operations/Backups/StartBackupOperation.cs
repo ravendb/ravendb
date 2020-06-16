@@ -1,15 +1,12 @@
-﻿using System;
-using System.Net.Http;
-using System.Threading.Tasks;
+﻿using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
-using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Backups
 {
-    public class StartBackupOperation : IMaintenanceOperation<StartBackupOperationResult>
+    public class StartBackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
         private readonly bool _isFullBackup;
         private readonly long _taskId;
@@ -20,12 +17,12 @@ namespace Raven.Client.Documents.Operations.Backups
             _taskId = taskId;
         }
 
-        public RavenCommand<StartBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<OperationIdResult<StartBackupOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new StartBackupCommand(_isFullBackup, _taskId);
         }
 
-        private class StartBackupCommand : RavenCommand<StartBackupOperationResult>
+        private class StartBackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>
         {
             public override bool IsReadRequest => true;
 
@@ -54,7 +51,10 @@ namespace Raven.Client.Documents.Operations.Backups
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.BackupDatabaseNowResult(response);
+                var result = JsonDeserializationClient.BackupDatabaseNowResult(response);
+                var operationIdResult = JsonDeserializationClient.OperationIdResult(response);
+
+                Result = operationIdResult.ForResult(result);
             }
         }
     }
@@ -64,17 +64,5 @@ namespace Raven.Client.Documents.Operations.Backups
         public string ResponsibleNode { get; set; }
 
         public int OperationId { get; set; }
-
-        public async Task<IOperationResult> WaitForCompletionAsync(DocumentStore store, TimeSpan? timeout = null)
-        {
-            var requestExecutor = store.GetRequestExecutor();
-            var op = new Operation(requestExecutor, () => store.Changes(), requestExecutor.Conventions, OperationId);
-            return await op.WaitForCompletionAsync(timeout).ConfigureAwait(false);
-        }
-
-        public IOperationResult WaitForCompletion(DocumentStore store, TimeSpan? timeout = null)
-        {
-            return AsyncHelpers.RunSync(() => WaitForCompletionAsync(store, timeout));
-        }
     }
 }
