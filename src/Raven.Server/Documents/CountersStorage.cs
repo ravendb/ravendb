@@ -165,7 +165,10 @@ namespace Raven.Server.Documents
                 var countersItem  = CreateReplicationBatchItem(context, result);
 
                 if (caseInsensitiveNames)
+                {
                     yield return countersItem;
+                    continue;
+                }
 
                 // 4.2 replication destination
                 // need to change the CounterGroup document to match 4.2 format  
@@ -1664,6 +1667,8 @@ namespace Raven.Server.Documents
 
             if (newEtag == -1)
             {
+                // add local part to delete change vector
+
                 if (count > 0)
                 {
                     sb.Append(", ");
