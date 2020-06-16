@@ -65,8 +65,8 @@ class documentsCompression extends viewModelBase {
     }
 
     onConfigurationLoaded(data: Raven.Client.ServerWide.DocumentsCompressionConfiguration) {
-        this.compressRevisions(data.CompressRevisions);
-        this.collectionsToCompress(data.Collections);
+        this.compressRevisions(data ? data.CompressRevisions : false);
+        this.collectionsToCompress(data ? data.Collections : []);
         this.dirtyFlag().reset();
     }
 

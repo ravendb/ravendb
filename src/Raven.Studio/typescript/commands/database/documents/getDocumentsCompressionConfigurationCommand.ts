@@ -10,9 +10,20 @@ class getDocumentsCompressionConfigurationCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.ServerWide.DocumentsCompressionConfiguration> {
         const url = endpoints.databases.documentsCompression.documentsCompressionConfig;
+        const getConfigurationTask = $.Deferred<Raven.Client.ServerWide.DocumentsCompressionConfiguration>();
 
-        return this.query<Raven.Client.ServerWide.DocumentsCompressionConfiguration>(url, null, this.db)
-            .fail((response: JQueryXHR) => this.reportError(`Failed to get documents compression configuration`, response.responseText, response.statusText))
+        this.query<Raven.Client.ServerWide.DocumentsCompressionConfiguration>(url, null, this.db)
+            .done(dto => getConfigurationTask.resolve(dto)) 
+            .fail((response: JQueryXHR) => {
+                if (response.status !== 404) {
+                    this.reportError(`Failed to get documents compression configuration`, response.responseText, response.statusText);
+                    getConfigurationTask.reject(response);
+                } else {
+                    getConfigurationTask.resolve(null);
+                }
+            });
+
+        return getConfigurationTask;
     }
 }
 
