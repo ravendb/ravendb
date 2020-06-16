@@ -6,6 +6,11 @@
 
 namespace Raven.Client.Documents.Operations
 {
+    public class OperationIdResult<TResult> : OperationIdResult
+    {
+        public TResult Result { get; set; }
+    }
+
     /// <summary>
     /// The result of a OperationIdResult operation
     /// </summary>
@@ -21,5 +26,14 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         public string OperationNodeTag { get; set; }
 
+        internal OperationIdResult<TResult> ForResult<TResult>(TResult result)
+        {
+            return new OperationIdResult<TResult>
+            {
+                OperationId = OperationId,
+                OperationNodeTag = OperationNodeTag,
+                Result = result
+            };
+        }
     }
 }

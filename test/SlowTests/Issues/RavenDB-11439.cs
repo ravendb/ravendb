@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
@@ -37,7 +36,7 @@ namespace SlowTests.Issues
 
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 var res = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                await res.WaitForCompletionAsync(store, TimeSpan.FromSeconds(15));
+                await res.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var getPeriodicBackupResult = store.Maintenance.Send(getPeriodicBackupStatus);
@@ -47,7 +46,7 @@ namespace SlowTests.Issues
                 Assert.NotNull(oldFolderName);
 
                 res = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await res.WaitForCompletionAsync(store, TimeSpan.FromSeconds(15));
+                await res.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 var newfolderName = store.Maintenance.Send(getPeriodicBackupStatus).Status.FolderName;
                 Assert.NotNull(newfolderName);

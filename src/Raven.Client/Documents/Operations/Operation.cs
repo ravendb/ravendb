@@ -14,6 +14,23 @@ using Sparrow.Utils;
 
 namespace Raven.Client.Documents.Operations
 {
+    public class Operation<TResult> : Operation
+    {
+        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag = null)
+            : base(requestExecutor, changes, conventions, id, nodeTag)
+        {
+            Result = result;
+        }
+
+        internal Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, TResult result, long id, string nodeTag, Task additionalTask)
+            : base(requestExecutor, changes, conventions, id, nodeTag, additionalTask)
+        {
+            Result = result;
+        }
+
+        public TResult Result { get; }
+    }
+
     public class Operation : IObserver<OperationStatusChange>
     {
         private readonly RequestExecutor _requestExecutor;
@@ -161,7 +178,7 @@ namespace Raven.Client.Documents.Operations
         }
 
         /// <summary>
-        /// Since operation might complete before we subscribe to it, 
+        /// Since operation might complete before we subscribe to it,
         /// fetch operation status but only once  to avoid race condition
         /// If we receive notification using changes API meanwhile, ignore fetched status
         /// to avoid issues with non monotonic increasing progress
@@ -317,7 +334,7 @@ namespace Raven.Client.Documents.Operations
                 }
 
                 await _additionalTask.ConfigureAwait(false);
-                return (TResult)await result.Task.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException 
+                return (TResult)await result.Task.ConfigureAwait(false); // already done waiting but in failure we want the exception itself and not AggregateException
             }
         }
 

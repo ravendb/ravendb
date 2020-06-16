@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -139,7 +138,7 @@ namespace SlowTests.Client.Attachments
                 };
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
                 var res = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                await res.WaitForCompletionAsync(store, TimeSpan.FromSeconds(15));
+                await res.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 var getPeriodicBackupResult = store.Maintenance.Send(operation);
                 Assert.NotNull(getPeriodicBackupResult.Status);
@@ -151,7 +150,7 @@ namespace SlowTests.Client.Attachments
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
 
                 res = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-                await res.WaitForCompletionAsync(store);
+                await res.WaitForCompletionAsync();
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
