@@ -138,31 +138,29 @@ namespace SlowTests.Client.Attachments
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var res = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                await res.WaitForCompletionAsync(store, TimeSpan.FromSeconds(15));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
-                {
-                    var getPeriodicBackupResult = store.Maintenance.Send(operation);
-                    return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                var getPeriodicBackupResult = store.Maintenance.Send(operation);
+                Assert.NotNull(getPeriodicBackupResult.Status);
+                Assert.True(getPeriodicBackupResult.Status.LastEtag > 0);
 
-                var etagForBackups = store.Maintenance.Send(operation).Status.LastEtag;
+                var etagForBackups = getPeriodicBackupResult.Status.LastEtag;
                 store.Operations.Send(new DeleteAttachmentOperation("users/1", "file1"));
                 using (var stream = new MemoryStream(new byte[] { 4, 5, 6 }))
                     store.Operations.Send(new PutAttachmentOperation("users/1", "file2", stream, "image/png"));
 
-                await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                res = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await res.WaitForCompletionAsync(store);
 
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(1, stats.CountOfDocuments);
                 Assert.Equal(1, stats.CountOfAttachments);
                 Assert.Equal(1, stats.CountOfUniqueAttachments);
 
-                SpinWait.SpinUntil(() =>
-                {
-                    var newLastEtag = store.Maintenance.Send(operation).Status.LastEtag;
-                    return newLastEtag != etagForBackups;
-                }, TimeSpan.FromMinutes(2));
+                getPeriodicBackupResult = store.Maintenance.Send(operation);
+                Assert.NotNull(getPeriodicBackupResult.Status);
+                Assert.True(getPeriodicBackupResult.Status.LastEtag != etagForBackups);
             }
 
             using (var store = GetDocumentStore(new Options
