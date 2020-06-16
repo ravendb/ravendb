@@ -53,7 +53,8 @@ namespace Raven.Client.Documents.Operations.Backups
 
                 var result = JsonDeserializationClient.BackupDatabaseNowResult(response);
                 var operationIdResult = JsonDeserializationClient.OperationIdResult(response);
-
+                // OperationNodeTag used to fetch operation status
+                operationIdResult.OperationNodeTag ??= result.ResponsibleNode;
                 Result = operationIdResult.ForResult(result);
             }
         }
