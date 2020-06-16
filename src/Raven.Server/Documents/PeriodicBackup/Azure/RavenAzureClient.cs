@@ -333,15 +333,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         {
             try
             {
-                if (ContainerExists())
-                    return;
+                if (ContainerExists() == false)
+                    throw new ContainerNotFoundException($"Container '{_containerName}' wasn't found!");
             }
             catch (UnauthorizedAccessException)
             {
                 // we don't have the permissions to see if the container exists
             }
-
-            throw new ContainerNotFoundException($"Container '{_containerName}' not found!");
         }
 
         private bool ContainerExists()
