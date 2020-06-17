@@ -171,6 +171,10 @@ namespace Raven.Server.Documents
                 {
                     // the database was disabled while we were trying to execute an action (e.g. PendingClusterTransactions)
                 }
+                catch (ObjectDisposedException)
+                {
+                    // the server is disposed when we are trying to access to database
+                }
                 catch (DatabaseConcurrentLoadTimeoutException e)
                 {
                     var title = $"Concurrent load timeout of '{databaseName}' database";

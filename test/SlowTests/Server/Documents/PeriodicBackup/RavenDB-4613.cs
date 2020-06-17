@@ -164,7 +164,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
 
                 var e = Assert.Throws<ContainerNotFoundException>(() => client.TestConnection());
-                Assert.Equal($"Container '{containerName}' not found!", e.Message);
+                Assert.Equal($"Container '{containerName}' wasn't found!", e.Message);
 
                 containerNames = client.GetContainerNames(500);
                 Assert.False(containerNames.Exists(x => x.Equals(containerName)));
