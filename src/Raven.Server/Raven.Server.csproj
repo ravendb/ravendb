@@ -138,6 +138,11 @@
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\debug.Dockerfile">
+      <Link>debug.Dockerfile</Link>
+    </Content>
+  </ItemGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>
   </PropertyGroup>
