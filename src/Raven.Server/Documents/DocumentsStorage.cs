@@ -486,6 +486,12 @@ namespace Raven.Server.Documents
             return ChangeVectorUtils.TryUpdateChangeVector(DocumentDatabase, changeVector).ChangeVector;
         }
 
+        public (string ChangeVector, long Etag) GetNewChangeVector(DocumentsOperationContext context)
+        {
+            var etag = GenerateNextEtag();
+            return (GetNewChangeVector(context, etag), etag);
+        }
+
         public string GetNewChangeVector(DocumentsOperationContext context, long newEtag)
         {
             var changeVector = context.LastDatabaseChangeVector ??

@@ -38,6 +38,18 @@ namespace Raven.Server.Documents
             };
         }
 
+        public void Recreate<T>(DocumentsOperationContext context, string docId) where T : IRecreationType
+        {
+            var type = _recreationTypes.Single(t => t.GetType() == typeof(T));
+            var flags = DocumentFlags.None;
+
+            var updated = RecreatePreserveCasing(context, docId, type, ref flags);
+            if (updated == null)
+                return;
+
+            PutDocument(context, docId, expectedChangeVector: null, document: updated, flags: flags);
+        }
+
         public PutOperationResults PutDocument(DocumentsOperationContext context, string id,
             string expectedChangeVector,
             BlittableJsonReaderObject document,
@@ -442,20 +454,25 @@ namespace Raven.Server.Documents
         private bool RecreateIfNeeded(DocumentsOperationContext context, string docId, BlittableJsonReaderObject oldDoc,
             BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags, IRecreationType type)
         {
-            BlittableJsonReaderObject metadata;
+            BlittableJsonReaderObject metadata = null;
             BlittableJsonReaderArray current = null, old = null;
 
             if (nonPersistentFlags.Contain(type.ResolveConflictFlag))
             {
-                document.TryGet(Constants.Documents.Metadata.Key, out metadata);
-                if (metadata != null)
-                    metadata.TryGet(type.MetadataProperty, out current);
-
+                TryGetMetadata(document, type, out metadata, out current);
                 return RecreatePreserveCasing(current, ref flags);
             }
 
-            if (flags.Contain(type.HasFlag) == false || 
-                nonPersistentFlags.Contain(type.ByUpdateFlag) ||
+            if (flags.Contain(type.HasFlag) == false)
+                return false;
+
+            if (IsNewDocumentFromReplication())
+            {
+                TryGetMetadata(document, type, out metadata, out current);
+                return RecreatePreserveCasing(current, ref flags);
+            }
+
+            if (nonPersistentFlags.Contain(type.ByUpdateFlag) ||
                 nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication)) 
                 return false;
 
@@ -467,9 +484,8 @@ namespace Raven.Server.Documents
             // Make sure the user did not changed the value of @attachments in the @metadata
             // In most cases it won't be changed so we can use this value 
             // instead of recreating the document's blittable from scratch
-            
-            if (document.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                metadata.TryGet(type.MetadataProperty, out current) == false ||
+
+            if (TryGetMetadata(document, type, out metadata, out current) == false ||
                 current.Equals(old) == false)
             {
                 return RecreatePreserveCasing(current, ref flags);
@@ -580,9 +596,95 @@ namespace Raven.Server.Documents
 
                 return true;
             }
+
+            bool IsNewDocumentFromReplication()
+            {
+                return nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) &&
+                       oldDoc == null;
+            }
         }
 
-        private interface IRecreationType
+        private static bool TryGetMetadata(BlittableJsonReaderObject document, IRecreationType type, out BlittableJsonReaderObject metadata, out BlittableJsonReaderArray current)
+        {
+            current = null;
+            metadata = null;
+
+            return document.TryGet(Constants.Documents.Metadata.Key, out metadata) &&
+                   metadata.TryGet(type.MetadataProperty, out current);
+        }
+
+        private BlittableJsonReaderObject RecreatePreserveCasing(
+            DocumentsOperationContext context,
+            string docId,
+            IRecreationType type,
+            ref DocumentFlags documentFlags)
+        {
+            var doc = _documentsStorage.Get(context, docId);
+            if (doc == null)
+                return null;
+
+            var document = doc.Data;
+            documentFlags = doc.Flags;
+
+            TryGetMetadata(document, type, out var metadata, out var currentMetadata);
+            var values = type.GetMetadata(context, docId);
+
+            if (values.Count == 0)
+            {
+                if (metadata != null)
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    metadata.Modifications.Remove(type.MetadataProperty);
+                    document.Modifications = new DynamicJsonValue(document) {[Constants.Documents.Metadata.Key] = metadata};
+                }
+
+                documentFlags &= ~type.HasFlag;
+                return context.ReadObject(document, docId);
+            }
+
+            documentFlags |= type.HasFlag;
+
+            if (currentMetadata != null && type.IsReturningLowerCasedMetadata)
+            {
+                var casePreservingValues = new DynamicJsonArray();
+
+                bool hasChanges = false;
+
+                foreach (object value in values)
+                {
+                    var location = currentMetadata.BinarySearch((string)value, StringComparison.OrdinalIgnoreCase);
+
+                    if (location >= 0)
+                    {
+                        casePreservingValues.Add(currentMetadata[location]);
+                    }
+                    else
+                    {
+                        casePreservingValues.Add(value);
+                        hasChanges = true;
+                    }
+                }
+
+                if (hasChanges == false)
+                    return null;
+
+                values = casePreservingValues;
+            }
+
+            if (metadata == null)
+            {
+                document.Modifications = new DynamicJsonValue(document) {[Constants.Documents.Metadata.Key] = new DynamicJsonValue {[type.MetadataProperty] = values}};
+            }
+            else
+            {
+                metadata.Modifications = new DynamicJsonValue(metadata) {[type.MetadataProperty] = values};
+                document.Modifications = new DynamicJsonValue(document) {[Constants.Documents.Metadata.Key] = metadata};
+            }
+
+            return context.ReadObject(document, docId);
+        }
+
+        public interface IRecreationType
         {
             string MetadataProperty { get; }
 
@@ -626,7 +728,7 @@ namespace Raven.Server.Documents
             public bool IsReturningLowerCasedMetadata { get { return false; } } 
         }
 
-        private class RecreateCounters : IRecreationType
+        public class RecreateCounters : IRecreationType
         {
             private readonly DocumentsStorage _storage;
 

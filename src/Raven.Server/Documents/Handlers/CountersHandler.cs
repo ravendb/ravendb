@@ -412,11 +412,8 @@ namespace Raven.Server.Documents.Handlers
                 if (doc != null)
                     docCollection = CollectionName.GetCollectionName(doc.Data);
 
-                _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.DocumentId, docCollection,
-                    counterGroupDetail.ChangeVector, counterGroupDetail.Values);
-
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(counterGroupDetail.ChangeVector, context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context));
-
+                var cv = _database.DocumentsStorage.GetNewChangeVector(context).ChangeVector;
+                _database.DocumentsStorage.CountersStorage.PutCounters(context, counterGroupDetail.DocumentId, docCollection, cv, counterGroupDetail.Values);
 
                 if (doc?.Data != null &&
                     _counterUpdates.ContainsKey(counterGroupDetail.DocumentId) == false)
