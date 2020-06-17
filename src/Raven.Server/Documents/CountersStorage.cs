@@ -48,8 +48,8 @@ namespace Raven.Server.Documents
         private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
-        private ObjectPool<Dictionary<LazyStringValue, PutCountersData>> _dictionariesPool
-            = new ObjectPool<Dictionary<LazyStringValue, PutCountersData>>(() => new Dictionary<LazyStringValue, PutCountersData>());
+        private readonly ObjectPool<Dictionary<LazyStringValue, PutCountersData>> _dictionariesPool
+            = new ObjectPool<Dictionary<LazyStringValue, PutCountersData>>(() => new Dictionary<LazyStringValue, PutCountersData>(LazyStringValueComparer.Instance));
 
         public static int SizeOfCounterValues = sizeof(CounterValues);
 
@@ -523,13 +523,13 @@ namespace Raven.Server.Documents
                     using (table.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(newCounterKey);
-
-                    tvb.Add(Bits.SwapBytes(etag));
-                    tvb.Add(cv);
-                    tvb.Add(snd.BasePointer, snd.Size);
-                    tvb.Add(collectionSlice);
-                    tvb.Add(context.GetTransactionMarker());
-                    table.Insert(tvb);
+                        tvb.Add(Bits.SwapBytes(etag));
+                        tvb.Add(cv);
+                        tvb.Add(snd.BasePointer, snd.Size);
+                        tvb.Add(collectionSlice);
+                        tvb.Add(context.GetTransactionMarker());
+                        table.Insert(tvb);
+                    }
                 }
             }
         }
@@ -728,7 +728,7 @@ namespace Raven.Server.Documents
                     int j;
                     for (j = 0; j < originalNames.Length; j++)
                     {
-                        current = (LazyStringValue)originalNames[j];
+                        current = originalNames.GetByIndex<LazyStringValue>(j);
                         if (string.Compare(p, current, StringComparison.OrdinalIgnoreCase) == 0)
                             break;
                     }
@@ -748,7 +748,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private struct PutCountersData
+        private class PutCountersData
         {
             public BlittableJsonReaderObject Data;
             public DbIdsHolder DbIdsHolder;
@@ -767,7 +767,7 @@ namespace Raven.Server.Documents
             }
 
             var entriesToUpdate = _dictionariesPool.Allocate();
-
+            var counterHasChanged = false;
             try
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
@@ -862,9 +862,13 @@ namespace Raven.Server.Documents
                                 else
                                 {
                                     var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
-                                    if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
-                                        continue;
-
+                                    if (sourceCounterNames != null)
+                                    {
+                                        // 5.0 source
+                                        if (ChangeVectorUtils.GetConflictStatus(existingChangeVector, changeVector) == ConflictStatus.AlreadyMerged)
+                                            continue;
+                                    }
+                                    
                                     using (data = GetCounterValuesData(context, ref tvr))
                                     {
                                         data = data.Clone(context);
@@ -876,24 +880,13 @@ namespace Raven.Server.Documents
                                             $"Local Counter-Group document '{counterKeySlice}' is missing '{DbIds}' property. Shouldn't happen");
                                     }
 
-                                    // clone counter group key
-                                    var scope = context.Allocator.Allocate(counterGroupKey.Size, out var output);
-
-
-
                                     putCountersData = new PutCountersData
                                     {
                                         Data = data,
                                         DbIdsHolder = new DbIdsHolder(dbIds),
                                         ChangeVector = existingChangeVector,
-                                        Modified = false,
-                                        KeyScope = scope
+                                        Modified = false
                                     };
-
-                                    counterGroupKey.CopyTo(output.Ptr);
-                                    var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length);
-
-                                    entriesToUpdate.Add(clonedKey, putCountersData);
                                 }
 
                                 if (data.TryGet(Values, out BlittableJsonReaderObject localCounters) == false)
@@ -914,29 +907,42 @@ namespace Raven.Server.Documents
                                     continue;
                                 }
 
+                                Debug.Assert(changeType != CounterChangeTypes.None || localCounters.Modifications != null,"We asked to update counters, but doesn't have any change.");
+
+                                if (entriesToUpdate.ContainsKey(counterGroupKey) == false)
+                                {
+                                    // clone counter group key
+                                    var scope = context.Allocator.Allocate(counterGroupKey.Size, out var output);
+                                    counterGroupKey.CopyTo(output.Ptr);
+                                    var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length);
+                                    putCountersData.KeyScope = scope;
+                                    entriesToUpdate[clonedKey] = putCountersData;
+                                }
+
                                 if (localCounters.Modifications != null)
                                 {
                                     putCountersData.Modified = true;
                                 }
 
-                                entriesToUpdate[counterGroupKey] = putCountersData;
+                                if (changeType == CounterChangeTypes.None) 
+                                    continue;
 
-                                if (changeType != CounterChangeTypes.None)
+                                if (changeType == CounterChangeTypes.Put || changeType == CounterChangeTypes.Delete)
+                                    counterHasChanged = true;
+
+                                var counterName = prop.Name;
+                                var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+                                context.Transaction.AddAfterCommitNotification(new CounterChange
                                 {
-                                    var counterName = prop.Name;
-                                    var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
-                                    context.Transaction.AddAfterCommitNotification(new CounterChange
-                                    {
-                                        ChangeVector = changeVector,
-                                        DocumentId = documentId,
-                                        CollectionName = collectionName.Name,
-                                        Name = counterName,
-                                        Value = value,
-                                        Type = changeType
-                                    });
+                                    ChangeVector = changeVector,
+                                    DocumentId = documentId,
+                                    CollectionName = collectionName.Name,
+                                    Name = counterName,
+                                    Value = value,
+                                    Type = changeType
+                                });
 
-                                    UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
-                                }
+                                UpdateMetrics(counterKeySlice, counterName, changeVector, collection);
                             }
                         }
                     }
@@ -993,6 +999,9 @@ namespace Raven.Server.Documents
                         }
                     }
                 }
+
+                if (counterHasChanged)
+                    _documentsStorage.DocumentPut.Recreate<DocumentPutAction.RecreateCounters>(context, documentId);
             }
             finally
             {
@@ -1091,6 +1100,9 @@ namespace Raven.Server.Documents
 
                         // blob + blob => put counter
                         changeType = InternalPutCounter(context, localCounters, counterName, dbIdsHolder, sourceDbIds, localCounterValues, sourceBlob);
+                        if (changeType == CounterChangeTypes.None)
+                            return false;
+
                         return true;
                     }
 
@@ -1173,7 +1185,7 @@ namespace Raven.Server.Documents
                 bool shouldAdd = true;
                 for (int i = 0; i < localCounterNames.Modifications.Count; i++)
                 {
-                    var current = (LazyStringValue)localCounterNames.Modifications.Items[i];
+                    var current = localCounterNames.GetByIndex<LazyStringValue>(i);
                     if (string.Equals(current, loweredName, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
@@ -1195,7 +1207,7 @@ namespace Raven.Server.Documents
             int j;
             for (j = 0; j < counterNames.Length; j++)
             {
-                current = (LazyStringValue)counterNames[j];
+                current = counterNames.GetByIndex<LazyStringValue>(j);
                 if (string.Compare(counterName, current, StringComparison.OrdinalIgnoreCase) == 0)
                     break;
             }
@@ -1254,7 +1266,7 @@ namespace Raven.Server.Documents
             var localDbIdsList = new List<LazyStringValue>(dbIds.Length);
             for (int i = 0; i < dbIds.Length; i++)
             {
-                localDbIdsList.Add((LazyStringValue)dbIds[i]);
+                localDbIdsList.Add(dbIds.GetByIndex<LazyStringValue>(i));
             }
 
             return localDbIdsList;
@@ -1277,7 +1289,7 @@ namespace Raven.Server.Documents
 
             for (var index = 0; index < sourceCount; index++)
             {
-                var sourceDbId = (LazyStringValue)sourceDbIds[index];
+                var sourceDbId = sourceDbIds.GetByIndex<LazyStringValue>(index);
                 var sourceValue = &((CounterValues*)source.Ptr)[index];
 
                 int localDbIdIndex = localDbIds.GetOrAddDbIdIndex(sourceDbId);
@@ -1621,7 +1633,7 @@ namespace Raven.Server.Documents
         {
             for (var index = 0; index < originalNames.Length; index++)
             {
-                var current = (LazyStringValue)originalNames[index];
+                var current = originalNames.GetByIndex<LazyStringValue>(index);
                 if (string.Equals(lowered, current, StringComparison.OrdinalIgnoreCase))
                     return index;
             }
