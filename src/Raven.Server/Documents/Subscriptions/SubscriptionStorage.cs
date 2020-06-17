@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.Subscriptions
                     throw new SubscriptionDoesNotBelongToNodeException(
                         $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
                         whoseTaskIsIt,
-                        databaseTopologyAvailabilityExplanation);
+                        databaseTopologyAvailabilityExplanation, id);
                 }
                 if (subscription.Disabled)
                     throw new SubscriptionClosedException($"The subscription with id {id} and name {name} is disabled and cannot be used until enabled");

@@ -6,6 +6,7 @@ namespace Raven.Client.Exceptions.Documents.Subscriptions
     public class SubscriptionDoesNotBelongToNodeException : SubscriptionException
     {
         public string AppropriateNode;
+        internal long Index;
         public readonly Dictionary<string, string> Reasons = new Dictionary<string, string>();
 
         public SubscriptionDoesNotBelongToNodeException(string message) : base(message)
@@ -20,6 +21,13 @@ namespace Raven.Client.Exceptions.Documents.Subscriptions
         {
             AppropriateNode = appropriateNode;
             Reasons = reasons;            
+        }
+
+        internal SubscriptionDoesNotBelongToNodeException(string message, string appropriateNode, Dictionary<string, string> reasons, long index) : base(message)
+        {
+            AppropriateNode = appropriateNode;
+            Reasons = reasons;
+            Index = index;
         }
     }
 }
