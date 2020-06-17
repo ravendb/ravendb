@@ -150,6 +150,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 try
                 {
                     var result = new SmapsReader(buffers).CalculateMemUsageFromSmaps<SmapsReaderJsonResults>();
+                    var procStatus = MemoryInformation.GetMemoryUsageFromProcStatus();
                     var djv = new DynamicJsonValue
                     {
                         ["Totals"] = new DynamicJsonValue
@@ -159,7 +160,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                             ["PrivateClean"] = result.PrivateClean,
                             ["TotalClean"] = result.SharedClean + result.PrivateClean,
                             ["TotalDirty"] = result.TotalDirty, // This includes not only r-ws buffer and voron files, but also dotnet's and heap dirty memory
+                            ["WorkingSetSwap"] = result.Swap, // Swap values sum for r-ws entries only
+                            ["Swap"] = procStatus.Swap,
                             ["RssHumanly"] = Sizes.Humane(result.Rss),
+                            ["SwapHumanly"] = Sizes.Humane(procStatus.Swap),
+                            ["WorkingSetSwapHumanly"] = Sizes.Humane(result.Swap),
                             ["SharedCleanHumanly"] = Sizes.Humane(result.SharedClean),
                             ["PrivateCleanHumanly"] = Sizes.Humane(result.PrivateClean),
                             ["TotalCleanHumanly"] = Sizes.Humane(result.SharedClean + result.PrivateClean)

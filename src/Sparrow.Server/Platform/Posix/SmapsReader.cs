@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -16,6 +16,7 @@ namespace Sparrow.Platform.Posix
         public long SharedDirty;
         public long PrivateClean;
         public long PrivateDirty;
+        public long Swap;
     }
     
     internal interface ISmapsReaderResultAction
@@ -41,7 +42,9 @@ namespace Sparrow.Platform.Posix
                 ["TotalClean"] = results.SharedClean + results.PrivateClean,
                 ["TotalCleanHumanly"] = Sizes.Humane(results.SharedClean + results.PrivateClean),
                 ["TotalDirty"] = results.SharedDirty + results.PrivateDirty,
-                ["TotalDirtyHumanly"] = Sizes.Humane(results.SharedDirty + results.PrivateDirty)
+                ["TotalDirtyHumanly"] = Sizes.Humane(results.SharedDirty + results.PrivateDirty),
+                ["TotalSwap"] = results.Swap,
+                ["TotalSwapHumanly"] = Sizes.Humane(results.Swap)
             };
             if (_dja == null)
                 _dja = new DynamicJsonArray();
@@ -76,6 +79,7 @@ namespace Sparrow.Platform.Posix
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
         private readonly byte[] _sizeBytes = Encoding.UTF8.GetBytes("Size:");
+        private readonly byte[] _swapBytes = Encoding.UTF8.GetBytes("Swap:");
         private readonly byte[] _rssBytes = Encoding.UTF8.GetBytes("Rss:");
         private readonly byte[] _sharedCleanBytes = Encoding.UTF8.GetBytes("Shared_Clean:");
         private readonly byte[] _sharedDirtyBytes = Encoding.UTF8.GetBytes("Shared_Dirty:");
@@ -97,7 +101,8 @@ namespace Sparrow.Platform.Posix
             SharedClean,
             SharedDirty,
             PrivateClean,
-            PrivateDirty
+            PrivateDirty,
+            Swap
         }
 
         public SmapsReader(byte[][] smapsBuffer)
@@ -151,9 +156,9 @@ namespace Sparrow.Platform.Posix
 
             var read = ReadFromFile(fileStream, _currentBuffer);
             var offsetForNextBuffer = 0;
-            long tmpRss = 0, tmpSharedClean = 0, tmpPrivateClean = 0, tmpTotalDirty = 0;
+            long tmpRss = 0, tmpSharedClean = 0, tmpPrivateClean = 0, tmpTotalDirty = 0, tmpSwap = 0;
             string resultString = null;
-            long valSize = 0, valRss = 0, valPrivateDirty = 0, valSharedDirty = 0, valSharedClean = 0, valPrivateClean = 0;
+            long valSize = 0, valRss = 0, valPrivateDirty = 0, valSharedDirty = 0, valSharedClean = 0, valPrivateClean = 0, valSwap = 0;
             while (true)
             {
                 if (read == 0)
@@ -179,8 +184,7 @@ namespace Sparrow.Platform.Posix
                         term = _rssBytes;
                     else if (_smapsBuffer[_currentBuffer][i] == 'S')
                     {
-                        term = _sizeBytes; // or SharedDirty or SharedCleanBytes (which ARE longer in length from Size)
-                        offset = _sharedCleanBytes.Length - term.Length;
+                        term = _sizeBytes; // or Swap or SharedDirty or SharedCleanBytes, but Size is first on the list
                     }
                     else if (_smapsBuffer[_currentBuffer][i] == 'P')
                     {
@@ -218,7 +222,7 @@ namespace Sparrow.Platform.Posix
                         // for 'S' and 'P' we might have to search different term:
                         if (_smapsBuffer[searchedBuffer][positionToSearch] != term[j])
                         {
-                            if (term == _privateCleanBytes) // didn't find PrivateCleanBytes - try to find PrivateDiryBytes
+                            if (term == _privateCleanBytes) // didn't find PrivateCleanBytes - try to find PrivateDirtyBytes
                             {
                                 term = _privateDirtyBytes;
                                 if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
@@ -227,6 +231,14 @@ namespace Sparrow.Platform.Posix
 
                             if (term == _sizeBytes) // didn't find Size - try to find SharedCleanBytes
                             {
+                                term = _swapBytes;
+                                if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
+                                    continue;
+                            }
+                            
+                            if (term == _swapBytes) // didn't find Size - try to find Swap
+                            {
+                                // Shared_X is longer than Swap or Size so we're putting it in between
                                 term = _sharedCleanBytes;
                                 if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
                                     continue;
@@ -238,7 +250,7 @@ namespace Sparrow.Platform.Posix
                                 if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
                                     continue;
                             }
-
+                            
                             hasMatch = false;
                             break;
                         }
@@ -289,9 +301,11 @@ namespace Sparrow.Platform.Posix
                                 valSharedDirty = 0;
                                 valSharedClean = 0;
                                 valPrivateClean = 0;
+                                valSwap = 0;
                             }
 
-                            if (currentChar == ' ' || currentChar == '\t')
+                            //TODO what if there's a space in the file path?
+                            if (currentChar == ' ' || currentChar == '\t') 
                                 posInTempBuf = 0;
                             else if (currentChar == '\n')
                                 break;
@@ -333,7 +347,6 @@ namespace Sparrow.Platform.Posix
                         }
                     }
                     
-
                     i += term.Length + bytesSearched;
                     if (i >= _smapsBuffer[_currentBuffer].Length)
                         offsetForNextBuffer = _smapsBuffer[_currentBuffer].Length - i;
@@ -413,9 +426,17 @@ namespace Sparrow.Platform.Posix
                         state = SearchState.PrivateDirty;
                         valPrivateDirty = resultLong;
                     }
-                    else if (term == _lockedBytes)
+                    else if (term == _swapBytes)
                     {
                         if (state != SearchState.PrivateDirty)
+                            continue;
+                        tmpSwap += resultLong;
+                        state = SearchState.Swap;
+                        valSwap = resultLong;
+                    }
+                    else if (term == _lockedBytes)
+                    {
+                        if (state != SearchState.Swap)
                             continue;
                         state = SearchState.None;
 
@@ -433,6 +454,7 @@ namespace Sparrow.Platform.Posix
                         _smapsReaderResults.SharedDirty = valSharedDirty;
                         _smapsReaderResults.PrivateClean = valPrivateClean;
                         _smapsReaderResults.PrivateDirty = valPrivateDirty;
+                        _smapsReaderResults.Swap = valSwap;
 
                         smapResultsObject.Add(_smapsReaderResults);
                     }
@@ -458,6 +480,7 @@ namespace Sparrow.Platform.Posix
                 SharedClean = tmpSharedClean,
                 PrivateClean = tmpPrivateClean,
                 TotalDirty = tmpTotalDirty,
+                Swap = tmpSwap,
                 SmapsResults = smapResultsObject
             };
         }

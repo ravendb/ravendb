@@ -56,5 +56,6 @@ scripts/raspberry-pi/ravendbd    text eol=lf
 *.RTF	diff=astextplain
 
 *.java text eol=lf
+*.smaps binary
 
 * -crlf

@@ -1,0 +1,13 @@
+.git
+.vs
+.idea
+bench
+**/bin
+**/obj
+**/node_modules
+test
+scripts
+artifacts
+src/Raven.Pal
+src/Raven.Pal/osxcross
+src/Raven.Pal/*.sdk.tar.xz
