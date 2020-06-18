@@ -865,7 +865,7 @@ namespace Raven.Server.Documents
                                     if (sourceCounterNames != null)
                                     {
                                         // 5.0 source
-                                        if (ChangeVectorUtils.GetConflictStatus(existingChangeVector, changeVector) == ConflictStatus.AlreadyMerged)
+                                        if (ChangeVectorUtils.GetConflictStatus(changeVector, existingChangeVector) == ConflictStatus.AlreadyMerged)
                                             continue;
                                     }
                                     
