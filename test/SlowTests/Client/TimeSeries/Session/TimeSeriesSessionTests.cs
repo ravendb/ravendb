@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.TimeSeries;
-using Raven.Client.Exceptions;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

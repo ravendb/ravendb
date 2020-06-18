@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,11 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NetTopologySuite.Utilities;
-using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -29,13 +25,11 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
 using Voron;
-using Raven.Server.ServerWide;
 using Sparrow.Server;
 using Size = Sparrow.Size;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Sparrow.Binary;
 using Sparrow.Threading;
 using Reader = Raven.Server.Documents.Replication.ReplicationItems.Reader;
 
@@ -966,7 +960,7 @@ namespace Raven.Server.Documents.Replication
 
                     var database = _replicationInfo.DocumentDatabase;
                     var lastTransactionMarker = 0;
-
+                    HashSet<LazyStringValue> docCountersToRecreate = null;
                     context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
@@ -977,7 +971,7 @@ namespace Raven.Server.Documents.Replication
                         }
 
                         operationsCount++;
-                            var rcvdChangeVector = item.ChangeVector;
+                        var rcvdChangeVector = item.ChangeVector;
                         context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
 
                         TimeSeriesStorage tss;
@@ -985,9 +979,9 @@ namespace Raven.Server.Documents.Replication
                         LazyStringValue name;
 
                         switch (item)
-                            {
+                        {
                             case AttachmentReplicationItem attachment:
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name,out _, out Slice attachmentName));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
 
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName, contentType, attachment.Base64Hash,
@@ -1015,7 +1009,15 @@ namespace Raven.Server.Documents.Replication
                                     rcvdChangeVector, revisionTombstone.LastModifiedTicks);
                                 break;
                             case CounterReplicationItem counter:
-                                database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector, counter.Values);
+                                var changed = database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector,
+                                    counter.Values);
+                                if (changed && _replicationInfo.SupportedFeatures.Replication.CaseInsensitiveCounters == false)
+                                {
+                                    // 4.2 counters
+                                    docCountersToRecreate ??= new HashSet<LazyStringValue>(LazyStringValueComparer.Instance);
+                                    docCountersToRecreate.Add(counter.Id);
+                                }
+
                                 break;
                             case TimeSeriesDeletedRangeItem deletedRange:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
@@ -1076,11 +1078,12 @@ namespace Raven.Server.Documents.Replication
                                             "Incoming Replication",
                                             $"Detected missing attachments for document '{doc.Id}'. Existing attachments in metadata:" +
                                             $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
-                                                AlertType.ReplicationMissingAttachments,
-                                                NotificationSeverity.Warning));
+                                            AlertType.ReplicationMissingAttachments,
+                                            NotificationSeverity.Warning));
                                     }
                                 }
 
+                                var nonPersistentFlags = NonPersistentDocumentFlags.FromReplication;
                                 if (doc.Flags.Contain(DocumentFlags.Revision))
                                 {
                                     database.DocumentsStorage.RevisionsStorage.Put(
@@ -1088,7 +1091,7 @@ namespace Raven.Server.Documents.Replication
                                         doc.Id,
                                         document,
                                         doc.Flags,
-                                        NonPersistentDocumentFlags.FromReplication,
+                                        nonPersistentFlags,
                                         rcvdChangeVector,
                                         doc.LastModifiedTicks);
                                     continue;
@@ -1101,7 +1104,7 @@ namespace Raven.Server.Documents.Replication
                                         doc.Id,
                                         document,
                                         doc.Flags,
-                                        NonPersistentDocumentFlags.FromReplication,
+                                        nonPersistentFlags,
                                         rcvdChangeVector,
                                         doc.LastModifiedTicks);
                                     continue;
@@ -1109,17 +1112,30 @@ namespace Raven.Server.Documents.Replication
 
                                 var hasRemoteClusterTx = doc.Flags.Contain(DocumentFlags.FromClusterTransaction);
                                 var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, doc.Id, doc.ChangeVector, out var hasLocalClusterTx);
-
                                 var flags = doc.Flags;
                                 var resolvedDocument = document;
+
                                 switch (conflictStatus)
                                 {
                                     case ConflictStatus.Update:
 
                                         if (resolvedDocument != null)
                                         {
+                                            if (flags.Contain(DocumentFlags.HasCounters) && 
+                                                _replicationInfo.SupportedFeatures.Replication.CaseInsensitiveCounters == false)
+                                            {
+                                                var oldDoc = context.DocumentDatabase.DocumentsStorage.Get(context, doc.Id);
+                                                if (oldDoc == null)
+                                                {
+                                                    // 4.2 documents might have counter names in metadata which don't exist in storage
+                                                    // we need to replace metadata counters with the counter names from storage
+
+                                                    nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
+                                                }
+                                            }
+
                                             database.DocumentsStorage.Put(context, doc.Id, null, resolvedDocument, doc.LastModifiedTicks,
-                                                rcvdChangeVector, flags, NonPersistentDocumentFlags.FromReplication);
+                                                rcvdChangeVector, flags, nonPersistentFlags);
                                         }
                                         else
                                         {
@@ -1130,7 +1146,7 @@ namespace Raven.Server.Documents.Replication
                                                     doc.LastModifiedTicks,
                                                     rcvdChangeVector,
                                                     new CollectionName(doc.Collection),
-                                                    NonPersistentDocumentFlags.FromReplication,
+                                                    nonPersistentFlags,
                                                     flags);
                                             }
                                         }
@@ -1193,8 +1209,16 @@ namespace Raven.Server.Documents.Replication
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException(item.GetType().ToString());
-                            }
                         }
+                    }
+
+                    if (docCountersToRecreate != null)
+                    {
+                        foreach (var id in docCountersToRecreate)
+                        {
+                            context.DocumentDatabase.DocumentsStorage.DocumentPut.Recreate<DocumentPutAction.RecreateCounters>(context, id);
+                        }
+                    }
 
                     Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||
                                  _replicationInfo.ReplicatedAttachmentStreams.Count == 0,
