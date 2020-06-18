@@ -757,17 +757,17 @@ namespace Raven.Server.Documents
             public ByteStringContext.InternalScope KeyScope;
         }
 
-        public void PutCounters(DocumentsOperationContext context, string documentId, string collection, string changeVector,
+        public bool PutCounters(DocumentsOperationContext context, string documentId, string collection, string changeVector,
             BlittableJsonReaderObject sourceData)
         {
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
-                return;
+                return false;
             }
 
             var entriesToUpdate = _dictionariesPool.Allocate();
-            var counterHasChanged = false;
+            var documentCountersHaveChanged = false;
             try
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
@@ -838,7 +838,7 @@ namespace Raven.Server.Documents
 
                         UpdateMetricsForNewCounterGroup(data);
 
-                        return;
+                        return true;
                     }
 
                     var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -907,7 +907,8 @@ namespace Raven.Server.Documents
                                     continue;
                                 }
 
-                                Debug.Assert(changeType != CounterChangeTypes.None || localCounters.Modifications != null,"We asked to update counters, but doesn't have any change.");
+                                Debug.Assert(changeType != CounterChangeTypes.None || localCounters.Modifications != null, 
+                                    "We asked to update counters, but don't have any change.");
 
                                 if (entriesToUpdate.ContainsKey(counterGroupKey) == false)
                                 {
@@ -924,11 +925,11 @@ namespace Raven.Server.Documents
                                     putCountersData.Modified = true;
                                 }
 
-                                if (changeType == CounterChangeTypes.None) 
+                                if (changeType == CounterChangeTypes.None)
                                     continue;
 
-                                if (changeType == CounterChangeTypes.Put || changeType == CounterChangeTypes.Delete)
-                                    counterHasChanged = true;
+                                if (changeType != CounterChangeTypes.Increment)
+                                    documentCountersHaveChanged = true;
 
                                 var counterName = prop.Name;
                                 var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
@@ -1000,8 +1001,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (counterHasChanged)
-                    _documentsStorage.DocumentPut.Recreate<DocumentPutAction.RecreateCounters>(context, documentId);
+                return documentCountersHaveChanged;
             }
             finally
             {
@@ -1185,7 +1185,7 @@ namespace Raven.Server.Documents
                 bool shouldAdd = true;
                 for (int i = 0; i < localCounterNames.Modifications.Count; i++)
                 {
-                    var current = localCounterNames.GetByIndex<LazyStringValue>(i);
+                    var current = localCounterNames.Modifications.Items[i].ToString();
                     if (string.Equals(current, loweredName, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
@@ -1325,7 +1325,7 @@ namespace Raven.Server.Documents
                     changeType = CounterChangeTypes.Increment;
                 }
 
-                counters.Modifications = counters.Modifications ?? new DynamicJsonValue(counters);
+                counters.Modifications ??= new DynamicJsonValue(counters);
                 counters.Modifications[counterName] = existingCounter;
             }
 
@@ -1402,27 +1402,44 @@ namespace Raven.Server.Documents
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
-                foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
-                {
-                    var data = GetCounterValuesData(context, ref counterGroup.Value.Reader);
-                    if (data.TryGet(CounterNames, out BlittableJsonReaderArray names) == false)
-                        throw new InvalidDataException($"Counter-Group document ({docId}) '{counterGroup.Key}' is missing '{CounterNames}' property. Shouldn't happen");
-                    
-                    if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
-                        throw new InvalidDataException($"Counter-Group document ({docId}) '{counterGroup.Key}' is missing '{Values}' property. Shouldn't happen");
-                    
-                    var sorted = new List<object>(names);
-                    sorted.Sort();
+                var names = GetAllCountersFromNamesArray(context, docId, table, key);
+                if (names == null)
+                    yield break;
 
-                    foreach (LazyStringValue name in sorted)
-                    {
-                        if (counterValues.TryGet(name.ToLower(), out object existing) == false ||
-                            existing is LazyStringValue)
-                            continue;
-                        yield return name;
-                    }
+                names.Sort();
+                foreach (var name in names)
+                {
+                    yield return name;
                 }
             }
+        }
+
+        private static List<LazyStringValue> GetAllCountersFromNamesArray(DocumentsOperationContext context, string docId, Table table, Slice key)
+        {
+            List<LazyStringValue> all = null;
+
+            foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+            {
+                var data = GetCounterValuesData(context, ref counterGroup.Value.Reader);
+                if (data.TryGet(CounterNames, out BlittableJsonReaderArray names) == false)
+                    throw new InvalidDataException($"Counter-Group document ({docId}) '{counterGroup.Key}' is missing '{CounterNames}' property. Shouldn't happen");
+
+                if (data.TryGet(Values, out BlittableJsonReaderObject counterValues) == false)
+                    throw new InvalidDataException($"Counter-Group document ({docId}) '{counterGroup.Key}' is missing '{Values}' property. Shouldn't happen");
+
+                all ??= new List<LazyStringValue>();
+
+                for (var i = 0; i < names.Length; i++)
+                {
+                    var name = names.GetByIndex<LazyStringValue>(i);
+                    if (counterValues.TryGet(name.ToLower(), out object existing) == false ||
+                        existing is LazyStringValue) // skip names of 'dead' counters 
+                        continue;
+                    all.Add(name);
+                }
+            }
+
+            return all;
         }
 
         public DynamicJsonArray GetCountersForDocumentList(DocumentsOperationContext context, string docId)
