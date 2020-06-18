@@ -1409,6 +1409,7 @@ namespace Raven.Server.Documents
             var count = counterToDelete.Length / SizeOfCounterValues;
             var sb = new StringBuilder();
 
+            long newEtag = -1;
             for (int i = 0; i < count; i++)
             {
                 if (i > 0)
@@ -1428,15 +1429,20 @@ namespace Raven.Server.Documents
                     continue;
                 }
 
-                var newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
+                newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
                 sb.Append(_documentDatabase.DbBase64Id)
                     .Append(":")
                     .Append(newEtag);
             }
 
-            if (count < dbIdIndex)
+            if (newEtag == -1)
             {
-                var newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
+                if (count > 0)
+                {
+                    sb.Append(", ");
+                }
+
+                newEtag = _documentDatabase.DocumentsStorage.GenerateNextEtag();
                 sb.Append(_documentDatabase.DbBase64Id)
                     .Append(":")
                     .Append(newEtag);
