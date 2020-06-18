@@ -115,19 +115,30 @@ namespace Raven.Client.Documents.Operations.Backups
             var backupDestinations = new List<string>();
 
             if (LocalSettings != null && LocalSettings.Disabled == false)
-                backupDestinations.Add("Local");
+                backupDestinations.Add(BackupDestination.Local.ToString());
             if (AzureSettings != null && AzureSettings.Disabled == false)
-                backupDestinations.Add("Azure");
+                backupDestinations.Add(BackupDestination.Azure.ToString());
             if (S3Settings != null && S3Settings.Disabled == false)
-                backupDestinations.Add("AmazonS3");
+                backupDestinations.Add(BackupDestination.AmazonS3.ToString());
             if (GlacierSettings != null && GlacierSettings.Disabled == false)
-                backupDestinations.Add("Glacier");
+                backupDestinations.Add(BackupDestination.Glacier.ToString());
             if (GoogleCloudSettings != null && GoogleCloudSettings.Disabled == false)
-                backupDestinations.Add("Google Cloud");
+                backupDestinations.Add(BackupDestination.GoogleCloud.ToString());
             if (FtpSettings != null && FtpSettings.Disabled == false)
-                backupDestinations.Add("FTP");
+                backupDestinations.Add(BackupDestination.FTP.ToString());
 
             return backupDestinations;
+        }
+
+        internal enum BackupDestination
+        {
+            None,
+            Local,
+            Azure,
+            AmazonS3,
+            Glacier,
+            GoogleCloud,
+            FTP
         }
 
         public virtual DynamicJsonValue ToJson()
