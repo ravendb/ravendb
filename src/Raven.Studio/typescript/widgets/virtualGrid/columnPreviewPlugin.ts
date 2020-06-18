@@ -17,13 +17,8 @@ class columnPreviewPlugin<T> {
 
     private static readonly delay = 500;
     private static readonly enterTooltipDelay = 100;
-    private static readonly maxPreviewWindowSize = {
-        // make sure it is in sync with virtual-grid.less: .json-preview pre style
-        width: 500,
-        height: 300
-    };
     
-    private defaultMarkupProvider(value: any) {
+    private static defaultMarkupProvider(value: any) {
         const copySyntax = '<button class="btn btn-default btn-sm copy"><i class="icon-copy"></i><span>Copy to clipboard</span></button>';
         
         if (moment.isMoment(value)) { // value instanceof moment isn't reliable 
@@ -61,7 +56,7 @@ class columnPreviewPlugin<T> {
 
         this.grid = grid;
         
-        const markupProvider = this.defaultMarkupProvider;
+        const markupProvider = columnPreviewPlugin.defaultMarkupProvider;
         this.$tooltip.on("click", ".copy", () => {
             copyToClipboard.copy(this.currentValue);
             $(".copy", this.$tooltip).addClass("btn-success");
@@ -84,7 +79,7 @@ class columnPreviewPlugin<T> {
             }, columnPreviewPlugin.delay);
         });
 
-        $(containerSelector).on("mouseleave", ".cell", e => {
+        $(containerSelector).on("mouseleave", ".cell", () => {
             clearTimeout(this.previewTimeoutHandle);
             this.previewTimeoutHandle = undefined;
 
@@ -120,10 +115,23 @@ class columnPreviewPlugin<T> {
         const cellOffset = $cell.offset();
 
         const parentWidth = $parent.outerWidth();
-        const parentHeight = $parent.outerHeight(); //TODO: i think we sould use virtual grid height here!
+        const parentHeight = $parent.outerHeight();
 
         const left = cellOffset.left - parentOffset.left;
-        if (left + columnPreviewPlugin.maxPreviewWindowSize.width < parentWidth) {
+        
+        // position in top left corner to measure
+        this.$tooltip
+            .css('left', '0px')
+            .css('right', '')
+            .css('top', '0px')
+            .css('bottom', '');
+
+        this.$tooltip.html(markup);
+        
+        const computedWidth = this.$tooltip.outerWidth();
+        const computedHeight = this.$tooltip.outerHeight();
+               
+        if (left + computedWidth < parentWidth) {
             this.$tooltip
                 .css('left', left + 'px')
                 .css('right', '');
@@ -135,7 +143,7 @@ class columnPreviewPlugin<T> {
         }
 
         const top = cellOffset.top - parentOffset.top + $cell.outerHeight();
-        if (top + columnPreviewPlugin.maxPreviewWindowSize.height < parentHeight) {
+        if (top + computedHeight < parentHeight) {
             this.$tooltip
                 .css('top', top + 'px')
                 .css('bottom', '');
@@ -149,8 +157,6 @@ class columnPreviewPlugin<T> {
         this.$tooltip
             .css('opacity', 1)
             .show();
-
-        this.$tooltip.html(markup);
     }
 
     hide() {
