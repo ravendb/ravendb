@@ -666,7 +666,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes/errors", "DELETE", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/indexes/errors", "DELETE", AuthorizationStatus.ValidUser)]
         public Task ClearErrors()
         {
             var names = GetStringValuesQueryString("name", required: false);
