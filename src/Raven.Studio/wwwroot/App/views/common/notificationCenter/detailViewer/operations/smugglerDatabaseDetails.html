@@ -61,20 +61,25 @@
                         <div class="errors" data-bind="text: erroredCount, css: { 'text-muted': !hasErroredCount }">
                         </div>
                     </div>
-                    <div class="attachments export-item" data-bind="with: attachments, visible: hasAttachments">
+                    <!-- ko foreach: nestedItems --> 
+                    <div class="nested-item export-item">
                         <div class="name">
-                            <h4>Attachments</h4>
+                            <h4 data-bind="text: name"></h4>
                         </div>
-                        <div class="status">
+                        <div class="status status-skipped" data-bind="visible: skipped">
+                            <i class="icon-skip"></i> <span>Skipped</span>
+                        </div>
+                        <div class="status" data-bind="visible: !skipped">
                         </div>
                         <div class="read" data-bind="text: readCount, css: { 'text-muted': !$parent.hasReadCount }">
                         </div>
-                        <div class="skipped text-muted">
+                        <div class="skipped" data-bind="css: { 'text-muted': !$parent.hasSkippedCount }">
                             -
                         </div>
                         <div class="errors" data-bind="text: erroredCount, css: { 'text-muted': !$parent.hasErroredCount }">
                         </div>
                     </div>
+                    <!-- /ko -->
                 </div>
             </div>
             <br/>
