@@ -48,7 +48,7 @@ namespace Raven.Server.Config.Categories
 
             [Description("Community string used for SNMP v2c authentication. Default: ravendb")]
             [DefaultValue("ravendb")]
-            [ConfigurationEntry("Monitoring.Snmp.Community", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.Snmp.Community", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
             public string Community { get; set; }
 
             [Description("Authentication protocol used for SNMP v3 authentication. Default: SHA1")]
@@ -63,7 +63,7 @@ namespace Raven.Server.Config.Categories
 
             [Description("Authentication password used for SNMP v3 authentication. If null value from 'Monitoring.Snmp.Community' is used. Default: null")]
             [DefaultValue(null)]
-            [ConfigurationEntry("Monitoring.Snmp.AuthenticationPassword", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.Snmp.AuthenticationPassword", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
             public string AuthenticationPassword { get; set; }
 
             [Description("Privacy protocol used for SNMP v3 privacy. Default: None")]
@@ -73,7 +73,7 @@ namespace Raven.Server.Config.Categories
 
             [Description("Privacy password used for SNMP v3 privacy. Default: ravendb")]
             [DefaultValue("ravendb")]
-            [ConfigurationEntry("Monitoring.Snmp.PrivacyPassword", ConfigurationEntryScope.ServerWideOnly)]
+            [ConfigurationEntry("Monitoring.Snmp.PrivacyPassword", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
             public string PrivacyPassword { get; set; }
 
             [Description("List of supported SNMP versions. Values must be semicolon separated. Default: V2C;V3")]
