@@ -443,14 +443,18 @@ namespace Raven.Server.Documents
                         break;
                 }
 
+                var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
+                var cv2 = context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, etag);
+
                 using (context.Allocator.Allocate(documentKeyPrefix.Size + firstChange + 1, out ByteString newCounterKey))
+                using (Slice.From(context.Allocator, cv2, out cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     documentKeyPrefix.CopyTo(newCounterKey.Ptr);
                     Memory.Copy(newCounterKey.Ptr + documentKeyPrefix.Size, firstPropertySnd.Name.Buffer, firstChange + 1);
 
                     tvb.Add(newCounterKey);
-                    tvb.Add(Bits.SwapBytes(context.DocumentDatabase.DocumentsStorage.GenerateNextEtag()));
+                    tvb.Add(Bits.SwapBytes(etag));
                     tvb.Add(cv);
                     tvb.Add(snd.BasePointer, snd.Size);
                     tvb.Add(collectionSlice);
