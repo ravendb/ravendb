@@ -255,6 +255,9 @@ namespace Raven.Client.Documents.Changes
 
         internal bool TriggeredByReplicationThread;
 
+        /// <summary>
+        /// Time series document collection name.
+        /// </summary>
         public string CollectionName { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -266,7 +269,8 @@ namespace Raven.Client.Documents.Changes
                 [nameof(To)] = To,
                 [nameof(DocumentId)] = DocumentId,
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Type)] = Type.ToString()
+                [nameof(Type)] = Type.ToString(),
+                [nameof(CollectionName)] = CollectionName
             };
         }
 
@@ -278,6 +282,7 @@ namespace Raven.Client.Documents.Changes
             value.TryGet(nameof(DocumentId), out string documentId);
             value.TryGet(nameof(ChangeVector), out string changeVector);
             value.TryGet(nameof(Type), out string type);
+            value.TryGet(nameof(CollectionName), out string collectionName);
 
             return new TimeSeriesChange
             {
@@ -286,7 +291,8 @@ namespace Raven.Client.Documents.Changes
                 To = to,
                 DocumentId = documentId,
                 ChangeVector = changeVector,
-                Type = (TimeSeriesChangeTypes)Enum.Parse(typeof(TimeSeriesChangeTypes), type, ignoreCase: true)
+                Type = (TimeSeriesChangeTypes)Enum.Parse(typeof(TimeSeriesChangeTypes), type, ignoreCase: true),
+                CollectionName = collectionName 
             };
         }
     }

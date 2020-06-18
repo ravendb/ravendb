@@ -139,6 +139,7 @@ namespace SlowTests.Issues
                     Assert.True(list.TryTake(out timeSeriesChange, TimeSpan.FromSeconds(1)));
                 }
 
+                Assert.NotNull(timeSeriesChange.CollectionName);
                 observableWithTask = taskObservable.ForTimeSeries("Likes");
 
                 using (observableWithTask.Subscribe(list.Add))
