@@ -260,6 +260,14 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
+            if (ReferenceEquals(incoming.Doc, resolved.Doc))
+            {
+                // when saving the incoming document as revision, we might have made modifications to the document.
+                // because incoming == resolved we need to remove these modifications before calling resolved.Clone()
+                resolved.Doc.Modifications = null;
+            }
+
+
             // because we are resolving to a conflict, and putting a document will
             // delete all the conflicts, we have to create a copy of the document
             // in order to avoid the data we are saving from being removed while
