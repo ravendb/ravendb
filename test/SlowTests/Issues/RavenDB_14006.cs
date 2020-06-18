@@ -124,6 +124,88 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public void CompareExchangeValueTrackingInSession_NoTracking()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var company = new Company { Id = "companies/1", ExternalId = "companies/cf", Name = "CF" };
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Store(company);
+
+                    var address = new Address { City = "Torun" };
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(company.ExternalId, address);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = true }))
+                {
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(company.ExternalId);
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    var value2 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(company.ExternalId);
+
+                    Assert.Equal(numberOfRequests + 2, session.Advanced.NumberOfRequests);
+
+                    Assert.NotEqual(value1, value2);
+
+                    var value3 = session.Advanced.ClusterTransaction.GetCompareExchangeValue<Address>(company.ExternalId);
+
+                    Assert.Equal(numberOfRequests + 3, session.Advanced.NumberOfRequests);
+
+                    Assert.NotEqual(value2, value3);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = true }))
+                {
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(company.ExternalId);
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    var value2 = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(company.ExternalId);
+
+                    Assert.Equal(numberOfRequests + 2, session.Advanced.NumberOfRequests);
+
+                    Assert.NotEqual(value1[company.ExternalId], value2[company.ExternalId]);
+
+                    var value3 = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(company.ExternalId);
+
+                    Assert.Equal(numberOfRequests + 3, session.Advanced.NumberOfRequests);
+
+                    Assert.NotEqual(value2[company.ExternalId], value3[company.ExternalId]);
+                }
+
+                using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide, NoTracking = true }))
+                {
+                    var numberOfRequests = session.Advanced.NumberOfRequests;
+
+                    var value1 = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] { company.ExternalId });
+
+                    Assert.Equal(numberOfRequests + 1, session.Advanced.NumberOfRequests);
+
+                    var value2 = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] { company.ExternalId });
+
+                    Assert.Equal(numberOfRequests + 2, session.Advanced.NumberOfRequests);
+
+                    Assert.NotEqual(value1[company.ExternalId], value2[company.ExternalId]);
+
+                    var value3 = session.Advanced.ClusterTransaction.GetCompareExchangeValues<Address>(new[] { company.ExternalId });
+
+                    Assert.Equal(numberOfRequests + 3, session.Advanced.NumberOfRequests);
+
+                    Assert.NotEqual(value2[company.ExternalId], value3[company.ExternalId]);
+                }
+            }
+        }
+
+        [Fact]
         public void CanUseCompareExchangeValueIncludesInLoad()
         {
             using (var store = GetDocumentStore())

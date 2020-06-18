@@ -236,6 +236,9 @@ namespace Raven.Client.Documents.Session
         {
             Debug.Assert(value != null, "value != null");
 
+            if (_session.NoTracking)
+                return new CompareExchangeSessionValue(value);
+
             if (_state.TryGetValue(value.Key, out var sessionValue) == false)
                 return _state[value.Key] = new CompareExchangeSessionValue(value);
 
