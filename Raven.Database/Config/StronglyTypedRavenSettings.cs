@@ -244,6 +244,8 @@ namespace Raven.Database.Config
             MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10 * 1000);
             AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
+            SkipConsistencyCheck = new BooleanSetting("Raven/Storage/SkipConsistencyCheck", false);
+
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
             Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
 
@@ -540,6 +542,8 @@ namespace Raven.Database.Config
         public EnumSetting<ImplicitFetchFieldsMode> ImplicitFetchFieldsFromDocumentMode { get; private set; }
 
         public StringSetting TempPath { get; private set; }
+
+        public BooleanSetting SkipConsistencyCheck { get; set; }
 
         public class VoronConfiguration
         {
