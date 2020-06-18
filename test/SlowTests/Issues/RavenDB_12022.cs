@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-15223")]
         public void CanMigrateLegacyCounters()
         {
             From41016.NumberOfCountersToMigrateInSingleTransaction = 20;
