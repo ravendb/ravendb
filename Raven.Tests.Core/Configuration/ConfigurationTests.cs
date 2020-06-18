@@ -197,6 +197,7 @@ namespace Raven.Tests.Core.Configuration
             configurationComparer.Assert(expected => expected.Replication.FetchingFromDiskTimeoutInSeconds.Value, actual => actual.Replication.FetchingFromDiskTimeoutInSeconds);
             configurationComparer.Assert(expected => expected.ConcurrentResourceLoadTimeout.Value, actual => actual.ConcurrentResourceLoadTimeout);
             configurationComparer.Assert(expected => expected.MaxConcurrentResourceLoads.Value, actual => actual.MaxConcurrentResourceLoads);
+            configurationComparer.Assert(expected => expected.SkipConsistencyCheck.Value, actual => actual.Storage.SkipConsistencyCheck);
             configurationComparer.Assert(expected => expected.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb.Value, actual => actual.Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb);
             configurationComparer.Assert(expected => expected.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds.Value, actual => actual.Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds);
             configurationComparer.Assert(expected => expected.Voron.AllowIncrementalBackups.Value, actual => actual.Storage.Voron.AllowIncrementalBackups);

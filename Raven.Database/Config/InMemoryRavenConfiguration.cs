@@ -329,6 +329,8 @@ namespace Raven.Database.Config
 
             RejectClientsMode = ravenSettings.RejectClientsModeEnabled.Value;
 
+            Storage.SkipConsistencyCheck = ravenSettings.SkipConsistencyCheck.Value;
+
             // Voron settings
             Storage.Voron.MaxBufferPoolSize = Math.Max(2, ravenSettings.Voron.MaxBufferPoolSize.Value);
             Storage.Voron.InitialFileSize = ravenSettings.Voron.InitialFileSize.Value;
