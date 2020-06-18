@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [Fact(Skip = "RavenDB-15223")]
         public void CanMigrateLegacyCountersWithMultipleDbIds()
         {
             From41016.NumberOfCountersToMigrateInSingleTransaction = 20;
