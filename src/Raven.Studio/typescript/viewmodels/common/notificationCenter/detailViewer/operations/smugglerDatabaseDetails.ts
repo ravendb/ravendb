@@ -17,8 +17,7 @@ type smugglerListItem = {
     erroredCount: string;
     hasSkippedCount: boolean;
     skippedCount: string;
-    hasAttachments: boolean;
-    attachments: attachmentsListItem;
+    nestedItems: Array<smugglerNestedListItem>;
     processingSpeedText: string;
 }
 
@@ -27,9 +26,11 @@ type uploadListItem = {
     uploadProgress: genericProgress;
 }
 
-type attachmentsListItem = {
+type smugglerNestedListItem = {
+    name: string;
     readCount: string;
     erroredCount: string;
+    skipped: boolean;
 }
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
@@ -96,22 +97,50 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             }
 
             const isDatabaseMigration = this.op.taskType() === "DatabaseMigration";
+            
+            const extractAttachments = (counts: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts) => {
+                const attachments = (counts as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtag).Attachments;
+                
+                return {
+                    name: "Attachments",
+                    readCount: attachments.ReadCount.toLocaleString(),
+                    erroredCount: attachments.ErroredCount.toLocaleString(),
+                    skipped: attachments.Skipped
+                } as smugglerNestedListItem;
+            };
+            
+            const mapNestedItem = (name: string, data: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts) => {
+                return {
+                    name,
+                    readCount: data.ReadCount.toLocaleString(),
+                    skipped: data.Skipped,
+                    erroredCount: data.ErroredCount.toLocaleString()
+                } as smugglerNestedListItem;
+            }
+            
             if (this.op.taskType() === "CollectionImportFromCsv" || isDatabaseMigration) {
-                result.push(this.mapToExportListItem("Documents", status.Documents, isDatabaseMigration));
+                result.push(this.mapToExportListItem("Documents", status.Documents, isDatabaseMigration ? [ extractAttachments(status.Documents) ] : []));
             } else {
+                const documentNested = [] as smugglerNestedListItem[];
+                const revisionsNested = [] as smugglerNestedListItem[];
+
+                documentNested.push(extractAttachments(status.Documents));
+                revisionsNested.push(extractAttachments(status.RevisionDocuments));
+                
+                documentNested.push(mapNestedItem("Counters", status.Counters));
+                documentNested.push(mapNestedItem("TimeSeries", status.TimeSeries));
+                
                 result.push(this.mapToExportListItem("Database Record", status.DatabaseRecord));
-                result.push(this.mapToExportListItem("Documents", status.Documents, true));
-                result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, true));
+                result.push(this.mapToExportListItem("Documents", status.Documents, documentNested));
+                result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, revisionsNested));
                 result.push(this.mapToExportListItem("Conflicts", status.Conflicts));
                 result.push(this.mapToExportListItem("Indexes", status.Indexes));
                 result.push(this.mapToExportListItem("Identities", status.Identities));
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
-                result.push(this.mapToExportListItem("Counters", status.Counters));
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
-                result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries));
                 
                 if (this.op.taskType() === "DatabaseImport") {
-                    result.push(this.mapToExportListItem("Tombstones", status.Tombstones));
+                    documentNested.push(mapNestedItem("Tombstones", status.Tombstones));
                     result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
                 }
             }
@@ -130,12 +159,12 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                     item.readCount = "-";
                     item.erroredCount = "-";
                     item.skippedCount = item.skippedCount || "-";
-
-                    if (item.hasAttachments) {
-                        const attachments = item.attachments;
-                        attachments.erroredCount = "-";
-                        attachments.readCount = "-";
-                    }
+                    
+                    item.nestedItems.forEach(nested => {
+                        nested.erroredCount = "-";
+                        nested.readCount = "-";
+                        nested.skipped = item.stage === "skipped";
+                    });
                 }
             });
 
@@ -285,21 +314,12 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         }));
     }
 
-    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, hasAttachments: boolean = false): smugglerListItem {
+    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, nestedItems: smugglerNestedListItem[] = []): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         if (item.Skipped) {
             stage = "skipped";
         } else if (item.Processed) {
             stage = "processed";
-        }
-
-        let attachmentsItem = null as attachmentsListItem;
-        if (hasAttachments) {
-            const attachments = (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtag).Attachments;
-            attachmentsItem = {
-                readCount: attachments.ReadCount.toLocaleString(),
-                erroredCount: attachments.ErroredCount.toLocaleString()
-            }
         }
 
         let processingSpeedText = smugglerDatabaseDetails.ProcessingText;
@@ -327,8 +347,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             skippedCount: isDocuments ? skippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString(),
-            hasAttachments: hasAttachments,
-            attachments: attachmentsItem,
+            nestedItems,
             processingSpeedText: processingSpeedText
         } as smugglerListItem;
     }
