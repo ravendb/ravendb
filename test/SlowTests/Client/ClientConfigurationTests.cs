@@ -13,27 +13,32 @@ namespace SlowTests.Client
         {
         }
 
-       
         [Fact]
         public void ChangeClientConfigurationForDatabase()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.LoadBalancerPerSessionContextSelector = _ => "1" }))
             {
                 var requestExecutor = store.GetRequestExecutor();
-                store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.None, Disabled = false }));
+                store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.None, LoadBalanceBehavior = LoadBalanceBehavior.None, LoadBalancerContextSeed = 0, Disabled = false }));
 
                 using (var session = store.OpenSession())
                 {
                     session.Load<dynamic>("users/1"); // forcing client configuration update
                 }
-                store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = false }));
+
+                store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext, LoadBalancerContextSeed = 10, Disabled = false }));
 
                 using (var session = store.OpenSession())
                 {
                     session.Load<dynamic>("users/1"); // forcing client configuration update
                 }
+
                 Assert.Equal(ReadBalanceBehavior.None, store.Conventions.ReadBalanceBehavior);
+                Assert.Equal(LoadBalanceBehavior.None, store.Conventions.LoadBalanceBehavior);
+                Assert.Equal(0, store.Conventions.LoadBalancerContextSeed);
                 Assert.Equal(ReadBalanceBehavior.RoundRobin, requestExecutor.Conventions.ReadBalanceBehavior);
+                Assert.Equal(LoadBalanceBehavior.UseSessionContext, requestExecutor.Conventions.LoadBalanceBehavior);
+                Assert.Equal(10, requestExecutor.Conventions.LoadBalancerContextSeed);
             }
         }
 
@@ -103,6 +108,5 @@ namespace SlowTests.Client
                 }
             }
         }
-
     }
 }
