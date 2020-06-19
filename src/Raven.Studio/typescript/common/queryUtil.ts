@@ -15,9 +15,25 @@ class queryUtil {
     static readonly DynamicPrefix = "collection/";
     static readonly AllDocs = "AllDocs";
 
+    static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string) {
+        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName);
+        const escapedDocumentId = queryUtil.escapeCollectionOrFieldName(documentId);
+        const escapedTimeSeriesName = queryUtil.escapeCollectionOrFieldName(timeSeriesName);
+        
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName})`;
+    }
+
+    static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string) {
+        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName);
+        const escapedDocumentId = queryUtil.escapeCollectionOrFieldName(documentId);
+        const escapedTimeSeriesName = queryUtil.escapeCollectionOrFieldName(timeSeriesName);
+
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} group by ${group} select min(), max(), avg(), first(), last())`;
+    }
+    
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
         const escapedFieldName = queryUtil.escapeCollectionOrFieldName(fieldName);
-        return `from index '${indexName}' where ${escapedFieldName} = '${value}' `;
+        return `from index ${indexName} where ${escapedFieldName} = '${value}' `;
     }
 
     static escapeCollectionOrFieldName(name: string) : string {

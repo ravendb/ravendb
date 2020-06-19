@@ -417,7 +417,7 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forQuery(db: database | databaseInfo, indexNameOrHashToQuery?: string | number): string {
+    static forQuery(db: database | databaseInfo, indexNameOrHashToQuery?: string | number, extraParameters: string = ""): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         let indexToQueryComponent = indexNameOrHashToQuery as string;
         if (typeof indexNameOrHashToQuery === "number") {
@@ -425,7 +425,7 @@ class appUrl {
         } 
 
         const indexPart = indexToQueryComponent ? "/" + encodeURIComponent(indexToQueryComponent) : "";
-        return "#databases/query/index" + indexPart + "?" + databasePart;
+        return "#databases/query/index" + indexPart + "?" + databasePart + extraParameters;
     }
 
     static forDatabaseQuery(db: database | databaseInfo): string {

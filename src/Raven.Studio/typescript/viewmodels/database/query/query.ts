@@ -93,6 +93,8 @@ class query extends viewModelBase {
     static readonly SortTypes: querySortType[] = ["Ascending", "Descending", "Range Ascending", "Range Descending"];
 
     static lastQuery = new Map<string, string>();
+    
+    autoOpenGraph: boolean = false;
 
     clientVersion = viewModelBase.clientVersion;
 
@@ -478,9 +480,13 @@ class query extends viewModelBase {
             }); 
     }
 
-    activate(indexNameOrRecentQueryHash?: string) {
-        super.activate(indexNameOrRecentQueryHash);
-
+    activate(indexNameOrRecentQueryHash?: string, additionalParameters?: { database: string; openGraph: boolean }) {
+        super.activate(indexNameOrRecentQueryHash, additionalParameters);
+        
+        if (additionalParameters && additionalParameters.openGraph) {
+            this.autoOpenGraph = true;
+        }
+        
         this.updateHelpLink('KCIMJK');
         
         const db = this.activeDatabase();
@@ -905,6 +911,16 @@ class query extends viewModelBase {
                         this.saveRecentQuery(criteriaDto, optionalSavedQueryName);
                         
                         this.setupDisableReasons(); 
+                        
+                        if (this.autoOpenGraph) {
+                            const firstItem = this.gridController().findItem(() => true);
+                            if (firstItem) {
+                                this.gridController().setSelectedItems([firstItem]);
+                                this.plotTimeSeries();
+                            }
+                            
+                            this.autoOpenGraph = false;
+                        }
                     })
                     .fail((request: JQueryXHR) => {
                         resultsTask.reject(request);

@@ -61,10 +61,12 @@ class viewModelBase {
         return this.databasesManager.activateBasedOnCurrentUrl();
     }
 
-    activate(args: any, isShell = false) {
+    activate(args: any, parameters?: any) {
         // create this ko.computed once to avoid creation and subscribing every 50 ms - thus creating memory leak.
         const adminArea = this.appUrls.isAreaActive("admin");
 
+        const isShell = parameters && parameters.shell;
+        
         if (!isShell && !adminArea()) {
             this.changesContext
                 .afterChangesApiConnected(() => this.afterClientApiConnected());

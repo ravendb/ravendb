@@ -39,6 +39,55 @@
                 <i class="icon-trash"></i>
                 <span data-bind="text: deleteButtonText"></span>
             </button>
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                    <i class="icon-graph"></i>
+                    <span>Plot</span>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li data-bind="click: plotTimeSeries">
+                        <a href="#" title="Plot time series as raw data (w/o any grouping)">
+                            <span>Raw data</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(plotGroupedTimeSeries, '1s')">
+                        <a href="#" title="Plot time series grouped by seconds">
+                            <span>Grouped by seconds</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(plotGroupedTimeSeries, '1m')">
+                        <a href="#" title="Plot time series grouped by minutes">
+                            <span>Grouped by minutes</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(plotGroupedTimeSeries, '1h')">
+                        <a href="#" title="Plot time series grouped by hours">
+                            <span>Grouped by hours</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(plotGroupedTimeSeries, '1d')">
+                        <a href="#" title="Plot time series grouped by days">
+                            <span>Grouped by days</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(plotGroupedTimeSeries, '1mon')">
+                        <a href="#" title="Plot time series grouped by months">
+                            <span>Grouped by months</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(plotGroupedTimeSeries, '1quarter')">
+                        <a href="#" title="Plot time series grouped by quarters">
+                            <span>Grouped by quarters</span>
+                        </a>
+                    </li>
+                    <li data-bind="click: _.partial(plotGroupedTimeSeries, '1year')">
+                        <a href="#" title="Plot time series grouped by years">
+                            <span>Grouped by years</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
     <div class="flex-grow utc-info-container">

@@ -258,7 +258,7 @@ class about extends viewModelBase {
     }
 
     activate(args: any) {
-        super.activate(args, true);
+        super.activate(args, { shell: true });
         return $.when<any>(this.getLicenseConfigurationSettings(), this.pullLatestVersionInfo());
     }
 }
