@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using Raven.Client.Documents.Commands.MultiGet;
@@ -97,6 +98,24 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
             if (response.Result != null)
             {
+                if (_clusterSession._session.NoTracking)
+                {
+                    var result = new Dictionary<string, CompareExchangeValue<T>>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var kvp in CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValues((BlittableJsonReaderObject)response.Result, materializeMetadata: false, _conventions))
+                    {
+                        if (kvp.Value == null)
+                        {
+                            result[kvp.Key] = _clusterSession.RegisterMissingCompareExchangeValue(kvp.Key).GetValue<T>(_conventions);
+                            continue;
+                        }
+
+                        result[kvp.Key] = _clusterSession.RegisterCompareExchangeValue(kvp.Value).GetValue<T>(_conventions);
+                    }
+
+                    Result = result;
+                    return;
+                }
+
                 foreach (var kvp in CompareExchangeValueResultParser<BlittableJsonReaderObject>.GetValues((BlittableJsonReaderObject)response.Result, materializeMetadata: false, _conventions))
                 {
                     if (kvp.Value == null)
@@ -116,13 +135,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                     _clusterSession.RegisterMissingCompareExchangeValue(key);
                 }
             }
-            else
-            {
-
-            }
 
             Result = _clusterSession.GetCompareExchangeValuesFromSessionInternal<T>(_keys, out var notTrackedKeys);
-            Debug.Assert(_clusterSession._session.NoTracking || notTrackedKeys == null, "missingKeys == null");
+            Debug.Assert(_clusterSession._session.NoTracking || notTrackedKeys == null, "notTrackedKeys == null");
         }
     }
 }
