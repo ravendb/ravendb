@@ -99,7 +99,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             const isDatabaseMigration = this.op.taskType() === "DatabaseMigration";
             
             const extractAttachments = (counts: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts) => {
-                const attachments = (counts as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtag).Attachments;
+                const attachments = (counts as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
                 
                 return {
                     name: "Attachments",
