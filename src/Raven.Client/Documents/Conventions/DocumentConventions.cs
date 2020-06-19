@@ -394,6 +394,22 @@ namespace Raven.Client.Documents.Conventions
                 _loadBalanceBehavior = value;
             }
         }
+
+        /// <summary>
+        /// Gets or set the function that allow to specialize the topology
+        /// selection for a particular session. Used in load balancing
+        /// scenarios.
+        /// </summary>
+        public Func<string, string> LoadBalancerPerSessionContextSelector
+        {
+            get => _loadBalancerPerSessionContextSelector;
+            set
+            {
+                AssertNotFrozen();
+                _loadBalancerPerSessionContextSelector = value;
+            }
+        }
+
         /// <summary>
         ///     By default, the field 'Id' field will be added to dynamic objects, this allows to disable this behavior.
         ///     Default value is 'true'
@@ -463,21 +479,6 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _useOptimisticConcurrency = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or set the function that allow to specialize the topology
-        /// selection for a particular session. Used in load balancing
-        /// scenarios.
-        /// </summary>
-        public Func<string, string> LoadBalancerPerSessionContextSelector
-        {
-            get => _loadBalancerPerSessionContextSelector;
-            set
-            {
-                AssertNotFrozen();
-                _loadBalancerPerSessionContextSelector = value;
             }
         }
 
@@ -994,6 +995,7 @@ namespace Raven.Client.Documents.Conventions
                     _readBalanceBehavior = _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
                     _identityPartsSeparator = _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
                     _loadBalanceBehavior = _originalConfiguration.LoadBalanceBehavior ?? _loadBalanceBehavior;
+                    _loadBalancerContextSeed = _originalConfiguration.LoadBalancerContextSeed ?? _loadBalancerContextSeed;
 
                     _originalConfiguration = null;
                     return;
@@ -1007,11 +1009,13 @@ namespace Raven.Client.Documents.Conventions
                         ReadBalanceBehavior = ReadBalanceBehavior,
                         IdentityPartsSeparator = IdentityPartsSeparator,
                         LoadBalanceBehavior = _loadBalanceBehavior,
+                        LoadBalancerContextSeed = _loadBalancerContextSeed
                     };
 
                 _maxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession ?? _maxNumberOfRequestsPerSession;
                 _readBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior ?? _readBalanceBehavior;
                 _loadBalanceBehavior = configuration.LoadBalanceBehavior ?? _originalConfiguration.LoadBalanceBehavior ?? _loadBalanceBehavior;
+                _loadBalancerContextSeed = configuration.LoadBalancerContextSeed ?? _originalConfiguration.LoadBalancerContextSeed ?? _loadBalancerContextSeed;
                 _identityPartsSeparator = configuration.IdentityPartsSeparator ?? _originalConfiguration.IdentityPartsSeparator ?? _identityPartsSeparator;
             }
         }
@@ -1155,7 +1159,7 @@ namespace Raven.Client.Documents.Conventions
 
         internal void Freeze()
         {
-            if (_loadBalanceBehavior == LoadBalanceBehavior.UseSessionContext && 
+            if (_loadBalanceBehavior == LoadBalanceBehavior.UseSessionContext &&
                 _loadBalancerPerSessionContextSelector == null)
             {
                 throw new NotSupportedException($"Cannot set {nameof(LoadBalanceBehavior)} to {LoadBalanceBehavior.UseSessionContext} without also providing a value for {nameof(LoadBalancerPerSessionContextSelector)}");

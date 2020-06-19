@@ -15,8 +15,10 @@ namespace Raven.Client.Documents.Operations.Configuration
         public int? MaxNumberOfRequestsPerSession { get; set; }
 
         public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
-        
+
         public LoadBalanceBehavior? LoadBalanceBehavior { get; set; }
+
+        public int? LoadBalancerContextSeed { get; set; }
 
         public char? IdentityPartsSeparator
         {
@@ -39,6 +41,7 @@ namespace Raven.Client.Documents.Operations.Configuration
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
                 [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior,
                 [nameof(LoadBalanceBehavior)] = LoadBalanceBehavior,
+                [nameof(LoadBalancerContextSeed)] = LoadBalancerContextSeed,
                 [nameof(IdentityPartsSeparator)] = IdentityPartsSeparator
             };
         }
