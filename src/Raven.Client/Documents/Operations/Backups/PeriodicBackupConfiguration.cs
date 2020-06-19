@@ -13,8 +13,8 @@ namespace Raven.Client.Documents.Operations.Backups
 {
     public class PeriodicBackupConfiguration : IDatabaseTask
     {
-        public long TaskId { get; set; } 
-        public bool Disabled { get; set; } 
+        public long TaskId { get; set; }
+        public bool Disabled { get; set; }
         public string Name { get; set; }
         public string MentorNode { get; set; }
         public BackupType BackupType { get; set; }
@@ -28,18 +28,18 @@ namespace Raven.Client.Documents.Operations.Backups
         public AzureSettings AzureSettings { get; set; }
         public FtpSettings FtpSettings { get; set; }
         public GoogleCloudSettings GoogleCloudSettings { get; set; }
-        
+
         /// <summary>
         /// Frequency of full backup jobs in cron format
         /// </summary>
         public string FullBackupFrequency { get; set; }
-        
+
         /// <summary>
         /// Frequency of incremental backup jobs in cron format
         /// If set to null incremental backup will be disabled.
         /// </summary>
         public string IncrementalBackupFrequency { get; set; }
-        
+
         public ulong GetTaskKey()
         {
             Debug.Assert(TaskId != 0);
@@ -55,8 +55,8 @@ namespace Raven.Client.Documents.Operations.Backups
         public string GetDefaultTaskName()
         {
             var destinations = GetDestinations();
-            return destinations.Count == 0 ? 
-                $"{BackupType} w/o destinations" : 
+            return destinations.Count == 0 ?
+                $"{BackupType} w/o destinations" :
                 $"{BackupType} to {string.Join(", ", destinations)}";
         }
 
@@ -115,17 +115,17 @@ namespace Raven.Client.Documents.Operations.Backups
             var backupDestinations = new List<string>();
 
             if (LocalSettings != null && LocalSettings.Disabled == false)
-                backupDestinations.Add(BackupDestination.Local.ToString());
+                backupDestinations.Add(nameof(BackupDestination.Local));
             if (AzureSettings != null && AzureSettings.Disabled == false)
-                backupDestinations.Add(BackupDestination.Azure.ToString());
+                backupDestinations.Add(nameof(BackupDestination.Azure));
             if (S3Settings != null && S3Settings.Disabled == false)
-                backupDestinations.Add(BackupDestination.AmazonS3.ToString());
+                backupDestinations.Add(nameof(BackupDestination.AmazonS3));
             if (GlacierSettings != null && GlacierSettings.Disabled == false)
-                backupDestinations.Add(BackupDestination.Glacier.ToString());
+                backupDestinations.Add(nameof(BackupDestination.Glacier));
             if (GoogleCloudSettings != null && GoogleCloudSettings.Disabled == false)
-                backupDestinations.Add(BackupDestination.GoogleCloud.ToString());
+                backupDestinations.Add(nameof(BackupDestination.GoogleCloud));
             if (FtpSettings != null && FtpSettings.Disabled == false)
-                backupDestinations.Add(BackupDestination.FTP.ToString());
+                backupDestinations.Add(nameof(BackupDestination.FTP));
 
             return backupDestinations;
         }
