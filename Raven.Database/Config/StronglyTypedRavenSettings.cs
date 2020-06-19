@@ -3,15 +3,15 @@
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
+using Rachis;
+using Raven.Abstractions.Data;
+using Raven.Database.Config.Settings;
 using System;
 using System.Collections.Specialized;
 using System.IO;
 using System.Net;
 using System.Runtime.Caching;
 using System.Threading;
-using Rachis;
-using Raven.Abstractions.Data;
-using Raven.Database.Config.Settings;
 
 namespace Raven.Database.Config
 {
@@ -68,11 +68,11 @@ namespace Raven.Database.Config
         }
 
         public void Setup(int defaultMaxNumberOfItemsToIndexInSingleBatch, int defaultInitialNumberOfItemsToIndexInSingleBatch)
-        { 
+        {
             const int defaultPrecomputedBatchSize = 32 * 1024;
             MaxPrecomputedBatchSizeForNewIndex = new IntegerSetting(settings["Raven/MaxPrecomputedBatchSizeForNewIndex"], defaultPrecomputedBatchSize);
 
-            const int defaultPrecomputedBatchTotalDocumentSizeInBytes = 1024*1024*250;  //250 mb
+            const int defaultPrecomputedBatchTotalDocumentSizeInBytes = 1024 * 1024 * 250;  //250 mb
             MaxPrecomputedBatchTotalDocumentSizeInBytes = new IntegerSetting(settings["Raven/MaxPrecomputedBatchTotalDocumentSizeInBytes"], defaultPrecomputedBatchTotalDocumentSizeInBytes);
 
             //1024 is Lucene.net default - so if the setting is not set it will be the same as not touching Lucene's settings at all
@@ -132,7 +132,6 @@ namespace Raven.Database.Config
             PrewarmFacetsOnIndexingMaxAge =
                 new TimeSpanSetting(settings["Raven/PrewarmFacetsOnIndexingMaxAge"], TimeSpan.FromMinutes(10),
                                     TimeSpanArgumentType.FromParse);
-
 
             MaxProcessingRunLatency =
                 new TimeSpanSetting(settings["Raven/MaxProcessingRunLatency"] ?? settings["Raven/MaxIndexingRunLatency"], TimeSpan.FromMinutes(5),
@@ -244,7 +243,7 @@ namespace Raven.Database.Config
             MaxStepsForScript = new IntegerSetting(settings["Raven/MaxStepsForScript"], 10 * 1000);
             AdditionalStepsForScriptBasedOnDocumentSize = new IntegerSetting(settings["Raven/AdditionalStepsForScriptBasedOnDocumentSize"], 5);
 
-            SkipConsistencyCheck = new BooleanSetting("Raven/Storage/SkipConsistencyCheck", false);
+            SkipConsistencyCheck = new BooleanSetting(settings["Raven/Storage/SkipConsistencyCheck"], false);
 
             Prefetcher.FetchingDocumentsFromDiskTimeoutInSeconds = new IntegerSetting(settings["Raven/Prefetcher/FetchingDocumentsFromDiskTimeout"], 5);
             Prefetcher.MaximumSizeAllowedToFetchFromStorageInMb = new IntegerSetting(settings["Raven/Prefetcher/MaximumSizeAllowedToFetchFromStorage"], 256);
@@ -290,7 +289,7 @@ namespace Raven.Database.Config
             Replication.ReplicationRequestTimeoutInMilliseconds = new IntegerSetting(settings["Raven/Replication/ReplicationRequestTimeout"], 60 * 1000);
             Replication.ForceReplicationRequestBuffering = new BooleanSetting(settings["Raven/Replication/ForceReplicationRequestBuffering"], false);
             Replication.MaxNumberOfItemsToReceiveInSingleBatch = new NullableIntegerSettingWithMin(settings["Raven/Replication/MaxNumberOfItemsToReceiveInSingleBatch"], (int?)null, 512);
-            Replication.ReplicationPropagationDelayInSeconds = new IntegerSetting(settings[Constants.ReplicationPropagationDelayInSeconds],15);
+            Replication.ReplicationPropagationDelayInSeconds = new IntegerSetting(settings[Constants.ReplicationPropagationDelayInSeconds], 15);
             Replication.CertificatePath = new StringSetting(settings["Raven/Replication/CertificatePath"], (string)null);
             Replication.CertificatePassword = new StringSetting(settings["Raven/Replication/CertificatePassword"], (string)null);
 
@@ -309,7 +308,7 @@ namespace Raven.Database.Config
             Counter.DataDir = new StringSetting(settings[Constants.Counter.DataDirectory], @"~\Counters");
             Counter.TombstoneRetentionTime = new TimeSpanSetting(settings[Constants.Counter.TombstoneRetentionTime], TimeSpan.FromDays(14), TimeSpanArgumentType.FromParse);
             Counter.DeletedTombstonesInBatch = new IntegerSetting(settings[Constants.Counter.DeletedTombstonesInBatch], 1000);
-            Counter.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.Counter.ReplicationLatencyMs], 30 * 1000);			
+            Counter.ReplicationLatencyInMs = new IntegerSetting(settings[Constants.Counter.ReplicationLatencyMs], 30 * 1000);
             Counter.BatchTimeout = new TimeSpanSetting(settings[Constants.Counter.BatchTimeout], TimeSpan.FromSeconds(360), TimeSpanArgumentType.FromParse);
 
             TimeSeries.DataDir = new StringSetting(settings[Constants.TimeSeries.DataDirectory], @"~\TimeSeries");
@@ -333,7 +332,7 @@ namespace Raven.Database.Config
             Cluster.MaxLogLengthBeforeCompaction = new IntegerSetting(settings["Raven/Cluster/MaxLogLengthBeforeCompaction"], RaftEngineOptions.DefaultMaxLogLengthBeforeCompaction);
             Cluster.MaxEntriesPerRequest = new IntegerSetting(settings["Raven/Cluster/MaxEntriesPerRequest"], RaftEngineOptions.DefaultMaxEntiresPerRequest);
             Cluster.MaxStepDownDrainTime = new TimeSpanSetting(settings["Raven/Cluster/MaxStepDownDrainTime"], RaftEngineOptions.DefaultMaxStepDownDrainTime, TimeSpanArgumentType.FromParse);
-            Cluster.MaxReplicationLatency = new TimeSpanSetting(settings["Raven/Cluster/MaxReplicationLatency"],TimeSpan.FromMinutes(2), TimeSpanArgumentType.FromParse);
+            Cluster.MaxReplicationLatency = new TimeSpanSetting(settings["Raven/Cluster/MaxReplicationLatency"], TimeSpan.FromMinutes(2), TimeSpanArgumentType.FromParse);
 
             DefaultStorageTypeName = new StringSetting(settings["Raven/StorageTypeName"] ?? settings["Raven/StorageEngine"], string.Empty);
 
@@ -381,7 +380,7 @@ namespace Raven.Database.Config
                                     cacheSizeMaxSetting.Value;
 
             if (val < 0)
-                return 128; // if machine has less than 1024 MB, then only use 128 MB 
+                return 128; // if machine has less than 1024 MB, then only use 128 MB
 
             return val;
         }
@@ -564,7 +563,6 @@ namespace Raven.Database.Config
             public StringSetting JournalsStoragePath { get; set; }
 
             public BooleanSetting AllowOn32Bits { get; set; }
-
         }
 
         public class EsentConfiguration
@@ -626,7 +624,6 @@ namespace Raven.Database.Config
         {
             public IntegerSetting FetchingFromDiskTimeoutInSeconds { get; set; }
 
-
             public BooleanSetting ForceReplicationRequestBuffering { get; set; }
 
             public IntegerSetting ReplicationRequestTimeoutInMilliseconds { get; set; }
@@ -638,7 +635,6 @@ namespace Raven.Database.Config
             public StringSetting CertificatePath { get; set; }
 
             public StringSetting CertificatePassword { get; set; }
-
         }
 
         public class SqlReplicationConfiguration
@@ -733,4 +729,3 @@ namespace Raven.Database.Config
         Exception
     }
 }
-
