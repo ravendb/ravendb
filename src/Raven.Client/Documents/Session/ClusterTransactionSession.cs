@@ -205,12 +205,14 @@ namespace Raven.Client.Documents.Session
             return results;
         }
 
-        internal void RegisterMissingCompareExchangeValue(string key)
+        internal CompareExchangeSessionValue RegisterMissingCompareExchangeValue(string key)
         {
+            var value = new CompareExchangeSessionValue(key, -1, CompareExchangeSessionValue.CompareExchangeValueState.Missing);
             if (_session.NoTracking)
-                return;
+                return value;
 
-            _state.Add(key, new CompareExchangeSessionValue(key, -1, CompareExchangeSessionValue.CompareExchangeValueState.Missing));
+            _state.Add(key, value);
+            return value;
         }
 
         internal void RegisterCompareExchangeValues(BlittableJsonReaderObject values)
