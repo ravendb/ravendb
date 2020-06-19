@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Handlers
                 const string dataProperty = "data";
 
                 string lastAttachmentEtag = null;
-                var progress = new SmugglerProgressBase.CountsWithLastEtag();
+                var progress = new SmugglerProgressBase.CountsWithLastEtagAndAttachments();
                 foreach (var attachmentObject in result.Values)
                 {
                     if (!(attachmentObject is Dictionary<string, object> attachmentDictionary))
