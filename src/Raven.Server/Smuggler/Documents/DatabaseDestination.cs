@@ -208,7 +208,7 @@ namespace Raven.Server.Smuggler.Documents
                 };
             }
 
-            public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
+            public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
             {
                 if (item.Attachments != null)
                 {

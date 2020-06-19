@@ -817,7 +817,7 @@ namespace Raven.Server.Smuggler.Documents
                 _filterMetadataProperty = filterMetadataProperty;
             }
 
-            public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtag progress)
+            public void WriteDocument(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
             {
                 if (item.Attachments != null)
                     throw new NotSupportedException();
@@ -889,7 +889,7 @@ namespace Raven.Server.Smuggler.Documents
                 throw new NotSupportedException();
             }
 
-            private void WriteUniqueAttachmentStreams(Document document, SmugglerProgressBase.CountsWithLastEtag progress)
+            private void WriteUniqueAttachmentStreams(Document document, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress)
             {
                 if ((document.Flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments ||
                     document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||

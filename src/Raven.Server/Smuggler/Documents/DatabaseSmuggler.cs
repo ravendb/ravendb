@@ -241,9 +241,17 @@ namespace Raven.Server.Smuggler.Documents
             {
                 counts.Processed = true;
 
-                if (counts is SmugglerProgressBase.CountsWithLastEtag countsWithEtag)
+                if (counts is SmugglerProgressBase.CountsWithLastEtagAndAttachments countsWithEtagAndAttachments)
                 {
-                    countsWithEtag.Attachments.Processed = true;
+                    countsWithEtagAndAttachments.Attachments.Processed = true;
+
+                    switch (type)
+                    {
+                        case DatabaseItemType.Documents:
+                        case DatabaseItemType.RevisionDocuments:
+                            countsWithEtagAndAttachments.Attachments.Skipped = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
+                            break;
+                    }
                 }
             }
 
@@ -342,7 +350,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessIdentities(SmugglerResult result, BuildVersionType buildType)
         {
             result.Identities.Start();
-            
+
             using (var actions = _destination.Identities())
             {
                 foreach (var identity in _source.GetIdentities())
@@ -382,7 +390,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessIndexes(SmugglerResult result)
         {
             result.Indexes.Start();
-            
+
             using (var actions = _destination.Indexes())
             {
                 foreach (var index in _source.GetIndexes())
@@ -528,7 +536,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.DatabaseRecordProgress ProcessDatabaseRecord(SmugglerResult result)
         {
             result.DatabaseRecord.Start();
-            
+
             using (var actions = _destination.DatabaseRecord())
             {
                 var databaseRecord = _source.GetDatabaseRecord();
@@ -560,7 +568,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessRevisionDocuments(SmugglerResult result)
         {
             result.RevisionDocuments.Start();
-            
+
             using (var actions = _destination.RevisionDocuments())
             {
                 foreach (var item in _source.GetRevisionDocuments(_options.Collections, actions))
@@ -593,7 +601,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, BuildVersionType buildType)
         {
             result.Documents.Start();
-            
+
             using (var actions = _destination.Documents())
             {
                 List<LazyStringValue> legacyIdsToDelete = null;
@@ -702,20 +710,20 @@ namespace Raven.Server.Smuggler.Documents
                 case BuildVersionType.V4:
                 case BuildVersionType.V5:
                 case BuildVersionType.GreaterThanCurrent:
-                {
-                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
-                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
+                    {
+                        if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false)
+                            item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasRevisions);
 
-                    // those flags will be re-added once counter/time-series is imported
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
-                    item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasTimeSeries);
+                        // those flags will be re-added once counter/time-series is imported
+                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasCounters);
+                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasTimeSeries);
 
-                    // attachments are special because they are referenced
-                    if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
-                        item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
+                        // attachments are special because they are referenced
+                        if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
+                            item.Document.Flags = item.Document.Flags.Strip(DocumentFlags.HasAttachments);
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 
@@ -750,7 +758,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessCompareExchange(SmugglerResult result)
         {
             result.CompareExchange.Start();
-            
+
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var actions = _destination.CompareExchange(context))
             {
@@ -784,7 +792,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessCounters(SmugglerResult result)
         {
             result.Counters.Start();
-            
+
             using (var actions = _destination.Counters(result))
             {
                 foreach (var counterGroup in _source.GetCounterValues(_options.Collections, actions))
@@ -909,7 +917,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessTombstones(SmugglerResult result)
         {
             result.Tombstones.Start();
-            
+
             using (var actions = _destination.Tombstones())
             {
                 foreach (var tombstone in _source.GetTombstones(_options.Collections, actions))
@@ -942,7 +950,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessCompareExchangeTombstones(SmugglerResult result)
         {
             result.CompareExchangeTombstones.Start();
-            
+
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var actions = _destination.CompareExchangeTombstones(context))
             {
@@ -975,7 +983,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessConflicts(SmugglerResult result)
         {
             result.Conflicts.Start();
-            
+
             using (var actions = _destination.Conflicts())
             {
                 foreach (var conflict in _source.GetConflicts(_options.Collections, actions))
@@ -1007,7 +1015,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessSubscriptions(SmugglerResult result)
         {
             result.Subscriptions.Start();
-            
+
             using (var actions = _destination.Subscriptions())
             {
                 foreach (var subscription in _source.GetSubscriptions())
@@ -1028,7 +1036,7 @@ namespace Raven.Server.Smuggler.Documents
         private SmugglerProgressBase.Counts ProcessTimeSeries(SmugglerResult result)
         {
             result.TimeSeries.Start();
-            
+
             using (var actions = _destination.TimeSeries())
             {
                 foreach (var ts in _source.GetTimeSeries(_options.Collections))
@@ -1047,7 +1055,6 @@ namespace Raven.Server.Smuggler.Documents
 
             return result.TimeSeries;
         }
-
 
         private static void SkipDocument(DocumentItem item, SmugglerResult result)
         {
