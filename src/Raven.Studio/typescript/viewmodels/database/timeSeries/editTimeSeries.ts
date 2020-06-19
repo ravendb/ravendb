@@ -17,6 +17,9 @@ import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindi
 import timeSeriesModel = require("models/database/timeSeries/timeSeriesModel");
 import getTimeSeriesConfigurationCommand = require("commands/database/documents/timeSeries/getTimeSeriesConfigurationCommand");
 import getDocumentMetadataCommand = require("commands/database/documents/getDocumentMetadataCommand");
+import queryUtil = require("common/queryUtil");
+import queryCriteria = require("models/database/query/queryCriteria");
+import recentQueriesStorage = require("common/storage/savedQueriesStorage");
 
 class timeSeriesInfo {
     name = ko.observable<string>();
@@ -62,7 +65,7 @@ class editTimeSeries extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("changeCurrentSeries", "createTimeSeries", "deleteTimeSeries");
+        this.bindToCurrentInstance("changeCurrentSeries", "createTimeSeries", "deleteTimeSeries", "plotTimeSeries", "plotGroupedTimeSeries");
         
         this.initObservables();
         datePickerBindingHandler.install();
@@ -491,6 +494,33 @@ class editTimeSeries extends viewModelBase {
             const tsInfo = this.getSeriesFromList(this.timeSeriesName());
             return tsInfo ? tsInfo.nameAndNumberFormatted() : "<creating new>";
         });
+    }
+
+    plotTimeSeries() {
+        const queryText = queryUtil.formatRawTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName());
+        this.plotTimeSeriesByQuery(queryText);
+    }
+
+    plotGroupedTimeSeries(group: string) {
+        const queryText = queryUtil.formatGroupedTimeSeriesQuery(this.documentCollection(), this.documentId(), this.timeSeriesName(), group);
+        this.plotTimeSeriesByQuery(queryText);
+    }
+    
+    plotTimeSeriesByQuery(queryText: string) {
+        const query = queryCriteria.empty();
+        
+
+        query.queryText(queryText);
+        query.name("Time Series: " + this.timeSeriesName() + " (document id: " + this.documentId() + ")");
+        query.recentQuery(true);
+
+        const queryDto = query.toStorageDto();
+        const recentQueries = recentQueriesStorage.getSavedQueries(this.activeDatabase());
+        recentQueriesStorage.appendQuery(queryDto, ko.observableArray(recentQueries));
+        recentQueriesStorage.storeSavedQueries(this.activeDatabase(), recentQueries);
+
+        const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash, "&openGraph=true");
+        this.navigate(queryUrl);
     }
 }
 

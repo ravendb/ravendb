@@ -43,7 +43,7 @@ class setupShell extends viewModelBase {
     }
 
     activate(args: any) {
-        super.activate(args, true);
+        super.activate(args, { shell: true });
 
         this.setupRouting();
         

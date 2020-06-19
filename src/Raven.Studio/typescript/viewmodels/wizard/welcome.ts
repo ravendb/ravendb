@@ -9,7 +9,7 @@ class welcome extends setupStep {
     disableLetEncrypt = ko.observable<boolean>(false);
     
     activate(args: any) {
-        super.activate(args, true);
+        super.activate(args, { shell: true });
         return $.when<any>(this.fetchLocalNodeIps(), this.fetchSetupParameters())
             .done((localIpsResult, setupParamsResult: [Raven.Server.Commercial.SetupParameters]) => {
                 this.model.init(setupParamsResult[0]);
