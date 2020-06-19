@@ -17,5 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public long CompareExchangeTombstonesCount { get; set; }
 
         public long IdentitiesCount { get; set; }
+
+        public long TimeSeriesSegmentsCount { get; set; }
     }
 }

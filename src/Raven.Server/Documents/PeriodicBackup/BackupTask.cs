@@ -725,6 +725,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             _backupResult.CompareExchangeTombstones.Processed = true;
             _backupResult.Subscriptions.Processed = true;
             _backupResult.Subscriptions.ReadCount = snapshotSmugglerResult.Subscriptions.ReadCount;
+
+            _backupResult.TimeSeries.Processed = true;
+            _backupResult.TimeSeries.ReadCount = databaseSummary.TimeSeriesSegmentsCount;
         }
 
         private void AddInfo(string message)

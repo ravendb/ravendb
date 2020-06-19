@@ -28,6 +28,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
@@ -269,6 +270,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                 result.CompareExchange.ReadCount += summary.CompareExchangeCount;
                                 result.CompareExchangeTombstones.ReadCount += summary.CompareExchangeTombstonesCount;
                                 result.Identities.ReadCount += summary.IdentitiesCount;
+                                result.TimeSeries.ReadCount += summary.TimeSeriesSegmentsCount;
 
                                 result.AddInfo($"Successfully restored {result.SnapshotRestore.ReadCount} files during snapshot restore, took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                                 onProgress.Invoke(result.Progress);
@@ -289,6 +291,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                             result.Identities.Processed = true;
                             result.CompareExchange.Processed = true;
                             result.Subscriptions.Processed = true;
+                            result.TimeSeries.Processed = true;
                             onProgress.Invoke(result.Progress);
                         }
                     }
