@@ -65,7 +65,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 backupConfiguration.AssertDestinationAllowed(destination);
             }
 
-            backupConfiguration.AllowedDestinations = new[] {"AmazonGlacier", "AmazonS3", "GoogleCloud"};
+            backupConfiguration.AllowedDestinations = new[] {"Amazonglacier", "Amazons3", "googleCloud"};
             backupConfiguration.AssertDestinationAllowed("AmazonGlacier");
             backupConfiguration.AssertDestinationAllowed("AmazonS3");
             backupConfiguration.AssertDestinationAllowed("GoogleCloud");
@@ -73,6 +73,12 @@ namespace FastTests.Server.Documents.PeriodicBackup
             Assert.StartsWith("The selected backup destination 'Google Cloud' is not allowed in this RavenDB server", exception.Message);
 
             backupConfiguration.AllowedDestinations = new[] { "None" };
+            foreach (var destination in allDestinations)
+            {
+                AssertNoneAllowedDestinations(destination);
+            }
+
+            backupConfiguration.AllowedDestinations = new[] { "nOnE" };
             foreach (var destination in allDestinations)
             {
                 AssertNoneAllowedDestinations(destination);
