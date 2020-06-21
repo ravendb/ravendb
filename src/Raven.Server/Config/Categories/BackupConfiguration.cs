@@ -55,6 +55,8 @@ namespace Raven.Server.Config.Categories
             new HashSet<string>(Enum.GetValues(typeof(PeriodicBackupConfiguration.BackupDestination))
                 .Cast<PeriodicBackupConfiguration.BackupDestination>().Select(x => x.ToString()));
 
+        private const string _noneDestination = nameof(PeriodicBackupConfiguration.BackupDestination.None);
+
         private void ValidateLocalRootPath()
         {
             if (LocalRootPath == null)
@@ -72,7 +74,7 @@ namespace Raven.Server.Config.Categories
             if (AllowedDestinations == null)
                 return;
 
-            if (AllowedDestinations.Contains("None", StringComparer.OrdinalIgnoreCase))
+            if (AllowedDestinations.Contains(_noneDestination, StringComparer.OrdinalIgnoreCase))
             {
                 if (AllowedDestinations.Length > 1)
                     throw new ArgumentException($"If you specify \"None\" under '{RavenConfiguration.GetKey(x => x.Backup.AllowedDestinations)}' then it must be the only value.");
@@ -111,10 +113,10 @@ namespace Raven.Server.Config.Categories
             if (AllowedDestinations == null)
                 return;
 
-            if (AllowedDestinations.Contains("None"))
+            if (AllowedDestinations.Contains(_noneDestination, StringComparer.OrdinalIgnoreCase))
                 throw new ArgumentException("Backups are not allowed in this RavenDB server. Contact the administrator for more information.");
 
-            if (AllowedDestinations.Contains(dest))
+            if (AllowedDestinations.Contains(dest, StringComparer.OrdinalIgnoreCase))
                 return;
 
             throw new ArgumentException($"The selected backup destination '{dest}' is not allowed in this RavenDB server. Contact the administrator for more information. Allowed backup destinations: {string.Join(", ", AllowedDestinations)}");
