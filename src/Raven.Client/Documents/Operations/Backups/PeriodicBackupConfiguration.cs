@@ -5,7 +5,9 @@
 //-----------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
@@ -54,7 +56,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public string GetDefaultTaskName()
         {
-            var destinations = GetDestinations();
+            var destinations = GetFullBackupDestinations();
             return destinations.Count == 0 ?
                 $"{BackupType} w/o destinations" :
                 $"{BackupType} to {string.Join(", ", destinations)}";
@@ -112,20 +114,39 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public List<string> GetDestinations()
         {
-            var backupDestinations = new List<string>();
+            return GetBackupDestinations().Select(x => x.ToString()).ToList();
+        }
 
-            if (LocalSettings != null && LocalSettings.Disabled == false)
-                backupDestinations.Add(nameof(BackupDestination.Local));
-            if (AzureSettings != null && AzureSettings.Disabled == false)
-                backupDestinations.Add(nameof(BackupDestination.Azure));
-            if (S3Settings != null && S3Settings.Disabled == false)
-                backupDestinations.Add(nameof(BackupDestination.AmazonS3));
-            if (GlacierSettings != null && GlacierSettings.Disabled == false)
-                backupDestinations.Add(nameof(BackupDestination.Glacier));
-            if (GoogleCloudSettings != null && GoogleCloudSettings.Disabled == false)
-                backupDestinations.Add(nameof(BackupDestination.GoogleCloud));
-            if (FtpSettings != null && FtpSettings.Disabled == false)
-                backupDestinations.Add(nameof(BackupDestination.FTP));
+        internal List<string> GetFullBackupDestinations()
+        {
+            // used for studio and generating the default task name
+            return GetBackupDestinations().Select(backupDestination =>
+            {
+                var str = backupDestination.ToString();
+                var fieldInfo = typeof(BackupDestination).GetField(str);
+                var attributes = (DescriptionAttribute[])fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false);
+                return attributes.Length > 0 ? attributes[0].Description : str;
+            }).ToList();
+        }
+
+        private List<BackupDestination> GetBackupDestinations()
+        {
+            var backupDestinations = new List<BackupDestination>();
+
+            AddBackupDestination(LocalSettings, BackupDestination.Local);
+            AddBackupDestination(S3Settings, BackupDestination.AmazonS3);
+            AddBackupDestination(GlacierSettings, BackupDestination.Glacier);
+            AddBackupDestination(AzureSettings, BackupDestination.Azure);
+            AddBackupDestination(GoogleCloudSettings, BackupDestination.GoogleCloud);
+            AddBackupDestination(FtpSettings, BackupDestination.FTP);
+
+            void AddBackupDestination(BackupSettings backupSettings, BackupDestination backupDestination)
+            {
+                if (backupSettings == null || backupSettings.Disabled)
+                    return;
+
+                backupDestinations.Add(backupDestination);
+            }
 
             return backupDestinations;
         }
@@ -134,9 +155,11 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             None,
             Local,
-            Azure,
+            [Description("S3")]
             AmazonS3,
             Glacier,
+            Azure,
+            [Description("Google Cloud")]
             GoogleCloud,
             FTP
         }

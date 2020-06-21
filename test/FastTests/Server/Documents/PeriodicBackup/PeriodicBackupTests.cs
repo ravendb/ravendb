@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
@@ -46,7 +47,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact,]
+        [Fact]
         public void CanSetupConfiguration()
         {
             var allDestinations = new HashSet<string>(BackupConfiguration._allDestinations);
@@ -82,6 +83,34 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 exception = Assert.Throws<ArgumentException>(() => backupConfiguration.AssertDestinationAllowed(destination));
                 Assert.Equal("Backups are not allowed in this RavenDB server. Contact the administrator for more information.", exception.Message);
             }
+        }
+
+        [Fact]
+        public void CanGetGenerateTheCorrectBackupName()
+        {
+            var configuration = new PeriodicBackupConfiguration
+            {
+                LocalSettings = new LocalSettings(),
+                S3Settings = new S3Settings(),
+                GlacierSettings = new GlacierSettings(),
+                AzureSettings = new AzureSettings(),
+                GoogleCloudSettings = new GoogleCloudSettings(),
+                FtpSettings = new FtpSettings(),
+            };
+
+            var allDestinations = new HashSet<string>(Enum.GetValues(typeof(PeriodicBackupConfiguration.BackupDestination))
+                .Cast<PeriodicBackupConfiguration.BackupDestination>().Where(x => x != PeriodicBackupConfiguration.BackupDestination.None)
+                .Select(backupDestination =>
+                {
+                    var str = backupDestination.ToString();
+                    var fieldInfo = typeof(PeriodicBackupConfiguration.BackupDestination).GetField(str);
+                    var attributes = (DescriptionAttribute[])fieldInfo.GetCustomAttributes(typeof(DescriptionAttribute), false);
+                    return attributes.Length > 0 ? attributes[0].Description : str;
+                }));
+
+            var destinations = configuration.GetFullBackupDestinations();
+
+            Assert.True(allDestinations.SequenceEqual(destinations));
         }
     }
 }

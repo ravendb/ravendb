@@ -511,7 +511,7 @@ namespace Raven.Server.Web.System
             var responsibleNodeTag = Database.WhoseTaskIsIt(databaseRecord.Topology, backupConfiguration, backupStatus, keepTaskOnOriginalMemberNode: true);
             var nextBackup = Database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus, responsibleNodeTag);
             var onGoingBackup = Database.PeriodicBackupRunner.OnGoingBackup(taskId);
-            var backupDestinations = backupConfiguration.GetDestinations();
+            var backupDestinations = backupConfiguration.GetFullBackupDestinations();
 
             return new OngoingTaskBackup
             {

@@ -130,7 +130,7 @@ namespace Raven.Server.Web.System
                 foreach (var backupBlittable in backups)
                 {
                     var backup = JsonDeserializationServer.ServerWideBackupConfiguration(backupBlittable);
-                    backup.BackupDestinations = backup.GetDestinations();
+                    backup.BackupDestinations = backup.GetFullBackupDestinations();
                     backup.IsEncrypted = backup.BackupEncryptionSettings != null &&
                                          backup.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
 
