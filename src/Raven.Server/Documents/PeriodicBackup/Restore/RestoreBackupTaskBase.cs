@@ -557,6 +557,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.SqlConnectionStrings = smugglerDatabaseRecord.SqlConnectionStrings;
                     databaseRecord.Client = smugglerDatabaseRecord.Client;
                     databaseRecord.TimeSeries = smugglerDatabaseRecord.TimeSeries;
+                    databaseRecord.DocumentsCompression = smugglerDatabaseRecord.DocumentsCompression;
 
                     // need to enable revisions before import
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);

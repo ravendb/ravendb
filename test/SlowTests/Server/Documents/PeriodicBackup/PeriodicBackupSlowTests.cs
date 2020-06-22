@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -15,10 +14,10 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -667,6 +666,75 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
                         Assert.Equal($"A:8-{originalDatabase.DbBase64Id}, A:10-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                    }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_and_restore_compression_config()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                
+                var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+                record.DocumentsCompression = new DocumentsCompressionConfiguration(true, "Users");
+                store.Maintenance.Server.Send(new UpdateDatabaseOperation(record, record.Etag));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.StoreAsync(new User
+                    {
+                        Name = "ayende"
+                    }, "users/2");
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 2);
+                Assert.Equal(2, value);
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName
+                }))
+                {
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    var compression = databaseRecord.DocumentsCompression;
+                    Assert.NotNull(compression);
+                    Assert.Contains("Users", compression.Collections);
+
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+                        Assert.True(users.Any(x => x.Value.Name == "ayende"));
                     }
                 }
             }
