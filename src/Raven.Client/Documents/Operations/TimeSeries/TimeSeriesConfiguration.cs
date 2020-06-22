@@ -106,9 +106,30 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         private void InternalPostJsonDeserialization()
         {
-            if(NamedValues == null)
+            PopulateNamedValues();
+            PopulatePolicies();
+        }
+
+        private void PopulatePolicies()
+        {
+            if (Collections == null)
                 return;
-            
+
+            // ensure StringComparer.OrdinalIgnoreCase
+            var dic = new Dictionary<string, TimeSeriesCollectionConfiguration>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kvp in Collections)
+            {
+                dic[kvp.Key] = kvp.Value;
+            }
+
+            Collections = dic;
+        }
+
+        private void PopulateNamedValues()
+        {
+            if (NamedValues == null)
+                return;
+
             // ensure StringComparer.OrdinalIgnoreCase
             var dic = new Dictionary<string, Dictionary<string, string[]>>(StringComparer.OrdinalIgnoreCase);
             foreach (var kvp in NamedValues)

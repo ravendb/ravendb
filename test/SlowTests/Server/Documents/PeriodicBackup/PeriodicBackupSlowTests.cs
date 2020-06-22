@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -14,6 +15,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -23,6 +25,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -676,7 +679,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today;
-
+                await store.TimeSeries.SetRawPolicyAsync("users", TimeValue.FromYears(1));
+                
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -752,6 +756,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     DatabaseName = databaseName
                 }))
                 {
+                    var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    var tsConfig = databaseRecord.TimeSeries;
+                    Assert.NotNull(tsConfig);
+                    Assert.Equal(TimeValue.FromYears(1), tsConfig.Collections["Users"].RawPolicy.RetentionTime);
+
                     using (var session = store.OpenAsyncSession(databaseName))
                     {
                         var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
