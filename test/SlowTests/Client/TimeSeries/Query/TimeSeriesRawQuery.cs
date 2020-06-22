@@ -1312,8 +1312,13 @@ select timeseries(from doc.HeartRate between $start and $end
             }
         }
 
-        [Fact]
-        public void CanQueryTimeSeriesAggregation_GroupByMonth()
+
+        [Theory]
+        [InlineData("months")]
+        [InlineData("month")]
+        [InlineData("mon")]
+        [InlineData("mo")]
+        public void CanQueryTimeSeriesAggregation_GroupByMonth(string syntax)
         {
             using (var store = GetDocumentStore())
             {
@@ -1347,13 +1352,13 @@ select timeseries(from doc.HeartRate between $start and $end
 
                 using (var session = store.OpenSession())
                 {
-                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>($@"
 declare timeseries out(x) 
-{
+{{
     from x.HeartRate between $start and $end
-    group by '1 month' 
+    group by '1 {syntax}' 
     select min(), max(), avg()
-}
+}}
 from People as doc
 where doc.Age > 49
 select out(doc)
