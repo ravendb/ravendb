@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public static Dictionary<string, long> GetLastProcessedTombstonesPerCollection(
+        public static Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection(
             Index index, HashSet<string> referencedCollections, IEnumerable<string> collections,
             Dictionary<string, HashSet<CollectionName>> compiledReferencedCollections,
             IndexStorage indexStorage)
@@ -317,6 +317,21 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return (lastProcessedCompareExchangeReferenceEtag, lastProcessedCompareExchangeReferenceTombstoneEtag);
+        }
+
+        internal static Dictionary<string, long> GetLastProcessedEtagsPerCollection(Index index, HashSet<string> collections, IndexStorage indexStorage)
+        {
+            using (index._contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var etags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+                foreach (var collection in collections)
+                {
+                    etags[collection] = indexStorage.ReadLastIndexedEtag(tx, collection);
+                }
+
+                return etags;
+            }
         }
 
         public static bool ShouldReplace(Index index, ref bool? isSideBySide)

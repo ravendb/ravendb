@@ -378,7 +378,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         batchStats = new IndexingRunStats();
                         scope = new IndexingStatsScope(batchStats);
                         index.DoIndexingWork(scope, CancellationToken.None);
-                        Assert.Equal(4, index.GetLastProcessedTombstonesPerCollection().Values.Min());
+                        Assert.Equal(4, index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents).Values.Min());
                         Assert.Equal(0, batchStats.MapAttempts);
                         Assert.Equal(0, batchStats.MapSuccesses);
                         Assert.Equal(0, batchStats.MapErrors);

@@ -985,8 +985,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public string TombstoneCleanerIdentifier => "Periodic Backup";
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
+            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
+                return null;
+
             var minLastEtag = GetMinLastEtag();
 
             if (minLastEtag == long.MaxValue)
