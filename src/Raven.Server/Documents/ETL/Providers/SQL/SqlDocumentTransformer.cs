@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -145,6 +146,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
 
+        protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
+        {
+            throw new NotSupportedException("Time series aren't supported by SQL ETL");
+        }
+
         private SqlTableWithRecords GetOrAdd(string tableName)
         {
             if (_tables.TryGetValue(tableName, out SqlTableWithRecords table) == false)
@@ -171,7 +177,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return _tables.Values.ToList();
         }
 
-        public override void Transform(ToSqlItem item, EtlStatsScope stats)
+        public override void Transform(ToSqlItem item, EtlStatsScope stats, EtlProcessState state)
         {
             _stats = stats;
 

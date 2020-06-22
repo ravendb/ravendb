@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class TimeSeriesBatchCommandData : ICommandData
     {
-        public TimeSeriesBatchCommandData(string documentId, string name, List<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.DeleteOperation> deletes)
+        public TimeSeriesBatchCommandData(string documentId, string name, IList<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.DeleteOperation> deletes)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -52,6 +52,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public CommandType Type => CommandType.TimeSeries;
 
         public TimeSeriesOperation TimeSeries { get; }
+        
+        public bool? FromEtl { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -62,6 +64,9 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Type)] = Type
             };
 
+            if (FromEtl.HasValue)
+                result[nameof(FromEtl)] = FromEtl;
+            
             return result;
         }
 

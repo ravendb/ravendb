@@ -984,7 +984,8 @@ namespace Raven.Server.Documents.Handlers
                             Reply.Add(acReply);
                             break;
                         case CommandType.TimeSeries:
-                            var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Id, cmd.TimeSeries, false);
+                            EtlGetDocIdFromPrefixIfNeeded(ref cmd.Id, cmd, lastPutResult);
+                            var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Id, cmd.TimeSeries, cmd.FromEtl);
 
                             tsCmd.ExecuteDirectly(context);
 
@@ -1001,20 +1002,7 @@ namespace Raven.Server.Documents.Handlers
 
                             break;
                         case CommandType.Counters:
-
-                            var counterDocId = cmd.Counters.DocumentId;
-
-                            if (cmd.FromEtl && counterDocId[counterDocId.Length - 1] == Database.IdentityPartsSeparator)
-                            {
-                                // counter sent by Raven ETL, only prefix is defined
-
-                                if (lastPutResult == null)
-                                    ThrowUnexpectedOrderOfRavenEtlCommands();
-
-                                Debug.Assert(lastPutResult.Value.Id.StartsWith(counterDocId));
-
-                                cmd.Counters.DocumentId = lastPutResult.Value.Id;
-                            }
+                            EtlGetDocIdFromPrefixIfNeeded(ref cmd.Counters.DocumentId, cmd, lastPutResult);
 
                             var counterBatchCmd = new CountersHandler.ExecuteCounterBatchCommand(Database, new CounterBatch
                             {
@@ -1135,6 +1123,19 @@ namespace Raven.Server.Documents.Handlers
                 return Reply.Count;
             }
 
+            private void EtlGetDocIdFromPrefixIfNeeded(ref string docId, BatchRequestParser.CommandData cmd, DocumentsStorage.PutOperationResults? lastPutResult)
+            {
+                if (!cmd.FromEtl || docId[^1] != Database.IdentityPartsSeparator) 
+                    return;
+                // counter/time-series sent by Raven ETL, only prefix is defined
+
+                if (lastPutResult == null)
+                    ThrowUnexpectedOrderOfRavenEtlCommands();
+
+                Debug.Assert(lastPutResult.HasValue && lastPutResult.Value.Id.StartsWith(docId));
+                docId = lastPutResult.Value.Id;
+            }
+            
             public void Dispose()
             {
                 if (ParsedCommands.Count == 0)

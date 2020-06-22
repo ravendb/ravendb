@@ -23,6 +23,8 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string NodeTag { get; set; }
 
+        public HashSet<string> SkippedTimeSeriesDocs { get; set; }
+        
         public long GetLastProcessedEtagForNode(string nodeTag)
         {
             if (LastProcessedEtagPerNode.TryGetValue(nodeTag, out var etag))
@@ -39,7 +41,8 @@ namespace Raven.Client.Documents.Operations.ETL
                 [nameof(TransformationName)] = TransformationName,
                 [nameof(LastProcessedEtagPerNode)] = LastProcessedEtagPerNode.ToJson(),
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(NodeTag)] = NodeTag
+                [nameof(NodeTag)] = NodeTag,
+                [nameof(SkippedTimeSeriesDocs)] = SkippedTimeSeriesDocs,
             };
 
             return json;

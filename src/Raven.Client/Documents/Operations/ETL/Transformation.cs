@@ -16,11 +16,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal const string AttachmentMarker = "$attachment/";
 
-        internal const string LoadCounter = "loadCounter";
-
-        internal const string AddCounter = "addCounter";
-
-        internal const string CounterMarker = "$counter/";
+        
 
         internal const string GenericDeleteDocumentsBehaviorFunctionKey = "$deleteDocumentsBehavior<>";
 
@@ -31,12 +27,198 @@ namespace Raven.Client.Documents.Operations.ETL
         private static readonly Regex LoadAttachmentMethodRegex = new Regex(LoadAttachment, RegexOptions.Compiled);
         private static readonly Regex AddAttachmentMethodRegex = new Regex(AddAttachment, RegexOptions.Compiled);
 
-        private static readonly Regex LoadCounterMethodRegex = new Regex(LoadCounter, RegexOptions.Compiled);
-        private static readonly Regex AddCounterMethodRegex = new Regex(AddCounter, RegexOptions.Compiled);
+        internal readonly CountersTransformation Counters;
+        
+        internal class CountersTransformation
+        {
+            internal const string Load = "loadCounter";
 
-        internal static readonly Regex LoadCountersBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\)", RegexOptions.Compiled);
-        internal static readonly Regex LoadCountersBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Compiled);
+            internal const string Add = "addCounter";
 
+            internal const string Marker = "$counter/";
+
+            private static readonly Regex AddMethodRegex = new Regex(Add, RegexOptions.Compiled);
+
+            private static readonly Regex LoadBehaviorMethodRegex = new Regex(@"function\s+loadCountersOf(\w+)Behavior\s*\(.+\)", RegexOptions.Compiled);
+            
+            private static readonly Regex LoadBehaviorMethodNameRegex = new Regex(@"loadCountersOf(\w+)Behavior", RegexOptions.Compiled);
+            
+            private readonly Transformation _parent;
+
+            internal bool IsAddingCounters { get; private set; }
+            internal Dictionary<string, string> CollectionToLoadBehaviorFunction { get; private set; }
+
+            public CountersTransformation(Transformation parent)
+            {
+                _parent = parent;
+            }
+            
+            internal void Validate(List<string> errors, EtlType type)
+            {
+                IsAddingCounters = AddMethodRegex.Matches(_parent.Script).Count > 0;
+
+                if (IsAddingCounters && type == EtlType.Sql)
+                    errors.Add("Adding counters isn't supported by SQL ETL");
+
+                FillCollectionToLoadCounterBehaviorFunction(errors, type);
+            }
+
+            private void FillCollectionToLoadCounterBehaviorFunction(List<string> errors, EtlType type)
+            {
+                var counterBehaviors = LoadBehaviorMethodRegex.Matches(_parent.Script);
+                if (counterBehaviors.Count == 0) 
+                    return;
+            
+                if (type == EtlType.Sql)
+                {
+                    errors.Add("Load counter behavior functions aren't supported by SQL ETL");
+                    return;
+                }
+
+                CollectionToLoadBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (Match counterBehaviorFunction in counterBehaviors)
+                {
+                    if (counterBehaviorFunction.Groups.Count != 2)
+                    {
+                        errors.Add(
+                            "Invalid load counters behavior function. It is expected to have the following signature: " +
+                            "loadCountersOf<CollectionName>Behavior(docId, counterName) and return 'true' if counter should be loaded to a destination");
+                    }
+
+                    var functionSignature = counterBehaviorFunction.Groups[0].Value;
+                    var collection = counterBehaviorFunction.Groups[1].Value;
+
+                    var functionName = LoadBehaviorMethodNameRegex.Match(functionSignature);
+
+                    if (_parent.Collections.Contains(collection) == false)
+                    {
+                        var scriptCollections = string.Join(", ", _parent.Collections.Select(x => ($"'{x}'")));
+
+                        errors.Add(
+                            $"There is '{functionName}' function defined in '{_parent.Name}' script while the processed collections " +
+                            $"({scriptCollections}) doesn't include '{collection}'. " +
+                            "loadCountersOf<CollectionName>Behavior() function is meant to be defined only for counters of docs from collections that " +
+                            "are loaded to the same collection on a destination side");
+                    }
+                    else if (_parent.GetCollectionsFromScript().Contains(collection) == false)
+                    {
+                        errors.Add($"`{functionName}` function where Defined while there is not load to {collection}. Load behavior function apply only if load to default collection");
+                    }
+                    if(CollectionToLoadBehaviorFunction.ContainsKey(collection))
+                    {
+                        errors.Add($"There are multiple '{functionName}' functions defined");
+                    }
+                    CollectionToLoadBehaviorFunction[collection] = functionName.Value;
+                }
+            }
+        }
+
+        internal readonly TimeSeriesTransformation TimeSeries;
+        internal class TimeSeriesTransformation
+        {
+            internal const string Marker = "$timeSeries/";
+            
+            internal static class AddTimeSeries
+            {
+                internal const string Name = "addTimeSeries";
+                public const string Signature  = "addTimeSeries(timeSeriesReference)";
+                public const int ParamsCount = 1;
+                internal static readonly Regex Regex = new Regex(Name, RegexOptions.Compiled);
+            }
+            internal static class LoadTimeSeries
+            {
+                public const string Name  = "loadTimeSeries";
+                public const string Signature  = "loadTimeSeries(timeSeriesName, from, to)";
+                public const int ParamsCount = 3;
+            }
+            
+            // internal static class LoadTimeSeries
+            // {
+            //     public const string Name  = "loadTimeSeries";
+            //     public const string Signature  = "loadTimeSeries(timeSeriesName, from, to)";
+            //     public const int ParamsCount = 3;
+            // }
+            //
+            // internal static class LoadTimeSeries
+            // {
+            //     public const string Name  = "loadTimeSeries";
+            //     public const string Signature  = "loadTimeSeries(timeSeriesName, from, to)";
+            //     public const int ParamsCount = 3;
+            // }
+            
+            private static class LoadTimeSeriesOfCollectionBehavior
+            {
+                public const string Signature  = "loadTimeSeriesOf<CollectionName>Behavior(docId, timeSeriesName)";
+                public const int ParamsCount = 2;
+                internal static readonly Regex Regex = new Regex(@"function\s+(?<func_name>loadTimeSeriesOf(?<collection>[A-Za-z]\w*)Behavior)\s*\(\s*((?<param>[a-zA-Z]\w*)\s*(?:,\s*(?<param>[a-zA-Z]\w*)\s*)*)?\s*\)", RegexOptions.Compiled);
+            }
+            private readonly Transformation _parent;
+
+            internal bool IsAddingTimeSeries { get; private set; }
+            
+            internal Dictionary<string, string> CollectionToLoadBehaviorFunction { get; private set; }
+            
+            public TimeSeriesTransformation(Transformation parent)
+            {
+                _parent = parent;
+            }
+            
+            internal void Validate(List<string> errors, EtlType type)
+            {
+                IsAddingTimeSeries = AddTimeSeries.Regex.Matches(_parent.Script).Count > 0;
+                if (IsAddingTimeSeries && type == EtlType.Sql)
+                    errors.Add("Adding time series isn't supported by SQL ETL");
+                
+                FillCollectionToLoadTimeSeriesBehaviorFunction(errors, type);
+            }
+
+            private void FillCollectionToLoadTimeSeriesBehaviorFunction(List<string> errors, EtlType type)
+            {
+                var timeSeriesBehaviors = LoadTimeSeriesOfCollectionBehavior.Regex.Matches(_parent.Script);
+                if (timeSeriesBehaviors.Count == 0) 
+                    return;
+            
+                if (type == EtlType.Sql)
+                {
+                    errors.Add("Load time series behavior functions aren't supported by SQL ETL");
+                    return;
+                }
+                
+                CollectionToLoadBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (Match counterBehaviorFunction in timeSeriesBehaviors)
+                {
+                    var functionName = counterBehaviorFunction.Groups["func_name"].Value;
+                    var collection = counterBehaviorFunction.Groups["collection"].Value;
+                    var args = counterBehaviorFunction.Groups["param"].Captures;
+
+                    if (args.Count > LoadTimeSeriesOfCollectionBehavior.ParamsCount)
+                    {
+                        errors.Add($"'{functionName} function defined with {args.Count}. The signature should be {LoadTimeSeriesOfCollectionBehavior.Signature}");
+                    }
+                    if (_parent.Collections.Contains(collection) == false)
+                    {
+                        var scriptCollections = string.Join(", ", _parent.Collections.Select(x => ($"'{x}'")));
+
+                        errors.Add(
+                            $"There is '{functionName}' function defined in '{_parent.Name}' script while the processed collections " +
+                            $"({scriptCollections}) doesn't include '{collection}'. " +
+                            $"{LoadTimeSeriesOfCollectionBehavior.Signature} function is meant to be defined only for time series of docs from collections that " +
+                            "are loaded to the same collection on a destination side");
+                    }
+                    else if (_parent.GetCollectionsFromScript().Contains(collection) == false)
+                    {
+                        errors.Add($"`{functionName}` function where Defined while there is not load to {collection}. Load behavior function apply only if load to default collection");
+                    }
+                    if(CollectionToLoadBehaviorFunction.ContainsKey(collection))
+                    {
+                        errors.Add($"There are multiple '{functionName}' functions defined");
+                    }
+
+                    CollectionToLoadBehaviorFunction[collection] = functionName;
+                }
+            }
+        }
+        
         private const string ParametersAndFunctionBodyRegex = @"\s*\((?:[^)(]+|\((?:[^)(]+|\([^)(]*\))*\))*\)\s*\{(?:[^}{]+|\{(?:[^}{]+|\{[^}{]*\})*\})*\}"; // https://stackoverflow.com/questions/4204136/does-anyone-have-regular-expression-match-javascript-function
 
         internal static readonly Regex DeleteDocumentsBehaviorMethodRegex = new Regex(@"function\s+deleteDocumentsOf(\w+)Behavior" + ParametersAndFunctionBodyRegex, RegexOptions.Singleline);
@@ -60,7 +242,6 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal bool IsEmptyScript { get; set; }
 
-        internal Dictionary<string, string> CollectionToLoadCounterBehaviorFunction { get; private set; }
 
         internal Dictionary<string, string> CollectionToDeleteDocumentsBehaviorFunction { get; private set; }
 
@@ -68,8 +249,13 @@ namespace Raven.Client.Documents.Operations.ETL
 
         internal bool IsLoadingAttachments { get; private set; }
 
-        internal bool IsAddingCounters { get; private set; }
 
+        public Transformation()
+        {
+            Counters = new CountersTransformation(this);
+            TimeSeries = new TimeSeriesTransformation(this);
+        }
+        
         public virtual bool Validate(ref List<string> errors, EtlType type)
         {
             if (errors == null)
@@ -100,57 +286,10 @@ namespace Raven.Client.Documents.Operations.ETL
                 IsAddingAttachments = AddAttachmentMethodRegex.Matches(Script).Count > 0;
                 IsLoadingAttachments = LoadAttachmentMethodRegex.Matches(Script).Count > 0;
 
-                IsAddingCounters = AddCounterMethodRegex.Matches(Script).Count > 0;
-
-                if (IsAddingCounters && type == EtlType.Sql)
-                    errors.Add("Adding counters isn't supported by SQL ETL");
-
-                var counterBehaviors = LoadCountersBehaviorMethodRegex.Matches(Script);
-
-                if (counterBehaviors.Count > 0)
-                {
-                    if (type == EtlType.Sql)
-                    {
-                        errors.Add("Load counter behavior functions aren't supported by SQL ETL");
-                    }
-                    else
-                    {
-                        CollectionToLoadCounterBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                        for (int i = 0; i < counterBehaviors.Count; i++)
-                        {
-                            var counterBehaviorFunction = counterBehaviors[i];
-
-                            if (counterBehaviorFunction.Groups.Count != 2)
-                            {
-                                errors.Add(
-                                    "Invalid load counters behavior function. It is expected to have the following signature: " +
-                                    "loadCountersOf<CollectionName>Behavior(docId, counterName) and return 'true' if counter should be loaded to a destination");
-                            }
-
-                            var functionSignature = counterBehaviorFunction.Groups[0].Value;
-                            var collection = counterBehaviorFunction.Groups[1].Value;
-
-                            var functionName = LoadCountersBehaviorMethodNameRegex.Match(functionSignature);
-
-                            if (Collections.Contains(collection) == false)
-                            {
-                                var scriptCollections = string.Join(", ", Collections.Select(x => ($"'{x}'")));
-
-                                errors.Add(
-                                    $"There is '{functionName}' function defined in '{Name}' script while the processed collections " +
-                                    $"({scriptCollections}) doesn't include '{collection}'. " +
-                                    "loadCountersOf<CollectionName>Behavior() function is meant to be defined only for counters of docs from collections that " +
-                                    "are loaded to the same collection on a destination side");
-                            }
-
-                            CollectionToLoadCounterBehaviorFunction[collection] = functionName.Value;
-                        }
-                    }
-                }
-
+                Counters.Validate(errors, type);
+                TimeSeries.Validate(errors, type);
+                
                 var deleteBehaviors = DeleteDocumentsBehaviorMethodRegex.Matches(Script);
-
                 if (deleteBehaviors.Count > 0)
                 {
                     if (type == EtlType.Sql)
