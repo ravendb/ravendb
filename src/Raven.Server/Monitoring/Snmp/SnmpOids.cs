@@ -79,7 +79,16 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Server low memory flag value")]
             public const string LowMemoryFlag = "1.6.2";
-
+            
+            [Description("Server total swap size in MB")]
+            public const string TotalSwapSize = "1.6.3";
+            
+            [Description("Server total swap usage in MB")]
+            public const string TotalSwapUsage = "1.6.4";
+            
+            [Description("Server working set swap usage in MB")]
+            public const string WorkingSetSwapUsage = "1.6.5";
+            
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
 

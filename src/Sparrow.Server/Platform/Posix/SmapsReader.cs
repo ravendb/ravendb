@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -16,6 +16,7 @@ namespace Sparrow.Platform.Posix
         public long SharedDirty;
         public long PrivateClean;
         public long PrivateDirty;
+        public long Swap;
     }
     
     internal interface ISmapsReaderResultAction
@@ -41,7 +42,9 @@ namespace Sparrow.Platform.Posix
                 ["TotalClean"] = results.SharedClean + results.PrivateClean,
                 ["TotalCleanHumanly"] = Sizes.Humane(results.SharedClean + results.PrivateClean),
                 ["TotalDirty"] = results.SharedDirty + results.PrivateDirty,
-                ["TotalDirtyHumanly"] = Sizes.Humane(results.SharedDirty + results.PrivateDirty)
+                ["TotalDirtyHumanly"] = Sizes.Humane(results.SharedDirty + results.PrivateDirty),
+                ["TotalSwap"] = results.Swap,
+                ["TotalSwapHumanly"] = Sizes.Humane(results.Swap)
             };
             if (_dja == null)
                 _dja = new DynamicJsonArray();
@@ -76,6 +79,7 @@ namespace Sparrow.Platform.Posix
 
         private readonly byte[] _rwsBytes = Encoding.UTF8.GetBytes("rw-s");
         private readonly byte[] _sizeBytes = Encoding.UTF8.GetBytes("Size:");
+        private readonly byte[] _swapBytes = Encoding.UTF8.GetBytes("Swap:");
         private readonly byte[] _rssBytes = Encoding.UTF8.GetBytes("Rss:");
         private readonly byte[] _sharedCleanBytes = Encoding.UTF8.GetBytes("Shared_Clean:");
         private readonly byte[] _sharedDirtyBytes = Encoding.UTF8.GetBytes("Shared_Dirty:");
@@ -97,7 +101,8 @@ namespace Sparrow.Platform.Posix
             SharedClean,
             SharedDirty,
             PrivateClean,
-            PrivateDirty
+            PrivateDirty,
+            Swap
         }
 
         public SmapsReader(byte[][] smapsBuffer)
@@ -112,7 +117,35 @@ namespace Sparrow.Platform.Posix
             return read;
         }
 
-        public (long Rss, long SharedClean, long PrivateClean, long TotalDirty, T SmapsResults) CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
+
+        public static string GetSmapsPath(int pid)
+        {
+            return $"/proc/{pid}/smaps";
+        }
+
+        public struct SmapsReadResult<T> where T : struct, ISmapsReaderResultAction
+        {
+            public long Rss;
+            public long SharedClean;
+            public long PrivateClean;
+            public long TotalDirty;
+            public long Swap;
+            public T SmapsResults;
+        }
+        
+        public SmapsReadResult<T> CalculateMemUsageFromSmaps<T>() where T : struct, ISmapsReaderResultAction
+        {
+            using (var currentProcess = Process.GetCurrentProcess())
+            using (var fileStream = new FileStream(
+                GetSmapsPath(currentProcess.Id),
+                FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                return CalculateMemUsageFromSmaps<T>(fileStream, currentProcess.Id);
+            }
+        }
+
+        public SmapsReadResult<T> CalculateMemUsageFromSmaps<T>(
+            Stream fileStream, int pid) where T : struct, ISmapsReaderResultAction
         {
             _endOfBuffer[0] = 0;
             _endOfBuffer[1] = 0;
@@ -121,307 +154,335 @@ namespace Sparrow.Platform.Posix
             var state = SearchState.None;
             var smapResultsObject = new T();
 
-            using (var currentProcess = Process.GetCurrentProcess())
-            using (var fileStream = new FileStream($"/proc/{currentProcess.Id}/smaps", FileMode.Open, FileAccess.Read, FileShare.Read))
+            var read = ReadFromFile(fileStream, _currentBuffer);
+            var offsetForNextBuffer = 0;
+            long tmpRss = 0, tmpSharedClean = 0, tmpPrivateClean = 0, tmpTotalDirty = 0, tmpSwap = 0;
+            string resultString = null;
+            long valSize = 0, valRss = 0, valPrivateDirty = 0, valSharedDirty = 0, valSharedClean = 0, valPrivateClean = 0, valSwap = 0;
+            while (true)
             {
-                var read = ReadFromFile(fileStream, _currentBuffer);
-                var offsetForNextBuffer = 0;
-                long tmpRss = 0, tmpSharedClean = 0, tmpPrivateClean = 0, tmpTotalDirty = 0;
-                string resultString = null;
-                long valSize = 0, valRss = 0, valPrivateDirty = 0, valSharedDirty = 0, valSharedClean = 0, valPrivateClean = 0;
-                while (true)
+                if (read == 0)
                 {
-                    if (read == 0)
+                    return new SmapsReadResult<T>()
                     {
-                        return (tmpRss, tmpSharedClean, tmpPrivateClean, tmpTotalDirty, smapResultsObject);
+                        Rss = tmpRss,
+                        SharedClean = tmpSharedClean,
+                        PrivateClean = tmpPrivateClean,
+                        TotalDirty = tmpTotalDirty,
+                        SmapsResults = smapResultsObject
+                    };
+                }
+
+                var switchBuffer = false;
+                for (var i = offsetForNextBuffer; i < _endOfBuffer[_currentBuffer]; i++)
+                {
+                    byte[] term;
+                    var offset = 0;
+                    if (_smapsBuffer[_currentBuffer][i] == 'r')
+                        term = _rwsBytes;
+                    else if (_smapsBuffer[_currentBuffer][i] == 'R')
+                        term = _rssBytes;
+                    else if (_smapsBuffer[_currentBuffer][i] == 'S')
+                    {
+                        term = _sizeBytes; // or Swap or SharedDirty or SharedCleanBytes, but Size is first on the list
+                    }
+                    else if (_smapsBuffer[_currentBuffer][i] == 'P')
+                    {
+                        term = _privateCleanBytes; // or PrivateDirty (which is not longer in length from PrivateCleanBytes)
+                    }
+                    else if (_smapsBuffer[_currentBuffer][i] == 'L')
+                    {
+                        term = _lockedBytes;
+                    }
+                    else
+                        continue;
+
+                    // check if the current buffer too small for the search term and read next buff if so
+                    if (switchBuffer == false && i + term.Length + offset > _endOfBuffer[_currentBuffer])
+                    {
+                        var nextBuffer = (_currentBuffer + 1) % 2;
+                        read = ReadFromFile(fileStream, nextBuffer);
+                        switchBuffer = true;
                     }
 
-                    var switchBuffer = false;
-                    for (var i = offsetForNextBuffer; i < _endOfBuffer[_currentBuffer]; i++)
+                    var searchedBuffer = _currentBuffer;
+                    var positionToSearch = i;
+                    var hasMatch = true;
+                    for (var j = 1; j < term.Length; j++)
                     {
-                        byte[] term;
-                        var offset = 0;
-                        if (_smapsBuffer[_currentBuffer][i] == 'r')
-                            term = _rwsBytes;
-                        else if (_smapsBuffer[_currentBuffer][i] == 'R')
-                            term = _rssBytes;
-                        else if (_smapsBuffer[_currentBuffer][i] == 'S')
+                        positionToSearch++;
+                        if (positionToSearch == _smapsBuffer[searchedBuffer].Length)
                         {
-                            term = _sizeBytes; // or SharedDirty or SharedCleanBytes (which ARE longer in length from Size)
-                            offset = _sharedCleanBytes.Length - term.Length;
-                        }
-                        else if (_smapsBuffer[_currentBuffer][i] == 'P')
-                        {
-                            term = _privateCleanBytes; // or PrivateDirty (which is not longer in length from PrivateCleanBytes)
-                        }
-                        else if (_smapsBuffer[_currentBuffer][i] == 'L')
-                        {
-                            term = _lockedBytes;
-                        }
-                        else
-                            continue;
-
-                        // check if the current buffer too small for the search term and read next buff if so
-                        if (switchBuffer == false && i + term.Length + offset > _endOfBuffer[_currentBuffer])
-                        {
-                            var nextBuffer = (_currentBuffer + 1) % 2;
-                            read = ReadFromFile(fileStream, nextBuffer);
-                            switchBuffer = true;
+                            // we assume max search term length doesn't exceed buffer length.. 
+                            searchedBuffer = (searchedBuffer + 1) % 2;
+                            positionToSearch = 0;
+                            Debug.Assert(switchBuffer);
                         }
 
-                        var searchedBuffer = _currentBuffer;
-                        var positionToSearch = i;
-                        var hasMatch = true;
-                        for (var j = 1; j < term.Length; j++)
+                        // for 'S' and 'P' we might have to search different term:
+                        if (_smapsBuffer[searchedBuffer][positionToSearch] != term[j])
                         {
-                            positionToSearch++;
-                            if (positionToSearch == _smapsBuffer[searchedBuffer].Length)
+                            if (term == _privateCleanBytes) // didn't find PrivateCleanBytes - try to find PrivateDirtyBytes
                             {
-                                // we assume max search term length doesn't exceed buffer length.. 
-                                searchedBuffer = (searchedBuffer + 1) % 2;
-                                positionToSearch = 0;
-                                Debug.Assert(switchBuffer);
+                                term = _privateDirtyBytes;
+                                if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
+                                    continue;
                             }
 
-                            // for 'S' and 'P' we might have to search different term:
-                            if (_smapsBuffer[searchedBuffer][positionToSearch] != term[j])
+                            if (term == _sizeBytes) // didn't find Size - try to find SharedCleanBytes
                             {
-                                if (term == _privateCleanBytes) // didn't find PrivateCleanBytes - try to find PrivateDiryBytes
+                                term = _swapBytes;
+                                if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
+                                    continue;
+                            }
+                            
+                            if (term == _swapBytes) // didn't find Size - try to find Swap
+                            {
+                                // Shared_X is longer than Swap or Size so we're putting it in between
+                                term = _sharedCleanBytes;
+                                if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
+                                    continue;
+                            }
+
+                            if (term == _sharedCleanBytes) // didn't find SharedCleanBytes - try to find SharedDirtyBytes
+                            {
+                                term = _sharedDirtyBytes;
+                                if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
+                                    continue;
+                            }
+                            
+                            hasMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (hasMatch == false)
+                        continue;
+
+                    // now read value.. search until reached letter 'B' (value ends with "kB")
+                    var bytesSearched = 0;
+                    var posInTempBuf = 0;
+                    var valueSearchPosition = i + term.Length;
+                    var foundValue = false;
+                    var foundK = false;
+
+                    while (bytesSearched < _tempBufferBytes.Length) // just a bullpark figure, usually ~40 bytes are enough
+                    {
+                        if (valueSearchPosition == _smapsBuffer[searchedBuffer].Length)
+                        {
+                            searchedBuffer = (_currentBuffer + 1) % 2;
+                            valueSearchPosition = 0;
+
+                            if (switchBuffer == false)
+                            {
+
+                                var readFromNextBuffer = ReadFromFile(fileStream, searchedBuffer);
+                                if (readFromNextBuffer == 0)
                                 {
-                                    term = _privateDirtyBytes;
-                                    if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
-                                        continue;
+                                    // this should not happen, the file ended without a value
+                                    break;
                                 }
 
-                                if (term == _sizeBytes) // didn't find Size - try to find SharedCleanBytes
-                                {
-                                    term = _sharedCleanBytes;
-                                    if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
-                                        continue;
-                                }
+                                switchBuffer = true;
+                            }
+                        }
 
-                                if (term == _sharedCleanBytes) // didn't find SharedCleanBytes - try to find SharedDirtyBytes
-                                {
-                                    term = _sharedDirtyBytes;
-                                    if (_smapsBuffer[searchedBuffer][positionToSearch] == term[j])
-                                        continue;
-                                }
+                        var currentChar = _smapsBuffer[searchedBuffer][valueSearchPosition];
 
-                                hasMatch = false;
+                        if (term == _rwsBytes) // value is filename which comes after last white-space and before '\n'
+                        {
+                            // zero previous entries
+                            if (posInTempBuf == 0)
+                            {
+                                resultString = null; // zero previous entries
+                                valSize = 0;
+                                valRss = 0;
+                                valPrivateDirty = 0;
+                                valSharedDirty = 0;
+                                valSharedClean = 0;
+                                valPrivateClean = 0;
+                                valSwap = 0;
+                            }
+
+                            //TODO what if there's a space in the file path?
+                            if (currentChar == ' ' || currentChar == '\t') 
+                                posInTempBuf = 0;
+                            else if (currentChar == '\n')
+                                break;
+                            else
+                            {
+                                _tempBufferBytes[posInTempBuf++] = currentChar;
+                            }
+                        }
+                        else
+                        {
+                            if (currentChar >= '0' && currentChar <= '9')
+                                _tempBufferBytes[posInTempBuf++] = currentChar;
+
+                            if (currentChar == 'k')
+                                foundK = true;
+
+                            if (currentChar == 'B')
+                            {
+                                foundValue = true;
                                 break;
                             }
                         }
 
-                        if (hasMatch == false)
-                            continue;
-
-                        // now read value.. search until reached letter 'B' (value ends with "kB")
-                        var bytesSearched = 0;
-                        var posInTempBuf = 0;
-                        var valueSearchPosition = i + term.Length;
-                        var foundValue = false;
-                        var foundK = false;
-
-                        while (bytesSearched < _tempBufferBytes.Length) // just a bullpark figure, usually ~40 bytes are enough
-                        {
-                            if (valueSearchPosition == _smapsBuffer[searchedBuffer].Length)
-                            {
-                                searchedBuffer = (_currentBuffer + 1) % 2;
-                                valueSearchPosition = 0;
-
-                                if (switchBuffer == false)
-                                {
-
-                                    var readFromNextBuffer = ReadFromFile(fileStream, searchedBuffer);
-                                    if (readFromNextBuffer == 0)
-                                    {
-                                        // this should not happen, the file ended without a value
-                                        break;
-                                    }
-
-                                    switchBuffer = true;
-                                }
-                            }
-
-                            var currentChar = _smapsBuffer[searchedBuffer][valueSearchPosition];
-
-                            if (term == _rwsBytes) // value is filename which comes after last white-space and before '\n'
-                            {
-                                // zero previous entries
-                                if (posInTempBuf == 0)
-                                {
-                                    resultString = null; // zero previous entries
-                                    valSize = 0;
-                                    valRss = 0;
-                                    valPrivateDirty = 0;
-                                    valSharedDirty = 0;
-                                    valSharedClean = 0;
-                                    valPrivateClean = 0;
-                                }
-
-                                if (currentChar == ' ' || currentChar == '\t')
-                                    posInTempBuf = 0;
-                                else if (currentChar == '\n')
-                                    break;
-                                else
-                                {
-                                    _tempBufferBytes[posInTempBuf++] = currentChar;
-                                }
-                            }
-                            else
-                            {
-                                if (currentChar >= '0' && currentChar <= '9')
-                                    _tempBufferBytes[posInTempBuf++] = currentChar;
-
-                                if (currentChar == 'k')
-                                    foundK = true;
-
-                                if (currentChar == 'B')
-                                {
-                                    foundValue = true;
-                                    break;
-                                }
-                            }
-
-                            ++valueSearchPosition;
-                            ++bytesSearched;
-                        }
-
-                        if (term != _rwsBytes)
-                        {
-                            if (foundValue == false)
-                                ThrowNotContainsValidValue(term, currentProcess.Id);
-                            if (foundK == false)
-                            {
-                                var additionalInfo =
-                                    $"Additional Info: switchBuffer={switchBuffer}, foundK/B={foundK}/{foundValue}, valueSearchPosition={valueSearchPosition}, bytesSearched={bytesSearched}" +
-                                    $", posInTempBuf={posInTempBuf}, searchedBuffer={searchedBuffer}, _tempBufferBytes=<{Encoding.UTF8.GetString(_tempBufferBytes)}" +
-                                    $", buffer 0=<{Encoding.UTF8.GetString(_smapsBuffer[0])}>. buffer 1={Encoding.UTF8.GetString(_smapsBuffer[1])}End of Addtional Info.";
-                                ThrowNotContainsKbValue(term, currentProcess.Id, additionalInfo);
-                            }
-                        }
-                        
-
-                        i += term.Length + bytesSearched;
-                        if (i >= _smapsBuffer[_currentBuffer].Length)
-                            offsetForNextBuffer = _smapsBuffer[_currentBuffer].Length - i;
-                        else
-                            offsetForNextBuffer = 0;
-
-
-                        long resultLong = 0;
-                        if (term != _rwsBytes)
-                        {
-                            var multiplier = 1;
-                            for (var j = posInTempBuf - 1; j >= 0; j--)
-                            {
-                                resultLong += (_tempBufferBytes[j] - (byte)'0') * multiplier;
-                                multiplier *= 10;
-                            }
-
-                            resultLong *= 1024; // "kB"
-                        }
-                        else
-                        {
-                            resultString = posInTempBuf > 0 ? Encoding.UTF8.GetString(_tempBufferBytes, 0, posInTempBuf) : "";
-                        }
-
-                        if (term == _rwsBytes)
-                        {
-                            if (state != SearchState.None)
-                                ThrowNotRwsTermAfterLockedTerm(state, term, currentProcess.Id);
-                            state = SearchState.Rws;
-                        }
-                        else if (term == _sizeBytes)
-                        {
-                            if (state != SearchState.Rws)
-                                continue; // found Rss but not after rw-s - irrelevant
-                            state = SearchState.Size;
-                            valSize = resultLong;
-                        }
-                        else if (term == _rssBytes)
-                        {
-                            if (state != SearchState.Size)
-                                continue; // found Rss but not after rw-s - irrelevant
-                            state = SearchState.Rss;
-                            tmpRss += resultLong;
-                            valRss = resultLong;
-                        }
-                        else if (term == _sharedCleanBytes)
-                        {
-                            if (state != SearchState.Rss)
-                                continue; // found Shared_Clean but not after Rss (which must come after rw-s) - irrelevant
-                            state = SearchState.SharedClean;
-                            tmpSharedClean += resultLong;
-                            valSharedClean = resultLong;
-                        }
-                        else if (term == _sharedDirtyBytes)
-                        {
-                            // special case - we want dirty memory of all files and not only after rw-s
-                            tmpTotalDirty += resultLong;
-                            if (state != SearchState.SharedClean)
-                                continue;
-                            state = SearchState.SharedDirty;
-                            valSharedDirty = resultLong;
-                        }
-                        else if (term == _privateCleanBytes)
-                        {
-                            if (state != SearchState.SharedDirty)
-                                continue;
-                            state = SearchState.PrivateClean;
-                            tmpPrivateClean += resultLong;
-                            valPrivateClean = resultLong;
-                        }
-                        else if (term == _privateDirtyBytes)
-                        {
-                            // special case - we want dirty memory of all files and not only after rw-s
-                            tmpTotalDirty += resultLong;
-                            if (state != SearchState.PrivateClean)
-                                continue;
-                            state = SearchState.PrivateDirty;
-                            valPrivateDirty = resultLong;
-                        }
-                        else if (term == _lockedBytes)
-                        {
-                            if (state != SearchState.PrivateDirty)
-                                continue;
-                            state = SearchState.None;
-
-                            if (resultString == null)
-                                ThrowOnNullString();
-
-                            if (resultString.EndsWith(".voron") == false &&
-                                resultString.EndsWith(".buffers") == false)
-                                continue;
-
-                            _smapsReaderResults.ResultString = resultString;
-                            _smapsReaderResults.Size = valSize;
-                            _smapsReaderResults.Rss = valRss;
-                            _smapsReaderResults.SharedClean = valSharedClean;
-                            _smapsReaderResults.SharedDirty = valSharedDirty;
-                            _smapsReaderResults.PrivateClean = valPrivateClean;
-                            _smapsReaderResults.PrivateDirty = valPrivateDirty;
-
-                            smapResultsObject.Add(_smapsReaderResults);
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException($"Reached unknown unhandled term: '{Encoding.UTF8.GetString(term)}'");
-                        }
+                        ++valueSearchPosition;
+                        ++bytesSearched;
                     }
 
-
-                    _currentBuffer = (_currentBuffer + 1) % 2;
-                    if (switchBuffer == false)
+                    if (term != _rwsBytes)
                     {
-                        read = ReadFromFile(fileStream, _currentBuffer);
-                        if (read == 0)
-                            break;
+                        if (foundValue == false)
+                            ThrowNotContainsValidValue(term, pid);
+                        if (foundK == false)
+                        {
+                            var additionalInfo =
+                                $"Additional Info: switchBuffer={switchBuffer}, foundK/B={foundK}/{foundValue}, valueSearchPosition={valueSearchPosition}, bytesSearched={bytesSearched}" +
+                                $", posInTempBuf={posInTempBuf}, searchedBuffer={searchedBuffer}, _tempBufferBytes=<{Encoding.UTF8.GetString(_tempBufferBytes)}" +
+                                $", buffer 0=<{Encoding.UTF8.GetString(_smapsBuffer[0])}>. buffer 1={Encoding.UTF8.GetString(_smapsBuffer[1])}End of Addtional Info.";
+                            ThrowNotContainsKbValue(term, pid, additionalInfo);
+                        }
+                    }
+                    
+                    i += term.Length + bytesSearched;
+                    if (i >= _smapsBuffer[_currentBuffer].Length)
+                        offsetForNextBuffer = _smapsBuffer[_currentBuffer].Length - i;
+                    else
+                        offsetForNextBuffer = 0;
+
+
+                    long resultLong = 0;
+                    if (term != _rwsBytes)
+                    {
+                        var multiplier = 1;
+                        for (var j = posInTempBuf - 1; j >= 0; j--)
+                        {
+                            resultLong += (_tempBufferBytes[j] - (byte)'0') * multiplier;
+                            multiplier *= 10;
+                        }
+
+                        resultLong *= 1024; // "kB"
+                    }
+                    else
+                    {
+                        resultString = posInTempBuf > 0 ? Encoding.UTF8.GetString(_tempBufferBytes, 0, posInTempBuf) : "";
+                    }
+
+                    if (term == _rwsBytes)
+                    {
+                        if (state != SearchState.None)
+                            ThrowNotRwsTermAfterLockedTerm(state, term, pid);
+                        state = SearchState.Rws;
+                    }
+                    else if (term == _sizeBytes)
+                    {
+                        if (state != SearchState.Rws)
+                            continue; // found Rss but not after rw-s - irrelevant
+                        state = SearchState.Size;
+                        valSize = resultLong;
+                    }
+                    else if (term == _rssBytes)
+                    {
+                        if (state != SearchState.Size)
+                            continue; // found Rss but not after rw-s - irrelevant
+                        state = SearchState.Rss;
+                        tmpRss += resultLong;
+                        valRss = resultLong;
+                    }
+                    else if (term == _sharedCleanBytes)
+                    {
+                        if (state != SearchState.Rss)
+                            continue; // found Shared_Clean but not after Rss (which must come after rw-s) - irrelevant
+                        state = SearchState.SharedClean;
+                        tmpSharedClean += resultLong;
+                        valSharedClean = resultLong;
+                    }
+                    else if (term == _sharedDirtyBytes)
+                    {
+                        // special case - we want dirty memory of all files and not only after rw-s
+                        tmpTotalDirty += resultLong;
+                        if (state != SearchState.SharedClean)
+                            continue;
+                        state = SearchState.SharedDirty;
+                        valSharedDirty = resultLong;
+                    }
+                    else if (term == _privateCleanBytes)
+                    {
+                        if (state != SearchState.SharedDirty)
+                            continue;
+                        state = SearchState.PrivateClean;
+                        tmpPrivateClean += resultLong;
+                        valPrivateClean = resultLong;
+                    }
+                    else if (term == _privateDirtyBytes)
+                    {
+                        // special case - we want dirty memory of all files and not only after rw-s
+                        tmpTotalDirty += resultLong;
+                        if (state != SearchState.PrivateClean)
+                            continue;
+                        state = SearchState.PrivateDirty;
+                        valPrivateDirty = resultLong;
+                    }
+                    else if (term == _swapBytes)
+                    {
+                        if (state != SearchState.PrivateDirty)
+                            continue;
+                        tmpSwap += resultLong;
+                        state = SearchState.Swap;
+                        valSwap = resultLong;
+                    }
+                    else if (term == _lockedBytes)
+                    {
+                        if (state != SearchState.Swap)
+                            continue;
+                        state = SearchState.None;
+
+                        if (resultString == null)
+                            ThrowOnNullString();
+
+                        if (resultString.EndsWith(".voron") == false &&
+                            resultString.EndsWith(".buffers") == false)
+                            continue;
+
+                        _smapsReaderResults.ResultString = resultString;
+                        _smapsReaderResults.Size = valSize;
+                        _smapsReaderResults.Rss = valRss;
+                        _smapsReaderResults.SharedClean = valSharedClean;
+                        _smapsReaderResults.SharedDirty = valSharedDirty;
+                        _smapsReaderResults.PrivateClean = valPrivateClean;
+                        _smapsReaderResults.PrivateDirty = valPrivateDirty;
+                        _smapsReaderResults.Swap = valSwap;
+
+                        smapResultsObject.Add(_smapsReaderResults);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Reached unknown unhandled term: '{Encoding.UTF8.GetString(term)}'");
                     }
                 }
 
-                return (tmpRss, tmpSharedClean, tmpPrivateClean, tmpTotalDirty, smapResultsObject);
+
+                _currentBuffer = (_currentBuffer + 1) % 2;
+                if (switchBuffer == false)
+                {
+                    read = ReadFromFile(fileStream, _currentBuffer);
+                    if (read == 0)
+                        break;
+                }
             }
+
+            return new SmapsReadResult<T>()
+            {
+                Rss = tmpRss,
+                SharedClean = tmpSharedClean,
+                PrivateClean = tmpPrivateClean,
+                TotalDirty = tmpTotalDirty,
+                Swap = tmpSwap,
+                SmapsResults = smapResultsObject
+            };
         }
 
         private static void ThrowOnNullString()

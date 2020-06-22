@@ -352,6 +352,9 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new ServerTotalMemory(server.MetricCacher));
             store.Add(new ServerLowMemoryFlag());
+            store.Add(new ServerTotalSwapSize(server.MetricCacher));
+            store.Add(new ServerTotalSwapUsage(server.MetricCacher));
+            store.Add(new ServerWorkingSetSwapUsage(server.MetricCacher));
 
             store.Add(new ServerLastRequestTime(server.Statistics));
             store.Add(new ServerLastAuthorizedNonClusterAdminRequestTime(server.Statistics));

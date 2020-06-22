@@ -26,6 +26,10 @@
         public Size SharedCleanMemory;
         public Size TotalScratchDirtyMemory;
 
+        public Size TotalSwapSize;
+        public Size TotalSwapUsage;
+        public Size WorkingSetSwapUsage;
+
         public bool IsExtended;
     }
 }

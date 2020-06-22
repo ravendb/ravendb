@@ -561,10 +561,6 @@ namespace Voron.Impl.Compaction
                         foreach (var entry in inputTable.SeekByPrimaryKey(lastSlice, 0))
                         {
                             token.ThrowIfCancellationRequested();
-                            // The table will take care of reconstructing indexes automatically
-                            outputTable.Insert(ref entry.Reader);
-                            copiedEntries++;
-                            transactionSize += entry.Reader.Size;
 
                             // The transaction has surpassed the allowed
                             // size before a flush
@@ -573,6 +569,12 @@ namespace Voron.Impl.Compaction
                                 schema.Key.GetSlice(txr.Allocator, ref entry.Reader, out lastSlice);
                                 break;
                             }
+
+                            // The table will take care of reconstructing indexes automatically
+                            outputTable.Insert(ref entry.Reader);
+                            copiedEntries++;
+                            transactionSize += entry.Reader.Size;
+                            ReportIfNeeded(sp, copiedTrees, totalTreesCount, copiedEntries, inputTable.NumberOfEntries, progressReport, $"Copying table tree '{treeName}'. Progress: {copiedEntries:#,#;;0}/{inputTable.NumberOfEntries:#,#;;0} entries.", treeName);
                         }
                     }
 
