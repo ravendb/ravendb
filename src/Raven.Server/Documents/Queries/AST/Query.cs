@@ -332,7 +332,8 @@ namespace Raven.Server.Documents.Queries.AST
 
                     if (TryConsumeMatch(source, ref offset, "months") ||
                         TryConsumeMatch(source, ref offset, "month") ||
-                        TryConsumeMatch(source, ref offset, "mon"))
+                        TryConsumeMatch(source, ref offset, "mon") ||
+                        TryConsumeMatch(source, ref offset, "mo"))
                     {
                         AssertValidDurationInMonths(duration);
                         range.Months += (int)duration;
@@ -421,7 +422,8 @@ namespace Raven.Server.Documents.Queries.AST
 
                     if (TryConsumeMatch(source, ref offset, "months") ||
                         TryConsumeMatch(source, ref offset, "month") ||
-                        TryConsumeMatch(source, ref offset, "mon"))
+                        TryConsumeMatch(source, ref offset, "mon") ||
+                        TryConsumeMatch(source, ref offset, "mo"))
                     {
                         result = TimeValue.FromMonths((int)duration);
                         break;
