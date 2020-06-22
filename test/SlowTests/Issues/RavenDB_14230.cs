@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Changes;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,9 +35,10 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
+                var date = DateTime.UtcNow.EnsureMilliseconds();
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.TimeSeriesFor("users/1", "Likes").Append(DateTime.UtcNow, 33);
+                    session.TimeSeriesFor("users/1", "Likes").Append(date, 33);
                     await session.SaveChangesAsync();
                 }
 
@@ -45,11 +47,14 @@ namespace SlowTests.Issues
                 Assert.Equal("users/1", timeSeriesChange.DocumentId);
                 Assert.Equal(TimeSeriesChangeTypes.Put, timeSeriesChange.Type);
                 Assert.Equal("Likes", timeSeriesChange.Name);
+                Assert.Equal(date, timeSeriesChange.From);
+                Assert.Equal(date, timeSeriesChange.To);
                 Assert.NotNull(timeSeriesChange.ChangeVector);
 
+                date = DateTime.UtcNow.EnsureMilliseconds();
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.TimeSeriesFor("users/1", "Likes").Append(DateTime.UtcNow, 22);
+                    session.TimeSeriesFor("users/1", "Likes").Append(date, 22);
                     await session.SaveChangesAsync();
                 }
 
@@ -59,6 +64,8 @@ namespace SlowTests.Issues
                 Assert.Equal(TimeSeriesChangeTypes.Put, timeSeriesChange.Type);
                 Assert.Equal("Likes", timeSeriesChange.Name);
                 Assert.NotNull(timeSeriesChange.ChangeVector);
+                Assert.Equal(date, timeSeriesChange.From);
+                Assert.Equal(date, timeSeriesChange.To);
             }
         }
 
@@ -81,9 +88,12 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
+                var date = DateTime.UtcNow.EnsureMilliseconds();
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.TimeSeriesFor("users/1", "Likes").Append(DateTime.UtcNow, 33);
+                    session.TimeSeriesFor("users/1", "Likes").Append(date, 33);
+                    session.TimeSeriesFor("users/1", "Likes").Append(date.AddMinutes(1), 22);
                     await session.SaveChangesAsync();
                 }
 
@@ -93,10 +103,12 @@ namespace SlowTests.Issues
                 Assert.Equal(TimeSeriesChangeTypes.Put, timeSeriesChange.Type);
                 Assert.Equal("Likes", timeSeriesChange.Name);
                 Assert.NotNull(timeSeriesChange.ChangeVector);
+                Assert.Equal(date, timeSeriesChange.From);
+                Assert.Equal(date.AddMinutes(1), timeSeriesChange.To);
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.TimeSeriesFor("users/1", "Likes").Remove(DateTime.MinValue, DateTime.MaxValue);
+                    session.TimeSeriesFor("users/1", "Likes").Remove(date, date);
                     await session.SaveChangesAsync();
                 }
 
@@ -106,6 +118,23 @@ namespace SlowTests.Issues
                 Assert.Equal(TimeSeriesChangeTypes.Delete, timeSeriesChange.Type);
                 Assert.Equal("Likes", timeSeriesChange.Name);
                 Assert.NotNull(timeSeriesChange.ChangeVector);
+                Assert.Equal(date, timeSeriesChange.From);
+                Assert.Equal(date, timeSeriesChange.To);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.TimeSeriesFor("users/1", "Likes").Remove();
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(list.TryTake(out timeSeriesChange, TimeSpan.FromSeconds(1)));
+
+                Assert.Equal("users/1", timeSeriesChange.DocumentId);
+                Assert.Equal(TimeSeriesChangeTypes.Delete, timeSeriesChange.Type);
+                Assert.Equal("Likes", timeSeriesChange.Name);
+                Assert.NotNull(timeSeriesChange.ChangeVector);
+                Assert.Equal(DateTime.MinValue, timeSeriesChange.From);
+                Assert.Equal(DateTime.MaxValue, timeSeriesChange.To);
             }
         }
 
