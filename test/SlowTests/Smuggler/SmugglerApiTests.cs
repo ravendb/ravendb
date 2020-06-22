@@ -13,6 +13,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -814,6 +815,97 @@ namespace SlowTests.Smuggler
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(4, stats.CountOfDocuments);
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public async Task CanExportAndImportTimeSeriesWithRollups()
+        {
+            var file = GetTempFileName();
+            var baseline = DateTime.Today;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    var config = new TimeSeriesConfiguration
+                    {
+                        Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                        {
+                            ["users"] = new TimeSeriesCollectionConfiguration
+                            {
+                                Policies = new List<TimeSeriesPolicy> {new TimeSeriesPolicy("EveryMinute", TimeValue.FromMinutes(1))}
+                            }
+                        }
+                    };
+
+                    await store1.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var db = await GetDocumentDatabaseInstanceFor(store1);
+                    await db.TimeSeriesPolicyRunner.RunRollups();
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 10; i++)
+                        {
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments);
+                    Assert.Equal(2, stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user1 = await session.LoadAsync<User>("users/1");
+                        Assert.Equal("Name1", user1.Name);
+
+                        var values = await session.TimeSeriesFor("users/1", "Heartrate").GetAsync();
+
+                        var count = 0;
+                        foreach (var val in values)
+                        {
+                            Assert.Equal(baseline.AddSeconds(count * 10), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                            Assert.Equal(1, val.Values.Length);
+                            Assert.Equal(count++ % 60, val.Values[0]);
+                        }
+
+                        Assert.Equal(10, count);
+
+                        values = await session.TimeSeriesFor("users/1", "Heartrate@EveryMinute").GetAsync();
+                        Assert.Equal(2, values.Length);
+                    }
                 }
             }
             finally

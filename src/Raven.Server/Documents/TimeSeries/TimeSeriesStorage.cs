@@ -21,6 +21,7 @@ using Sparrow.Binary;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -113,6 +114,8 @@ namespace Raven.Server.Documents.TimeSeries
             });
         }
 
+        private readonly Logger _logger;
+
         public TimeSeriesStorage(DocumentDatabase documentDatabase, Transaction tx)
         {
             _documentDatabase = documentDatabase;
@@ -123,6 +126,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             Stats = new TimeSeriesStats(tx);
             Rollups = new TimeSeriesRollups(documentDatabase.Name);
+            _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
         }
 
         public static DateTime ExtractDateTimeFromKey(Slice key)
@@ -1451,7 +1455,16 @@ namespace Raven.Server.Documents.TimeSeries
             if (doc == null)
                 return;
 
-            tsName = EnsureOriginalName(ctx, docId, tsName);
+            try
+            {
+                tsName = EnsureOriginalName(ctx, docId, tsName);
+            }
+            catch (Exception e)
+            {
+                var error = $"Unable to locate the original time-series '{tsName}' in document '{docId}'";
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(error, e);
+            }
 
             var data = doc.Data;
             BlittableJsonReaderArray tsNames = null;
@@ -1539,6 +1552,7 @@ namespace Raven.Server.Documents.TimeSeries
                         var name = GetOriginalName(lowerName, doc);
                         if (name == null)
                             throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in document '{docId}'");
+
                         return name;
                     }
                 }
@@ -1565,6 +1579,9 @@ namespace Raven.Server.Documents.TimeSeries
 
         public static string GetOriginalName(string lowerName, BlittableJsonReaderObject doc)
         {
+            if (doc == null)
+                return null;
+
             if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 return null;
 
