@@ -2063,6 +2063,69 @@ function loadTimeSeriesOfEmployeesBehavior(doc, timeSeries)
                 ThrowWithEtlErrors(src, e);
             }
         }
+
+        private class HasAndGetTimeSeriesUser
+        {
+            public bool HasTimeSeries1 { get; set; }
+            public bool HasTimeSeries2 { get; set; }
+            public string[] TimeSeriesNames { get; set; }
+        }
+        
+        [Fact]
+        public async Task RavenEtlWithTimeSeries_WhenUseHasTimeSeriesAndGetTimeSeriesInScript()
+        {
+            string[] collections = {"Users", "Employees"};
+            const string script = @"
+var hasTimeSeries1 = hasTimeSeries(""TimeSeries1"");
+var hasTimeSeries2 = hasTimeSeries(""TimeSeries2"");
+var timeSeriesNames = getTimeSeries();
+loadToUsers({
+    HasTimeSeries1: hasTimeSeries1,
+    HasTimeSeries2: hasTimeSeries2,
+    TimeSeriesNames: timeSeriesNames
+});
+";
+            
+            var src = GetDocumentStore(_options);
+
+            try
+            {
+                var dest = GetDocumentStore();
+                
+                AddEtl(src, dest, collections, script, collections.Length == 0);
+
+                var time = new DateTime(2020, 04, 27);
+                const string exitTimeSeries = "TimeSeries1";
+                const string notExitTimeSeries = "TimeSeries2";
+                const string tag = "fitbit";
+                const double value = 58d;
+
+                var user = new User();
+
+                using (var session = src.OpenAsyncSession())
+                {
+                    await session.StoreAsync(user);
+                    session.TimeSeriesFor(user.Id, exitTimeSeries).Append(time, new[] {value}, tag);
+
+                    await session.SaveChangesAsync();
+                }
+
+                var destUser = await AssertWaitForNotNullAsync(async () =>
+                {
+                    using var session = dest.OpenAsyncSession();
+                    return await session.LoadAsync<HasAndGetTimeSeriesUser>(user.Id);
+                }, interval: _waitInterval);
+                
+                Assert.True(destUser.HasTimeSeries1);
+                Assert.False(destUser.HasTimeSeries2);
+                Assert.Equal(destUser.TimeSeriesNames.Length, 1);
+                Assert.Equal(destUser.TimeSeriesNames.First(), exitTimeSeries);
+            }
+            catch (Exception e)
+            {
+                ThrowWithEtlErrors(src, e);
+            }
+        }
         
         private void ThrowWithEtlErrors(DocumentStore src, Exception e = null)
         {

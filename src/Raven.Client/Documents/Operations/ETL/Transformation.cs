@@ -132,19 +132,19 @@ namespace Raven.Client.Documents.Operations.ETL
                 public const int ParamsCount = 3;
             }
             
-            // internal static class LoadTimeSeries
-            // {
-            //     public const string Name  = "loadTimeSeries";
-            //     public const string Signature  = "loadTimeSeries(timeSeriesName, from, to)";
-            //     public const int ParamsCount = 3;
-            // }
-            //
-            // internal static class LoadTimeSeries
-            // {
-            //     public const string Name  = "loadTimeSeries";
-            //     public const string Signature  = "loadTimeSeries(timeSeriesName, from, to)";
-            //     public const int ParamsCount = 3;
-            // }
+            internal static class HasTimeSeries
+            {
+                public const string Name  = "hasTimeSeries";
+                public const string Signature  = "hasTimeSeries(timeSeriesName)";
+                public const int ParamsCount = 1;
+            }
+            
+            internal static class GetTimeSeries
+            {
+                public const string Name  = "getTimeSeries";
+                public const string Signature  = "getTimeSeries()";
+                public const int ParamsCount = 0;
+            }
             
             private static class LoadTimeSeriesOfCollectionBehavior
             {

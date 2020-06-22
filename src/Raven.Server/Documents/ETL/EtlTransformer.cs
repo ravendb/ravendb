@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Jint;
@@ -81,6 +81,12 @@ namespace Raven.Server.Documents.ETL
             DocumentScript.ScriptEngine.SetValue("getCounters", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getCounters", GetCounters));
 
             DocumentScript.ScriptEngine.SetValue("hasCounter", new ClrFunctionInstance(DocumentScript.ScriptEngine, "hasCounter", HasCounter));
+            
+            const string hasTimeSeries = Transformation.TimeSeriesTransformation.HasTimeSeries.Name;
+            DocumentScript.ScriptEngine.SetValue(hasTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, hasTimeSeries, HasTimeSeries));
+            
+            const string getTimeSeries = Transformation.TimeSeriesTransformation.GetTimeSeries.Name;
+            DocumentScript.ScriptEngine.SetValue(getTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, getTimeSeries, GetTimeSeries));
         }
 
         private JsValue LoadToFunctionTranslator(JsValue self, JsValue[] args)
@@ -299,6 +305,60 @@ namespace Raven.Server.Documents.ETL
             return false;
         }
 
+        private JsValue GetTimeSeries(JsValue self, JsValue[] args)
+        {
+            const int paramsCount = Transformation.TimeSeriesTransformation.GetTimeSeries.ParamsCount;
+            const string signature = Transformation.TimeSeriesTransformation.GetTimeSeries.Signature;
+            
+            if (args.Length != paramsCount)
+                ThrowInvalidScriptMethodCall($"{signature} must be called without any argument");
+
+            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
+                return false;
+            
+            if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesArray) == false)
+            {
+                return DocumentScript.ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+            }
+
+            var timeSeriesNames = new JsValue[timeSeriesArray.Length];
+            for (int i = 0; i < timeSeriesArray.Length; i++)
+            {
+                timeSeriesNames[i] = (JsValue)DocumentScript.Translate(Context, timeSeriesArray[i]);
+            }
+            return DocumentScript.ScriptEngine.Array.Construct(timeSeriesNames);
+        }
+
+        private JsValue HasTimeSeries(JsValue self, JsValue[] args)
+        {
+            const int paramsCount = Transformation.TimeSeriesTransformation.HasTimeSeries.ParamsCount;
+            const string signature = Transformation.TimeSeriesTransformation.HasTimeSeries.Signature;
+
+            if (args.Length != paramsCount || args[0].IsString() == false)
+                ThrowInvalidScriptMethodCall($"{signature} must be called with one argument (string)");
+
+            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
+                return false;
+
+            if (Current.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
+            {
+                return false;
+            }
+
+            var checkedName = args[0].AsString();
+
+            foreach (var timeSeries in timeSeriesNames)
+            {
+                var counterName = (LazyStringValue)timeSeries;
+                if (checkedName.Equals(counterName, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+        
         protected abstract string[] LoadToDestinations { get; }
 
         protected abstract void LoadToFunction(string tableName, ScriptRunnerResult colsAsObject);
