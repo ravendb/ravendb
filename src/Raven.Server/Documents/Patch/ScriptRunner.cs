@@ -386,7 +386,7 @@ namespace Raven.Server.Documents.Patch
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
                 string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
-                var timestamp = GetDateArg(args[0], signature, "timestamp");
+                var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
 
                 double[] valuesBuffer = null;
                 try
@@ -439,18 +439,27 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("timeseries(doc, name).remove");
 
-                const string signature = "timeseries(doc, name).remove(from, to)";
-                const int requiredArgs = 2;
+                const string removeAll = "remove()";
+                const string removeSignature = "remove(from, to)";
 
-                if (args.Length != requiredArgs)
-                    throw new ArgumentException($"{signature}: This method requires {requiredArgs} arguments but was called with {args.Length}");
+                DateTime from, to;
+                switch (args.Length)
+                {
+                    case 0:
+                        from = DateTime.MinValue;
+                        to = DateTime.MaxValue;
+                        break;
+                    case 2:
+                        from = GetTimeSeriesDateArg(args[0], removeSignature, "from");
+                        to = GetTimeSeriesDateArg(args[1], removeSignature, "to");
+                        break;
+                    default:
+                        throw new ArgumentException($"'remove' method has only the overloads: '{removeSignature}' or '{removeAll}', but was called with {args.Length} arguments.");
+                }
 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
                 string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
-
-                var from = GetDateArg(args[0], signature, "from");
-                var to = GetDateArg(args[1], signature, "to");
 
                 var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
                 {
@@ -483,8 +492,8 @@ namespace Raven.Server.Documents.Patch
                         to = DateTime.MaxValue;
                         break;
                     case 2:
-                        from = GetDateArg(args[0], getRangeSignature, "from");
-                        to = GetDateArg(args[1], getRangeSignature, "to");
+                        from = GetTimeSeriesDateArg(args[0], getRangeSignature, "from");
+                        to = GetTimeSeriesDateArg(args[1], getRangeSignature, "to");
                         break;
                     default:
                         throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
@@ -1355,6 +1364,18 @@ namespace Raven.Server.Documents.Patch
 
                 void ThrowInvalidDateArgument() =>
                     throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
+            }
+
+
+            private static DateTime GetTimeSeriesDateArg(JsValue arg, string signature, string argName)
+            {
+                if (arg.IsDate())
+                    return arg.AsDate().ToDateTime();
+
+                if (arg.IsString() == false)
+                    throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
+
+                return TimeSeriesRetriever.ParseDateTime(arg.AsString());
             }
 
             private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)

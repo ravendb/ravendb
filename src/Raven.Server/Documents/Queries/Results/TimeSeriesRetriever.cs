@@ -989,7 +989,7 @@ namespace Raven.Server.Documents.Queries.Results
             throw new ArgumentException("Unable to parse timeseries from/to values. Got: " + qe);
         }
 
-        private static DateTime? ParseDateTime(string valueAsStr)
+        public static DateTime ParseDateTime(string valueAsStr)
         {
             if (DateTime.TryParseExact(valueAsStr, SupportedDateTimeFormats, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var date) == false)
                 throw new ArgumentException($"Unable to parse timeseries from/to values. Got: {valueAsStr}{Environment.NewLine}" +
