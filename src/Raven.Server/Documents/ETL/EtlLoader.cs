@@ -556,8 +556,11 @@ namespace Raven.Server.Documents.ETL
 
         public string TombstoneCleanerIdentifier => $"ETL loader for {_database.Name}";
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
+            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
+                return null;
+
             var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
             var ravenEtls = _databaseRecord.RavenEtls;

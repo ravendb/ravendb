@@ -1323,8 +1323,11 @@ namespace Raven.Server.Documents.Replication
         public event Action<ReplicationNode, OutgoingReplicationFailureToConnectReporter> OutgoingReplicationConnectionErrored;
         public event Action<ReplicationNode, IncomingReplicationFailureToConnectReporter> IncomingReplicationConnectionErrored;
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
+            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
+                return null;
+
             var minEtag = GetMinimalEtagForReplication();
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
             {

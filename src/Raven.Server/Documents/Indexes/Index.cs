@@ -3449,8 +3449,11 @@ namespace Raven.Server.Documents.Indexes
 
         public string TombstoneCleanerIdentifier => $"Index '{Name}'";
 
-        public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        public virtual Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
+            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
+                return null;
+
             using (CurrentlyInUse())
             {
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))

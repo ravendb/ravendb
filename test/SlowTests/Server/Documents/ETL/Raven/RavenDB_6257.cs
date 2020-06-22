@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
+using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -57,7 +58,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 {
                     var tombstones = db.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
 
-                    var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection();
+                    var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
 
                     Assert.Equal(tombstones.First(x => x.Collection.CompareTo("Users") == 0).Etag, tombstoneEtags["Users"]);
                 }
@@ -106,7 +107,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 {
                     var tombstones = db.DocumentsStorage.GetTombstonesFrom(context, 0, 0, int.MaxValue).ToList();
 
-                    var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection();
+                    var tombstoneEtags = etlProcess.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
 
                     Assert.Equal(tombstones.Max(x => x.Etag), tombstoneEtags[Constants.Documents.Collections.AllDocumentsCollection]);
                 }

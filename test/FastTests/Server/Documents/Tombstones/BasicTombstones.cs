@@ -130,7 +130,7 @@ namespace FastTests.Server.Documents.Tombstones
                 var stats = new IndexingStatsScope(batchStats);
                 index.DoIndexingWork(stats, CancellationToken.None);
 
-                var tombstones = index.GetLastProcessedTombstonesPerCollection();
+                var tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(1, tombstones.Count);
                 Assert.Equal(0, tombstones["Users"]);
 
@@ -149,7 +149,7 @@ namespace FastTests.Server.Documents.Tombstones
                     tx.Commit();
                 }
 
-                tombstones = index.GetLastProcessedTombstonesPerCollection();
+                tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(1, tombstones.Count);
                 Assert.Equal(0, tombstones["Users"]);
 
@@ -171,7 +171,7 @@ namespace FastTests.Server.Documents.Tombstones
                 stats = new IndexingStatsScope(batchStats);
                 index.DoIndexingWork(stats, CancellationToken.None);
 
-                tombstones = index.GetLastProcessedTombstonesPerCollection();
+                tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(1, tombstones.Count);
                 Assert.Equal(4, tombstones["Users"]);
 
@@ -237,7 +237,7 @@ namespace FastTests.Server.Documents.Tombstones
                 var stats = new IndexingStatsScope(batchStats);
                 index.DoIndexingWork(stats, CancellationToken.None);
 
-                var tombstones = index.GetLastProcessedTombstonesPerCollection();
+                var tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(2, tombstones.Count);
                 Assert.Equal(0, tombstones["Orders"]);
                 Assert.Equal(0, tombstones["Companies"]);
@@ -254,7 +254,7 @@ namespace FastTests.Server.Documents.Tombstones
                     tx.Commit();
                 }
 
-                tombstones = index.GetLastProcessedTombstonesPerCollection();
+                tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(2, tombstones.Count);
                 Assert.Equal(0, tombstones["Orders"]);
                 Assert.Equal(0, tombstones["Companies"]);
@@ -277,7 +277,7 @@ namespace FastTests.Server.Documents.Tombstones
                 stats = new IndexingStatsScope(batchStats);
                 index.DoIndexingWork(stats, CancellationToken.None);
 
-                tombstones = index.GetLastProcessedTombstonesPerCollection();
+                tombstones = index.GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType.Documents);
                 Assert.Equal(2, tombstones.Count);
                 Assert.Equal(2, tombstones["Orders"]);
                 Assert.Equal(0, tombstones["Companies"]);

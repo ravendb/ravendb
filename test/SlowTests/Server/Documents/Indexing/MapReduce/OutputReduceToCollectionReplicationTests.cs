@@ -98,7 +98,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
 
         public string TombstoneCleanerIdentifier => nameof(OutputReduceToCollectionReplicationTests);
 
-        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection()
+        public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
             return new Dictionary<string, long>
             {

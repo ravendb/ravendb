@@ -199,6 +199,28 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return new StaticIndexItemEnumerator<DynamicTimeSeriesSegment>(items, filter: null, _compiled.Maps[collection], collection, stats, type);
         }
 
+        public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
+        {
+            if (tombstoneType == ITombstoneAware.TombstoneType.Documents)
+            {
+                using (CurrentlyInUse())
+                {
+                    return StaticIndexHelper.GetLastProcessedDocumentTombstonesPerCollection(
+                        this, _referencedCollections, Collections, _compiled.ReferencedCollections, _indexStorage);
+                }
+            }
+
+            if (tombstoneType == ITombstoneAware.TombstoneType.TimeSeries)
+            {
+                using (CurrentlyInUse())
+                {
+                    return StaticIndexHelper.GetLastProcessedEtagsPerCollection(this, Collections, _indexStorage);
+                }
+            }
+
+            return null;
+        }
+
         public static Index CreateNew(IndexDefinition definition, DocumentDatabase documentDatabase)
         {
             var instance = CreateIndexInstance(definition, documentDatabase.Configuration, IndexDefinitionBase.IndexVersion.CurrentVersion);
