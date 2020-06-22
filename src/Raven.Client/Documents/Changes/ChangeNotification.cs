@@ -262,11 +262,19 @@ namespace Raven.Client.Documents.Changes
 
         public DynamicJsonValue ToJson()
         {
+            DateTime? from = null, to = null;
+
+            if (From != DateTime.MinValue)
+                from = From;
+
+            if (To != DateTime.MaxValue)
+                to = To;
+
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(From)] = From,
-                [nameof(To)] = To,
+                [nameof(From)] = from,
+                [nameof(To)] = to,
                 [nameof(DocumentId)] = DocumentId,
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString(),
@@ -277,8 +285,8 @@ namespace Raven.Client.Documents.Changes
         internal static TimeSeriesChange FromJson(BlittableJsonReaderObject value)
         {
             value.TryGet(nameof(Name), out string name);
-            value.TryGet(nameof(From), out DateTime from);
-            value.TryGet(nameof(To), out DateTime to);
+            value.TryGet(nameof(From), out DateTime? from);
+            value.TryGet(nameof(To), out DateTime? to);
             value.TryGet(nameof(DocumentId), out string documentId);
             value.TryGet(nameof(ChangeVector), out string changeVector);
             value.TryGet(nameof(Type), out string type);
@@ -287,8 +295,8 @@ namespace Raven.Client.Documents.Changes
             return new TimeSeriesChange
             {
                 Name = name,
-                From = from,
-                To = to,
+                From = from ?? DateTime.MinValue,
+                To = to ?? DateTime.MaxValue,
                 DocumentId = documentId,
                 ChangeVector = changeVector,
                 Type = (TimeSeriesChangeTypes)Enum.Parse(typeof(TimeSeriesChangeTypes), type, ignoreCase: true),

@@ -521,6 +521,9 @@ namespace Raven.Server.Documents.TimeSeries
 
         public static DateTime EnsureMillisecondsPrecision(DateTime dt)
         {
+            if (dt == DateTime.MinValue || dt == DateTime.MaxValue)
+                return dt;
+
             var remainder = dt.Ticks % 10_000;
             if (remainder != 0)
                 dt = dt.AddTicks(-remainder);
@@ -1026,6 +1029,9 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly IEnumerator<SingleResult> _toAppend;
             private SingleResult _current;
 
+            public DateTime Last;
+            public DateTime First;
+
             public AppendEnumerator(string documentId, string name, IEnumerable<SingleResult> toAppend, bool fromReplication)
             {
                 _documentId = documentId;
@@ -1039,12 +1045,18 @@ namespace Raven.Server.Documents.TimeSeries
                 var currentTimestamp = _current?.Timestamp;
                 if (_toAppend.MoveNext() == false)
                 {
+                    if (_current != null)
+                        Last = _current.Timestamp;
+
                     _current = null;
                     return false;
                 }
 
                 var next = _toAppend.Current;
                 next.Timestamp = EnsureMillisecondsPrecision(next.Timestamp);
+
+                if (_current == null)
+                    First = next.Timestamp;
 
                 if (currentTimestamp >= next.Timestamp)
                     throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
@@ -1145,6 +1157,17 @@ namespace Raven.Server.Documents.TimeSeries
                         }
                     }
                 }
+
+                context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
+                {
+                    CollectionName = collectionName.Name,
+                    ChangeVector = context.LastDatabaseChangeVector,
+                    DocumentId = documentId,
+                    Name = name,
+                    Type = TimeSeriesChangeTypes.Put,
+                    From = appendEnumerator.First,
+                    To = appendEnumerator.Last
+                });
             }
 
             if (newSeries)
@@ -1153,17 +1176,6 @@ namespace Raven.Server.Documents.TimeSeries
                 if (stats.Count > 0)
                     AddTimeSeriesNameToMetadata(context, documentId, name);
             }
-
-            context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
-            {
-                CollectionName = collectionName.Name,
-                ChangeVector = context.LastDatabaseChangeVector,
-                DocumentId = documentId,
-                Name = name,
-                Type = TimeSeriesChangeTypes.Put,
-                From = DateTime.MinValue,
-                To = DateTime.MaxValue
-            });
 
             return context.LastDatabaseChangeVector;
         }
