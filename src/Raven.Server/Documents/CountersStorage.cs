@@ -1646,18 +1646,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static int GetCounterNameIndex(BlittableJsonReaderArray originalNames, string lowered)
-        {
-            for (var index = 0; index < originalNames.Length; index++)
-            {
-                var current = originalNames.GetByIndex<LazyStringValue>(index);
-                if (string.Equals(lowered, current, StringComparison.OrdinalIgnoreCase))
-                    return index;
-            }
-
-            return -1;
-        }
-
         internal string GenerateDeleteChangeVectorFromRawBlob(BlittableJsonReaderObject data,
             BlittableJsonReaderObject.RawBlob counterToDelete)
         {
@@ -2262,35 +2250,6 @@ namespace Raven.Server.Documents
                     }
                 }
             }
-        }
-    }
-
-    public class CounterStorageUtils 
-    {
-        public static int BinarySearch(List<object> list, object key, StringComparison comparison)
-        {
-            int min = 0;
-            int max = list.Count - 1;
-
-            while (min <= max)
-            {
-                int mid = (min + max) >> 1;
-                var current = list[mid];
-                var result = string.Compare(key.ToString(), current.ToString(), comparison);
-                if (result == 0)
-                {
-                    return mid;
-                }
-                else if (result < 0)
-                {
-                    max = mid - 1;
-                }
-                else
-                {
-                    min = mid + 1;
-                }
-            }
-            return ~(((min + max) >> 1) + 1);
         }
     }
 
