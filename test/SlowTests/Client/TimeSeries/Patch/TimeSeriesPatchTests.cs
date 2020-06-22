@@ -269,6 +269,94 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
         
+        [Fact]
+        public async Task RavenDB_15193()
+        {
+            const string tag = "watches/fitbit";
+            const string timeseries = "Heartrate";
+            const string documentId = "users/1";
+            var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
+
+
+            var fromIndex = 2;
+            var toIndex = 4;
+
+            var baseline = RavenTestHelper.UtcToday;
+            var toRemoveFrom = baseline.AddMinutes(fromIndex);
+            var toRemoveTo = baseline.AddMinutes(toIndex);
+            var expectedValues = new List<(DateTime, double)>();
+            
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new { Name = "Oren" }, documentId);
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        var time = baseline.AddMinutes(i);
+                        expectedValues.Add((time, values[i]));
+                        session.TimeSeriesFor(documentId, timeseries).Append(time, values[i], tag);
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = @"timeseries(this, args.timeseries).remove(args.from, args.to);",
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                                { "from", toRemoveFrom.ToString("yyyy-MM-ddTHH:mm") },
+                                { "to", toRemoveTo.ToString("yyyy-MM-ddTHH:mm") },
+                            }
+                        }, null));
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var entries = (await session.TimeSeriesFor(documentId, timeseries)
+                            .GetAsync())?.ToList();
+
+                    Assert.Equal(values.Length - 1 - (toIndex - fromIndex), (entries?.Count ?? 0));
+                    foreach (var expected in expectedValues)
+                    {
+                        if (expected.Item1 >= toRemoveFrom || expected.Item1 <= toRemoveTo) 
+                            continue;
+                        
+                        Assert.Equal(expected.Item1, entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                        Assert.Equal(expected.Item2, entries[0].Values[0]);
+                        Assert.Equal(tag, entries[0].Tag);
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Defer(new PatchCommandData(documentId, null,
+                        new PatchRequest
+                        {
+                            Script = @"timeseries(this, args.timeseries).remove();",
+                            Values =
+                            {
+                                { "timeseries", timeseries },
+                            }
+                        }, null));
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var entries = (await session.TimeSeriesFor(documentId, timeseries).GetAsync());
+
+                    Assert.Equal(null, entries);
+                }
+            }
+        }
+
         [Theory]
         [InlineData(4, 7)]
         [InlineData(0, 3)]
