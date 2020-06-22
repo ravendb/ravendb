@@ -80,6 +80,7 @@
                 margin-left: 0;
                 position: relative;
                 z-index: 2;
+                min-height: 95px;
 
                 .item-name {
                     border-bottom: 1px solid @hr-border;
@@ -115,6 +116,9 @@
             &:nth-of-type(1) {
                 .item-content {
                     border-color: @color-time-series;
+                    .aggregation {
+                        visibility: hidden;
+                    }
                 }
             }
 
