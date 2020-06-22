@@ -13,8 +13,11 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -30,6 +33,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private readonly List<ICommandData> _commands = new List<ICommandData>();
         private PropertyDescriptor _addAttachmentMethod;
         private PropertyDescriptor _addCounterMethod;
+        private PropertyDescriptor _addTimeSeriesMethod;
         private RavenEtlScriptRun _currentRun;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
@@ -51,8 +55,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (_transformation.IsAddingAttachments)
                 _addAttachmentMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addAttachment", AddAttachment), null, null, null);
 
-            if (_transformation.IsAddingCounters)
-                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, "addCounter", AddCounter), null, null, null);
+            if (_transformation.Counters.IsAddingCounters)
+            {
+                const string addCounter = Transformation.CountersTransformation.Add;
+                _addCounterMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addCounter, AddCounter), null, null, null);
+            }
+
+            if (_transformation.TimeSeries.IsAddingTimeSeries)
+            {
+                const string addTimeSeries = Transformation.TimeSeriesTransformation.AddTimeSeries.Name;
+                _addTimeSeriesMethod = new PropertyDescriptor(new ClrFunctionInstance(DocumentScript.ScriptEngine, addTimeSeries, AddTimeSeries), null, null, null);
+            }
         }
 
         protected override string[] LoadToDestinations { get; }
@@ -99,11 +112,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 docInstance.DefinePropertyOrThrow(Transformation.AddAttachment, _addAttachmentMethod);
             }
 
-            if (_transformation.IsAddingCounters)
+            if (_transformation.Counters.IsAddingCounters)
             {
                 var docInstance = (ObjectInstance)document.Instance;
 
-                docInstance.DefinePropertyOrThrow(Transformation.AddCounter, _addCounterMethod);
+                docInstance.DefinePropertyOrThrow(Transformation.CountersTransformation.Add, _addCounterMethod);
+            }
+            
+            if (_transformation.TimeSeries.IsAddingTimeSeries)
+            {
+                var docInstance = (ObjectInstance)document.Instance;
+
+                docInstance.DefinePropertyOrThrow(Transformation.TimeSeriesTransformation.AddTimeSeries.Name, _addTimeSeriesMethod);
             }
         }
 
@@ -151,17 +171,17 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private JsValue AddCounter(JsValue self, JsValue[] args)
         {
             if (args.Length != 1)
-                ThrowInvalidScriptMethodCall($"{Transformation.AddCounter} must have one arguments");
+                ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Add} must have one arguments");
 
             var counterReference = args[0];
 
             if (counterReference.IsNull())
                 return self;
 
-            if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CounterMarker) == false)
+            if (counterReference.IsString() == false || counterReference.AsString().StartsWith(Transformation.CountersTransformation.Marker) == false)
             {
                 var message =
-                    $"{Transformation.AddCounter}() method expects to get the reference to a counter while it got argument of '{counterReference.Type}' type";
+                    $"{Transformation.CountersTransformation.Add}() method expects to get the reference to a counter while it got argument of '{counterReference.Type}' type";
 
                 if (counterReference.IsString())
                     message += $" (value: '{counterReference.AsString()}')";
@@ -170,6 +190,37 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
 
             _currentRun.AddCounter(self, counterReference);
+
+            return self;
+        }
+        
+        private JsValue AddTimeSeries(JsValue self, JsValue[] args)
+        {
+            if (args.Length != Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount)
+            {
+                ThrowInvalidScriptMethodCall(
+                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} must have {Transformation.TimeSeriesTransformation.AddTimeSeries.ParamsCount} arguments. " +
+                    $"Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`");
+            }
+
+            var timeSeriesReference = args[0];
+
+            if (timeSeriesReference.IsNull())
+                return self;
+
+            if (timeSeriesReference.IsString() == false || timeSeriesReference.AsString().StartsWith(Transformation.TimeSeriesTransformation.Marker) == false)
+            {
+                var message =
+                    $"{Transformation.TimeSeriesTransformation.AddTimeSeries.Name} method expects to get the reference to a time-series while it got argument of '{timeSeriesReference.Type}' type";
+
+                if (timeSeriesReference.IsString())
+                    message += $" (value: '{timeSeriesReference.AsString()}')";
+
+                message += $". Signature `{Transformation.TimeSeriesTransformation.AddTimeSeries.Signature}`";
+                ThrowInvalidScriptMethodCall(message);
+            }
+
+            _currentRun.AddTimeSeries(self, timeSeriesReference);
 
             return self;
         }
@@ -184,7 +235,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return _commands;
         }
 
-        public override void Transform(RavenEtlItem item, EtlStatsScope stats)
+        public override void Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)
         {
             Current = item;
             _currentRun = new RavenEtlScriptRun(stats);
@@ -198,78 +249,112 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         {
                             // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
                             // documents loaded to non default collections
-
                             ApplyDeleteCommands(item, OperationType.Put);
 
                             DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
-
-                            if (_script.HasLoadCounterBehaviors && _script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function))
+                            if (_currentRun.IsDocumentLoadedToSameCollection(item.DocumentId) == false)
+                                break;
+                            
+                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var counterFunction))
                             {
                                 var counterGroups = GetCounterGroupsFor(item);
                                 if (counterGroups != null)
+                                    AddCounters(item.DocumentId, counterGroups, counterFunction);    
+                            }
+                            if (_script.TryGetLoadTimeSeriesBehaviorFunctionFor(item.Collection, out var timeSeriesLoadBehaviorFunc))
+                            {
+                                if (ShouldLoadTimeSeriesWithDoc(item, state))
                                 {
-                                    AddCounters(item.DocumentId, counterGroups, function);    
+                                    var timeSeriesReaders = GetTimeSeriesFor(item, timeSeriesLoadBehaviorFunc);
+                                    if (timeSeriesReaders != null)
+                                        AddAndRemoveTimeSeries(item.DocumentId, timeSeriesReaders);
                                 }
                             }
                         }
                         else
                         {
-                            _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, GetAttachmentsFor(item), GetCounterOperationsFor(item));
+                            var attachments = GetAttachmentsFor(item);
+                            var counterOperations = GetCounterOperationsFor(item);
+                            var timeSeriesOperations = ShouldLoadTimeSeriesWithDoc(item, state)? GetTimeSeriesOperationsFor(item) : null;
+                            _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, attachments, counterOperations, timeSeriesOperations);
                         }
-
                         break;
                     case EtlItemType.CounterGroup:
+                        string cFunction = null;
                         if (_script.HasTransformation)
                         {
-                            if (_script.HasLoadCounterBehaviors == false)
+                            if (_script.MayLoadedToDefaultCollection(item) == false)
                                 break;
-
-                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out var function) == false)
+                            if (_script.TryGetLoadCounterBehaviorFunctionFor(item.Collection, out cFunction) == false)
                                 break;
-
-                            AddSingleCounterGroup(item.DocumentId, item.CounterGroupDocument, function);
                         }
-                        else
+                        AddSingleCounterGroup(item.DocumentId, item.CounterGroupDocument, cFunction);
+                        break;
+                    case EtlItemType.TimeSeries:
+                        string tsFunction = null;
+                        if (_script.HasTransformation)
                         {
-                            AddSingleCounterGroup(item.DocumentId, item.CounterGroupDocument);
+                            if (_script.MayLoadedToDefaultCollection(item) == false)
+                                break;
+                            if (_script.TryGetLoadTimeSeriesBehaviorFunctionFor(item.Collection, out tsFunction) == false)
+                                break;
                         }
-
+                        HandleSingleTimeSeriesSegment(item.DocumentId, item.TimeSeriesSegmentEntry, tsFunction, state);
                         break;
                 }
             }
             else
             {
-                Debug.Assert(item.Type == EtlItemType.Document);
-
-                if (ShouldFilterOutDeletion(item) == false)
+                switch (item.Type)
                 {
-                    if (_script.HasTransformation)
-                    {
-                        Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
-
-                        ApplyDeleteCommands(item, OperationType.Delete);
-                    }
-                    else
-                    {
-                        if (item.IsAttachmentTombstone == false)
+                    case EtlItemType.Document:
+                        if (ShouldFilterOutDeletion(item))
+                            break;
+                        if (_script.HasTransformation)
                         {
-                            _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                            Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
+
+                            ApplyDeleteCommands(item, OperationType.Delete);
                         }
                         else
                         {
-                            var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
-
-                            _currentRun.DeleteAttachment(doc, attachmentName);
+                            if (item.IsAttachmentTombstone == false)
+                            {
+                                _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
+                            }
+                            else
+                            {
+                                var (doc, attachmentName) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId);
+                                _currentRun.DeleteAttachment(doc, attachmentName);
+                            }
                         }
-                    }
-
+                        break;
+                    case EtlItemType.TimeSeries:
+                        string function = null;
+                        if (_script.HasTransformation)
+                        {
+                            if (_script.MayLoadedToDefaultCollection(item) == false)
+                                break;
+                            
+                            if (_script.TryGetLoadTimeSeriesBehaviorFunctionFor(item.Collection, out function) == false)
+                                break;
+                        }
+                        HandleSingleTimeSeriesDeletedRangeItem(item.TimeSeriesDeletedRangeItem, function);
+                        break;
+                    default:
+                        throw new InvalidOperationException($"Dead Etl item can be of type {EtlItemType.Document} or {EtlItemType.TimeSeries} but got {item.Type}");
                 }
-
             }
 
             _commands.AddRange(_currentRun.GetCommands());
         }
 
+        private bool ShouldLoadTimeSeriesWithDoc(RavenEtlItem item, EtlProcessState state)
+        {
+            //If etag of time-series lower then its document Etag then replication can send the time-series before the document.
+            //In this situation Etl process will skip the time-series and will send all of it here with the document
+            return state.SkippedTimeSeriesDocs != null && state.SkippedTimeSeriesDocs.Remove(item.DocumentId);
+        }
 
         private bool ShouldFilterOutDeletion(RavenEtlItem item)
         {
@@ -322,12 +407,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 AddSingleCounterGroup(docId, cgd.Values, function);
             }
-
         }
 
-        private void AddSingleCounterGroup(LazyStringValue docId, BlittableJsonReaderObject counerGroupDocument, string function = null)
+        private void AddSingleCounterGroup(LazyStringValue docId, BlittableJsonReaderObject counterGroupDocument, string function = null)
         {
-            if (counerGroupDocument.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) == false)
+            if (counterGroupDocument.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters) == false)
                 return;
 
             var prop = new BlittableJsonReaderObject.PropertyDetails();
@@ -343,6 +427,193 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 else
                     _currentRun.AddCounter(docId, prop.Name, value);
             }
+        }
+        
+        private readonly struct TimeSeriesModifications
+        {
+            public readonly IEnumerable<SingleResult> ToAdd;
+            public readonly IEnumerable<TimeSeriesDeletedRangeItem> ToDelete;
+
+            public TimeSeriesModifications(IEnumerable<SingleResult> toAdd, IEnumerable<TimeSeriesDeletedRangeItem> toDelete)
+            {
+                ToAdd = toAdd;
+                ToDelete = toDelete;
+            }
+        }
+        
+        private void AddAndRemoveTimeSeries(LazyStringValue docId, Dictionary<string, TimeSeriesModifications> modificationsPerTimeSeries)
+        {
+            foreach (var (timeSeriesName, modifications) in modificationsPerTimeSeries)
+            {
+                foreach (var singleResult in modifications.ToAdd)
+                {
+                    _currentRun.AddTimeSeries(docId, timeSeriesName, singleResult);
+                }
+                foreach (var range in modifications.ToDelete)
+                {
+                    _currentRun.RemoveTimeSeries(docId, timeSeriesName, range.From, range.To);
+                }
+            }
+        }
+        
+        private void HandleSingleTimeSeriesSegment(LazyStringValue docId, TimeSeriesSegmentEntry segmentEntry, string loadBehaviorFunction, EtlProcessState state)
+        {
+            var doc = Database.DocumentsStorage.Get(Context, docId);
+            if (doc == null)
+            {
+                //Through replication the Etl source database can have time-series without its document.
+                //This is a rare situation and we will skip Etl this time-series and will mark the document so when it will be Etl we will send all its time-series with it
+                (state.SkippedTimeSeriesDocs??=new HashSet<string>()).Add(docId);
+                return;
+            }
+            if (doc.Etag > segmentEntry.Etag)
+            {
+                //There is a chance that the document didn't Etl yet so we push it with the time-series to be sure
+                if (DocumentScript != null)
+                {
+                    DocumentScript.Run(Context, Context, "execute", new object[] { doc }).Dispose();
+                    if (_currentRun.IsDocumentLoadedToSameCollection(docId) == false)
+                        return;
+                }
+                else
+                {
+                    _currentRun.PutFullDocument(docId, doc.Data);
+                }
+            }
+            var timeSeriesEntries = segmentEntry.Segment.YieldAllValues(Context, segmentEntry.Start, false);
+            if (loadBehaviorFunction != null && FilterSingleTimeSeriesSegmentByLoadBehaviourScript(ref timeSeriesEntries, docId, segmentEntry, loadBehaviorFunction))
+                return;
+
+            if (doc.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
+                throw new InvalidOperationException($"Document {docId} has time-series but its metadata doesn't");
+
+            //TODO Time-series name should be taken from time-series storage after the relevant implementation will change
+            var index = timeSeriesNames.BinarySearch(segmentEntry.Name, StringComparison.OrdinalIgnoreCase);
+            if(index < 0)
+                throw new InvalidOperationException($"Document {docId} has time-series {segmentEntry.Name} but its metadata doesn't");
+            var timeSeriesName = timeSeriesNames.GetStringByIndex(index);
+
+            foreach (var entry in timeSeriesEntries)
+            {
+                _currentRun.AddTimeSeries(docId, timeSeriesName, entry);
+            }
+        }
+        
+        private void HandleSingleTimeSeriesDeletedRangeItem(TimeSeriesDeletedRangeItem item, string loadBehaviourFunction)
+        {
+            TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, Context, out var docId, out var name);
+
+            if (loadBehaviourFunction != null)
+            {
+                if (ShouldFilterByScriptAndGetParams(docId, name, loadBehaviourFunction, out (DateTime begin, DateTime end)? toLoad)) 
+                    return;
+            
+                if(toLoad.HasValue && (toLoad.Value.begin > item.To || toLoad.Value.end < item.From))
+                    return;    
+            }
+            
+            _currentRun.RemoveTimeSeries(docId, name, item.From, item.To);
+        }
+
+        private bool FilterSingleTimeSeriesSegmentByLoadBehaviourScript(
+            ref IEnumerable<SingleResult> timeSeriesEntries, 
+            LazyStringValue docId,
+            TimeSeriesSegmentEntry segmentEntry, 
+            string loadBehaviourFunction)
+        {
+            if (ShouldFilterByScriptAndGetParams(docId, segmentEntry.Name, loadBehaviourFunction, out (DateTime begin, DateTime end)? toLoad)) 
+                return true;
+
+            if (toLoad == null)
+                return false;
+            
+            var lastTimestamp = segmentEntry.Segment.GetLastTimestamp(segmentEntry.Start);
+            if (segmentEntry.Start > toLoad.Value.end || lastTimestamp < toLoad.Value.begin)
+                return true;
+
+            if (toLoad.Value.begin > segmentEntry.Start)
+            {
+                timeSeriesEntries = SkipUntilFrom(timeSeriesEntries, toLoad.Value.begin);
+
+                static IEnumerable<SingleResult> SkipUntilFrom(IEnumerable<SingleResult> origin, DateTime from)
+                {
+                    using var enumerator = origin.GetEnumerator();
+                    while (enumerator.MoveNext())
+                    {
+                        if (enumerator.Current.Timestamp >= @from)
+                            yield return enumerator.Current;
+                    }
+                }
+            }
+
+            if (toLoad.Value.end < lastTimestamp)
+            {
+                timeSeriesEntries = BreakOnTo(timeSeriesEntries, toLoad.Value.end);
+
+                static IEnumerable<SingleResult> BreakOnTo(IEnumerable<SingleResult> origin, DateTime to)
+                {
+                    using var enumerator = origin.GetEnumerator();
+                    while (enumerator.MoveNext() && enumerator.Current.Timestamp <= to)
+                    {
+                        yield return enumerator.Current;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool ShouldFilterByScriptAndGetParams(string docId, string timeSeriesName, string function, out (DateTime From, DateTime To)? toLoad)
+        {
+            toLoad = null;
+            using (var scriptRunnerResult = BehaviorsScript.Run(Context, Context, function, new object[] {docId, timeSeriesName}))
+            {
+                if (scriptRunnerResult.BooleanValue != null)
+                {
+                    if (scriptRunnerResult.BooleanValue == false)
+                        return true;
+                }
+                else if (scriptRunnerResult.IsNull)
+                {
+                    return true;
+                }
+                else if (scriptRunnerResult.Instance.IsObject() == false)
+                {
+                    throw new InvalidOperationException($"Return type of `{function}` function should be a boolean or object. docId({docId}), timeSeriesName({timeSeriesName})");
+                }
+                else
+                {
+                    var toLoadLocal = (From: DateTime.MinValue, To: DateTime.MaxValue);
+                    foreach ((JsValue jsValue, PropertyDescriptor propertyDescriptor) in scriptRunnerResult.Instance.AsObject().GetOwnProperties())
+                    {
+                        var key = jsValue.AsString();
+                        if (key.Equals("from", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (toLoadLocal.From != DateTime.MinValue)
+                                throw new InvalidOperationException($"Duplicate of property `From`/`from`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                            toLoadLocal.From = propertyDescriptor.Value.AsDate().ToDateTime();
+                        }
+                        else if (key.Equals("to", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (toLoadLocal.To != DateTime.MaxValue)
+                                throw new InvalidOperationException($"Duplicate of property `To`/`to`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                            toLoadLocal.To = propertyDescriptor.Value.AsDate().ToDateTime();
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"Returned object should contain only `from` and `to` property but contain `{key}`. docId({docId}), timeSeriesName({timeSeriesName}), function({function})");
+                        }
+                    }
+
+                    if (toLoadLocal.To < toLoadLocal.From)
+                        throw new InvalidOperationException($"The property `from` is bigger the the `to` property. " +
+                                                            $"docId{docId} timeSeries{timeSeriesName} from({toLoadLocal.From}) to({toLoadLocal.To})");
+                    toLoad = toLoadLocal;
+                }
+            }
+
+            return false;
         }
 
         private List<CounterOperation> GetCounterOperationsFor(RavenEtlItem item)
@@ -387,7 +658,70 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             return counterOperations;
         }
+        
+        private Dictionary<string, TimeSeriesModifications> GetTimeSeriesFor(RavenEtlItem item, string loadBehaviorFunction)
+        {
+            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
+                return null;
+            
+            //TODO Time-series name should be taken from time-series storage after the relevant implementation will change
+            if (item.Document.TryGetMetadata(out var metadata) == false ||
+                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
+                return null;
+            
+            metadata.Modifications ??= new DynamicJsonValue(metadata);
+            
+            metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+            
+            var ret = new Dictionary<string, TimeSeriesModifications>();
+            foreach (LazyStringValue timeSeriesName in timeSeriesNames)
+            {
+                (DateTime from, DateTime to)? toLoad = null;
+                if(loadBehaviorFunction != null && ShouldFilterByScriptAndGetParams(item.DocumentId, timeSeriesName, loadBehaviorFunction, out toLoad))
+                    continue;
+                toLoad ??= (DateTime.MinValue, DateTime.MaxValue);
+                
+                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, item.DocumentId, timeSeriesName, toLoad.Value.from, toLoad.Value.to);
+                var deletedRanges = Database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesForDoc(Context, item.DocumentId);
+                ret[timeSeriesName] = new TimeSeriesModifications(reader.AllValues(), deletedRanges);
+            }
+            return ret;
+        }
+        private List<TimeSeriesOperation> GetTimeSeriesOperationsFor(RavenEtlItem item)
+        {
+            var modificationsPerTimeSeries = GetTimeSeriesFor(item, null);
+            if (modificationsPerTimeSeries == null)
+                return null; 
+                
+            var results = new List<TimeSeriesOperation>();
+            
+            foreach (var (timeSeriesName, modifications) in modificationsPerTimeSeries)
+            {
+                var operation = new TimeSeriesOperation { Name = timeSeriesName };
+                
+                foreach (var timeSeries in modifications.ToAdd)
+                {
+                    operation.Append(new TimeSeriesOperation.AppendOperation
+                    {
+                        Tag = timeSeries.Tag,
+                        Timestamp = timeSeries.Timestamp,
+                        Values = timeSeries.Values.ToArray()
+                    });
+                }
+                
+                foreach (var range in modifications.ToDelete)
+                {
+                    (operation.Deletes ??= new List<TimeSeriesOperation.DeleteOperation>()).Add(new TimeSeriesOperation.DeleteOperation
+                    {
+                        From  = range.From, To = range.To
+                    });
+                }
 
+                results.Add(operation);
+            }
+            return results;
+        }
+        
         private bool GetCounterValueAndCheckIfShouldSkip(LazyStringValue docId, string function, BlittableJsonReaderObject.PropertyDetails prop, out long value, out bool delete)
         {
             value = 0;
@@ -432,6 +766,11 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             _currentRun.LoadCounter(reference, name, value);
         }
+        
+        protected override void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries)
+        {
+            _currentRun.LoadTimeSeries(reference, name, entries);
+        }
 
         private List<Attachment> GetAttachmentsFor(RavenEtlItem item)
         {
@@ -474,7 +813,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 if (_script.IsLoadedToDefaultCollection(item, collection))
                 {
-                    if (operation == OperationType.Delete || _transformation.IsAddingAttachments || _transformation.IsAddingCounters || _transformation.IsEmptyScript == false)
+                    if (operation == OperationType.Delete 
+                        || _transformation.IsAddingAttachments 
+                        || _transformation.Counters.IsAddingCounters 
+                        || _transformation.TimeSeries.IsAddingTimeSeries) 
                         _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                 }
                 else
@@ -497,12 +839,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             public readonly Dictionary<string, string> IdPrefixForCollection = new Dictionary<string, string>();
 
             private readonly Dictionary<string, string> _collectionToLoadCounterBehaviorFunction;
+            
+            private readonly Dictionary<string, string> _collectionToLoadTimeSeriesBehaviorFunction;
 
             private readonly Dictionary<string, string> _collectionToDeleteDocumentBehaviorFunction;
 
             public bool HasTransformation => Transformation != null;
 
             public bool HasLoadCounterBehaviors => _collectionToLoadCounterBehaviorFunction != null;
+            
+            public bool HasLoadTimeSeriesBehaviors => _collectionToLoadTimeSeriesBehaviorFunction != null;
 
             public bool HasDeleteDocumentsBehaviors => _collectionToDeleteDocumentBehaviorFunction != null;
 
@@ -516,13 +862,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (transformation.IsEmptyScript == false)
                     Transformation = new PatchRequest(transformation.Script, PatchRequestType.RavenEtl);
 
-                if (transformation.CollectionToLoadCounterBehaviorFunction != null)
-                    _collectionToLoadCounterBehaviorFunction = transformation.CollectionToLoadCounterBehaviorFunction;
+                if (transformation.Counters.CollectionToLoadBehaviorFunction != null)
+                    _collectionToLoadCounterBehaviorFunction = transformation.Counters.CollectionToLoadBehaviorFunction;
+
+                if (transformation.TimeSeries.CollectionToLoadBehaviorFunction != null)
+                    _collectionToLoadTimeSeriesBehaviorFunction = transformation.TimeSeries.CollectionToLoadBehaviorFunction;
 
                 if (transformation.CollectionToDeleteDocumentsBehaviorFunction != null)
                     _collectionToDeleteDocumentBehaviorFunction = transformation.CollectionToDeleteDocumentsBehaviorFunction;
 
-                if (HasLoadCounterBehaviors || HasDeleteDocumentsBehaviors)
+                if (HasLoadCounterBehaviors || HasDeleteDocumentsBehaviors || HasLoadTimeSeriesBehaviors)
                     BehaviorFunctions = new PatchRequest(transformation.Script, PatchRequestType.EtlBehaviorFunctions);
 
                 if (transformation.IsEmptyScript == false)
@@ -551,7 +900,18 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             public bool TryGetLoadCounterBehaviorFunctionFor(string collection, out string functionName)
             {
-                return _collectionToLoadCounterBehaviorFunction.TryGetValue(collection, out functionName);
+                if(HasLoadCounterBehaviors)
+                    return _collectionToLoadCounterBehaviorFunction.TryGetValue(collection, out functionName);
+                functionName = null;
+                return false;
+            }
+            
+            public bool TryGetLoadTimeSeriesBehaviorFunctionFor(string collection, out string functionName)
+            {
+                if (HasLoadTimeSeriesBehaviors) 
+                    return _collectionToLoadTimeSeriesBehaviorFunction.TryGetValue(collection, out functionName);
+                functionName = null;
+                return false;
             }
 
             public bool TryGetDeleteDocumentBehaviorFunctionFor(string collection, out string functionName)
@@ -567,6 +927,20 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 var collection = item.CollectionFromMetadata;
 
                 return collection?.CompareTo(loadToCollection) == 0;
+            }
+            
+            public bool MayLoadedToDefaultCollection(RavenEtlItem item)
+            {
+                if (item.Collection == null)
+                    return false;
+                
+                foreach (string loadToCollection in LoadToCollections)
+                { 
+                    if(_collectionNameComparisons.ContainsKey(loadToCollection))
+                        return true;
+                }
+
+                return false;
             }
         }
 

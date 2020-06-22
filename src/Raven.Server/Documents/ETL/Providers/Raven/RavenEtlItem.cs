@@ -1,4 +1,6 @@
 ﻿using Raven.Client.Documents.Operations.Counters;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
@@ -26,6 +28,28 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             ChangeVector = counter.ChangeVector;
             Type = EtlItemType.CounterGroup;
             CounterGroupDocument = counter.Values;
+        }
+        
+        public RavenEtlItem(TimeSeriesSegmentEntry timeSeriesSegmentEntry, string collection)
+        {
+            DocumentId = timeSeriesSegmentEntry.DocId;
+            Etag = timeSeriesSegmentEntry.Etag;
+            Collection = collection;
+            ChangeVector = timeSeriesSegmentEntry.ChangeVector;
+            Type = EtlItemType.TimeSeries;
+            TimeSeriesSegmentEntry = timeSeriesSegmentEntry;
+        }
+
+        public RavenEtlItem(TimeSeriesDeletedRangeItem deletedRange, string collection)
+        {
+            Etag = deletedRange.Etag;
+            ChangeVector = deletedRange.ChangeVector;
+            Collection = collection;
+            Type = EtlItemType.TimeSeries;
+            IsDelete = true;
+            
+            TimeSeriesDeletedRangeItem = deletedRange;
+
         }
 
         public LazyStringValue AttachmentTombstoneId { get; protected set; }

@@ -148,6 +148,41 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+        public static unsafe DateTime GetDateArg(JsValue arg, string signature, string argName)
+        {
+            if (arg.IsDate())
+                return arg.AsDate().ToDateTime();
+
+            if (arg.IsString() == false)
+                ThrowInvalidDateArgument();
+
+            var s = arg.AsString();
+            fixed (char* pValue = s)
+            {
+                var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
+                if (result != LazyStringParser.Result.DateTime)
+                    ThrowInvalidDateArgument();
+
+                return dt;
+            }
+
+            void ThrowInvalidDateArgument() =>
+                throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
+        }
+
+        private static DateTime GetTimeSeriesDateArg(JsValue arg, string signature, string argName)
+        {
+            if (arg.IsDate())
+                return arg.AsDate().ToDateTime();
+
+            if (arg.IsString() == false)
+                throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
+
+            return TimeSeriesRetriever.ParseDateTime(arg.AsString());
+        }
+        
+        private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
+        
         public class SingleRun
         {
             private readonly DocumentDatabase _database;
@@ -299,8 +334,6 @@ namespace Raven.Server.Documents.Patch
 
                 throw new InvalidOperationException($"{signature}: 'doc' must be a string argument (the document id) or the actual document instance itself. {GetTypes(docArg)}");
             }
-
-            private static string GetTypes(JsValue value) => $"JintType({value.Type}) .NETType({value.GetType().Name})";
 
             private string GetIdFromArg(JsValue docArg, string signature)
             {
@@ -1475,39 +1508,6 @@ namespace Raven.Server.Documents.Patch
                     default:
                         throw new InvalidOperationException($"compareDates(date1, date2, binaryOp) : unsupported binary operation '{binaryOperationType}'");
                 }
-            }
-
-            private static unsafe DateTime GetDateArg(JsValue arg, string signature, string argName)
-            {
-                if (arg.IsDate())
-                    return arg.AsDate().ToDateTime();
-
-                if (arg.IsString() == false)
-                    ThrowInvalidDateArgument();
-
-                var s = arg.AsString();
-                fixed (char* pValue = s)
-                {
-                    var result = LazyStringParser.TryParseDateTime(pValue, s.Length, out DateTime dt, out _);
-                    if (result != LazyStringParser.Result.DateTime)
-                        ThrowInvalidDateArgument();
-
-                    return dt;
-                }
-
-                void ThrowInvalidDateArgument() =>
-                    throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
-            }
-
-            private static DateTime GetTimeSeriesDateArg(JsValue arg, string signature, string argName)
-            {
-                if (arg.IsDate())
-                    return arg.AsDate().ToDateTime();
-
-                if (arg.IsString() == false)
-                    throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
-
-                return TimeSeriesRetriever.ParseDateTime(arg.AsString());
             }
 
             private static unsafe JsValue ToStringWithFormat(JsValue self, JsValue[] args)

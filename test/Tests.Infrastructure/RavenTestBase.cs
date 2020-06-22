@@ -630,35 +630,76 @@ namespace FastTests
             throw new TimeoutException(msg);
         }
 
-        protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        protected async Task<T> AssertWaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var ret = await WaitForGreaterThanAsync(act, val, timeout, interval);
+            if(ret.CompareTo(val) > 0 == false)
+                throw new TimeoutException($"Timeout {TimeSpan.FromMilliseconds(timeout):g}. Value should be greater then {val}. Current value {ret}");
+            return ret;
+        }
+        
+        protected async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100)  where T : IComparable =>
+            await WaitForPredicateAsync(a => a.CompareTo(val) > 0, act, timeout, interval);
+        
+        protected async Task AssertWaitForTrueAsync(Func<Task<bool>> act, int timeout = 15000, int interval = 100)
+        {
+            Assert.True(await WaitForValueAsync(act, true, timeout, interval));
+        }
+        
+        protected async Task<T> AssertWaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        {
+            var ret = await WaitForValueAsync(act, expectedVal, timeout, interval);
+            Assert.Equal(expectedVal, ret);
+            return ret;
+        }
+        
+        protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) =>
+             await WaitForPredicateAsync(a => (a == null && expectedVal == null) || (a != null && a.Equals(expectedVal)), act, timeout, interval);
+
+        protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
+        {
+            var ret = await WaitForNotNullAsync(act, timeout, interval);
+            Assert.NotNull(ret);
+            return ret;
+        }
+        
+        protected async Task<T> AssertWaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100)
+        {
+            var ret = await WaitForNotDefaultAsync(act, timeout, interval);
+            Assert.NotEqual(ret, default);
+            return ret;
+        }
+        
+        protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T: class =>
+            await WaitForPredicateAsync(a => a != null, act, timeout, interval);
+        
+        protected async Task<T> WaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) =>
+            await WaitForPredicateAsync(a => !EqualityComparer<T>.Default.Equals(a, default), act, timeout, interval);
+        
+        protected async Task<T> WaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T: class =>
+            await WaitForPredicateAsync(a => a == null, act, timeout, interval);
+        
+        private static async Task<T>WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
 
             var sw = Stopwatch.StartNew();
-            do
+            while (true)
             {
                 try
                 {
                     var currentVal = await act();
-                    if (expectedVal.Equals(currentVal))
-                    {
+                    if (predicate(currentVal) || sw.ElapsedMilliseconds > timeout)
                         return currentVal;
-                    }
-                    if (sw.ElapsedMilliseconds > timeout)
-                    {
-                        return currentVal;
-                    }
                 }
                 catch
                 {
                     if (sw.ElapsedMilliseconds <= timeout)
-                    {
                         throw;
-                    }
                 }
                 await Task.Delay(interval);
-            } while (true);
+            } 
         }
 
         protected static async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000)

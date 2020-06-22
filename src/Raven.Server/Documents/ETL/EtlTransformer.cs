@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Jint;
 using Jint.Native;
 using Jint.Runtime.Interop;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -66,7 +68,11 @@ namespace Raven.Server.Documents.ETL
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadAttachment, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadAttachment, LoadAttachment));
 
-            DocumentScript.ScriptEngine.SetValue(Transformation.LoadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, Transformation.LoadCounter, LoadCounter));
+            const string loadCounter = Transformation.CountersTransformation.Load;
+            DocumentScript.ScriptEngine.SetValue(loadCounter, new ClrFunctionInstance(DocumentScript.ScriptEngine, loadCounter, LoadCounter));
+
+            const string loadTimeSeries = Transformation.TimeSeriesTransformation.LoadTimeSeries.Name;
+            DocumentScript.ScriptEngine.SetValue(loadTimeSeries, new ClrFunctionInstance(DocumentScript.ScriptEngine, loadTimeSeries, LoadTimeSeries));
 
             DocumentScript.ScriptEngine.SetValue("getAttachments", new ClrFunctionInstance(DocumentScript.ScriptEngine, "getAttachments", GetAttachments));
 
@@ -113,6 +119,8 @@ namespace Raven.Server.Documents.ETL
         protected abstract void AddLoadedAttachment(JsValue reference, string name, Attachment attachment);
 
         protected abstract void AddLoadedCounter(JsValue reference, string name, long value);
+        
+        protected abstract void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries);
 
         private JsValue LoadAttachment(JsValue self, JsValue[] args)
         {
@@ -142,10 +150,10 @@ namespace Raven.Server.Documents.ETL
         private JsValue LoadCounter(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || args[0].IsString() == false)
-                ThrowInvalidScriptMethodCall($"{Transformation.LoadCounter}(name) must have a single string argument");
+                ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
 
             var counterName = args[0].AsString();
-            JsValue loadCounterReference = (JsValue)Transformation.CounterMarker + counterName;
+            var loadCounterReference = (JsValue)Transformation.CountersTransformation.Marker + counterName;
 
             if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
             {
@@ -164,6 +172,35 @@ namespace Raven.Server.Documents.ETL
             return loadCounterReference;
         }
 
+        private JsValue LoadTimeSeries(JsValue self, JsValue[] args)
+        {
+            if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries == false)
+                return JsValue.Null;
+
+            const int paramsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.ParamsCount;
+            const string signature = Transformation.TimeSeriesTransformation.LoadTimeSeries.Signature;
+            
+            if (args.Length != paramsCount)
+                ThrowInvalidScriptMethodCall($"{signature} must have {paramsCount} arguments");
+                
+            if(args[0].IsString() == false)
+                ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be a string");
+            var timeSeriesName = args[0].AsString();
+
+            var from = ScriptRunner.GetDateArg(args[1], signature, "from"); 
+            var to = ScriptRunner.GetDateArg(args[2], signature, "to"); 
+                
+            var loadTimeSeriesReference = (JsValue)Transformation.TimeSeriesTransformation.Marker + timeSeriesName + args[1] + args[2];
+
+            var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
+            if(reader.AllValues().Any() == false)
+                return JsValue.Null;
+
+            AddLoadedTimeSeries(loadTimeSeriesReference, timeSeriesName, reader.AllValues());
+
+            return loadTimeSeriesReference;
+        }
+        
         private JsValue GetAttachments(JsValue self, JsValue[] args)
         {
             if (args.Length != 0)
@@ -268,7 +305,7 @@ namespace Raven.Server.Documents.ETL
 
         public abstract List<TTransformed> GetTransformedResults();
 
-        public abstract void Transform(TExtracted item, EtlStatsScope stats);
+        public abstract void Transform(TExtracted item, EtlStatsScope stats, EtlProcessState state);
 
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {

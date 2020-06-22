@@ -11,6 +11,8 @@ using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
+using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -92,6 +94,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             return new CountersToRavenEtlItems(counters, collection);
         }
+        
+        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesEnumerator(IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        {
+            return new TimeSeriesToRavenEtlItems(timeSeries, collection);
+        }
+        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        {
+            return new TimeSeriesDeletedRangeToRavenEtlItems(timeSeries, collection);
+        }
 
         protected override bool ShouldTrackAttachmentTombstones()
         {
@@ -111,7 +122,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             // when load counter behavior functions are defined, otherwise counters are send on document updates
             // when addCounter() is called during transformation
 
-            return Transformation.IsEmptyScript || Transformation.CollectionToLoadCounterBehaviorFunction != null;
+            return Transformation.IsEmptyScript || Transformation.Counters.CollectionToLoadBehaviorFunction != null;
+        }
+
+        public override bool ShouldTrackTimeSeries()
+        {
+            // we track timeSeries only if script is empty (then we send all timeSeries together with documents) or
+            // when load timeSeries behavior functions are defined, otherwise timeSeries are send on document updates
+            // when addTimeSeries() is called during transformation
+
+            return Transformation.IsEmptyScript || Transformation.TimeSeries.CollectionToLoadBehaviorFunction != null;
         }
 
         protected override EtlTransformer<RavenEtlItem, ICommandData> GetTransformer(DocumentsOperationContext context)

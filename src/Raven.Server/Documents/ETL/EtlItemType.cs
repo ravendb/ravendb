@@ -4,6 +4,7 @@
     {
         None = 0,
         Document = 1,
-        CounterGroup = 2
+        CounterGroup = 2,
+        TimeSeries = 3,
     }
 }

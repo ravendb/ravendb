@@ -1701,14 +1701,48 @@ namespace Raven.Server.Documents.TimeSeries
             return item;
         }
 
-        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag)
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
 
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[AllDeletedRangesEtagSlice], etag, 0))
             {
-                yield return CreateDeletedRangeItem(context, ref result.Reader);
+                var item = CreateDeletedRangeItem(context, ref result.Reader);
+                if(item.Etag > toEtag)
+                    yield break;
+                yield return item;
+            }
+        }
+        
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag = long.MaxValue)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                yield break;
+            var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
+            if (table == null)
+                yield break;
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice], fromEtag, 0))
+            {
+                var item = CreateDeletedRangeItem(context, ref result.Reader);
+                if(item.Etag > toEtag)
+                    yield break;
+                yield return item;
+            }
+        }
+
+        public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
+        {
+            var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
+            using var dispose = DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach ((_, Table.TableValueHolder tvh) in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
+            {
+                var item = CreateDeletedRangeItem(context, ref tvh.Reader);
+                yield return item;
             }
         }
 
@@ -1755,20 +1789,30 @@ namespace Raven.Server.Documents.TimeSeries
             return CreateTimeSeriesItem(context, ref tvr);
         }
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take)
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, long etag, long take) =>
+            GetTimeSeries(context, etag, long.MaxValue, take);
+
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeries(DocumentsOperationContext context, long fromEtag, long toEtag ,long take = long.MaxValue)
         {
             var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
 
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], etag, 0))
+            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[AllTimeSeriesEtagSlice], fromEtag, 0))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return CreateTimeSeriesItem(context, ref result.Reader);
+                var item = CreateTimeSeriesItem(context, ref result.Reader);
+                if(item.Etag > toEtag)
+                    yield break;
+                
+                yield return item;
             }
         }
 
-        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag, long take)
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long etag, long take) =>
+            GetTimeSeriesFrom(context, collection, etag, long.MaxValue, take);   
+        
+        public IEnumerable<TimeSeriesSegmentEntry> GetTimeSeriesFrom(DocumentsOperationContext context, string collection, long fromEtag, long toEtag, long take)
         {
             var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -1779,12 +1823,16 @@ namespace Raven.Server.Documents.TimeSeries
             if (table == null)
                 yield break;
 
-            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag, skip: 0))
+            foreach (var result in table.SeekForwardFrom(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], fromEtag, skip: 0))
             {
                 if (take-- <= 0)
                     yield break;
 
-                yield return CreateTimeSeriesItem(context, ref result.Reader);
+                var item = CreateTimeSeriesItem(context, ref result.Reader);
+                if(item.Etag > toEtag)
+                    yield break;
+
+                yield return item;
             }
         }
 
@@ -1983,6 +2031,50 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public long GetNumberOfTimeSeriesSegmentsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice];
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
+        }
+        
+        public long GetNumberOfTimeSeriesDeletedRangesToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var table = GetOrCreateDeleteRangesTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice];
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
+        }
+        
         [Conditional("DEBUG")]
         private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name)
         {

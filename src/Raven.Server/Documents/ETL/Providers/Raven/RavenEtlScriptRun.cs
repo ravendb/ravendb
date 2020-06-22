@@ -1,11 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Jint.Native;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Counters;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.TimeSeries;
 using Sparrow.Json;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -23,8 +25,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private Dictionary<JsValue, List<CounterOperation>> _countersByJsReference;
 
         private Dictionary<LazyStringValue, List<CounterOperation>> _countersByDocumentId;
+        
+        private Dictionary<JsValue, Dictionary<JsValue, TimeSeriesOperation>> _timeSeriesByJsReference;
+
+        private Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>> _timeSeriesByDocumentId;
 
         private Dictionary<JsValue, (string Name, long Value)> _loadedCountersByJsReference;
+        
+        private Dictionary<JsValue, (string Name, IEnumerable<SingleResult> Value)> _loadedTimeSeriesByJsReference;
 
         private List<ICommandData> _fullDocuments;
 
@@ -40,7 +48,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _deletes.Add(command);
         }
 
-        public void PutFullDocument(string id, BlittableJsonReaderObject doc, List<Attachment> attachments, List<CounterOperation> counterOperations)
+        public void PutFullDocument(
+            string id, 
+            BlittableJsonReaderObject doc, 
+            List<Attachment> attachments = null, 
+            List<CounterOperation> counterOperations = null, 
+            List<TimeSeriesOperation> timeSeriesOperations = null)
         {
             if (_fullDocuments == null)
                 _fullDocuments = new List<ICommandData>();
@@ -66,14 +79,24 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     FromEtl = true
                 });
             }
+            
+            if (timeSeriesOperations != null)
+            {
+                foreach (var operation in timeSeriesOperations)
+                {
+                    _fullDocuments.Add(new TimeSeriesBatchCommandData(id, operation.Name, operation.Appends, operation.Deletes)
+                    {
+                        FromEtl = true
+                    });    
+                }
+            }
         }
 
         public void Put(string id, JsValue instance, BlittableJsonReaderObject doc)
         {
             Debug.Assert(instance != null);
 
-            if (_putsByJsReference == null)
-                _putsByJsReference = new Dictionary<JsValue, (string Id, BlittableJsonReaderObject)>(ReferenceEqualityComparer<JsValue>.Default);
+            _putsByJsReference ??= new Dictionary<JsValue, (string Id, BlittableJsonReaderObject)>();
 
             _putsByJsReference.Add(instance, (id, doc));
             _stats.IncrementBatchSize(doc.Size);
@@ -82,7 +105,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public void LoadAttachment(JsValue attachmentReference, Attachment attachment)
         {
             if (_loadedAttachments == null)
-                _loadedAttachments = new Dictionary<JsValue, Attachment>(ReferenceEqualityComparer<JsValue>.Default);
+                _loadedAttachments = new Dictionary<JsValue, Attachment>();
 
             _loadedAttachments.Add(attachmentReference, attachment);
         }
@@ -90,9 +113,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         public void LoadCounter(JsValue counterReference, string name, long value)
         {
             if (_loadedCountersByJsReference == null)
-                _loadedCountersByJsReference = new Dictionary<JsValue, (string, long)>(ReferenceEqualityComparer<JsValue>.Default);
+                _loadedCountersByJsReference = new Dictionary<JsValue, (string, long)>();
 
             _loadedCountersByJsReference.Add(counterReference, (name, value));
+        }
+        
+        public void LoadTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> value)
+        {
+            (_loadedTimeSeriesByJsReference ??= new Dictionary<JsValue, (string, IEnumerable<SingleResult>)>())
+                .Add(reference, (name, value));
         }
 
         public void AddAttachment(JsValue instance, string name, JsValue attachmentReference)
@@ -100,7 +129,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var attachment = _loadedAttachments[attachmentReference];
 
             if (_addAttachments == null)
-                _addAttachments = new Dictionary<JsValue, List<(string, Attachment)>>(ReferenceEqualityComparer<JsValue>.Default);
+                _addAttachments = new Dictionary<JsValue, List<(string, Attachment)>>();
 
             if (_addAttachments.TryGetValue(instance, out var attachments) == false)
             {
@@ -122,7 +151,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             var counter = _loadedCountersByJsReference[counterReference];
 
             if (_countersByJsReference == null)
-                _countersByJsReference = new Dictionary<JsValue, List<CounterOperation>>(ReferenceEqualityComparer<JsValue>.Default);
+                _countersByJsReference = new Dictionary<JsValue, List<CounterOperation>>();
 
             if (_countersByJsReference.TryGetValue(instance, out var operations) == false)
             {
@@ -175,6 +204,70 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             });
         }
 
+        public void AddTimeSeries(JsValue instance, JsValue timeSeriesReference)
+        {
+            var (name, entries) = _loadedTimeSeriesByJsReference[timeSeriesReference];
+
+            _timeSeriesByJsReference ??= new Dictionary<JsValue, Dictionary<JsValue, TimeSeriesOperation>>();
+            if (_timeSeriesByJsReference.TryGetValue(instance, out var timeSeriesOperations) == false)
+            {
+                timeSeriesOperations = new Dictionary<JsValue, TimeSeriesOperation>();
+                _timeSeriesByJsReference.Add(instance, timeSeriesOperations);
+            }
+
+            if (timeSeriesOperations.TryGetValue(name, out var timeSeriesOperation) == false)
+            {
+                timeSeriesOperation = new TimeSeriesOperation {Name = name};
+                timeSeriesOperations.Add(name, timeSeriesOperation);
+            }
+
+            foreach (var entry in entries)
+            {
+                timeSeriesOperation.Append(new TimeSeriesOperation.AppendOperation
+                {
+                    Timestamp = entry.Timestamp,
+                    Tag = entry.Tag,
+                    Values = entry.Values.ToArray()
+                });    
+            }
+        }
+        
+        public void AddTimeSeries(LazyStringValue documentId, string timeSeriesName, SingleResult timeSeries)
+        {
+            var timeSeriesOperation = GetTimeSeriesOperationFor(documentId, timeSeriesName);
+            timeSeriesOperation.TimeSeries.Append(new TimeSeriesOperation.AppendOperation
+            {
+                Timestamp = timeSeries.Timestamp,
+                Tag = timeSeries.Tag,
+                Values = timeSeries.Values.ToArray(),
+            });
+        }
+
+        public void RemoveTimeSeries(LazyStringValue documentId, string timeSeriesName, DateTime from, DateTime to)
+        {
+            var timeSeriesOperation = GetTimeSeriesOperationFor(documentId, timeSeriesName);
+            (timeSeriesOperation.TimeSeries.Deletes ??= new List<TimeSeriesOperation.DeleteOperation>())
+                .Add(new TimeSeriesOperation.DeleteOperation { From = from, To = to });
+        }
+
+        private TimeSeriesBatchCommandData GetTimeSeriesOperationFor(LazyStringValue documentId, string timeSeriesName)
+        {
+            _timeSeriesByDocumentId ??= new Dictionary<LazyStringValue, Dictionary<string, TimeSeriesBatchCommandData>>(LazyStringValueComparer.Instance);
+            if (_timeSeriesByDocumentId.TryGetValue(documentId, out var timeSeriesOperations) == false)
+            {
+                timeSeriesOperations = new Dictionary<string, TimeSeriesBatchCommandData>();
+                _timeSeriesByDocumentId.Add(documentId, timeSeriesOperations);
+            }
+
+            if (timeSeriesOperations.TryGetValue(timeSeriesName, out var timeSeriesOperation) == false)
+            {
+                timeSeriesOperation = new TimeSeriesBatchCommandData(documentId, timeSeriesName, null, null);
+                timeSeriesOperations.Add(timeSeriesName, timeSeriesOperation);
+            }
+
+            return timeSeriesOperation;
+        }
+
         public List<ICommandData> GetCommands()
         {
             // let's send deletions first
@@ -210,6 +303,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             FromEtl = true
                         });
                     }
+                    
+                    if (_timeSeriesByJsReference != null && _timeSeriesByJsReference.TryGetValue(put.Key, out var timeSeriesOperations))
+                    {
+                        foreach (var (_, operation) in timeSeriesOperations)
+                        {
+                            commands.Add(new TimeSeriesBatchCommandData(put.Value.Id, operation.Name, operation.Appends, operation.Deletes){FromEtl = true});
+                        }
+                    }
                 }
             }
 
@@ -224,7 +325,33 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
             }
             
+            if (_timeSeriesByDocumentId != null)
+            {
+                foreach (var timeSeriesSetForDoc in _timeSeriesByDocumentId)
+                {
+                    foreach (var value in timeSeriesSetForDoc.Value.Values)
+                    {
+                        value.FromEtl = true;
+                        commands.Add(value);
+                    }
+                }
+            }
+            
             return commands;
+        }
+
+        public bool IsDocumentLoadedToSameCollection(LazyStringValue documentId)
+        {
+            if (_putsByJsReference != null)
+            {
+                foreach (var (_, (id, _)) in _putsByJsReference)
+                {
+                    if (id == documentId)
+                        return true;
+                }
+            }
+
+            return false;
         }
     }
 }
