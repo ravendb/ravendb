@@ -340,16 +340,16 @@ namespace Raven.Server.Documents
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
                 TaskExecutor.Execute(_ =>
-               {
-                   try
-                   {
-                       NotifyFeaturesAboutStateChange(record, index);
-                   }
-                   catch
-                   {
+                {
+                    try
+                    {
+                        NotifyFeaturesAboutStateChange(record, index);
+                    }
+                    catch
+                    {
                         // We ignore the exception since it was caught in the function itself
                     }
-               }, null);
+                }, null);
 
                 Task.Run(async () =>
                 {
