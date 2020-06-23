@@ -39,9 +39,11 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationLoader : IDisposable, ITombstoneAware
     {
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
+
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
 
         public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
+
         public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
 
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
@@ -82,6 +84,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private int _replicationStatsId;
+
         private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination =
             new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
@@ -128,8 +131,10 @@ namespace Raven.Server.Documents.Replication
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
         // directly and fetching the Value avoids this problem.
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
+
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
         public IEnumerable<OutgoingReplicationHandler> OutgoingHandlers => _outgoing;
+
         // PERF: _incoming locks if you do _incoming.Values. Using .Select
         // directly and fetching the Value avoids this problem.
         public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Select(x => x.Value);
@@ -376,10 +381,9 @@ namespace Raven.Server.Documents.Replication
                 {
                     tcpConnectionOptions.Dispose();
                 }
-
                 catch (Exception)
                 {
-                    // do nothing   
+                    // do nothing
                 }
 
                 throw;
@@ -506,7 +510,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (newRecord == null)
             {
-                // we drop the connections in the handle topology change method 
+                // we drop the connections in the handle topology change method
                 return;
             }
             foreach (var connection in OutgoingFailureInfo)
@@ -1064,7 +1068,6 @@ namespace Raven.Server.Documents.Replication
                     var failureReporter = new OutgoingReplicationFailureToConnectReporter(node, stats);
                     OutgoingReplicationConnectionErrored?.Invoke(node, failureReporter);
                     OutgoingConnectionsLastFailureToConnect.AddOrUpdate(node, failureReporter, (_, __) => failureReporter);
-
                 }
 
                 shutdownInfo.OnError(e);
@@ -1136,6 +1139,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private static readonly string ExternalReplicationTag = "external-replication";
+
         private TcpConnectionInfo GetExternalReplicationTcpInfo(ExternalReplication exNode, X509Certificate2 certificate, string database)
         {
             using (var requestExecutor = RequestExecutor.Create(exNode.ConnectionString.TopologyDiscoveryUrls, exNode.ConnectionString.Database, certificate,
@@ -1284,6 +1288,7 @@ namespace Raven.Server.Documents.Replication
                     handler.OnReplicationFromAnotherSource();
             }
         }
+
         public void Dispose()
         {
             var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
@@ -1319,19 +1324,20 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string TombstoneCleanerIdentifier => "Replication";
+
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> OutgoingReplicationConnectionFailed;
+
         public event Action<ReplicationNode, OutgoingReplicationFailureToConnectReporter> OutgoingReplicationConnectionErrored;
+
         public event Action<ReplicationNode, IncomingReplicationFailureToConnectReporter> IncomingReplicationConnectionErrored;
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
-            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
-                return null;
-
             var minEtag = GetMinimalEtagForReplication();
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
             {
-                {Constants.Documents.Collections.AllDocumentsCollection, minEtag}
+                { Constants.Documents.Collections.AllDocumentsCollection, minEtag },
+                { Constants.TimeSeries.All, minEtag }
             };
 
             if (Destinations == null)
@@ -1525,6 +1531,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string DestinationFormatted => $"{_node.Url}/databases/{_node.Database}";
+
         public OutgoingReplicationPerformanceStats[] GetReplicationPerformance()
         {
             return new[] { _stats.ToReplicationPerformanceStats() };
@@ -1543,6 +1550,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string DestinationFormatted => $"{_node.Url}/databases/{_node.Database}";
+
         public IncomingReplicationPerformanceStats[] GetReplicationPerformance()
         {
             return new[] { _stats.ToReplicationPerformanceStats() };

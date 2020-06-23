@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -13,7 +12,6 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
-using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -68,6 +66,7 @@ namespace Raven.Server.Documents.ETL
         }
 
         public event Action<EtlProcess> ProcessAdded;
+
         public event Action<EtlProcess> ProcessRemoved;
 
         private void OnProcessAdded(EtlProcess process)
@@ -395,7 +394,7 @@ namespace Raven.Server.Documents.ETL
                     mySqlEtl.Add(config);
                 }
             }
-            
+
             var toRemove = _processes.GroupBy(x => x.ConfigurationName).ToDictionary(x => x.Key, x => x.ToList());
 
             foreach (var processesPerConfig in _processes.GroupBy(x => x.ConfigurationName))
@@ -566,7 +565,7 @@ namespace Raven.Server.Documents.ETL
             var ravenEtls = _databaseRecord.RavenEtls;
             var sqlEtls = _databaseRecord.SqlEtls;
 
-            foreach (var config in ravenEtls) 
+            foreach (var config in ravenEtls)
                 MarkTombstonesForDeletion(config, lastProcessedTombstones);
 
             foreach (var config in sqlEtls)

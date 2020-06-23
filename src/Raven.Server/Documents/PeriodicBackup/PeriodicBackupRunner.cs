@@ -987,9 +987,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
-            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
-                return null;
-
             var minLastEtag = GetMinLastEtag();
 
             if (minLastEtag == long.MaxValue)
@@ -997,7 +994,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             return new Dictionary<string, long>
             {
-                [Constants.Documents.Collections.AllDocumentsCollection] = minLastEtag
+                [Constants.Documents.Collections.AllDocumentsCollection] = minLastEtag,
+                [Constants.TimeSeries.All] = minLastEtag
             };
         }
     }
