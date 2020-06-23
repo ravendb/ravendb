@@ -483,9 +483,11 @@ class editDocument extends viewModelBase {
         });
 
         this.canViewTimeSeries = ko.pureComputed(() => {
-            if (this.isClone()) {
-                return true;
-            }
+            // TODO: Bring this back once issue RavenDB-14386 is done
+            // if (this.isClone()) {
+            //     return true;
+            // }
+            
             return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
         });
 
