@@ -163,32 +163,35 @@ namespace Raven.Server.Config
 
         public RavenConfiguration Initialize()
         {
-            Http.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Embedded.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Server.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Cluster.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Etl.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Queries.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Patching.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Logs.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Memory.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Storage.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Security.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Backup.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Indexing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Monitoring.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Studio.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Databases.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            PerformanceHints.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Licensing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Subscriptions.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            TransactionMergerConfiguration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Notifications.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Updates.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
-            Migration.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            var settingsNames = Settings.AsEnumerable().Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var serverWideSettingsNames = ServerWideSettings?.AsEnumerable().Select(pair => pair.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            Http.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Embedded.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Server.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Core.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Replication.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Cluster.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Etl.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Queries.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Patching.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Logs.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Memory.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Storage.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Security.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Backup.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Indexing.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Monitoring.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Studio.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Databases.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            PerformanceHints.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Licensing.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Tombstones.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Subscriptions.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            TransactionMergerConfiguration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Notifications.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Updates.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
+            Migration.Initialize(Settings, settingsNames, ServerWideSettings, serverWideSettingsNames, ResourceType, ResourceName);
 
             PostInit();
 

@@ -3,6 +3,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.Commercial;
@@ -83,9 +84,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Features.Availability", ConfigurationEntryScope.ServerWideOnly)]
         public FeaturesAvailability FeaturesAvailability { get; set; }
 
-        public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
+        public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
-            base.Initialize(settings, serverWideSettings, type, resourceName);
+            base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
 
             if (type != ResourceType.Server)
                 return;

@@ -1,11 +1,14 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
+using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
@@ -37,7 +40,7 @@ namespace Raven.Server.Config.Categories
 
         protected internal bool Initialized { get; set; }
 
-        public virtual void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
+        public virtual void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             string GetValue(IConfiguration cfg, string name)
             {
@@ -52,7 +55,7 @@ namespace Raven.Server.Config.Categories
                     : null;
             }
 
-            string GetConfigurationValue(IConfiguration cfg, string keyName, out bool keyExistsInConfiguration)
+            string GetConfigurationValue(IConfigurationRoot cfg, HashSet<string> cfgNames, string keyName, out bool keyExistsInConfiguration)
             {
                 keyExistsInConfiguration = false;
 
@@ -60,7 +63,8 @@ namespace Raven.Server.Config.Categories
                     return null;
 
                 // This check is needed because cfg.GetSection(keyName) returns null even if key does Not exist in configuration!
-                keyExistsInConfiguration = cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName, StringComparison.OrdinalIgnoreCase));
+
+                keyExistsInConfiguration = cfgNames.Contains(keyName);
 
                 var val = GetValue(cfg, keyName);
                 if (val != null)
@@ -83,10 +87,10 @@ namespace Raven.Server.Config.Categories
             }
 
             bool keyExistsInDatabaseRecord, keyExistsInServerSettings;
-            
+
             Initialize(
-                key => new SettingValue(GetConfigurationValue(settings, key, out keyExistsInDatabaseRecord), keyExistsInDatabaseRecord,
-                        GetConfigurationValue(serverWideSettings, key, out keyExistsInServerSettings), keyExistsInServerSettings),
+                key => new SettingValue(GetConfigurationValue(settings, settingsNames, key, out keyExistsInDatabaseRecord), keyExistsInDatabaseRecord,
+                        GetConfigurationValue(serverWideSettings, serverWideSettingsNames, key, out keyExistsInServerSettings), keyExistsInServerSettings),
                 serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName, throwIfThereIsNoSetMethod: true);
         }
 
