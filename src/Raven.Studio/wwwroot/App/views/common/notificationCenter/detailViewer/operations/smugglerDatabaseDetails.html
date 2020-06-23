@@ -35,9 +35,10 @@
                     </div>
                 </div>
                 <div data-bind="foreach: exportItems">
-                    <div class="export-item">
+                    <div class="export-item" data-bind="css: { 'nested-item': isNested }">
                         <div class="name">
-                            <h3 data-bind="text: name"></h3>
+                            <h3 data-bind="text: name, visible: !isNested"></h3>
+                            <h4 data-bind="text: name, visible: isNested"></h4>
                         </div>
                         <div class="status status-processed" data-bind="visible: stage === 'processed'">
                             <i class="icon-check"></i> <span>Processed</span>
@@ -61,25 +62,6 @@
                         <div class="errors" data-bind="text: erroredCount, css: { 'text-muted': !hasErroredCount }">
                         </div>
                     </div>
-                    <!-- ko foreach: nestedItems --> 
-                    <div class="nested-item export-item">
-                        <div class="name">
-                            <h4 data-bind="text: name"></h4>
-                        </div>
-                        <div class="status status-skipped" data-bind="visible: skipped">
-                            <i class="icon-skip"></i> <span>Skipped</span>
-                        </div>
-                        <div class="status" data-bind="visible: !skipped">
-                        </div>
-                        <div class="read" data-bind="text: readCount, css: { 'text-muted': !$parent.hasReadCount }">
-                        </div>
-                        <div class="skipped" data-bind="css: { 'text-muted': !$parent.hasSkippedCount }">
-                            -
-                        </div>
-                        <div class="errors" data-bind="text: erroredCount, css: { 'text-muted': !$parent.hasErroredCount }">
-                        </div>
-                    </div>
-                    <!-- /ko -->
                 </div>
             </div>
             <br/>

@@ -4,7 +4,7 @@
         <form data-bind="submit: startExport">
             <h3>Export your database to a .ravendbdump file</h3>
             <div class="row">
-                <div class="col-sm-6">
+                <div class="col-sm-12 col-lg-6">
                     <div class="form-group">
                         <div class="input-group">
                             <div class="input-group-addon">Destination File Name:</div>
@@ -13,38 +13,41 @@
                     </div>
                 </div>
             </div>
-            <div data-bind="with: model">
+            <div data-bind="with: model" class="margin-top">
                 <div class="row">
                     <div class="col-lg-3">
-                        <div class="toggle">
-                            <input id="toggleDocuments" type="checkbox" data-bind="checked: includeDocuments" />
-                            <label for="toggleDocuments">Include Documents</label>
-                        </div>
-                        <div class="margin-left margin-left-lg">
+                        <h4>Documents and Extentsions:</h4>
+                        <div class="margin-left">
                             <div class="toggle">
-                                <input id="toggleAttachments" type="checkbox"
-                                       data-bind="checked: includeAttachments" />
-                                <label for="toggleAttachments">Include Attachments</label>
+                                <input id="toggleDocuments" type="checkbox" data-bind="checked: includeDocuments" />
+                                <label for="toggleDocuments">Include Documents</label>
                             </div>
-                            <div class="toggle">
-                                <input id="toggleCounters" type="checkbox"
-                                       data-bind="checked: includeCounters" />
-                                <label for="toggleCounters">Include Counters</label>
-                            </div>
-                            <div class="toggle">
-                                <input id="toggleTimeSeries" type="checkbox"
-                                       data-bind="checked: includeTimeSeries" />
-                                <label for="toggleTimeSeries">Include Time Series</label>
+                            <div class="margin-left margin-left-lg">
+                                <div class="toggle">
+                                    <input id="toggleAttachments" type="checkbox"
+                                           data-bind="checked: includeAttachments" />
+                                    <label for="toggleAttachments">Include Attachments</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="toggleCounters" type="checkbox"
+                                           data-bind="checked: includeCounters" />
+                                    <label for="toggleCounters">Include Counters</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="toggleTimeSeries" type="checkbox"
+                                           data-bind="checked: includeTimeSeries" />
+                                    <label for="toggleTimeSeries">Include Time Series</label>
+                                </div>
+                                <div class="toggle" data-toggle="tooltip" data-placement="top"
+                                     data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled for this database' }">
+                                    <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions" />
+                                    <label for="toggleRevisions">Include Revisions</label>
+                                </div>
                             </div>
                             <div class="toggle">
                                 <input id="toggleArtificial" type="checkbox"
                                        data-bind="checked: includeArtificialDocuments" />
                                 <label for="toggleArtificial">Include Artificial Documents</label>
-                            </div>
-                            <div class="toggle" data-toggle="tooltip" data-placement="top"
-                                 data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled for this database' }">
-                                <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions" />
-                                <label for="toggleRevisions">Include Revisions</label>
                             </div>
                             <div class="toggle">
                                 <input id="toggleConflicts" type="checkbox" data-bind="checked: includeConflicts" />
@@ -53,34 +56,37 @@
                         </div>
                     </div>
                     <div class="col-lg-5">
-                        <div class="toggle">
-                            <input id="toggleIndexes" type="checkbox" data-bind="checked: includeIndexes" />
-                            <label for="toggleIndexes">Include Indexes</label>
-                        </div>
-                        <div class="margin-left margin-left-lg">
+                        <h4>Cluster Entities:</h4>
+                        <div class="margin-left">
                             <div class="toggle">
-                                <input id="toggleAnalyzers" type="checkbox" 
-                                       data-bind="checked: removeAnalyzers, enable: includeIndexes" />
-                                <label for="toggleAnalyzers">Remove Analyzers</label>
+                                <input id="toggleIndexes" type="checkbox" data-bind="checked: includeIndexes" />
+                                <label for="toggleIndexes">Include Indexes</label>
                             </div>
-                        </div>
-                        <div class="toggle">
-                            <input id="toggleIdentities" type="checkbox" data-bind="checked: includeIdentities" />
-                            <label for="toggleIdentities">Include Identities</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="toggleCmpXch" type="checkbox" data-bind="checked: includeCompareExchange" />
-                            <label for="toggleCmpXch">Include Compare Exchange</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="toggleSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
-                            <label for="toggleSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="toggleConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
-                            <label for="toggleConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
-                            <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
-                            <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
+                            <div class="margin-left margin-left-lg">
+                                <div class="toggle">
+                                    <input id="toggleAnalyzers" type="checkbox" 
+                                           data-bind="checked: removeAnalyzers, enable: includeIndexes" />
+                                    <label for="toggleAnalyzers">Remove Analyzers</label>
+                                </div>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggleIdentities" type="checkbox" data-bind="checked: includeIdentities" />
+                                <label for="toggleIdentities">Include Identities</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggleCmpXch" type="checkbox" data-bind="checked: includeCompareExchange" />
+                                <label for="toggleCmpXch">Include Compare Exchange</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggleSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
+                                <label for="toggleSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="toggleConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
+                                <label for="toggleConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
+                                <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
+                                <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -164,7 +170,7 @@
                             </div>
                         </div>
                         <div data-bind="with: model.databaseModel">
-                            <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>    
+                            <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                         </div>
                     </div>
                     <div class="form-group">
@@ -179,8 +185,19 @@
                 </div>
             </div>
             <hr/>
+            <div class="row" data-bind="collapse: model.itemsToWarnAbout">
+                <div class="col-sm-12 col-lg-6">
+                    <div class="bg-warning text-warning padding padding-xs margin-bottom flex-horizontal">
+                        <div class="flex-start"><small><i class="icon-warning"></i></small></div>
+                        <div>
+                            <small>Note: You are exporting <span data-bind="text: model.itemsToWarnAbout"></span> data without including the Documents.</small><br>
+                            <small>The documents data will be needed when importing this exported file to another database.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
-                Advanced
+                <span data-bind="text: showAdvancedOptions() ? 'Close ' : ''"></span>Advanced
             </button>
             <button class="btn btn-primary" type="submit" data-bind="disable: isExporting, css: { 'btn-spinner': isExporting() }"><span class="icon-export"></span> <span>Export Database</span></button>
         </form>

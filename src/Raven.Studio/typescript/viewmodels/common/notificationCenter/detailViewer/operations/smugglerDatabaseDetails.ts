@@ -17,20 +17,13 @@ type smugglerListItem = {
     erroredCount: string;
     hasSkippedCount: boolean;
     skippedCount: string;
-    nestedItems: Array<smugglerNestedListItem>;
     processingSpeedText: string;
+    isNested: boolean;
 }
 
 type uploadListItem = {
     name: string;
     uploadProgress: genericProgress;
-}
-
-type smugglerNestedListItem = {
-    name: string;
-    readCount: string;
-    erroredCount: string;
-    skipped: boolean;
 }
 
 class smugglerDatabaseDetails extends abstractOperationDetails {
@@ -98,51 +91,36 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
             const isDatabaseMigration = this.op.taskType() === "DatabaseMigration";
             
-            const extractAttachments = (counts: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts) => {
-                const attachments = (counts as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
-                
-                return {
-                    name: "Attachments",
-                    readCount: attachments.ReadCount.toLocaleString(),
-                    erroredCount: attachments.ErroredCount.toLocaleString(),
-                    skipped: attachments.Skipped
-                } as smugglerNestedListItem;
-            };
-            
-            const mapNestedItem = (name: string, data: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts) => {
-                return {
-                    name,
-                    readCount: data.ReadCount.toLocaleString(),
-                    skipped: data.Skipped,
-                    erroredCount: data.ErroredCount.toLocaleString()
-                } as smugglerNestedListItem;
-            }
-            
             if (this.op.taskType() === "CollectionImportFromCsv" || isDatabaseMigration) {
-                result.push(this.mapToExportListItem("Documents", status.Documents, isDatabaseMigration ? [ extractAttachments(status.Documents) ] : []));
+                result.push(this.mapToExportListItem("Documents", status.Documents));
+                if (isDatabaseMigration) {
+                    const attachments = (status.Documents as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
+                    result.push(this.mapToExportListItem("Attachments", attachments, true));
+                }
             } else {
-                const documentNested = [] as smugglerNestedListItem[];
-                const revisionsNested = [] as smugglerNestedListItem[];
-
-                documentNested.push(extractAttachments(status.Documents));
-                revisionsNested.push(extractAttachments(status.RevisionDocuments));
-                
-                documentNested.push(mapNestedItem("Counters", status.Counters));
-                documentNested.push(mapNestedItem("TimeSeries", status.TimeSeries));
-                
                 result.push(this.mapToExportListItem("Database Record", status.DatabaseRecord));
-                result.push(this.mapToExportListItem("Documents", status.Documents, documentNested));
-                result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments, revisionsNested));
+                result.push(this.mapToExportListItem("Documents", status.Documents));
+
+                const attachments = (status.Documents as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
+                result.push(this.mapToExportListItem("Attachments", attachments, true));
+                
+                result.push(this.mapToExportListItem("Counters", status.Counters, true));
+                result.push(this.mapToExportListItem("TimeSeries", status.TimeSeries, true));
+                
+                if (this.op.taskType() === "DatabaseImport") {
+                    result.push(this.mapToExportListItem("Tombstones", status.Tombstones, true));
+                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
+                }
+                
+                result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
+                const revisionsAttachments = (status.RevisionDocuments as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtagAndAttachments).Attachments;
+                result.push(this.mapToExportListItem("Attachments", revisionsAttachments, true));
+
                 result.push(this.mapToExportListItem("Conflicts", status.Conflicts));
                 result.push(this.mapToExportListItem("Indexes", status.Indexes));
                 result.push(this.mapToExportListItem("Identities", status.Identities));
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
-                
-                if (this.op.taskType() === "DatabaseImport") {
-                    documentNested.push(mapNestedItem("Tombstones", status.Tombstones));
-                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
-                }
             }
 
             const currentlyProcessingItems = smugglerDatabaseDetails.findCurrentlyProcessingItems(result);
@@ -159,12 +137,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                     item.readCount = "-";
                     item.erroredCount = "-";
                     item.skippedCount = item.skippedCount || "-";
-                    
-                    item.nestedItems.forEach(nested => {
-                        nested.erroredCount = "-";
-                        nested.readCount = "-";
-                        nested.skipped = item.stage === "skipped";
-                    });
                 }
             });
 
@@ -314,7 +286,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         }));
     }
 
-    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, nestedItems: smugglerNestedListItem[] = []): smugglerListItem {
+    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, isNested: boolean = false): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         if (item.Skipped) {
             stage = "skipped";
@@ -347,8 +319,8 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             skippedCount: isDocuments ? skippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString(),
-            nestedItems,
-            processingSpeedText: processingSpeedText
+            processingSpeedText: processingSpeedText,
+            isNested: isNested
         } as smugglerListItem;
     }
 
