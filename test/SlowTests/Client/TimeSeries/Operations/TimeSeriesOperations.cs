@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -1028,63 +1029,7 @@ namespace SlowTests.Client.TimeSeries.Operations
 
             }
         }
-
-        [Fact]
-        public async Task GetOperationShouldIncludeValuesFromRollUpsInResult()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
-
-                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
-                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
-                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
-                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
-
-                var config = new TimeSeriesConfiguration
-                {
-                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
-                    {
-                        ["Users"] = new TimeSeriesCollectionConfiguration
-                        {
-                            RawPolicy = raw,
-                            Policies = new List<TimeSeriesPolicy>
-                            {
-                                p1,p2,p3,p4
-                            }
-                        },
-                    },
-                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
-                };
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
-
-                var now = DateTime.UtcNow;
-                var baseline = now.AddDays(-12);
-                var total = TimeSpan.FromDays(12).TotalMinutes;
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Core.Utils.Entities.User { Name = "Karmel" }, "users/karmel");
-                    for (int i = 0; i <= total; i++)
-                    {
-                        session.TimeSeriesFor("users/karmel", "Heartrate")
-                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
-                    }
-                    session.SaveChanges();
-                }
-
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-
-                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
-
-                var result = store.Operations.Send(new GetTimeSeriesOperation("users/karmel", "Heartrate"));
-
-                ValidateResults(result.Entries, now);
-            }
-        }
-
+        
         [Theory]
         [InlineData(0)]
         [InlineData(12)]
@@ -1143,146 +1088,6 @@ namespace SlowTests.Client.TimeSeries.Operations
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
                 await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
-
-                var result = store.Operations.Send(new GetTimeSeriesOperation("users/karmel", "Heartrate"));
-
-                ValidateResults(result.Entries, now);
-            }
-        }
-
-        public static void ValidateResults(TimeSeriesEntry[] results, DateTime now)
-        {
-            var byDay = 0;
-            var by6Hours = 0;
-            var by1Hour = 0;
-            var by30Min = 0;
-            var rawCount = 0;
-            foreach (var entry in results)
-            {
-                if (entry.IsRollup)
-                {
-                    switch (entry.Values[5])
-                    {
-                        case 1440:
-                            byDay++;
-                            break;
-                        case 360:
-                            by6Hours++;
-                            break;
-                        case 60:
-                            by1Hour++;
-                            break;
-                        case 30:
-                            by30Min++;
-                            break;
-                        default:
-                            throw new AggregateException($"Wrong number of minutes {entry.Values[5]}");
-                    }
-
-                    continue;
-                }
-
-                rawCount++;
-            }
-
-            var expectedByDay = 1; // first day of 'By1Day'
-            var expectedBy6Hours = 4; // first day of 'By6Hours'
-            var expectedBy1Hour = 24; // first day of 'By1Hour'
-            var expectedBy30Min = 24 * 2 + 1; // first day of 'By30Minutes'
-            var expectedRawCount = 1440; // entire raw policy for 1 day 
-
-            if (now.Hour >= 6)
-                expectedByDay++;
-
-            if (now.Hour >= 1 && now.Hour % 6 != 0)
-                expectedBy6Hours++;
-
-            if (now.Minute >= 30)
-                expectedBy1Hour++;
-
-
-            Assert.Equal(expectedRawCount, rawCount);
-            Assert.Equal(expectedBy30Min, by30Min);
-            Assert.Equal(expectedBy1Hour, by1Hour);
-            Assert.Equal(expectedBy6Hours, by6Hours);
-            Assert.Equal(expectedByDay, byDay);
-        }
-
-        [Fact]
-        public async Task GetMultipleRangesOperationShouldIncludeValuesFromRollUpsInResult()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
-
-                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
-                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
-                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
-                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
-
-                var config = new TimeSeriesConfiguration
-                {
-                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
-                    {
-                        ["Users"] = new TimeSeriesCollectionConfiguration
-                        {
-                            RawPolicy = raw,
-                            Policies = new List<TimeSeriesPolicy>
-                            {
-                                p1,p2,p3,p4
-                            }
-                        },
-                    },
-                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
-                };
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
-
-                var now = DateTime.UtcNow;
-                var nowMinutes = now.Minute;
-                now = now.AddMinutes(-nowMinutes);
-                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
-
-                var baseline = now.AddDays(-12);
-                var total = TimeSpan.FromDays(12).TotalMinutes;
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Core.Utils.Entities.User { Name = "Karmel" }, "users/karmel");
-                    for (int i = 0; i <= total; i++)
-                    {
-                        session.TimeSeriesFor("users/karmel", "Heartrate")
-                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
-                        session.TimeSeriesFor("users/karmel", "BloodPressure")
-                            .Append(baseline.AddMinutes(i), i);
-                    }
-                    session.SaveChanges();
-                }
-
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-
-                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
-
-                var result = store.Operations.Send(new GetMultipleTimeSeriesOperation("users/karmel", new List<TimeSeriesRange>
-                {
-                    new TimeSeriesRange
-                    {
-                        Name = "Heartrate",
-                        From = DateTime.MinValue,
-                        To = now
-                    },
-                    new TimeSeriesRange
-                    {
-                        Name = "BloodPressure"
-                    }
-                }));
-
-                Assert.True(result.Values.TryGetValue("Heartrate", out var rangeResult));
-                ValidateResults(rangeResult.SelectMany(x => x.Entries).ToArray(), now);
-
-                Assert.True(result.Values.TryGetValue("BloodPressure", out rangeResult));
-                ValidateResults(rangeResult.SelectMany(x => x.Entries).ToArray(), now);
             }
         }
     }

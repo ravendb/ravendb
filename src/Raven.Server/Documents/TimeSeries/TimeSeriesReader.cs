@@ -55,7 +55,16 @@ namespace Raven.Server.Documents.TimeSeries
         public double[] Max { get; set; }
     }
 
-    public unsafe class TimeSeriesReader
+    public interface ITimeSeriesReader
+    {
+        public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues();
+
+        public IEnumerable<SingleResult> AllValues(bool includeDead = false);
+
+        public bool IsRaw { get; }
+    }
+
+    public unsafe class TimeSeriesReader : ITimeSeriesReader
     {
         private readonly DocumentsOperationContext _context;
         private readonly string _documentId;
@@ -69,7 +78,8 @@ namespace Raven.Server.Documents.TimeSeries
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
         private TimeSpan? _offset;
-        public readonly bool IsRaw;
+
+        public bool IsRaw { get; }
 
         public TimeSeriesReader(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to, TimeSpan? offset)
         {
@@ -390,7 +400,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
     }
 
-    public class TimeSeriesMultiReader
+    public class TimeSeriesMultiReader : ITimeSeriesReader
     {
         private readonly DocumentsOperationContext _context;
         private TimeSeriesReader _reader;
@@ -400,7 +410,7 @@ namespace Raven.Server.Documents.TimeSeries
         private SortedList<long, string> _names;
         private int _current;
 
-        public bool CurrentIsRaw => _reader.IsRaw;
+        public bool IsRaw => _reader.IsRaw;
 
         public TimeSeriesMultiReader(DocumentsOperationContext context, string documentId,
             string source, string collection, DateTime min, DateTime max, TimeSpan? offset)
@@ -470,13 +480,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<SingleResult> AllValues()
+        public IEnumerable<SingleResult> AllValues(bool includeDead = false)
         {
             while (_current < _names.Count)
             {
                 GetNextReader();
 
-                foreach (var singleResult in _reader.AllValues())
+                foreach (var singleResult in _reader.AllValues(includeDead))
                 {
                     yield return singleResult;
                 }

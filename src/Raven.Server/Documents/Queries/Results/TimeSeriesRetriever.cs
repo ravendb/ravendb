@@ -61,7 +61,9 @@ namespace Raven.Server.Documents.Queries.Results
             var (min, max) = GetMinAndMax(declaredFunction, documentId, args, timeSeriesFunction, source, offset);
             var collection = GetCollection(documentId);
 
-            var reader = new TimeSeriesMultiReader(_context, documentId, source, collection, min, max, offset);
+            var reader = timeSeriesFunction.GroupBy == null
+                ? new TimeSeriesReader(_context, documentId, source, min, max, offset)
+                : new TimeSeriesMultiReader(_context, documentId, source, collection, min, max, offset) as ITimeSeriesReader;
 
             var array = new DynamicJsonArray();
 
@@ -104,7 +106,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     for (int i = 0; i < aggStates.Length; i++)
                     {
-                        aggStates[i].Step(cur.Values.Span, reader.CurrentIsRaw);
+                        aggStates[i].Step(cur.Values.Span, reader.IsRaw);
                     }
                 }
             }
@@ -148,7 +150,7 @@ namespace Raven.Server.Documents.Queries.Results
                         [nameof(TimeSeriesEntry.Values)] = vals,
                         [nameof(TimeSeriesEntry.IsRollup)] = singleResult.Type == SingleResultType.RolledUp,
                     });
-                    count += reader.CurrentIsRaw ? 1 : (long)singleResult.Values.Span[(int)AggregationType.Count];
+                    count += reader.IsRaw ? 1 : (long)singleResult.Values.Span[(int)AggregationType.Count];
                 }
 
                 _argumentValuesDictionary.Clear();
@@ -181,7 +183,7 @@ namespace Raven.Server.Documents.Queries.Results
                             var span = it.Segment.Summary.Span;
                             for (int i = 0; i < aggStates.Length; i++)
                             {
-                                aggStates[i].Segment(span, reader.CurrentIsRaw);
+                                aggStates[i].Segment(span, reader.IsRaw);
                             }
                         }
                     }
@@ -589,7 +591,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                             if (index >= singleResult.Values.Length)
                                 return null;
-                            if (reader.CurrentIsRaw)
+                            if (reader.IsRaw)
                                 return singleResult.Values.Span[index];
 
                             // we are working with a rolled-up series
@@ -607,7 +609,7 @@ namespace Raven.Server.Documents.Queries.Results
                         case "value":
                             if (fe.Compound.Count > 1)
                                 throw new InvalidQueryException($"Failed to evaluate expression '{fe}'");
-                            if (reader.CurrentIsRaw)
+                            if (reader.IsRaw)
                                 return singleResult.Values.Span[0];
 
                             // rolled-up series

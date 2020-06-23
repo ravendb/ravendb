@@ -646,23 +646,9 @@ select out()
                     var count = result.Results.Length;
 
                     Assert.Equal(5, result.Results[count - 1440].Values.Length);
-                    Assert.Equal(5 * 6, result.Results[count - 1441].Values.Length);
 
                     foreach (var res in result.Results)
                     {
-                        if (res.IsRollup)
-                        {
-                            Assert.Equal(30, res.Values.Length);
-
-                            var rolled = res.AsRollupEntry();
-                            Assert.Equal(res.Value.Close, rolled.First.Close);
-                            Assert.Equal(res.Value.High, rolled.First.High);
-                            Assert.Equal(res.Value.Low, rolled.First.Low);
-                            Assert.Equal(res.Value.Open, rolled.First.Open);
-                            Assert.Equal(res.Value.Volume, rolled.First.Volume);
-                            continue;
-                        }
-
                         Assert.Equal(5, res.Values.Length);
                     }
                 }
@@ -680,23 +666,9 @@ select out()
                     var count = result.Results.Length;
 
                     Assert.Equal(5, result.Results[count - 1440].Values.Length);
-                    Assert.Equal(5 * 6, result.Results[count - 1441].Values.Length);
 
                     foreach (var res in result.Results)
                     {
-                        if (res.IsRollup)
-                        {
-                            Assert.Equal(30, res.Values.Length);
-
-                            var rolled = res.AsRollupEntry();
-                            Assert.Equal(res.Value.Close, rolled.First.Close);
-                            Assert.Equal(res.Value.High, rolled.First.High);
-                            Assert.Equal(res.Value.Low, rolled.First.Low);
-                            Assert.Equal(res.Value.Open, rolled.First.Open);
-                            Assert.Equal(res.Value.Volume, rolled.First.Volume);
-                            continue;
-                        }
-
                         Assert.Equal(5, res.Values.Length);
                     }
                 }

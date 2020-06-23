@@ -50,7 +50,9 @@ namespace Raven.Server.Documents.Includes
 
             foreach (var range in timeSeriesToGet)
             {
-                var timeSeriesRangeResult = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, range.Name, range.From, range.To);
+                var start = 0;
+                var pageSize = int.MaxValue;
+                var timeSeriesRangeResult = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, range.Name, range.From ?? DateTime.MinValue, range.To ?? DateTime.MaxValue, ref start, ref pageSize);
                 if (dictionary.TryGetValue(range.Name, out var list) == false)
                 {
                     dictionary[range.Name] = new List<TimeSeriesRangeResult>{ timeSeriesRangeResult };

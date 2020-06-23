@@ -545,65 +545,6 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
-        public async Task SessionGetShouldIncludeValuesFromRollUpsInResult()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
-
-                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
-                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
-                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
-                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
-
-                var config = new TimeSeriesConfiguration
-                {
-                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
-                    {
-                        ["Users"] = new TimeSeriesCollectionConfiguration
-                        {
-                            RawPolicy = raw,
-                            Policies = new List<TimeSeriesPolicy>
-                            {
-                                p1,p2,p3,p4
-                            }
-                        },
-                    },
-                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
-                };
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                var database = await GetDocumentDatabaseInstanceFor(store);
-
-                var now = DateTime.UtcNow.EnsureMilliseconds();
-                
-                var baseline = now.AddDays(-12);
-                var total = TimeSpan.FromDays(12).TotalMinutes;
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Core.Utils.Entities.User { Name = "Karmel" }, "users/karmel");
-                    for (int i = 0; i <= total; i++)
-                    {
-                        session.TimeSeriesFor("users/karmel", "Heartrate")
-                            .Append(baseline.AddMinutes(i), i, "watches/fitbit");
-                    }
-                    session.SaveChanges();
-                }
-
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-
-                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"]);
-
-                using (var session = store.OpenSession())
-                {
-                    var result = session.TimeSeriesFor("users/karmel", "Heartrate").Get()?.ToList();
-                    TimeSeriesOperations.ValidateResults(result.ToArray(), now);
-                }
-            }
-        }
-
         internal class CanGetTimeSeriesRangeCases : IEnumerable<object[]>
         {
             private readonly List<object[]> _data = new List<object[]>

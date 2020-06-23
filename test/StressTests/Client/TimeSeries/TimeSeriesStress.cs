@@ -1,16 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
+using Raven.Client;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.TimeSeries.Patch;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -222,6 +229,129 @@ namespace StressTests.Client.TimeSeries
                 await EnsureNoReplicationLoop(Servers[0], store.Database);
                 await EnsureNoReplicationLoop(Servers[1], store.Database);
                 await EnsureNoReplicationLoop(Servers[2], store.Database);
+            }
+        }
+
+          [Fact]
+        public async Task PatchTimestamp_IntegrationTest()
+        {
+            string[] tags = {"tag/1", "tag/2", "tag/3", "tag/4", null};
+            const string timeseries = "Heartrate";
+            const int timeSeriesPointsAmount = 128;
+            const int docAmount = 8_192;
+            
+            using (var store = GetDocumentStore())
+            {
+                await using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 0; i < docAmount; i++)
+                    {
+                        await bulkInsert.StoreAsync(new TimeSeriesPatchTests.TimeSeriesResultHolder(), $"TimeSeriesResultHolders/{i}");
+                    }
+                }
+
+                var baseTime = new DateTime(2020, 2, 12);
+                var randomValues = new Random(2020);
+                var toAppend = Enumerable.Range(0, timeSeriesPointsAmount)
+                    .Select(i =>
+                    {
+                        return new TimeSeriesEntry
+                        {
+                            Tag = tags[i % tags.Length], 
+                            Timestamp = baseTime.AddSeconds(i).AddSeconds(.1 * (randomValues.NextDouble() - .5)), 
+                            Values = new[] {256 + 16 * randomValues.NextDouble()}
+                        };
+                    }).ToArray();
+                
+                var appendOperation = store
+                    .Operations
+                    .Send(new PatchByQueryOperation(new IndexQuery
+                    {
+                        QueryParameters = new Parameters
+                        {
+                            {"timeseries", timeseries},
+                            {"toAppend", toAppend},
+                        },
+                        Query = @"
+from TimeSeriesResultHolders as c
+update
+{
+    for(var i = 0; i < $toAppend.length; i++){
+        timeseries(this, $timeseries).append($toAppend[i].Timestamp, $toAppend[i].Values, $toAppend[i].Tag);
+    }
+}"}));
+                await appendOperation.WaitForCompletionAsync();
+
+                var deleteFrom = toAppend[timeSeriesPointsAmount * 1/3].Timestamp;
+                var deleteTo = toAppend[timeSeriesPointsAmount * 3/4].Timestamp;
+                var deleteOperation = store
+                    .Operations
+                    .Send(new PatchByQueryOperation(new IndexQuery
+                    {
+                        QueryParameters = new Parameters
+                        {
+                            {"timeseries", timeseries},
+                            {"from", deleteFrom},
+                            {"to", deleteTo}
+                        },
+                        Query = @"
+from TimeSeriesResultHolders as c
+update
+{
+  timeseries(this, $timeseries).remove($from, $to);
+}"}));
+                await deleteOperation.WaitForCompletionAsync();
+
+                var getFrom = toAppend[timeSeriesPointsAmount * 1/5].Timestamp;
+                var getTo = toAppend[timeSeriesPointsAmount * 4/5].Timestamp;
+                var getOperation = store
+                    .Operations
+                    .Send(new PatchByQueryOperation(new IndexQuery
+                    {
+                        QueryParameters = new Parameters
+                        {
+                            {"timeseries", timeseries},
+                            {"from", getFrom},
+                            {"to", getTo}
+                        },
+                        Query = @"
+from TimeSeriesResultHolders as c
+update
+{
+  this.Result = timeseries(this, $timeseries).get($from, $to);
+}"}));
+                await getOperation.WaitForCompletionAsync();
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    var docs = await session
+                        .Query<TimeSeriesPatchTests.TimeSeriesResultHolder>()
+                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(5)))
+                        .ToArrayAsync();
+
+                    foreach (var doc in docs)
+                    {
+                        var expectedList = toAppend
+                            .Where(s => s.Timestamp >= getFrom && s.Timestamp <= getTo)
+                            .Where(s => s.Timestamp < deleteFrom || s.Timestamp > deleteTo)
+                            .ToArray();
+                        
+                        Assert.Equal(expectedList.Length, doc.Result.Length);
+                        for (int i = 0; i < expectedList.Length; i++)
+                        {
+                            var expected = expectedList[i];
+                            var actual = doc.Result[i];
+                            if (expected.Timestamp < getFrom || expected.Timestamp > getTo) 
+                                continue;
+                            if (expected.Timestamp >= deleteFrom || expected.Timestamp <= deleteTo) 
+                                continue;
+                        
+                            Assert.Equal(expected.Timestamp, actual.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                            Assert.Equal(expected.Values, actual.Values);
+                            Assert.Equal(expected.Tag, actual.Tag);
+                        }
+                    }
+                }
             }
         }
     }
