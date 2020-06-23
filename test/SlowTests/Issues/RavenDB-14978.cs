@@ -1,12 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using FastTests;
 using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
-using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -29,7 +26,7 @@ namespace SlowTests.Issues
 
             using var store = new DocumentStore
             {
-                Urls = new[] {leader.WebUrl},
+                Urls = new[] { leader.WebUrl },
                 Database = databaseName,
                 Conventions = new DocumentConventions
                 {
@@ -38,12 +35,12 @@ namespace SlowTests.Issues
                     LoadBalancerPerSessionContextSelector = db => context
                 }
             }.Initialize();
-            
+
             var amre = new AsyncManualResetEvent();
-            
+
             var requestExecutor = store.GetRequestExecutor();
             requestExecutor.ClientConfigurationChanged += (sender, _) => amre.Set();
-            
+
             var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
             await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
 
@@ -55,7 +52,7 @@ namespace SlowTests.Issues
             await amre.WaitAsync();
 
             int s1Ctx = -1;
-            
+
             using (var s1 = store.OpenSession())
             {
                 var sessionInfo = s1.Advanced.SessionInfo;
@@ -68,7 +65,7 @@ namespace SlowTests.Issues
                 var sessionInfo = s2.Advanced.SessionInfo;
                 s2Ctx = sessionInfo.SessionId;
             }
-            
+
             Assert.Equal(s2Ctx, s1Ctx);
 
             context = "users/2";
@@ -79,25 +76,23 @@ namespace SlowTests.Issues
                 var sessionInfo = s3.Advanced.SessionInfo;
                 s3Ctx = sessionInfo.SessionId;
             }
-            
+
             Assert.NotEqual(s2Ctx, s3Ctx);
 
             int s4Ctx = -1;
             using (var s4 = store.OpenSession())
             {
                 s4.Advanced.SessionInfo.SetContext("monkey");
-                
+
                 var sessionInfo = s4.Advanced.SessionInfo;
                 s3Ctx = sessionInfo.SessionId;
             }
-            
-            Assert.NotEqual(s4Ctx, s3Ctx);
 
+            Assert.NotEqual(s4Ctx, s3Ctx);
         }
 
         internal class User
         {
-            
         }
     }
 }

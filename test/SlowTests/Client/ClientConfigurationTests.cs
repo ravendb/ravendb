@@ -16,7 +16,7 @@ namespace SlowTests.Client
         [Fact]
         public void ChangeClientConfigurationForDatabase()
         {
-            using (var store = GetDocumentStore(new Options { ModifyDocumentStore = s => s.Conventions.LoadBalancerPerSessionContextSelector = _ => "1" }))
+            using (var store = GetDocumentStore())
             {
                 var requestExecutor = store.GetRequestExecutor();
                 store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.None, LoadBalanceBehavior = LoadBalanceBehavior.None, LoadBalancerContextSeed = 0, Disabled = false }));

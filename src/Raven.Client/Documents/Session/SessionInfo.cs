@@ -10,17 +10,28 @@ namespace Raven.Client.Documents.Session
         [ThreadStatic]
         private static int _clientSessionIdCounter;
 
-        private int _clientSessionId;
+        private int? _sessionId;
         private bool _sessionIdUsed;
         private readonly int _loadBalancerContextSeed;
+        private readonly bool _loadBalancerContextSelectorSet;
+        private readonly InMemoryDocumentSessionOperations _session;
 
         public int SessionId
         {
             get
             {
+                if (_sessionId == null)
+                    SetContext(_session.Conventions.LoadBalancerPerSessionContextSelector?.Invoke(_session.DatabaseName));
+
                 _sessionIdUsed = true;
-                return _clientSessionId;
+
+                return _sessionId.Value;
             }
+        }
+
+        internal bool HasSessionId
+        {
+            get => _sessionId.HasValue || _loadBalancerContextSelectorSet;
         }
 
         public long? LastClusterTransactionIndex { get; set; }
@@ -29,34 +40,32 @@ namespace Raven.Client.Documents.Session
 
         public bool NoCaching { get; set; }
 
-        public SessionInfo(string sessionKey, int loadBalancerContextSeed, bool asyncCommandRunning, long? lastClusterTransactionIndex = null, bool noCaching = false)
+        internal SessionInfo(InMemoryDocumentSessionOperations session, SessionOptions options, DocumentStoreBase documentStore, bool asyncCommandRunning)
         {
-            SetContext(sessionKey, loadBalancerContextSeed);
+            if (documentStore is null)
+                throw new ArgumentNullException(nameof(documentStore));
 
-            _loadBalancerContextSeed = loadBalancerContextSeed;
+            _session = session ?? throw new ArgumentNullException(nameof(session));
+            _loadBalancerContextSeed = session.RequestExecutor.Conventions.LoadBalancerContextSeed;
+            _loadBalancerContextSelectorSet = session.Conventions.LoadBalanceBehavior == LoadBalanceBehavior.UseSessionContext && session.Conventions.LoadBalancerPerSessionContextSelector != null;
 
-            LastClusterTransactionIndex = lastClusterTransactionIndex;
+            LastClusterTransactionIndex = documentStore.GetLastTransactionIndex(session.DatabaseName);
             AsyncCommandRunning = asyncCommandRunning;
-            NoCaching = noCaching;
+            NoCaching = options.NoCaching;
         }
 
         public void SetContext(string sessionKey)
-        {
-            SetContext(sessionKey, _loadBalancerContextSeed);
-        }
-
-        private void SetContext(string sessionKey, int loadBalancerContextSeed)
         {
             if (_sessionIdUsed)
                 throw new InvalidOperationException("Unable to set the session context after it has already been used. The session context can only be modified before it is utliziedn");
 
             if (sessionKey == null)
             {
-                _clientSessionId = ++_clientSessionIdCounter;
+                _sessionId = ++_clientSessionIdCounter;
             }
             else
             {
-                _clientSessionId = (int)Hashing.XXHash32.Calculate(sessionKey, (uint)loadBalancerContextSeed);
+                _sessionId = (int)Hashing.XXHash32.Calculate(sessionKey, (uint)_loadBalancerContextSeed);
             }
         }
 
@@ -67,8 +76,12 @@ namespace Raven.Client.Documents.Session
             switch (requestExecutor.Conventions.LoadBalanceBehavior)
             {
                 case LoadBalanceBehavior.UseSessionContext:
-                    result = await requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
-                    return result.Node;
+                    if (HasSessionId)
+                    {
+                        result = await requestExecutor.GetNodeBySessionId(SessionId).ConfigureAwait(false);
+                        return result.Node;
+                    }
+                    break;
             }
 
             switch (requestExecutor.Conventions.ReadBalanceBehavior)
@@ -77,7 +90,7 @@ namespace Raven.Client.Documents.Session
                     result = await requestExecutor.GetPreferredNode().ConfigureAwait(false);
                     break;
                 case ReadBalanceBehavior.RoundRobin:
-                    result = await requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
+                    result = await requestExecutor.GetNodeBySessionId(SessionId).ConfigureAwait(false);
                     break;
                 case ReadBalanceBehavior.FastestNode:
                     result = await requestExecutor.GetFastestNode().ConfigureAwait(false);
