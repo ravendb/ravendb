@@ -537,9 +537,15 @@ namespace Raven.Server.Commercial
                     // the features of the license, even before we check with the
                     // server
                     SetLicense(license.Id, newLicenseStatus.Attributes);
-
-                    // license expired, we'll try to update it
-                    license = await GetUpdatedLicenseInternal(license);
+                    try
+                    {
+                        // license expired, we'll try to update it
+                        license = await GetUpdatedLicenseInternal(license);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
+                    }
                     if (license != null)
                     {
                         await Activate(license, skipLeaseLicense: true, raftRequestId, ensureNotPassive: ensureNotPassive);
