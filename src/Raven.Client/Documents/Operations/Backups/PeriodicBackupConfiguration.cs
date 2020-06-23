@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
             AddBackupDestination(LocalSettings, BackupDestination.Local);
             AddBackupDestination(S3Settings, BackupDestination.AmazonS3);
-            AddBackupDestination(GlacierSettings, BackupDestination.Glacier);
+            AddBackupDestination(GlacierSettings, BackupDestination.AmazonGlacier);
             AddBackupDestination(AzureSettings, BackupDestination.Azure);
             AddBackupDestination(GoogleCloudSettings, BackupDestination.GoogleCloud);
             AddBackupDestination(FtpSettings, BackupDestination.FTP);
@@ -155,9 +155,10 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             None,
             Local,
-            [Description("S3")]
+            [Description("Amazon S3")]
             AmazonS3,
-            Glacier,
+            [Description("Amazon Glacier")]
+            AmazonGlacier,
             Azure,
             [Description("Google Cloud")]
             GoogleCloud,

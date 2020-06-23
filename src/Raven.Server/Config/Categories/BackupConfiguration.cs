@@ -69,7 +69,7 @@ namespace Raven.Server.Config.Categories
             }
         }
         
-        private void ValidateAllowedDestinations()
+        internal void ValidateAllowedDestinations()
         {
             if (AllowedDestinations == null)
                 return;
