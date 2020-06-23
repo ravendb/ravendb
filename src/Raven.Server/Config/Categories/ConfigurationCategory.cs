@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -17,6 +18,8 @@ namespace Raven.Server.Config.Categories
 {
     public abstract class ConfigurationCategory
     {
+        private static readonly ConcurrentDictionary<Type, List<ConfigurationProperty>> _configurationPropertiesCache = new ConcurrentDictionary<Type, List<ConfigurationProperty>>();
+
         public const string DefaultValueSetInConstructor = "default-value-set-in-constructor";
 
         public class SettingValue
@@ -86,42 +89,27 @@ namespace Raven.Server.Config.Categories
         {
             foreach (var property in GetConfigurationProperties())
             {
-                if (property.SetMethod == null)
+                if (property.Info.SetMethod == null)
                 {
                     if (throwIfThereIsNoSetMethod)
-                        throw new InvalidOperationException($"No set method available for '{property.Name}' property.");
+                        throw new InvalidOperationException($"No set method available for '{property.Info.Name}' property.Info.");
 
                     continue;
                 }
 
-                ValidateProperty(property);
-
-                TimeUnitAttribute timeUnit = null;
-                SizeUnitAttribute sizeUnit = null;
-
-                if (property.PropertyType == typeof(TimeSetting) ||
-                    property.PropertyType == typeof(TimeSetting?))
-                {
-                    timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
-                    Debug.Assert(timeUnit != null);
-                }
-                else if (property.PropertyType == typeof(Size) ||
-                         property.PropertyType == typeof(Size?))
-                {
-                    sizeUnit = property.GetCustomAttribute<SizeUnitAttribute>();
-                    Debug.Assert(sizeUnit != null);
-                }
+                TimeUnitAttribute timeUnit = property.TimeUnitAttribute;
+                SizeUnitAttribute sizeUnit = property.SizeUnitAttribute;
 
                 var configuredValueSet = false;
                 var setDefaultValueOfNeeded = true;
 
                 ConfigurationEntryAttribute previousAttribute = null;
 
-                foreach (var entry in property.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(order => order.Order))
+                foreach (var entry in property.Info.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(order => order.Order))
                 {
                     if (previousAttribute != null && previousAttribute.Scope != entry.Scope)
                     {
-                        throw new InvalidOperationException($"All ConfigurationEntryAttribute for {property.Name} must have the same Scope");
+                        throw new InvalidOperationException($"All ConfigurationEntryAttribute for {property.Info.Name} must have the same Scope");
                     }
 
                     previousAttribute = entry;
@@ -139,48 +127,48 @@ namespace Raven.Server.Config.Categories
 
                     try
                     {
-                        var minValue = property.GetCustomAttribute<MinValueAttribute>();
+                        var minValue = property.MinValueAttribute;
 
                         if (minValue == null)
                         {
-                            if (property.PropertyType.GetTypeInfo().IsEnum)
+                            if (property.Info.PropertyType.GetTypeInfo().IsEnum)
                             {
                                 object parsedValue;
                                 try
                                 {
-                                    parsedValue = Enum.Parse(property.PropertyType, value, true);
+                                    parsedValue = Enum.Parse(property.Info.PropertyType, value, true);
                                 }
                                 catch (ArgumentException)
                                 {
-                                    throw new ConfigurationEnumValueException(value, property.PropertyType);
+                                    throw new ConfigurationEnumValueException(value, property.Info.PropertyType);
                                 }
 
-                                property.SetValue(this, parsedValue);
+                                property.Info.SetValue(this, parsedValue);
                             }
-                            else if (property.PropertyType == typeof(string[]))
+                            else if (property.Info.PropertyType == typeof(string[]))
                             {
                                 var values = SplitValue(value);
 
-                                property.SetValue(this, values);
+                                property.Info.SetValue(this, values);
                             }
-                            else if (property.PropertyType.IsArray && property.PropertyType.GetElementType().IsEnum)
+                            else if (property.Info.PropertyType.IsArray && property.Info.PropertyType.GetElementType().IsEnum)
                             {
                                 var values = SplitValue(value)
-                                    .Select(item => Enum.Parse(property.PropertyType.GetElementType(), item, ignoreCase: true))
+                                    .Select(item => Enum.Parse(property.Info.PropertyType.GetElementType(), item, ignoreCase: true))
                                     .ToArray();
 
-                                var enumValues = Array.CreateInstance(property.PropertyType.GetElementType(), values.Length);
+                                var enumValues = Array.CreateInstance(property.Info.PropertyType.GetElementType(), values.Length);
                                 Array.Copy(values, enumValues, enumValues.Length);
 
-                                property.SetValue(this, enumValues);
+                                property.Info.SetValue(this, enumValues);
                             }
-                            else if (property.PropertyType == typeof(HashSet<string>))
+                            else if (property.Info.PropertyType == typeof(HashSet<string>))
                             {
                                 var hashSet = new HashSet<string>(SplitValue(value), StringComparer.OrdinalIgnoreCase);
 
-                                property.SetValue(this, hashSet);
+                                property.Info.SetValue(this, hashSet);
                             }
-                            else if (property.PropertyType == typeof(UriSetting[]))
+                            else if (property.Info.PropertyType == typeof(UriSetting[]))
                             {
                                 var values = SplitValue(value);
                                 UriSetting[] settings = new UriSetting[values.Length];
@@ -188,67 +176,67 @@ namespace Raven.Server.Config.Categories
                                 {
                                     settings[i] = new UriSetting(values[i]);
                                 }
-                                property.SetValue(this, settings);
+                                property.Info.SetValue(this, settings);
                             }
                             else if (timeUnit != null)
                             {
-                                property.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));
+                                property.Info.SetValue(this, new TimeSetting(Convert.ToInt64(value), timeUnit.Unit));
                             }
                             else if (sizeUnit != null)
                             {
-                                property.SetValue(this, new Size(Convert.ToInt64(value), sizeUnit.Unit));
+                                property.Info.SetValue(this, new Size(Convert.ToInt64(value), sizeUnit.Unit));
                             }
                             else
                             {
-                                var t = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+                                var t = Nullable.GetUnderlyingType(property.Info.PropertyType) ?? property.Info.PropertyType;
 
-                                if (property.PropertyType == typeof(PathSetting))
+                                if (property.Info.PropertyType == typeof(PathSetting))
                                 {
-                                    property.SetValue(this,
+                                    property.Info.SetValue(this,
                                         settingValue.CurrentValue != null
                                             ? new PathSetting(Convert.ToString(value), serverDataDir)
                                             : new PathSetting(Convert.ToString(value), type, resourceName));
                                 }
-                                else if (property.PropertyType == typeof(PathSetting[]))
+                                else if (property.Info.PropertyType == typeof(PathSetting[]))
                                 {
                                     var paths = SplitValue(value);
 
-                                    property.SetValue(this,
+                                    property.Info.SetValue(this,
                                         settingValue.CurrentValue != null
                                             ? paths.Select(x => new PathSetting(Convert.ToString(x), serverDataDir)).ToArray()
                                             : paths.Select(x => new PathSetting(Convert.ToString(x), type, resourceName)).ToArray());
                                 }
                                 else if (t == typeof(UriSetting))
                                 {
-                                    property.SetValue(this, new UriSetting(value));
+                                    property.Info.SetValue(this, new UriSetting(value));
                                 }
                                 else
                                 {
                                     var safeValue = Convert.ChangeType(value, t);
-                                    property.SetValue(this, safeValue);
+                                    property.Info.SetValue(this, safeValue);
                                 }
                             }
                         }
                         else
                         {
-                            if (property.PropertyType == typeof(int) ||
-                                property.PropertyType == typeof(int?))
+                            if (property.Info.PropertyType == typeof(int) ||
+                                property.Info.PropertyType == typeof(int?))
                             {
-                                property.SetValue(this, Math.Max(Convert.ToInt32(value), minValue.Int32Value));
+                                property.Info.SetValue(this, Math.Max(Convert.ToInt32(value), minValue.Int32Value));
                             }
-                            else if (property.PropertyType == typeof(Size) ||
-                                     property.PropertyType == typeof(Size?))
+                            else if (property.Info.PropertyType == typeof(Size) ||
+                                     property.Info.PropertyType == typeof(Size?))
                             {
-                                property.SetValue(this, new Size(Math.Max(Convert.ToInt32(value), minValue.Int32Value), sizeUnit.Unit));
+                                property.Info.SetValue(this, new Size(Math.Max(Convert.ToInt32(value), minValue.Int32Value), sizeUnit.Unit));
                             }
-                            else if (property.PropertyType == typeof(TimeSetting) ||
-                                     property.PropertyType == typeof(TimeSetting?))
+                            else if (property.Info.PropertyType == typeof(TimeSetting) ||
+                                     property.Info.PropertyType == typeof(TimeSetting?))
                             {
-                                property.SetValue(this, new TimeSetting(Math.Max(Convert.ToInt32(value), minValue.Int32Value), timeUnit.Unit));
+                                property.Info.SetValue(this, new TimeSetting(Math.Max(Convert.ToInt32(value), minValue.Int32Value), timeUnit.Unit));
                             }
                             else
                             {
-                                throw new NotSupportedException("Min value for " + property.PropertyType + " is not supported. Property name: " + property.Name);
+                                throw new NotSupportedException("Min value for " + property.Info.PropertyType + " is not supported. Property name: " + property.Info.Name);
                             }
                         }
                     }
@@ -264,11 +252,11 @@ namespace Raven.Server.Config.Categories
                 if (configuredValueSet || setDefaultValueOfNeeded == false)
                     continue;
 
-                var defaultValueAttribute = property.GetCustomAttribute<DefaultValueAttribute>();
+                var defaultValueAttribute = property.DefaultValueAttribute;
 
                 if (defaultValueAttribute == null)
                 {
-                    throw new InvalidOperationException($"Property '{property.Name}' does not have a default value attribute");
+                    throw new InvalidOperationException($"Property '{property.Info.Name}' does not have a default value attribute");
                 }
 
                 var defaultValue = defaultValueAttribute.Value;
@@ -278,36 +266,36 @@ namespace Raven.Server.Config.Categories
 
                 if (timeUnit != null && defaultValue != null)
                 {
-                    property.SetValue(this, new TimeSetting(Convert.ToInt64(defaultValue), timeUnit.Unit));
+                    property.Info.SetValue(this, new TimeSetting(Convert.ToInt64(defaultValue), timeUnit.Unit));
                 }
                 else if (sizeUnit != null && defaultValue != null)
                 {
-                    property.SetValue(this, new Size(Convert.ToInt64(defaultValue), sizeUnit.Unit));
+                    property.Info.SetValue(this, new Size(Convert.ToInt64(defaultValue), sizeUnit.Unit));
                 }
                 else
                 {
-                    if (property.PropertyType == typeof(PathSetting) && defaultValue != null)
+                    if (property.Info.PropertyType == typeof(PathSetting) && defaultValue != null)
                     {
-                        property.SetValue(this, new PathSetting(Convert.ToString(defaultValue), type, resourceName));
+                        property.Info.SetValue(this, new PathSetting(Convert.ToString(defaultValue), type, resourceName));
                     }
-                    else if (property.PropertyType == typeof(string[]) && defaultValue is string defaultValueAsString1)
+                    else if (property.Info.PropertyType == typeof(string[]) && defaultValue is string defaultValueAsString1)
                     {
                         var values = SplitValue(defaultValueAsString1);
-                        property.SetValue(this, values);
+                        property.Info.SetValue(this, values);
                     }
-                    else if (property.PropertyType.IsArray && property.PropertyType.GetElementType().IsEnum && defaultValue is string defaultValueAsString2)
+                    else if (property.Info.PropertyType.IsArray && property.Info.PropertyType.GetElementType().IsEnum && defaultValue is string defaultValueAsString2)
                     {
                         var values = SplitValue(defaultValueAsString2)
-                            .Select(item => Enum.Parse(property.PropertyType.GetElementType(), item, ignoreCase: true))
+                            .Select(item => Enum.Parse(property.Info.PropertyType.GetElementType(), item, ignoreCase: true))
                             .ToArray();
 
-                        var enumValues = Array.CreateInstance(property.PropertyType.GetElementType(), values.Length);
+                        var enumValues = Array.CreateInstance(property.Info.PropertyType.GetElementType(), values.Length);
                         Array.Copy(values, enumValues, enumValues.Length);
 
-                        property.SetValue(this, enumValues);
+                        property.Info.SetValue(this, enumValues);
                     }
                     else
-                        property.SetValue(this, defaultValue);
+                        property.Info.SetValue(this, defaultValue);
                 }
             }
 
@@ -316,17 +304,71 @@ namespace Raven.Server.Config.Categories
 
         protected virtual void ValidateProperty(PropertyInfo property)
         {
+            var defaultValueAttribute = property.GetCustomAttribute<DefaultValueAttribute>();
+            if (defaultValueAttribute == null)
+                ThrowMissingDefaultValue(property);
         }
 
-        protected IEnumerable<PropertyInfo> GetConfigurationProperties()
+        protected static void ThrowMissingDefaultValue(PropertyInfo property)
         {
-            var configurationProperties = from property in GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            throw new InvalidOperationException($"The {nameof(DefaultValueAttribute)} is missing for '{property.Name}' property.");
+        }
+
+        protected List<ConfigurationProperty> GetConfigurationProperties()
+        {
+            var configurationProperties = _configurationPropertiesCache.GetOrAdd(GetType(), GetConfigurationPropertiesInternal);
+
+            return configurationProperties;
+        }
+
+        private List<ConfigurationProperty> GetConfigurationPropertiesInternal(Type type)
+        {
+            var configurationProperties = from property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
                                           let configurationEntryAttribute = property.GetCustomAttributes<ConfigurationEntryAttribute>().FirstOrDefault()
                                           where configurationEntryAttribute != null // filter out properties which aren't marked as configuration entry
                                           orderby configurationEntryAttribute.Order // properties are initialized in order of declaration
                                           select property;
 
-            return configurationProperties;
+            var results = new List<ConfigurationProperty>();
+
+            foreach (var property in configurationProperties)
+            {
+                ValidateProperty(property);
+
+                var attributes = property.GetCustomAttributes<ConfigurationEntryAttribute>().OrderBy(order => order.Order).ToList();
+                var defaultValueAttribute = property.GetCustomAttribute<DefaultValueAttribute>();
+                var minValueAttribute = property.GetCustomAttribute<MinValueAttribute>();
+
+                TimeUnitAttribute timeUnit = null;
+                SizeUnitAttribute sizeUnit = null;
+
+                if (property.PropertyType == typeof(TimeSetting) ||
+                    property.PropertyType == typeof(TimeSetting?))
+                {
+                    timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
+                    Debug.Assert(timeUnit != null);
+                }
+                else if (property.PropertyType == typeof(Size) ||
+                         property.PropertyType == typeof(Size?))
+                {
+                    sizeUnit = property.GetCustomAttribute<SizeUnitAttribute>();
+                    Debug.Assert(sizeUnit != null);
+                }
+
+                var item = new ConfigurationProperty
+                {
+                    Info = property,
+                    ConfigurationEntryAttributes = attributes,
+                    DefaultValueAttribute = defaultValueAttribute,
+                    MinValueAttribute = minValueAttribute,
+                    TimeUnitAttribute = timeUnit,
+                    SizeUnitAttribute = sizeUnit
+                };
+
+                results.Add(item);
+            }
+
+            return results;
         }
 
         public object GetDefaultValue<T>(Expression<Func<T, object>> getValue)
@@ -348,6 +390,21 @@ namespace Raven.Server.Config.Categories
             for (var i = 0; i < values.Length; i++)
                 values[i] = values[i].Trim();
             return values;
+        }
+
+        public class ConfigurationProperty
+        {
+            public PropertyInfo Info;
+
+            public List<ConfigurationEntryAttribute> ConfigurationEntryAttributes;
+
+            public DefaultValueAttribute DefaultValueAttribute;
+
+            public MinValueAttribute MinValueAttribute;
+
+            public TimeUnitAttribute TimeUnitAttribute;
+
+            public SizeUnitAttribute SizeUnitAttribute;
         }
     }
 }
