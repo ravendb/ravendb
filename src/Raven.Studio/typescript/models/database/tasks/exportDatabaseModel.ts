@@ -1,10 +1,8 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import smugglerDatabaseRecord = require("models/database/tasks/smugglerDatabaseRecord");
 
 class exportDatabaseModel {
-
     includeDatabaseRecord = ko.observable(true);
     includeDocuments = ko.observable(true);
     includeConflicts = ko.observable(true);
@@ -39,19 +37,15 @@ class exportDatabaseModel {
     validationGroup: KnockoutValidationGroup;
     encryptionValidationGroup: KnockoutValidationGroup;
     exportDefinitionHasIncludes: KnockoutComputed<boolean>;
+    itemsToWarnAbout: KnockoutComputed<string>;
 
     constructor() {
         this.initValidation();
         this.initEncryptionValidation();
+        this.initObservables();
+    }
 
-        this.includeDocuments.subscribe(documents => {
-            if (!documents) {
-                this.includeCounters(false);
-                this.includeAttachments(false);
-                this.includeTimeSeries(false);
-            }
-        });
-        
+    private initObservables() {
         this.includeCounters.subscribe(counters => {
             if (counters) {
                 this.includeDocuments(true);
@@ -70,14 +64,8 @@ class exportDatabaseModel {
             }
         });
 
-        this.includeCounters.subscribe(counters => {
-            if (counters) {
-                this.includeDocuments(true);
-            }
-        });
-
-        this.includeAttachments.subscribe(attachments => {
-            if (attachments) {
+        this.includeRevisionDocuments.subscribe(revisions => {
+            if (revisions) {
                 this.includeDocuments(true);
             }
         });
@@ -105,6 +93,37 @@ class exportDatabaseModel {
                 this.includeDatabaseRecord(true);
             }
         })
+
+        this.itemsToWarnAbout = ko.pureComputed(() => {
+            let items = [];
+
+            if (!this.includeDocuments()) {
+                if (this.includeAttachments()) {
+                    items.push(["Attachments"]);
+                }
+                if (this.includeCounters()) {
+                    items.push(["Counters"]);
+                }
+                if (this.includeTimeSeries()) {
+                    items.push(["Time Series"]);
+                }
+                if (this.includeRevisionDocuments()) {
+                    items.push(["Revisions"]);
+                }
+            }
+
+            switch (items.length) {
+                case 4:
+                case 3:
+                    return `${items.slice(0, items.length-1).join(', ')} & ${items[items.length-1]}`;
+                case 2:
+                    return `${items[0]} & ${items[1]}`;
+                case 1:
+                    return `${items[0]}`;
+                default:
+                    return "";
+            }
+        });
     }
 
     toDto(): Raven.Server.Smuggler.Documents.Data.DatabaseSmugglerOptionsServerSide {
@@ -173,7 +192,8 @@ class exportDatabaseModel {
                 || this.includeCounters() 
                 || this.includeTimeSeries()
                 || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) 
-                || this.includeDocuments();
+                || this.includeDocuments()
+                || this.includeArtificialDocuments();
         });
 
         this.transformScript.extend({

@@ -3,15 +3,15 @@
     <div class="panel-body">
         <form data-bind="submit: importDb">
             <div class="row">
-                <div class="col-sm-8 col-lg-6 col-xl-5">
+                <div class="col-sm-8 col-lg-6">
                     <h3>Import data from a .ravendbdump file into the current database</h3>
-                    <div class="bg-warning text-warning padding padding-xs margin-top margin-bottom">
-                        <small><i class="icon-warning"></i><span>Note: Importing will overwrite any existing documents and indexes.</span></small>
+                    <div class="bg-info text-info padding padding-xs margin-top margin-bottom">
+                        <small><i class="icon-info"></i><span>Note: Importing will overwrite any existing documents and indexes.</span></small>
                     </div>
                 </div>
             </div>
             <div class="row">
-                <div class="col-sm-8 col-lg-6 col-xl-5">
+                <div class="col-sm-8 col-lg-6">
                     <div class="input-group file-input" data-bind="validationElement: importedFileName">
                         <input type="file" accept=".ravendbdump" id="importDatabaseFilePicker" data-bind="event: { change: _.partial(fileSelected, $element.value) }, disable: isImporting" tabindex="-1" />
                         <span class="static-name form-control" data-bind="text: importedFileName() || 'Select file...'"></span>
@@ -31,43 +31,45 @@
                     </div>
                 </div>
             </div>
-            <br />
-            <div data-bind="with: model">
+            <div data-bind="with: model" class="margin-top">
                 <div class="row">
                     <div class="col-lg-3">
-                        <div class="toggle">
-                            <input id="importDocuments" type="checkbox" data-bind="checked: includeDocuments" />
-                            <label for="importDocuments">Include Documents</label>
-                        </div>
-                        <div class="margin-left margin-left-lg">
+                        <h4>Documents and Extentsions:</h4>
+                        <div class="margin-left">
                             <div class="toggle">
-                                <input id="importAttachments" type="checkbox"
-                                       data-bind="checked: includeAttachments" />
-                                <label for="importAttachments">Include Attachments</label>
+                                <input id="importDocuments" type="checkbox" data-bind="checked: includeDocuments" />
+                                <label for="importDocuments">Include Documents</label>
                             </div>
-                            <div class="toggle">
-                                <input id="importLegacyAttachments" type="checkbox"
-                                       data-bind="checked: includeLegacyAttachments" />
-                                <label for="importLegacyAttachments">Include Legacy Attachments</label>
-                            </div>
-                            <div class="toggle">
-                                <input id="importCounters" type="checkbox"
-                                       data-bind="checked: includeCounters" />
-                                <label for="importCounters">Include Counters</label>
-                            </div>
-                            <div class="toggle">
-                                <input id="importLegacyCounters" type="checkbox"
-                                       data-bind="checked: includeLegacyCounters" />
-                                <label for="importLegacyCounters">Include Legacy Counters</label>
-                            </div>
-                            <div class="toggle">
-                                <input id="importTimeSeries" type="checkbox"
-                                       data-bind="checked: includeTimeSeries" />
-                                <label for="importTimeSeries">Include Time Series</label>
-                            </div>
-                            <div class="toggle">
-                                <input id="importExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments" />
-                                <label for="importExpiredDocuments">Include Expired Documents</label>
+                            <div class="margin-left margin-left-lg">
+                                <div class="toggle">
+                                    <input id="importAttachments" type="checkbox"
+                                           data-bind="checked: includeAttachments" />
+                                    <label for="importAttachments">Include Attachments</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="importLegacyAttachments" type="checkbox"
+                                           data-bind="checked: includeLegacyAttachments" />
+                                    <label for="importLegacyAttachments">Include Legacy Attachments</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="importCounters" type="checkbox"
+                                           data-bind="checked: includeCounters" />
+                                    <label for="importCounters">Include Counters</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="importLegacyCounters" type="checkbox"
+                                           data-bind="checked: includeLegacyCounters" />
+                                    <label for="importLegacyCounters">Include Legacy Counters</label>
+                                </div>
+                                <div class="toggle">
+                                    <input id="importTimeSeries" type="checkbox"
+                                           data-bind="checked: includeTimeSeries" />
+                                    <label for="importTimeSeries">Include Time Series</label>
+                                </div>                                
+                                <div class="toggle">
+                                    <input id="importRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
+                                    <label for="importRevisions">Include Revisions</label>
+                                </div>
                             </div>
                             <div class="toggle">
                                 <input id="importArtificialDocuments" type="checkbox" data-bind="checked: includeArtificialDocuments" />
@@ -75,53 +77,56 @@
                                 <small id="js-import-artificial-documents"><i class="icon-info text-info"></i></small>
                             </div>
                             <div class="toggle">
-                                <input id="importRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
-                                <label for="importRevisions">Include Revisions</label>
+                                <input id="importExpiredDocuments" type="checkbox" data-bind="checked: includeExpiredDocuments" />
+                                <label for="importExpiredDocuments">Include Expired Documents</label>
                             </div>
                             <div class="toggle">
                                 <input id="importConflicts" type="checkbox" data-bind="checked: includeConflicts" />
                                 <label for="importConflicts">Include Conflicts</label>
                             </div>
+                            <div class="toggle">
+                                <input id="importDocumentsTombstones" type="checkbox" data-bind="checked: includeDocumentsTombstones" />
+                                <label for="importDocumentsTombstones" class="margin-right margin-right-sm">Include Documents Tombstones</label>
+                            </div>
                         </div>
                     </div>
                     <div class="col-lg-5">
-                        <div class="toggle">
-                            <input id="importIndexes" type="checkbox" data-bind="checked: includeIndexes" />
-                            <label for="importIndexes">Include Indexes</label>
-                        </div>
-                        <div class="margin-left margin-left-lg">
+                        <h4>Cluster Entities:</h4>
+                        <div class="margin-left">
                             <div class="toggle">
-                                <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers" />
-                                <label for="importAnalyzers">Remove Analyzers</label>
+                                <input id="importIndexes" type="checkbox" data-bind="checked: includeIndexes" />
+                                <label for="importIndexes">Include Indexes</label>
                             </div>
-                        </div>
-                        <div class="toggle">
-                            <input id="importIdentities" type="checkbox" data-bind="checked: includeIdentities" />
-                            <label for="importIdentities">Include Identities</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="importCmpXch" type="checkbox" data-bind="checked: includeCompareExchange" />
-                            <label for="importCmpXch">Include Compare Exchange</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="importSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
-                            <label for="importSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
-                        </div>
-                        <div class="flex-horizontal">
+                            <div class="margin-left margin-left-lg">
+                                <div class="toggle">
+                                    <input id="importAnalyzers" type="checkbox" data-bind="checked: removeAnalyzers" />
+                                    <label for="importAnalyzers">Remove Analyzers</label>
+                                </div>
+                            </div>
                             <div class="toggle">
-                                <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
-                                <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
+                                <input id="importIdentities" type="checkbox" data-bind="checked: includeIdentities" />
+                                <label for="importIdentities">Include Identities</label>
                             </div>
-                            <button class="btn btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
-                            <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
-                        </div>
-                        <div class="toggle">
-                            <input id="importDocumentsTombstones" type="checkbox" data-bind="checked: includeDocumentsTombstones" />
-                            <label for="importDocumentsTombstones" class="margin-right margin-right-sm">Include Documents Tombstones</label>
-                        </div>
-                        <div class="toggle">
-                            <input id="importCmpXchTombstones" type="checkbox" data-bind="checked: includeCompareExchangeTombstones" />
-                            <label for="importCmpXchTombstones" class="margin-right margin-right-sm">Include Compare Exchange Tombstones</label>
+                            <div class="toggle">
+                                <input id="importSubscriptions" type="checkbox" data-bind="checked: includeSubscriptions" />
+                                <label for="importSubscriptions" class="margin-right margin-right-sm">Include Subscriptions</label>
+                            </div>
+                            <div class="flex-horizontal">
+                                <div class="toggle">
+                                    <input id="importConfiguration" type="checkbox" data-bind="checked: includeDatabaseRecord" />
+                                    <label for="importConfiguration" class="margin-right margin-right-sm">Include Configuration and Ongoing Tasks</label>
+                                </div>
+                                <button class="btn btn-default btn-sm margin-right margin-right-sm" data-bind="enable: includeDatabaseRecord, click: $root.customizeConfigurationClicked">Customize</button>
+                                <small id="js-ongoing-tasks-disabled"><i class="icon-info text-info"></i></small>
+                            </div>
+                            <div class="toggle">
+                                <input id="importCmpXch" type="checkbox" data-bind="checked: includeCompareExchange" />
+                                <label for="importCmpXch">Include Compare Exchange</label>
+                            </div>
+                            <div class="toggle">
+                                <input id="importCmpXchTombstones" type="checkbox" data-bind="checked: includeCompareExchangeTombstones" />
+                                <label for="importCmpXchTombstones" class="margin-right margin-right-sm">Include Compare Exchange Tombstones</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -205,11 +210,22 @@
                 </div>
             </div>
             <hr />
+            <div class="row" data-bind="collapse: model.itemsToWarnAbout">
+                <div class="col-sm-8 col-lg-6">
+                    <div class="bg-warning text-warning padding padding-xs margin-bottom flex-horizontal">
+                        <div class="flex-start"><small><i class="icon-warning"></i></small></div>
+                        <div>
+                            <small>Note: You are importing <span data-bind="text: model.itemsToWarnAbout"></span> data without including the Documents.</small><br>
+                            <small>You must verify that matching documents exist in the current database prior to importing.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="progress" data-bind="visible: isUploading()">
                 <div class="progress-bar progress-bar-primary progress-bar-striped" role="progressbar" data-bind="style: { width: uploadStatus() + '%' }"> <span class="sr-only" data-bind="text: uploadStatus() + '%'"></span> </div>
             </div>
             <button class="btn btn-default" type="button" data-bind="click: showAdvancedOptions.toggle.bind(showAdvancedOptions)">
-                Advanced
+                <span data-bind="text: showAdvancedOptions() ? 'Close ' : ''"></span>Advanced
             </button>
             <button class="btn btn-primary" type="submit" data-bind="css: { 'btn-spinner': isImporting() }"><span class="icon-import"></span><span>Import Database</span></button>
         </form>

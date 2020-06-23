@@ -3,7 +3,7 @@
         <input type="checkbox" data-bind="checked: customizeDatabaseRecordTypes, attr: { id: 'customizeDatabaseRecordTypes_' + instanceCounter }">
         <label data-bind="attr: { for: 'customizeDatabaseRecordTypes_' + instanceCounter }" class="margin-right margin-right-sm">Customize Configuration and Ongoing Tasks</label>
     </div>
-    <div class="margin-left margin-left-lg js-customize-record" data-bind="visible: customizeDatabaseRecordTypes">
+    <div class="margin-left margin-left-lg js-customize-record" data-bind="collapse: customizeDatabaseRecordTypes">
 
         <div class="row">
             <div class="col-lg-3">
