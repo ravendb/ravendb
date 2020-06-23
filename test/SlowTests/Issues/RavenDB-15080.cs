@@ -100,8 +100,6 @@ namespace SlowTests.Issues
                 });
                 await Task.WhenAll(t1, t2);
 
-                WaitForUserToContinueTheTest(storeA);
-
                 EnsureReplicating(storeA, storeB);
                 EnsureReplicating(storeB, storeA);
                 await EnsureNoReplicationLoop(Server, storeA.Database);
