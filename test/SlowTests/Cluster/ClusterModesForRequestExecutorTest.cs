@@ -372,7 +372,7 @@ namespace SlowTests.Cluster
                         for (var sessionId = 0; sessionId < 5; sessionId++)
                         {
                             requestExecutor.Cache.Clear(); //make sure we do not use request cache
-                            await requestExecutor.ExecuteAsync(new GetStatisticsOperation().GetCommand(DocumentConventions.Default, tmpContext), tmpContext, new SessionInfo(null, 0, false));
+                            await requestExecutor.ExecuteAsync(new GetStatisticsOperation().GetCommand(DocumentConventions.Default, tmpContext), tmpContext);
                         }
                     }
                 }

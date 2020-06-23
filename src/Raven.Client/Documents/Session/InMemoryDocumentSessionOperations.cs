@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -32,7 +31,6 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -63,7 +61,7 @@ namespace Raven.Client.Documents.Session
         private IJsonSerializer _jsonSerializer;
 
         /// <summary>
-        /// The session id 
+        /// The session id
         /// </summary>
         public Guid Id { get; }
 
@@ -220,10 +218,6 @@ namespace Raven.Client.Documents.Session
             if (string.IsNullOrWhiteSpace(DatabaseName))
                 ThrowNoDatabase();
 
-            string sessionKey = documentStore.Conventions.LoadBalancerPerSessionContextSelector?.Invoke(DatabaseName);
-
-   
-
             _documentStore = documentStore;
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
@@ -232,12 +226,11 @@ namespace Raven.Client.Documents.Session
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
-            _sessionInfo = new SessionInfo(sessionKey, documentStore.Conventions.LoadBalancerContextSeed,false,
-                _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
+            _sessionInfo = new SessionInfo(this, options, _documentStore, asyncCommandRunning: false);
             TransactionMode = options.TransactionMode;
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
-                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter, 
+                flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
                 extensions: JavascriptConversionExtensions.LinqMethodsSupport.Instance)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
@@ -364,7 +357,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whether a document with the specified id is loaded in the 
+        /// Returns whether a document with the specified id is loaded in the
         /// current session
         /// </summary>
         public bool IsLoaded(string id)
@@ -380,7 +373,7 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// Returns whether a document with the specified id is deleted 
+        /// Returns whether a document with the specified id is deleted
         /// or known to be missing
         /// </summary>
         public bool IsDeleted(string id)
@@ -407,10 +400,10 @@ namespace Raven.Client.Documents.Session
         {
             if (++NumberOfRequests > MaxNumberOfRequestsPerSession)
                 throw new InvalidOperationException($@"The maximum number of requests ({MaxNumberOfRequestsPerSession}) allowed for this session has been reached.
-Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and 
+Raven limits the number of remote calls that a session is allowed to make as an early warning system. Sessions are expected to be short lived, and
 Raven provides facilities like Load(string[] ids) to load multiple documents at once and batch saves (call SaveChanges() only once).
 You can increase the limit by setting DocumentConventions.MaxNumberOfRequestsPerSession or MaxNumberOfRequestsPerSession, but it is
-advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a 
+advisable that you'll look into reducing the number of remote calls first, since that will speed up your application significantly and result in a
 more responsive application.
 ");
         }
@@ -684,7 +677,7 @@ more responsive application.
             }
             else
             {
-                // Store it back into the Id field so the client has access to it                    
+                // Store it back into the Id field so the client has access to it
                 GenerateEntityIdOnTheClient.TrySetIdentity(entity, id);
             }
 
@@ -769,7 +762,7 @@ more responsive application.
                     return id;
 
                 id = await GenerateIdAsync(entity).ConfigureAwait(false);
-                // If we generated a new id, store it back into the Id field so the client has access to it                    
+                // If we generated a new id, store it back into the Id field so the client has access to it
                 if (id != null)
                     GenerateEntityIdOnTheClient.TrySetIdOnDynamic(entity, id);
                 return id;
@@ -889,7 +882,7 @@ more responsive application.
         {
             if (HasClusterSession == false)
                 return;
-            
+
             var clusterSession = GetClusterSession();
             if (clusterSession.NumberOfTrackedCompareExchangeValues == 0)
                 return;
@@ -1724,13 +1717,13 @@ more responsive application.
         }
 
         internal static void AddToCache(
-            string timeseries, 
-            DateTime from, 
-            DateTime to, 
-            int fromRangeIndex, 
-            int toRangeIndex, 
-            List<TimeSeriesRangeResult> ranges, 
-            Dictionary<string, List<TimeSeriesRangeResult>> cache, 
+            string timeseries,
+            DateTime from,
+            DateTime to,
+            int fromRangeIndex,
+            int toRangeIndex,
+            List<TimeSeriesRangeResult> ranges,
+            Dictionary<string, List<TimeSeriesRangeResult>> cache,
             TimeSeriesEntry[] values)
         {
             if (fromRangeIndex == -1)
@@ -1739,7 +1732,7 @@ more responsive application.
 
                 if (toRangeIndex == ranges.Count)
                 {
-                    // the requested range [from, to] contains all the ranges that are in cache 
+                    // the requested range [from, to] contains all the ranges that are in cache
 
                     // e.g. if cache is : [[2,3], [4,5], [7, 10]]
                     // and the requested range is : [1, 15]
@@ -1804,7 +1797,7 @@ more responsive application.
                 {
                     // requested range starts after 'fromRange' ends,
                     // so it needs to be placed right after it
-                    // remove all the ranges that come after 'fromRange' from cache 
+                    // remove all the ranges that come after 'fromRange' from cache
                     // add the merged values as a new range at the end of the list
 
                     // e.g. if cache is : [[2,3], [5,6], [7,10]]
@@ -1825,7 +1818,7 @@ more responsive application.
 
                 // the requested range starts inside 'fromRange'
                 // merge result into 'fromRange'
-                // remove all the ranges from cache that come after 'fromRange' 
+                // remove all the ranges from cache that come after 'fromRange'
 
                 // e.g. if cache is : [[2,3], [4,6], [7,10]]
                 // and the requested range is : [5,12]
@@ -1840,7 +1833,7 @@ more responsive application.
             }
 
             // found both 'fromRange' and 'toRange'
-            // the requested range is inside cache bounds 
+            // the requested range is inside cache bounds
 
             if (ranges[fromRangeIndex].To < from)
             {
@@ -1869,7 +1862,7 @@ more responsive application.
                     return;
                 }
 
-                // requested range ends inside 'toRange' 
+                // requested range ends inside 'toRange'
 
                 // merge the new range into 'toRange'
                 // remove all ranges in between 'fromRange' and 'toRange'

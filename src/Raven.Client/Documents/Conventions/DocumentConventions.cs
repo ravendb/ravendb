@@ -385,9 +385,7 @@ namespace Raven.Client.Documents.Conventions
 
         public LoadBalanceBehavior LoadBalanceBehavior
         {
-            // We have to make this check so if admin activated this, but client code did not provide the selector,
-            // it is still disabled. Relevant if we have multiple clients / versions at once.
-            get => _loadBalancerPerSessionContextSelector == null ? LoadBalanceBehavior.None : _loadBalanceBehavior;
+            get => _loadBalanceBehavior;
             set
             {
                 AssertNotFrozen();
@@ -1159,12 +1157,6 @@ namespace Raven.Client.Documents.Conventions
 
         internal void Freeze()
         {
-            if (_loadBalanceBehavior == LoadBalanceBehavior.UseSessionContext &&
-                _loadBalancerPerSessionContextSelector == null)
-            {
-                throw new NotSupportedException($"Cannot set {nameof(LoadBalanceBehavior)} to {LoadBalanceBehavior.UseSessionContext} without also providing a value for {nameof(LoadBalancerPerSessionContextSelector)}");
-            }
-
             _frozen = true;
         }
 
