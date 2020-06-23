@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact(Skip = "RavenDB-15223")]
+        [Fact]
         public void CanMigrateTablesWithCounterWord()
         {
             var backupPath = NewDataPath(forceCreateDir: true);
