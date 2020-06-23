@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.IO;
-using System.Text;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
