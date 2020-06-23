@@ -36,13 +36,13 @@ namespace Raven.Server.Documents.Indexes.Configuration
             var result = IndexUpdateType.None;
             foreach (var property in GetConfigurationProperties())
             {
-                var currentValue = property.GetValue(this);
-                var newValue = property.GetValue(newConfiguration);
+                var currentValue = property.Info.GetValue(this);
+                var newValue = property.Info.GetValue(newConfiguration);
 
                 if (Equals(currentValue, newValue))
                     continue;
 
-                var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
+                var updateTypeAttribute = property.Info.GetCustomAttribute<IndexUpdateTypeAttribute>();
 
                 if (updateTypeAttribute.UpdateType == IndexUpdateType.Reset)
                     return IndexUpdateType.Reset; // worst case, we do not need to check further
