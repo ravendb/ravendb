@@ -192,8 +192,8 @@ namespace Raven.Server.Documents
             for (int i = 0; i < counterValues.Count; i++)
             {
                 counterValues.GetPropertyByIndex(i, ref prop);
-                var originalName = GetOriginalName(originalNames, prop.Name);
-                if (originalName == null || string.Equals(prop.Name, originalName))
+                var originalName = GetOriginalName(context, originalNames, prop.Name);
+                if (LazyStringValueComparer.Instance.Equals(prop.Name, originalName))
                     continue;
 
                 // remove the lower-cased property, use original casing instead  
@@ -1085,7 +1085,7 @@ namespace Raven.Server.Documents
 
                             // need to add original counter name to 'CounterNames' array
 
-                            AddNewCounterName(incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
+                            AddNewCounterName(context, incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
                         }
 
                         // blob + blob => put counter
@@ -1140,7 +1140,7 @@ namespace Raven.Server.Documents
                         }
                         else
                         {
-                            AddNewCounterName(incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
+                            AddNewCounterName(context, incomingCountersProp.Name, sourceCounterNames, localCounterNames, counterName);
                         }
 
                         // put deleted counter
@@ -1156,18 +1156,18 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void AddNewCounterName(LazyStringValue propName, BlittableJsonReaderObject sourceCounterNames, BlittableJsonReaderObject localCounterNames,
+        private static void AddNewCounterName(DocumentsOperationContext context, LazyStringValue propName, BlittableJsonReaderObject sourceCounterNames,
+            BlittableJsonReaderObject localCounterNames,
             string loweredName)
         {
             localCounterNames.Modifications ??= new DynamicJsonValue(localCounterNames);
 
             if (sourceCounterNames != null)
             {
-                var originalName = GetOriginalName(sourceCounterNames, loweredName);
+                var originalName = GetOriginalName(context, sourceCounterNames, loweredName);
 
                 localCounterNames.Modifications[loweredName] = originalName;
             }
-
             else
             {
                 // 4.2 source
@@ -1191,11 +1191,11 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static LazyStringValue GetOriginalName(BlittableJsonReaderObject counterNames, string counterName)
+        private static LazyStringValue GetOriginalName(DocumentsOperationContext context, BlittableJsonReaderObject counterNames, string counterName)
         {
             var lower = counterName.ToLower();
             if (counterNames.TryGet(lower, out object originalName) == false)
-                return null;
+                return context.GetLazyString(counterName);
             return GetLazyStringCounterName(lower, originalName);
         }
 
