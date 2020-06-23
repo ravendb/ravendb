@@ -243,17 +243,10 @@ namespace Raven.Server.Documents.Handlers
             return rangeResultDictionary;
         }
 
-        internal static TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime? from, DateTime? to)
-        {
-            int start = 0, pageSize = int.MaxValue;
-            return GetTimeSeriesRange(context, docId, name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ref start, ref pageSize);
-        }
-
-        private static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
+        internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
             List<TimeSeriesEntry> values = new List<TimeSeriesEntry>();
-            var collection = ExecuteTimeSeriesBatchCommand.GetDocumentCollection(context.DocumentDatabase, context, docId, fromEtl: false);
-            var reader = new TimeSeriesMultiReader(context, docId, name, collection, from, to, offset: null);
+            var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
 
             // init hash 
             var size = Sodium.crypto_generichash_bytes();
