@@ -16,6 +16,7 @@ namespace Raven.Server.NotificationCenter
         private static readonly string PagingDocumentsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.Documents}";
         private static readonly string PagingQueriesId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.Queries}";
         private static readonly string PagingRevisionsId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.Revisions}";
+        private static readonly string PagingCompareExchangeId = $"{NotificationType.PerformanceHint}/{PerformanceHintType.Paging}/{PagingOperationType.CompareExchange}";
 
         private readonly NotificationCenter _notificationCenter;
         private readonly NotificationsStorage _notificationsStorage;
@@ -68,7 +69,7 @@ namespace Raven.Server.NotificationCenter
                 if (_pagingQueue.IsEmpty)
                     return;
 
-                PerformanceHint documents = null, queries = null, revisions = null;
+                PerformanceHint documents = null, queries = null, revisions = null, compareExchange = null;
 
                 while (_pagingQueue.TryDequeue(
                     out (PagingOperationType Type, string Action, string Details, int NumberOfResults, int PageSize, long Duration, DateTime Occurrence) tuple))
@@ -98,6 +99,14 @@ namespace Raven.Server.NotificationCenter
                             ((PagingPerformanceDetails)revisions.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
                                 tuple.Occurrence);
                             break;
+
+                        case PagingOperationType.CompareExchange:
+                            if (compareExchange == null)
+                                compareExchange = GetPagingPerformanceHint(PagingCompareExchangeId, tuple.Type);
+
+                            ((PagingPerformanceDetails)compareExchange.Details).Update(tuple.Action, tuple.Details, tuple.NumberOfResults, tuple.PageSize, tuple.Duration,
+                                tuple.Occurrence);
+                            break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
@@ -111,6 +120,9 @@ namespace Raven.Server.NotificationCenter
 
                 if (revisions != null)
                     _notificationCenter.Add(revisions);
+
+                if (compareExchange != null)
+                    _notificationCenter.Add(compareExchange);
             }
             catch (Exception e)
             {
@@ -133,9 +145,11 @@ namespace Raven.Server.NotificationCenter
                 {
                     case PagingOperationType.Documents:
                     case PagingOperationType.Queries:
-                        return PerformanceHint.Create(_database,$"Page size too big ({type.ToString().ToLower()})", "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.", PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                        return PerformanceHint.Create(_database, $"Page size too big ({type.ToString().ToLower()})", "We have detected that some of the requests are returning excessive amount of documents. Consider using smaller page sizes or streaming operations.", PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     case PagingOperationType.Revisions:
                         return PerformanceHint.Create(_database, "Page size too big (revisions)", "We have detected that some of the requests are returning excessive amount of revisions. Consider using smaller page sizes.", PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
+                    case PagingOperationType.CompareExchange:
+                        return PerformanceHint.Create(_database, "Page size too big (compare exchange)", "We have detected that some of the requests are returning excessive amount of compare exchange values. Consider using smaller page sizes.", PerformanceHintType.Paging, NotificationSeverity.Warning, type.ToString(), details);
                     default:
                         throw new ArgumentOutOfRangeException(nameof(type), type, null);
                 }
