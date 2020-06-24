@@ -1,5 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import smugglerDatabaseRecord = require("models/database/tasks/smugglerDatabaseRecord");
+import genUtils = require("common/generalUtils");
 
 class importDatabaseModel {
     includeDatabaseRecord = ko.observable(true);
@@ -39,6 +40,12 @@ class importDatabaseModel {
     }
     
     private initObservables() {
+        this.includeDocuments.subscribe(documents => {
+            if (!documents) {
+                this.includeAttachments(false);
+            }
+        });
+        
         this.includeCounters.subscribe(counters => {
             if (counters) {
                 this.includeDocuments(true);
@@ -91,31 +98,18 @@ class importDatabaseModel {
             let items = [];
 
             if (!this.includeDocuments()) {
-                if (this.includeAttachments()) {
-                    items.push(["Attachments"]);
-                }
                 if (this.includeCounters()) {
-                    items.push(["Counters"]);
+                    items.push("Counters");
                 }
                 if (this.includeTimeSeries()) {
-                    items.push(["Time Series"]);
+                    items.push("Time Series");
                 }
                 if (this.includeRevisionDocuments()) {
-                    items.push(["Revisions"]);
+                    items.push("Revisions");
                 }
             }
 
-            switch (items.length) {
-                case 4:
-                case 3:
-                    return `${items.slice(0, items.length-1).join(', ')} & ${items[items.length-1]}`;
-                case 2:
-                    return `${items[0]} & ${items[1]}`;
-                case 1:
-                    return `${items[0]}`;
-                default:
-                    return "";
-            }
+            return genUtils.getItemsListFormatted(items);
         });
     }
     

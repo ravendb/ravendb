@@ -444,6 +444,19 @@ class genUtils {
         return inputNumber.toLocaleString(undefined, { minimumFractionDigits: n, maximumFractionDigits: n });
     };
 
+    static getItemsListFormatted(items: Array<string>) {
+        switch (items.length) {
+            case 0:
+                return "";
+            case 1:
+                return `${items[0]}`;
+            case 2:
+                return `${items[0]} & ${items[1]}`;
+            default:
+                return `${items.slice(0, items.length-1).join(', ')} & ${items[items.length-1]}`;
+        }
+    }
+
     /***  File Methods ***/
     
     static getFileExtension(filePath: string): string {
