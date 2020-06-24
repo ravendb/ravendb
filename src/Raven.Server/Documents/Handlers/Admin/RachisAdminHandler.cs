@@ -586,6 +586,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 throw new ArgumentException("The new assigned cores value must be larger than 0");
 
             await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, GetRaftRequestIdFromQuery());
+            NoContentStatus();
         }
 
         [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
