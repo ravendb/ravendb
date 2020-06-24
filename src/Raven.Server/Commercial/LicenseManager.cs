@@ -544,7 +544,10 @@ namespace Raven.Server.Commercial
                     }
                     catch (Exception e)
                     {
-                        throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
+                        if (e is HttpRequestException)
+                            throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
+                        
+                        throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license.", e);
                     }
                     if (license != null)
                     {
