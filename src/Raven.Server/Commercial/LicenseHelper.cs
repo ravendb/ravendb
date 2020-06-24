@@ -165,11 +165,7 @@ namespace Raven.Server.Commercial
             }
 
             if (licenseString == null)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to access the environment variable: `{RavenConfiguration.EnvironmentVariableLicenseString}`");
                 return;
-            }
 
             if (TryDeserializeLicense(licenseString, out var oldLicense) == false)
                 return;
@@ -177,8 +173,15 @@ namespace Raven.Server.Commercial
             if (ValidateLicense(newLicense, rsaParameters, oldLicense) == false)
                 return;
 
-            var newLicenseString = JsonConvert.SerializeObject(newLicense);
-            Environment.SetEnvironmentVariable(RavenConfiguration.EnvironmentVariableLicenseString, newLicenseString, preferredTarget);
+            try
+            {
+                var newLicenseString = JsonConvert.SerializeObject(newLicense);
+                Environment.SetEnvironmentVariable(RavenConfiguration.EnvironmentVariableLicenseString, newLicenseString, preferredTarget);
+            }
+            catch (SecurityException)
+            {
+                // expected
+            }
 
             string GetLicenseString()
             {
