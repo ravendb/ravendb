@@ -25,6 +25,7 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
@@ -47,6 +48,7 @@ namespace Raven.Server.Documents.Patch
             public SingleRun Value;
             public WeakReference<SingleRun> WeakValue;
         }
+
         private readonly ConcurrentQueue<Holder> _cache = new ConcurrentQueue<Holder>();
         private readonly DocumentDatabase _db;
         private readonly RavenConfiguration _configuration;
@@ -54,8 +56,8 @@ namespace Raven.Server.Documents.Patch
         private readonly DateTime _creationTime;
         public readonly List<string> ScriptsSource = new List<string>();
 
-        public int NumberOfCachedScripts => _cache.Count(x=>
-            x.Value != null || 
+        public int NumberOfCachedScripts => _cache.Count(x =>
+            x.Value != null ||
             x.WeakValue?.TryGetTarget(out _) == true);
 
         internal readonly Dictionary<string, DeclaredFunction> TimeSeriesDeclaration = new Dictionary<string, DeclaredFunction>();
@@ -109,11 +111,11 @@ namespace Raven.Server.Documents.Patch
                 {
                     Parent = this
                 };
-        }
+            }
 
             if (holder.Value == null)
             {
-                if (holder.WeakValue!= null && 
+                if (holder.WeakValue != null &&
                     holder.WeakValue.TryGetTarget(out run))
                 {
                     holder.Value = run;
@@ -153,6 +155,8 @@ namespace Raven.Server.Documents.Patch
 
             private readonly ScriptRunner _runner;
             public readonly Engine ScriptEngine;
+            private QueryTimingsScope _scope;
+            private QueryTimingsScope _loadScope;
             private DocumentsOperationContext _docsCtx;
             private JsonOperationContext _jsonCtx;
             public PatchDebugActions DebugActions;
@@ -524,7 +528,7 @@ namespace Raven.Server.Documents.Patch
                 return ScriptEngine.Array.Construct(entries.ToArray());
             }
 
-            private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName]string caller = null)
+            private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName] string caller = null)
             {
                 void Swap()
                 {
@@ -895,33 +899,36 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue LoadDocumentByPath(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext("loadPath");
-
-                if (args.Length != 2 ||
-                    (args[0].IsNull() == false && args[0].IsUndefined() == false && args[0].IsObject() == false)
-                    || args[1].IsString() == false)
-                    throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
-
-                if (args[0].IsNull() || args[1].IsUndefined())
-                    return args[0];
-
-                if (args[0].AsObject() is BlittableObjectInstance b)
+                using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                 {
-                    var path = args[1].AsString();
-                    if (_documentIds == null)
-                        _documentIds = new HashSet<string>();
+                    AssertValidDatabaseContext("loadPath");
 
-                    _documentIds.Clear();
-                    IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
-                    if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1) // array
-                        return JsValue.FromObject(ScriptEngine, _documentIds.Select(LoadDocumentInternal).ToList());
-                    if (_documentIds.Count == 0)
-                        return JsValue.Null;
+                    if (args.Length != 2 ||
+                        (args[0].IsNull() == false && args[0].IsUndefined() == false && args[0].IsObject() == false)
+                        || args[1].IsString() == false)
+                        throw new InvalidOperationException("loadPath(doc, path) must be called with a document and path");
 
-                    return LoadDocumentInternal(_documentIds.First());
+                    if (args[0].IsNull() || args[1].IsUndefined())
+                        return args[0];
+
+                    if (args[0].AsObject() is BlittableObjectInstance b)
+                    {
+                        var path = args[1].AsString();
+                        if (_documentIds == null)
+                            _documentIds = new HashSet<string>();
+
+                        _documentIds.Clear();
+                        IncludeUtil.GetDocIdFromInclude(b.Blittable, path, _documentIds, _database.IdentityPartsSeparator);
+                        if (path.IndexOf("[]", StringComparison.InvariantCulture) != -1) // array
+                            return JsValue.FromObject(ScriptEngine, _documentIds.Select(LoadDocumentInternal).ToList());
+                        if (_documentIds.Count == 0)
+                            return JsValue.Null;
+
+                        return LoadDocumentInternal(_documentIds.First());
+                    }
+
+                    throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
                 }
-
-                throw new InvalidOperationException("loadPath(doc, path) must be called with a valid document instance, but got a JS object instead");
             }
 
             private JsValue CompareExchange(JsValue self, JsValue[] args)
@@ -936,32 +943,35 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue LoadDocument(JsValue self, JsValue[] args)
             {
-                AssertValidDatabaseContext("load");
-
-                if (args.Length != 1)
-                    throw new InvalidOperationException($"load(id | ids) must be called with a single string argument");
-
-                if (args[0].IsNull() || args[0].IsUndefined())
-                    return args[0];
-
-                if (args[0].IsArray())
+                using (_loadScope = _loadScope?.Start() ?? _scope?.For(nameof(QueryTimingsScope.Names.Load)))
                 {
-                    var results = (ArrayInstance)ScriptEngine.Array.Construct(Array.Empty<JsValue>());
-                    var arrayInstance = args[0].AsArray();
-                    foreach (var kvp in arrayInstance.GetOwnPropertiesWithoutLength())
+                    AssertValidDatabaseContext("load");
+
+                    if (args.Length != 1)
+                        throw new InvalidOperationException($"load(id | ids) must be called with a single string argument");
+
+                    if (args[0].IsNull() || args[0].IsUndefined())
+                        return args[0];
+
+                    if (args[0].IsArray())
                     {
-                        if (kvp.Value.Value.IsString() == false)
-                            throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
-                        var result = LoadDocumentInternal(kvp.Value.Value.AsString());
-                        ScriptEngine.Array.PrototypeObject.Push(results, new[] { result });
+                        var results = (ArrayInstance)ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                        var arrayInstance = args[0].AsArray();
+                        foreach (var kvp in arrayInstance.GetOwnPropertiesWithoutLength())
+                        {
+                            if (kvp.Value.Value.IsString() == false)
+                                throw new InvalidOperationException("load(ids) must be called with a array of strings, but got " + kvp.Value.Value.Type + " - " + kvp.Value.Value);
+                            var result = LoadDocumentInternal(kvp.Value.Value.AsString());
+                            ScriptEngine.Array.PrototypeObject.Push(results, new[] { result });
+                        }
+                        return results;
                     }
-                    return results;
+
+                    if (args[0].IsString() == false)
+                        throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
+
+                    return LoadDocumentInternal(args[0].AsString());
                 }
-
-                if (args[0].IsString() == false)
-                    throw new InvalidOperationException("load(id | ids) must be called with a single string or array argument");
-
-                return LoadDocumentInternal(args[0].AsString());
             }
 
             private JsValue GetCounter(JsValue self, JsValue[] args)
@@ -1376,7 +1386,6 @@ namespace Raven.Server.Documents.Patch
                     throw new ArgumentException($"{signature} : {argName} must be of type 'DateInstance' or a DateTime string. {GetTypes(arg)}");
             }
 
-
             private static DateTime GetTimeSeriesDateArg(JsValue arg, string signature, string argName)
             {
                 if (arg.IsDate())
@@ -1500,7 +1509,7 @@ namespace Raven.Server.Documents.Patch
                         var propName = functionAst.TryGetFieldFromSimpleLambdaExpression();
 
                         BlittableObjectInstance.BlittableObjectProperty existingValue = default;
-                        if (selfInstance.OwnValues?.TryGetValue(propName, out existingValue) == true && 
+                        if (selfInstance.OwnValues?.TryGetValue(propName, out existingValue) == true &&
                             existingValue != null)
                         {
                             if (existingValue.Changed)
@@ -1579,15 +1588,17 @@ namespace Raven.Server.Documents.Patch
             private JsValue[] _args = Array.Empty<JsValue>();
             private readonly JintPreventResolvingTasksReferenceResolver _refResolver = new JintPreventResolvingTasksReferenceResolver();
 
-            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, object[] args, QueryTimingsScope scope = null)
             {
-                return Run(jsonCtx, docCtx, method, null, args);
+                return Run(jsonCtx, docCtx, method, null, args, scope);
             }
 
-            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args)
+            public ScriptRunnerResult Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, string method, string documentId, object[] args, QueryTimingsScope scope = null)
             {
                 _docsCtx = docCtx;
                 _jsonCtx = jsonCtx ?? ThrowArgumentNull();
+                _scope = scope;
+
                 JavaScriptUtils.Reset(_jsonCtx);
 
                 Reset();
@@ -1615,6 +1626,8 @@ namespace Raven.Server.Documents.Patch
                 finally
                 {
                     _refResolver.ExplodeArgsOn(null, null);
+                    _scope = null;
+                    _loadScope = null;
                     _docsCtx = null;
                     _jsonCtx = null;
                     Array.Clear(_args, 0, _args.Length);
@@ -1761,7 +1774,7 @@ namespace Raven.Server.Documents.Patch
                     holder.Value = null;
                     _cache.Enqueue(holder);
                     continue;
-    }
+                }
 
                 var weak = holder.WeakValue;
                 if (weak == null)
@@ -1773,8 +1786,8 @@ namespace Raven.Server.Documents.Patch
                 {
                     _cache.Enqueue(holder);
                     return true;
-}
-                
+                }
+
                 // the weak ref has no value, can discard it
             }
 

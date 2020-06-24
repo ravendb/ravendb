@@ -13,7 +13,9 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Timings;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -80,7 +82,6 @@ namespace SlowTests.Client
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal("Jerry", queryResult[0].FirstName);
-
                 }
             }
         }
@@ -89,7 +90,7 @@ namespace SlowTests.Client
         public void Custom_Functions_With_Timespan()
         {
             using (var store = GetDocumentStore())
-            {                                    
+            {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", Birthday = new DateTime(1942, 8, 1) }, "users/1");
@@ -99,7 +100,7 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
-                        .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday});
+                        .Select(u => new { u.Name, Age = DateTime.Today - u.Birthday });
 
                     Assert.Equal("from 'Users' as u select { " +
                                  "Name : u.Name, Age : compareDates(new Date(new Date().setHours(0,0,0,0)), u.Birthday) }",
@@ -159,12 +160,12 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
-                        .Select(u => new {
+                        .Select(u => new
+                        {
                             DayOfBirth = u.Birthday.Day,
                             MonthOfBirth = u.Birthday.Month,
                             Age = DateTime.Today.Year - u.Birthday.Year
                         });
-
 
                     Assert.Equal("from 'Users' as u select { DayOfBirth : new Date(Date.parse(u.Birthday)).getDate(), MonthOfBirth : new Date(Date.parse(u.Birthday)).getMonth()+1, Age : new Date().getFullYear()-new Date(Date.parse(u.Birthday)).getFullYear() }"
                         , query.ToString());
@@ -178,7 +179,6 @@ namespace SlowTests.Client
                     Assert.Equal(birthday.Day, queryResult[0].DayOfBirth);
                     Assert.Equal(birthday.Month, queryResult[0].MonthOfBirth);
                     Assert.Equal(age, queryResult[0].Age);
-
                 }
             }
         }
@@ -197,12 +197,12 @@ namespace SlowTests.Client
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<User>()
-                        .Select(u => new {
+                        .Select(u => new
+                        {
                             DayOfBirth = u.Birthday.Day,
                             MonthOfBirth = u.Birthday.Month,
                             Age = DateTime.Today.Year - u.Birthday.Year
                         });
-
 
                     Assert.Equal("from 'Users' as u select { DayOfBirth : new Date(Date.parse(u.Birthday)).getDate(), MonthOfBirth : new Date(Date.parse(u.Birthday)).getMonth()+1, Age : new Date().getFullYear()-new Date(Date.parse(u.Birthday)).getFullYear() }"
                         , query.ToString());
@@ -216,7 +216,6 @@ namespace SlowTests.Client
                     Assert.Equal(birthday.Day, queryResult[0].DayOfBirth);
                     Assert.Equal(birthday.Month, queryResult[0].MonthOfBirth);
                     Assert.Equal(age, queryResult[0].Age);
-
                 }
             }
         }
@@ -305,7 +304,8 @@ namespace SlowTests.Client
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
-                        .Select(u => new {
+                        .Select(u => new
+                        {
                             Roles = u.Roles.Select(r => new
                             {
                                 RoleName = r + "!"
@@ -320,10 +320,9 @@ namespace SlowTests.Client
 
                     var roles = queryResult[0].Roles.ToList();
 
-                    Assert.Equal(2 , roles.Count);
+                    Assert.Equal(2, roles.Count);
                     Assert.Equal("Musician!", roles[0].RoleName);
                     Assert.Equal("Song Writer!", roles[1].RoleName);
-
                 }
             }
         }
@@ -342,7 +341,8 @@ namespace SlowTests.Client
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = session.Query<User>()
-                        .Select(u => new {
+                        .Select(u => new
+                        {
                             Roles = u.Roles.Select(r => new
                             {
                                 RoleName = r + "!"
@@ -360,7 +360,6 @@ namespace SlowTests.Client
                     Assert.Equal(2, roles.Count);
                     Assert.Equal("Musician!", roles[0].RoleName);
                     Assert.Equal("Song Writer!", roles[1].RoleName);
-
                 }
             }
         }
@@ -393,7 +392,6 @@ namespace SlowTests.Client
 }
 from 'Users' as u select output(u)", query.ToString());
 
-
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
@@ -418,11 +416,11 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = from u in session.Query<User>()
-                        let lastName = u.LastName
-                        select new
-                        {
-                            FullName = u.Name + " " + lastName
-                        };
+                                let lastName = u.LastName
+                                select new
+                                {
+                                    FullName = u.Name + " " + lastName
+                                };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
@@ -430,7 +428,6 @@ from 'Users' as u select output(u)", query.ToString());
 	return { FullName : u.Name+"" ""+lastName };
 }
 from 'Users' as u select output(u)", query.ToString());
-
 
                     var queryResult = await query.ToListAsync();
 
@@ -469,7 +466,6 @@ from 'Users' as u select output(u)", query.ToString());
 }
 from 'Users' as u select output(u)", query.ToString());
 
-
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
@@ -494,11 +490,11 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = from u in session.Query<User>()
-                        let format = (Func<User, string>)(p => p.Name + " " + p.LastName)
-                        select new
-                        {
-                            FullName = format(u)
-                        };
+                                let format = (Func<User, string>)(p => p.Name + " " + p.LastName)
+                                select new
+                                {
+                                    FullName = format(u)
+                                };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
@@ -506,7 +502,6 @@ from 'Users' as u select output(u)", query.ToString());
 	return { FullName : format(u) };
 }
 from 'Users' as u select output(u)", query.ToString());
-
 
                     var queryResult = await query.ToListAsync();
 
@@ -549,7 +544,6 @@ from 'Users' as u select output(u)", query.ToString());
 }
 from 'Users' as u select output(u)", query.ToString());
 
-
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
@@ -574,13 +568,13 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = from u in session.Query<User>()
-                        let space = " "
-                        let last = u.LastName
-                        let format = (Func<User, string>)(p => p.Name + space + last)
-                        select new
-                        {
-                            FullName = format(u)
-                        };
+                                let space = " "
+                                let last = u.LastName
+                                let format = (Func<User, string>)(p => p.Name + space + last)
+                                select new
+                                {
+                                    FullName = format(u)
+                                };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
@@ -590,7 +584,6 @@ from 'Users' as u select output(u)", query.ToString());
 	return { FullName : format(u) };
 }
 from 'Users' as u select output(u)", query.ToString());
-
 
                     var queryResult = await query.ToListAsync();
 
@@ -615,12 +608,12 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        let last = u.LastName
-                        where u.Name == "Jerry"
-                        select new
-                        {
-                            LastName = last
-                        };
+                                let last = u.LastName
+                                where u.Name == "Jerry"
+                                select new
+                                {
+                                    LastName = last
+                                };
 
                     Assert.Throws<NotSupportedException>(() => query.ToList());
                 }
@@ -641,12 +634,12 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenAsyncSession())
                 {
                     var query = from u in session.Query<User>()
-                        let last = u.LastName
-                        where u.Name == "Jerry"
-                        select new
-                        {
-                            LastName = last
-                        };
+                                let last = u.LastName
+                                where u.Name == "Jerry"
+                                select new
+                                {
+                                    LastName = last
+                                };
 
                     await Assert.ThrowsAsync<NotSupportedException>(async () => await query.ToListAsync());
                 }
@@ -670,7 +663,8 @@ from 'Users' as u select output(u)", query.ToString());
 
                 using (var session = store.OpenSession())
                 {
-                    var query = from u in session.Query<User>()
+                    QueryTimings timings = null;
+                    var query = from u in session.Query<User>().Customize(x => x.Timings(out timings))
                                 where u.Name != "Bob"
                                 let detail = session.Load<Detail>(u.DetailId)
                                 select new
@@ -679,7 +673,7 @@ from 'Users' as u select output(u)", query.ToString());
                                     Detail = detail.Number
                                 };
 
-                    Assert.Equal("from 'Users' as u where u.Name != $p0 load u.DetailId as detail select { FullName : u.Name+\" \"+u.LastName, Detail : detail.Number }",
+                    Assert.Equal("from 'Users' as u where u.Name != $p0 load u.DetailId as detail select { FullName : u.Name+\" \"+u.LastName, Detail : detail.Number } include timings()",
                                  query.ToString());
 
                     var queryResult = query.ToList();
@@ -687,6 +681,8 @@ from 'Users' as u select output(u)", query.ToString());
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal(12345, queryResult[0].Detail);
+
+                    Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Retriever)].Timings[nameof(QueryTimingsScope.Names.Projection)].Timings[nameof(QueryTimingsScope.Names.Load)].DurationInMs >= 0);
                 }
             }
         }
@@ -709,13 +705,13 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var asyncSession = store.OpenAsyncSession())
                 {
                     var query = from u in asyncSession.Query<User>()
-                        where u.Name != "Bob"
-                        let detail = RavenQuery.Load<Detail>(u.DetailId)
-                        select new
-                        {
-                            FullName = u.Name + " " + u.LastName,
-                            Detail = detail.Number
-                        };
+                                where u.Name != "Bob"
+                                let detail = RavenQuery.Load<Detail>(u.DetailId)
+                                select new
+                                {
+                                    FullName = u.Name + " " + u.LastName,
+                                    Detail = detail.Number
+                                };
 
                     Assert.Equal(@"from 'Users' as u where u.Name != $p0 load u.DetailId as detail select { FullName : u.Name+"" ""+u.LastName, Detail : detail.Number }",
                         query.ToString());
@@ -746,17 +742,18 @@ from 'Users' as u select output(u)", query.ToString());
 
                 using (var session = store.OpenSession())
                 {
-                    var query = from u in session.Query<User>()
-                        where u.Name != "Bob"
-                        let format = (Func<User, string>)(user => user.Name + " " + user.LastName)
-                        let detail = session.Load<Detail>(u.DetailId)
-                        let friend = session.Load<User>(u.FriendId)
-                        select new
-                        {
-                            FullName = format(u),
-                            Friend = format(friend),
-                            Detail = detail.Number
-                        };
+                    QueryTimings timings = null;
+                    var query = from u in session.Query<User>().Customize(x => x.Timings(out timings))
+                                where u.Name != "Bob"
+                                let format = (Func<User, string>)(user => user.Name + " " + user.LastName)
+                                let detail = session.Load<Detail>(u.DetailId)
+                                let friend = session.Load<User>(u.FriendId)
+                                select new
+                                {
+                                    FullName = format(u),
+                                    Friend = format(friend),
+                                    Detail = detail.Number
+                                };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
 @"declare function output(u) {
@@ -765,7 +762,7 @@ from 'Users' as u select output(u)", query.ToString());
 	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
 }
-from 'Users' as u where u.Name != $p0 select output(u)",
+from 'Users' as u where u.Name != $p0 select output(u) include timings()",
                         query.ToString());
 
                     var queryResult = query.ToList();
@@ -774,6 +771,8 @@ from 'Users' as u where u.Name != $p0 select output(u)",
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal("Bob Weir", queryResult[0].Friend);
                     Assert.Equal(12345, queryResult[0].Detail);
+
+                    Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Retriever)].Timings[nameof(QueryTimingsScope.Names.Projection)].Timings[nameof(QueryTimingsScope.Names.JavaScript)].Timings[nameof(QueryTimingsScope.Names.Load)].DurationInMs >= 0);
                 }
             }
         }
@@ -795,7 +794,8 @@ from 'Users' as u where u.Name != $p0 select output(u)",
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var query = from u in session.Query<User>()
+                    QueryTimings timings = null;
+                    var query = from u in session.Query<User>().Customize(x => x.Timings(out timings))
                                 where u.Name != "Bob"
                                 let format = (Func<User, string>)(user => user.Name + " " + user.LastName)
                                 let detail = RavenQuery.Load<Detail>(u.DetailId)
@@ -814,7 +814,7 @@ from 'Users' as u where u.Name != $p0 select output(u)",
 	var friend = load(u.FriendId);
 	return { FullName : format(u), Friend : format(friend), Detail : detail.Number };
 }
-from 'Users' as u where u.Name != $p0 select output(u)",
+from 'Users' as u where u.Name != $p0 select output(u) include timings()",
                         query.ToString());
 
                     var queryResult = await query.ToListAsync();
@@ -823,6 +823,8 @@ from 'Users' as u where u.Name != $p0 select output(u)",
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal("Bob Weir", queryResult[0].Friend);
                     Assert.Equal(12345, queryResult[0].Detail);
+
+                    Assert.True(timings.Timings[nameof(QueryTimingsScope.Names.Query)].Timings[nameof(QueryTimingsScope.Names.Retriever)].Timings[nameof(QueryTimingsScope.Names.Projection)].Timings[nameof(QueryTimingsScope.Names.JavaScript)].Timings[nameof(QueryTimingsScope.Names.Load)].DurationInMs >= 0);
                 }
             }
         }
@@ -870,7 +872,6 @@ from 'Users' as u select output(u)", query.ToString());
 
                     Assert.Equal("Bob Weir", queryResult[1].FullName);
                     Assert.Equal(67890, queryResult[1].DetailNumber);
-
                 }
             }
         }
@@ -918,7 +919,6 @@ from 'Users' as u select output(u)", query.ToString());
 
                     Assert.Equal("Bob Weir", queryResult[1].FullName);
                     Assert.Equal(67890, queryResult[1].DetailNumber);
-
                 }
             }
         }
@@ -935,7 +935,6 @@ from 'Users' as u select output(u)", query.ToString());
                     session.Store(new Detail { Number = 3 }, "details/3");
                     session.Store(new Detail { Number = 4 }, "details/4");
 
-
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new[] { "details/1", "details/2" } }, "users/1");
                     session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new[] { "details/3", "details/4" } }, "users/2");
                     session.SaveChanges();
@@ -944,13 +943,13 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        where u.Name != "Bob"
-                        let details = RavenQuery.Load<Detail>(u.DetailIds)
-                        select new
-                        {
-                            FullName = u.Name + " " + u.LastName,
-                            Details = details
-                        };
+                                where u.Name != "Bob"
+                                let details = RavenQuery.Load<Detail>(u.DetailIds)
+                                select new
+                                {
+                                    FullName = u.Name + " " + u.LastName,
+                                    Details = details
+                                };
 
                     Assert.Equal(@"from 'Users' as u where u.Name != $p0 load u.DetailIds as details[] select { FullName : u.Name+"" ""+u.LastName, Details : details }",
                         query.ToString());
@@ -980,7 +979,6 @@ from 'Users' as u select output(u)", query.ToString());
                     await session.StoreAsync(new Detail { Number = 2 }, "details/2");
                     await session.StoreAsync(new Detail { Number = 3 }, "details/3");
                     await session.StoreAsync(new Detail { Number = 4 }, "details/4");
-
 
                     await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new[] { "details/1", "details/2" } }, "users/1");
                     await session.StoreAsync(new User { Name = "Bob", LastName = "Weir", DetailIds = new[] { "details/3", "details/4" } }, "users/2");
@@ -1027,8 +1025,7 @@ from 'Users' as u select output(u)", query.ToString());
                     session.Store(new Detail { Number = 3 }, "details/3");
                     session.Store(new Detail { Number = 4 }, "details/4");
 
-
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string>{ "details/1", "details/2" } }, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
                     session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
                     session.SaveChanges();
                 }
@@ -1072,7 +1069,6 @@ from 'Users' as u select output(u)", query.ToString());
                     await session.StoreAsync(new Detail { Number = 2 }, "details/2");
                     await session.StoreAsync(new Detail { Number = 3 }, "details/3");
                     await session.StoreAsync(new Detail { Number = 4 }, "details/4");
-
 
                     await session.StoreAsync(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new[] { "details/1", "details/2" } }, "users/1");
                     await session.StoreAsync(new User { Name = "Bob", LastName = "Weir", DetailIds = new[] { "details/3", "details/4" } }, "users/2");
@@ -1151,7 +1147,6 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal(12345, queryResult[0].DetailNumber);
-
                 }
             }
         }
@@ -1200,7 +1195,6 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jerry Garcia", queryResult[0].FullName);
                     Assert.Equal(12345, queryResult[0].DetailNumber);
-
                 }
             }
         }
@@ -1212,7 +1206,7 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia" , IdNumber = 7}, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", IdNumber = 7 }, "users/1");
                     session.SaveChanges();
                 }
 
@@ -1300,7 +1294,6 @@ from 'Users' as u where (u.Name = $p0) and (u.IsActive = $p1) order by LastName 
 }
 from 'Users' as user select output(user)", query.ToString());
 
-
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
@@ -1324,12 +1317,12 @@ from 'Users' as user select output(user)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        let date = new DateTime(1960, 1, 1)
-                        select new
-                        {
-                            Bday = u.Birthday,
-                            Date = date
-                        };
+                                let date = new DateTime(1960, 1, 1)
+                                select new
+                                {
+                                    Bday = u.Birthday,
+                                    Date = date
+                                };
 
                     RavenTestHelper.AssertEqualRespectingNewLines(
                         @"declare function output(u) {
@@ -1338,14 +1331,11 @@ from 'Users' as user select output(user)", query.ToString());
 }
 from 'Users' as u select output(u)", query.ToString());
 
-
                     var queryResult = query.ToList();
 
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal(new DateTime(1942, 8, 1), queryResult[0].Bday);
                     Assert.Equal(new DateTime(1960, 1, 1), queryResult[0].Date);
-
-
                 }
             }
         }
@@ -1364,11 +1354,11 @@ from 'Users' as u select output(u)", query.ToString());
                 using (var session = store.OpenSession())
                 {
                     var query = from user in session.Query<User>()
-                        select new
-                        {
-                            Date = RavenQuery.Raw<DateTime>("new Date(Date.parse(user.Birthday))"),
-                            Name = RavenQuery.Raw<string>("user.Name.substr(0,3)"),
-                        };
+                                select new
+                                {
+                                    Date = RavenQuery.Raw<DateTime>("new Date(Date.parse(user.Birthday))"),
+                                    Name = RavenQuery.Raw<string>("user.Name.substr(0,3)"),
+                                };
 
                     Assert.Equal("from 'Users' as user select { Date : new Date(Date.parse(user.Birthday)), Name : user.Name.substr(0,3) }",
                         query.ToString());
@@ -1378,11 +1368,10 @@ from 'Users' as u select output(u)", query.ToString());
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal(new DateTime(1942, 8, 1), queryResult[0].Date);
                     Assert.Equal("Jer", queryResult[0].Name);
-
                 }
             }
         }
-        
+
         [Fact]
         public void Custom_Functions_With_Escape_Hatch_Inside_Let()
         {
@@ -1412,9 +1401,9 @@ from 'Users' as u select output(u)", query.ToString());
 	return { Days : days };
 }
 from 'Users' as u select output(u)", query.ToString());
-                    
+
                     var queryResult = query.ToList();
-                    
+
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal(Math.Ceiling((DateTime.UtcNow - new DateTime(1942, 8, 1)).TotalDays), queryResult[0].Days);
                 }
@@ -1428,7 +1417,7 @@ from 'Users' as u select output(u)", query.ToString());
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia"}, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
                     session.SaveChanges();
                 }
 
@@ -1448,7 +1437,6 @@ from 'Users' as u select output(u)", query.ToString());
 
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jer", queryResult[0].Name);
-
                 }
             }
         }
@@ -1465,8 +1453,8 @@ from 'Users' as u select output(u)", query.ToString());
                     session.Store(new Detail { Number = 3 }, "details/3");
                     session.Store(new Detail { Number = 4 }, "details/4");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2", DetailIds = new List<string> { "details/1", "details/2" }}, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1", DetailIds = new List<string> { "details/3", "details/4" }}, "users/2");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
 
                     session.SaveChanges();
                 }
@@ -1475,7 +1463,7 @@ from 'Users' as u select output(u)", query.ToString());
                 {
                     var query = from u in session.Query<User>()
                                 let friend = session.Load<User>(u.FriendId).Name
-                                let details = RavenQuery.Load<Detail>(u.DetailIds).Select(x=> x.Number)
+                                let details = RavenQuery.Load<Detail>(u.DetailIds).Select(x => x.Number)
                                 select new
                                 {
                                     FullName = u.Name + " " + u.LastName,
@@ -1542,7 +1530,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var exception = Assert.Throws<NotSupportedException>(() => query.ToList());
                     Assert.Equal("Using IDocumentSession.Load(IEnumerable<string> ids) inside a query is not supported. " +
                                  "You should use RavenQuery.Load(IEnumerable<string> ids) instead", exception.Message);
-
                 }
             }
         }
@@ -1554,7 +1541,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Roles = new []{"Grateful", "Dead"}}, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", Roles = new[] { "Grateful", "Dead" } }, "users/1");
                     session.SaveChanges();
                 }
 
@@ -1563,7 +1550,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var query = from u in session.Query<User>()
                                 select new
                                 {
-                                    RolesList = u.Roles.Select(a=> new
+                                    RolesList = u.Roles.Select(a => new
                                     {
                                         Id = a
                                     }).ToList(),
@@ -1588,7 +1575,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     Assert.Equal(2, queryResult[0].RolesArray.Length);
                     Assert.Equal("Grateful", queryResult[0].RolesArray[0].Id);
                     Assert.Equal("Dead", queryResult[0].RolesArray[1].Id);
-
                 }
             }
         }
@@ -1609,11 +1595,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        select new
-                        {
-                            FirstName = u.Name,
-                            LastName = u.LastName ?? "Has no last name"
-                        };
+                                select new
+                                {
+                                    FirstName = u.Name,
+                                    LastName = u.LastName ?? "Has no last name"
+                                };
 
                     Assert.Equal("from 'Users' as u select { FirstName : u.Name, " +
                                  "LastName : (u.LastName!=null?u.LastName:\"Has no last name\") }"
@@ -1630,7 +1616,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal("Pigpen", queryResult[2].FirstName);
                     Assert.Equal("Has no last name", queryResult[2].LastName);
-
                 }
             }
         }
@@ -1682,7 +1667,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
 
-
                     Assert.Equal(int.Parse("1234") + int.Parse("1234"), queryResult[0].IntParse);
                     Assert.Equal(1234, queryResult[0].DoubleParse);
                     Assert.Equal(12.34M, queryResult[0].DecimalParse);
@@ -1695,7 +1679,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     Assert.Equal((uint)1234, queryResult[0].UintParse);
                     Assert.Equal((ulong)1234, queryResult[0].UlongParse);
                     Assert.Equal((ushort)1234, queryResult[0].UshortParse);
-
                 }
             }
         }
@@ -1747,7 +1730,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal("Jon", queryResult[4].Name);
                     Assert.Equal("Unknown", queryResult[4].Role);
-
                 }
             }
         }
@@ -1759,7 +1741,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", IdNumber = 19420801, Roles = new []{"The", "Grateful", "Dead"}}, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", IdNumber = 19420801, Roles = new[] { "The", "Grateful", "Dead" } }, "users/1");
                     session.Store(new User { Name = "Bob", LastName = "Weir", Roles = new[] { "o" } }, "users/2");
                     session.Store(new User { Name = "  John   ", LastName = "Doe" }, "users/3");
                     session.SaveChanges();
@@ -1781,11 +1763,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                                     ToUpper = u.Name.ToUpper(),
                                     ToLower = u.Name.ToLower(),
                                     Contains = u.Name.Contains("e"),
-                                    Format = "Name: "+u.Name+", LastName : "+u.LastName,
+                                    Format = "Name: " + u.Name + ", LastName : " + u.LastName,
                                     Split = u.Name.Split('r', StringSplitOptions.None),
                                     SplitLimit = u.Name.Split(new char[] { 'r' }, 3),
                                     SplitArray = u.Name.Split(new char[] { 'r', 'e' }),
-                                    SplitArgument =  u.Name.Split(u.Roles, StringSplitOptions.None),
+                                    SplitArgument = u.Name.Split(u.Roles, StringSplitOptions.None),
                                     SplitStringArray = u.Name.Split(new string[] { "er", "rr" }, StringSplitOptions.None),
 
                                     Replace = u.Name.Replace('r', 'd'),
@@ -1848,7 +1830,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     Assert.Equal("Bo", queryResult[1].Substr);
                     Assert.Equal("Bob, Weir, 0", queryResult[1].Join);
                     Assert.Equal("Name: Bob, LastName : Weir", queryResult[1].Format);
-
 
                     Assert.Equal("  John   ".Trim(), queryResult[2].Trim);
                     Assert.Null(queryResult[2].ArrayJoin);
@@ -1930,7 +1911,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     session.Store(new Detail { Number = 3 }, "details/3");
                     session.Store(new Detail { Number = 4 }, "details/4");
 
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" }}, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia", DetailIds = new List<string> { "details/1", "details/2" } }, "users/1");
                     session.Store(new User { Name = "Bob", LastName = "Weir", DetailIds = new List<string> { "details/3", "details/4" } }, "users/2");
 
                     session.SaveChanges();
@@ -1940,7 +1921,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 {
                     var query = from u in session.Query<User>()
                                 let details = RavenQuery.Load<Detail>(u.DetailIds)
-                                select new 
+                                select new
                                 {
                                     Name = u.Name,
                                     First = details.First(x => x.Number > 1).Number,
@@ -2006,7 +1987,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     Assert.Equal("from 'Users' as u select { Name : u.Name, " +
                                  "DetailNumbers : u.DetailIds.map(function(detailId){return {detailId:detailId,detail:load(detailId)};})" +
                                                             ".map(function(__rvn0){return {Number:__rvn0.detail.Number};}) }"
-                                ,query.ToString());
+                                , query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(2, queryResult.Count);
@@ -2025,7 +2006,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     Assert.Equal(2, details.Count);
                     Assert.Equal(3, details[0].Number);
                     Assert.Equal(4, details[1].Number);
-
                 }
             }
         }
@@ -2038,17 +2018,18 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 var definition = new IndexDefinitionBuilder<User>("UsersByNameAndFriendId")
                 {
                     Map = docs => from doc in docs
-                        select new
-                        {
-                            doc.Name, doc.FriendId
-                        }
+                                  select new
+                                  {
+                                      doc.Name,
+                                      doc.FriendId
+                                  }
                 }.ToIndexDefinition(store.Conventions);
                 store.Maintenance.Send(new PutIndexesOperation(definition));
 
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", FriendId = "users/2" }, "users/1");
-                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1"}, "users/2");
+                    session.Store(new User { Name = "Bob", LastName = "Weir", FriendId = "users/1" }, "users/2");
                     session.Store(new User { Name = "Pigpen", FriendId = "users/1" }, "users/3");
                     session.SaveChanges();
                 }
@@ -2078,7 +2059,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal("Bob", queryResult[1].Name);
                     Assert.Equal("Jerry", queryResult[1].Friend);
-
                 }
             }
         }
@@ -2132,7 +2112,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal("Bob", queryResult[1].Name);
                     Assert.Equal("Jerry", queryResult[1].Friend);
-
                 }
             }
         }
@@ -2151,7 +2130,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                                select new 
+                                select new
                                 {
                                     Name = u.Name,
                                     Metadata = session.Advanced.GetMetadataFor(u),
@@ -2168,11 +2147,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                     Assert.Equal(metadata.Count, queryResult[0].Metadata.Count);
                     Assert.Equal(metadata[Constants.Documents.Metadata.Id], queryResult[0].Metadata[Constants.Documents.Metadata.Id]);
-                    Assert.Equal(metadata[Constants.Documents.Metadata.Collection], queryResult[0].Metadata[Constants.Documents.Metadata.Collection] );
+                    Assert.Equal(metadata[Constants.Documents.Metadata.Collection], queryResult[0].Metadata[Constants.Documents.Metadata.Collection]);
                     Assert.Equal(metadata[Constants.Documents.Metadata.ChangeVector], queryResult[0].Metadata[Constants.Documents.Metadata.ChangeVector]);
                     Assert.Equal(metadata[Constants.Documents.Metadata.RavenClrType], queryResult[0].Metadata[Constants.Documents.Metadata.RavenClrType]);
 
-                    DateTime.TryParse(metadata[Constants.Documents.Metadata.LastModified].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind , out var lastModified);
+                    DateTime.TryParse(metadata[Constants.Documents.Metadata.LastModified].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var lastModified);
                     DateTime.TryParse(queryResult[0].Metadata[Constants.Documents.Metadata.LastModified].ToString(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var lastModifiedFromQueryResult);
 
                     Assert.Equal(lastModified, lastModifiedFromQueryResult);
@@ -2230,7 +2209,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", LastName = "Garcia"}, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
                     session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/2");
                     session.Store(new Detail { Number = 15 }, "details/1");
                     session.SaveChanges();
@@ -2259,7 +2238,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var rawQuery = session.Advanced.RawQuery<RawQueryResult>("from 'Users' as u where u.LastName = \"Garcia\" " +
                                                                              "load \"details/1\" as detail " +
                                                                              "select { Name : u.Name, Detail : detail}").ToList();
-                                    
+
                     Assert.Equal(1, rawQuery.Count);
                     Assert.Equal("Jerry", rawQuery[0].Name);
                     Assert.Equal(15, rawQuery[0].Detail.Number);
@@ -2311,14 +2290,14 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
         }
 
         [Fact]
-        public async Task QueryCompareExchangeValue(){
-        
+        public async Task QueryCompareExchangeValue()
+        {
             using (var store = GetDocumentStore())
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
                 var result = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
                 Assert.Equal("Karmel", result.Value);
-                            
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
@@ -2343,10 +2322,10 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 }
             }
         }
-        
+
         [Fact]
-        public async Task QueryCompareExchangeInnerValue(){
-        
+        public async Task QueryCompareExchangeInnerValue()
+        {
             using (var store = GetDocumentStore())
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("users/1", new User
@@ -2356,7 +2335,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 }, 0));
                 var res = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("users/1"));
                 Assert.Equal("Karmel", res.Value.Name);
-                            
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
@@ -2366,11 +2345,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        select new
-                        {
-                            u.Name,
-                            UniqueUser = RavenQuery.CmpXchg<User>("users/1").Name,
-                        };
+                                select new
+                                {
+                                    u.Name,
+                                    UniqueUser = RavenQuery.CmpXchg<User>("users/1").Name,
+                                };
 
                     Assert.Equal("from 'Users' as u select { Name : u.Name, UniqueUser : cmpxchg(\"users/1\").Name }", query.ToString());
 
@@ -2414,28 +2393,28 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
         }
 
         [Fact]
-        public async Task QueryCompareExchangeWhere(){
-        
+        public async Task QueryCompareExchangeWhere()
+        {
             using (var store = GetDocumentStore())
             {
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom","Jerry", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera","Zeus", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Gaya","Uranus", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Jerry@gmail.com","users/2", 0));
-                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus@gmail.com","users/1", 0));
-              
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom", "Jerry", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera", "Zeus", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Gaya", "Uranus", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Jerry@gmail.com", "users/2", 0));
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Zeus@gmail.com", "users/1", 0));
+
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry"}, "users/2");
-                    session.Store(new User { Name = "Zeus", LastName = "Jerry"}, "users/1");
+                    session.Store(new User { Name = "Jerry" }, "users/2");
+                    session.Store(new User { Name = "Zeus", LastName = "Jerry" }, "users/1");
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        where u.Name == RavenQuery.CmpXchg<string>("Hera") && u.LastName == RavenQuery.CmpXchg<string>("Tom")
-                        select u;
+                                where u.Name == RavenQuery.CmpXchg<string>("Hera") && u.LastName == RavenQuery.CmpXchg<string>("Tom")
+                                select u;
                     var q = session.Advanced
                         .DocumentQuery<User>()
                         .WhereEquals("Name", CmpXchg.Value("Hera"))
@@ -2447,10 +2426,10 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
-                    
+
                     query = from u in session.Query<User>()
-                        where u.Name != RavenQuery.CmpXchg<string>("Hera")
-                        select u;
+                            where u.Name != RavenQuery.CmpXchg<string>("Hera")
+                            select u;
                     Assert.Equal("from 'Users' where Name != cmpxchg($p0)", query.ToString());
                     queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
@@ -2472,7 +2451,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
         [Fact(Skip = "RavenDB-9850")]
         public async Task QueryCompareExchangeWhereWithProperty()
         {
-
             using (var store = GetDocumentStore())
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Tom", "Jerry", 0));
@@ -2510,20 +2488,20 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 using (var session = store.OpenSession())
                 {
                     var query = from u in session.Query<User>()
-                        where u.Name == RavenQuery.CmpXchg<Linked>("ActiveUser").Next.Next.Name
-                        select u;
+                                where u.Name == RavenQuery.CmpXchg<Linked>("ActiveUser").Next.Next.Name
+                                select u;
                     var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg.Value("ActiveUser"));
 
                     Assert.Equal("from 'Users' where Name = cmpxchg($p0).Next.Next.Name", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());
 
                     var queryResult = query.ToList();
-//                    Assert.Equal(1, queryResult.Count);
-//                    Assert.Equal("Zeus", queryResult[0].Name);
+                    //                    Assert.Equal(1, queryResult.Count);
+                    //                    Assert.Equal("Zeus", queryResult[0].Name);
 
                     query = from u in session.Query<User>()
-                        where u.IsActive == RavenQuery.CmpXchg<Linked>("ActiveUser").Users[0].IsActive
-                        select u;
+                            where u.IsActive == RavenQuery.CmpXchg<Linked>("ActiveUser").Users[0].IsActive
+                            select u;
                     Assert.Equal("from 'Users' where IsActive = cmpxchg($p0).Users[0].IsActive", query.ToString());
                     queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
@@ -2541,12 +2519,14 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                 {
                     session.Store(new Employee
                     {
-                        FirstName = "Jerry", LastName = "Garcia"
+                        FirstName = "Jerry",
+                        LastName = "Garcia"
                     }, "employees/1");
 
                     session.Store(new Employee
                     {
-                        FirstName = "Bob", LastName = "Weir"
+                        FirstName = "Bob",
+                        LastName = "Weir"
                     }, "employees/2");
 
                     session.Store(new Order
@@ -2566,14 +2546,14 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
 
                 using (var session = store.OpenSession())
                 {
-                    var complexLinqQuery =  from o in session.Query<Order>()
-                                            where o.OrderedAt.Year <= 1945
-                                            let employee = session.Load<Employee>(o.Employee)
-                                            select new
-                                            {
-                                                Id = o.Id,
-                                                Status = "Ordered at " + o.OrderedAt + ", by " + employee.FirstName + " " + employee.LastName
-                                            };
+                    var complexLinqQuery = from o in session.Query<Order>()
+                                           where o.OrderedAt.Year <= 1945
+                                           let employee = session.Load<Employee>(o.Employee)
+                                           select new
+                                           {
+                                               Id = o.Id,
+                                               Status = "Ordered at " + o.OrderedAt + ", by " + employee.FirstName + " " + employee.LastName
+                                           };
 
                     Assert.Equal("from 'Orders' as o where o.OrderedAt.Year <= $p0 " +
                                  "load o.Employee as employee " +
@@ -2583,7 +2563,6 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var queryResult = complexLinqQuery.ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Ordered at 1942-08-01T00:00:00.0000000, by Jerry Garcia", queryResult[0].Status);
-
                 }
             }
         }
@@ -2687,7 +2666,6 @@ from 'Orders' as o select output(o)", complexLinqQuery.ToString());
 
                     Assert.Equal("orders/3-A", queryResult[2].Id);
                     Assert.Equal(totalSpentOnOrder(o3), queryResult[2].TotalMoneySpent);
-
                 }
             }
         }
@@ -2732,8 +2710,7 @@ from 'Orders' as o select output(o)", complexLinqQuery.ToString());
 	var employeeId = id(employee);
 	return { OrderId : id(o), EmployeeId1 : employeeId, EmployeeId2 : id(employee) };
 }
-from 'Orders' as o load o.Employee as employee select output(o, employee)" , query.ToString());
-                                 
+from 'Orders' as o load o.Employee as employee select output(o, employee)", query.ToString());
 
                     var queryResult = query.ToList();
                     Assert.Equal(1, queryResult.Count);
@@ -2741,7 +2718,6 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)" , que
                     Assert.Equal("orders/1", queryResult[0].OrderId);
                     Assert.Equal("employees/1", queryResult[0].EmployeeId1);
                     Assert.Equal("employees/1", queryResult[0].EmployeeId2);
-
                 }
             }
         }
@@ -2775,7 +2751,6 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)" , que
                                 {
                                     Total = order.Lines.Sum(l => l.PricePerUnit * l.Quantity * (1 - l.Discount))
                                 };
-
 
                     Assert.Equal("from 'Orders' as 'order' " +
                                  "select { Total : order.Lines.map(function(l){return l.PricePerUnit*l.Quantity*(1-l.Discount);}).reduce(function(a, b) { return a + b; }, 0) }"
@@ -2825,7 +2800,6 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)" , que
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Oren", queryResult[0].Name);
                     Assert.Equal("1234-05-06T07:08:09.0000000", queryResult[0].Birthday);
-
                 }
             }
         }
@@ -2838,7 +2812,7 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)" , que
                 var user = new User
                 {
                     Name = "Jerry",
-                    Roles = new[] {"1", "1", "2", "2", "2", "3", "4"},
+                    Roles = new[] { "1", "1", "2", "2", "2", "3", "4" },
                     Details = new List<Detail>
                     {
                         new Detail { Number = 19},
@@ -2873,8 +2847,7 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)" , que
                             IndexOf = u.Roles.ToList().IndexOf("3"),
                             Concat = u.Roles.Concat(roles),
                             Distinct = u.Roles.Distinct(),
-                            ElementAt = u.Details.Select(x=>x.Number).ElementAt(2)
-
+                            ElementAt = u.Details.Select(x => x.Number).ElementAt(2)
                         });
 
                     Assert.Equal("from 'Users' as u select { " +
@@ -2907,7 +2880,6 @@ from 'Orders' as o load o.Employee as employee select output(o, employee)" , que
                     Assert.Equal(user.Roles.Concat(roles), queryResult[0].Concat);
                     Assert.Equal(user.Roles.Distinct(), queryResult[0].Distinct);
                     Assert.Equal(user.Details.Select(x => x.Number).ElementAt(2), queryResult[0].ElementAt);
-
                 }
             }
         }
@@ -2955,18 +2927,17 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Jerry", queryResult[0].Name);
                     Assert.Equal(15, queryResult[0].Detail.Number);
-
                 }
             }
         }
-        
+
         [Fact]
         public void Can_Project_With_JsonPropertyAttribute()
         {
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
-                var ids = new[] {"ids/1"};
+                var ids = new[] { "ids/1" };
 
                 var projection =
                     from s in session.Query<Document>().Where(x => x.Id.In(ids))
@@ -2974,9 +2945,9 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     {
                         Id = s.Id,
                         Results = s.Results.Select(x => new
-                            {
-                                ResultValue = x.ResultValue
-                            })
+                        {
+                            ResultValue = x.ResultValue
+                        })
                             .ToArray()
                     };
 
@@ -3011,7 +2982,7 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                 Assert.Equal(10, result[0].Result);
             }
         }
-        
+
         [Fact]
         public void Can_Project_Where_Id_StartsWith()
         {
@@ -3027,15 +2998,15 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                 session.SaveChanges();
 
                 var query = session.Query<User>().Where(u => u.Id.StartsWith("bunny")).ToList();
-                
+
                 Assert.Equal(3, query.Count);
             }
         }
-        
+
         [Fact]
-        public void Can_Use_DefaultIfEmpty() 
+        public void Can_Use_DefaultIfEmpty()
         {
-            using (var store = GetDocumentStore ())
+            using (var store = GetDocumentStore())
             {
                 var lists = new Lists
                 {
@@ -3048,42 +3019,42 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     Doubles = new List<double>(),
                     Users = new List<User>()
                 };
-                
+
                 using (var session = store.OpenSession())
                 {
-                    session.Store(lists);           
+                    session.Store(lists);
                     session.SaveChanges();
                 }
-                
+
                 using (var session = store.OpenSession())
                 {
                     var query = from l in session.Query<Lists>()
-                                select new 
+                                select new
                                 {
-                                      Strings = l.Strings.DefaultIfEmpty(),
-                                      Bools = l.Bools.DefaultIfEmpty(),
-                                      Chars = l.Chars.DefaultIfEmpty(),
-                                      Ints = l.Ints.DefaultIfEmpty(),
-                                      Longs = l.Longs.DefaultIfEmpty(),                                     
-                                      Decimals = l.Decimals.DefaultIfEmpty(),
-                                      Doubles = l.Doubles.DefaultIfEmpty(),
-                                      Users = l.Users.DefaultIfEmpty()                                  
-                                };                   
-                    
+                                    Strings = l.Strings.DefaultIfEmpty(),
+                                    Bools = l.Bools.DefaultIfEmpty(),
+                                    Chars = l.Chars.DefaultIfEmpty(),
+                                    Ints = l.Ints.DefaultIfEmpty(),
+                                    Longs = l.Longs.DefaultIfEmpty(),
+                                    Decimals = l.Decimals.DefaultIfEmpty(),
+                                    Doubles = l.Doubles.DefaultIfEmpty(),
+                                    Users = l.Users.DefaultIfEmpty()
+                                };
+
                     var result = query.ToList();
-                    
-                    Assert.Equal(lists.Strings.DefaultIfEmpty() , result[0].Strings);
-                    Assert.Equal(lists.Bools.DefaultIfEmpty() , result[0].Bools);
-                    Assert.Equal(lists.Chars.DefaultIfEmpty() , result[0].Chars);
-                    Assert.Equal(lists.Ints.DefaultIfEmpty() , result[0].Ints);
-                    Assert.Equal(lists.Longs.DefaultIfEmpty() , result[0].Longs);
-                    Assert.Equal(lists.Decimals.DefaultIfEmpty() , result[0].Decimals);
-                    Assert.Equal(lists.Doubles.DefaultIfEmpty() , result[0].Doubles);
-                    Assert.Equal(lists.Users.DefaultIfEmpty() , result[0].Users);
+
+                    Assert.Equal(lists.Strings.DefaultIfEmpty(), result[0].Strings);
+                    Assert.Equal(lists.Bools.DefaultIfEmpty(), result[0].Bools);
+                    Assert.Equal(lists.Chars.DefaultIfEmpty(), result[0].Chars);
+                    Assert.Equal(lists.Ints.DefaultIfEmpty(), result[0].Ints);
+                    Assert.Equal(lists.Longs.DefaultIfEmpty(), result[0].Longs);
+                    Assert.Equal(lists.Decimals.DefaultIfEmpty(), result[0].Decimals);
+                    Assert.Equal(lists.Doubles.DefaultIfEmpty(), result[0].Doubles);
+                    Assert.Equal(lists.Users.DefaultIfEmpty(), result[0].Users);
                 }
             }
         }
-               					
+
         [Fact]
         public void Custom_Functions_With_SelectMany()
         {
@@ -3108,7 +3079,7 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     Name = "ChildlessParent",
                     Children = null
                 };
-                
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(nestedNode);
@@ -3131,10 +3102,10 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
-                    
+
                     Assert.Equal(50, queryResult[0].Grandchildren.Count);
                     Assert.Null(queryResult[1].Grandchildren);
-                    
+
                     for (var i = 0; i < 50; i++)
                     {
                         Assert.Equal("Grandchild" + i, queryResult[0].Grandchildren[i].Name);
@@ -3142,31 +3113,31 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                 }
             }
         }
-                       
+
         [Fact]
-        public async Task Can_SelectMany_From_Dictionary() 
+        public async Task Can_SelectMany_From_Dictionary()
         {
-            using (var store = GetDocumentStore ()) 
+            using (var store = GetDocumentStore())
             {
-                using (var session = store.OpenAsyncSession ()) 
+                using (var session = store.OpenAsyncSession())
                 {
-                    var testable = new TestableDTO 
+                    var testable = new TestableDTO
                     {
-                        Data = new Dictionary<string, IList<string>> 
+                        Data = new Dictionary<string, IList<string>>
                         {
                             { "a", new List<string> { "a1", "a2", "a3" } },
                             { "b", new List<string> { "b1", "b2", "b3" } }
                         }
                     };
-                                                   
-                    await session.StoreAsync(testable);                   
+
+                    await session.StoreAsync(testable);
                     await session.SaveChangesAsync();
                 }
-                
-                using (var session = store.OpenAsyncSession ()) 
+
+                using (var session = store.OpenAsyncSession())
                 {
                     var query = from item in session.Query<TestableDTO>()
-                                select new 
+                                select new
                                 {
                                     Id = item.Id,
                                     data = item.Data,
@@ -3175,7 +3146,7 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                                                       .DefaultIfEmpty()
                                                       .ToList()
                                 };
-                    
+
                     Assert.Equal("from 'TestableDTOs' as item select { " +
                                  "Id : id(item), " +
                                  "data : item.Data, " +
@@ -3185,20 +3156,20 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                                                     ".reduce(function(a, b) { return a.concat(b);},[])" +
                                                     ".map((function(n){return n;}))) }"
                                 , query.ToString());
-                    
+
                     var first = await query.FirstAsync();
-                    
-                    Assert.Collection ( first.values,
-                        i => Assert.Equal ( "a1", i ),
-                        i => Assert.Equal ( "a2", i ),
-                        i => Assert.Equal ( "a3", i ),
-                        i => Assert.Equal ( "b1", i ),
-                        i => Assert.Equal ( "b2", i ),
-                        i => Assert.Equal ( "b3", i ) );
+
+                    Assert.Collection(first.values,
+                        i => Assert.Equal("a1", i),
+                        i => Assert.Equal("a2", i),
+                        i => Assert.Equal("a3", i),
+                        i => Assert.Equal("b1", i),
+                        i => Assert.Equal("b2", i),
+                        i => Assert.Equal("b3", i));
                 }
             }
         }
-        
+
         [Fact]
         public void Custom_Functions_With_Nested_Loads_Simple()
         {
@@ -3209,9 +3180,9 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     session.Store(new Detail { Number = 12345 }, "detail/1");
                     session.Store(new Detail { Number = 67890 }, "detail/2");
 
-                    session.Store(new User { Name = "Jerry", DetailId = "detail/1", FriendId = "users/2"}, "users/1");
-                    session.Store(new User { Name = "Bob", DetailId = "detail/2", FriendId = "users/1"}, "users/2");
-                                                                             
+                    session.Store(new User { Name = "Jerry", DetailId = "detail/1", FriendId = "users/2" }, "users/1");
+                    session.Store(new User { Name = "Bob", DetailId = "detail/2", FriendId = "users/1" }, "users/2");
+
                     session.SaveChanges();
                 }
 
@@ -3238,50 +3209,50 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
                     var queryResult = query.ToList();
 
                     Assert.Equal(2, queryResult.Count);
-                    
-                    Assert.Equal("Jerry" ,queryResult[0].Name);
-                    Assert.Equal(12345 ,queryResult[0].Mine);
-                    Assert.Equal(67890 ,queryResult[0].Friends);
-                    
-                    Assert.Equal("Bob" ,queryResult[1].Name);
-                    Assert.Equal(67890 ,queryResult[1].Mine);
-                    Assert.Equal(12345 ,queryResult[1].Friends);
+
+                    Assert.Equal("Jerry", queryResult[0].Name);
+                    Assert.Equal(12345, queryResult[0].Mine);
+                    Assert.Equal(67890, queryResult[0].Friends);
+
+                    Assert.Equal("Bob", queryResult[1].Name);
+                    Assert.Equal(67890, queryResult[1].Mine);
+                    Assert.Equal(12345, queryResult[1].Friends);
                 }
             }
         }
-        
+
         [Fact]
         public void Custom_Functions_With_Nested_Loads_Complex()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
-                {                    
+                {
                     session.Store(new Company
                     {
                         Name = "GD",
-                        EmployeesIds = new List<string> {"employees/1","employees/2", "employees/3"}
+                        EmployeesIds = new List<string> { "employees/1", "employees/2", "employees/3" }
                     }, "companies/1");
-                    
+
                     session.Store(new Employee
                     {
                         FirstName = "Bob",
                         LastName = "Weir",
                         ReportsTo = "employees/2"
                     }, "employees/1");
-                    
+
                     session.Store(new Employee
                     {
                         FirstName = "Jerry",
                         LastName = "Garcia"
                     }, "employees/2");
-                    
+
                     session.Store(new Order
                     {
-                        OrderedAt = new DateTime(1942,8,1),
+                        OrderedAt = new DateTime(1942, 8, 1),
                         Company = "companies/1",
                     }, "orders/1");
-                                                         
+
                     session.SaveChanges();
                 }
 
@@ -3309,14 +3280,14 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                     var queryResult = query.ToList();
 
                     Assert.Equal(1, queryResult.Count);
-                    
-                    Assert.Equal("GD" ,queryResult[0].Company);
-                    Assert.Equal("Bob Weir" ,queryResult[0].Employee);
-                    Assert.Equal("Jerry Garcia" ,queryResult[0].Manager);
+
+                    Assert.Equal("GD", queryResult[0].Company);
+                    Assert.Equal("Bob Weir", queryResult[0].Employee);
+                    Assert.Equal("Jerry Garcia", queryResult[0].Manager);
                 }
             }
         }
-        
+
         [Fact]
         public void Can_Load_SingleDocument_When_Declare()
         {
@@ -3334,7 +3305,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                         }
                     }, "groups/1");
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", Groups = new List<string>() { "groups/1" } }, "users/1");
-                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null}, "users/2");
+                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null }, "users/2");
                     session.Store(new User { Name = "Bob", LastName = "Weir" }, "users/3");
                     session.SaveChanges();
                 }
@@ -3342,22 +3313,21 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 using (var session = store.OpenSession())
                 {
                     var query = from user in session.Query<User>()
-                        let configuration = RavenQuery.Load<Configuration>("configuration/global")
-                        let test = 1    // This will create a (declare) function
-                        let groups = RavenQuery.Load<Group>(user.Groups)
-                        select new
-                        {                           
-                            Language = configuration.Language
-                        };
-
+                                let configuration = RavenQuery.Load<Configuration>("configuration/global")
+                                let test = 1    // This will create a (declare) function
+                                let groups = RavenQuery.Load<Group>(user.Groups)
+                                select new
+                                {
+                                    Language = configuration.Language
+                                };
 
                     var queryResult = query.ToList();
 
                     Assert.Equal("nl", queryResult[0].Language);
                 }
             }
-        }        
-                
+        }
+
         [Fact]
         public void Can_Load_Old_Document_With_Undefined_Member()
         {
@@ -3376,7 +3346,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                         }
                     }, "groups/1");
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", Groups = new List<string>() { "groups/1" } }, "users/1");
-                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null}, "users/2");
+                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null }, "users/2");
                     session.Store(new OldUser.User { Name = "Bob", LastName = "Weir" }, "users/3");
                     session.SaveChanges();
                 }
@@ -3387,25 +3357,25 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                                        let groups = RavenQuery.Load<Group>(user.Groups)
                                        select new
                                        {
-                                           Language = groups.Select(a => a.Name)                                          
+                                           Language = groups.Select(a => a.Name)
                                        }).ToList();
-                                        
+
                     Assert.NotEmpty(queryResult[0].Language);
                     Assert.Empty(queryResult[1].Language);
                     Assert.Empty(queryResult[2].Language);
                 }
             }
         }
-        
+
         [Fact]
         public void Can_Do_Null_Comparison_On_Undefined_Member()
-        {                      
+        {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia", Groups = new List<string>() { "groups/1" } }, "users/1");
-                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null}, "users/2");
+                    session.Store(new User { Name = "John", LastName = "Doe", Groups = null }, "users/2");
                     session.Store(new OldUser.User { Name = "Bob", LastName = "Weir" }, "users/3");
 
                     session.SaveChanges();
@@ -3418,29 +3388,29 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                                 {
                                     HasGroups = user.Groups != null
                                 };
-                    
+
                     Assert.Equal("from 'Users' as user select " +
                                  "{ HasGroups : user.Groups!=null }", query.ToString());
-                    
+
                     var queryResult = query.ToList();
-                    
+
                     Assert.True(queryResult[0].HasGroups);
                     Assert.False(queryResult[1].HasGroups);
                     Assert.False(queryResult[2].HasGroups);
                 }
             }
         }
-        
+
         [Fact]
         public void IsNullOrEmptySupport()
-        {                      
+        {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" });
                     session.Store(new User { Name = "Bob", LastName = "" });
-                    session.Store(new User { Name = "Phil"});
+                    session.Store(new User { Name = "Phil" });
                     session.SaveChanges();
                 }
 
@@ -3451,32 +3421,31 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                                 {
                                     Name = string.IsNullOrEmpty(user.LastName) ? user.Name : user.LastName,
                                 };
-                    
+
                     Assert.Equal("from 'Users' as user " +
                                  "select { Name : (user.LastName == null || user.LastName === \"\")?user.Name:user.LastName }", query.ToString());
-                    
+
                     var queryResult = query.ToList();
-                    
+
                     Assert.Equal(3, queryResult.Count);
-                    
+
                     Assert.Equal("Garcia", queryResult[0].Name);
                     Assert.Equal("Bob", queryResult[1].Name);
                     Assert.Equal("Phil", queryResult[2].Name);
-
                 }
             }
         }
-        
+
         [Fact]
         public void IsNullOrWhitespaceSupport()
-        {                      
+        {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Jerry", LastName = "Garcia" });
                     session.Store(new User { Name = "Bob", LastName = " " });
-                    session.Store(new User { Name = "Phil"});
+                    session.Store(new User { Name = "Phil" });
                     session.SaveChanges();
                 }
 
@@ -3487,50 +3456,50 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                                 {
                                     Name = string.IsNullOrWhiteSpace(user.LastName) ? user.Name : user.LastName,
                                 };
-                    
+
                     Assert.Equal("from 'Users' as user " +
                                  "select { Name : (!user.LastName || !user.LastName.trim())?user.Name:user.LastName }", query.ToString());
-                    
+
                     var queryResult = query.ToList();
-                    
+
                     Assert.Equal(3, queryResult.Count);
-                    
+
                     Assert.Equal("Garcia", queryResult[0].Name);
                     Assert.Equal("Bob", queryResult[1].Name);
                     Assert.Equal("Phil", queryResult[2].Name);
                 }
             }
         }
-        
+
         [Fact]
         public void CanProjectWithEnumerableCount()
-        {               
+        {
             //https://issues.hibernatingrhinos.com/issue/RDBC-99
-            
+
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User { Name = "Jerry", Roles = new []{ "1", "2" }});
+                    session.Store(new User { Name = "Jerry", Roles = new[] { "1", "2" } });
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
-                {                   
+                {
                     var query = from user in session.Query<User>()
                                 select new
                                 {
                                     user.Name,
                                     NumberOfRoles = user.Roles.Count()
                                 };
-                    
+
                     Assert.Equal("from 'Users' as user " +
-                                 "select { Name : user.Name, NumberOfRoles : user.Roles.length }", 
+                                 "select { Name : user.Name, NumberOfRoles : user.Roles.length }",
                                 query.ToString());
-                    
+
                     var queryResult = query.ToList();
-                    
-                    Assert.Equal(1, queryResult.Count);                    
+
+                    Assert.Equal(1, queryResult.Count);
                     Assert.Equal(2, queryResult[0].NumberOfRoles);
                 }
             }
@@ -3545,8 +3514,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 {
                     session.Store(new User
                     {
-                        Name = "Jerry", 
-                        LastName = "Garcia", 
+                        Name = "Jerry",
+                        LastName = "Garcia",
                         Birthday = new DateTime(1942, 8, 1)
                     });
 
@@ -3564,11 +3533,11 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 {
                     var today = DateTime.Today;
                     var query = from user in session.Query<User>()
-                        select new
-                        {
-                            Name = user.Name + ' ' + user.LastName, 
-                            OldTimer = user.Birthday < today.AddYears(-60)
-                        };
+                                select new
+                                {
+                                    Name = user.Name + ' ' + user.LastName,
+                                    OldTimer = user.Birthday < today.AddYears(-60)
+                                };
 
                     var queryResult = query.ToList();
 
@@ -3583,13 +3552,12 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             }
         }
 
-
         public class ProjectionParameters : RavenTestBase
         {
             public ProjectionParameters(ITestOutputHelper output) : base(output)
             {
             }
-            
+
             public class Document
             {
                 public string Id { get; set; }
@@ -3605,9 +3573,9 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 public decimal TargetValue { get; set; }
             }
 
-            Document doc1;
-            Document doc2;
-            Document doc3;
+            private Document doc1;
+            private Document doc2;
+            private Document doc3;
 
             private void SetUp(IDocumentStore store)
             {
@@ -3679,8 +3647,8 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
 
                                           .Select(x => new Result
                                           {
-                                                  TargetId = x.TargetId,
-                                                  TargetValue = x.TargetValue
+                                              TargetId = x.TargetId,
+                                              TargetValue = x.TargetValue
                                           })
                             };
 
@@ -3703,7 +3671,6 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
 
                         values = result[1].Values.ToList();
                         Assert.Equal(0, values.Count);
-
                     }
                 }
             }
@@ -3717,7 +3684,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
 
                     using (var session = store.OpenSession())
                     {
-                        var ids = new[] {doc1.Id, doc2.Id, doc3.Id};
+                        var ids = new[] { doc1.Id, doc2.Id, doc3.Id };
                         var targetIds = new List<string>
                         {
                             "id2"
@@ -3824,6 +3791,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             public List<User> Users { get; set; }
             public string Name { get; set; }
         }
+
         private class User
         {
             public string Id { get; set; }
@@ -3839,21 +3807,24 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             public List<Detail> Details { get; set; }
             public string DetailShortId { get; set; }
             public List<string> Groups { get; set; }
-
         }
+
         private class Detail
         {
             public int Number { get; set; }
         }
+
         private class QueryResult
         {
             public string FullName { get; set; }
         }
+
         private class RawQueryResult
         {
             public string Name { get; set; }
             public Detail Detail { get; set; }
         }
+
         private class IndexQueryResult
         {
             public string Name { get; set; }
@@ -3872,33 +3843,33 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
         private class Result
         {
             [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
-            public decimal? ResultValue { get; set; }                
+            public decimal? ResultValue { get; set; }
         }
-        
+
         private class Lists
         {
             public List<string> Strings { get; set; }
-            public List<bool> Bools { get; set; }           
+            public List<bool> Bools { get; set; }
             public List<char> Chars { get; set; }
             public List<int> Ints { get; set; }
             public List<long> Longs { get; set; }
             public List<decimal> Decimals { get; set; }
             public List<double> Doubles { get; set; }
-            public List<User> Users { get; set; }           
+            public List<User> Users { get; set; }
         }
-                
+
         private class Node
         {
             public string Name { get; set; }
             public List<Node> Children = new List<Node>();
         }
-        
-        private class TestableDTO 
+
+        private class TestableDTO
         {
             public string Id { get; set; }
-            public IDictionary<string, IList<string>> Data { get; set; } 
+            public IDictionary<string, IList<string>> Data { get; set; }
         }
-        
+
         private class Employee
         {
             public string Id { get; set; }
@@ -3906,7 +3877,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             public string LastName { get; set; }
             public string ReportsTo { get; set; }
         }
-        
+
         private class Configuration
         {
             public string Language { get; set; }
@@ -3917,7 +3888,7 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
             // Multilanguage name
             public Dictionary<string, string> Name { get; set; }
         }
-        
+
         private class OldUser
         {
             public class User
@@ -3926,7 +3897,5 @@ from 'Orders' as o load o.Company as company select output(o, company)", query.T
                 public string LastName { get; set; }
             }
         }
-        
     }
 }
-
