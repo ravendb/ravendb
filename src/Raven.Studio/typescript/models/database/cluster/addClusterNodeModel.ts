@@ -5,6 +5,7 @@ class addClusterNodeModel {
     nodeTag = ko.observable<string>();
     addAsWatcher = ko.observable<boolean>(false);
     assignedCores = ko.observable<number>(undefined);
+    maxUtilizedCores = ko.observable<number>(undefined);
     usaAvailableCores = ko.observable<boolean>(true);
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({

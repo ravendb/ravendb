@@ -50,7 +50,15 @@
                                 <label for="assigned-cores" class="control-label">Assigned Cores</label>
                                 <div class="flex-grow">
                                     <div data-bind="validationElement: assignedCores">
-                                        <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: assignedCores, disable: usaAvailableCores" id="assigned-cores" placeholder="Enter number of assigned cores for the new node">
+                                        <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: assignedCores, disable: usaAvailableCores" id="assigned-cores" placeholder="Enter the number of assigned cores for the new node">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="max-utilized-cores" class="control-label">Maximum cores to use</label>
+                                <div class="flex-grow">
+                                    <div>
+                                        <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: maxUtilizedCores, disable: usaAvailableCores" id="max-utilized-cores" placeholder="Enter the number of the maximum utilized cores for the new node">
                                     </div>
                                 </div>
                             </div>

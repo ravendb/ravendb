@@ -61,7 +61,7 @@ class addClusterNode extends viewModelBase {
 
         this.spinners.save(true);
 
-        new addNodeToClusterCommand(this.model.serverUrl(), this.model.addAsWatcher(), this.model.assignedCores(), this.model.nodeTag())
+        new addNodeToClusterCommand(this.model.serverUrl(), this.model.addAsWatcher(), this.model.assignedCores(), this.model.maxUtilizedCores(), this.model.nodeTag())
             .execute()
             .done(() => this.goToClusterView())
             .always(() => this.spinners.save(false));
