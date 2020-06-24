@@ -178,6 +178,9 @@ namespace Raven.Server.Rachis
 
         public void Record(string message)
         {
+            if (_current == null)
+                return; // ignore - shutting down
+
             Timings.Add(new RachisLogEntry
             {
                 Message = message,

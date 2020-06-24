@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 var backupDetails = (NextBackup)backupTaskDetails;
 
-                if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
+                if (ShouldRunBackupAfterTimerCallbackAndRescheduleIfNeeded(backupDetails, out PeriodicBackup periodicBackup) == false)
                     return;
 
                 StartBackupTaskAndRescheduleIfNeeded(periodicBackup, backupDetails);
@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 var backupDetails = (NextBackup)backupTaskDetails;
 
-                if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
+                if (ShouldRunBackupAfterTimerCallbackAndRescheduleIfNeeded(backupDetails, out PeriodicBackup periodicBackup) == false)
                     return;
 
                 var remainingInterval = backupDetails.TimeSpan - MaxTimerTimeout;
@@ -624,10 +624,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             return isFullBackup ? "Snapshot" : "Incremental Snapshot";
         }
 
-        private bool ShouldRunBackupAfterTimerCallback(NextBackup backupInfo, out PeriodicBackup periodicBackup)
+        private bool ShouldRunBackupAfterTimerCallbackAndRescheduleIfNeeded(NextBackup backupInfo, out PeriodicBackup periodicBackup)
         {
             if (_periodicBackups.TryGetValue(backupInfo.TaskId, out periodicBackup) == false)
             {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup {backupInfo.TaskId}, doesn't exist anymore");
+
                 // periodic backup doesn't exist anymore
                 return false;
             }
@@ -644,6 +647,31 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             var taskStatus = GetTaskStatus(topology, periodicBackup.Configuration);
+            if (_forTestingPurposes != null && _forTestingPurposes.SimulateClusterDownStatus)
+            {
+                taskStatus = TaskStatus.ClusterDown;
+                _forTestingPurposes.ClusterDownStatusSimulated = true;
+            }
+
+            string msg;
+            switch (taskStatus)
+            {
+                case TaskStatus.ActiveByCurrentNode:
+                    msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be executed on current node.";
+                    break;
+                case TaskStatus.ClusterDown:
+                    msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be rescheduled on current node.";
+                    var status = GetBackupStatus(backupInfo.TaskId, periodicBackup.BackupStatus);
+                    periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, status));
+                    break;
+                default:
+                    msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be canceled on current node.";
+                    break;
+            }
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations(msg);
+
             return taskStatus == TaskStatus.ActiveByCurrentNode;
         }
 
@@ -997,6 +1025,22 @@ namespace Raven.Server.Documents.PeriodicBackup
                 [Constants.Documents.Collections.AllDocumentsCollection] = minLastEtag,
                 [Constants.TimeSeries.All] = minLastEtag
             };
+        }
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal bool SimulateClusterDownStatus;
+            internal bool ClusterDownStatusSimulated;
         }
     }
 }
