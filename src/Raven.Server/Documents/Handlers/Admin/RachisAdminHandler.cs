@@ -305,6 +305,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (assignedCores <= 0)
                 throw new ArgumentException("Assigned cores must be greater than 0!");
 
+            var maxUtilizedCores = GetIntValueQueryString("maxUtilizedCores", false);
+
             nodeUrl = nodeUrl.Trim();
             if (Uri.IsWellFormedUriString(nodeUrl, UriKind.Absolute) == false)
                 throw new InvalidOperationException($"Given node URL '{nodeUrl}' is not in a correct format.");
@@ -377,15 +379,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             ServerStore.EnsureNotPassive();
 
-            var setCustomUtilizedCores = false;
-            if (assignedCores != null)
-            {
-                setCustomUtilizedCores = true;
-            }
-            else
-            {
-                assignedCores = ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
-            }
+            assignedCores ??= ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
+            if (maxUtilizedCores != null)
+                assignedCores = Math.Min(assignedCores.Value, maxUtilizedCores.Value);
 
             Debug.Assert(assignedCores <= nodeInfo.NumberOfCores);
 
@@ -507,7 +503,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         var detailsPerNode = new DetailsPerNode
                         {
                             UtilizedCores = assignedCores.Value,
-                            CustomUtilizedCores = setCustomUtilizedCores,
+                            MaxUtilizedCores = maxUtilizedCores,
                             NumberOfCores = nodeInfo.NumberOfCores,
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
                             UsableMemoryInGb = nodeInfo.UsableMemoryInGb,
@@ -579,13 +575,17 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var nodeTag = GetStringQueryString("nodeTag");
             var newAssignedCores = GetIntValueQueryString("newAssignedCores");
+            var maxUtilizedCores = GetIntValueQueryString("maxUtilizedCores", required: false);
 
             Debug.Assert(newAssignedCores != null);
 
             if (newAssignedCores <= 0)
                 throw new ArgumentException("The new assigned cores value must be larger than 0");
+            
+            if (maxUtilizedCores != null && newAssignedCores > maxUtilizedCores)
+                throw new ArgumentException("Max utilized cores must be larger or equal to the new assigned cores");
 
-            await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, GetRaftRequestIdFromQuery());
+            await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, maxUtilizedCores, GetRaftRequestIdFromQuery());
             NoContentStatus();
         }
 
