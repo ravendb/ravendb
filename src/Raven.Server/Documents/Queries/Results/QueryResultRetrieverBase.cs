@@ -1,25 +1,25 @@
 ﻿using System;
-using System.Linq;
-using Lucene.Net.Documents;
-using Sparrow.Json.Parsing;
-using Sparrow.Json;
 using System.Collections.Generic;
-using Raven.Client.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.Json;
+using System.Linq;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime;
+using Lucene.Net.Documents;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Raven.Server.Documents.Indexes;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -50,6 +50,7 @@ namespace Raven.Server.Documents.Queries.Results
         private QueryTimingsScope _projectionScope;
         private QueryTimingsScope _projectionStorageScope;
         private QueryTimingsScope _functionScope;
+        private QueryTimingsScope _loadScope;
 
         private TimeSeriesRetriever _timeSeriesRetriever;
 
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                     if (doc == null)
                         return null;
-                    return GetProjectionFromDocument(doc, input, scoreDoc, FieldsToFetch, _context, state);
+                    return GetProjectionFromDocumentInternal(doc, input, scoreDoc, FieldsToFetch, _context, state);
                 }
 
                 var documentLoaded = false;
@@ -193,6 +194,15 @@ namespace Raven.Server.Documents.Queries.Results
         }
 
         public Document GetProjectionFromDocument(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
+        {
+            using (RetrieverScope?.Start())
+            using (_projectionScope = _projectionScope?.Start() ?? RetrieverScope?.For(nameof(QueryTimingsScope.Names.Projection)))
+            {
+                return GetProjectionFromDocumentInternal(doc, luceneDoc, scoreDoc, fieldsToFetch, context, state);
+            }
+        }
+
+        private Document GetProjectionFromDocumentInternal(Document doc, Lucene.Net.Documents.Document luceneDoc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, JsonOperationContext context, IState state)
         {
             var result = new DynamicJsonValue();
 
@@ -516,7 +526,6 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     _loadedDocumentIds.Add(fieldToFetch.QueryField.SourceAlias);
                 }
-
                 else if (fieldToFetch.QueryField.IsParameter)
                 {
                     if (_query.QueryParameters == null)
@@ -527,7 +536,6 @@ namespace Raven.Server.Documents.Queries.Results
 
                     _loadedDocumentIds.Add(id.ToString());
                 }
-
                 else if (fieldToFetch.QueryField.LoadFromAlias != null)
                 {
                     if (_loadedDocumentsByAliasName.TryGetValue(fieldToFetch.QueryField.LoadFromAlias, out var loadedDoc))
@@ -535,7 +543,6 @@ namespace Raven.Server.Documents.Queries.Results
                         IncludeUtil.GetDocIdFromInclude(loadedDoc.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _database.IdentityPartsSeparator);
                     }
                 }
-
                 else if (fieldToFetch.CanExtractFromIndex)
                 {
                     if (luceneDoc != null)
@@ -548,12 +555,10 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                     }
                 }
-
                 else
                 {
                     IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds, _database.IdentityPartsSeparator);
                 }
-
             }
             else
             {
@@ -581,7 +586,8 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (_loadedDocuments.TryGetValue(docId, out var doc) == false)
                 {
-                    _loadedDocuments[docId] = doc = LoadDocument(docId);
+                    using (_loadScope = _loadScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Load)))
+                        _loadedDocuments[docId] = doc = LoadDocument(docId);
                 }
                 if (doc == null)
                     continue;
@@ -643,7 +649,8 @@ namespace Raven.Server.Documents.Queries.Results
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     documentId,
-                    args);
+                    args,
+                    _functionScope);
 
                 return value;
             }
@@ -709,17 +716,15 @@ namespace Raven.Server.Documents.Queries.Results
                         continue;
                     }
 
-
                     if (kvp.Value.Type != DeclaredFunction.FunctionType.JavaScript)
                         continue;
 
                     runner.AddScript(kvp.Value.FunctionText);
                 }
             }
-
         }
 
-        private object InvokeFunction(string methodName, Query query, string documentId, object[] args)
+        private object InvokeFunction(string methodName, Query query, string documentId, object[] args, QueryTimingsScope timings)
         {
             if (query.DeclaredFunctions != null &&
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) &&
@@ -731,7 +736,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var key = new QueryKey(query.DeclaredFunctions);
             using (_database.Scripts.GetScriptRunner(key, readOnly: true, patchRun: out var run))
-            using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args))
+            using (var result = run.Run(_context, _context as DocumentsOperationContext, methodName, args, timings))
             {
                 _includeDocumentsCommand?.AddRange(run.Includes, documentId);
                 _includeCompareExchangeValuesCommand?.AddRange(run.CompareExchangeValueIncludes);

@@ -32,11 +32,6 @@ namespace Raven.Server.Documents.Queries.Results
             _context = context;
         }
 
-        public Document Get(Document doc)
-        {
-            return GetProjectionFromDocument(doc, null, ZeroScore, FieldsToFetch, _context, null);
-        }
-
         public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
         {
             throw new NotSupportedException("Graph Queries do not deal with Lucene indexes.");
