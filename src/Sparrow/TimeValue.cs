@@ -77,6 +77,29 @@ namespace Sparrow
             };
         }
 
+        public double TimesInInterval(DateTime from, DateTime to)
+        {
+            if (from >= to)
+                return 0;
+
+            switch (Unit)
+            {
+                case TimeValueUnit.Month:
+                    return (to.TotalMonths() - from.TotalMonths()) / (double)Value;
+                case TimeValueUnit.Second:
+                    return to.Subtract(from).TotalSeconds / Value;
+                default:
+                    throw new ArgumentException();
+            }
+        }
+
+        public bool IsMultiple(TimeValue multiple)
+        {
+            if (Unit != multiple.Unit)
+                return false;
+            return multiple.Value % Value == 0;
+        }
+
         private void Append(StringBuilder builder, int value, string singular)
         {
             if (value <= 0)
@@ -275,6 +298,12 @@ namespace Sparrow
             return (int)result;
         }
 
+        public static TimeValue operator *(double c, TimeValue b)
+        {
+            b.Value = (int)(b.Value * c);
+            return b;
+        }
+
         public static TimeValue operator +(TimeValue a, TimeValue b)
         {
             if (a.Value == 0)
@@ -345,6 +374,19 @@ namespace Sparrow
             return new TimeSpan(0, 0, a.Value);
         }
 
+        public static explicit operator DateTime(TimeValue a)
+        {
+            switch (a.Unit)
+            {
+                case TimeValueUnit.Second:
+                    return new DateTime(0).AddSeconds(a.Value);
+                case TimeValueUnit.Month:
+                    return new DateTime(0).AddMonths(a.Value);
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
         public static implicit operator TimeValue(TimeSpan a)
         {
             return new TimeValue(checked((int)a.TotalSeconds), TimeValueUnit.Second);
@@ -389,6 +431,13 @@ namespace Sparrow
                 default:
                     throw new ArgumentOutOfRangeException(nameof(time.Unit), $"Not supported time value unit '{time.Unit}'");
             }
+        }
+
+        public static int TotalMonths(this DateTime date)
+        {
+            var years = date.Year;
+            var months = date.Month;
+            return years * 12 + months;
         }
 
         public static DateTime EnsureMilliseconds(this DateTime date)

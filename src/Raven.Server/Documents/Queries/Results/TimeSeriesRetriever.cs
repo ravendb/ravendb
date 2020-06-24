@@ -58,20 +58,11 @@ namespace Raven.Server.Documents.Queries.Results
 
             var source = GetSourceAndId();
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
-            var (min, max) = GetMinAndMax(declaredFunction, documentId, args, timeSeriesFunction, source, offset);
+            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, source, offset);
             var collection = GetCollection(documentId);
 
-            var reader = timeSeriesFunction.GroupBy == null
-                ? new TimeSeriesReader(_context, documentId, source, min, max, offset)
-                : new TimeSeriesMultiReader(_context, documentId, source, collection, min, max, offset) as ITimeSeriesReader;
-
-            var array = new DynamicJsonArray();
-
-            if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
-                return GetRawValues();
-
-            RangeGroup rangeSpec;
             var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
+            RangeGroup rangeSpec;
             if (groupBy != null)
             {
                 rangeSpec = RangeGroup.ParseRangeFromString(groupBy);
@@ -79,8 +70,16 @@ namespace Raven.Server.Documents.Queries.Results
             else
             {
                 rangeSpec = new RangeGroup();
-                rangeSpec.InitializeFullRange(min, max);
+                rangeSpec.InitializeFullRange(from, to);
             }
+            var reader = groupBy == null
+                ? new TimeSeriesReader(_context, documentId, source, from, to, offset)
+                : new TimeSeriesMultiReader(_context, documentId, source, collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
+
+            var array = new DynamicJsonArray();
+
+            if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
+                return GetRawValues();
 
             TimeSeriesAggregation[] aggStates;
             if (timeSeriesFunction.Select != null)
@@ -736,44 +735,44 @@ namespace Raven.Server.Documents.Queries.Results
             return _context.ReadObject(result, "timeseries/value");
         }
 
-        private (DateTime Min, DateTime Max) GetMinAndMax(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
+        private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
         {
-            DateTime min, max;
+            DateTime from, to;
             if (timeSeriesFunction.Last != null)
             {
                 var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
 
-                max = DateTime.MaxValue;
+                to = DateTime.MaxValue;
                 var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                min = stats.End.Add(-timeFromLast);
+                from = stats.End.Add(-timeFromLast);
             }
             else if (timeSeriesFunction.First != null)
             {
                 var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
 
-                min = DateTime.MinValue;
+                from = DateTime.MinValue;
                 var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                max = stats.Start.Add(timeFromFirst);
+                to = stats.Start.Add(timeFromFirst);
             }
             else
             {
-                min = GetDateValue(timeSeriesFunction.Between?.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
-                max = GetDateValue(timeSeriesFunction.Between?.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
+                from = GetDateValue(timeSeriesFunction.Between?.MinExpression, declaredFunction, args) ?? DateTime.MinValue;
+                to = GetDateValue(timeSeriesFunction.Between?.MaxExpression, declaredFunction, args) ?? DateTime.MaxValue;
             }
 
             if (offset.HasValue)
             {
-                var minWithOffset = min.Ticks + offset.Value.Ticks;
-                var maxWithOffset = max.Ticks + offset.Value.Ticks;
+                var minWithOffset = from.Ticks + offset.Value.Ticks;
+                var maxWithOffset = to.Ticks + offset.Value.Ticks;
 
                 if (minWithOffset >= 0 && minWithOffset <= DateTime.MaxValue.Ticks)
-                    min = min.Add(offset.Value);
+                    from = from.Add(offset.Value);
                 if (maxWithOffset >= 0 && maxWithOffset <= DateTime.MaxValue.Ticks)
-                    max = max.Add(offset.Value);
+                    to = to.Add(offset.Value);
 
             }
 
-            return (min, max);
+            return (from, to);
         }
 
         private TimeValue GetTimePeriodFromValueExpression(ValueExpression valueExpression, string methodName, string functionName, string documentId)

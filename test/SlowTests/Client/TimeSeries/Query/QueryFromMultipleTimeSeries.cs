@@ -515,6 +515,231 @@ select out('Heartrate')
         }
 
         [Fact]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = DateTime.UtcNow;
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), 1, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                var noPolicy = GetSum(store, now);
+
+                var p1 = new TimeSeriesPolicy("By3Day", TimeSpan.FromDays(3), TimeValue.FromDays(7));
+                var p2 = new TimeSeriesPolicy("By7Day", TimeSpan.FromDays(7), TimeValue.FromDays(14));
+                var p3 = new TimeSeriesPolicy("By1Day", TimeValue.FromDays(1), TimeValue.FromDays(3));
+               
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,
+                                p2,
+                                p3,
+                            }
+                        },
+                    },
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var raw = GetSum(store, now);
+                Assert.Equal(noPolicy, raw);
+
+                config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromDays(5));
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                await VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var rawAndRoll = GetSum(store, now);
+                Assert.Equal(raw, rawAndRoll);
+            }
+        }
+
+        [Fact]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = DateTime.UtcNow;
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), 1, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                var noPolicy = GetSum(store, now);
+
+                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6));
+                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1));
+                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30));
+                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,
+                                p2,
+                                p3,
+                                p4
+                            }
+                        },
+                    },
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var raw = GetSum(store, now);
+                Assert.Equal(noPolicy, raw);
+
+                config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromDays(5));
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                await VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var rawAndRoll = GetSum(store, now);
+                Assert.Equal(raw, rawAndRoll);
+            }
+        }
+
+         [Fact]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollup3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = DateTime.UtcNow;
+                var baseline = now.AddDays(-45);
+                var total = TimeSpan.FromDays(45).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), 1, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                var noPolicy = GetSum(store, now);
+
+                var p1 = new TimeSeriesPolicy("ByMonth", TimeValue.FromMonths(1));
+                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), TimeValue.FromMonths(3));
+                var p3 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), TimeValue.FromDays(7));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,
+                                p2,
+                                p3,
+                            }
+                        },
+                    },
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+//                await VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var raw = GetSum(store, now);
+                Assert.Equal(noPolicy, raw);
+
+                config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromDays(5));
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+    //            await VerifyFullPolicyExecution(store, config.Collections["Users"]);
+
+                var rawAndRoll = GetSum(store, now);
+                Assert.Equal(raw, rawAndRoll);
+            }
+        }
+
+        private static long GetSum(DocumentStore store, DateTime now)
+        {
+            using (var session = store.OpenSession())
+            {
+                var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+
+declare timeseries out() 
+{
+    from Heartrate
+    group by 1h
+    select sum()
+}
+from Users as u
+select out()
+");
+
+                var aggregationResult = query.Single();
+                return (long)aggregationResult.Results.Sum(x => x.Sum[0]);
+            }
+        }
+
+        [Fact]
         public async Task QueryFromMultipleTimeSeriesAtOnce_AggregationQuery_NoRetention()
         {
             using (var store = GetDocumentStore())
@@ -1055,22 +1280,26 @@ select out()
                         .ToList();
 
                     Assert.NotNull(ts);
-                    Assert.Equal(((TimeSpan)raw.RetentionTime).TotalMinutes, ts.Count);
+                    if (raw != null)
+                        Assert.Equal(((TimeSpan)raw.RetentionTime).TotalMinutes, ts.Count);
 
                     foreach (var policy in configuration.Policies)
                     {
                         ts = session.TimeSeriesFor("users/karmel", policy.GetTimeSeriesName("Heartrate"))
-                            .Get(DateTime.MinValue, DateTime.MaxValue)?
+                            .Get()?
                             .ToList();
 
                         TimeValue retentionTime = policy.RetentionTime;
                         if (retentionTime == TimeValue.MaxValue)
                         {
-                            retentionTime = TimeSpan.FromDays(12);
+                            var seconds = TimeSpan.FromDays(12).TotalSeconds;
+                            var x = Math.Ceiling(seconds / policy.AggregationTime.Value);
+                            var max = Math.Max(x * policy.AggregationTime.Value, seconds);
+                            retentionTime = TimeSpan.FromSeconds(max);
                         }
 
                         Assert.NotNull(ts);
-                        Assert.Equal(((TimeSpan)retentionTime).TotalMinutes / ((TimeSpan)policy.AggregationTime).TotalMinutes, ts.Count);
+                        Assert.Equal((int)(((TimeSpan)retentionTime).TotalMinutes / ((TimeSpan)policy.AggregationTime).TotalMinutes), ts.Count);
                     }
                 }
                 return true;

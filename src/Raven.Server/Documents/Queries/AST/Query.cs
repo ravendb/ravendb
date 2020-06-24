@@ -519,6 +519,14 @@ namespace Raven.Server.Documents.Queries.AST
 
             throw new ArgumentException("Unable to parse: '" + source.Substring(offset) + "' as a number");
         }
+
+        public TimeValue ToTimeValue()
+        {
+            if (Ticks != 0)
+                return TimeValue.FromSeconds((int)(Ticks / 10_000_000));
+
+            return TimeValue.FromMonths(Months);
+        }
     }
 
 
