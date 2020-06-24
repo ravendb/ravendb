@@ -203,6 +203,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public string GetTimeSeriesName(string rawName)
         {
+            if (Name == RawTimeSeriesPolicy.PolicyString)
+                return rawName;
+
             return $"{rawName}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{Name}";
         }
 

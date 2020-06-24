@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
@@ -97,6 +99,9 @@ namespace Raven.Server.Documents.TimeSeries
 
         internal bool Init()
         {
+            if (_from > _to)
+                return false;
+
             using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(_from))
             {
                 if (_table.SeekOneBackwardByPrimaryKeyPrefix(holder.TimeSeriesPrefixSlice, holder.TimeSeriesKeySlice, out _tvr) == false)
@@ -402,80 +407,134 @@ namespace Raven.Server.Documents.TimeSeries
         }
     }
 
-    public class TimeSeriesMultiReader : ITimeSeriesReader
+    public class TimeSeriesMultiReader : ITimeSeriesReader, IEnumerator<TimeSeriesReader>
     {
         private readonly DocumentsOperationContext _context;
         private TimeSeriesReader _reader;
         private readonly string _docId, _source;
+        private readonly string _collection;
         private readonly TimeSpan? _offset;
-        private readonly DateTime _min, _max;
-        private SortedList<long, string> _names;
-        private int _current;
+        private readonly TimeValue _groupBy;
+        private readonly DateTime _from, _to;
+        private Stack<(DateTime Start, string Name)> _timeseriesStack;
 
         public bool IsRaw => _reader.IsRaw;
 
         public TimeSeriesMultiReader(DocumentsOperationContext context, string documentId,
-            string source, string collection, DateTime min, DateTime max, TimeSpan? offset)
+            string source, string collection, DateTime from, DateTime to, TimeSpan? offset, TimeValue groupBy)
         {
             if (string.IsNullOrEmpty(source))
                 throw new ArgumentNullException(nameof(source));
             _source = source;
+            _collection = collection;
             _docId = documentId ?? throw new ArgumentNullException(nameof(documentId));
             _context = context;
-            _min = min;
-            _max = max;
+            _from = from;
+            _to = to;
             _offset = offset;
-            _current = 0;
+            _groupBy = groupBy;
 
-            Initialize(collection);
+            Initialize();
         }
 
-        private void Initialize(string collection)
+        private void Initialize()
         {
-            _names = new SortedList<long, string>();
+            _timeseriesStack ??= new Stack<(DateTime Start, string Name)>();
+            _timeseriesStack.Clear();
 
-            var policyRunner = _context.DocumentDatabase.TimeSeriesPolicyRunner;
-            if (_source.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ||
-                policyRunner == null ||
-                policyRunner.Configuration.Collections.TryGetValue(collection, out var config) == false ||
-                config.Disabled || config.Policies.Count == 0)
-            {
-                _names[0] = _source;
+            var raw = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, _docId, _source);
+            if (raw.Count > 0)
+                _timeseriesStack.Push((raw.Start, _source));
+
+            if (TryGetConfig(out var config))
                 return;
-            }
 
-            DateTime rawStart = default;
-            for (var i = 0; i < config.Policies.Count + 1; i++)
+            foreach (var policy in config.Policies)
             {
-                var name = i == 0
-                    ? _source
-                    : config.Policies[i - 1].GetTimeSeriesName(_source);
-
+                var name = policy.GetTimeSeriesName(_source);
                 var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, _docId, name);
-                if (i == 0)
-                    rawStart = stats.Start;
-                
-                if (stats.Start > rawStart ||
-                    _names.ContainsKey(stats.Start.Ticks) || 
-                    stats.End < _min || 
-                    stats.Start > _max || 
-                    stats.Count == 0)
+                if (stats.Count == 0)
                     continue;
 
-                _names[stats.Start.Ticks] = name;
+                if (_timeseriesStack.TryPop(out var previous))
+                {
+                    // prev start doesn't overlap with the first aggregation frame
+                    if (previous.Start <= stats.Start.Add(policy.AggregationTime))
+                    {
+                        if (policy.AggregationTime.IsMultiple(_groupBy) == false)
+                        {
+                            _timeseriesStack.Push(previous);
+                            continue; // we prefer the higher resolution
+                        }
 
-                if (stats.Start.Ticks <= _min.Ticks)
-                    break;
+                        previous.Start = stats.End.Add(policy.AggregationTime);
+                    }
+                    else
+                    {
+                        // prev start overlap with the first aggregation frame
+                        // need to adjust to avoid counting same points twice
+                        var x = policy.AggregationTime.TimesInInterval(stats.Start, previous.Start);
+                        if (x % policy.AggregationTime.Value != 0)
+                            x++;
+
+                        previous.Start = stats.Start.Add((int)x * policy.AggregationTime);
+                    }
+
+                    AlignStartPoints(previous);
+                }
+
+                _timeseriesStack.Push((stats.Start, name));
             }
+        }
+
+        private void AlignStartPoints((DateTime Start, string Name) current)
+        {
+            while (true)
+            {
+                if (_timeseriesStack.TryPop(out var prev) == false)
+                {
+                    _timeseriesStack.Push(current);
+                    return;
+                }
+
+                if (_timeseriesStack.TryPeek(out var beforePrev))
+                {
+                    if (beforePrev.Start <= current.Start)
+                        continue; // prev is not necessary
+                }
+
+                if (prev.Start <= current.Start)
+                {
+                    prev.Start = current.Start;
+                    _timeseriesStack.Push(prev);
+                }
+                else
+                {
+                    _timeseriesStack.Push(prev);
+                    _timeseriesStack.Push(current);
+                }
+
+                return;
+            }
+        }
+
+        private bool TryGetConfig(out TimeSeriesCollectionConfiguration config)
+        {
+            var policyRunner = _context.DocumentDatabase.TimeSeriesPolicyRunner;
+            config = null;
+
+            return _source.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator) ||
+                   policyRunner == null ||
+                   policyRunner.Configuration.Collections.TryGetValue(_collection, out config) == false ||
+                   config.Disabled ||
+                   config.Policies.Count == 0;
         }
 
         public IEnumerable<(IEnumerable<SingleResult> IndividualValues, SegmentResult Segment)> SegmentsOrValues()
         {
-            while (_current < _names.Count)
+            while (MoveNext())
             {
-                GetNextReader();
-
-                foreach (var sov in _reader.SegmentsOrValues())
+                foreach (var sov in Current.SegmentsOrValues())
                 {
                     yield return sov;
                 }
@@ -484,28 +543,59 @@ namespace Raven.Server.Documents.TimeSeries
 
         public IEnumerable<SingleResult> AllValues(bool includeDead = false)
         {
-            while (_current < _names.Count)
+            while (MoveNext())
             {
-                GetNextReader();
-
-                foreach (var singleResult in _reader.AllValues(includeDead))
+                foreach (var singleResult in Current.AllValues(includeDead))
                 {
                     yield return singleResult;
                 }
             }
         }
 
-        private void GetNextReader()
+        public bool MoveNext()
         {
-            var name = _names.Values[_current];
+            while (true)
+            {
+                if (_timeseriesStack.TryPop(out var current) == false)
+                {
+                    _reader = null;
+                    return false;
+                }
 
-            var from = _reader?._to.AddMilliseconds(1) ?? _min;
+                var previousEnd = _reader?._to.AddMilliseconds(1) ?? _from;
+                if (previousEnd == _to)
+                    return false;
 
-            var to = ++_current > _names.Count - 1
-                ? _max
-                : new DateTime(_names.Keys[_current]).AddMilliseconds(-1);
+                if (_timeseriesStack.Count == 0)
+                {
+                    _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, _to, _offset);
+                    return true;
+                }
 
-            _reader = new TimeSeriesReader(_context, _docId, name, from, to, _offset);
+                var next = _timeseriesStack.Peek();
+                if (next.Start < previousEnd)
+                    continue;
+
+                var to = next.Start.AddMilliseconds(-1);
+                if (_to < to)
+                    to = _to;
+
+                _reader = new TimeSeriesReader(_context, _docId, current.Name, previousEnd, to, _offset);
+                return true;
+            }
+        }
+
+        public void Reset()
+        {
+            Initialize();
+        }
+
+        public TimeSeriesReader Current => _reader;
+
+        object? IEnumerator.Current => Current;
+
+        public void Dispose()
+        {
         }
     }
 }
