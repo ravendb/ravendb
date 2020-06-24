@@ -12,7 +12,17 @@
                             <div class="row" data-bind="validationElement: assignedCores">
                                 <label class="control-label col-xs-4">Cores to use:</label>
                                 <div class="col-xs-8">
-                                    <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: assignedCores" id="assigned-cores" placeholder="Assigned cores for the new node">
+                                    <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: assignedCores" id="assigned-cores" placeholder="Utilized cores">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div class="row">
+                                <label class="control-label col-xs-4">Maximum cores to use:</label>
+                                <div class="col-xs-8">
+                                    <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: maxUtilizedCores" id="max-utilized-cores" placeholder="Maximum cores that will be used">
                                 </div>
                             </div>
                         </div>

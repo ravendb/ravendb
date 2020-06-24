@@ -4,6 +4,7 @@ import setLicenseLimitsCommand = require("commands/database/cluster/setLicenseLi
 
 class assignCores extends dialogViewModelBase {
     assignedCores = ko.observable<number>();
+    maxUtilizedCores = ko.observable<number | null>();
     availableCores = ko.observable<number>();
     numberOfCores = ko.observable<number>();
 
@@ -22,12 +23,13 @@ class assignCores extends dialogViewModelBase {
         save: ko.observable<boolean>(false)
     };
 
-    constructor(private nodeTag: string, assignedCores: number, remainingCoresToAssign: number, numberOfCores: number) {
+    constructor(private nodeTag: string, assignedCores: number, maxUtilizedCores: number | null, remainingCoresToAssign: number, numberOfCores: number) {
         super();
 
         const maxCoresAccordingToLicense = assignedCores + remainingCoresToAssign;
 
         this.assignedCores(assignedCores);
+        this.maxUtilizedCores(maxUtilizedCores);
         this.availableCores(remainingCoresToAssign);
         this.numberOfCores(numberOfCores);
 
@@ -55,7 +57,7 @@ class assignCores extends dialogViewModelBase {
         
         this.spinners.save(true);
 
-        new setLicenseLimitsCommand(this.nodeTag, this.assignedCores())
+        new setLicenseLimitsCommand(this.nodeTag, this.assignedCores(), this.maxUtilizedCores())
             .execute()
             .always(() => {
                 this.spinners.save(false);

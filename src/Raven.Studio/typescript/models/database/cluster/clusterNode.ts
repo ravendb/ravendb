@@ -2,7 +2,6 @@
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import generalUtils = require("common/generalUtils");
 import license = require("models/auth/licenseModel");
-import popoverUtils = require("common/popoverUtils");
 import accessManager = require("common/shell/accessManager");
 
 class clusterNode {
@@ -11,6 +10,7 @@ class clusterNode {
     type = ko.observable<clusterNodeType>();
     connected = ko.observable<boolean>();
     utilizedCores = ko.observable<number>();
+    maxUtilizedCores = ko.observable<number | null>();
     numberOfCores = ko.observable<number>();
     installedMemoryInGb = ko.observable<number>();
     installedMemory = ko.pureComputed(() => this.formatNumber(this.installedMemoryInGb()));
@@ -118,6 +118,7 @@ class clusterNode {
         this.type(incoming.type());
         this.connected(incoming.connected());
         this.utilizedCores(incoming.utilizedCores());
+        this.maxUtilizedCores(incoming.maxUtilizedCores());
         this.numberOfCores(incoming.numberOfCores());
         this.installedMemoryInGb(incoming.installedMemoryInGb());
         this.usableMemoryInGb(incoming.usableMemoryInGb());

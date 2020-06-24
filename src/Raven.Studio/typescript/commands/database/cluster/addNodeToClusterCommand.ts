@@ -3,7 +3,7 @@ import endpoints = require("endpoints");
 
 class addNodeToClusterCommand extends commandBase {
 
-    constructor(private serverUrl: string, private addAsWatcher: boolean, private assignedCores?: number, private nodeTag?: string) {
+    constructor(private serverUrl: string, private addAsWatcher: boolean, private assignedCores?: number, private maxUtilizedCores?: number, private nodeTag?: string) {
         super();
     }
 
@@ -12,6 +12,7 @@ class addNodeToClusterCommand extends commandBase {
             url: this.serverUrl,
             watcher: this.addAsWatcher,
             assignedCores: this.assignedCores,
+            maxUtilizedCores: this.maxUtilizedCores,
             tag: this.nodeTag,
         };
         const url = endpoints.global.rachisAdmin.adminClusterNode + this.urlEncodeArgs(args);
