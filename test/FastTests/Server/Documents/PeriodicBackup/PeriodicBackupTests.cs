@@ -66,6 +66,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             }
 
             backupConfiguration.AllowedDestinations = new[] {"Amazonglacier", "Amazons3", "googleCloud"};
+            backupConfiguration.ValidateAllowedDestinations();
             backupConfiguration.AssertDestinationAllowed("AmazonGlacier");
             backupConfiguration.AssertDestinationAllowed("AmazonS3");
             backupConfiguration.AssertDestinationAllowed("GoogleCloud");
