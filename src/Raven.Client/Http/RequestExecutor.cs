@@ -537,7 +537,7 @@ namespace Raven.Client.Http
             switch (Conventions.LoadBalanceBehavior)
             {
                 case LoadBalanceBehavior.UseSessionContext:
-                    if (sessionInfo?.HasSessionId == true)
+                    if (sessionInfo?.CanUseLoadBalanceBehavior == true)
                         return _nodeSelector.GetNodeBySessionId(sessionInfo.SessionId);
                     break;
             }

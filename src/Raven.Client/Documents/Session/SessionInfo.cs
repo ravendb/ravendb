@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Session
         private int? _sessionId;
         private bool _sessionIdUsed;
         private readonly int _loadBalancerContextSeed;
-        private readonly bool _loadBalancerContextSelectorSet;
+        private bool _canUseLoadBalanceBehavior;
         private readonly InMemoryDocumentSessionOperations _session;
 
         public int SessionId
@@ -21,7 +21,7 @@ namespace Raven.Client.Documents.Session
             get
             {
                 if (_sessionId == null)
-                    SetContext(_session.Conventions.LoadBalancerPerSessionContextSelector?.Invoke(_session.DatabaseName));
+                    SetContextInternal(_session.Conventions.LoadBalancerPerSessionContextSelector?.Invoke(_session.DatabaseName));
 
                 _sessionIdUsed = true;
 
@@ -29,10 +29,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        internal bool HasSessionId
-        {
-            get => _sessionId.HasValue || _loadBalancerContextSelectorSet;
-        }
+        internal bool CanUseLoadBalanceBehavior => _canUseLoadBalanceBehavior;
 
         public long? LastClusterTransactionIndex { get; set; }
 
@@ -47,7 +44,7 @@ namespace Raven.Client.Documents.Session
 
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _loadBalancerContextSeed = session.RequestExecutor.Conventions.LoadBalancerContextSeed;
-            _loadBalancerContextSelectorSet = session.Conventions.LoadBalanceBehavior == LoadBalanceBehavior.UseSessionContext && session.Conventions.LoadBalancerPerSessionContextSelector != null;
+            _canUseLoadBalanceBehavior = session.Conventions.LoadBalanceBehavior == LoadBalanceBehavior.UseSessionContext && session.Conventions.LoadBalancerPerSessionContextSelector != null;
 
             LastClusterTransactionIndex = documentStore.GetLastTransactionIndex(session.DatabaseName);
             AsyncCommandRunning = asyncCommandRunning;
@@ -56,8 +53,18 @@ namespace Raven.Client.Documents.Session
 
         public void SetContext(string sessionKey)
         {
+            if (string.IsNullOrWhiteSpace(sessionKey))
+                throw new ArgumentException("Session key cannot be null or whitespace.", nameof(sessionKey));
+
+            SetContextInternal(sessionKey);
+
+            _canUseLoadBalanceBehavior = _canUseLoadBalanceBehavior || _session.Conventions.LoadBalanceBehavior == LoadBalanceBehavior.UseSessionContext;
+        }
+
+        private void SetContextInternal(string sessionKey)
+        {
             if (_sessionIdUsed)
-                throw new InvalidOperationException("Unable to set the session context after it has already been used. The session context can only be modified before it is utliziedn");
+                throw new InvalidOperationException("Unable to set the session context after it has already been used. The session context can only be modified before it is utilized.");
 
             if (sessionKey == null)
             {
@@ -76,7 +83,7 @@ namespace Raven.Client.Documents.Session
             switch (requestExecutor.Conventions.LoadBalanceBehavior)
             {
                 case LoadBalanceBehavior.UseSessionContext:
-                    if (HasSessionId)
+                    if (_canUseLoadBalanceBehavior)
                     {
                         result = await requestExecutor.GetNodeBySessionId(SessionId).ConfigureAwait(false);
                         return result.Node;
