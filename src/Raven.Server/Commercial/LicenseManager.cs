@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -19,6 +19,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -48,9 +49,7 @@ namespace Raven.Server.Commercial
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
         private LicenseStatus _licenseStatus = new LicenseStatus();
-        private int _previousLicenseCores = 0;
         private Timer _leaseLicenseTimer;
-        private bool _disableCalculatingLicenseLimits;
         private RSAParameters? _rsaParameters;
         private readonly ServerStore _serverStore;
         private readonly LicenseHelper _licenseHelper;
@@ -60,7 +59,6 @@ namespace Raven.Server.Commercial
         private readonly bool _skipLeasingErrorsLogging;
         private DateTime? _lastPerformanceHint;
         private bool _eulaAcceptedButHasPendingRestart;
-        private bool _putMyNodeInfoSuccess;
 
         private readonly object _locker = new object();
         private LicenseSupportInfo _lastKnownSupportInfo;
@@ -131,8 +129,9 @@ namespace Raven.Server.Commercial
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
                 ReloadLicense(firstRun: true);
+                ReloadLicenseLimits(addPerformanceHint: true);
 
-                Task.Run(PutMyNodeInfoAsync);
+                Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
             }
             catch (Exception e)
             {
@@ -148,20 +147,26 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task PutMyNodeInfoAsync()
+        public async Task PutMyNodeInfoAsync()
         {
-            if (_putMyNodeInfoSuccess)
+            if (await _licenseLimitsSemaphore.WaitAsync(0) == false)
                 return;
 
             try
             {
-                await _serverStore.PutMyNodeInfoAsync(_licenseStatus.MaxCores);
-                _putMyNodeInfoSuccess = true;
+                var nodeInfo = _serverStore.GetNodeInfo();
+                var detailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo);
+
+                await _serverStore.PutNodeLicenseLimitsAsync(_serverStore.NodeTag, detailsPerNode, _licenseStatus.MaxCores);
             }
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Failed to put my node info, will try again later", e);
+            }
+            finally
+            {
+                _licenseLimitsSemaphore.Release();
             }
         }
 
@@ -211,8 +216,6 @@ namespace Raven.Server.Commercial
 
             if (firstRun == false)
                 _licenseHelper.UpdateLocalLicense(license, RSAParameters);
-
-            ReloadLicenseLimits(addPerformanceHint: firstRun);
         }
 
         private void CreateAgplAlert()
@@ -245,6 +248,8 @@ namespace Raven.Server.Commercial
                     SetAffinity(process, utilizedCores, addPerformanceHint);
                     SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
                 }
+
+                ValidateLicenseStatus();
             }
             catch (Exception e)
             {
@@ -261,6 +266,9 @@ namespace Raven.Server.Commercial
                 return Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
             }
 
+            // we don't have any license limits for this node, let's put our info to update it
+            Task.Run(async() => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
+
             return Math.Min(ProcessorInfo.ProcessorCount, _licenseStatus.MaxCores);
         }
 
@@ -274,150 +282,95 @@ namespace Raven.Server.Commercial
 
         public async Task ChangeLicenseLimits(string nodeTag, int newAssignedCores, string raftRequestId)
         {
-            if (_serverStore.IsLeader() == false)
-                throw new InvalidOperationException("Only the leader is allowed to change the license limits");
+            var licenseLimits = _serverStore.LoadLicenseLimits();
 
-            if (_licenseLimitsSemaphore.Wait(1000 * 10) == false)
-                throw new TimeoutException("License limit change is already in progress. " +
-                                           "Please try again later.");
-
-            try
+            var oldAssignedCores = 0;
+            DetailsPerNode detailsPerNode = null;
+            if (licenseLimits != null)
             {
-                var licenseLimits = GetOrCreateLicenseLimits();
-
-                var oldAssignedCores = 0;
-                var numberOfCores = -1;
-                double installedMemoryInGb = -1;
-                double usableMemoryInGb = -1;
-                BuildNumber buildInfo = null;
-                OsInfo osInfo = null;
-                if (licenseLimits.NodeLicenseDetails.TryGetValue(nodeTag, out var nodeDetails))
-                {
-                    installedMemoryInGb = nodeDetails.InstalledMemoryInGb;
-                    usableMemoryInGb = nodeDetails.UsableMemoryInGb;
-                    oldAssignedCores = nodeDetails.UtilizedCores;
-                    buildInfo = nodeDetails.BuildInfo;
-                    osInfo = nodeDetails.OsInfo;
-                }
-
-                var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores) - oldAssignedCores + newAssignedCores;
-                var maxCores = _licenseStatus.MaxCores;
-                if (utilizedCores > maxCores)
-                {
-                    var message = $"Cannot change the license limit for node {nodeTag} " +
-                                  $"from {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
-                                  $"to {newAssignedCores} core{Pluralize(newAssignedCores)} " +
-                                  $"because the utilized number of cores in the cluster will be {utilizedCores} " +
-                                  $"while the maximum allowed cores according to the license is {maxCores}.";
-                    throw new LicenseLimitException(LimitType.Cores, message);
-                }
-
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
-                    if (allNodes.TryGetValue(nodeTag, out var nodeUrl) == false)
-                        throw new ArgumentException($"Node tag: {nodeTag} isn't part of the cluster");
-
-                    if (nodeTag == _serverStore.NodeTag)
-                    {
-                        numberOfCores = ProcessorInfo.ProcessorCount;
-                        var memoryInfo = GetMemoryInfoInGb();
-                        installedMemoryInGb = memoryInfo.InstalledMemory;
-                        usableMemoryInGb = memoryInfo.UsableMemory;
-                        buildInfo = BuildInfo;
-                        osInfo = OsInfo;
-                    }
-                    else
-                    {
-                        var nodeInfo = await GetNodeInfo(nodeUrl, context);
-                        if (nodeInfo == null && numberOfCores == -1)
-                        {
-                            throw new InvalidOperationException($"Node tag: {nodeTag} with node url: {nodeUrl} cannot be reached");
-                        }
-                        else if (nodeInfo != null)
-                        {
-                            numberOfCores = nodeInfo.NumberOfCores;
-                            installedMemoryInGb = nodeInfo.InstalledMemoryInGb;
-                            usableMemoryInGb = nodeInfo.UsableMemoryInGb;
-                            buildInfo = nodeInfo.BuildInfo;
-                            osInfo = nodeInfo.OsInfo;
-                        }
-                    }
-
-                    Debug.Assert(numberOfCores > 0);
-
-                    if (numberOfCores < newAssignedCores)
-                        throw new ArgumentException($"The new assigned cores count: {newAssignedCores} " +
-                                                    $"is larger than the number of cores in the node: {numberOfCores}");
-
-                    licenseLimits.NodeLicenseDetails[nodeTag] = new DetailsPerNode
-                    {
-                        UtilizedCores = newAssignedCores,
-                        NumberOfCores = numberOfCores,
-                        InstalledMemoryInGb = installedMemoryInGb,
-                        UsableMemoryInGb = usableMemoryInGb,
-                        BuildInfo = buildInfo,
-                        OsInfo = osInfo
-                    };
-                }
-
-                await _serverStore.PutLicenseLimitsAsync(licenseLimits, raftRequestId);
-            }
-            finally
-            {
-                _licenseLimitsSemaphore.Release();
-            }
-        }
-
-        private LicenseLimits GetOrCreateLicenseLimits()
-        {
-            var licenseLimits = _serverStore.LoadLicenseLimits() ?? new LicenseLimits();
-            if (licenseLimits.NodeLicenseDetails == null)
-            {
-                licenseLimits.NodeLicenseDetails = new Dictionary<string, DetailsPerNode>();
+                licenseLimits.NodeLicenseDetails.TryGetValue(nodeTag, out detailsPerNode);
+                oldAssignedCores = detailsPerNode?.UtilizedCores ?? 0;
             }
 
-            return licenseLimits;
-        }
-
-        public async Task CalculateLicenseLimits(
-            NodeDetails newNodeDetails = null,
-            bool forceFetchingNodeInfo = false,
-            bool forceUpdate = false)
-        {
-            if (forceUpdate == false && _serverStore.IsLeader() == false)
-                return;
-
-            if (_disableCalculatingLicenseLimits)
-                return;
-
-            if (_licenseLimitsSemaphore.Wait(forceFetchingNodeInfo ? 1000 : 0) == false)
-                return;
-
-            try
+            var currentCoresUtilization = licenseLimits?.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores) - oldAssignedCores ?? 0;
+            var newUtilizedCores = currentCoresUtilization + newAssignedCores;
+            var maxCores = _licenseStatus.MaxCores;
+            if (newUtilizedCores > maxCores)
             {
-                var licenseLimits = await UpdateNodesInfoInternal(forceFetchingNodeInfo, newNodeDetails, forceUpdate);
-                if (licenseLimits == null)
-                    return;
+                var message = $"Cannot change the license limit for node {nodeTag} " +
+                              $"from {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
+                              $"to {newAssignedCores} core{Pluralize(newAssignedCores)} " +
+                              $"because the utilized number of cores in the cluster will be {newUtilizedCores} " +
+                              $"while the maximum allowed cores according to the license is {maxCores}.";
 
-                if (forceFetchingNodeInfo)
+                throw new LicenseLimitException(LimitType.Cores, message);
+            }
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
+                if (allNodes.TryGetValue(nodeTag, out var nodeUrl) == false)
+                    throw new ArgumentException($"Node tag `{nodeTag}` isn't part of the cluster");
+
+                if (nodeTag == _serverStore.NodeTag)
                 {
-                    await _serverStore.PutLicenseLimitsAsync(licenseLimits, RaftIdGenerator.DontCareId);
+                    detailsPerNode ??= new DetailsPerNode();
+                    detailsPerNode.NumberOfCores = ProcessorInfo.ProcessorCount;
+                    var memoryInfo = GetMemoryInfoInGb();
+                    detailsPerNode.InstalledMemoryInGb = memoryInfo.InstalledMemory;
+                    detailsPerNode.UsableMemoryInGb = memoryInfo.UsableMemory;
+                    detailsPerNode.BuildInfo = BuildInfo;
+                    detailsPerNode.OsInfo = OsInfo;
                 }
                 else
                 {
-                    _serverStore.PutLicenseLimits(licenseLimits, RaftIdGenerator.DontCareId);
+                    var nodeInfo = await GetNodeInfo(nodeUrl, context);
+                    if (nodeInfo != null)
+                    {
+                        detailsPerNode ??= new DetailsPerNode();
+                        detailsPerNode.NumberOfCores = nodeInfo.NumberOfCores;
+                        detailsPerNode.InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb;
+                        detailsPerNode.UsableMemoryInGb = nodeInfo.UsableMemoryInGb;
+                        detailsPerNode.BuildInfo = nodeInfo.BuildInfo;
+                        detailsPerNode.OsInfo = nodeInfo.OsInfo;
+                    }
+                    else if (detailsPerNode == null)
+                    {
+                        throw new InvalidOperationException($"Node tag: {nodeTag} with node url: {nodeUrl} cannot be reached");
+                    }
                 }
+
+                Debug.Assert(detailsPerNode != null);
+                Debug.Assert(detailsPerNode.NumberOfCores > 0);
+
+                if (detailsPerNode.NumberOfCores < newAssignedCores)
+                    throw new ArgumentException($"The new assigned cores count: {newAssignedCores} " +
+                                                $"is larger than the number of cores in the node: {detailsPerNode.NumberOfCores}");
+
+                detailsPerNode.UtilizedCores = newAssignedCores;
+                detailsPerNode.CustomUtilizedCores = true;
             }
-            catch (Exception e)
+
+            await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, _licenseStatus.MaxCores);
+        }
+
+        private async Task<NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)
+        {
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _serverStore.Server.Certificate.Certificate))
             {
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations("Failed to calculate license limits", e);
-            }
-            finally
-            {
-                _licenseLimitsSemaphore.Release();
+                var infoCmd = new GetNodeInfoCommand(TimeSpan.FromSeconds(15));
+
+                try
+                {
+                    await requestExecutor.ExecuteAsync(infoCmd, ctx);
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+
+                return infoCmd.Result;
             }
         }
 
@@ -473,38 +426,31 @@ namespace Raven.Server.Commercial
                     return;
             }
 
-            using (DisableCalculatingCoresCount())
+            if (ensureNotPassive)
+                _serverStore.EnsureNotPassive();
+
+            try
             {
-                if (ensureNotPassive)
-                    _serverStore.EnsureNotPassive();
+                await _serverStore.PutLicenseAsync(license, raftRequestId).ConfigureAwait(false);
 
-                try
-                {
-                    await _serverStore.PutLicenseAsync(license, raftRequestId).ConfigureAwait(false);
-
-                    SetLicense(license.Id, newLicenseStatus.Attributes);
-                }
-                catch (Exception e)
-                {
-                    var message = $"Could not save the following license:{Environment.NewLine}" +
-                                  $"Id: {license.Id}{Environment.NewLine}" +
-                                  $"Name: {license.Name}{Environment.NewLine}" +
-                                  $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
-
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info(message, e);
-
-                    throw new InvalidDataException("Could not save license!", e);
-                }
+                SetLicense(license.Id, newLicenseStatus.Attributes);
             }
+            catch (Exception e)
+            {
+                var message = $"Could not save the following license:{Environment.NewLine}" +
+                              $"Id: {license.Id}{Environment.NewLine}" +
+                              $"Name: {license.Name}{Environment.NewLine}" +
+                              $"Keys: [{(license.Keys != null ? string.Join(", ", license.Keys) : "N/A")}]";
 
-            await CalculateLicenseLimits(forceFetchingNodeInfo: true, forceUpdate: true);
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message, e);
+
+                throw new InvalidDataException("Could not save license!", e);
+            }
         }
 
         private void ResetLicense(string error)
         {
-            _previousLicenseCores = _licenseStatus.MaxCores;
-
             _licenseStatus = new LicenseStatus
             {
                 FirstServerStartDate = _licenseStatus.FirstServerStartDate,
@@ -514,8 +460,6 @@ namespace Raven.Server.Commercial
 
         private void SetLicense(Guid id, Dictionary<string, object> attributes)
         {
-            _previousLicenseCores = _licenseStatus.MaxCores;
-
             _licenseStatus = new LicenseStatus
             {
                 Id = id,
@@ -533,10 +477,12 @@ namespace Raven.Server.Commercial
                 {
                     // Here we have an expired license, but it was valid once.
                     // The user might rely on the license features and we want
-                    // to err on the side of the user in this case, so we'll accept
+                    // to error on the side of the user in this case, so we'll accept
                     // the features of the license, even before we check with the
                     // server
                     SetLicense(license.Id, newLicenseStatus.Attributes);
+
+                    // license expired, we'll try to update it
                     try
                     {
                         // license expired, we'll try to update it
@@ -546,9 +492,10 @@ namespace Raven.Server.Commercial
                     {
                         if (e is HttpRequestException)
                             throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
-                        
+
                         throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license.", e);
                     }
+
                     if (license != null)
                     {
                         await Activate(license, skipLeaseLicense: true, raftRequestId, ensureNotPassive: ensureNotPassive);
@@ -589,15 +536,6 @@ namespace Raven.Server.Commercial
                 Attributes = licenseAttributes
             };
             return newLicenseStatus;
-        }
-
-        private IDisposable DisableCalculatingCoresCount()
-        {
-            _disableCalculatingLicenseLimits = true;
-            return new DisposableAction(() =>
-            {
-                _disableCalculatingLicenseLimits = false;
-            });
         }
 
         public void TryActivateLicense(bool throwOnActivationFailure)
@@ -733,11 +671,9 @@ namespace Raven.Server.Commercial
         {
             try
             {
+                await LeaseLicense(RaftIdGenerator.NewId(), throwOnError: false);
+
                 await PutMyNodeInfoAsync();
-
-                await LeaseLicense(RaftIdGenerator.NewId());
-
-                await CalculateLicenseLimits(forceFetchingNodeInfo: true);
 
                 ReloadLicenseLimits(addPerformanceHint: true);
             }
@@ -766,12 +702,9 @@ namespace Raven.Server.Commercial
             return JsonConvert.DeserializeObject<LicenseRenewalResult>(responseString);
         }
 
-        public async Task LeaseLicense(string raftRequestId, bool forceUpdate = false)
+        public async Task LeaseLicense(string raftRequestId, bool throwOnError)
         {
-            if (forceUpdate == false && _serverStore.IsLeader() == false)
-                return;
-
-            if (_leaseLicenseSemaphore.Wait(0) == false)
+            if (await _leaseLicenseSemaphore.WaitAsync(0) == false)
                 return;
 
             try
@@ -801,7 +734,7 @@ namespace Raven.Server.Commercial
                 var message = e is HttpRequestException ? "failed to connect to api.ravendb.net" : "see exception details";
                 AddLeaseLicenseError(message, e);
 
-                if (forceUpdate)
+                if (throwOnError)
                     throw;
             }
             finally
@@ -810,225 +743,27 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task<LicenseLimits> UpdateNodesInfoInternal(bool forceFetchingNodeInfo, NodeDetails newNodeDetails, bool licenseChanged)
+        private void ValidateLicenseStatus()
         {
-            var licenseLimits = GetOrCreateLicenseLimits();
-            var hasChanges = false;
+            var licenseLimits = _serverStore.LoadLicenseLimits();
+            if (licenseLimits == null)
+                return;
 
-            var detailsPerNode = licenseLimits.NodeLicenseDetails;
-            if (newNodeDetails != null)
-            {
-                hasChanges = true;
-                detailsPerNode[newNodeDetails.NodeTag] = new DetailsPerNode
-                {
-                    UtilizedCores = newNodeDetails.AssignedCores,
-                    NumberOfCores = newNodeDetails.NumberOfCores,
-                    InstalledMemoryInGb = newNodeDetails.InstalledMemoryInGb,
-                    UsableMemoryInGb = newNodeDetails.UsableMemoryInGb,
-                    BuildInfo = newNodeDetails.BuildInfo,
-                    OsInfo = newNodeDetails.OsInfo
-                };
-            }
-
-            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var allNodes = _serverStore.GetClusterTopology(context).AllNodes;
-                var missingNodesAssignment = new List<string>();
-                var changedNodes = new List<string>();
-
-                foreach (var node in allNodes)
-                {
-                    int numberOfCores;
-                    double installedMemoryInGb;
-                    double usableMemoryInGb;
-                    BuildNumber buildInfo;
-                    OsInfo osInfo;
-                    var nodeTag = node.Key;
-                    if (nodeTag == _serverStore.NodeTag)
-                    {
-                        numberOfCores = ProcessorInfo.ProcessorCount;
-                        var memoryInfo = GetMemoryInfoInGb();
-                        installedMemoryInGb = memoryInfo.InstalledMemory;
-                        usableMemoryInGb = memoryInfo.UsableMemory;
-                        buildInfo = BuildInfo;
-                        osInfo = OsInfo;
-                    }
-                    else
-                    {
-                        if (forceFetchingNodeInfo == false)
-                            continue;
-
-                        var nodeInfo = await GetNodeInfo(node.Value, context);
-                        if (nodeInfo == null)
-                            continue;
-
-                        numberOfCores = nodeInfo.NumberOfCores;
-                        installedMemoryInGb = nodeInfo.InstalledMemoryInGb;
-                        usableMemoryInGb = nodeInfo.UsableMemoryInGb;
-                        buildInfo = nodeInfo.BuildInfo;
-                        osInfo = nodeInfo.OsInfo;
-                    }
-
-                    var nodeDetailsExist = detailsPerNode.TryGetValue(nodeTag, out var nodeDetails);
-                    if (nodeDetailsExist &&
-                        nodeDetails.NumberOfCores == numberOfCores &&
-                        nodeDetails.UsableMemoryInGb.Equals(usableMemoryInGb) &&
-                        nodeDetails.InstalledMemoryInGb.Equals(installedMemoryInGb) &&
-                        // using static method here to avoid null checks
-                        Equals(nodeDetails.BuildInfo, buildInfo) &&
-                        Equals(nodeDetails.OsInfo, osInfo))
-                    {
-                        // nodes hardware didn't change
-                        continue;
-                    }
-
-                    hasChanges = true;
-                    detailsPerNode[nodeTag] = new DetailsPerNode
-                    {
-                        NumberOfCores = numberOfCores,
-                        InstalledMemoryInGb = installedMemoryInGb,
-                        UsableMemoryInGb = usableMemoryInGb,
-                        BuildInfo = buildInfo,
-                        OsInfo = osInfo
-                    };
-
-                    if (nodeDetailsExist == false)
-                    {
-                        // we'll assign the utilized cores later
-                        missingNodesAssignment.Add(nodeTag);
-                        continue;
-                    }
-
-                    if (nodeDetails.NumberOfCores != numberOfCores)
-                        changedNodes.Add(nodeTag);
-
-                    detailsPerNode[nodeTag].UtilizedCores = Math.Min(numberOfCores, nodeDetails.UtilizedCores);
-                }
-
-                var nodesToRemove = detailsPerNode.Keys.Except(allNodes.Keys).ToList();
-                foreach (var nodeToRemove in nodesToRemove)
-                {
-                    hasChanges = true;
-                    detailsPerNode.Remove(nodeToRemove);
-                }
-
-                AssignMissingCoresForMissingNodes(missingNodesAssignment, detailsPerNode);
-                VerifyCoresPerNode(detailsPerNode, changedNodes, licenseChanged, ref hasChanges);
-                ValidateLicenseStatus(detailsPerNode);
-            }
-
-            return hasChanges ? licenseLimits : null;
-        }
-
-        private void ValidateLicenseStatus(Dictionary<string, DetailsPerNode> detailsPerNode)
-        {
-            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
+            var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
             string errorMessage = null;
             if (utilizedCores > _licenseStatus.MaxCores)
             {
                 errorMessage = $"The number of utilized cores is {utilizedCores}, " +
                               $"while the license limit is {_licenseStatus.MaxCores} cores";
             }
-            else if (detailsPerNode.Count > _licenseStatus.MaxClusterSize)
+            else if (licenseLimits.NodeLicenseDetails.Count > _licenseStatus.MaxClusterSize)
             {
-                errorMessage = $"The cluster size is {detailsPerNode.Count}, " +
+                errorMessage = $"The cluster size is {licenseLimits.NodeLicenseDetails.Count}, " +
                               $"while the license limit is {_licenseStatus.MaxClusterSize}";
             }
 
             if (errorMessage != null)
                 _licenseStatus.ErrorMessage = errorMessage;
-        }
-
-        private void VerifyCoresPerNode(Dictionary<string, DetailsPerNode> detailsPerNode, List<string> changedNodes, bool licenseChanged, ref bool hasChanges)
-        {
-            var maxCores = _licenseStatus.MaxCores;
-            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-
-            if (maxCores == utilizedCores)
-                return;
-
-            hasChanges = true;
-
-            if (maxCores < utilizedCores)
-            {
-                // we have less licensed cores than we currently used
-                var coresPerNode = Math.Max(1, maxCores / detailsPerNode.Count);
-                foreach (var nodeDetails in detailsPerNode)
-                {
-                    nodeDetails.Value.UtilizedCores = coresPerNode;
-                }
-
-                return;
-            }
-
-            if (licenseChanged && _licenseStatus.MaxCores > _previousLicenseCores)
-            {
-                changedNodes = detailsPerNode.Select(x => x.Key).ToList();
-            }
-
-            if (changedNodes.Count == 0)
-                return;
-
-            // we have spare cores to distribute
-            var freeCoresToDistribute = maxCores - utilizedCores;
-
-            foreach (var node in changedNodes)
-            {
-                if (freeCoresToDistribute == 0)
-                    break;
-
-                var nodeDetails = detailsPerNode[node];
-
-                var availableCoresToAssignForNode = nodeDetails.NumberOfCores - nodeDetails.UtilizedCores;
-                if (availableCoresToAssignForNode <= 0)
-                    continue;
-
-                var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, freeCoresToDistribute);
-                nodeDetails.UtilizedCores += numberOfCoresToAdd;
-                freeCoresToDistribute -= numberOfCoresToAdd;
-            }
-        }
-
-        private void AssignMissingCoresForMissingNodes(
-            List<string> missingNodesAssignment,
-            Dictionary<string, DetailsPerNode> detailsPerNode)
-        {
-            if (missingNodesAssignment.Count == 0)
-                return;
-
-            var utilizedCores = detailsPerNode.Sum(x => x.Value.UtilizedCores);
-            var freeCoresToDistribute = _licenseStatus.MaxCores - utilizedCores;
-            var coresPerNode = Math.Max(1, freeCoresToDistribute / missingNodesAssignment.Count);
-
-            foreach (var nodeTag in missingNodesAssignment)
-            {
-                if (detailsPerNode.TryGetValue(nodeTag, out var nodeDetails) == false)
-                    continue;
-
-                coresPerNode = Math.Min(coresPerNode, nodeDetails.NumberOfCores);
-
-                nodeDetails.UtilizedCores = coresPerNode;
-            }
-        }
-
-        private async Task<NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)
-        {
-            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, _serverStore.Server.Certificate.Certificate))
-            {
-                var infoCmd = new GetNodeInfoCommand(TimeSpan.FromSeconds(15));
-
-                try
-                {
-                    await requestExecutor.ExecuteAsync(infoCmd, ctx);
-                }
-                catch (Exception)
-                {
-                    return null;
-                }
-
-                return infoCmd.Result;
-            }
         }
 
         private void AddLeaseLicenseError(string errorMessage, Exception exception = null)

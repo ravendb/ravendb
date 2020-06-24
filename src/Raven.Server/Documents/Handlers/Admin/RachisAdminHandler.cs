@@ -317,8 +317,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
             }
 
-            if (tag != null)
-                tag = tag.Trim();
+            tag = tag?.Trim();
 
             NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -378,8 +377,15 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             ServerStore.EnsureNotPassive();
 
-            if (assignedCores == null)
+            var setCustomUtilizedCores = false;
+            if (assignedCores != null)
+            {
+                setCustomUtilizedCores = true;
+            }
+            else
+            {
                 assignedCores = ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
+            }
 
             Debug.Assert(assignedCores <= nodeInfo.NumberOfCores);
 
@@ -498,17 +504,19 @@ namespace Raven.Server.Documents.Handlers.Admin
                             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 
-                        var nodeDetails = new NodeDetails
+                        var detailsPerNode = new DetailsPerNode
                         {
-                            NodeTag = nodeTag,
-                            AssignedCores = assignedCores.Value,
+                            UtilizedCores = assignedCores.Value,
+                            CustomUtilizedCores = setCustomUtilizedCores,
                             NumberOfCores = nodeInfo.NumberOfCores,
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
                             UsableMemoryInGb = nodeInfo.UsableMemoryInGb,
                             BuildInfo = nodeInfo.BuildInfo,
                             OsInfo = nodeInfo.OsInfo
                         };
-                        await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true);
+
+                        var maxCores = ServerStore.LicenseManager.GetLicenseStatus().MaxCores;
+                        await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores);
                     }
 
                     NoContentStatus();
@@ -546,6 +554,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var nodeTag = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
+
             if (ServerStore.IsLeader())
             {
                 if (nodeTag == ServerStore.Engine.Tag)
@@ -558,10 +567,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
                 NoContentStatus();
                 return;
             }
+
             RedirectToLeader();
         }
 
@@ -576,15 +585,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (newAssignedCores <= 0)
                 throw new ArgumentException("The new assigned cores value must be larger than 0");
 
-            if (ServerStore.IsLeader())
-            {
-                await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, GetRaftRequestIdFromQuery());
-
-                NoContentStatus();
-                return;
-            }
-
-            RedirectToLeader();
+            await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, GetRaftRequestIdFromQuery());
         }
 
         [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]

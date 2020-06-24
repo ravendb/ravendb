@@ -1035,6 +1035,16 @@ namespace Raven.Server.ServerWide
                     tasks.Add(() => OnDatabaseChanges(record.DatabaseName, index, nameof(RemoveNodeFromCluster), DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged));
                 }
 
+                // delete the node license limits
+                var licenseLimitsBlittable = Read(context, ServerStore.LicenseLimitsStorageKey, out _);
+                if (licenseLimitsBlittable != null)
+                {
+                    var licenseLimits = JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
+                    licenseLimits.NodeLicenseDetails.Remove(removed);
+                    var value = context.ReadObject(licenseLimits.ToJson(), "overwrite-license-limits");
+                    PutValueDirectly(context, ServerStore.LicenseLimitsStorageKey, value, index);
+                }
+
                 ExecuteManyOnDispose(context, index, nameof(RemoveNodeFromCluster), tasks);
             }
             catch (Exception e)
@@ -3229,7 +3239,7 @@ namespace Raven.Server.ServerWide
 
             // reload license can send a notification which will open a write tx
             serverStore.LicenseManager.ReloadLicense();
-            await serverStore.LicenseManager.CalculateLicenseLimits();
+            await serverStore.LicenseManager.PutMyNodeInfoAsync();
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }
