@@ -62,7 +62,6 @@ namespace Raven.Client.Exceptions
         {
             FilePath = filePath;
             AccessType = accessType;
-            
         }
     }
 }
