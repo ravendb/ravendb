@@ -101,7 +101,7 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
-            await ServerStore.LicenseManager.LeaseLicense(GetRaftRequestIdFromQuery(), forceUpdate: true);
+            await ServerStore.LicenseManager.LeaseLicense(GetRaftRequestIdFromQuery(), throwOnError: true);
 
             NoContentStatus();
         }

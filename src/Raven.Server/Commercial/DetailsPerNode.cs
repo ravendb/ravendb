@@ -8,6 +8,8 @@ namespace Raven.Server.Commercial
     {
         public int UtilizedCores;
 
+        public bool CustomUtilizedCores;
+
         public int NumberOfCores;
 
         public double InstalledMemoryInGb;
@@ -23,6 +25,7 @@ namespace Raven.Server.Commercial
             return new DynamicJsonValue
             {
                 [nameof(UtilizedCores)] = UtilizedCores,
+                [nameof(CustomUtilizedCores)] = CustomUtilizedCores,
                 [nameof(NumberOfCores)] = NumberOfCores,
                 [nameof(InstalledMemoryInGb)] = InstalledMemoryInGb,
                 [nameof(UsableMemoryInGb)] = UsableMemoryInGb,

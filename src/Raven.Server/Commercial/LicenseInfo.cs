@@ -5,6 +5,11 @@ namespace Raven.Server.Commercial
 {
     public class LicenseLimits
     {
+        public LicenseLimits()
+        {
+            NodeLicenseDetails = new Dictionary<string, DetailsPerNode>();
+        }
+
         public Dictionary<string, DetailsPerNode> NodeLicenseDetails { get; set; }
 
         public DynamicJsonValue ToJson()
