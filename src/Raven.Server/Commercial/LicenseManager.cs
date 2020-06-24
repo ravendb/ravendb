@@ -280,7 +280,7 @@ namespace Raven.Server.Commercial
             return _serverStore.GetClusterTopology().AllNodes.Count;
         }
 
-        public async Task ChangeLicenseLimits(string nodeTag, int newAssignedCores, string raftRequestId)
+        public async Task ChangeLicenseLimits(string nodeTag, int utilizedCores, int? maxUtilizedCores, string raftRequestId)
         {
             var licenseLimits = _serverStore.LoadLicenseLimits();
 
@@ -293,15 +293,15 @@ namespace Raven.Server.Commercial
             }
 
             var currentCoresUtilization = licenseLimits?.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores) - oldAssignedCores ?? 0;
-            var newUtilizedCores = currentCoresUtilization + newAssignedCores;
-            var maxCores = _licenseStatus.MaxCores;
-            if (newUtilizedCores > maxCores)
+            var newUtilizedCores = currentCoresUtilization + utilizedCores;
+            var maxLicensedCores = _licenseStatus.MaxCores;
+            if (newUtilizedCores > maxLicensedCores)
             {
                 var message = $"Cannot change the license limit for node {nodeTag} " +
                               $"from {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
-                              $"to {newAssignedCores} core{Pluralize(newAssignedCores)} " +
+                              $"to {utilizedCores} core{Pluralize(utilizedCores)} " +
                               $"because the utilized number of cores in the cluster will be {newUtilizedCores} " +
-                              $"while the maximum allowed cores according to the license is {maxCores}.";
+                              $"while the maximum allowed cores according to the license is {maxLicensedCores}.";
 
                 throw new LicenseLimitException(LimitType.Cores, message);
             }
@@ -344,12 +344,12 @@ namespace Raven.Server.Commercial
                 Debug.Assert(detailsPerNode != null);
                 Debug.Assert(detailsPerNode.NumberOfCores > 0);
 
-                if (detailsPerNode.NumberOfCores < newAssignedCores)
-                    throw new ArgumentException($"The new assigned cores count: {newAssignedCores} " +
+                if (detailsPerNode.NumberOfCores < utilizedCores)
+                    throw new ArgumentException($"The new assigned cores count: {utilizedCores} " +
                                                 $"is larger than the number of cores in the node: {detailsPerNode.NumberOfCores}");
 
-                detailsPerNode.UtilizedCores = newAssignedCores;
-                detailsPerNode.CustomUtilizedCores = true;
+                detailsPerNode.UtilizedCores = utilizedCores;
+                detailsPerNode.MaxUtilizedCores = maxUtilizedCores;
             }
 
             await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, _licenseStatus.MaxCores);

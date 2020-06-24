@@ -33,13 +33,12 @@ namespace Raven.Server.ServerWide.Commands
             if (Value.DetailsPerNode == null || Value.NodeTag == null || Value.AllNodes == null)
                 throw new RachisApplyException($"{nameof(Value.DetailsPerNode)}, {nameof(Value.NodeTag)}, {nameof(Value.AllNodes)} cannot be null");
 
-            if (Value.DetailsPerNode.CustomUtilizedCores && Value.DetailsPerNode.UtilizedCores == 0)
-                throw new RachisApplyException(
-                    $"{nameof(Value.DetailsPerNode.UtilizedCores)} cannot be 0 while the {nameof(Value.DetailsPerNode.CustomUtilizedCores)} is set");
-
             if (Value.DetailsPerNode.NumberOfCores < Value.DetailsPerNode.UtilizedCores)
                 throw new RachisApplyException($"The utilized cores count: {Value.DetailsPerNode.UtilizedCores} " +
                                                $"is larger than the number of cores in the node: {Value.DetailsPerNode.NumberOfCores}");
+
+            if (Value.DetailsPerNode.MaxUtilizedCores != null && Value.DetailsPerNode.MaxUtilizedCores.Value < Value.DetailsPerNode.UtilizedCores)
+                throw new RachisApplyException($"{nameof(DetailsPerNode.MaxUtilizedCores)} must be larger or equal to {nameof(DetailsPerNode.UtilizedCores)}");
 
             var licenseLimits = previousValue == null ? new LicenseLimits() : JsonDeserializationServer.LicenseLimits(previousValue);
 
@@ -63,30 +62,12 @@ namespace Raven.Server.ServerWide.Commands
 
         private void UpdateNodeDetails(LicenseLimits licenseLimits)
         {
-            try
+            if (Value.DetailsPerNode.UtilizedCores == 0)
             {
-                if (Value.DetailsPerNode.CustomUtilizedCores)
-                {
-                    // setting a custom number of utilized cores
-                    return;
-                }
-
                 if (licenseLimits.NodeLicenseDetails.TryGetValue(Value.NodeTag, out var currentDetailsPerNode))
                 {
-                    if (currentDetailsPerNode.CustomUtilizedCores)
-                    {
-                        // don't change the currently utilized cores
-                        Value.DetailsPerNode.CustomUtilizedCores = true;
-                        Value.DetailsPerNode.UtilizedCores = Math.Min(Value.DetailsPerNode.NumberOfCores, currentDetailsPerNode.UtilizedCores);
-                        return;
-                    }
-
-                    if (currentDetailsPerNode.NumberOfCores == Value.DetailsPerNode.NumberOfCores)
-                    {
-                        // the number of cores on the node hasn't changed, nothing to do
-                        Value.DetailsPerNode.UtilizedCores = currentDetailsPerNode.UtilizedCores;
-                        return;
-                    }
+                    // need to keep the previous max utilized cores
+                    Value.DetailsPerNode.MaxUtilizedCores = currentDetailsPerNode.MaxUtilizedCores;
                 }
 
                 licenseLimits.NodeLicenseDetails.Remove(Value.NodeTag);
@@ -95,20 +76,12 @@ namespace Raven.Server.ServerWide.Commands
                 // need to "reserve" cores for nodes that aren't in license limits yet
                 // we are going to distribute the available cores equally
                 var unassignedNodesCount = Value.AllNodes.Except(licenseLimits.NodeLicenseDetails.Keys).Count();
-                var coresPerNodeToDistribute = availableCoresToDistribute / unassignedNodesCount;
+                var coresPerNodeToDistribute = Math.Max(1, availableCoresToDistribute / unassignedNodesCount);
 
-                Value.DetailsPerNode.UtilizedCores = coresPerNodeToDistribute > 0
-                    ? Math.Min(Value.DetailsPerNode.NumberOfCores, coresPerNodeToDistribute)
-                    : 1;
+                Value.DetailsPerNode.UtilizedCores = Value.DetailsPerNode.GetMaxCoresToUtilize(coresPerNodeToDistribute);
             }
-            finally
-            {
-                if (Value.DetailsPerNode.UtilizedCores == 0)
-                    throw new RachisApplyException($"Trying to set {nameof(Value.DetailsPerNode.UtilizedCores)} to 0");
 
-                licenseLimits.NodeLicenseDetails[Value.NodeTag] = Value.DetailsPerNode;
-                ResetCustomUtilizedCoresPropertyIfNeeded(licenseLimits, Value.DetailsPerNode);
-            }
+            licenseLimits.NodeLicenseDetails[Value.NodeTag] = Value.DetailsPerNode;
         }
 
         private void VerifyCoresPerNode(LicenseLimits licenseLimits)
@@ -122,10 +95,9 @@ namespace Raven.Server.ServerWide.Commands
 
             // we have less licensed cores than we are currently utilizing
             var coresPerNode = Math.Max(1, Value.LicensedCores / Value.AllNodes.Count);
-            foreach (var nodeDetails in licenseLimits.NodeLicenseDetails)
+            foreach (var detailsPerNode in licenseLimits.NodeLicenseDetails.Values)
             {
-                nodeDetails.Value.UtilizedCores = Math.Min(coresPerNode, nodeDetails.Value.NumberOfCores);
-                ResetCustomUtilizedCoresPropertyIfNeeded(licenseLimits, nodeDetails.Value);
+                detailsPerNode.UtilizedCores = detailsPerNode.GetMaxCoresToUtilize(coresPerNode);
             }
         }
 
@@ -143,44 +115,31 @@ namespace Raven.Server.ServerWide.Commands
                 return;
             }
 
-            var freeCoresToDistribute = Value.LicensedCores - utilizedCores;
-            if (freeCoresToDistribute <= 0)
+            var availableCoresToDistribute = Value.LicensedCores - utilizedCores;
+            if (availableCoresToDistribute <= 0)
                 return;
 
             // we have spare cores to distribute
             var nodesToDistribute = licenseLimits.NodeLicenseDetails
                 .Select(x => x.Value)
-                .Where(x => x.CustomUtilizedCores == false && x.NumberOfCores - x.UtilizedCores > 0)
-                .OrderBy(x => x.NumberOfCores - x.UtilizedCores)
+                .Where(x => x.AvailableCoresToAssignForNode > 0)
+                .OrderByDescending(x => x.AvailableCoresToAssignForNode)
                 .ToList();
 
             for (var i = 0; i < nodesToDistribute.Count; i++)
             {
-                if (freeCoresToDistribute == 0)
+                if (availableCoresToDistribute == 0)
                     break;
 
                 var nodeDetails = nodesToDistribute[i];
-                var availableCoresToAssignForNode = nodeDetails.NumberOfCores - nodeDetails.UtilizedCores;
+                var availableCoresToAssignForNode = nodeDetails.AvailableCoresToAssignForNode;
                 if (availableCoresToAssignForNode <= 0)
                     continue;
 
-                var coresToDistributePerNode = freeCoresToDistribute / (nodesToDistribute.Count - i);
+                var coresToDistributePerNode = availableCoresToDistribute / (nodesToDistribute.Count - i);
                 var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, coresToDistributePerNode);
                 nodeDetails.UtilizedCores += numberOfCoresToAdd;
-                freeCoresToDistribute -= numberOfCoresToAdd;
-                ResetCustomUtilizedCoresPropertyIfNeeded(licenseLimits, nodeDetails);
-            }
-        }
-
-        private void ResetCustomUtilizedCoresPropertyIfNeeded(LicenseLimits licenseLimits, DetailsPerNode detailsPerNode)
-        {
-            if (detailsPerNode.CustomUtilizedCores == false)
-                return;
-
-            if (detailsPerNode.UtilizedCores == detailsPerNode.NumberOfCores || 
-                licenseLimits.TotalUtilizedCores == Value.LicensedCores)
-            {
-                detailsPerNode.CustomUtilizedCores = false;
+                availableCoresToDistribute -= numberOfCoresToAdd;
             }
         }
     }

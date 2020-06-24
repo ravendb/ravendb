@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
@@ -8,7 +9,7 @@ namespace Raven.Server.Commercial
     {
         public int UtilizedCores;
 
-        public bool CustomUtilizedCores;
+        public int? MaxUtilizedCores;
 
         public int NumberOfCores;
 
@@ -20,12 +21,27 @@ namespace Raven.Server.Commercial
 
         public OsInfo OsInfo;
 
+        public int AvailableCoresToAssignForNode
+        {
+            get
+            {
+                var availableCoresToAssign = NumberOfCores - UtilizedCores;
+                if (MaxUtilizedCores == null)
+                    return availableCoresToAssign;
+
+                if (UtilizedCores < MaxUtilizedCores.Value)
+                    return Math.Min(availableCoresToAssign, MaxUtilizedCores.Value - UtilizedCores);
+
+                return 0;
+            }
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(UtilizedCores)] = UtilizedCores,
-                [nameof(CustomUtilizedCores)] = CustomUtilizedCores,
+                [nameof(MaxUtilizedCores)] = MaxUtilizedCores,
                 [nameof(NumberOfCores)] = NumberOfCores,
                 [nameof(InstalledMemoryInGb)] = InstalledMemoryInGb,
                 [nameof(UsableMemoryInGb)] = UsableMemoryInGb,
@@ -45,6 +61,15 @@ namespace Raven.Server.Commercial
                 BuildInfo = nodeInfo.BuildInfo,
                 OsInfo = nodeInfo.OsInfo
             };
+        }
+
+        public int GetMaxCoresToUtilize(int requestedCores)
+        {
+            var utilizedCores = Math.Min(requestedCores, NumberOfCores);
+            if (MaxUtilizedCores != null)
+                utilizedCores = Math.Min(utilizedCores, MaxUtilizedCores.Value);
+
+            return utilizedCores;
         }
     }
 }
