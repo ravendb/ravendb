@@ -143,9 +143,9 @@ namespace Raven.Server.ServerWide.Commands
 
             // we have spare cores to distribute
             var nodesToDistribute = licenseLimits.NodeLicenseDetails
-                .Where(x => x.Value.CustomUtilizedCores == false)
                 .Select(x => x.Value)
-                .OrderBy(x => x.NumberOfCores - x.UtilizedCores)
+                .Where(x => x.CustomUtilizedCores == false && x.NumberOfCores - x.UtilizedCores > 0)
+                .OrderByDescending(x => x.NumberOfCores - x.UtilizedCores)
                 .ToList();
 
             for (var i = 0; i < nodesToDistribute.Count; i++)
@@ -162,6 +162,7 @@ namespace Raven.Server.ServerWide.Commands
                 var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, coresToDistributePerNode);
                 nodeDetails.UtilizedCores += numberOfCoresToAdd;
                 freeCoresToDistribute -= numberOfCoresToAdd;
+                ResetCustomUtilizedCoresPropertyIfNeeded(licenseLimits, nodeDetails);
             }
         }
 
