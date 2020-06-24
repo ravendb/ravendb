@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Commercial
@@ -11,6 +12,8 @@ namespace Raven.Server.Commercial
         }
 
         public Dictionary<string, DetailsPerNode> NodeLicenseDetails { get; set; }
+
+        public int UtilizedCores => NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
 
         public DynamicJsonValue ToJson()
         {
