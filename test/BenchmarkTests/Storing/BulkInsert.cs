@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using BenchmarkTests.Utils;
 using Raven.Client.Documents;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,6 +36,51 @@ namespace BenchmarkTests.Storing
         public async Task Large_Size_1M()
         {
             await Large_Size_Internal(1_000_000);
+        }
+
+        [Fact]
+        public async Task VeryBigTransactionsForBulkInsertOfCounters()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string baseDocId = "users/";
+                using (var bulk = store.BulkInsert())
+                {
+                    var docId = baseDocId + 1;
+                    await bulk.StoreAsync(new User() { Name = "Grisha" }, docId);
+
+                    var counters = bulk.CountersFor(docId);
+                    for (var j = 0; j < 1_000_000; j++)
+                    {
+                        var rnd = new Random(DateTime.Now.Millisecond);
+                        await counters.IncrementAsync(j.ToString(), rnd.Next(1, 1_000_000));
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task VeryBigTransactionsForBulkInsertOfTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string baseDocId = "users/";
+                using (var bulk = store.BulkInsert())
+                {
+                    for (var i = 1; i < 1_000; i++)
+                    {
+                        var docId = baseDocId + 1;
+                        await bulk.StoreAsync(new User() { Name = "Grisha" }, docId);
+
+                        using var counters = bulk.TimeSeriesFor(docId, $"test_{i}");
+                        for (var j = 0; j < 100_000; j++)
+                        {
+                            var rnd = new Random(DateTime.Now.Millisecond);
+                            await counters.AppendAsync(DateTime.Now.AddMilliseconds(j), rnd.Next(1, 1_000_000));
+                        }
+                    }
+                }
+            }
         }
 
         private async Task Small_Size_Internal(int count)
