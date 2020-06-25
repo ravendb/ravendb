@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -42,6 +43,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public sealed class IndexReadOperation : IndexOperationBase
     {
+        private static readonly Sort SortByFieldScore = new Sort(SortField.FIELD_SCORE);
+
         private readonly QueryBuilderFactories _queryBuilderFactories;
         private readonly IndexType _indexType;
         private readonly bool _indexHasBoostedFields;
@@ -82,7 +85,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-
         public IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             ExplanationOptions explanationOptions = null;
@@ -115,8 +117,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var returnedResults = 0;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
+            using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
                 if (query.Metadata.HasHighlightings)
@@ -334,7 +336,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer, _queryBuilderFactories);
             }
 
-            //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
+            //Not sure how to select the page size here??? The problem is that only docs in this search can be part
             //of the final result because we're doing an intersection query (but we might exclude some of them)
             var pageSize = GetPageSize(_searcher, query.PageSize);
             int pageSizeBestGuess = GetPageSize(_searcher, ((long)query.Start + query.PageSize) * 2);
@@ -342,8 +344,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0;
 
             var firstSubDocumentQuery = subQueries[0];
-            var sort = GetSort(query, _index, getSpatialField, documentsContext);
 
+            using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
                 //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
@@ -379,7 +381,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     && previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
 
                 var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
-                //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize, 
+                //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize,
                 //because it's before the INTERSECTION has been applied, so only some of those results make it out.
                 //Trying to give an accurate answer is going to be too costly, so we aren't going to try.
                 totalResults.Value = search.TotalHits;
@@ -480,9 +482,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static readonly Sort SortByFieldScore = new Sort(SortField.FIELD_SCORE);
-        private Sort GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext)
+        private IDisposable GetSort(IndexQueryServerSide query, Index index, Func<string, SpatialField> getSpatialField, DocumentsOperationContext documentsContext, out Sort sort)
         {
+            sort = null;
             if (query.PageSize == 0) // no need to sort when counting only
                 return null;
 
@@ -493,11 +495,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (query.Metadata.HasBoost == false && index.HasBoostedFields == false)
                     return null;
 
-                return SortByFieldScore;
+                sort = SortByFieldScore;
+                return null;
             }
 
             int sortIndex = 0;
-            var sort = new SortField[orderByFields.Length];
+            var sortArray = new ArraySegment<SortField>(ArrayPool<SortField>.Shared.Rent(orderByFields.Length), sortIndex, orderByFields.Length);
 
             foreach (var field in orderByFields)
             {
@@ -507,16 +510,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (field.Arguments != null && field.Arguments.Length > 0)
                         value = field.Arguments[0].NameOrValue;
 
-                    sort[sortIndex++] = new RandomSortField(value);
+                    sortArray[sortIndex++] = new RandomSortField(value);
                     continue;
                 }
 
                 if (field.OrderingType == OrderByFieldType.Score)
                 {
                     if (field.Ascending)
-                        sort[sortIndex++] = SortField.FIELD_SCORE;
+                        sortArray[sortIndex++] = SortField.FIELD_SCORE;
                     else
-                        sort[sortIndex++] = new SortField(null, 0, true);
+                        sortArray[sortIndex++] = new SortField(null, 0, true);
                     continue;
                 }
 
@@ -561,7 +564,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         : 0;
 
                     var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point, query, roundTo);
-                    sort[sortIndex++] = new SortField(field.Name, dsort, field.Ascending == false);
+                    sortArray[sortIndex++] = new SortField(field.Name, dsort, field.Ascending == false);
                     continue;
                 }
 
@@ -573,26 +576,42 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     case OrderByFieldType.Custom:
                         var cName = field.Arguments[0].NameOrValue;
                         var cSort = new CustomComparatorSource(cName, _index.DocumentDatabase.Name, query);
-                        sort[sortIndex++] = new SortField(fieldName, cSort, field.Ascending == false);
+                        sortArray[sortIndex++] = new SortField(fieldName, cSort, field.Ascending == false);
                         continue;
                     case OrderByFieldType.AlphaNumeric:
                         var anSort = new AlphaNumericComparatorSource(documentsContext);
-                        sort[sortIndex++] = new SortField(fieldName, anSort, field.Ascending == false);
+                        sortArray[sortIndex++] = new SortField(fieldName, anSort, field.Ascending == false);
                         continue;
                     case OrderByFieldType.Long:
                         sortOptions = SortField.LONG;
-                        fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+                        fieldName += Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
                         break;
                     case OrderByFieldType.Double:
                         sortOptions = SortField.DOUBLE;
-                        fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
+                        fieldName += Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
                         break;
                 }
 
-                sort[sortIndex++] = new SortField(fieldName, sortOptions, field.Ascending == false);
+                sortArray[sortIndex++] = new SortField(fieldName, sortOptions, field.Ascending == false);
             }
 
-            return new Sort(sort);
+            sort = new Sort(sortArray);
+            return new ReturnSort(sortArray);
+        }
+
+        private readonly struct ReturnSort : IDisposable
+        {
+            private readonly ArraySegment<SortField> _sortArray;
+
+            public ReturnSort(ArraySegment<SortField> sortArray)
+            {
+                _sortArray = sortArray;
+            }
+
+            public void Dispose()
+            {
+                ArrayPool<SortField>.Shared.Return(_sortArray.Array, clearArray: true);
+            }
         }
 
         public HashSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
@@ -774,21 +793,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var position = query.Start;
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
-            var sort = GetSort(query, _index, getSpatialField, documentsContext);
-
-            var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
-            var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);
-
-            totalResults.Value = search.TotalHits;
-
-            for (var index = position; index < search.ScoreDocs.Length; index++)
+            using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
             {
-                token.ThrowIfCancellationRequested();
+                var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
+                var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);
 
-                var scoreDoc = search.ScoreDocs[index];
-                var document = termsDocs[scoreDoc.Doc];
+                totalResults.Value = search.TotalHits;
 
-                yield return document;
+                for (var index = position; index < search.ScoreDocs.Length; index++)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    var scoreDoc = search.ScoreDocs[index];
+                    var document = termsDocs[scoreDoc.Doc];
+
+                    yield return document;
+                }
             }
         }
 
@@ -831,7 +851,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             fixed (byte* ptr = bytes)
             {
                 var blittableJson = context.ParseBuffer(ptr, bytes.Length, "MoreLikeThis/ExtractTermsFromJson", BlittableJsonDocumentBuilder.UsageMode.None);
-                blittableJson.BlittableValidation(); //precaution, needed because this is user input..                
+                blittableJson.BlittableValidation(); //precaution, needed because this is user input..
                 return blittableJson;
             }
         }
