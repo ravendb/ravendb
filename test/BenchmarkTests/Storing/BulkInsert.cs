@@ -39,7 +39,7 @@ namespace BenchmarkTests.Storing
         }
 
         [Fact]
-        public async Task VeryBigTransactionsForBulkInsertOfCounters()
+        public async Task Counters_1M_1Value_1User()
         {
             using (var store = GetDocumentStore())
             {
@@ -53,30 +53,28 @@ namespace BenchmarkTests.Storing
                     for (var j = 0; j < 1_000_000; j++)
                     {
                         var rnd = new Random(DateTime.Now.Millisecond);
-                        await counters.IncrementAsync(j.ToString(), rnd.Next(1, 1_000_000));
+                        await counters.IncrementAsync(j.ToString(), j + 1);
                     }
                 }
             }
         }
 
         [Fact]
-        public async Task VeryBigTransactionsForBulkInsertOfTimeSeries()
+        public async Task TimeSeries_1K_100KValues_1User()
         {
             using (var store = GetDocumentStore())
             {
                 const string baseDocId = "users/";
                 using (var bulk = store.BulkInsert())
                 {
+                    var docId = baseDocId + 1;
+                    await bulk.StoreAsync(new User() { Name = "Grisha" }, docId);
                     for (var i = 1; i < 1_000; i++)
                     {
-                        var docId = baseDocId + 1;
-                        await bulk.StoreAsync(new User() { Name = "Grisha" }, docId);
-
                         using var counters = bulk.TimeSeriesFor(docId, $"test_{i}");
                         for (var j = 0; j < 100_000; j++)
                         {
-                            var rnd = new Random(DateTime.Now.Millisecond);
-                            await counters.AppendAsync(DateTime.Now.AddMilliseconds(j), rnd.Next(1, 1_000_000));
+                            await counters.AppendAsync(DateTime.Now.AddMilliseconds(j), j + 1);
                         }
                     }
                 }
