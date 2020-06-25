@@ -62,7 +62,12 @@ class deleteTimeSeries extends dialogViewModelBase {
             },
             validation: [
                 {
-                    validator: () => !this.useMinStartDate() && this.startDate().isValid(),
+                    validator: () => {
+                        if (this.useMinStartDate()) {
+                            return true;
+                        }
+                        return this.startDate().isValid();
+                    },
                     message: "Please enter a valid date"
                 }
             ]
@@ -74,7 +79,12 @@ class deleteTimeSeries extends dialogViewModelBase {
             },
             validation: [
                 {
-                    validator: () => !this.useMaxEndDate() && this.endDate().isValid(),
+                    validator: () => {
+                        if (this.useMaxEndDate()) {
+                            return true;
+                        }
+                        return this.endDate().isValid();
+                    },
                     message: "Please enter a valid date"
                 }
             ]
