@@ -58,6 +58,7 @@ namespace Raven.Server.Documents.Handlers
                             var array = new BatchRequestParser.CommandData[8];
                             var numberOfCommands = 0;
                             long totalSize = 0;
+                            int operationsCount = 0;
                             while (true)
                             {
                                 using (var modifier = new BlittableMetadataModifier(docsCtx))
@@ -71,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                                     // if we are going to wait on the network, flush immediately
                                     if ((task.Wait(5) == false && numberOfCommands > 0) ||
                                         // but don't batch too much anyway
-                                        totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
+                                        totalSize > 16 * Voron.Global.Constants.Size.Megabyte || operationsCount >= 8192)
                                     {
                                         using (ReplaceContextIfCurrentlyInUse(task, numberOfCommands, array))
                                         {
@@ -99,6 +100,7 @@ namespace Raven.Server.Documents.Handlers
 
                                         numberOfCommands = 0;
                                         totalSize = 0;
+                                        operationsCount = 0;
                                     }
 
                                     var commandData = await task;
@@ -110,7 +112,9 @@ namespace Raven.Server.Documents.Handlers
                                         commandData.AttachmentStream = await WriteAttachment(commandData.ContentLength, parser.GetBlob(commandData.ContentLength));
                                     }
 
-                                    totalSize += GetSize(commandData);
+                                    (long size, int opsCount) = GetSizeAndOperationsCount(commandData);
+                                    operationsCount += opsCount;
+                                    totalSize += size;
                                     if (numberOfCommands >= array.Length)
                                         Array.Resize(ref array, array.Length + Math.Min(1024, array.Length));
                                     array[numberOfCommands++] = commandData;
@@ -204,13 +208,13 @@ namespace Raven.Server.Documents.Handlers
 
         private int? _changeVectorSize;
 
-        private long GetSize(BatchRequestParser.CommandData commandData)
+        private (long, int) GetSizeAndOperationsCount(BatchRequestParser.CommandData commandData)
         {
             long size = 0;
             switch (commandData.Type)
             {
                 case CommandType.PUT:
-                    return commandData.Document.Size;
+                    return (commandData.Document.Size, 1);
                 case CommandType.Counters:
                     foreach (var operation in commandData.Counters.Operations)
                     {
@@ -221,9 +225,9 @@ namespace Raven.Server.Documents.Handlers
                                 + 10; // estimated collection name size
                     }
 
-                    return size;
+                    return (size, commandData.Counters.Operations.Count);
                 case CommandType.AttachmentPUT:
-                    return commandData.ContentLength;
+                    return (commandData.ContentLength, 1);
                 case CommandType.TimeSeries:
                 case CommandType.TimeSeriesBulkInsert:
                     // we don't know the size of the change so we are just estimating
@@ -236,7 +240,7 @@ namespace Raven.Server.Documents.Handlers
                         size += append.Values.Length * sizeof(double);
                     }
 
-                    return size;
+                    return (size, commandData.TimeSeries.Appends.Count);
                 default:
                     throw new ArgumentOutOfRangeException($"'{commandData.Type}' isn't supported");
             }

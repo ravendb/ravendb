@@ -31,20 +31,16 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new BenchmarkTests.Storing.Session(testOutputHelper))
+                    using (var test = new RavenDB_10600(testOutputHelper))
                     {
-                        var sw = Stopwatch.StartNew();
-                        await test.Store_500k_Batch_Size_10();
-                        Console.WriteLine($"Took: {sw.Elapsed.TotalSeconds} seconds.");
+                        await test.TransformScriptShouldWorkWhenAttachmentsArePresentAndShouldBeAbleToSkipDocumentsUsingThrow();
                     }
-                    return;
                 }
                 catch (Exception e)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(e);
                     Console.ForegroundColor = ConsoleColor.White;
-                   // Console.ReadLine();
                 }
             }
         }
