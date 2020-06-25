@@ -1,5 +1,5 @@
 <div class="modal-dialog modal-lg margin-bottom" role="document" id="patchSyntaxDialog">
-    <div class="modal-content">        
+    <div class="modal-content">
         <div class="modal-body">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
             <div class="margin-top">Filter out an array item:</div>
@@ -8,7 +8,7 @@
 <span class="token keyword">update</span><span class="token punctuation"> { </span>
     this.Lines = this.Lines.filter(l => l.Product <span class="token operator">!=</span> <span class="token string">'products/1'</span>);
 <span class="token punctuation">}</span>
-</pre>            
+</pre>
             <div>Denormalize the company name:</div>
 <pre class="margin-bottom">
 <span class="token keyword">from</span> <span class="token string">Orders</span> <span class="token keyword">as</span> o
@@ -17,7 +17,6 @@
     o.CompanyName = c.Name;
 <span class="token punctuation">}</span>
 </pre>
-            
             <div>Use JavaScript to patch:</div>
 <pre class="margin-bottom"><span class="token keyword">from index</span><span class="token string"> 'Orders/Totals' </span><span class="token keyword">as</span> i
 <span class="token keyword">where</span> i.Total<span class="token operator"> > </span>10000
@@ -25,29 +24,44 @@
 <span class="token keyword">update</span><span class="token punctuation"> { </span>
     i.LowerName = c.Name.toLowerCase();
 <span class="token punctuation">}</span>
-</pre>                
-                <div>Working with metadata</div>
+</pre>
+            <div>Access the metadata</div>
 <pre class="margin-bottom">
 <span class="token keyword">from </span><span class="token string">Orders </span>
 <span class="token keyword">update</span><span class="token punctuation"> { </span>
     <span class="token keyword">this</span>.DocumentId = id(<span class="token keyword">this</span>);
     <span class="token keyword">this</span>.DocumentCollection = <span class="token keyword">this</span>["@metadata"]["@collection"];
 <span class="token punctuation">}</span>
-</pre> 
+</pre>
+            <div>Add a time series entry</div>
+<pre class="margin-bottom">
+<span class="token keyword">from </span><span class="token string">Persons</span>
+<span class="token keyword">update</span><span class="token punctuation"> { </span>
+    timeseries(<span class="token string">"Persons/1"</span>, <span class="token string">"HeartRate"</span>).append(<span class="token string">"2020-06-25T10:48:14.794"</span>, [120, 80], <span class="token string">"TagName"</span>);
+<span class="token punctuation">}</span>
+</pre>
         </div>
         <div class="modal-footer">
-           <div class="text-left">
-               <p>You can use following functions in your patch script:</p>
-                <ul>
+            <div class="text-left">
+                <div>The following functions can be used under <code>update</code> in the patch script:</div>
+                <small>See RavenDB online documentation for the full list.</small>
+                <ul class="margin-top margin-top-sm">
+                    Documents:
                     <li><code>put(documentId, document)</code> - puts document with given name and data</li>
                     <li><code>load(documentIdToLoad)</code> - loads document by ID</li>
                     <li><code>del(documentIdToRemove)</code> - deletes document by ID</li>
+                    Counters:
                     <li><code>incrementCounter(document/documentId, name, value = 1)</code> - increment a counter by document/document ID</li>
                     <li><code>counter(document/documentId, name)</code> - get the counter value by document/document ID</li>
                     <li><code>deleteCounter(document/documentId, name)</code> - delete a counter by document/document ID</li>
-                    <li><code>output(message)</code> - allows to output debug info when testing patches</li>
+                    Time Series:
+                    <li><code>timeseries(document/documentId, name).append(timestamp, values, tag = null)</code> - add a new entry to a timeseries</li>
+                    <li><code>timeseries(document/documentId, name).remove(from, to)</code> - remove entries from a timeseries</li>
+                    <li><code>timeseries(document/documentId, name).get(from, to)</code> - get timeseries entries</li>
+                    General:
+                    <li><code>output(message)</code> - output debug info when testing a patch</li>
                 </ul>
-           </div>
+            </div>
         </div>
     </div>
 </div>
