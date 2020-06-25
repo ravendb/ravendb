@@ -65,11 +65,11 @@ namespace Raven.Server.Commercial
 
         public int GetMaxCoresToUtilize(int requestedCores)
         {
-            var utilizedCores = Math.Min(requestedCores, NumberOfCores);
+            var coresToUtilize = Math.Min(requestedCores, NumberOfCores);
             if (MaxUtilizedCores != null)
-                utilizedCores = Math.Min(utilizedCores, MaxUtilizedCores.Value);
+                coresToUtilize = Math.Min(coresToUtilize, MaxUtilizedCores.Value);
 
-            return utilizedCores;
+            return coresToUtilize;
         }
     }
 }

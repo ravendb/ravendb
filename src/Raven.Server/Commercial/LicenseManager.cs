@@ -280,31 +280,12 @@ namespace Raven.Server.Commercial
             return _serverStore.GetClusterTopology().AllNodes.Count;
         }
 
-        public async Task ChangeLicenseLimits(string nodeTag, int utilizedCores, int? maxUtilizedCores, string raftRequestId)
+        public async Task ChangeLicenseLimits(string nodeTag, int? maxUtilizedCores, string raftRequestId)
         {
             var licenseLimits = _serverStore.LoadLicenseLimits();
 
-            var oldAssignedCores = 0;
             DetailsPerNode detailsPerNode = null;
-            if (licenseLimits != null)
-            {
-                licenseLimits.NodeLicenseDetails.TryGetValue(nodeTag, out detailsPerNode);
-                oldAssignedCores = detailsPerNode?.UtilizedCores ?? 0;
-            }
-
-            var currentCoresUtilization = licenseLimits?.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores) - oldAssignedCores ?? 0;
-            var newUtilizedCores = currentCoresUtilization + utilizedCores;
-            var maxLicensedCores = _licenseStatus.MaxCores;
-            if (newUtilizedCores > maxLicensedCores)
-            {
-                var message = $"Cannot change the license limit for node {nodeTag} " +
-                              $"from {oldAssignedCores} core{Pluralize(oldAssignedCores)} " +
-                              $"to {utilizedCores} core{Pluralize(utilizedCores)} " +
-                              $"because the utilized number of cores in the cluster will be {newUtilizedCores} " +
-                              $"while the maximum allowed cores according to the license is {maxLicensedCores}.";
-
-                throw new LicenseLimitException(LimitType.Cores, message);
-            }
+            licenseLimits?.NodeLicenseDetails.TryGetValue(nodeTag, out detailsPerNode);
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -344,11 +325,6 @@ namespace Raven.Server.Commercial
                 Debug.Assert(detailsPerNode != null);
                 Debug.Assert(detailsPerNode.NumberOfCores > 0);
 
-                if (detailsPerNode.NumberOfCores < utilizedCores)
-                    throw new ArgumentException($"The new assigned cores count: {utilizedCores} " +
-                                                $"is larger than the number of cores in the node: {detailsPerNode.NumberOfCores}");
-
-                detailsPerNode.UtilizedCores = utilizedCores;
                 detailsPerNode.MaxUtilizedCores = maxUtilizedCores;
             }
 
@@ -382,16 +358,6 @@ namespace Raven.Server.Commercial
                 return 0;
 
             return detailsPerNode.Sum(x => x.Value.UtilizedCores);
-        }
-
-        public int GetCoresToAssign(int numberOfCores)
-        {
-            var utilizedCores = GetUtilizedCores();
-            if (utilizedCores == 0)
-                return Math.Min(numberOfCores, _licenseStatus.MaxCores);
-
-            var availableCores = Math.Max(1, _licenseStatus.MaxCores - utilizedCores);
-            return Math.Min(availableCores, numberOfCores);
         }
 
         private void AssertCanAssignCores(int assignedCores)
@@ -1115,7 +1081,7 @@ namespace Raven.Server.Commercial
             return (hasSnapshotBackup, hasCloudBackup, hasEncryptedBackup);
         }
 
-        public void AssertCanAddNode(string nodeUrl, int assignedCores)
+        public void AssertCanAddNode(int assignedCores)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;

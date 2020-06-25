@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                 Path = Path.Combine(server.Configuration.Core.DataDirectory.FullPath, "UtilizedCoresShouldNotChangeAfterRestart")
             });
 
-            await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, 1, null, Guid.NewGuid().ToString());
+            await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, 1, Guid.NewGuid().ToString());
             var license = server.ServerStore.LoadLicenseLimits();
             Assert.True(license.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out var detailsPerNode));
             Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
             var tags = Servers.Where(x => x.ServerStore.NodeTag != leader.ServerStore.NodeTag).Select(x => x.ServerStore.NodeTag).ToList();
             foreach (var tag in tags)
             {
-                await ActionWithLeader(l => l.ServerStore.LicenseManager.ChangeLicenseLimits(tag, 1, null, Guid.NewGuid().ToString()));
+                await ActionWithLeader(l => l.ServerStore.LicenseManager.ChangeLicenseLimits(tag, 1, Guid.NewGuid().ToString()));
                 var license = leader.ServerStore.LoadLicenseLimits();
                 Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
                 Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
