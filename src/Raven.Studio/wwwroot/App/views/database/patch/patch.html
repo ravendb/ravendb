@@ -41,22 +41,21 @@
                                 </div>
                             </div>
                             <div class="patch-controls">
+                                <div class="flex-separator"></div>
                                 <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: runPatch" title="Execute patch">
                                     <i class="icon-play2 icon-lg"></i><br />
                                     <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                                 </button>
-
-                                <div class="flex-separator"></div>
                                 <button class="btn btn-default btn-block text-center margin-top" data-bind="click: enterTestMode" title="Dry patch run. It doesn't modify any data">
                                     <i class="icon-rocket"></i><span>Test</span>
                                 </button>
                             </div>
                             <div class="test-controls">
+                                <div class="flex-separator"></div>
                                 <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
                                     <i class="icon-rocket"></i><span>Test</span><br />
                                     <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                                 </button>
-                                <div class="flex-separator"></div>
                                 <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode" title="Leave test mode">
                                     <i class="icon-check"></i><span>Done</span>
                                 </button>
@@ -78,7 +77,7 @@
             <div class="row">
                 <div class="col-sm-6">
                     <div class="input-group">
-                        <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document id" 
+                        <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document id" autocomplete="off"
                             title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
                         <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu" 
                              data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
