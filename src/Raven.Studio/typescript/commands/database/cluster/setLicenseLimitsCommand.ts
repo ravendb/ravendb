@@ -3,14 +3,13 @@ import endpoints = require("endpoints");
 
 class setLicenseLimitsCommand extends commandBase {
 
-    constructor(private nodeTag: string, private newAssignedCores: number, private maxUtilizedCores: number | null) {
+    constructor(private nodeTag: string, private maxUtilizedCores: number | null) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
             nodeTag: this.nodeTag,
-            newAssignedCores: this.newAssignedCores,
             maxUtilizedCores : this.maxUtilizedCores
         }
 

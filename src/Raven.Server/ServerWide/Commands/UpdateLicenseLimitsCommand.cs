@@ -33,12 +33,8 @@ namespace Raven.Server.ServerWide.Commands
             if (Value.DetailsPerNode == null || Value.NodeTag == null || Value.AllNodes == null)
                 throw new RachisApplyException($"{nameof(Value.DetailsPerNode)}, {nameof(Value.NodeTag)}, {nameof(Value.AllNodes)} cannot be null");
 
-            if (Value.DetailsPerNode.NumberOfCores < Value.DetailsPerNode.UtilizedCores)
-                throw new RachisApplyException($"The utilized cores count: {Value.DetailsPerNode.UtilizedCores} " +
-                                               $"is larger than the number of cores in the node: {Value.DetailsPerNode.NumberOfCores}");
-
-            if (Value.DetailsPerNode.MaxUtilizedCores != null && Value.DetailsPerNode.MaxUtilizedCores.Value < Value.DetailsPerNode.UtilizedCores)
-                throw new RachisApplyException($"{nameof(DetailsPerNode.MaxUtilizedCores)} must be larger or equal to {nameof(DetailsPerNode.UtilizedCores)}");
+            if (Value.DetailsPerNode.MaxUtilizedCores != null && Value.DetailsPerNode.MaxUtilizedCores <= 0)
+                throw new RachisApplyException($"{nameof(DetailsPerNode.MaxUtilizedCores)} must be greater than 0");
 
             var licenseLimits = previousValue == null ? new LicenseLimits() : JsonDeserializationServer.LicenseLimits(previousValue);
 
@@ -62,22 +58,27 @@ namespace Raven.Server.ServerWide.Commands
 
         private void UpdateNodeDetails(LicenseLimits licenseLimits)
         {
-            if (Value.DetailsPerNode.UtilizedCores == 0)
+            if (licenseLimits.NodeLicenseDetails.TryGetValue(Value.NodeTag, out var currentDetailsPerNode))
             {
-                if (licenseLimits.NodeLicenseDetails.TryGetValue(Value.NodeTag, out var currentDetailsPerNode))
+                if (Value.DetailsPerNode.UtilizedCores == 0)
                 {
-                    // need to keep the previous max utilized cores
+                    // this is a node info update, need to keep the previous max utilized cores
                     Value.DetailsPerNode.MaxUtilizedCores = currentDetailsPerNode.MaxUtilizedCores;
                 }
 
-                licenseLimits.NodeLicenseDetails.Remove(Value.NodeTag);
+                Value.DetailsPerNode.UtilizedCores = Value.DetailsPerNode.GetMaxCoresToUtilize(currentDetailsPerNode.UtilizedCores);
+            }
+            else
+            {
                 var availableCoresToDistribute = Value.LicensedCores - licenseLimits.TotalUtilizedCores;
 
                 // need to "reserve" cores for nodes that aren't in license limits yet
                 // we are going to distribute the available cores equally
                 var unassignedNodesCount = Value.AllNodes.Except(licenseLimits.NodeLicenseDetails.Keys).Count();
-                var coresPerNodeToDistribute = Math.Max(1, availableCoresToDistribute / unassignedNodesCount);
+                if (unassignedNodesCount == 0)
+                    throw new RachisApplyException($"Node {Value.NodeTag} isn't part of the cluster, all nodes are: {string.Join(", ", Value.AllNodes)}");
 
+                var coresPerNodeToDistribute = Math.Max(1, availableCoresToDistribute / unassignedNodesCount);
                 Value.DetailsPerNode.UtilizedCores = Value.DetailsPerNode.GetMaxCoresToUtilize(coresPerNodeToDistribute);
             }
 
@@ -87,9 +88,6 @@ namespace Raven.Server.ServerWide.Commands
         private void VerifyCoresPerNode(LicenseLimits licenseLimits)
         {
             var utilizedCores = licenseLimits.TotalUtilizedCores;
-            if (Value.LicensedCores == utilizedCores)
-                return;
-
             if (Value.LicensedCores >= utilizedCores)
                 return;
 

@@ -4,23 +4,22 @@ class addClusterNodeModel {
     serverUrl = ko.observable<string>();
     nodeTag = ko.observable<string>();
     addAsWatcher = ko.observable<boolean>(false);
-    assignedCores = ko.observable<number>(undefined);
     maxUtilizedCores = ko.observable<number>(undefined);
     usaAvailableCores = ko.observable<boolean>(true);
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         serverUrl: this.serverUrl,
         nodeTag: this.nodeTag,
-        assignedCores: this.assignedCores
+        maxUtilizedCores: this.maxUtilizedCores
     });
 
     constructor() {
         this.usaAvailableCores.subscribe(newValue => {
-            this.assignedCores.clearError();
+            this.maxUtilizedCores.clearError();
             if (!newValue)
                 return;
 
-            this.assignedCores(undefined);
+            this.maxUtilizedCores(undefined);
         });
 
         this.initValidation();
@@ -41,7 +40,7 @@ class addClusterNodeModel {
             maxLength: 4,
         });
 
-        this.assignedCores.extend({
+        this.maxUtilizedCores.extend({
             required: {
                 onlyIf: () => !this.usaAvailableCores()
             },

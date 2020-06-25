@@ -301,11 +301,10 @@ namespace Raven.Server.Documents.Handlers.Admin
             var tag = GetStringQueryString("tag", false);
             var watcher = GetBoolValueQueryString("watcher", false);
             var raftRequestId = GetRaftRequestIdFromQuery();
-            var assignedCores = GetIntValueQueryString("assignedCores", false);
-            if (assignedCores <= 0)
-                throw new ArgumentException("Assigned cores must be greater than 0!");
 
             var maxUtilizedCores = GetIntValueQueryString("maxUtilizedCores", false);
+            if (maxUtilizedCores != null && maxUtilizedCores <= 0)
+                throw new ArgumentException("Max utilized cores cores must be greater than 0");
 
             nodeUrl = nodeUrl.Trim();
             if (Uri.IsWellFormedUriString(nodeUrl, UriKind.Absolute) == false)
@@ -364,12 +363,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
 
-            if (assignedCores != null && assignedCores > nodeInfo.NumberOfCores)
-            {
-                throw new ArgumentException("Cannot add node because the assigned cores is larger " +
-                                            $"than the available cores on that machine: {nodeInfo.NumberOfCores}");
-            }
-
             if (ServerStore.ValidateFixedPort && nodeInfo.HasFixedPort == false)
             {
                 throw new InvalidOperationException($"Failed to add node '{nodeUrl}' to cluster. " +
@@ -379,13 +372,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             ServerStore.EnsureNotPassive();
 
-            assignedCores ??= ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
-            if (maxUtilizedCores != null)
-                assignedCores = Math.Min(assignedCores.Value, maxUtilizedCores.Value);
-
-            Debug.Assert(assignedCores <= nodeInfo.NumberOfCores);
-
-            ServerStore.LicenseManager.AssertCanAddNode(nodeUrl, assignedCores.Value);
+            // check if we can add at least one core for this node
+            // the actual assignment of the cores will be done in UpdateLicenseLimitsCommand
+            ServerStore.LicenseManager.AssertCanAddNode(1);
 
             if (ServerStore.IsLeader())
             {
@@ -502,7 +491,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         var detailsPerNode = new DetailsPerNode
                         {
-                            UtilizedCores = assignedCores.Value,
+                            UtilizedCores = 0,
                             MaxUtilizedCores = maxUtilizedCores,
                             NumberOfCores = nodeInfo.NumberOfCores,
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
@@ -512,7 +501,15 @@ namespace Raven.Server.Documents.Handlers.Admin
                         };
 
                         var maxCores = ServerStore.LicenseManager.GetLicenseStatus().MaxCores;
-                        await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores);
+
+                        try
+                        {
+                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores);
+                        }
+                        catch
+                        {
+                            // we'll retry this again later
+                        }
                     }
 
                     NoContentStatus();
@@ -574,18 +571,11 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task SetLicenseLimit()
         {
             var nodeTag = GetStringQueryString("nodeTag");
-            var newAssignedCores = GetIntValueQueryString("newAssignedCores");
             var maxUtilizedCores = GetIntValueQueryString("maxUtilizedCores", required: false);
+            if (maxUtilizedCores != null && maxUtilizedCores <= 0)
+                throw new ArgumentException("Max utilized cores must be greater than 0");
 
-            Debug.Assert(newAssignedCores != null);
-
-            if (newAssignedCores <= 0)
-                throw new ArgumentException("The new assigned cores value must be larger than 0");
-            
-            if (maxUtilizedCores != null && newAssignedCores > maxUtilizedCores)
-                throw new ArgumentException("Max utilized cores must be larger or equal to the new assigned cores");
-
-            await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, maxUtilizedCores, GetRaftRequestIdFromQuery());
+            await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, maxUtilizedCores, GetRaftRequestIdFromQuery());
             NoContentStatus();
         }
 
