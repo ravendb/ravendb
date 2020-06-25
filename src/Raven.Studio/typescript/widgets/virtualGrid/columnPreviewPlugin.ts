@@ -46,6 +46,7 @@ class columnPreviewPlugin<T> {
 
     install(containerSelector: string, tooltipSelector: string, 
             previewContextProvider: (item: T, column: virtualColumn, event: JQueryEventObject, onValueProvided: (context: any, valueToCopy?: any) => void) => void) {
+        
         const $grid = $(containerSelector + " .virtual-grid");
         const grid = ko.dataFor($grid[0]) as virtualGrid<T>;
         if (!grid || !(grid instanceof virtualGrid)) {
@@ -57,8 +58,10 @@ class columnPreviewPlugin<T> {
         this.grid = grid;
         
         const markupProvider = columnPreviewPlugin.defaultMarkupProvider;
+        
         this.$tooltip.on("click", ".copy", () => {
-            copyToClipboard.copy(this.currentValue);
+            copyToClipboard.copy(this.currentValue, "Item has been copied to clipboard", document.querySelector(containerSelector));
+            
             $(".copy", this.$tooltip).addClass("btn-success");
             $(".copy span", this.$tooltip)
                 .html("Copied!")
