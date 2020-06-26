@@ -69,7 +69,7 @@ namespace FastTests
 
         private static readonly object ServerLocker = new object();
 
-        private bool _doNotReuseServer;
+        protected bool _doNotReuseServer;
 
         private IDictionary<string, string> _customServerSettings;
 

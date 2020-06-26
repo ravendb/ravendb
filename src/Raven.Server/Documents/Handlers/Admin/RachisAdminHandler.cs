@@ -491,7 +491,6 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         var detailsPerNode = new DetailsPerNode
                         {
-                            UtilizedCores = 0,
                             MaxUtilizedCores = maxUtilizedCores,
                             NumberOfCores = nodeInfo.NumberOfCores,
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
