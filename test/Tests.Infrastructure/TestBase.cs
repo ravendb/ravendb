@@ -75,7 +75,6 @@ namespace FastTests
 
         static TestBase()
         {
-            LicenseManager.IgnoreProcessorAffinityChanges = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
@@ -471,6 +470,18 @@ namespace FastTests
                 }
             }
 
+            private bool _ignoreProcessorAffinityChanges = true;
+
+            public bool IgnoreProcessorAffinityChanges
+            {
+                get => _ignoreProcessorAffinityChanges;
+                set
+                {
+                    AssertNotFrozen();
+                    _ignoreProcessorAffinityChanges = value;
+                }
+            }
+
             private string _dataDirectory;
 
             public string DataDirectory
@@ -615,8 +626,10 @@ namespace FastTests
                 if (options.BeforeDatabasesStartup != null)
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
 
+
                 server.Initialize();
                 server.ServerStore.ValidateFixedPort = false;
+                server.ServerStore.IgnoreProcessorAffinityChanges = options.IgnoreProcessorAffinityChanges;
 
                 if (options.RegisterForDisposal)
                     ServersForDisposal.Add(server);
