@@ -1,5 +1,4 @@
 using System;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
@@ -47,19 +46,6 @@ namespace Raven.Server.Commercial
                 [nameof(UsableMemoryInGb)] = UsableMemoryInGb,
                 [nameof(BuildInfo)] = BuildInfo,
                 [nameof(OsInfo)] = OsInfo
-            };
-        }
-
-        public static DetailsPerNode FromNodeInfo(NodeInfo nodeInfo)
-        {
-            return new DetailsPerNode
-            {
-                UtilizedCores = 0, // don't care
-                NumberOfCores = nodeInfo.NumberOfCores,
-                InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
-                UsableMemoryInGb = nodeInfo.UsableMemoryInGb,
-                BuildInfo = nodeInfo.BuildInfo,
-                OsInfo = nodeInfo.OsInfo
             };
         }
 

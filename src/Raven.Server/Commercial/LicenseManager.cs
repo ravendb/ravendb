@@ -30,6 +30,7 @@ using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
@@ -155,13 +156,21 @@ namespace Raven.Server.Commercial
             try
             {
                 var nodeInfo = _serverStore.GetNodeInfo();
-                var detailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo);
+                var detailsPerNode = new DetailsPerNode
+                {
+                    UtilizedCores = UpdateLicenseLimitsCommand.NodeInfoUpdate,
+                    NumberOfCores = nodeInfo.NumberOfCores,
+                    InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
+                    UsableMemoryInGb = nodeInfo.UsableMemoryInGb,
+                    BuildInfo = nodeInfo.BuildInfo,
+                    OsInfo = nodeInfo.OsInfo
+                };
 
                 await _serverStore.PutNodeLicenseLimitsAsync(_serverStore.NodeTag, detailsPerNode, _licenseStatus.MaxCores);
             }
             catch (Exception e)
             {
-                if (Logger.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled && _serverStore.IsPassive() == false)
                     Logger.Operations("Failed to put my node info, will try again later", e);
             }
             finally
@@ -267,7 +276,7 @@ namespace Raven.Server.Commercial
             }
 
             // we don't have any license limits for this node, let's put our info to update it
-            Task.Run(async() => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
+            Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
 
             return Math.Min(ProcessorInfo.ProcessorCount, _licenseStatus.MaxCores);
         }
@@ -298,9 +307,10 @@ namespace Raven.Server.Commercial
                 {
                     detailsPerNode ??= new DetailsPerNode();
                     detailsPerNode.NumberOfCores = ProcessorInfo.ProcessorCount;
-                    var memoryInfo = GetMemoryInfoInGb();
-                    detailsPerNode.InstalledMemoryInGb = memoryInfo.InstalledMemory;
-                    detailsPerNode.UsableMemoryInGb = memoryInfo.UsableMemory;
+
+                    var memoryInfo = _serverStore.Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfo);
+                    detailsPerNode.InstalledMemoryInGb = memoryInfo.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
+                    detailsPerNode.UsableMemoryInGb = memoryInfo.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
                     detailsPerNode.BuildInfo = BuildInfo;
                     detailsPerNode.OsInfo = OsInfo;
                 }
@@ -1412,14 +1422,6 @@ namespace Raven.Server.Commercial
 
                 return GetDefaultLicenseSupportInfo();
             }
-        }
-
-        private static (double InstalledMemory, double UsableMemory) GetMemoryInfoInGb()
-        {
-            var memoryInformation = MemoryInformation.GetMemoryInfo();
-            var installedMemoryInGb = memoryInformation.InstalledMemory.GetDoubleValue(SizeUnit.Gigabytes);
-            var usableMemoryInGb = memoryInformation.TotalPhysicalMemory.GetDoubleValue(SizeUnit.Gigabytes);
-            return (installedMemoryInGb, usableMemoryInGb);
         }
 
         private LicenseSupportInfo GetDefaultLicenseSupportInfo()

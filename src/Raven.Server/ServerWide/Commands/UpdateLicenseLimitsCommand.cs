@@ -9,6 +9,8 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class UpdateLicenseLimitsCommand : UpdateValueCommand<NodeLicenseLimits>
     {
+        public static int NodeInfoUpdate = -1;
+
         public UpdateLicenseLimitsCommand()
         {
             // for deserialization
@@ -60,7 +62,7 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (licenseLimits.NodeLicenseDetails.TryGetValue(Value.NodeTag, out var currentDetailsPerNode))
             {
-                if (Value.DetailsPerNode.UtilizedCores == 0)
+                if (Value.DetailsPerNode.UtilizedCores == NodeInfoUpdate)
                 {
                     // this is a node info update, need to keep the previous max utilized cores
                     Value.DetailsPerNode.MaxUtilizedCores = currentDetailsPerNode.MaxUtilizedCores;
