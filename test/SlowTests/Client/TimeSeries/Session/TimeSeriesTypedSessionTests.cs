@@ -36,11 +36,13 @@ namespace SlowTests.Client.TimeSeries.Session
 
         private class StockPriceWithBadAttributes
         {
+#pragma warning disable CS0649
             [TimeSeriesValue(1)] public double Open;
             [TimeSeriesValue(2)] public double Close;
             [TimeSeriesValue(3)] public double High;
             [TimeSeriesValue(4)] public double Low;
             [TimeSeriesValue(5)] public double Volume;
+#pragma warning restore CS0649
         }
 
         internal struct HeartRateMeasure

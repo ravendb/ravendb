@@ -25,9 +25,11 @@ namespace SlowTests.Issues
 
         private class MetricValue
         {
+#pragma warning disable CS0649
             [TimeSeriesValue(0)] public long DurationInMs;
             [TimeSeriesValue(1)] public long RequestSize;
             [TimeSeriesValue(2)] public string SourceIp;
+#pragma warning restore CS0649
         }
     }
 }
