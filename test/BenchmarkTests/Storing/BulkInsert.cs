@@ -39,7 +39,7 @@ namespace BenchmarkTests.Storing
         }
 
         [Fact]
-        public async Task Counters_1M_1Value_1User()
+        public async Task Counters_1M_Value_1_Users_1()
         {
             using (var store = GetDocumentStore())
             {
@@ -52,7 +52,6 @@ namespace BenchmarkTests.Storing
                     var counters = bulk.CountersFor(docId);
                     for (var j = 0; j < 1_000_000; j++)
                     {
-                        var rnd = new Random(DateTime.Now.Millisecond);
                         await counters.IncrementAsync(j.ToString(), j + 1);
                     }
                 }
@@ -60,7 +59,7 @@ namespace BenchmarkTests.Storing
         }
 
         [Fact]
-        public async Task TimeSeries_1K_100KValues_1User()
+        public async Task TimeSeries_1k_Values_100k_Users_1()
         {
             using (var store = GetDocumentStore())
             {
