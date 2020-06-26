@@ -469,6 +469,7 @@ namespace Tests.Infrastructure
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
+            bool ignoreProcessorAffinityChanges = true,
             [CallerMemberName]string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
@@ -515,7 +516,8 @@ namespace Tests.Infrastructure
                     CustomSettings = customSettings,
                     RunInMemory = shouldRunInMemory,
                     RegisterForDisposal = false,
-                    NodeTag = allowedNodeTags[i]
+                    NodeTag = allowedNodeTags[i],
+                    IgnoreProcessorAffinityChanges = ignoreProcessorAffinityChanges
                 };
                 var server = GetNewServer(co, caller);
                 var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);

@@ -15,7 +15,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override Integer32 GetData()
         {
-            var cores = _store.LicenseManager.GetCoresLimitForNode();
+            var cores = _store.LicenseManager.GetCoresLimitForNode(out _);
             return new Integer32(cores);
         }
     }

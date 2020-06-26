@@ -26,7 +26,8 @@ namespace FastTests.Server
         {
             var server = GetNewServer(new ServerCreationOptions
             {
-                RunInMemory = false
+                RunInMemory = false,
+                IgnoreProcessorAffinityChanges = false
             });
 
             {
@@ -63,7 +64,7 @@ namespace FastTests.Server
         {
             DoNotReuseServer();
 
-            var (servers, leader) = await CreateRaftCluster(5);
+            var (servers, leader) = await CreateRaftCluster(5, ignoreProcessorAffinityChanges: false);
             leader.ServerStore.EnsureNotPassive();
 
             foreach (var server in servers)
@@ -103,7 +104,8 @@ namespace FastTests.Server
         {
             var server = GetNewServer(new ServerCreationOptions
             {
-                RunInMemory = false
+                RunInMemory = false,
+                IgnoreProcessorAffinityChanges = false
             });
 
             using (GetDocumentStore(new Options
@@ -139,7 +141,7 @@ namespace FastTests.Server
             DoNotReuseServer();
 
             var reasonableTime = Debugger.IsAttached ? 5000 : 3000;
-            var (servers, leader) = await CreateRaftCluster(3);
+            var (servers, leader) = await CreateRaftCluster(3, ignoreProcessorAffinityChanges: false);
 
             using (var store = GetDocumentStore(new Options
             {

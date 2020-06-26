@@ -76,8 +76,6 @@ namespace Raven.Server.Commercial
             FullVersion = ServerVersion.FullVersion
         };
 
-        internal static bool IgnoreProcessorAffinityChanges = false;
-
         public LicenseManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
@@ -250,11 +248,11 @@ namespace Raven.Server.Commercial
             {
                 using (var process = Process.GetCurrentProcess())
                 {
-                    var utilizedCores = GetCoresLimitForNode();
+                    var utilizedCores = GetCoresLimitForNode(out var hasLicenseLimits);
                     var clusterSize = GetClusterSize();
                     var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, utilizedCores * _licenseStatus.Ratio);
 
-                    SetAffinity(process, utilizedCores, addPerformanceHint);
+                    SetAffinity(process, utilizedCores, addPerformanceHint, hasLicenseLimits);
                     SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
                 }
 
@@ -266,18 +264,19 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public int GetCoresLimitForNode()
+        public int GetCoresLimitForNode(out bool hasLicenseLimits)
         {
             var licenseLimits = _serverStore.LoadLicenseLimits();
             if (licenseLimits?.NodeLicenseDetails != null &&
                 licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
             {
+                hasLicenseLimits = true;
                 return Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
             }
 
             // we don't have any license limits for this node, let's put our info to update it
             Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
-
+            hasLicenseLimits = false;
             return Math.Min(ProcessorInfo.ProcessorCount, _licenseStatus.MaxCores);
         }
 
@@ -775,20 +774,17 @@ namespace Raven.Server.Commercial
             _serverStore.NotificationCenter.Add(alert);
         }
 
-        private void SetAffinity(Process process, int cores, bool addPerformanceHint)
+        private void SetAffinity(Process process, int cores, bool addPerformanceHint, bool hasLicenseLimits)
         {
             if (cores > ProcessorInfo.ProcessorCount)
                 cores = ProcessorInfo.ProcessorCount;
 
             try
             {
-                var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
-                if (IgnoreProcessorAffinityChanges && currentlyAssignedCores != cores)
-                {
-                    Console.WriteLine($"Processor affinity change detected. Current cores: {currentlyAssignedCores}. Requested cores: {cores}.");
+                if (IgnoreProcessorAffinityChanges(cores, hasLicenseLimits))
                     return;
-                }
 
+                var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
                 if (currentlyAssignedCores == cores &&
                     _lastPerformanceHint != null &&
                     _lastPerformanceHint.Value.AddDays(7) > DateTime.UtcNow)
@@ -860,6 +856,25 @@ namespace Raven.Server.Commercial
             {
                 Logger.Info($"Failed to set affinity for {cores} cores, error code: {Marshal.GetLastWin32Error()}", e);
             }
+        }
+
+        private bool IgnoreProcessorAffinityChanges(int cores, bool hasLicenseLimits)
+        {
+            if (_serverStore.IgnoreProcessorAffinityChanges == false)
+                return false;
+
+            if (hasLicenseLimits == false)
+            {
+                // at server startup we are setting the amount of cores in the default license (3)
+                return false;
+            }
+
+            if (ProcessorInfo.ProcessorCount == cores)
+                return false;
+
+            Console.WriteLine($"Processor affinity was set and not using all available cores. Requested cores: {cores}. Number of cores on the machine: {ProcessorInfo.ProcessorCount}");
+            return true;
+
         }
 
         private static void SetMaxWorkingSet(Process process, double ramInGb)
