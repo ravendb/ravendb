@@ -21,50 +21,48 @@ namespace FastTests.Server
         {
         }
 
-        [Fact]
+        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
         public async Task WillUtilizeAllAvailableCores()
         {
             var server = GetNewServer(new ServerCreationOptions
             {
-                RunInMemory = false,
-                IgnoreProcessorAffinityChanges = false
+                RunInMemory = false
             });
 
+            server.ServerStore.EnsureNotPassive();
+
+            await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, 1, Guid.NewGuid().ToString());
+            var licenseLimits = server.ServerStore.LoadLicenseLimits();
+            Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out var detailsPerNode));
+            Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
+
+            // Taking down server
+            var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
+            var settings = new Dictionary<string, string>
             {
-                server.ServerStore.EnsureNotPassive();
+                {RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url}
+            };
 
-                await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, 1, Guid.NewGuid().ToString());
-                var licenseLimits = server.ServerStore.LoadLicenseLimits();
-                Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out var detailsPerNode));
-                Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
+            // Bring server up
+            server = GetNewServer(
+                new ServerCreationOptions {RunInMemory = false, DeletePrevious = false, DataDirectory = result.DataDirectory, CustomSettings = settings});
 
-                // Taking down server
-                var result = await DisposeServerAndWaitForFinishOfDisposalAsync(server);
-                var settings = new Dictionary<string, string>
-                {
-                    { RavenConfiguration.GetKey(x => x.Core.ServerUrls), result.Url }
-                };
+            licenseLimits = server.ServerStore.LoadLicenseLimits();
+            Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out detailsPerNode));
+            Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
 
-                // Bring server up
-                server = GetNewServer(new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = result.DataDirectory, CustomSettings = settings });
-
-                licenseLimits = server.ServerStore.LoadLicenseLimits();
-                Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out detailsPerNode));
-                Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
-
-                await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, null, Guid.NewGuid().ToString());
-                licenseLimits = server.ServerStore.LoadLicenseLimits();
-                Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out detailsPerNode));
-                Assert.True(detailsPerNode.UtilizedCores == ProcessorInfo.ProcessorCount, $"detailsPerNode.UtilizedCores == {ProcessorInfo.ProcessorCount}");
-            }
+            await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, null, Guid.NewGuid().ToString());
+            licenseLimits = server.ServerStore.LoadLicenseLimits();
+            Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out detailsPerNode));
+            Assert.True(detailsPerNode.UtilizedCores == ProcessorInfo.ProcessorCount, $"detailsPerNode.UtilizedCores == {ProcessorInfo.ProcessorCount}");
         }
 
-        [Fact]
+        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
         public async Task WillUtilizeAllAvailableCoresInACluster()
         {
             DoNotReuseServer();
 
-            var (servers, leader) = await CreateRaftCluster(5, ignoreProcessorAffinityChanges: false);
+            var (servers, leader) = await CreateRaftCluster(5);
             leader.ServerStore.EnsureNotPassive();
 
             foreach (var server in servers)
@@ -99,13 +97,12 @@ namespace FastTests.Server
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
         public async Task UtilizedCoresShouldNotChangeAfterRestart()
         {
             var server = GetNewServer(new ServerCreationOptions
             {
-                RunInMemory = false,
-                IgnoreProcessorAffinityChanges = false
+                RunInMemory = false
             });
 
             using (GetDocumentStore(new Options
@@ -135,13 +132,13 @@ namespace FastTests.Server
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
         public async Task DemotePromoteShouldNotChangeTheUtilizedCores()
         {
             DoNotReuseServer();
 
             var reasonableTime = Debugger.IsAttached ? 5000 : 3000;
-            var (servers, leader) = await CreateRaftCluster(3, ignoreProcessorAffinityChanges: false);
+            var (servers, leader) = await CreateRaftCluster(3);
 
             using (var store = GetDocumentStore(new Options
             {

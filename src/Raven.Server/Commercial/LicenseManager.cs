@@ -76,6 +76,8 @@ namespace Raven.Server.Commercial
             FullVersion = ServerVersion.FullVersion
         };
 
+        internal static bool IgnoreProcessorAffinityChanges = false;
+
         public LicenseManager(ServerStore serverStore)
         {
             _serverStore = serverStore;
@@ -781,7 +783,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                if (IgnoreProcessorAffinityChanges(cores, hasLicenseLimits))
+                if (ShouldIgnoreProcessorAffinityChanges(cores, hasLicenseLimits))
                     return;
 
                 var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
@@ -858,9 +860,9 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private bool IgnoreProcessorAffinityChanges(int cores, bool hasLicenseLimits)
+        private static bool ShouldIgnoreProcessorAffinityChanges(int cores, bool hasLicenseLimits)
         {
-            if (_serverStore.IgnoreProcessorAffinityChanges == false)
+            if (IgnoreProcessorAffinityChanges == false)
                 return false;
 
             if (hasLicenseLimits == false)
