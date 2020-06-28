@@ -113,8 +113,14 @@ class trafficWatch extends viewModelBase {
         const textFilterLower = this.filter() ? this.filter().trim().toLowerCase() : "";
         const uri = item.RequestUri.toLocaleLowerCase();
         const customInfo = item.CustomInfo;
+
+        const textFilterMatch = textFilterLower ? item.ResponseStatusCode.toString().includes(textFilterLower)  ||
+                                                  item.DatabaseName.includes(textFilterLower)                   ||
+                                                  item.HttpMethod.toLocaleLowerCase().includes(textFilterLower) ||
+                                                  item.ClientIP.includes(textFilterLower)                       ||
+                                                  (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) ||
+                                                  uri.includes(textFilterLower): true;
         
-        const textFilterMatch = textFilterLower ? uri.includes(textFilterLower) || (customInfo && customInfo.toLocaleLowerCase().includes(textFilterLower)) : true;
         const typeMatch = _.includes(this.selectedTypeNames(), item.Type);
         const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
         
@@ -216,15 +222,15 @@ class trafficWatch extends viewModelBase {
         grid.headerVisible(true);
         grid.init((s, t) => this.fetchTraffic(s, t), () =>
             [
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp), "Timestamp", "20%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => generalUtils.formatUtcDateAsLocal(x.TimeStamp), "Timestamp", "12%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "8%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ResponseStatusCode, "Status", "6%", {
                     extraClass: rowHighlightRules,
                     sortable: "number"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "8%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.DatabaseName, "Database Name", "10%", {
                     extraClass: rowHighlightRules,
                     sortable: "string",
                     customComparator: generalUtils.sortAlphaNumeric
@@ -241,11 +247,15 @@ class trafficWatch extends viewModelBase {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "Custom Info", "8%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.ClientIP, "Client IP", "8%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "35%", {
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.CustomInfo, "Custom Info", "10%", {
+                    extraClass: rowHighlightRules,
+                    sortable: "string"
+                }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChange>(grid, x => x.RequestUri, "URI", "30%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 })
@@ -261,6 +271,8 @@ class trafficWatch extends viewModelBase {
                 onValue(moment.utc(item.TimeStamp), item.TimeStamp); 
             } else if (column.header === "Custom Info") {
                 onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
+            } else if (column.header === "Client IP") {
+                onValue(item.ClientIP);
             }
         });
 

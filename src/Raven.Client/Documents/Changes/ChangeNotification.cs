@@ -364,6 +364,7 @@ namespace Raven.Client.Documents.Changes
         public string DatabaseName { get; set; }
         public string CustomInfo { get; set; }
         public TrafficWatchChangeType Type { get; set; }
+        public string ClientIP { get; set; }
     }
 
     public enum TrafficWatchChangeType
