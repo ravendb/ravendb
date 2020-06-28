@@ -42,7 +42,7 @@ namespace Raven.Server.Documents
         public const string Values = "@vals";
         public const string CounterNames = "@names";
 
-        private readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
+        internal readonly List<ByteStringContext<ByteStringMemoryCache>.InternalScope> _counterModificationMemoryScopes =
             new List<ByteStringContext<ByteStringMemoryCache>.InternalScope>();
 
         private readonly ObjectPool<Dictionary<LazyStringValue, PutCountersData>> _dictionariesPool
@@ -50,12 +50,12 @@ namespace Raven.Server.Documents
 
         public static int SizeOfCounterValues = sizeof(CounterValues);
 
-        private static readonly TableSchema CountersSchema = new TableSchema
+        internal static readonly TableSchema CountersSchema = new TableSchema
         {
             TableType = (byte)TableType.Counters
         };
 
-        private enum CountersTable
+        internal enum CountersTable
         {
             // Format of this is:
             // lower document id, record separator, prefix
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, 0))
             {
-                var countersItem  = CreateReplicationBatchItem(context, result);
+                var countersItem  = CreateReplicationBatchItem(context, ref result.Reader);
 
                 if (caseInsensitiveNames)
                 {
@@ -278,20 +278,20 @@ namespace Raven.Server.Documents
             };
         }
 
-        private static CounterReplicationItem CreateReplicationBatchItem(DocumentsOperationContext context, Table.TableValueHolder tvh)
+        internal static CounterReplicationItem CreateReplicationBatchItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
-            var data = GetCounterValuesData(context, ref tvh.Reader);
-            var docId = ExtractDocId(context, ref tvh.Reader);
+            var data = GetCounterValuesData(context, ref reader);
+            var docId = ExtractDocId(context, ref reader);
 
             return new CounterReplicationItem
             {
                 Type = ReplicationBatchItem.ReplicationItemType.CounterGroup,
                 Id = docId,
-                ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvh.Reader),
+                ChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref reader),
                 Values = data,
-                Collection = TableValueToId(context, (int)CountersTable.Collection, ref tvh.Reader),
-                Etag = TableValueToEtag((int)CountersTable.Etag, ref tvh.Reader),
-                TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(CountersTable.TransactionMarker), ref tvh.Reader)
+                Collection = TableValueToId(context, (int)CountersTable.Collection, ref reader),
+                Etag = TableValueToEtag((int)CountersTable.Etag, ref reader),
+                TransactionMarker = TableValueToShort((int)CountersTable.TransactionMarker, nameof(CountersTable.TransactionMarker), ref reader)
             };
         }
 
@@ -467,7 +467,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static void ThrowMissingProperty(Slice counterKeySlice, string property)
+        internal static void ThrowMissingProperty(Slice counterKeySlice, string property)
         {
             throw new InvalidDataException($"Counter-Group document '{counterKeySlice}' is missing '{property}' property. Shouldn't happen");
         }
@@ -739,7 +739,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private class PutCountersData
+        internal class PutCountersData
         {
             public BlittableJsonReaderObject Data;
             public DbIdsHolder DbIdsHolder;
@@ -1022,7 +1022,7 @@ namespace Raven.Server.Documents
             _documentDatabase.Metrics.Counters.PutsPerSec.MarkSingleThreaded(values.Count);
         }
 
-        private bool MergeCounterIfNeeded(DocumentsOperationContext context,
+        internal bool MergeCounterIfNeeded(DocumentsOperationContext context,
             BlittableJsonReaderObject localCounters,
             ref BlittableJsonReaderObject.PropertyDetails incomingCountersProp,
             DbIdsHolder dbIdsHolder,
@@ -1444,7 +1444,7 @@ namespace Raven.Server.Documents
             return new DynamicJsonArray(GetCountersForDocument(context, docId));
         }
 
-        private static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, ref TableValueReader existing)
+        internal static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, ref TableValueReader existing)
         {
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
         }
@@ -1485,7 +1485,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static ByteStringContext.ExternalScope CreateCounterKeySlice(DocumentsOperationContext context, ByteString buffer, Slice documentIdPrefix, Slice counterName, out Slice counterKeySlice)
+        internal static ByteStringContext.ExternalScope CreateCounterKeySlice(DocumentsOperationContext context, ByteString buffer, Slice documentIdPrefix, Slice counterName, out Slice counterKeySlice)
         {
             var scope = Slice.External(context.Allocator, buffer.Ptr, buffer.Length, out counterKeySlice);
             documentIdPrefix.CopyTo(buffer.Ptr);

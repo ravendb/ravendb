@@ -481,7 +481,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return scope;
         }
 
-        private static string ReadDbId(UpdateStep step)
+        internal static string ReadDbId(UpdateStep step)
         {
             var metadataTree = step.WriteTx.ReadTree(Constants.MetadataTreeNameSlice);
             if (metadataTree == null)
