@@ -262,6 +262,81 @@ select out(u)
         }
 
         [Fact]
+        public async Task CanQueryAverageFromRollup()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
+
+                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1
+                            }
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = new DateTime(2020, 6, 6);
+
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        ts.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    ts.Append(DateTime.UtcNow, 0, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(doc) 
+{
+    from doc.Heartrate 
+    group by 1y
+    select min(), max(), avg()
+}
+from Users as u
+select out(u)
+");
+
+                    var aggregationResult = query.Single();
+
+                    var years = new HashSet<DateTime>();
+                    foreach (var g in aggregationResult.Results.GroupBy(r => new DateTime(r.From.Year, r.From.Month, r.From.Day)))
+                    {
+                        years.Add(g.Key);
+                    }
+
+                    var expected = DateTime.UtcNow.Year == 2020 ? 1 : 2;
+                    Assert.Equal(expected, years.Count);
+                }
+            }
+        }
+
+        [Fact]
         public async Task QueryFromMultipleTimeSeriesAtOnce_UsingJsFunctionAsArgumentOfTimeSeriesFunction()
         {
             using (var store = GetDocumentStore())
