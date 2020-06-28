@@ -261,7 +261,7 @@ class databaseCreationModel {
                         } else {
                             // encrypted backup - we need license and https for encrypted db
                             
-                            encryptionSection.enabled(canCreateEncryptedDbs);
+                            encryptionSection.enabled(false);
                             encryptionSection.disableToggle(!canCreateEncryptedDbs);
                         }
                     } else { //backup is not encrypted
