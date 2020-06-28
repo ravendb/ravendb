@@ -944,14 +944,18 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
         {
-            var result = new DynamicJsonValue();
+            DateTime? from = start, to = next;
+            if (start == DateTime.MinValue)
+                from = null;
+            if (next == DateTime.MaxValue)
+                to = null;
 
-            if (func.GroupBy != null)
+            var result = new DynamicJsonValue
             {
-                result[nameof(TimeSeriesRangeAggregation.From)] = start;
-                result[nameof(TimeSeriesRangeAggregation.To)] = next;
-                result[nameof(TimeSeriesRangeAggregation.Count)] = new DynamicJsonArray(aggStates[0].Count);
-            }
+                [nameof(TimeSeriesRangeAggregation.From)] = from,
+                [nameof(TimeSeriesRangeAggregation.To)] = to,
+                [nameof(TimeSeriesRangeAggregation.Count)] = new DynamicJsonArray(aggStates[0].Count)
+            };
 
             for (int i = 0; i < aggStates.Length; i++)
             {
