@@ -32,6 +32,8 @@
     <None Remove="Data\RavenDB_13759\Orders_ByOrderBy.zip" />
     <None Remove="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data-2.zip" />
     <None Remove="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data.zip" />
+    <None Remove="Data\RavenDB_15223\counters.4.2.103.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_15223\manycounters.4.2.103.ravendb-snapshot" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
@@ -84,6 +86,8 @@
     <EmbeddedResource Include="Data\RavenDB_13759\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data-2.zip" />
     <EmbeddedResource Include="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data.zip" />
+    <EmbeddedResource Include="Data\RavenDB_15223\manycounters.4.2.103.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_15223\counters.4.2.103.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
