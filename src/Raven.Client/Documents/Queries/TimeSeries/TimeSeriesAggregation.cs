@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session.TimeSeries;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
@@ -25,11 +27,30 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public TimeSeriesRangeAggregation[] Results { get; set; }
     }
 
-    public class TimeSeriesRangeAggregation
+    public class TimeSeriesRangeAggregation : IPostJsonDeserialization
     {
         public long[] Count;
         public double[] Max, Min, Last, First, Average, Sum;
         public DateTime To, From;
+
+        [OnDeserialized]
+        internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
+        {
+            SetMinMaxDateTime();
+        }
+
+        void IPostJsonDeserialization.PostDeserialization()
+        {
+            SetMinMaxDateTime();
+        }
+        
+        private void SetMinMaxDateTime()
+        {
+            if (From == default)
+                From = DateTime.MinValue;
+            if (To == default)
+                To = DateTime.MaxValue;
+        }
     }
 
     public class TimeSeriesAggregationResult<T> : TimeSeriesAggregationResult where T : new()

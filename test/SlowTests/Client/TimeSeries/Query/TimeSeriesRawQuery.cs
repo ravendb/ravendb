@@ -5297,6 +5297,8 @@ select out(p)
                     session.SaveChanges();
                 }
 
+                var from = baseline.EnsureUtc();
+                var to = baseline.AddMonths(2).EnsureUtc();
                 using (var session = store.OpenSession())
                 {
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
@@ -5309,14 +5311,71 @@ declare timeseries out(x)
 from People as p
 select out(p)
 ")
-                        .AddParameter("start", baseline.EnsureUtc())
-                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
+                        .AddParameter("start", from)
+                        .AddParameter("end", to);
 
                     var agg = query.First();
 
                     Assert.Equal(5, agg.Count);
 
                     Assert.Equal(179, agg.Results[0].Max[0]);
+                    Assert.Equal(from, agg.Results[0].From);
+                    Assert.Equal(to, agg.Results[0].To);
+
+                }
+            }
+        }
+
+         [Fact]
+        public void CanQueryTimeSeriesAggregation_SelectWithoutGroupBy_FullRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+
+                using (var session = store.OpenSession())
+                {
+                    var id = "people/1";
+
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                        Age = 30,
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 369d }, null);
+
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
+declare timeseries out(x) 
+{
+    from x.HeartRate
+    where Tag != null
+    select max()
+}
+from People as p
+select out(p)
+");
+
+                    var agg = query.First();
+
+                    Assert.Equal(5, agg.Count);
+
+                    Assert.Equal(179, agg.Results[0].Max[0]);
+                    Assert.Equal(DateTime.MinValue, agg.Results[0].From);
+                    Assert.Equal(DateTime.MaxValue, agg.Results[0].To);
 
                 }
             }
