@@ -20,18 +20,11 @@ namespace Raven.Server.Commercial
 
         public OsInfo OsInfo;
 
-        public int AvailableCoresToAssignForNode
+        public int MaxCoresToUtilize
         {
             get
             {
-                var availableCoresToAssign = NumberOfCores - UtilizedCores;
-                if (MaxUtilizedCores == null)
-                    return availableCoresToAssign;
-
-                if (UtilizedCores < MaxUtilizedCores.Value)
-                    return Math.Min(availableCoresToAssign, MaxUtilizedCores.Value - UtilizedCores);
-
-                return 0;
+                return MaxUtilizedCores == null ? NumberOfCores : Math.Min(NumberOfCores, MaxUtilizedCores.Value);
             }
         }
 

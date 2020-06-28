@@ -42,9 +42,7 @@ namespace Raven.Server.ServerWide.Commands
 
             RemoveNotInClusterNodes(licenseLimits);
             UpdateNodeDetails(licenseLimits);
-
-            VerifyCoresPerNode(licenseLimits);
-            RedistributeAvailableCores(licenseLimits);
+            ReBalanceCores(licenseLimits);
 
             return context.ReadObject(licenseLimits.ToJson(), "update-license-limits");
         }
@@ -87,59 +85,40 @@ namespace Raven.Server.ServerWide.Commands
             licenseLimits.NodeLicenseDetails[Value.NodeTag] = Value.DetailsPerNode;
         }
 
-        private void VerifyCoresPerNode(LicenseLimits licenseLimits)
+        private void ReBalanceCores(LicenseLimits licenseLimits)
         {
-            var utilizedCores = licenseLimits.TotalUtilizedCores;
-            if (Value.LicensedCores >= utilizedCores)
-                return;
-
-            // we have less licensed cores than we are currently utilizing
-            var coresPerNode = Math.Max(1, Value.LicensedCores / Value.AllNodes.Count);
-            foreach (var detailsPerNode in licenseLimits.NodeLicenseDetails.Values)
+            if (Value.LicensedCores < Value.AllNodes.Count)
             {
-                detailsPerNode.UtilizedCores = detailsPerNode.GetMaxCoresToUtilize(coresPerNode);
-            }
-        }
+                // the number of licensed cores is less then the number of nodes
+                foreach (var detailsPerNode in licenseLimits.NodeLicenseDetails.Values)
+                {
+                    detailsPerNode.UtilizedCores = detailsPerNode.GetMaxCoresToUtilize(1);
+                }
 
-        private void RedistributeAvailableCores(LicenseLimits licenseLimits)
-        {
-            var utilizedCores = licenseLimits.TotalUtilizedCores;
-            if (Value.LicensedCores == utilizedCores)
                 return;
+            }
+
+            var nodesToDistribute = licenseLimits.NodeLicenseDetails
+                .OrderBy(x => x.Value.MaxCoresToUtilize)
+                .ThenBy(x => x.Key)
+                .Select(x => x.Value)
+                .ToList();
 
             var unassignedNodesCount = Value.AllNodes.Except(licenseLimits.NodeLicenseDetails.Keys).Count();
-            if (unassignedNodesCount > 0)
-            {
-                // there are still nodes that didn't send their info
-                // once they do we'll be able to split the free cores that weren't distributed
-                return;
-            }
-
-            var availableCoresToDistribute = Value.LicensedCores - utilizedCores;
-            if (availableCoresToDistribute <= 0)
-                return;
-
-            // we have spare cores to distribute
-            var nodesToDistribute = licenseLimits.NodeLicenseDetails
-                .Select(x => x.Value)
-                .Where(x => x.AvailableCoresToAssignForNode > 0)
-                .OrderByDescending(x => x.AvailableCoresToAssignForNode)
-                .ToList();
+            var coresToDistribute = Value.LicensedCores - unassignedNodesCount;
+            if (coresToDistribute <= 0)
+                throw new RachisApplyException($"Number of cores to distribute is {coresToDistribute}. " +
+                                               $"The number of licensed cores is {Value.LicensedCores}. " +
+                                               $"The number of unassigned nodes is {unassignedNodesCount}");
 
             for (var i = 0; i < nodesToDistribute.Count; i++)
             {
-                if (availableCoresToDistribute == 0)
-                    break;
-
                 var nodeDetails = nodesToDistribute[i];
-                var availableCoresToAssignForNode = nodeDetails.AvailableCoresToAssignForNode;
-                if (availableCoresToAssignForNode <= 0)
-                    continue;
 
-                var coresToDistributePerNode = availableCoresToDistribute / (nodesToDistribute.Count - i);
-                var numberOfCoresToAdd = Math.Min(availableCoresToAssignForNode, coresToDistributePerNode);
-                nodeDetails.UtilizedCores += numberOfCoresToAdd;
-                availableCoresToDistribute -= numberOfCoresToAdd;
+                var coresToDistributePerNode = (int)Math.Ceiling((double)coresToDistribute / (nodesToDistribute.Count - i));
+                var utilizedCores = nodeDetails.GetMaxCoresToUtilize(coresToDistributePerNode);
+                nodeDetails.UtilizedCores = utilizedCores;
+                coresToDistribute -= utilizedCores;
             }
         }
     }

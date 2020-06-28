@@ -372,9 +372,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             ServerStore.EnsureNotPassive();
 
-            // check if we can add at least one core for this node
-            // the actual assignment of the cores will be done in UpdateLicenseLimitsCommand
-            ServerStore.LicenseManager.AssertCanAddNode(1);
+            ServerStore.LicenseManager.AssertCanAddNode();
 
             if (ServerStore.IsLeader())
             {
