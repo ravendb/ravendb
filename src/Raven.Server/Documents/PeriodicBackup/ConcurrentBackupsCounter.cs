@@ -1,5 +1,6 @@
 using System;
 using Raven.Server.Commercial;
+using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -11,6 +12,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly LicenseManager _licenseManager;
         private int _concurrentBackups;
         private int _maxConcurrentBackups;
+        private readonly TimeSpan _concurrentBackupsDelay;
         private readonly bool _skipModifications;
 
         public int MaxNumberOfConcurrentBackups
@@ -35,15 +37,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public ConcurrentBackupsCounter(int? maxNumberOfConcurrentBackupsConfiguration, LicenseManager licenseManager)
+        public ConcurrentBackupsCounter(BackupConfiguration backupConfiguration, LicenseManager licenseManager)
         {
             _licenseManager = licenseManager;
 
             int numberOfCoresToUse;
-            var skipModifications = maxNumberOfConcurrentBackupsConfiguration != null;
+            var skipModifications = backupConfiguration.MaxNumberOfConcurrentBackups != null;
             if (skipModifications)
             {
-                numberOfCoresToUse = maxNumberOfConcurrentBackupsConfiguration.Value;
+                numberOfCoresToUse = backupConfiguration.MaxNumberOfConcurrentBackups.Value;
             }
             else
             {
@@ -53,6 +55,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             _concurrentBackups = numberOfCoresToUse;
             _maxConcurrentBackups = numberOfCoresToUse;
+            _concurrentBackupsDelay = backupConfiguration.ConcurrentBackupsDelay.AsTimeSpan;
             _skipModifications = skipModifications;
         }
 
@@ -67,7 +70,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         $"The task exceeds the maximum number of concurrent backup tasks configured. " +
                         $"Current maximum number of concurrent backups is: {_maxConcurrentBackups:#,#;;0}")
                     {
-                        DelayPeriod = TimeSpan.FromMinutes(1)
+                        DelayPeriod = _concurrentBackupsDelay
                     };
                 }
 
