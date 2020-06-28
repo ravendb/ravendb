@@ -371,23 +371,6 @@ namespace Raven.Server.Commercial
             return detailsPerNode.Sum(x => x.Value.UtilizedCores);
         }
 
-        private void AssertCanAssignCores(int assignedCores)
-        {
-            var licenseLimits = _serverStore.LoadLicenseLimits();
-            if (licenseLimits?.NodeLicenseDetails == null ||
-                licenseLimits.NodeLicenseDetails.Count == 0)
-                return;
-
-            var coresInUse = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
-            if (coresInUse + assignedCores > _licenseStatus.MaxCores)
-            {
-                var message = $"Can't assign {assignedCores} core{Pluralize(assignedCores)} " +
-                          $"to the node, max allowed cores on license: {_licenseStatus.MaxCores}, " +
-                          $"number of utilized cores: {coresInUse}";
-                throw GenerateLicenseLimit(LimitType.Cores, message);
-            }
-        }
-
         public async Task Activate(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive = true, bool forceActivate = false)
         {
             var newLicenseStatus = GetLicenseStatus(license);
@@ -1108,12 +1091,18 @@ namespace Raven.Server.Commercial
             return (hasSnapshotBackup, hasCloudBackup, hasEncryptedBackup);
         }
 
-        public void AssertCanAddNode(int assignedCores)
+        public void AssertCanAddNode()
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            AssertCanAssignCores(assignedCores);
+            var allNodesCount = _serverStore.GetClusterTopology().AllNodes.Count;
+            if (_licenseStatus.MaxCores <= allNodesCount)
+            {
+                var message = $"Cannot add the node to the cluster because the number of licensed cores is {_licenseStatus.MaxCores} " +
+                              $"while the number of nodes is {allNodesCount}. This will bring the number of utilized cores over the limit";
+                throw GenerateLicenseLimit(LimitType.Cores, message);
+            }
 
             if (_licenseStatus.DistributedCluster == false)
             {
