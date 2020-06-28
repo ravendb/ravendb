@@ -33,6 +33,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.MaxNumberOfConcurrentBackups", ConfigurationEntryScope.ServerWideOnly)]
         public int? MaxNumberOfConcurrentBackups { get; set; }
 
+        [Description("Number of seconds to delay the backup after hitting the maximum number of concurrent backups limit")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Backup.ConcurrentBackupsDelayInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting ConcurrentBackupsDelay { get; set; }
+
         [Description("Number of minutes to delay the backup after entering the low memory state by the Server.")]
         [DefaultValue(10)]
         [TimeUnit(TimeUnit.Minutes)]

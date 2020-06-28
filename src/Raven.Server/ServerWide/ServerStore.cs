@@ -722,7 +722,7 @@ namespace Raven.Server.ServerWide
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
 
-            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup.MaxNumberOfConcurrentBackups, LicenseManager);
+            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
 
             ConfigureAuditLog();
 
