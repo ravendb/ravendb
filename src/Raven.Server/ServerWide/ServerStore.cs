@@ -102,8 +102,6 @@ namespace Raven.Server.ServerWide
         internal readonly SizeLimitedConcurrentDictionary<string, ConcurrentQueue<DateTime>> ClientCreationRate = 
             new SizeLimitedConcurrentDictionary<string, ConcurrentQueue<DateTime>>(50);
 
-        internal bool IgnoreProcessorAffinityChanges = false;
-
         private readonly NotificationsStorage _notificationsStorage;
         private readonly OperationsStorage _operationsStorage;
         public ConcurrentDictionary<string, Dictionary<string, long>> IdleDatabases;
