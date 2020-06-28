@@ -676,7 +676,9 @@ namespace Raven.Server.Documents.Queries.AST
             for (int i = 0; i < originalNumOfValues; i++)
             {
                 var index = i * 6;
-                var val = values[index + (int)Aggregation];
+                var val = Aggregation == AggregationType.Average ? 
+                    values[index + (int)AggregationType.Sum] : 
+                    values[index + (int)Aggregation];
 
                 switch (Aggregation)
                 {
@@ -693,9 +695,6 @@ namespace Raven.Server.Documents.Queries.AST
                             _values[i] = Math.Max(_values[i], val.Max);
                         break;
                     case AggregationType.Average:
-                        val = values[index + (int)AggregationType.Sum];
-                        _values[i] = _values[i] + val.Sum;
-                        break;
                     case AggregationType.Sum:
                         _values[i] = _values[i] + val.Sum;
                         break;

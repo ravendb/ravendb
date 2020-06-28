@@ -224,17 +224,19 @@ namespace Raven.Server.Documents.TimeSeries
                 segmentResult.Start = baseline;
                 segmentResult.ChangeVector = GetCurrentSegmentChangeVector();
 
-                if (segmentResult.Start >= _from &&
-                    segmentResult.End <= _to &&
-                    _currentSegment.NumberOfLiveEntries > 0)
+                if (_currentSegment.NumberOfLiveEntries > 0)
                 {
-                    // we can yield the whole segment in one go
-                    segmentResult.Summary = _currentSegment.SegmentValues;
-                    yield return (null, segmentResult);
-                }
-                else
-                {
-                    yield return (YieldSegment(baseline), segmentResult);
+                    if (segmentResult.Start >= _from && 
+                        segmentResult.End <= _to)
+                    {
+                        // we can yield the whole segment in one go
+                        segmentResult.Summary = _currentSegment.SegmentValues;
+                        yield return (null, segmentResult);
+                    }
+                    else
+                    {
+                        yield return (YieldSegment(baseline), segmentResult);
+                    }
                 }
 
                 if (NextSegment(out baselineMilliseconds) == false)
