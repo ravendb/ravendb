@@ -585,7 +585,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             try
             {
-                _serverStore.ConcurrentBackupsCounter.FinishBackup(periodicBackup.Configuration.Name, elapsed, _logger);
+                _serverStore.ConcurrentBackupsCounter.FinishBackup(periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
 
                 periodicBackup.RunningTask = null;
                 periodicBackup.RunningBackupTaskId = null;
