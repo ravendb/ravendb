@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Sparrow.Logging;
@@ -81,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 logger.Operations($"Starting backup task '{backupName}'");
         }
 
-        public void FinishBackup(string backupName, TimeSpan? elapsed, Logger logger)
+        public void FinishBackup(string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, Logger logger)
         {
             lock (_locker)
             {
@@ -90,9 +91,40 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (logger.IsOperationsEnabled)
             {
-                var message = $"Finished backup task '{backupName}'";
+                string backupTypeString = "backup";
+                string extendedBackupTimings = string.Empty;
+                if (backupStatus != null)
+                {
+                    backupTypeString = BackupTask.GetBackupDescription(backupStatus.BackupType, backupStatus.IsFull);
+                    
+                    var first = true;
+                    AddBackupTimings(backupStatus.LocalBackup, "local");
+                    AddBackupTimings(backupStatus.UploadToS3, "Amazon S3");
+                    AddBackupTimings(backupStatus.UploadToGlacier, "Amazon Glacier");
+                    AddBackupTimings(backupStatus.UploadToAzure, "Azure");
+                    AddBackupTimings(backupStatus.UploadToGoogleCloud, "Google Cloud");
+                    AddBackupTimings(backupStatus.UploadToFtp, "FTP");
+
+                    void AddBackupTimings(BackupStatus perDestinationBackupStatus, string backupTypeName)
+                    {
+                        if (perDestinationBackupStatus is CloudUploadStatus cus && cus.Skipped)
+                            return;
+
+                        if (first == false)
+                            extendedBackupTimings += ", ";
+
+                        first = false;
+                        extendedBackupTimings +=
+                            $"backup to {backupTypeName} took: " +
+                            $"{(backupStatus.IsFull ? perDestinationBackupStatus.FullBackupDurationInMs : perDestinationBackupStatus.IncrementalBackupDurationInMs)}ms";
+                    }
+                }
+
+                var message = $"Finished {backupTypeString} task '{backupName}'";
                 if (elapsed != null)
                     message += $", took: {elapsed}";
+
+                message += $" {extendedBackupTimings}";
 
                 logger.Operations(message);
             }
