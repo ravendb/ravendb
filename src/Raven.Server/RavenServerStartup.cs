@@ -270,7 +270,8 @@ namespace Raven.Server
                 AbsoluteUri = $"{context.Request.Scheme}://{context.Request.Host}",
                 DatabaseName = database ?? "N/A",
                 CustomInfo = twTuple.CustomInfo,
-                Type = twTuple.Type
+                Type = twTuple.Type,
+                ClientIP = context.Connection.RemoteIpAddress.ToString()
             };
 
             TrafficWatchManager.DispatchMessage(twn);
