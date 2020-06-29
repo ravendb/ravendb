@@ -6,6 +6,9 @@ using System.Text;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -379,6 +382,7 @@ namespace Raven.Server.Documents.TimeSeries
             private readonly DateTime _now;
             private readonly List<RollupState> _states;
             private readonly bool _isFirstInTopology;
+            private readonly Logger _logger;
 
             public long RolledUp;
 
@@ -388,6 +392,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _now = now;
                 _states = states;
                 _isFirstInTopology = isFirstInTopology;
+                _logger = LoggingSource.Instance.GetLogger<TimeSeriesRollups>(nameof(RollupTimeSeriesCommand));
             }
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
@@ -485,7 +490,27 @@ namespace Raven.Server.Documents.TimeSeries
                             throw new ArgumentOutOfRangeException(nameof(policy.AggregationTime.Unit), $"Not supported time value unit '{policy.AggregationTime.Unit}'");
                     }
                     rangeSpec.InitializeRange(rollupStart);
-                    var values = GetAggregatedValues(reader, rangeSpec, mode);
+
+                    List<SingleResult> values = null;
+                    try
+                    {
+                        values = GetAggregatedValues(reader, rangeSpec, mode);
+                    }
+                    catch (RollupExceedNumberOfValuesException e)
+                    {
+                        table.DeleteByKey(item.Key);
+                        
+                        var msg = $"Rollup for time-series '{item.Name}' in document '{item.DocId}' failed.";
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(msg, e);
+
+                        var alert = AlertRaised.Create(context.DocumentDatabase.Name, "Failed to perform rollup because the time-series has more than 5 values", msg,
+                            AlertType.RollupExceedNumberOfValues, NotificationSeverity.Warning, $"{item.DocId}/{item.Name}", new ExceptionDetails(e));
+
+                        context.DocumentDatabase.NotificationCenter.Add(alert);
+
+                        continue;
+                    }
 
                     if (previouslyAggregated)
                     {
@@ -736,9 +761,16 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void EnsureNumberOfValues(int numberOfValues)
             {
+                
                 switch (_mode)
                 {
                     case AggregationMode.FromRaw:
+                        
+                        if (numberOfValues > 5)
+                            throw new RollupExceedNumberOfValuesException(
+                                $"Rollup more than 5 values is not supported.{Environment.NewLine}" +
+                                $"The number of values is {numberOfValues}, so an aggregated entry will contain {numberOfValues * 6} values, which will exceed the allowed 32 values per time-series entry.{Environment.NewLine}");
+
                         var entries = numberOfValues * Aggregations.Length;
                         for (int i = Values.Count; i < entries; i++)
                         {
@@ -864,6 +896,24 @@ namespace Raven.Server.Documents.TimeSeries
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(nextPolicy.AggregationTime.Unit), $"Not supported time value unit '{nextPolicy.AggregationTime.Unit}'");
+            }
+        }
+
+
+
+
+        public class RollupExceedNumberOfValuesException : Exception
+        {
+            public RollupExceedNumberOfValuesException()
+            {
+            }
+
+            public RollupExceedNumberOfValuesException(string message) : base(message)
+            {
+            }
+
+            public RollupExceedNumberOfValuesException(string message, Exception innerException) : base(message, innerException)
+            {
             }
         }
     }
