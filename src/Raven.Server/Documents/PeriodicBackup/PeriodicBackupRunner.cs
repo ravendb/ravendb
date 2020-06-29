@@ -104,24 +104,47 @@ namespace Raven.Server.Documents.PeriodicBackup
             // we will always wake up the database for a full backup.
             // but for incremental we will wake the database only if there were changes made.
 
-            var now = SystemTime.UtcNow;
+            if (configuration.Disabled || configuration.IncrementalBackupFrequency == null && configuration.FullBackupFrequency == null)
+                return null;
 
             if (backupStatus == null)
             {
-                return GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, now, configuration, skipErrorLog: false);
+                // we want to wait for the backup occurrence
+                return DateTime.UtcNow;
+            }
+
+            var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag);
+            if (nextBackup == null)
+                return null;
+
+            var nowUtc = SystemTime.UtcNow;
+            if (nextBackup.DateTime < nowUtc)
+            {
+                // this backup is delayed
+                return DateTime.UtcNow;
             }
 
             if (backupStatus.LastEtag != lastEtag)
             {
-                var lastIncrementalBackupUtc = backupStatus.LastIncrementalBackupInternal ?? backupStatus.LastFullBackupInternal ?? now;
-                var nextLastIncrementalBackupLocal = GetNextBackupOccurrenceLocal(configuration.IncrementalBackupFrequency, lastIncrementalBackupUtc, configuration, skipErrorLog: false);
-
-                if (nextLastIncrementalBackupLocal != null)
-                    return nextLastIncrementalBackupLocal;
+                // we have changes since last backup
+                return nextBackup.DateTime;
             }
 
-            var lastFullBackup = backupStatus.LastFullBackupInternal ?? now;
-            return GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, lastFullBackup, configuration, skipErrorLog: false);
+            if (nextBackup.IsFull)
+            {
+                return nextBackup.DateTime;
+            }
+
+            // we don't have changes since the last backup and the next backup is incremental
+            var lastFullBackup = backupStatus.LastFullBackupInternal ?? nowUtc;
+            var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, lastFullBackup, configuration, skipErrorLog: false);
+            if (nextFullBackup < nowUtc)
+            {
+                // this backup is delayed
+                return DateTime.UtcNow;
+            }
+
+            return nextFullBackup;
         }
 
         private NextBackup GetNextBackupDetails(

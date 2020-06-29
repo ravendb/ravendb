@@ -108,6 +108,61 @@ namespace StressTests.Issues
             }
         }
 
+        // RDBCL-1478
+        [NightlyBuildFact]
+        public async Task DatabaseWithBackupTaskShouldNotGetIdleBeforeBackupOccurrence()
+        {
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+                    [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
+                    [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+                }
+            });
+            try
+            {
+                var backupPath = NewDataPath(suffix: "BackupFolder");
+                using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "su");
+                    await session.SaveChangesAsync();
+                }
+
+                var sec = DateTime.Now.Second;
+                while (sec > 10)
+                {
+                    await Task.Delay(1000);
+                    sec = DateTime.Now.Second;
+                }
+                var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "*/1 * * * *",
+                    LocalSettings = new LocalSettings { FolderPath = backupPath }
+                }));
+                var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+                Assert.NotNull(serverWideConfiguration);
+                var backupTaskId = serverWideConfiguration.TaskId;
+
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                Assert.Equal(1, WaitForValue(() =>
+                {
+                    Assert.Equal(0, server.ServerStore.IdleDatabases.Count);
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1, timeout: 75000, interval: 300));
+
+                server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+                Assert.Equal(1, WaitForValue(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 300));
+            }
+            finally
+            {
+                server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
+            }
+        }
+
         internal static int WaitForCount(TimeSpan seconds, int excepted, Func<int> func)
         {
             var now = DateTime.Now;
