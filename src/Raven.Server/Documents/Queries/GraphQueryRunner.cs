@@ -6,8 +6,9 @@ using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Includes;
 using Raven.Server.Config.Categories;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Graph;
 using Raven.Server.Documents.Queries.Results;
@@ -19,13 +20,13 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner : AbstractQueryRunner
     {
         private readonly HashSet<StringSegment> _mapReduceAliases = new HashSet<StringSegment>();
+
         public GraphQueryRunner(DocumentDatabase database) : base(database)
         {
         }
@@ -78,27 +79,19 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-
-        public async Task<GraphDebugInfo> GetAnalyzedQueryResults(IndexQueryServerSide query, DocumentsOperationContext documentsContext, long? existingResultEtag,
-           OperationCancelToken token)
+        public async Task<GraphDebugInfo> GetAnalyzedQueryResults(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
         {
-            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
-            {
-                var qr = await GetQueryResults(query, context, null, token);
-                var result = new GraphDebugInfo(Database, documentsContext);
-                qr.QueryPlan.Analyze(qr.Matches, result);
-                return result;
-            }
+            var qr = await GetQueryResults(query, queryContext, null, token);
+            var result = new GraphDebugInfo(Database, queryContext.Documents);
+            qr.QueryPlan.Analyze(qr.Matches, result);
+            return result;
         }
 
-        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, BlittableJsonTextWriter writer, OperationCancelToken token)
         {
-            using (var context = QueryOperationContext.Allocate(Database, needsServerContext: false))
-            {
-                var qr = await GetQueryResults(indexQuery, context, null, token, true);
-                var reporter = new GraphQueryDetailedReporter(writer, documentsContext);
-                reporter.Visit(qr.QueryPlan.RootQueryStep);
-            }
+            var qr = await GetQueryResults(indexQuery, queryContext, null, token, true);
+            var reporter = new GraphQueryDetailedReporter(writer, queryContext.Documents);
+            reporter.Visit(qr.QueryPlan.RootQueryStep);
         }
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag,
@@ -176,7 +169,6 @@ namespace Raven.Server.Documents.Queries
                                 continue;
                             final.AddResult(result);
                         }
-
                     }
 
                     if (idc == null)
@@ -184,7 +176,6 @@ namespace Raven.Server.Documents.Queries
 
                     if (query.Metadata.Includes?.Length > 0)
                     {
-
                         foreach (var result in final.Results)
                         {
                             idc.Gather(result);
@@ -226,7 +217,6 @@ namespace Raven.Server.Documents.Queries
             var orderByMltipleFieldsSorter = new GraphQueryMultipleFieldsComparer(orderBy, databaseName, query);
             matches.Sort(orderByMltipleFieldsSorter);
         }
-
 
         private async Task<(List<Match> Matches, GraphQueryPlan QueryPlan, bool NotModified)> GetQueryResults(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token, bool collectIntermediateResults = false)
         {
@@ -353,6 +343,5 @@ namespace Raven.Server.Documents.Queries
         {
             throw new NotSupportedException("You cannot suggest based on graph query");
         }
-
     }
 }
