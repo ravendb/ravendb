@@ -69,14 +69,13 @@ namespace FastTests
 
         private static readonly object ServerLocker = new object();
 
-        protected bool _doNotReuseServer;
+        private bool _doNotReuseServer;
 
         private IDictionary<string, string> _customServerSettings;
 
         static TestBase()
         {
             LicenseManager.IgnoreProcessorAffinityChanges = true;
-
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
@@ -615,7 +614,6 @@ namespace FastTests
 
                 if (options.BeforeDatabasesStartup != null)
                     server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().BeforeHandleClusterDatabaseChanged = options.BeforeDatabasesStartup;
-
 
                 server.Initialize();
                 server.ServerStore.ValidateFixedPort = false;

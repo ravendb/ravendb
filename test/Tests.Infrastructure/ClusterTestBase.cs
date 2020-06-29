@@ -521,10 +521,7 @@ namespace Tests.Infrastructure
                 var port = Convert.ToInt32(server.ServerStore.GetNodeHttpServerUrl().Split(':')[2]);
                 var prefix = useSsl ? "https" : "http";
                 serverUrl = UseFiddlerUrl($"{prefix}://127.0.0.1:{port}");
-
-                if (_doNotReuseServer == false)
-                    Servers.Add(server);
-
+                Servers.Add(server);
                 clusterNodes.Add(server);
 
                 serversToPorts.Add(server, serverUrl);
