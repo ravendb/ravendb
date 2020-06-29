@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -53,7 +55,7 @@ namespace Raven.Server.Commercial
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
 
                 var id = context.GetLazyString(FirstServerStartDateKey);
-                using (var json = context.ReadObject(firstServerStartDate, "DatabaseInfo",
+                using (var json = context.ReadObject(firstServerStartDate, "firstServerStartDate",
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     using (table.Allocate(out TableValueBuilder tvb))
@@ -64,6 +66,7 @@ namespace Raven.Server.Commercial
                         table.Set(tvb);
                     }
                 }
+
                 tx.Commit();
             }
         }
@@ -78,7 +81,7 @@ namespace Raven.Server.Commercial
                 TableValueReader infoTvr;
                 using (Slice.From(tx.InnerTransaction.Allocator, FirstServerStartDateKey, out Slice keyAsSlice))
                 {
-                    //It seems like the database was shutdown rudely and never wrote it stats onto the disk
+                    // it seems like the database was shutdown rudely and never wrote it stats onto the disk
                     if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
                         return null;
                 }
@@ -90,6 +93,51 @@ namespace Raven.Server.Commercial
                 }
 
                 return null;
+            }
+        }
+
+        public unsafe void SetBuildInfo(BuildNumber buildNumber)
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
+
+                var id = context.GetLazyString(nameof(BuildNumber));
+                using (var json = context.ReadObject(buildNumber.ToJson(), nameof(BuildNumber), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    using (table.Allocate(out TableValueBuilder tvb))
+                    {
+                        tvb.Add(id.Buffer, id.Size);
+                        tvb.Add(json.BasePointer, json.Size);
+
+                        table.Set(tvb);
+                    }
+                }
+
+                tx.Commit();
+            }
+        }
+
+        public BuildNumber GetBuildInfo()
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
+
+                TableValueReader infoTvr;
+                using (Slice.From(tx.InnerTransaction.Allocator, nameof(BuildNumber), out Slice keyAsSlice))
+                {
+                    // it seems like the database was shutdown rudely and never wrote it stats onto the disk
+                    if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
+                        return null;
+                }
+
+                using (var blittable = Read(context, ref infoTvr))
+                {
+                    return JsonDeserializationServer.BuildNumber(blittable);
+                }
             }
         }
 

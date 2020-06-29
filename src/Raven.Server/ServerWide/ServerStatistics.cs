@@ -90,6 +90,9 @@ namespace Raven.Server.ServerWide
 
         internal void Persist(TransactionContextPool contextPool, Logger logger)
         {
+            if (contextPool == null)
+                return;
+
             lock (this)
             {
                 try
