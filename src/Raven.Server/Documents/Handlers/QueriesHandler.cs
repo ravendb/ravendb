@@ -230,10 +230,9 @@ namespace Raven.Server.Documents.Handlers
             if (!(queryRunner is GraphQueryRunner gqr))
                 throw new InvalidOperationException("The specified query is not a graph query.");
             using (var token = CreateTimeLimitedQueryToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (var writer = new BlittableJsonTextWriter(queryContext.Documents, ResponseBodyStream()))
             {
-                await gqr.WriteDetailedQueryResult(indexQuery, ctx, writer, token);
+                await gqr.WriteDetailedQueryResult(indexQuery, queryContext, writer, token);
             }
         }
 
@@ -245,9 +244,8 @@ namespace Raven.Server.Documents.Handlers
                 throw new InvalidOperationException("The specified query is not a graph query.");
 
             using (var token = CreateTimeLimitedQueryToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             {
-                var results = await gqr.GetAnalyzedQueryResults(indexQuery, ctx, null, token);
+                var results = await gqr.GetAnalyzedQueryResults(indexQuery, queryContext, null, token);
 
                 var nodes = new DynamicJsonArray();
                 var edges = new DynamicJsonArray();
