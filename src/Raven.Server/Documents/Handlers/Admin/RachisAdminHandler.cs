@@ -301,9 +301,10 @@ namespace Raven.Server.Documents.Handlers.Admin
             var tag = GetStringQueryString("tag", false);
             var watcher = GetBoolValueQueryString("watcher", false);
             var raftRequestId = GetRaftRequestIdFromQuery();
-            var assignedCores = GetIntValueQueryString("assignedCores", false);
-            if (assignedCores <= 0)
-                throw new ArgumentException("Assigned cores must be greater than 0!");
+
+            var maxUtilizedCores = GetIntValueQueryString("maxUtilizedCores", false);
+            if (maxUtilizedCores != null && maxUtilizedCores <= 0)
+                throw new ArgumentException("Max utilized cores cores must be greater than 0");
 
             nodeUrl = nodeUrl.Trim();
             if (Uri.IsWellFormedUriString(nodeUrl, UriKind.Absolute) == false)
@@ -317,8 +318,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
             }
 
-            if (tag != null)
-                tag = tag.Trim();
+            tag = tag?.Trim();
 
             NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -363,12 +363,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
             }
 
-            if (assignedCores != null && assignedCores > nodeInfo.NumberOfCores)
-            {
-                throw new ArgumentException("Cannot add node because the assigned cores is larger " +
-                                            $"than the available cores on that machine: {nodeInfo.NumberOfCores}");
-            }
-
             if (ServerStore.ValidateFixedPort && nodeInfo.HasFixedPort == false)
             {
                 throw new InvalidOperationException($"Failed to add node '{nodeUrl}' to cluster. " +
@@ -378,12 +372,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             ServerStore.EnsureNotPassive();
 
-            if (assignedCores == null)
-                assignedCores = ServerStore.LicenseManager.GetCoresToAssign(nodeInfo.NumberOfCores);
-
-            Debug.Assert(assignedCores <= nodeInfo.NumberOfCores);
-
-            ServerStore.LicenseManager.AssertCanAddNode(nodeUrl, assignedCores.Value);
+            ServerStore.LicenseManager.AssertCanAddNode();
 
             if (ServerStore.IsLeader())
             {
@@ -498,17 +487,26 @@ namespace Raven.Server.Documents.Handlers.Admin
                             await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                         }
 
-                        var nodeDetails = new NodeDetails
+                        var detailsPerNode = new DetailsPerNode
                         {
-                            NodeTag = nodeTag,
-                            AssignedCores = assignedCores.Value,
+                            MaxUtilizedCores = maxUtilizedCores,
                             NumberOfCores = nodeInfo.NumberOfCores,
                             InstalledMemoryInGb = nodeInfo.InstalledMemoryInGb,
                             UsableMemoryInGb = nodeInfo.UsableMemoryInGb,
                             BuildInfo = nodeInfo.BuildInfo,
                             OsInfo = nodeInfo.OsInfo
                         };
-                        await ServerStore.LicenseManager.CalculateLicenseLimits(nodeDetails, forceFetchingNodeInfo: true);
+
+                        var maxCores = ServerStore.LicenseManager.GetLicenseStatus().MaxCores;
+
+                        try
+                        {
+                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores);
+                        }
+                        catch
+                        {
+                            // we'll retry this again later
+                        }
                     }
 
                     NoContentStatus();
@@ -546,6 +544,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             var nodeTag = GetStringQueryString("nodeTag");
             ServerStore.EnsureNotPassive();
+
             if (ServerStore.IsLeader())
             {
                 if (nodeTag == ServerStore.Engine.Tag)
@@ -558,10 +557,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }
 
                 await ServerStore.RemoveFromClusterAsync(nodeTag);
-                await ServerStore.LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true);
                 NoContentStatus();
                 return;
             }
+
             RedirectToLeader();
         }
 
@@ -569,22 +568,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task SetLicenseLimit()
         {
             var nodeTag = GetStringQueryString("nodeTag");
-            var newAssignedCores = GetIntValueQueryString("newAssignedCores");
+            var maxUtilizedCores = GetIntValueQueryString("maxUtilizedCores", required: false);
+            if (maxUtilizedCores != null && maxUtilizedCores <= 0)
+                throw new ArgumentException("Max utilized cores must be greater than 0");
 
-            Debug.Assert(newAssignedCores != null);
-
-            if (newAssignedCores <= 0)
-                throw new ArgumentException("The new assigned cores value must be larger than 0");
-
-            if (ServerStore.IsLeader())
-            {
-                await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, newAssignedCores.Value, GetRaftRequestIdFromQuery());
-
-                NoContentStatus();
-                return;
-            }
-
-            RedirectToLeader();
+            await ServerStore.LicenseManager.ChangeLicenseLimits(nodeTag, maxUtilizedCores, GetRaftRequestIdFromQuery());
+            NoContentStatus();
         }
 
         [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]

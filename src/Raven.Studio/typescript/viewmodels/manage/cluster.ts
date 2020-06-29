@@ -217,7 +217,7 @@ class cluster extends viewModelBase {
     assignCores(node: clusterNode) {
         const utilizedCores = _.sumBy(this.topology().nodes(), x => x.utilizedCores());
         const availableCores = license.licenseStatus().MaxCores - utilizedCores;
-        const assignCoresView = new assignCores(node.tag(), node.utilizedCores(), availableCores, node.numberOfCores());
+        const assignCoresView = new assignCores(node.tag(), node.utilizedCores(), node.maxUtilizedCores(), availableCores, node.numberOfCores());
         app.showBootstrapDialog(assignCoresView);
     }
 

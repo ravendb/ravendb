@@ -1,5 +1,7 @@
 using System;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Commercial;
+using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -11,6 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly LicenseManager _licenseManager;
         private int _concurrentBackups;
         private int _maxConcurrentBackups;
+        private readonly TimeSpan _concurrentBackupsDelay;
         private readonly bool _skipModifications;
 
         public int MaxNumberOfConcurrentBackups
@@ -35,24 +38,25 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public ConcurrentBackupsCounter(int? maxNumberOfConcurrentBackupsConfiguration, LicenseManager licenseManager)
+        public ConcurrentBackupsCounter(BackupConfiguration backupConfiguration, LicenseManager licenseManager)
         {
             _licenseManager = licenseManager;
 
             int numberOfCoresToUse;
-            var skipModifications = maxNumberOfConcurrentBackupsConfiguration != null;
+            var skipModifications = backupConfiguration.MaxNumberOfConcurrentBackups != null;
             if (skipModifications)
             {
-                numberOfCoresToUse = maxNumberOfConcurrentBackupsConfiguration.Value;
+                numberOfCoresToUse = backupConfiguration.MaxNumberOfConcurrentBackups.Value;
             }
             else
             {
-                var utilizedCores = _licenseManager.GetCoresLimitForNode();
+                var utilizedCores = _licenseManager.GetCoresLimitForNode(out _);
                 numberOfCoresToUse = GetNumberOfCoresToUseForBackup(utilizedCores);
             }
 
             _concurrentBackups = numberOfCoresToUse;
             _maxConcurrentBackups = numberOfCoresToUse;
+            _concurrentBackupsDelay = backupConfiguration.ConcurrentBackupsDelay.AsTimeSpan;
             _skipModifications = skipModifications;
         }
 
@@ -67,7 +71,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         $"The task exceeds the maximum number of concurrent backup tasks configured. " +
                         $"Current maximum number of concurrent backups is: {_maxConcurrentBackups:#,#;;0}")
                     {
-                        DelayPeriod = TimeSpan.FromMinutes(1)
+                        DelayPeriod = _concurrentBackupsDelay
                     };
                 }
 
@@ -78,7 +82,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 logger.Operations($"Starting backup task '{backupName}'");
         }
 
-        public void FinishBackup(string backupName, TimeSpan? elapsed, Logger logger)
+        public void FinishBackup(string backupName, PeriodicBackupStatus backupStatus, TimeSpan? elapsed, Logger logger)
         {
             lock (_locker)
             {
@@ -87,9 +91,40 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             if (logger.IsOperationsEnabled)
             {
-                var message = $"Finished backup task '{backupName}'";
+                string backupTypeString = "backup";
+                string extendedBackupTimings = string.Empty;
+                if (backupStatus != null)
+                {
+                    backupTypeString = BackupTask.GetBackupDescription(backupStatus.BackupType, backupStatus.IsFull);
+                    
+                    var first = true;
+                    AddBackupTimings(backupStatus.LocalBackup, "local");
+                    AddBackupTimings(backupStatus.UploadToS3, "Amazon S3");
+                    AddBackupTimings(backupStatus.UploadToGlacier, "Amazon Glacier");
+                    AddBackupTimings(backupStatus.UploadToAzure, "Azure");
+                    AddBackupTimings(backupStatus.UploadToGoogleCloud, "Google Cloud");
+                    AddBackupTimings(backupStatus.UploadToFtp, "FTP");
+
+                    void AddBackupTimings(BackupStatus perDestinationBackupStatus, string backupTypeName)
+                    {
+                        if (perDestinationBackupStatus is CloudUploadStatus cus && cus.Skipped)
+                            return;
+
+                        if (first == false)
+                            extendedBackupTimings += ", ";
+
+                        first = false;
+                        extendedBackupTimings +=
+                            $"backup to {backupTypeName} took: " +
+                            $"{(backupStatus.IsFull ? perDestinationBackupStatus.FullBackupDurationInMs : perDestinationBackupStatus.IncrementalBackupDurationInMs)}ms";
+                    }
+                }
+
+                var message = $"Finished {backupTypeString} task '{backupName}'";
                 if (elapsed != null)
                     message += $", took: {elapsed}";
+
+                message += $" {extendedBackupTimings}";
 
                 logger.Operations(message);
             }
@@ -100,7 +135,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_skipModifications)
                 return;
 
-            var utilizedCores = _licenseManager.GetCoresLimitForNode();
+            var utilizedCores = _licenseManager.GetCoresLimitForNode(out _);
             var newMaxConcurrentBackups = GetNumberOfCoresToUseForBackup(utilizedCores);
 
             lock (_locker)
