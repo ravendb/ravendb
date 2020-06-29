@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
@@ -58,7 +56,6 @@ namespace SlowTests.Authentication
                         WaitForNonStaleResults = true
                     });
                     WaitForIndexing(store);
-
 
                     Assert.True(result.Results.Length > 1000);
 
@@ -120,7 +117,6 @@ namespace SlowTests.Authentication
             {
                 store.Maintenance.Send(new CreateSampleDataOperation());
 
-
                 using (var commands = store.Commands())
                 {
                     // create auto map index
@@ -155,7 +151,7 @@ namespace SlowTests.Authentication
                             Query = $"FROM INDEX '{indexDef.Name}'"
                         });
 
-                        Assert.True(queryResult.Results.Length > 0);
+                        Assert.True(queryResult.Results.Length > 0, $"queryResult.Results.Length > 0 for '{indexDef.Name}' index.");
                     }
 
                     // restart database
@@ -170,7 +166,7 @@ namespace SlowTests.Authentication
                             Query = $"FROM INDEX '{indexDef.Name}'"
                         });
 
-                        Assert.True(queryResult.Results.Length > 0);
+                        Assert.True(queryResult.Results.Length > 0, $"queryResult.Results.Length > 0 for '{indexDef.Name}' index.");
                     }
                 }
             }
