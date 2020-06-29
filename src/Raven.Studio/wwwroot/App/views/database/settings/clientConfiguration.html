@@ -42,7 +42,7 @@
                                         </label>
                                     </div>
                                 </div>
-                                <div data-bind="validationElement: model.identityPartsSeparator, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-4': !hasGlobalConfiguration() }">
+                                <div data-bind="validationElement: model.identityPartsSeparator, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-5': !hasGlobalConfiguration() }">
                                     <input class="form-control" type="text"
                                            data-bind="textInput: model.identityPartsSeparator, enable: _.includes(model.isDefined(), 'identityPartsSeparator'), 
                                                       attr: { placeholder: separatorPlaceHolderInSettings }" />
@@ -70,7 +70,7 @@
                                         </label>
                                     </div>
                                 </div>
-                                <div data-bind="validationElement: model.maxNumberOfRequestsPerSession, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-4': !hasGlobalConfiguration() }">
+                                <div data-bind="validationElement: model.maxNumberOfRequestsPerSession, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-5': !hasGlobalConfiguration() }">
                                     <input class="form-control" type="number" min="0" placeholder="Enter requests number"
                                            data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession'),
                                                       attr: { placeholder: requestsNumberPlaceHolderInSettings }" />
@@ -89,7 +89,7 @@
                     <div data-bind="css: { 'col-sm-6': !hasGlobalConfiguration() }">
                         <div class="panel padding">
                             <div class="row">
-                                <div class="col-sm-6">
+                                <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="useSessionContextToggle" type="checkbox"
                                                data-bind="checked: model.isDefined, checkedValue: 'useSessionContextForLoadBehavior', enable: canEditSettings()">
@@ -98,8 +98,25 @@
                                         </label>
                                     </div>
                                 </div>
+                                <div data-bind="validationElement: model.loadBalanceContextSeed, validationOptions: { insertMessages: false }, css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-5': !hasGlobalConfiguration() }">
+                                    <div class="flex-horizontal">
+                                        <div class="toggle">
+                                            <input id="toggleSeed" type="checkbox"
+                                                   data-bind="checked: model.setLoadBalanceSeed, enable: _.includes(model.isDefined(), 'useSessionContextForLoadBehavior')">
+                                            <label for="toggleSeed">
+                                                Seed
+                                            </label>
+                                        </div>
+                                        <input class="form-control margin-left" type="number" min="0" placeholder="Enter number"
+                                               data-bind="numericInput: model.loadBalanceContextSeed, enable: model.setLoadBalanceSeed" />
+                                    </div>
+                                    <div class="help-block" data-bind="validationMessage: model.loadBalanceContextSeed"></div>
+                                </div>
+                                <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
+                                    <input class="form-control" disabled data-bind="value: globalModel.loadBalanceContextSeed" />
+                                </div>
                             </div>
-                            <div class="row margin-top margin-top-sm">
+                            <div class="row margin-top">
                                 <div data-bind="css: { 'col-sm-3': hasGlobalConfiguration, 'col-sm-6': !hasGlobalConfiguration() }">
                                     <div class="checkbox">
                                         <input id="checkboxReadBalance" type="checkbox"
@@ -109,7 +126,7 @@
                                         </label>
                                     </div>
                                 </div>
-                                <div data-bind="css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-4': !hasGlobalConfiguration() }">
+                                <div data-bind="css: { 'col-sm-2': hasGlobalConfiguration,'col-sm-5': !hasGlobalConfiguration() }">
                                     <div class="dropdown flex-vertical">
                                         <button class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
                                                 data-bind="enable: _.includes(model.isDefined(), 'readBalanceBehavior')">
@@ -123,7 +140,7 @@
                                 <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration, if: hasGlobalConfiguration">
                                     <input class="form-control" disabled data-bind="value: globalModel.readBalanceBehaviorLabel" />
                                 </div>
-                                <div class="col-sm-2" data-bind="visible: hasGlobalConfiguration()">
+                                <div class="col-sm-3" data-bind="visible: hasGlobalConfiguration()">
                                     <h3 class="margin-top margin-top-sm" data-bind="text: effectiveReadBalanceBehavior"></h3>
                                 </div>
                             </div>
