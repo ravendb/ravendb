@@ -19,7 +19,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-sm-4" data-bind="validationElement: model.identityPartsSeparator">
+                            <div class="col-sm-5" data-bind="validationElement: model.identityPartsSeparator">
                                 <input class="form-control" type="text"
                                        data-bind="textInput: model.identityPartsSeparator, enable: _.includes(model.isDefined(), 'identityPartsSeparator'), 
                                                   attr: { placeholder: model.separatorPlaceHolder }" />
@@ -37,7 +37,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-sm-4" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
+                            <div class="col-sm-5" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
                                 <input class="form-control" type="number" min="0"
                                        data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession'), 
                                                   attr: { placeholder: model.requestsNumberPlaceHolder }" />
@@ -55,8 +55,22 @@
                                     </label>
                                 </div>
                             </div>
+                            <div class="col-sm-5" data-bind="validationElement: model.loadBalanceContextSeed, validationOptions: { insertMessages: false }">
+                                <div class="flex-horizontal">
+                                    <div class="toggle">
+                                        <input id="toggleSeed" type="checkbox" 
+                                               data-bind="checked: model.setLoadBalanceSeed, enable: _.includes(model.isDefined(), 'useSessionContextForLoadBehavior')">
+                                        <label for="toggleSeed">
+                                            Seed
+                                        </label>
+                                    </div>
+                                    <input class="form-control margin-left" type="number" min="0" placeholder="Enter seed number"
+                                           data-bind="numericInput: model.loadBalanceContextSeed, enable: model.setLoadBalanceSeed" />
+                                </div>
+                                <div class="help-block" data-bind="validationMessage: model.loadBalanceContextSeed"></div>
+                            </div>
                         </div>
-                        <div class="row margin-top margin-top-sm">
+                        <div class="row margin-top">
                             <div class="col-sm-6">
                                 <div class="checkbox">
                                     <input id="checkboxReadBalance" type="checkbox"
@@ -66,7 +80,7 @@
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-sm-4">
+                            <div class="col-sm-5">
                                 <div class="dropdown flex-vertical">
                                     <button class="btn btn-default btn-block dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
                                             data-bind="enable: !_.includes(model.isDefined() , 'useSessionContextForLoadBehavior') && _.includes(model.isDefined() , 'readBalanceBehavior')">

@@ -16,6 +16,8 @@ class clientConfigurationModel {
     requestsNumberPlaceHolder: KnockoutComputed<string>;
     
     useSessionContextForLoadBehavior = ko.observable<Raven.Client.Http.LoadBalanceBehavior>();
+    loadBalanceContextSeed = ko.observable<number>();
+    setLoadBalanceSeed  = ko.observable<boolean>(false);
     
     readBalanceBehavior = ko.observable<Raven.Client.Http.ReadBalanceBehavior>("None");
     readBalanceBehaviorLabel: KnockoutComputed<string>;
@@ -37,6 +39,12 @@ class clientConfigurationModel {
             if (dto.LoadBalanceBehavior === "UseSessionContext") {
                 this.isDefined.push("useSessionContextForLoadBehavior");
                 this.useSessionContextForLoadBehavior("UseSessionContext");
+                
+                if (dto.LoadBalancerContextSeed || dto.LoadBalancerContextSeed === 0) {
+                    this.isDefined.push("loadBalanceContextSeed");
+                    this.loadBalanceContextSeed(dto.LoadBalancerContextSeed);
+                    this.setLoadBalanceSeed(true);
+                }
             } else if (dto.ReadBalanceBehavior != null) {
                 this.isDefined.push("readBalanceBehavior");
                 this.readBalanceBehavior(dto.ReadBalanceBehavior);
@@ -69,6 +77,15 @@ class clientConfigurationModel {
             return _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? "Enter requests number" : "Default is 30";
         });
         
+        this.setLoadBalanceSeed.subscribe(setSeed => {
+           if (setSeed) {
+               this.isDefined.push("loadBalanceContextSeed");
+           } else {
+               _.remove(this.isDefined(), x => x === "loadBalanceContextSeed");
+               this.loadBalanceContextSeed(null);
+           }
+        });
+        
         this.isDefined.subscribe((changesList) => {
             const change = changesList[0];
             
@@ -81,7 +98,12 @@ class clientConfigurationModel {
             if (_.includes(this.isDefined(), "useSessionContextForLoadBehavior")) {
                 if (change.status === "added" && change.value === "readBalanceBehavior") {
                     _.remove(this.isDefined(), x => x === "useSessionContextForLoadBehavior");
+                    this.setLoadBalanceSeed(false);
                 }
+            }
+
+            if (!_.includes(this.isDefined(), "useSessionContextForLoadBehavior")) {
+                this.setLoadBalanceSeed(false);
             }
             
             if (!_.includes(this.isDefined(), "identityPartsSeparator")) {
@@ -101,6 +123,8 @@ class clientConfigurationModel {
             this.identityPartsSeparator,
             this.maxNumberOfRequestsPerSession,
             this.useSessionContextForLoadBehavior,
+            this.setLoadBalanceSeed,
+            this.loadBalanceContextSeed,
             this.readBalanceBehavior,
             this.isDefined
         ], false, jsonUtil.newLineNormalizingHashFunction);
@@ -137,10 +161,19 @@ class clientConfigurationModel {
             digit: true
         });
         
+        this.loadBalanceContextSeed.extend({
+            required: {
+                onlyIf: () => this.setLoadBalanceSeed()
+            },
+            min: 0,
+            digit: true
+        });
+        
         this.validationGroup = ko.validatedObservable({
             identityPartsSeparator: this.identityPartsSeparator,
             readBalanceBehavior: this.readBalanceBehavior,
-            maxNumberOfRequestsPerSession: this.maxNumberOfRequestsPerSession
+            maxNumberOfRequestsPerSession: this.maxNumberOfRequestsPerSession,
+            loadBalanceContextSeed: this.loadBalanceContextSeed
         });
     }
     
@@ -153,6 +186,7 @@ class clientConfigurationModel {
         return {
             IdentityPartsSeparator: _.includes(this.isDefined(), "identityPartsSeparator") ? this.identityPartsSeparator() : null,
             LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? "UseSessionContext" : null,
+            LoadBalancerContextSeed: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") && _.includes(this.isDefined(), "loadBalanceContextSeed") ? this.loadBalanceContextSeed() : null,
             ReadBalanceBehavior: _.includes(this.isDefined(), "readBalanceBehavior") ? this.readBalanceBehavior() : null,
             MaxNumberOfRequestsPerSession: _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? this.maxNumberOfRequestsPerSession() : null,
             Disabled: this.disabled()

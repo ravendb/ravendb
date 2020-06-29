@@ -85,7 +85,11 @@ class clientConfiguration extends viewModelBase {
             const usingSessionContext = _.includes(configToUse.isDefined(), "useSessionContextForLoadBehavior");
             
             if (usingSessionContext) {
-                return "Session Context";
+                const isSeedDefined =  _.includes(configToUse.isDefined(), "loadBalanceContextSeed") && 
+                                       (configToUse.loadBalanceContextSeed() || configToUse.loadBalanceContextSeed() === 0);
+                
+                const seedText = isSeedDefined ? `(Seed: ${configToUse.loadBalanceContextSeed()})` : "";
+                return `Session Context ${seedText}`;
             }
 
             const label = configToUse.readBalanceBehaviorLabel();
