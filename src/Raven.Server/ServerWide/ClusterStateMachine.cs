@@ -2797,14 +2797,14 @@ namespace Raven.Server.ServerWide
         public BlittableJsonReaderObject Read<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
-            var dbKey = name.ToLowerInvariant();
-            using (Slice.From(context.Allocator, dbKey, out Slice key))
+            var lowerName = name.ToLowerInvariant();
+            using (Slice.From(context.Allocator, lowerName, out Slice key))
             {
                 return ReadInternal(context, out etag, key);
             }
         }
 
-        private static unsafe BlittableJsonReaderObject ReadInternal<T>(TransactionOperationContext<T> context, out long etag, Slice key)
+        public static unsafe BlittableJsonReaderObject ReadInternal<T>(TransactionOperationContext<T> context, out long etag, Slice key)
             where T : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);

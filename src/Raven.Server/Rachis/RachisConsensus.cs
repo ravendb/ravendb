@@ -381,7 +381,7 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, string myUrl, out long clusterTopologyEtag)
+        public void Initialize(StorageEnvironment env, RavenConfiguration configuration, string myUrl, out long clusterTopologyEtag)
         {
             try
             {

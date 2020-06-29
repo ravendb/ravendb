@@ -647,6 +647,7 @@ namespace Raven.Server.ServerWide
 
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
+            options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
 
@@ -2431,10 +2432,18 @@ namespace Raven.Server.ServerWide
 
         public License LoadLicense()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            return LoadLicense(ContextPool);
+        }
+
+        public License LoadLicense(TransactionContextPool contextPool)
+        {
+            var lowerName = LicenseStorageKey.ToLowerInvariant();
+
+            using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
+            using (Slice.From(context.Allocator, lowerName, out Slice key))
             {
-                var licenseBlittable = Cluster.Read(context, LicenseStorageKey);
+                var licenseBlittable = ClusterStateMachine.ReadInternal(context, out _, key);
                 if (licenseBlittable == null)
                     return null;
 

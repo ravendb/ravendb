@@ -8,11 +8,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.AspNetCore.Connections;
+using Raven.Client.Properties;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.BackgroundTasks;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Utils.Cli;
 using Sparrow;
@@ -20,6 +22,7 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
+using Voron;
 
 namespace Raven.Server
 {
@@ -160,6 +163,7 @@ namespace Raven.Server
                                 Console.WriteLine("Warning: Admin Channel is not available:" + e);
                             }
 
+                            server.BeforeSchemaUpgrade = x => BeforeSchemaUpgrade(x, server.ServerStore);
                             server.Initialize();
 
                             if (CommandLineSwitches.PrintServerId)
@@ -247,6 +251,10 @@ namespace Raven.Server
                                     $"if this is your case please run{Environment.NewLine}" +
                                     $"sudo setcap CAP_NET_BIND_SERVICE=+eip {ravenPath}";
                             }
+                            else if (e.InnerException is LicenseExpiredException)
+                            {
+                                message = e.InnerException.Message;
+                            }
 
                             if (Logger.IsOperationsEnabled)
                             {
@@ -281,6 +289,32 @@ namespace Raven.Server
             } while (rerun);
 
             return 0;
+        }
+
+        private static void BeforeSchemaUpgrade(StorageEnvironment storageEnvironment, ServerStore serverStore)
+        {
+            // doing this before the schema upgrade to allow to downgrade in case we cannot start the server
+
+            using (var contextPool = new TransactionContextPool(storageEnvironment, serverStore.Configuration.Memory.MaxContextSizeToKeep))
+            {
+                var license = serverStore.LoadLicense(contextPool);
+                if (license == null)
+                    return;
+
+                var licenseStatus = LicenseManager.GetLicenseStatus(license);
+                if (licenseStatus.Expiration >= RavenVersionAttribute.Instance.EffectiveReleaseDate)
+                    return;
+
+                var licenseStorage = new LicenseStorage();
+                licenseStorage.Initialize(storageEnvironment, contextPool);
+
+                var errorMessage = "Cannot start the RavenDB server because the expiration date of this license is before the effective release date of this version.";
+                var buildInfo = licenseStorage.GetBuildInfo();
+                if (buildInfo != null)
+                    errorMessage += $" You can downgrade to the latest build that was working ({buildInfo.FullVersion})";
+
+                throw new LicenseExpiredException(errorMessage);
+            }
         }
 
         private static void UseOnlyInvariantCultureInRavenDB()

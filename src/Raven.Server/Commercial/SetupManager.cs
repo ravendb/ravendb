@@ -384,7 +384,7 @@ namespace Raven.Server.Commercial
                 await serverStore.LicenseManager.GetUpdatedLicense(currentLicense).ConfigureAwait(false)
                 ?? currentLicense;
 
-            var licenseStatus = serverStore.LicenseManager.GetLicenseStatus(license);
+            var licenseStatus = LicenseManager.GetLicenseStatus(license);
             if (licenseStatus.Expired)
                 throw new LicenseExpiredException($"The provided license for {license.Name} has expired ({licenseStatus.Expiration})");
 
