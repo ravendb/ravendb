@@ -11,8 +11,10 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Operations.TransactionsRecording;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
 using SlowTests.Client.TimeSeries.Session;
@@ -358,6 +360,87 @@ namespace SlowTests.Client.TimeSeries.Policies
                     var ts4 = session.TimeSeriesFor("users/karmel", p4.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(1, ts4.Count);
                 }
+            }
+        }
+
+        public class BigMeasure
+        {
+            [TimeSeriesValue(0)] public double Measure1 { get; set; }
+            [TimeSeriesValue(1)] public double Measure2 { get; set; }
+            [TimeSeriesValue(2)] public double Measure3 { get; set; }
+            [TimeSeriesValue(3)] public double Measure4 { get; set; }
+            [TimeSeriesValue(4)] public double Measure5 { get; set; }
+            [TimeSeriesValue(5)] public double Measure6 { get; set; }
+        }
+
+        public class SmallMeasure
+        {
+            [TimeSeriesValue(0)] public double Measure1 { get; set; }
+        }
+
+        [Fact]
+        public async Task RollupWithMoreThan5ValuesShouldRaiseAlert()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var p1 = new TimeSeriesPolicy("ByMinute",TimeValue.FromMinutes(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1
+                            }
+                        },
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                var baseline = DateTime.Today.AddDays(-1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    var big = session.TimeSeriesFor<BigMeasure>("users/karmel");
+                    var small = session.TimeSeriesFor<SmallMeasure>("users/karmel");
+                    for (int i = 0; i < 100; i++)
+                    {
+                            big.Append(baseline.AddSeconds(3 * i), new BigMeasure
+                            {
+                                Measure1 = i,
+                                Measure2 = i,
+                                Measure3 = i,
+                                Measure4 = i,
+                                Measure5 = i,
+                                Measure6 = i,
+                            }, "watches/fitbit");
+                            small.Append(baseline.AddSeconds(3 * i) , new SmallMeasure
+                            {
+                                Measure1 = i
+                            },"watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.RunRollups();
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor<SmallMeasure>("users/karmel").Get().ToList();
+                    var minutes = (int)(ts.Last().Timestamp - ts.First().Timestamp).TotalMinutes;
+
+                    var ts1 = session.TimeSeriesRollupFor<SmallMeasure>("users/karmel", p1.Name).Get().ToList();
+                    var ts1Minutes = (int)(ts1.Last().Timestamp - ts1.First().Timestamp).TotalMinutes;
+                    Assert.Equal(ts1Minutes, minutes);
+                }
+
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
+                Assert.NotNull(database.NotificationCenter.GetDatabaseFor(key));
             }
         }
 
