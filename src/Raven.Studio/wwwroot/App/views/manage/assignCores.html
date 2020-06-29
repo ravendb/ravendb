@@ -7,14 +7,20 @@
             </div>
             <div class="modal-body">
                 <div class="padding padding-sm text-center">
-                    <div class="row">
+                    <div class="row" data-bind="validationElement: maxUtilizedCores">
                         <div class="col-xs-12">
-                            <div class="row" data-bind="validationElement: assignedCores">
-                                <label class="control-label col-xs-4">Cores to use:</label>
+                            <div class="row">
+                                <label class="control-label col-xs-4">Maximum cores to use:</label>
                                 <div class="col-xs-8">
-                                    <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: assignedCores" id="assigned-cores" placeholder="Assigned cores for the new node">
+                                    <input autocomplete="off" type="number" class="form-control" data-bind="numericInput: maxUtilizedCores" id="max-utilized-cores" placeholder="Maximum cores that will be used">
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12" data-bind="if: utilizedCores() && utilizedCores() != -1">
+                            <label class="control-label col-xs-4">Utilized cores:</label>
+                            <strong class="control-label col-xs-1"><span data-bind="text: utilizedCores"></span></strong>
                         </div>
                     </div>
                     <div class="row">

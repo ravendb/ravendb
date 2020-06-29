@@ -71,6 +71,7 @@ class clusterTopology {
                 const nodeLicenseDetails = licenseDetails[k];
 
                 node.utilizedCores(nodeLicenseDetails.UtilizedCores);
+                node.maxUtilizedCores(nodeLicenseDetails.MaxUtilizedCores);
                 node.numberOfCores(nodeLicenseDetails.NumberOfCores);
                 node.installedMemoryInGb(nodeLicenseDetails.InstalledMemoryInGb);
                 node.usableMemoryInGb(nodeLicenseDetails.UsableMemoryInGb);

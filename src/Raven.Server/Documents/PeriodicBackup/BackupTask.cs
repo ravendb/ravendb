@@ -276,7 +276,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     _periodicBackup.BackupStatus = runningBackupStatus;
 
-
                     // save the backup status
                     AddInfo("Saving backup status");
                     SaveBackupStatus(runningBackupStatus, _database, _logger);
@@ -569,9 +568,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (_configuration.BackupType == BackupType.Backup ||
                         _configuration.BackupType == BackupType.Snapshot && _isFullBackup == false)
                     {
-                        var backupType = _configuration.BackupType == BackupType.Snapshot ? "snapshot " : string.Empty;
-                        var backupSizeType = _isFullBackup ? "a full" : "an incremental";
-                        AddInfo($"Started {backupSizeType} {backupType}backup");
+                        AddInfo($"Started {GetBackupDescription(_configuration.BackupType, _isFullBackup)}");
 
                         // smuggler backup
                         var options = new DatabaseSmugglerOptionsServerSide
@@ -658,6 +655,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             return internalBackupResult;
+        }
+
+        public static string GetBackupDescription(BackupType backupType, bool isFull)
+        {
+            var isFullText = isFull ? "a full" : "an incremental";
+            var backupTypeText = backupType == BackupType.Snapshot ? "snapshot backup" : "backup";
+            return $"{isFullText} {backupTypeText}";
         }
 
         private void DeleteFile(string path)

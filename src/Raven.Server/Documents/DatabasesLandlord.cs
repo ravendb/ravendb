@@ -907,6 +907,9 @@ namespace Raven.Server.Documents
             if (dueTime > 0)
                 _wakeupTimers.TryAdd(databaseName.Value, new Timer(_ => StartDatabaseOnTimer(databaseName.Value, wakeup), null, dueTime, Timeout.Infinite));
 
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Unloading directly {databaseName}, wakeup set to: {wakeup}");
+
             return true;
         }
 

@@ -3,14 +3,14 @@ import endpoints = require("endpoints");
 
 class setLicenseLimitsCommand extends commandBase {
 
-    constructor(private nodeTag: string, private newAssignedCores: number) {
+    constructor(private nodeTag: string, private maxUtilizedCores: number | null) {
         super();
     }
 
     execute(): JQueryPromise<void> {
         const args = {
             nodeTag: this.nodeTag,
-            newAssignedCores: this.newAssignedCores
+            maxUtilizedCores : this.maxUtilizedCores
         }
 
         const url = endpoints.global.rachisAdmin.adminLicenseSetLimit + this.urlEncodeArgs(args);

@@ -414,12 +414,6 @@ namespace Raven.Server.ServerWide
                                 ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                             }
 
-                            if (newNodes.Count > 1)
-                            {
-                                // calculate only if we have more than one node
-                                LicenseManager.CalculateLicenseLimits(forceFetchingNodeInfo: true).Wait(ServerShutdown);
-                            }
-
                             var leaderChanged = _engine.WaitForLeaveState(RachisState.Leader, ServerShutdown);
 
                             if (Task.WaitAny(new[] { topologyChangedTask, leaderChanged }, ServerShutdown) == 1)
@@ -723,7 +717,7 @@ namespace Raven.Server.ServerWide
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Instance.Check(this);
 
-            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup.MaxNumberOfConcurrentBackups, LicenseManager);
+            ConcurrentBackupsCounter = new ConcurrentBackupsCounter(Configuration.Backup, LicenseManager);
 
             ConfigureAuditLog();
 
@@ -1053,6 +1047,9 @@ namespace Raven.Server.ServerWide
                 case nameof(PutLicenseCommand):
                     LicenseManager.ReloadLicense();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
+
+                    // we are not waiting here on purpose
+                    var t = LicenseManager.PutMyNodeInfoAsync().IgnoreUnobservedExceptions();
                     break;
                 case nameof(PutLicenseLimitsCommand):
                 case nameof(UpdateLicenseLimitsCommand):
@@ -2454,38 +2451,16 @@ namespace Raven.Server.ServerWide
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }
 
-        public void PutLicenseLimits(LicenseLimits licenseLimits, string raftRequestId)
+        public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, int maxLicensedCores)
         {
-            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
-            SendToLeaderAsync(command).IgnoreUnobservedExceptions();
-        }
-
-        public async Task PutLicenseLimitsAsync(LicenseLimits licenseLimits, string raftRequestId)
-        {
-            var command = new PutLicenseLimitsCommand(LicenseLimitsStorageKey, licenseLimits, raftRequestId);
-
-            var result = await SendToLeaderAsync(command);
-
-            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
-        }
-
-        public async Task PutMyNodeInfoAsync(int maxLicenseCores)
-        {
-            var licenseLimits = LoadLicenseLimits();
-            if (licenseLimits == null)
-                return;
-
-            if (licenseLimits.NodeLicenseDetails.TryGetValue(NodeTag, out _) == false)
-                return;
-
-            var nodeInfo = GetNodeInfo();
             var nodeLicenseLimits = new NodeLicenseLimits
             {
-                NodeTag = NodeTag,
-                DetailsPerNode = DetailsPerNode.FromNodeInfo(nodeInfo),
-                LicensedCores = maxLicenseCores,
+                NodeTag = nodeTag,
+                DetailsPerNode = detailsPerNode,
+                LicensedCores = maxLicensedCores,
                 AllNodes = GetClusterTopology().AllNodes.Keys.ToList()
             };
+
             var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, nodeLicenseLimits, RaftIdGenerator.NewId());
 
             var result = await SendToLeaderAsync(command);
