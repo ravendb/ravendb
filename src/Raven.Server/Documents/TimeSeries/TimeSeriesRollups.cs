@@ -117,16 +117,16 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(policyToApply);
                     tvb.Add(etag);
                     tvb.Add(changeVectorSlice);
-                }
 
-                table.Set(tvb);
+                    table.Set(tvb);
+                }
             }
         }
 
         public unsafe void MarkSegmentForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp, string changeVector)
         {
             var nextRollup = NextRollup(timestamp, nextPolicy);
-
+           
             // mark for rollup
             RollupSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollupTable, 16);
             var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
@@ -154,9 +154,9 @@ namespace Raven.Server.Documents.TimeSeries
                     tvb.Add(policyToApply);
                     tvb.Add(etag);
                     tvb.Add(changeVectorSlice);
-                }
 
-                table.Set(tvb);
+                    table.Set(tvb);
+                }
             }
         }
 
