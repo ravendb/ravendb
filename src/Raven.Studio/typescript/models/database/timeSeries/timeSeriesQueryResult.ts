@@ -1,3 +1,4 @@
+/// <reference path="../../../../typings/tsd.d.ts" />
 
 class timeSeriesQueryResult {
     constructor(private dto: timeSeriesQueryResultDto) {
@@ -42,7 +43,12 @@ class timeSeriesQueryResult {
     
     static detectGroupKeys(groupedValues: Array<timeSeriesQueryGroupedItemResultDto>): string[] {
         const allKeys = Object.keys(groupedValues[0]);
-        return _.without(allKeys, "From", "To", "Count");
+        const keyWithOutRange = _.without(allKeys, "From", "To");
+        // server added Count property every time, so we filter it out, unless only Count is available in result
+        if (keyWithOutRange.length === 1 && keyWithOutRange[0] === "Count") {
+            return ["Count"];
+        }
+        return _.without(keyWithOutRange, "Count"); 
     }
     
     static detectValuesCount(dto: timeSeriesQueryResultDto): number {
