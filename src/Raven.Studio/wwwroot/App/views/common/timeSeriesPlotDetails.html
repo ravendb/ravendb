@@ -2,24 +2,28 @@
     <div class="dynamic-container">
         
     </div>
-    <div class="time-series-legend">
+    <div class="time-series-legend scroll">
+        <div class="checkbox margin-bottom margin-bottom-lg">
+            <input id="connectPoints" class="styled" type="checkbox" data-bind="checked: connectPoints">
+            <label for="connectPoints">
+                Connect Points
+            </label>
+        </div>
         <h4 class="ts-legend-header">LEGEND</h4>
         <div class="flex-grow" style="position: relative">
-            <div class="scroll">
-                <div data-bind="foreach: allTimeSeries">
-                    
-                    <div data-bind="text: sectionName" class="section-name"></div>
-                    
-                    <div class="legend" data-bind="foreach: series">
-                        <div class="checkbox">
-                            <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />
-                            <label data-bind="attr: { for: uniqueId }">
-                                <span data-bind="attr: { class: $root.getColorClass($data) + ' ' + $parent.type }">
-                                    <i data-bind="attr: { class: $root.getIcon($parent.type) }" class="icon-graph"></i>
-                                </span>
-                                <span data-bind="text: name"></span>
-                            </label>
-                        </div>
+            <div data-bind="foreach: allTimeSeries">
+                
+                <div data-bind="text: sectionName" class="section-name"></div>
+                
+                <div class="legend" data-bind="foreach: series">
+                    <div class="checkbox">
+                        <input type="checkbox" data-bind="attr: { id: uniqueId }, checked: visible" />
+                        <label data-bind="attr: { for: uniqueId }">
+                            <span data-bind="attr: { class: $root.getColorClass($data) + ' ' + $parent.type }">
+                                <i data-bind="attr: { class: $root.getIcon($parent.type) }" class="icon-graph"></i>
+                            </span>
+                            <span data-bind="text: name"></span>
+                        </label>
                     </div>
                 </div>
             </div>

@@ -250,11 +250,17 @@ class timeSeriesPlotDetails extends viewModelBase {
     private zoom: d3.behavior.Zoom<void>;
     private rect: d3.Selection<any>;
     private readonly colorClassScale: d3.scale.Ordinal<string, keyof this["colors"] & string>;
+
+    connectPoints = ko.observable<boolean>(true);
+    
+    private throttledTooltipUpdate = _.throttle((svgLocation: [number, number], globalLocation: [number, number]) => this.updateTooltip(svgLocation, globalLocation), 100);
     
     constructor(timeSeries: Array<timeSeriesPlotItem>) {
         super();
         
         const onChange = () => this.draw(true, false);
+        
+        this.connectPoints.subscribe(() => onChange());
         
         timeSeries.forEach(item => {
             const value = item.value;
@@ -469,7 +475,9 @@ class timeSeriesPlotDetails extends viewModelBase {
                         .attr("x1", mouseLocation[0] + 0.5)
                         .attr("x2", mouseLocation[0] + 0.5);
 
-                    this.updateTooltip();    
+                    const svgLocation = d3.mouse(this.svg.node());
+                    const globalLocation = d3.mouse(d3.select(".time-series-details").node());
+                    this.throttledTooltipUpdate(svgLocation, globalLocation);
                 }
             });
     }
@@ -484,8 +492,6 @@ class timeSeriesPlotDetails extends viewModelBase {
         
         this.tooltip
             .style("display", undefined)
-            .transition("opacity")
-            .duration(250)
             .style("opacity", 1);
 
         const svgLocation = d3.mouse(this.svg.node());
@@ -509,10 +515,7 @@ class timeSeriesPlotDetails extends viewModelBase {
             .each("end", () => this.tooltip.style('display', 'none'));
     }
     
-    private updateTooltip() {
-        const svgLocation = d3.mouse(this.svg.node());
-        
-        const globalLocation = d3.mouse(d3.select(".time-series-details").node());
+    private updateTooltip(svgLocation: [number, number], globalLocation: [number, number]) {
         const [x, y] = globalLocation;
         
         this.tooltip
@@ -725,8 +728,16 @@ class timeSeriesPlotDetails extends viewModelBase {
                     for (let p = 0; p < series.points.length; p++) {
                         const point = series.points[p];
                         const yValue = this.yBrush(point.value);
-                        contextContext.moveTo(this.xBrush(point.from), yValue);
-                        contextContext.lineTo(this.xBrush(point.to), yValue);
+                        if (this.connectPoints()) {
+                            contextContext.lineTo(this.xBrush(point.from), yValue);
+                            contextContext.lineTo(this.xBrush(point.to), yValue);
+                        } else {
+                            const x1 = this.xBrush(point.from);
+                            const x2 = this.xBrush(point.to);
+                            const xDelta = Math.max(x2 - x1, 1);
+                            contextContext.moveTo(x1, yValue);
+                            contextContext.lineTo(x1 + xDelta, yValue);
+                        }
                     }
                     contextContext.stroke();
                 }
@@ -741,7 +752,8 @@ class timeSeriesPlotDetails extends viewModelBase {
                         contextContext.beginPath();
                         contextContext.strokeStyle = this.colors[this.colorClassScale(points.uniqueId)];
                         contextContext.lineWidth = 1;
-                        const renderer = new quantizedLineRenderer(contextContext, pixelTimeDelta, this.xBrush, this.yBrush);
+                        contextContext.fillStyle = this.colors[this.colorClassScale(points.uniqueId)];
+                        const renderer = new quantizedLineRenderer(contextContext, pixelTimeDelta, this.xBrush, this.yBrush, this.connectPoints());
                         renderer.draw(points.points[0].date, points.points[0].value);
 
                         for (let p = 0; p < points.points.length; p++) {
@@ -773,8 +785,16 @@ class timeSeriesPlotDetails extends viewModelBase {
                 for (let p = 0; p < series.points.length; p++) {
                     const point = series.points[p];
                     const yValue = this.y(point.value);
-                    focusContext.moveTo(this.x(point.from), yValue);
-                    focusContext.lineTo(this.x(point.to), yValue);
+                    if (this.connectPoints()) {
+                        focusContext.lineTo(this.x(point.from), yValue);
+                        focusContext.lineTo(this.x(point.to), yValue);
+                    } else {
+                        const x1 = this.x(point.from);
+                        const x2 = this.x(point.to);
+                        const xDelta = Math.max(x2 - x1, 1);
+                        focusContext.moveTo(x1, yValue);
+                        focusContext.lineTo(x1 + xDelta, yValue);
+                    }
                 }
                 focusContext.stroke();
             }
@@ -790,10 +810,9 @@ class timeSeriesPlotDetails extends viewModelBase {
                 
                 if (points.points.length) {
                     focusContext.beginPath();
-                    const a = this.colorClassScale(points.uniqueId);
                     focusContext.strokeStyle = this.colors[this.colorClassScale(points.uniqueId)];
                     focusContext.lineWidth = 1;
-                    const renderer = new quantizedLineRenderer(focusContext, pixelTimeDelta, this.x, this.y);
+                    const renderer = new quantizedLineRenderer(focusContext, pixelTimeDelta, this.x, this.y, this.connectPoints());
                     renderer.draw(points.points[startIdx].date, points.points[startIdx].value);
 
                     for (let p = startIdx; p < endIdx; p++) {
@@ -952,7 +971,8 @@ class quantizedLineRenderer {
     constructor(private context: CanvasRenderingContext2D, 
                 private quantizationOffset: number, 
                 private xScale: d3.time.Scale<number, number>, 
-                private yScale: d3.scale.Linear<number, number>) {
+                private yScale: d3.scale.Linear<number, number>,
+                private connectPoints: boolean) {
     }
     
     private flushQueue() {
@@ -964,11 +984,29 @@ class quantizedLineRenderer {
             // compute extend to avoid drawing average line
             const [localMin, localMax] = d3.extent(this.queue.values);
             const xValue = this.xScale(this.queue.date);
+            const yMin = this.yScale(localMin);
+            const yMax = this.yScale(localMax);
             
-            this.context.lineTo(xValue, this.yScale(localMin));
-            this.context.lineTo(xValue, this.yScale(localMax));
+            if (this.connectPoints) {
+                this.context.lineTo(xValue, yMin);
+                this.context.lineTo(xValue, yMax);    
+            } else {
+                const yToDraw = new Set<number>();
+                for (let i = 0; i < this.queue.values.length; i++) {
+                    yToDraw.add(Math.floor(this.yScale(this.queue.values[i])));
+                }
+                
+                const drawArray = Array.from(yToDraw);
+                for (let i = 0; i < drawArray.length; i++) {
+                    this.context.strokeRect(xValue, drawArray[i], 1, 1);
+                }
+            }
         } else {
-            this.context.lineTo(this.xScale(this.queue.date), this.yScale(this.queue.values[0]));
+            if (this.connectPoints) {
+                this.context.lineTo(this.xScale(this.queue.date), this.yScale(this.queue.values[0]));    
+            } else {
+                this.context.strokeRect(this.xScale(this.queue.date), this.yScale(this.queue.values[0]), 1, 1);
+            }
         }
         
         this.queue = null;
