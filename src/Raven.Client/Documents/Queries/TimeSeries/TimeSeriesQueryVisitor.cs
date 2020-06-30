@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesQueryable.FromFirst):
                     First(mce.Arguments[0]);
                     break;
-                case nameof(ITimeSeriesQueryable.LoadTag):
+                case nameof(ITimeSeriesQueryable.LoadByTag):
                 case nameof(ITimeSeriesQueryable.ToList):
                     break;
                 default:
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _whereVisitor = new TimeSeriesWhereClauseVisitor<T>(lambda.Parameters[0].Name, _providerProcessor.DocumentQuery);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
-                LoadTag(lambda.Parameters[1].Name);
+                LoadByTag(lambda.Parameters[1].Name);
             
             if (lambda.Body is BinaryExpression be)
                 WhereBinary(be);
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 throw new NotSupportedException("Unsupported expression in Where clause " + expression);
         }
 
-        private void LoadTag(string alias)
+        private void LoadByTag(string alias)
         {
             _loadTag = $" load Tag as {alias}";
         }

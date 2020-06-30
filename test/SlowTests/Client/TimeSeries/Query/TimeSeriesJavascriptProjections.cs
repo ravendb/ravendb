@@ -1121,7 +1121,7 @@ select foo(heartrate(p))
                                 select new
                                 {
                                     Heartrate = RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                                        .LoadTag<Watch>()
+                                        .LoadByTag<Watch>()
                                         .Where((ts, watch) => ts.Values[0] > 70 && watch.Accuracy >= 2)
                                         .GroupBy(g => g.Months(1))
                                         .Select(g => new
@@ -1430,7 +1430,7 @@ select foo(heartrate(p))
                                 .ToList()
                         })
                         let tsQuery = RavenQuery.TimeSeries(person, "Heartrate", baseline, baseline.AddMonths(2))
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((ts, watch) => ts.Values[0] > 70 && watch.Accuracy >= 2)
                             .ToList()
                         select new
@@ -1525,7 +1525,7 @@ select foo(heartrate(p))
                                     MaxGroupSize = ranges.Max(r => r.Count[0])
                                 })
                                 let tsQuery = RavenQuery.TimeSeries(person, series, baseline, baseline.AddMonths(2))
-                                    .LoadTag<Watch>()
+                                    .LoadByTag<Watch>()
                                     .Where((ts, watch) => ts.Values[0] > 70 && watch.Accuracy >= 2)
                                     .GroupBy(g => g.Months(1))
                                     .Select(x => new
@@ -1972,7 +1972,7 @@ select foo(heartrate(p))
                         where p.Age > 21
                         let tsFunc = new Func<string, DateTime, DateTime, double?>((name, f, t) =>
                             RavenQuery.TimeSeries(p, name, f, t)
-                                .LoadTag<Watch>()
+                                .LoadByTag<Watch>()
                                 .Where((ts, src) => ts.Values[0] < 500 && src != null)
                                 .ToList()
                                 .Results
@@ -2050,7 +2050,7 @@ select foo(heartrate(p))
                         where p.Age > 21
                         let tsFunc = new Func<string, DateTime, DateTime, IEnumerable<TimeSeriesRangeAggregation>>((name, f, t) =>
                             RavenQuery.TimeSeries(p, name, f, t)
-                                .LoadTag<Watch>()
+                                .LoadByTag<Watch>()
                                 .Where((ts, src) => ts.Values[0] < 500 && src != null)
                                 .GroupBy(g => g.Months(1))
                                 .Select(x => new {Max = x.Max(), Avg = x.Average()})
@@ -2148,7 +2148,7 @@ select foo(heartrate(p))
                         where p.Age > 21
                         let tsFunc = new Func<string, DateTime, DateTime, TimeSeriesEntry>((name, f, t) =>
                             RavenQuery.TimeSeries(p, name, f, t)
-                                .LoadTag<Watch>()
+                                .LoadByTag<Watch>()
                                 .Where((ts, src) => ts.Values[0] < 500 && src != null)
                                 .ToList()
                                 .Results
