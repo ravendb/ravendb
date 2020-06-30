@@ -498,9 +498,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                     catch (RollupExceedNumberOfValuesException e)
                     {
-                        table.DeleteByKey(item.Key);
-                        
-                        var msg = $"Rollup for time-series '{item.Name}' in document '{item.DocId}' failed.";
+                        var msg = $"Rollup '{item.RollupPolicy}' for time-series '{item.Name}' in document '{item.DocId}' failed.";
                         if (_logger.IsInfoEnabled)
                             _logger.Info(msg, e);
 
