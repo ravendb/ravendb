@@ -24,11 +24,14 @@ class columnPreviewPlugin<T> {
         if (moment.isMoment(value)) { // value instanceof moment isn't reliable 
             const dateAsMoment = value as moment.Moment;
             const diff = moment.utc().diff(dateAsMoment);
-            const duration = generalUtils.formatDuration(moment.duration(diff), true, 2);
+            
+            const duration = diff < 0 ? generalUtils.formatDuration(moment.duration(diff * -1), true, 2) :
+                                        generalUtils.formatDuration(moment.duration(diff), true, 2);
+            const fullDuration = diff < 0 ? "in " + duration : duration + "ago";
+            
             const isUtc = dateAsMoment.isUtc();
             const dateFormatted = isUtc ? dateAsMoment.format() : dateAsMoment.format(columnPreviewPlugin.localDateFormat);
             
-            const fullDuration = diff < 0 ? "in " + duration : duration + "ago";
             return `<div class="dateContainer">
                         <div>
                             <div class="dateLabel">${isUtc ? "UTC" : "Local"}: </div>
