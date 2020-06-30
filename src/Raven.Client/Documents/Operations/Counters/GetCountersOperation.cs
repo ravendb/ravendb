@@ -68,9 +68,6 @@ namespace Raven.Client.Documents.Operations.Counters
                     .Append("docId=")
                     .Append(Uri.EscapeDataString(_docId));
 
-                if (_returnFullResults)
-                    pathBuilder.Append("&full=").Append(true);
-
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get
@@ -86,6 +83,11 @@ namespace Raven.Client.Documents.Operations.Counters
                     {
                         pathBuilder.Append("&counter=").Append(Uri.EscapeDataString(_counters[0]));
                     }
+                }
+
+                if (_returnFullResults && request.Method == HttpMethod.Get) // if we dropped to Post, _returnFullResults is part of the request content 
+                {
+                    pathBuilder.Append("&full=").Append(true);
                 }
 
                 url = pathBuilder.ToString();
@@ -135,7 +137,8 @@ namespace Raven.Client.Documents.Operations.Counters
                         Documents = new List<DocumentCountersOperation>
                         {
                             docOps
-                        }
+                        },
+                        ReplyWithAllNodesValues = _returnFullResults
                     };
 
                     request.Content = new BlittableJsonContent(stream =>
