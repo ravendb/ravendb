@@ -34,7 +34,7 @@
                                         <div class="input-group-addon">(local)</div>
                                         <span class="help-block" data-bind="validationMessage: timestamp"></span>
                                     </div>
-                                    <p class="form-control-static" data-bind="text: $root.dateFormattedAsLocal, visible: $root.lockTimeStamp"></p>        
+                                    <p class="form-control-static" data-bind="text: $root.dateFormattedAsLocal, visible: $root.lockTimeStamp"></p>
                                 </div>
                                 <div class="col-md-6">
                                     <p class="form-control-static" data-bind="text: $root.dateFormattedAsUtc"></p>
@@ -73,7 +73,7 @@
                                     <div class="help-block margin-bottom" data-bind="validationMessage: values"></div>
                                 </div>
                             </div>
-                            <button class="btn btn-default btn-sm" data-bind="click: addValue">
+                            <button class="btn btn-default btn-sm" data-bind="click: addValue, disable: maxNumberOfValuesReached">
                                 <i class="icon-plus"></i>
                                 <span>Add Value</span>
                             </button>
@@ -81,11 +81,29 @@
                     </div>
                     <div class="form-group" data-bind="visible: $root.isAggregation">
                         <label class="control-label">&nbsp;</label>
-                        <div class="flex-horizontal bg-warning small padding padding-sm">
-                            <i class="icon-warning padding"></i>
-                            <div class="text-warning">
-                                Please note: above values are the results of a pre-defined aggregation policy.<br />
-                                Editing or deleting any value can impact other aggregations and queries.
+                        <div class="bg-warning text-warning padding padding-sm flex-horizontal">
+                            <div class="flex-start"><small><i class="icon-warning"></i></small></div>
+                            <div>
+                                <small>Please note: above values are the results of a pre-defined aggregation policy.</small><br>
+                                <small>Editing or deleting any value can impact other aggregations and queries.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" data-bind="visible: maxNumberOfValuesReached">
+                        <label class="control-label">&nbsp;</label>
+                        <div class="bg-info text-info padding padding-xs flex-horizontal">
+                            <div class="flex-start"><small><i class="icon-info"></i></small></div>
+                            <div>
+                                <small>The maximum number of possible values (32) has been reached.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group" data-bind="visible: values().length > 5">
+                        <label class="control-label">&nbsp;</label>
+                        <div class="bg-warning text-warning padding padding-xs flex-horizontal">
+                            <div class="flex-start"><small><i class="icon-warning"></i></small></div>
+                            <div>
+                                <small>Note: Aggregated rollup data is Not created for a Time Series if an Entry has more than 5 values.</small>
                             </div>
                         </div>
                     </div>

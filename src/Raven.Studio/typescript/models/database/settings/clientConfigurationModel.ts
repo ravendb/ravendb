@@ -17,7 +17,7 @@ class clientConfigurationModel {
     
     useSessionContextForLoadBehavior = ko.observable<Raven.Client.Http.LoadBalanceBehavior>();
     loadBalanceContextSeed = ko.observable<number>();
-    setLoadBalanceSeed  = ko.observable<boolean>(false);
+    setLoadBalanceSeed = ko.observable<boolean>(false);
     
     readBalanceBehavior = ko.observable<Raven.Client.Http.ReadBalanceBehavior>("None");
     readBalanceBehaviorLabel: KnockoutComputed<string>;

@@ -76,7 +76,8 @@
                     <div class="form-group">
                         <label class="control-label">Collection</label>
                         <div class="dropdown btn-group flex-grow" data-bind="validationElement: collection">
-                            <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" data-bind="textInput: collection, attr: { id: 'collectionNameInput' }" />
+                            <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" autocomplete="off" 
+                                   data-bind="textInput: collection, attr: { id: 'collectionNameInput' }" />
                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter($data)">
                                 <li role="presentation" data-bind="click: $parent.collection.bind($parent, $data)">
