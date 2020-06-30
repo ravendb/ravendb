@@ -4,6 +4,7 @@ import generalUtils = require("common/generalUtils");
 class timeSeriesModel {
     
     static aggregationColumns = ["First", "Last", "Min", "Max", "Sum", "Count"];
+    static readonly numberOfPossibleValues = 32;
     
     constructor(name: string, dto: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         this.name(name);
@@ -13,12 +14,17 @@ class timeSeriesModel {
         
         this.canEditName = !name;
         this.initValidation();
+
+        this.maxNumberOfValuesReached = ko.pureComputed(() => {
+            return this.values().length === timeSeriesModel.numberOfPossibleValues; 
+        }); 
     }
     
     name = ko.observable<string>();
     tag = ko.observable<string>();
     timestamp = ko.observable<moment.Moment>();
     values = ko.observableArray<timeSeriesValue>([]);
+    maxNumberOfValuesReached: KnockoutComputed<boolean>;
     
     canEditName: boolean;
     validationGroup: KnockoutValidationGroup;
@@ -53,6 +59,15 @@ class timeSeriesModel {
             ]
         });
 
+        this.tag.extend({
+            validation: [
+                {
+                    validator: () => !this.tag() || this.tag().length <= 255,
+                    message: "Number of characters cannot exceed 255."
+                }
+            ]
+        });
+        
         this.values.extend({
             validation: [
                 {
