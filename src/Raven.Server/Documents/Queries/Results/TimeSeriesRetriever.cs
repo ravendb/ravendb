@@ -52,14 +52,19 @@ namespace Raven.Server.Documents.Queries.Results
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
         }
 
+        
+        private string _source;
+        private string _collection;
+
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, bool addProjectionToResult = false)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
 
-            var source = GetSourceAndId();
+            _source = GetSourceAndId();
+            _collection = GetCollection(documentId);
+
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
-            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, source, offset);
-            var collection = GetCollection(documentId);
+            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, _source, offset);
 
             var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
             RangeGroup rangeSpec;
@@ -73,8 +78,8 @@ namespace Raven.Server.Documents.Queries.Results
                 rangeSpec.InitializeFullRange(from, to);
             }
             var reader = groupBy == null
-                ? new TimeSeriesReader(_context, documentId, source, from, to, offset)
-                : new TimeSeriesMultiReader(_context, documentId, source, collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
+                ? new TimeSeriesReader(_context, documentId, _source, from, to, offset)
+                : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
 
             var array = new DynamicJsonArray();
 
@@ -726,10 +731,17 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (addProjectionToResult)
             {
-                result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                var metadata = new DynamicJsonValue
                 {
                     [Constants.Documents.Metadata.Projection] = true
                 };
+                var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
+                var names = config?.GetNames(_collection, _source);
+                if (names != null)
+                {
+                    metadata[Constants.Documents.Metadata.TimeSeriesValuesNames] = new DynamicJsonArray(names);
+                }
+                result[Constants.Documents.Metadata.Key] = metadata;
             }
 
             return _context.ReadObject(result, "timeseries/value");
