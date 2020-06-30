@@ -15,6 +15,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -2704,6 +2705,16 @@ namespace Raven.Server.ServerWide
             catch
             {
                 return false;
+            }
+        }
+
+        public TimeSeriesConfiguration ReadTimeSeriesConfiguration(string database)
+        {
+            using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out ClusterOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var databaseRecord = ReadRawDatabaseRecord(context, database))
+            {
+                return databaseRecord.TimeSeriesConfiguration;
             }
         }
 

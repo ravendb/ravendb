@@ -199,6 +199,8 @@ namespace Raven.Client
 
                 public const string TimeSeries = "@timeseries";
 
+                public const string TimeSeriesValuesNames = "@values-names";
+
                 public const string RevisionCounters = "@counters-snapshot";
 
                 public const string RevisionTimeSeries = "@timeseries-snapshot";
