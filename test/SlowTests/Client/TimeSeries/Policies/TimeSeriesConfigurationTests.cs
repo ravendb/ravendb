@@ -444,6 +444,117 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
+        [Fact]
+        public async Task RollupWithMoreThan5ValuesShouldHalt()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var p1 = new TimeSeriesPolicy("ByMinute",TimeValue.FromMinutes(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1
+                            }
+                        },
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                var baseline = DateTime.Today.AddDays(-1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    var big = session.TimeSeriesFor<BigMeasure>("users/karmel");
+                    var small = session.TimeSeriesFor<SmallMeasure>("users/karmel");
+                    for (int i = 0; i < 100; i++)
+                    {
+                            big.Append(baseline.AddSeconds(3 * i), new BigMeasure
+                            {
+                                Measure1 = i,
+                                Measure2 = i,
+                                Measure3 = i,
+                                Measure4 = i,
+                                Measure5 = i,
+                                Measure6 = i,
+                            }, "watches/fitbit");
+                            small.Append(baseline.AddSeconds(3 * i) , new SmallMeasure
+                            {
+                                Measure1 = i
+                            },"watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.RunRollups();
+
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor<SmallMeasure>("users/karmel").Get().ToList();
+                    var minutes = (int)(ts.Last().Timestamp - ts.First().Timestamp).TotalMinutes;
+
+                    var ts1 = session.TimeSeriesRollupFor<SmallMeasure>("users/karmel", p1.Name).Get().ToList();
+                    var ts1Minutes = (int)(ts1.Last().Timestamp - ts1.First().Timestamp).TotalMinutes;
+                    Assert.Equal(ts1Minutes, minutes);
+
+                    Assert.Null(session.TimeSeriesRollupFor<BigMeasure>("users/karmel", p1.Name).Get()?.ToList());
+                }
+
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
+                Assert.NotNull(database.NotificationCenter.GetDatabaseFor(key));
+
+                using (var session = store.OpenSession())
+                {
+                    var big = session.TimeSeriesFor("users/karmel", "BigMeasures");
+                    for (int i = 100; i < 200; i++)
+                    {
+                        big.Append(baseline.AddHours(12).AddSeconds(3 * i), i , "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                    await database.TimeSeriesPolicyRunner.RunRollups();
+                    Assert.Null(session.TimeSeriesRollupFor<BigMeasure>("users/karmel", p1.Name).Get()?.ToList());
+                }
+
+                // also retention for this TS will be stopped
+                config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromHours(1));
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                using (var session = store.OpenSession())
+                {
+                    Assert.Null(session.TimeSeriesFor<SmallMeasure>("users/karmel").Get()?.ToList());
+                    Assert.NotNull(session.TimeSeriesFor<BigMeasure>("users/karmel").Get()?.ToList());
+                }
+
+                // to make it work, let remove all entries with 6 values
+                using (var session = store.OpenSession())
+                {
+                    var big = session.TimeSeriesFor("users/karmel", "BigMeasures");
+                    big.Remove(to: baseline.AddHours(12));
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                using (var session = store.OpenSession())
+                {
+                    Assert.Null(session.TimeSeriesFor<SmallMeasure>("users/karmel").Get()?.ToList());
+                    Assert.Null(session.TimeSeriesFor<BigMeasure>("users/karmel").Get()?.ToList());
+
+                    Assert.NotNull(session.TimeSeriesRollupFor<SmallMeasure>("users/karmel", p1.Name).Get().ToList());
+                    Assert.NotNull(session.TimeSeriesRollupFor<BigMeasure>("users/karmel", p1.Name).Get().ToList());
+                }
+            }
+        }
 
         [Fact]
         public async Task CanExecuteSimpleRollup()
