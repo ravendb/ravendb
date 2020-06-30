@@ -46,6 +46,18 @@ namespace SlowTests.Issues
                 }
 
                 Assert.Null(vals.Counters[^1]);
+
+                // test with returnFullResults = true
+
+                vals = store.Operations.Send(new GetCountersOperation(docId, counterNames, returnFullResults: true));
+                Assert.Equal(101, vals.Counters.Count);
+
+                for (int i = 0; i < 100; i++)
+                {
+                    Assert.Equal(1, vals.Counters[i].CounterValues.Count);
+                }
+
+                Assert.Null(vals.Counters[^1]);
             }
         }
 
@@ -79,6 +91,17 @@ namespace SlowTests.Issues
                 for (int i = 0; i < 1000; i++)
                 {
                     Assert.Equal(1, vals.Counters[i].TotalValue);
+                }
+
+                Assert.Null(vals.Counters[^1]);
+
+                // test with returnFullResults = true
+                vals = store.Operations.Send(new GetCountersOperation(docId, counterNames, returnFullResults: true));
+                Assert.Equal(1001, vals.Counters.Count);
+
+                for (int i = 0; i < 1000; i++)
+                {
+                    Assert.Equal(1, vals.Counters[i].CounterValues.Count);
                 }
 
                 Assert.Null(vals.Counters[^1]);

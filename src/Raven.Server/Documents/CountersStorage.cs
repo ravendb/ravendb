@@ -1211,7 +1211,8 @@ namespace Raven.Server.Documents
 
         public (long Value, long Etag)? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
         {
-            if (TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
+            if (string.IsNullOrEmpty(counterName) ||
+                TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
                 return null;
 
             return (InternalGetCounterValue(blob, docId, counterName), etag);
@@ -1253,6 +1254,9 @@ namespace Raven.Server.Documents
 
         public IEnumerable<(string ChangeVector, long Value, long ETag)> GetCounterValues(DocumentsOperationContext context, string docId, string counterName)
         {
+            if (string.IsNullOrEmpty(counterName))
+                yield break;
+
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
