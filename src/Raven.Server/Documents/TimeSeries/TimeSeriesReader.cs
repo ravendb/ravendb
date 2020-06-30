@@ -471,6 +471,13 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                     else
                     {
+                        if (previous.Start <= _from)
+                        {
+                            // previous is in higher resolution and covers the requested range
+                            _timeseriesStack.Push(previous);
+                            continue;
+                        }
+
                         // prev start overlap with the first aggregation frame
                         // need to adjust to avoid counting same points twice
                         var x = policy.AggregationTime.TimesInInterval(stats.Start, previous.Start);
