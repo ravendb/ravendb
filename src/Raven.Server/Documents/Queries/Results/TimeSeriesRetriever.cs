@@ -734,22 +734,23 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (addProjectionToResult)
             {
-                var metadata = new DynamicJsonValue
+                result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                 {
                     [Constants.Documents.Metadata.Projection] = true
                 };
-                result[Constants.Documents.Metadata.Key] = metadata;
-
-                AddNamesIfNeeded(metadata);
             }
+
+            AddNamesIfNeeded(result);
 
             return _context.ReadObject(result, "timeseries/value");
         }
 
-        private void AddNamesIfNeeded(DynamicJsonValue metadata)
+        private void AddNamesIfNeeded(DynamicJsonValue result)
         {
             if (_isFromStudio == false) 
                 return;
+
+            var metadata = (DynamicJsonValue)(result[Constants.Documents.Metadata.Key] ?? (result[Constants.Documents.Metadata.Key] = new DynamicJsonValue()));
 
             var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
             var names = config?.GetNames(_collection, _source);
