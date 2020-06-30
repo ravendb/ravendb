@@ -77,6 +77,19 @@ abstract class timeSeriesContainer<T> {
     }
     
     abstract getClosestItems(pointInTime: Date): Array<closestItem<T>>;
+    
+    protected getSeriesValuesNames(valuesCount: number, dto: timeSeriesQueryResultDto) {
+        const seriesValuesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
+
+        if (dto && dto["@metadata"] && dto["@metadata"]["@timeseries-named-values"]) {
+            const namedValues = dto["@metadata"]["@timeseries-named-values"];
+            for (let i = 0; i < namedValues.length; i++) {
+                seriesValuesName[i] = namedValues[i];
+            }
+        }
+        
+        return seriesValuesName;
+    }
 }
 
 class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
@@ -88,7 +101,8 @@ class groupedTimeSeriesContainer extends timeSeriesContainer<dataRangePoint> {
         const groupedValues = item.value.Results as Array<timeSeriesQueryGroupedItemResultDto>;
         const seriesPrefixNames = timeSeriesQueryResult.detectGroupKeys(groupedValues);
         const valuesCount = timeSeriesQueryResult.detectValuesCount(item.value);
-        const seriesValuesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
+        
+        const seriesValuesName = this.getSeriesValuesNames(valuesCount, item.value);
         
         const dateFromPoints = groupedValues.map(x => new Date(x.From));
         const dateToPoints = groupedValues.map(x => new Date(x.To));
@@ -145,7 +159,7 @@ class rawTimeSeriesContainer extends timeSeriesContainer<dataPoint> {
     private prepareSeries() {
         const rawValues = this.value.Results as Array<timeSeriesRawItemResultDto>;
         const valuesCount = _.max(rawValues.map(x => x.Values.length));
-        const seriesName = _.range(valuesCount).map((_, idx) => "Value #" + (idx + 1));
+        const seriesName = this.getSeriesValuesNames(valuesCount, this.value);
         
         const datePoints = rawValues.map(x => new Date(x.Timestamp));
         
