@@ -449,7 +449,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             using (Slice.From(context.Allocator, changeVector, out var cv))
                             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
                             using (context.Allocator.Allocate(documentKeyPrefix.Size + prop.Name.Size, out var counterKeyBuffer))
-                            using (Slice.From(context.Allocator, prop.Name, out var nameSlice)) // prop.Name is already lower-cased
+                            using (Slice.From(context.Allocator, prop.Name, out var nameSlice))
                             using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, nameSlice, out var counterKeySlice))
                             {
                                 if (i == 0)
@@ -601,17 +601,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                     builder.WriteArrayEnd();
 
-                    var lowerNameToOriginalNameDictionary = new Dictionary<string, string>();
-
                     builder.WritePropertyName(CountersStorage.Values);
                     builder.StartWriteObject();
 
                     foreach (var kvp in batch)
                     {
-                        var lower = kvp.Key.ToLower();
-                        lowerNameToOriginalNameDictionary.Add(lower, kvp.Key);
-
-                        builder.WritePropertyName(lower);
+                        builder.WritePropertyName(kvp.Key);
 
                         var maxDbIdIndex = GetMaxDbIdIndex(context, dbIds, kvp.Value);
 
@@ -620,17 +615,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         Memory.Set(newVal.Ptr, 0, newVal.Length);
 
                         WriteRawBlob(context, dbIds, kvp.Value, newVal, builder);
-                    }
-
-                    builder.WriteObjectEnd();
-
-                    builder.WritePropertyName(CountersStorage.CounterNames);
-                    builder.StartWriteObject();
-
-                    foreach (var kvp in lowerNameToOriginalNameDictionary)
-                    {
-                        builder.WritePropertyName(kvp.Key);
-                        builder.WriteValue(kvp.Value);
                     }
 
                     builder.WriteObjectEnd();
