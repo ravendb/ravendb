@@ -1176,7 +1176,7 @@ namespace Raven.Server.Documents.Patch
 
                 var queryParams = ((Document)tsFunctionArgs[tsFunctionArgs.Length - 1]).Data;
 
-                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, null);
+                var retriever = new TimeSeriesRetriever(_docsCtx, queryParams, null, isFromStudio: false);
 
                 var result = retriever.InvokeTimeSeriesFunction(func, docId, tsFunctionArgs);
 
