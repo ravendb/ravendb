@@ -21,7 +21,6 @@
                         <div class="margin-bottom">
                             Please specify date range to delete:
                         </div>
-
                         <div class="form-group" >
                             <label for="startDate" class="control-label">Start Date</label>
                             <div class="flex-grow">
@@ -39,7 +38,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="form-group">
                             <label for="endDate" class="control-label">End Date</label>
                             <div class="flex-grow">
@@ -59,14 +57,13 @@
                         </div>
                     </div>
                 </div>
-
-                <div class="padding bg-warning" data-bind="if: showWarning, visible: showWarning">
-                    <div class="flex-horizontal text-warning">
-                        <i class="icon-warning"></i>
-                        <span>
-                            You're deleting all time series entries matching time range:<br />
-                            <strong data-bind="text: startDateToUse"></strong> - <strong data-bind="text: endDateToUse"></strong>            
-                        </span>
+                <div data-bind="if: showWarning, visible: showWarning">
+                    <div class="bg-warning text-warning padding flex-horizontal">
+                        <div class="flex-start"><i class="icon-warning"></i></div>
+                        <div>
+                            <div>You're deleting all time series entries matching time range:</div>
+                            <div><strong data-bind="text: startDateToUse"></strong> - <strong data-bind="text: endDateToUse"></strong></div>
+                        </div>
                     </div>
                 </div>
             </div>

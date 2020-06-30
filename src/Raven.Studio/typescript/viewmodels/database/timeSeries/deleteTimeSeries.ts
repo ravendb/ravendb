@@ -45,8 +45,8 @@ class deleteTimeSeries extends dialogViewModelBase {
         });
         
         this.showWarning = ko.pureComputed(() => {
-            const startDefined = this.useMinStartDate() || this.startDate();
-            const endDefined = this.useMaxEndDate() || this.endDate();
+            const startDefined = this.useMinStartDate() || (this.startDate() && this.startDate.isValid());
+            const endDefined = this.useMaxEndDate() || (this.endDate() && this.endDate.isValid());
             
             return !!startDefined && !!endDefined;
         });
@@ -86,6 +86,10 @@ class deleteTimeSeries extends dialogViewModelBase {
                         return this.endDate().isValid();
                     },
                     message: "Please enter a valid date"
+                },
+                {
+                    validator: () => this.endDate() && this.endDate().diff(this.startDate()) >= 0,
+                    message: "End Date must be greater than Start Date"
                 }
             ]
         });
