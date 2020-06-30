@@ -16,37 +16,54 @@ class queryUtil {
     static readonly AllDocs = "AllDocs";
 
     static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string) {
-        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName);
-        const escapedDocumentId = queryUtil.escapeCollectionOrFieldName(documentId);
-        const escapedTimeSeriesName = queryUtil.escapeCollectionOrFieldName(timeSeriesName);
+        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
+        const escapedDocumentId = queryUtil.escapeDocumentId(documentId);
+        const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
         
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName})`;
     }
 
     static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string) {
-        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName);
-        const escapedDocumentId = queryUtil.escapeCollectionOrFieldName(documentId);
-        const escapedTimeSeriesName = queryUtil.escapeCollectionOrFieldName(timeSeriesName);
+        const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
+        const escapedDocumentId = queryUtil.escapeDocumentId(documentId);
+        const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
 
-        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} group by ${group} select min(), max(), avg(), first(), last())`;
+        return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} group by ${group} select avg())`;
     }
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
         const escapedFieldName = queryUtil.escapeCollectionOrFieldName(fieldName);
         return `from index ${indexName} where ${escapedFieldName} = '${value}' `;
     }
+    
+    private static wrapWithSingleQuotes(input: string) {
+        if (input.includes("'")) {
+            input = input.replace("'", "''");
+        }
+        return "'" + input + "'";
+    }
 
+    static escapeDocumentId(name: string) {
+        return queryUtil.wrapWithSingleQuotes(name);
+    }
+    
     static escapeCollectionOrFieldName(name: string) : string {
         // wrap collection name in 'collection name' if it has spaces.
-        if (/^[0-9a-zA-Z_@]+$/.test(name)){
+        // @ is allowed (ex. @all_docs) - but only in front
+        if (/^@?[0-9a-zA-Z_]+$/.test(name)) {
             return name;
         }
 
-        // escape ' char
-        if (name.includes("'")){
-            name = name.replace("'", "''")
+        return queryUtil.wrapWithSingleQuotes(name);
+    }
+    
+    static escapeTimeSeriesName(name: string): string {
+        // wrap collection name in 'collection name' if it has spaces.
+        if (/^[0-9a-zA-Z_]+$/.test(name)) {
+            return name;
         }
-        return "'" + name + "'";
+
+        return queryUtil.wrapWithSingleQuotes(name);
     }
 
     private static readonly RQL_TOKEN_REGEX = /(?=([^{]*{[^}{]*})*[^}]*$)(?=([^']*'[^']*')*[^']*$)(?=([^"]*"[^"]*")*[^"]*$)(SELECT|WHERE|ORDER BY|LOAD|UPDATE|INCLUDE)(\s+|{)/gi;
