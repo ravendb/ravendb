@@ -1,6 +1,3 @@
-using System.IO;
-using System.Reflection;
-
 namespace Raven.Client
 {
     public static class Constants
@@ -128,7 +125,7 @@ namespace Raven.Client
 
             public const string StudioId = "DatabaseSettings/Studio";
         }
-        
+
         public class Configuration
         {
             private Configuration()
@@ -177,6 +174,7 @@ namespace Raven.Client
                 private Metadata()
                 {
                 }
+
                 public const string Edges = "@edges";
 
                 public const string Collection = "@collection";
@@ -199,7 +197,7 @@ namespace Raven.Client
 
                 public const string TimeSeries = "@timeseries";
 
-                public const string TimeSeriesValuesNames = "@timeseries-values-names";
+                public const string TimeSeriesNamedValues = "@timeseries-named-values";
 
                 public const string RevisionCounters = "@counters-snapshot";
 
@@ -358,11 +356,11 @@ namespace Raven.Client
                     public const string Configuration = "Configuration";
                 }
             }
-            
+
             internal class Blob
             {
                 public const string Document = "@raven-data";
-                
+
                 public const string Size = "@raven-blob-size";
             }
         }
@@ -370,8 +368,8 @@ namespace Raven.Client
         internal static class Smuggler
         {
             public const string ImportOptions = "importOptions";
-            
-            public const string CsvImportOptions  = "csvImportOptions";
+
+            public const string CsvImportOptions = "csvImportOptions";
         }
 
         internal class CompareExchange

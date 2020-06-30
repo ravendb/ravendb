@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (_currentSegment.NumberOfLiveEntries > 0)
                 {
-                    if (segmentResult.Start >= _from && 
+                    if (segmentResult.Start >= _from &&
                         segmentResult.End <= _to)
                     {
                         // we can yield the whole segment in one go
@@ -287,6 +287,7 @@ namespace Raven.Server.Documents.TimeSeries
                     yield break;
             }
         }
+
         public IEnumerable<SingleResult> YieldSegment(DateTime baseline, bool includeDead = false)
         {
             var shouldBreak = includeDead ? _currentSegment.NumberOfEntries == 0 : _currentSegment.NumberOfLiveEntries == 0;
@@ -319,9 +320,9 @@ namespace Raven.Server.Documents.TimeSeries
 
                     yield return new SingleResult
                     {
-                        Timestamp = cur, 
-                        Tag = tag, 
-                        Status = status, 
+                        Timestamp = cur,
+                        Tag = tag,
+                        Status = status,
                         Values = new Memory<double>(_values, 0, end),
                         Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp
                     };
@@ -599,7 +600,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public TimeSeriesReader Current => _reader;
 
-        object? IEnumerator.Current => Current;
+        object IEnumerator.Current => Current;
 
         public void Dispose()
         {
