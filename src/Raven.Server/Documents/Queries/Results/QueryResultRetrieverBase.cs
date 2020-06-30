@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Queries.Results
         private QueryTimingsScope _loadScope;
 
         private TimeSeriesRetriever _timeSeriesRetriever;
-
+        protected IndexQueryServerSide IndexQueryServerSide => _query;
         protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
         {
             _database = database;
@@ -644,7 +644,6 @@ namespace Raven.Server.Documents.Queries.Results
             using (_functionScope = _functionScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.JavaScript)))
             {
                 args[args.Length - 1] = _query.QueryParameters;
-
                 var value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
@@ -730,7 +729,7 @@ namespace Raven.Server.Documents.Queries.Results
                 query.DeclaredFunctions.TryGetValue(methodName, out var func) &&
                 func.Type == DeclaredFunction.FunctionType.TimeSeries)
             {
-                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
+                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments, IndexQueryServerSide.IsFromStudio);
                 return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, addProjectionToResult: FieldsToFetch.SingleBodyOrMethodWithNoAlias);
             }
 

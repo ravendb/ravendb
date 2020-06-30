@@ -30,6 +30,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly DocumentsOperationContext _context;
 
         private Dictionary<string, Document> _loadedDocuments;
+        private readonly bool _isFromStudio;
 
         private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
         {
@@ -42,11 +43,13 @@ namespace Raven.Server.Documents.Queries.Results
             new TimeSeriesAggregation(AggregationType.Average),
         };
 
-        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
+        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments,
+            bool isFromStudio)
         {
             _context = context;
             _queryParameters = queryParameters;
             _loadedDocuments = loadedDocuments;
+            _isFromStudio = isFromStudio;
 
             _valuesDictionary = new Dictionary<ValueExpression, object>();
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
@@ -59,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Results
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, bool addProjectionToResult = false)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
-
+            
             _source = GetSourceAndId();
             _collection = GetCollection(documentId);
 
@@ -735,16 +738,25 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     [Constants.Documents.Metadata.Projection] = true
                 };
-                var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
-                var names = config?.GetNames(_collection, _source);
-                if (names != null)
-                {
-                    metadata[Constants.Documents.Metadata.TimeSeriesValuesNames] = new DynamicJsonArray(names);
-                }
                 result[Constants.Documents.Metadata.Key] = metadata;
+
+                AddNamesIfNeeded(metadata);
             }
 
             return _context.ReadObject(result, "timeseries/value");
+        }
+
+        private void AddNamesIfNeeded(DynamicJsonValue metadata)
+        {
+            if (_isFromStudio == false) 
+                return;
+
+            var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
+            var names = config?.GetNames(_collection, _source);
+            if (names != null)
+            {
+                metadata[Constants.Documents.Metadata.TimeSeriesValuesNames] = new DynamicJsonArray(names);
+            }
         }
 
         private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
