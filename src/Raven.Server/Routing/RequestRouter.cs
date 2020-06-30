@@ -223,18 +223,28 @@ namespace Raven.Server.Routing
         public static void AssertClientVersion(HttpContext context, Exception innerException)
         {
             // client in this context could be also a follower sending a command to his leader.
-            if (TryGetClientVersion(context, out var clientVersion))
-            {
-                var currentServerVersion = RavenVersionAttribute.Instance;
+            if (TryGetClientVersion(context, out var clientVersion) == false) 
+                return;
 
-                if (currentServerVersion.MajorVersion != clientVersion.Major || currentServerVersion.BuildVersion < clientVersion.Revision || currentServerVersion.BuildVersion == ServerVersion.DevBuildNumber || (clientVersion.Revision >= 40 && clientVersion.Revision < 50))
-                {
-                    throw new ClientVersionMismatchException(
-                        $"Failed to make a request from a newer client with build version {clientVersion} to an older server with build version {RavenVersionAttribute.Instance.AssemblyVersion}.{Environment.NewLine}" +
-                        $"Upgrading this node might fix this issue.",
-                        innerException);
-                }
-            }
+            if(CheckClientVersionAndWrapException(clientVersion, ref innerException) == false)
+                throw innerException;
+        }
+
+        public static bool CheckClientVersionAndWrapException(Version clientVersion, ref Exception innerException)
+        {
+            var currentServerVersion = RavenVersionAttribute.Instance;
+
+            if (currentServerVersion.MajorVersion == clientVersion.Major &&
+                currentServerVersion.BuildVersion >= clientVersion.Revision &&
+                currentServerVersion.BuildVersion != ServerVersion.DevBuildNumber &&
+                (clientVersion.Revision < 40 || clientVersion.Revision >= 50)) 
+                return true;
+            
+            innerException =  new ClientVersionMismatchException(
+                $"Failed to make a request from a newer client with build version {clientVersion} to an older server with build version {RavenVersionAttribute.Instance.AssemblyVersion}.{Environment.NewLine}" +
+                $"Upgrading this node might fix this issue.",
+                innerException);
+            return false;
         }
 
         private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database, out RavenServer.AuthenticationStatus authenticationStatus)

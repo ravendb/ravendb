@@ -905,40 +905,40 @@ namespace Raven.Server.Documents.Handlers
             switch (state.StringSize)
             {
                 case 3:
-                    if (*(short*)state.StringBuffer != 21840 ||
-                        state.StringBuffer[2] != (byte)'T')
-                        ThrowInvalidProperty(state, ctx);
-                    return CommandType.PUT;
+                    if (*(short*)state.StringBuffer == 21840 && 
+                        state.StringBuffer[2] == (byte)'T') 
+                        return CommandType.PUT;
+                    break;
 
                 case 5:
-                    if (*(int*)state.StringBuffer != 1129595216 ||
-                        state.StringBuffer[4] != (byte)'H')
-                        ThrowInvalidProperty(state, ctx);
-                    return CommandType.PATCH;
+                    if (*(int*)state.StringBuffer == 1129595216 &&
+                        state.StringBuffer[4] == (byte)'H') 
+                        return CommandType.PATCH;
+                    break;
 
                 case 6:
-                    if (*(int*)state.StringBuffer != 1162626372 ||
-                     *(short*)(state.StringBuffer + 4) != 17748)
-                        ThrowInvalidProperty(state, ctx);
-                    return CommandType.DELETE;
-
+                    if (*(int*)state.StringBuffer == 1162626372 &&
+                        *(short*)(state.StringBuffer + 4) == 17748) 
+                        return CommandType.DELETE;
+                    break;
+                    
                 case 8:
-                    if (*(long*)state.StringBuffer != 8318823012450529091)
-                        ThrowInvalidProperty(state, ctx);
-                    return CommandType.Counters;
+                    if (*(long*)state.StringBuffer == 8318823012450529091) 
+                        return CommandType.Counters;
+                    break;
                 
                 case 10:
-                    if (*(long*)state.StringBuffer != 6071222181947531586 ||
-                        *(short*)(state.StringBuffer + sizeof(long)) != 18499)
-                        ThrowInvalidProperty(state, ctx);
-                    return CommandType.BatchPATCH;
+                    if (*(long*)state.StringBuffer == 6071222181947531586 &&
+                        *(short*)(state.StringBuffer + sizeof(long)) == 18499) 
+                        return CommandType.BatchPATCH;
+                    break;
 
                 case 13:
-                    if (*(long*)state.StringBuffer != 7308612546338255937 ||
-                        *(int*)(state.StringBuffer + sizeof(long)) != 1431336046 ||
-                        state.StringBuffer[sizeof(long) + sizeof(int)] != (byte)'T')
-                        ThrowInvalidProperty(state, ctx);
-                    return CommandType.AttachmentPUT;
+                    if (*(long*)state.StringBuffer == 7308612546338255937 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1431336046 &&
+                        state.StringBuffer[sizeof(long) + sizeof(int)] == (byte)'T') 
+                        return CommandType.AttachmentPUT;
+                    break;
                 
                 case 14:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
@@ -950,46 +950,36 @@ namespace Raven.Server.Documents.Handlers
                         *(int*)(state.StringBuffer + sizeof(long)) == 1330476142 &&
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 17750)
                         return CommandType.AttachmentMOVE;
-
-                    ThrowInvalidProperty(state, ctx);
-                    return CommandType.None;
+                    break;
                 
                 case 16:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 4995694080542667886)
                         return CommandType.AttachmentDELETE;
-                    ThrowInvalidProperty(state, ctx);
-                    return CommandType.None;
-
+                    break;
+                
                 case 18:
-                    if (*(long*)state.StringBuffer != 5000528724088418115 ||
-                        *(long*)(state.StringBuffer + sizeof(long)) != 5793150219460305784 ||
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) != 21589)
-                    {
-                        ThrowInvalidProperty(state, ctx);
-                    }
-                    return CommandType.CompareExchangePUT;
-              
+                    if (*(long*)state.StringBuffer == 5000528724088418115 &&
+                        *(long*)(state.StringBuffer + sizeof(long)) == 5793150219460305784 &&
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 21589) 
+                        return CommandType.CompareExchangePUT;
+                    break;
+                
                 case 21:
                     if (*(long*)state.StringBuffer == 5000528724088418115 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 4928459091005170552 &&
                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1413827653 &&
                         state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'E')
-                       return CommandType.CompareExchangeDELETE;
+                        return CommandType.CompareExchangeDELETE;
                     
                     if (*(long*)state.StringBuffer == 8531315664536891206 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7309979286770381673 &&
                         *(int*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 1869182049 &&
                         state.StringBuffer[sizeof(long) + sizeof(long) + sizeof(int)] == (byte)'n')
                         return CommandType.ForceRevisionCreation;
-                    
-                    ThrowInvalidProperty(state, ctx);
-                    return CommandType.None;
-                
-                default:
-                    ThrowInvalidProperty(state, ctx);
-                    return CommandType.None;
+                    break;
             }
+            throw new InvalidCommandTypeException("Invalid command type: " + ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
         }
 
         private static void ThrowInvalidUsageOfChangeVectorWithIdentities(CommandData commandData)
@@ -1024,5 +1014,9 @@ namespace Raven.Server.Documents.Handlers
             throw new EndOfStreamException();
         }
 
+        public class InvalidCommandTypeException : Exception
+        {
+            public InvalidCommandTypeException(string msg): base(msg) { }
+        }
     }
 }
