@@ -701,6 +701,136 @@ select out()
         }
 
         [Fact]
+        public async Task CanWorkWithRollupTimeSeries2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var raw = new RawTimeSeriesPolicy(TimeSpan.FromHours(24));
+
+                var p1 = new TimeSeriesPolicy("By6Hours", TimeSpan.FromHours(6), raw.RetentionTime * 4);
+                var p2 = new TimeSeriesPolicy("By1Day", TimeSpan.FromDays(1), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By30Minutes", TimeSpan.FromMinutes(30), raw.RetentionTime * 2);
+                var p4 = new TimeSeriesPolicy("By1Hour", TimeSpan.FromMinutes(60), raw.RetentionTime * 3);
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1,p2,p3,p4
+                            }
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await store.TimeSeries.RegisterAsync<User, StockPrice>();
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = DateTime.UtcNow;
+                var baseline = now.AddDays(-12);
+                var total = TimeSpan.FromDays(12).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    var ts = session.TimeSeriesFor<StockPrice>("users/karmel");
+                    var entry = new StockPrice();
+                    for (int i = 0; i <= total; i++)
+                    {
+                        entry.Open = i;
+                        entry.Close = i + 100_000;
+                        entry.High = i + 200_000;
+                        entry.Low = i + 300_000;
+                        entry.Volume = i + 400_000;
+                        ts.Append(baseline.AddMinutes(i), entry, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                            .Select(u =>
+                                RavenQuery.TimeSeries<StockPrice>(u, "StockPrices").Select(x=>
+                                    new {
+                                       First = x.First(),
+                                       Last = x.Last(),
+                                       Min = x.Min(),
+                                       Max = x.Max(),
+                                       Sum = x.Sum(),
+                                       Count = x.Count(),
+                                       Avg = x.Average()
+                                    })
+                                    .ToList());
+
+                    var result = query.Single();
+
+                    Assert.Equal(1, result.Results.Length);
+                    var r = result.Results[0];
+                    Assert.NotNull(r.First);
+                    Assert.NotNull(r.Last);
+                    Assert.NotNull(r.Min);
+                    Assert.NotNull(r.Max);
+                    Assert.NotNull(r.Sum);
+                    Assert.NotNull(r.Count);
+                    Assert.NotNull(r.Average);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Select(u =>
+                            RavenQuery.TimeSeries<StockPrice>(u, "StockPrices")
+                                .GroupBy(x => x.Hours(3))
+                                .Select(x =>
+                                    new
+                                    {
+                                        First = x.First(),
+                                        Last = x.Last(),
+                                        Min = x.Min(),
+                                        Max = x.Max(),
+                                        Sum = x.Sum(),
+                                        Count = x.Count(),
+                                        Avg = x.Average()
+                                    })
+                                .ToList());
+
+                    var result = query.Single();
+                    var r = result.Results[0];
+                    Assert.NotNull(r.First);
+                    Assert.NotNull(r.Last);
+                    Assert.NotNull(r.Min);
+                    Assert.NotNull(r.Max);
+                    Assert.NotNull(r.Sum);
+                    Assert.NotNull(r.Count);
+                    Assert.NotNull(r.Average);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var ts1 = session.TimeSeriesRollupFor<StockPrice>("users/karmel", p1.Name);
+                    var r = ts1.Get().First();
+                    Assert.NotNull(r.First);
+                    Assert.NotNull(r.Last);
+                    Assert.NotNull(r.Min);
+                    Assert.NotNull(r.Max);
+                    Assert.NotNull(r.Sum);
+                    Assert.NotNull(r.Count);
+                    Assert.NotNull(r.Average);
+                }
+            }
+        }
+
+        [Fact]
         public void MappingNeedsToContainConsecutiveValuesStartingFromZero()
         {
             using (var store = GetDocumentStore())
