@@ -308,12 +308,18 @@ namespace Raven.Server
                 var licenseStorage = new LicenseStorage();
                 licenseStorage.Initialize(storageEnvironment, contextPool);
 
-                var errorMessage = "Cannot start the RavenDB server because the expiration date of this license is before the effective release date of this version.";
+                var errorMessage = $"Cannot start the RavenDB server because the expiration date of this license ({FormattedDateTime(licenseStatus.Expiration ?? DateTime.MinValue)}) " +
+                                   $"is before the effective release date of this version ({FormattedDateTime(RavenVersionAttribute.Instance.EffectiveReleaseDate)})";
                 var buildInfo = licenseStorage.GetBuildInfo();
                 if (buildInfo != null)
                     errorMessage += $" You can downgrade to the latest build that was working ({buildInfo.FullVersion})";
 
                 throw new LicenseExpiredException(errorMessage);
+
+                static string FormattedDateTime(DateTime dateTime)
+                {
+                    return dateTime.ToString("dd MMMM yyyy");
+                }
             }
         }
 
