@@ -190,9 +190,9 @@ class registration extends dialogViewModelBase {
                 if (shouldShow) {
                     registration.showRegistrationDialog(license, canDismiss, false);
                 }
-                
+                break;
             default:
-                if (license.Expired && !license.IsIsv) {
+                if (license.Expired) {
                     registration.showRegistrationDialog(license, false, false);
                 }
                 break;
@@ -234,7 +234,7 @@ class registration extends dialogViewModelBase {
                 license.fetchLicenseStatus()
                     .done(() => {
                         const licenseStatus = license.licenseStatus();
-                        if (!licenseStatus.Expired      &&
+                        if (!licenseStatus.Expired &&
                             !licenseStatus.ErrorMessage &&
                             !this.renewWhenNotExpired() ) {
                                 app.closeDialog(this);
@@ -255,7 +255,7 @@ class registration extends dialogViewModelBase {
 
     private composeRenewMessage(sentToEmail: string, newExpirationDate: string) : string {
 
-        let newExpirationDateFormatted;
+        let newExpirationDateFormatted: string;
         const newExpiration = moment(newExpirationDate);
         if (newExpiration.isValid()) {
             newExpirationDateFormatted = newExpiration.format("YYYY MMMM Do");

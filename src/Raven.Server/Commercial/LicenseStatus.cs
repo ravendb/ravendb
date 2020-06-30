@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Properties;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -66,7 +67,9 @@ namespace Raven.Server.Commercial
                 if (Expiration == null)
                     return true;
 
-                return DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
+                return IsIsv ?
+                    Expiration < RavenVersionAttribute.Instance.EffectiveReleaseDate :
+                    DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
             }
         }
 
