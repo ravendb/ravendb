@@ -689,6 +689,9 @@ type timeSeriesResultType = "grouped" | "raw";
 
 interface timeSeriesQueryResultDto {
     Count: number;
+    "@metadata": {
+        "@timeseries-named-values"?: string[];
+    }
     Results: Array<timeSeriesQueryGroupedItemResultDto | timeSeriesRawItemResultDto>;
 }
 
