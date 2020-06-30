@@ -258,6 +258,13 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
             {
+                if (individualValues == null && 
+                    start > segmentResult.Summary.Span[0].Count)
+                {
+                    start -= segmentResult.Summary.Span[0].Count;
+                    continue;
+                }
+
                 var enumerable = individualValues ?? segmentResult.Values;
 
                 foreach (var singleResult in enumerable)
@@ -278,6 +285,9 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 ComputeHttpEtags.HashChangeVector(state, segmentResult?.ChangeVector);
+
+                if (pageSize <= 0)
+                    break;
             }
 
             return new TimeSeriesRangeResult
