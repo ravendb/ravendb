@@ -537,10 +537,8 @@ select out(u)
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
-                var now = DateTime.UtcNow;
-                var nowMinutes = now.Minute;
-                now = now.AddMinutes(-nowMinutes);
-                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(-nowMinutes);
+                var now = RavenTestHelper.UtcToday.AddHours(-4);
+                database.Time.UtcDateTime = () => now;
 
                 var baseline = now.AddDays(-12);
                 var total = TimeSpan.FromDays(12).TotalMinutes;
@@ -558,7 +556,7 @@ select out(u)
 
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
-
+            
                 await VerifyFullPolicyExecution(store, config.Collections["Users"]);
 
                 using (var session = store.OpenSession())
