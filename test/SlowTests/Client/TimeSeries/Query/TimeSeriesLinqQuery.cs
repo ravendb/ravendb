@@ -417,7 +417,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<Person>()
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((ts, src) => src.Manufacturer.In(new[] { "Fitbit", "Apple" }))
                             .GroupBy("1 month")
                             .Select(g => new
@@ -560,7 +560,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<Person>()
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((ts, src) => ts.Values[0] <= src.Accuracy)
                             .GroupBy("1 month")
                             .Select(g => new
@@ -1238,7 +1238,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((ts, src) => src != null && src.Accuracy > 2.2)
                             .GroupBy(g => g.Months(1))
                             .Select(g => new
@@ -1360,7 +1360,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var d = 70d;
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((ts, src) => (src != null && src.Accuracy > 2.2) || 
                                                 (ts.Tag != "watches/sony" && ts.Values[0] > d))
                             .GroupBy(g => g.Months(1))
@@ -1504,7 +1504,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
                             .Where(ts => ts.Tag != "watches/sony")
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((tag, src) => src != null)
                             .GroupBy(g => g.Months(1))
                             .ToList());
@@ -1570,7 +1570,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate")
-                                .LoadTag<Watch>());
+                                .LoadByTag<Watch>());
 
                     var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
                     Assert.Contains(msg, ex.Message);
@@ -1582,7 +1582,7 @@ namespace SlowTests.Client.TimeSeries.Query
                         .Select(p => new
                         {
                             HeartRate = RavenQuery.TimeSeries(p, "Heartrate")
-                                .LoadTag<Watch>()
+                                .LoadByTag<Watch>()
                                 .Where((ts, tag) => tag != null && ts.Tag == "watches/fitbit")
                         });
 
@@ -1638,7 +1638,7 @@ namespace SlowTests.Client.TimeSeries.Query
                 {
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries<TimeSeriesTypedSessionTests.HeartRateMeasure>(p, "Heartrate")
-                            .LoadTag<Watch>());
+                            .LoadByTag<Watch>());
 
                     var ex = Assert.Throws<InvalidOperationException>(() => query.ToList());
                     Assert.Contains(msg, ex.Message);
@@ -2082,7 +2082,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<Person>()
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((ts, src) => ts.Values[0] <= src.Accuracy)
                             .ToList());
 
@@ -2155,7 +2155,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<Person>()
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .LoadTag<Watch>()
+                            .LoadByTag<Watch>()
                             .Where((ts, src) => src.Manufacturer.In(new[] { "Fitbit", "Apple" }))
                             .ToList());
 

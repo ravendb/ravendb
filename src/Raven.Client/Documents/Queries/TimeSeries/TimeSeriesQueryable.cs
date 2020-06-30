@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod);
 
-        ITimeSeriesLoadQueryable<TTag> LoadTag<TTag>();
+        ITimeSeriesLoadQueryable<TEntity> LoadByTag<TEntity>();
 
         ITimeSeriesAggregationQueryable GroupBy(string s);
 
@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable<T> FromFirst(Action<ITimePeriodBuilder> timePeriod);
 
-        ITimeSeriesLoadQueryable<T, TTag> LoadTag<TTag>();
+        ITimeSeriesLoadQueryable<T, TEntity> LoadByTag<TEntity>();
 
         ITimeSeriesAggregationQueryable<T> GroupBy(string s);
 
