@@ -755,7 +755,7 @@ namespace Raven.Server.Documents.Queries.Results
             var names = config?.GetNames(_collection, _source);
             if (names != null)
             {
-                metadata[Constants.Documents.Metadata.TimeSeriesValuesNames] = new DynamicJsonArray(names);
+                metadata[Constants.Documents.Metadata.TimeSeriesNamedValues] = new DynamicJsonArray(names);
             }
         }
 
