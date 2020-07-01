@@ -975,8 +975,10 @@ body {
 }
 
 #right-options-panel {
-    transition: transform @menu-transition-ease;
+    transition: transform @menu-transition-ease, margin-right @menu-transition-ease;
     flex-shrink: 0;
+
+
 
     @media (orientation: portrait) {
         flex-direction: row;
@@ -999,6 +1001,39 @@ body {
 
     @media (min-width: @screen-md) {
         top: @navbar-height;
+    }
+
+    .collapse-options-panel-container {
+        position: absolute;
+        right: 100%;
+        top: -2px;
+
+        .collapse-options-panel, .show-options-panel {
+            border: none;
+            width: @gutter;
+            height: @gutter;
+            line-height: @gutter;
+            text-align: center;
+            padding: 0;
+        }
+
+        .show-options-panel {
+            display: none;
+        }
+    }
+
+    &.collapse {
+        margin-right: -@right-panel-width;
+
+        .collapse-options-panel-container {
+            .collapse-options-panel {
+                display: none;
+            }
+
+            .show-options-panel {
+                display: block;
+            }
+        }
     }
 
     .search-documents {
