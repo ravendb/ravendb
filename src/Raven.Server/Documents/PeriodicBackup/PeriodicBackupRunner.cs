@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, responsibleNodeTag, skipErrorLog: true);
         }
 
-        private DateTime? GetNextWakeupTimeLocal(long lastEtag, PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus)
+        private DateTime? GetNextWakeupTimeLocal(string databaseName, long lastEtag, PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus)
         {
             // we will always wake up the database for a full backup.
             // but for incremental we will wake the database only if there were changes made.
@@ -110,28 +110,43 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (backupStatus == null)
             {
                 // we want to wait for the backup occurrence
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' is never backed up yet.");
+
                 return DateTime.UtcNow;
             }
 
             var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag);
             if (nextBackup == null)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have next backup. Should not happen and likely a bug.");
+
                 return null;
+            }
 
             var nowUtc = SystemTime.UtcNow;
             if (nextBackup.DateTime < nowUtc)
             {
                 // this backup is delayed
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' is delayed.");
                 return DateTime.UtcNow;
             }
 
             if (backupStatus.LastEtag != lastEtag)
             {
                 // we have changes since last backup
+                var type = nextBackup.IsFull ? "full" : "incremental";
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' have changes since last backup. Wakeup timer will be set to the next {type} backup at '{nextBackup.DateTime}'.");
                 return nextBackup.DateTime;
             }
 
             if (nextBackup.IsFull)
             {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have changes since last backup. Wakeup timer will be set to the next full backup at '{nextBackup.DateTime}'.");
                 return nextBackup.DateTime;
             }
 
@@ -140,9 +155,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             var nextFullBackup = GetNextBackupOccurrenceLocal(configuration.FullBackupFrequency, lastFullBackup, configuration, skipErrorLog: false);
             if (nextFullBackup < nowUtc)
             {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have changes since last backup but has delayed backup.");
                 // this backup is delayed
                 return DateTime.UtcNow;
             }
+
+            if (_logger.IsOperationsEnabled)
+                _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' doesn't have changes since last backup. Wakeup timer set to next full backup at {nextFullBackup}, and will skip the incremental backups.");
 
             return nextFullBackup;
         }
@@ -406,7 +426,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return CreateBackupTask(periodicBackup, isFullBackup, SystemTime.UtcNow);
         }
 
-        public DateTime? GetWakeDatabaseTimeUtc()
+        public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
         {
             long lastEtag;
 
@@ -419,7 +439,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             DateTime? wakeupDatabase = null;
             foreach (var backup in _periodicBackups)
             {
-                var nextBackup = GetNextWakeupTimeLocal(lastEtag, backup.Value.Configuration, backup.Value.BackupStatus);
+                var nextBackup = GetNextWakeupTimeLocal(databaseName, lastEtag, backup.Value.Configuration, backup.Value.BackupStatus);
                 if (nextBackup == null)
                     continue;
 

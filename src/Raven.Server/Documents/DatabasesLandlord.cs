@@ -899,7 +899,11 @@ namespace Raven.Server.Documents
         public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
         {
             if (ShouldContinueDispose(databaseName.Value, wakeup, out var dueTime) == false)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Could not unload database '{databaseName}', reason: {nameof(dueTime)} is {dueTime} ms which is less than {TimeSpan.FromMinutes(5).TotalMilliseconds} ms.");
                 return false;
+            }
 
             LastRecentlyUsed.TryRemove(databaseName, out _);
             DatabasesCache.RemoveLockAndReturn(databaseName.Value, CompleteDatabaseUnloading, out _, caller).Dispose();
@@ -908,7 +912,10 @@ namespace Raven.Server.Documents
                 _wakeupTimers.TryAdd(databaseName.Value, new Timer(_ => StartDatabaseOnTimer(databaseName.Value, wakeup), null, dueTime, Timeout.Infinite));
 
             if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Unloading directly {databaseName}, wakeup set to: {wakeup}");
+            {
+                var msg = dueTime > 0 ? $"wakeup timer set to: {wakeup}, which will happen in {dueTime} ms." : "without setting a wakeup timer.";
+                _logger.Operations($"Unloading directly database '{databaseName}', {msg}");
+            }
 
             return true;
         }
