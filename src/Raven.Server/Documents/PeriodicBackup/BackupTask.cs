@@ -139,15 +139,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_isFullBackup == false)
                 {
                     // if we come from old version the _previousBackupStatus won't have LastRaftIndex
-                    if (_previousBackupStatus.LastRaftIndex == null)
-                        _previousBackupStatus.LastRaftIndex = new LastRaftIndex();
+                    _previousBackupStatus.LastRaftIndex ??= new LastRaftIndex();
 
                     // no-op if nothing has changed
                     var (currentLastEtag, currentChangeVector) = _database.ReadLastEtagAndChangeVector();
 
                     // if we come from old version the _previousBackupStatus won't have LastRaftIndex
-                    if (_previousBackupStatus.LastRaftIndex == null)
-                        _previousBackupStatus.LastRaftIndex = new LastRaftIndex();
+                    _previousBackupStatus.LastRaftIndex ??= new LastRaftIndex();
 
                     if (currentLastEtag == _previousBackupStatus.LastEtag
                         && currentChangeVector == _previousBackupStatus.LastDatabaseChangeVector
@@ -160,6 +158,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         UpdateOperationId(runningBackupStatus);
                         runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTimeInUtc;
+                        runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
                         DatabaseSmuggler.EnsureProcessed(_backupResult);
                         AddInfo(message);
 
