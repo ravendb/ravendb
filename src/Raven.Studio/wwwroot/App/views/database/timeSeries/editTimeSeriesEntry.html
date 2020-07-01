@@ -73,10 +73,13 @@
                                     <div class="help-block margin-bottom" data-bind="validationMessage: values"></div>
                                 </div>
                             </div>
-                            <button class="btn btn-default btn-sm" data-bind="click: addValue, disable: maxNumberOfValuesReached">
-                                <i class="icon-plus"></i>
-                                <span>Add Value</span>
-                            </button>
+                            <span class="has-disable-reason" data-placement="right"
+                                  data-bind="attr: { 'data-original-title': maxNumberOfValuesReached() ? 'The maximum number of possible values (32) has been reached.' : '' }">
+                                <button class="btn btn-default btn-sm" data-bind="click: addValue, disable: maxNumberOfValuesReached()">
+                                    <i class="icon-plus"></i>
+                                    <span>Add Value</span>
+                                </button>
+                            </span>
                         </div>
                     </div>
                     <div class="form-group" data-bind="visible: $root.isAggregation">
@@ -89,21 +92,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="form-group" data-bind="visible: maxNumberOfValuesReached">
-                        <label class="control-label">&nbsp;</label>
-                        <div class="bg-info text-info padding padding-xs flex-horizontal">
-                            <div class="flex-start"><small><i class="icon-info"></i></small></div>
-                            <div>
-                                <small>The maximum number of possible values (32) has been reached.</small>
-                            </div>
-                        </div>
-                    </div>
                     <div class="form-group" data-bind="visible: values().length > 5">
                         <label class="control-label">&nbsp;</label>
                         <div class="bg-warning text-warning padding padding-xs flex-horizontal">
                             <div class="flex-start"><small><i class="icon-warning"></i></small></div>
                             <div>
-                                <small>Note: Aggregated rollup data is Not created for a Time Series if an Entry has more than 5 values.</small>
+                                <small>Note: Aggregated rollup data is not created for a Time Series if an Entry has more than 5 values.</small>
                             </div>
                         </div>
                     </div>
