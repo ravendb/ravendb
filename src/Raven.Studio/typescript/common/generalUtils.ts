@@ -172,10 +172,19 @@ class genUtils {
         return dateToFormat.local().format(format);
     }
 
-    static formatDurationByDate(dateInUtc: moment.Moment, isFromDuration: boolean): string {
-        const now = timeHelpers.utcNowWithSecondPrecision();
-        const diff = isFromDuration ? now.diff(dateInUtc) : dateInUtc.diff(now);
-        return genUtils.formatDuration(moment.duration(diff), true, 2, true);
+    static formatDurationByDate(dateInUtc: moment.Moment, addTimeText: boolean = false): string {
+        const timeDiff = moment.utc().diff(dateInUtc);
+        
+        const futureTime = timeDiff < 0; 
+        const diff = futureTime ? timeDiff * -1 : timeDiff;
+        
+        const duration = genUtils.formatDuration(moment.duration(diff), true, 2, true);
+        
+        if (!addTimeText) {
+            return duration; 
+        }
+        
+        return `${futureTime ? "in" : ""} ${duration} ${!futureTime ? "ago" : ""}`;
     }
 
     static formatMillis(input: number) {

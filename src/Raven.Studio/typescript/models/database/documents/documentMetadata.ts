@@ -56,8 +56,7 @@ class documentMetadata {
             this.lastModifiedInterval = ko.pureComputed(() => {
                 const lastModified = this.lastModified();
                 if (lastModified) {
-                    const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastModified), true);
-                    return `${fromDuration} ago`;
+                    return generalUtils.formatDurationByDate(moment.utc(lastModified), true);
                 }
                 return "";
             });
@@ -74,8 +73,7 @@ class documentMetadata {
             this.expirationDateInterval = ko.pureComputed(() => {
                 const expiration = dto["@expires"];
                 if (expiration) {
-                    const fromDuration = generalUtils.formatDurationByDate(moment.utc(expiration), false);
-                    return `in ${fromDuration}`;
+                    return generalUtils.formatDurationByDate(moment.utc(expiration), true);
                 }
                 return "";
             });
@@ -90,10 +88,9 @@ class documentMetadata {
             });
 
             this.refreshDateInterval = ko.pureComputed(() => {
-                const refresh = dto["@refresh"]; 
+                const refresh = dto["@refresh"];
                 if (refresh) {
-                    const fromDuration = generalUtils.formatDurationByDate(moment.utc(refresh), false);
-                    return `in ${fromDuration}`;
+                    return generalUtils.formatDurationByDate(moment.utc(refresh), true);
                 }
                 return "";
             });

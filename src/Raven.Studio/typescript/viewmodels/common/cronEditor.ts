@@ -201,8 +201,8 @@ class cronEditor  {
                     const nextOccurrenceUtc = moment.utc(result.Utc);
                     this.nextOccurrenceLocalTime(nextOccurrenceUtc.local().format(dateFormat));
 
-                    const fromDuration = generalUtils.formatDurationByDate(nextOccurrenceUtc, false);
-                    this.nextInterval(`in ${fromDuration}`);
+                    const fromDuration = generalUtils.formatDurationByDate(nextOccurrenceUtc, true);
+                    this.nextInterval(`${fromDuration}`);
 
                     this.parsingError(null);
                 } else {

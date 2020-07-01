@@ -103,8 +103,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
                 return ongoingTaskBackupListModel.neverBackedUpText;
             }
 
-            const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastFullBackup), true);
-            return `${fromDuration} ago`;
+            return generalUtils.formatDurationByDate(moment.utc(lastFullBackup), true);
         });
 
         this.lastIncrementalBackupHumanized = ko.pureComputed(() => {
@@ -113,8 +112,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
                 return ongoingTaskBackupListModel.neverBackedUpText;
             }
 
-            const fromDuration = generalUtils.formatDurationByDate(moment.utc(lastIncrementalBackup), true);
-            return `${fromDuration} ago`;
+            return generalUtils.formatDurationByDate(moment.utc(lastIncrementalBackup), true);
         });
 
         this.nextBackupHumanized = ko.pureComputed(() => {
@@ -151,7 +149,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
             }
 
             const fromDuration = generalUtils.formatDurationByDate(moment.utc(onGoingBackup.StartTime), true);
-            return `${fromDuration} ago (${this.getBackupType(this.backupType(), onGoingBackup.IsFull)})`;
+            return `${fromDuration} (${this.getBackupType(this.backupType(), onGoingBackup.IsFull)})`;
         });
 
         this.retentionPolicyHumanized = ko.pureComputed(() => {
