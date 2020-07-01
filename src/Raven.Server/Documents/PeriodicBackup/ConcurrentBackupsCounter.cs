@@ -107,7 +107,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     void AddBackupTimings(BackupStatus perDestinationBackupStatus, string backupTypeName)
                     {
-                        if (perDestinationBackupStatus is CloudUploadStatus cus && cus.Skipped)
+                        if (perDestinationBackupStatus == null || 
+                            perDestinationBackupStatus is CloudUploadStatus cus && cus.Skipped)
                             return;
 
                         if (first == false)

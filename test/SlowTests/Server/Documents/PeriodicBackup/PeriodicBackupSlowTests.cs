@@ -1087,6 +1087,66 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task can_run_incremental_with_no_changes()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "users/1" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings { FolderPath = backupPath },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, backupTaskId));
+                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LocalBackup.IncrementalBackupDurationInMs, 0);
+                Assert.Equal(0, value);
+
+                string backupFolder = Directory.GetDirectories(backupPath).OrderBy(Directory.GetCreationTime).Last();
+                var backupsToRestore = Directory.GetFiles(backupFolder).Where(BackupUtils.IsBackupFile)
+                    .OrderBackups()
+                    .ToArray();
+
+                Assert.Equal(1, backupsToRestore.Length);
+
+                var databaseName = GetDatabaseName() + "restore";
+
+                using (RestoreDatabase(
+                    store,
+                    new RestoreBackupConfiguration()
+                    {
+                        BackupLocation = backupFolder,
+                        DatabaseName = databaseName,
+                        LastFileNameToRestore = backupsToRestore.Last()
+                    },
+                    TimeSpan.FromSeconds(60)))
+                {
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var user = await session.LoadAsync<User>("users/1");
+                        Assert.NotNull(user);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public async Task FirstBackupWithClusterDownStatusShouldRearrangeTheTimer()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
