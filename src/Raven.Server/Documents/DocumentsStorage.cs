@@ -2036,8 +2036,8 @@ namespace Raven.Server.Documents
             var deleteCount = table.DeleteBackwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, numberOfEntriesToDelete);
             if (_logger.IsInfoEnabled && deleteCount > 0)
                 _logger.Info($"Deleted {deleteCount:#,#;;0} tombstones earlier than {etag} in {collection}");
-
-            EnsureLastEtagIsPersisted(context, etag);
+            if (deleteCount > 0)
+                EnsureLastEtagIsPersisted(context, etag);
 
             return deleteCount;
         }
