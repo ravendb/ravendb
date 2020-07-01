@@ -167,7 +167,11 @@
             </div>
         </div>
     </div>
-    <div id="right-options-panel" class="flex-window">
+    <div id="right-options-panel" class="flex-window" data-bind="css: { collapse: !propertiesPanelVisible() }">
+        <div class="collapse-options-panel-container">
+            <button class="collapse-options-panel btn btn-sm" title="Collapse properties panel" data-bind="click: togglePropertiesPanel"><i class="icon-arrow-right"></i></button>
+            <button class="show-options-panel btn btn-sm" title="Expand properties panel" data-bind="click: togglePropertiesPanel"><i class="icon-arrow-left"></i></button>
+        </div>
         <div class="panel document-properties flex-window-head">
             <div class="panel-body">
                 <h3 class="margin-none">Properties</h3>

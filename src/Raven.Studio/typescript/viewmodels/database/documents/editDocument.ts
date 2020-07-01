@@ -91,6 +91,8 @@ class editDocument extends viewModelBase {
     userIdHasFocus = ko.observable<boolean>(false);   
     userSpecifiedId = ko.observable<string>("");
 
+    propertiesPanelVisible = ko.observable(true);
+
     globalValidationGroup = ko.validatedObservable({
         userDocumentId: this.userSpecifiedId,
         userDocumentText: this.documentText
@@ -158,7 +160,7 @@ class editDocument extends viewModelBase {
         this.initializeObservables();
         this.initValidation();
         
-        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "copyChangeVectorToClipboard");
+        this.bindToCurrentInstance("compareRevisions", "forceCreateRevision", "copyChangeVectorToClipboard", "togglePropertiesPanel");
     }
 
     canActivate(args: any) {
@@ -602,6 +604,10 @@ class editDocument extends viewModelBase {
 
     copyChangeVectorToClipboard() {
         copyToClipboard.copy(this.changeVector().map(vectorItem => vectorItem.fullFormat).join(" "), "Change Vector has been copied to clipboard");
+    }
+
+    togglePropertiesPanel() {
+        this.propertiesPanelVisible.toggle();
     }
 
     toggleNewlineMode() {
