@@ -20,6 +20,7 @@ import getDocumentMetadataCommand = require("commands/database/documents/getDocu
 import queryUtil = require("common/queryUtil");
 import queryCriteria = require("models/database/query/queryCriteria");
 import recentQueriesStorage = require("common/storage/savedQueriesStorage");
+import popoverUtils = require("common/popoverUtils");
 
 class timeSeriesInfo {
     name = ko.observable<string>();
@@ -206,6 +207,8 @@ class editTimeSeries extends viewModelBase {
                     onValue(generalUtils.escapeHtml(value), value);
                 }
             });
+
+        this.initTooltips();
     }
     
     private editItem(item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
@@ -521,6 +524,45 @@ class editTimeSeries extends viewModelBase {
 
         const queryUrl = appUrl.forQuery(this.activeDatabase(), queryDto.hash, "&openGraph=true");
         this.navigate(queryUrl);
+    }
+
+    private urlForTimeSeriesPolicies() {
+        return appUrl.forTimeSeries(this.activeDatabase());
+    }
+
+    private initTooltips() {
+        const timeseriesSettingsUrl = this.urlForTimeSeriesPolicies();
+        
+        popoverUtils.longWithHover($(".raw-data-info"),
+            {
+                content: `<ul style="max-width: 600px;">
+                              <li>
+                                  <small>Data below is <strong>Raw Time Series Data</strong>. Entries can be edited as needed.</small>
+                              </li>
+                              <li>
+                                  <small> The raw data can be aggregated per time period that is configured in the <a href="${timeseriesSettingsUrl}">Time Series Settings</a> view.</small>
+                              </li>
+                           </ul>`,
+                placement: "right",
+                html: true,
+                container: ".edit-time-series"
+            });
+
+        popoverUtils.longWithHover($(".rollups-info"),
+            {
+                content: `<ul style="max-width: 700px;">
+                              <li>
+                                  <small>Data below is not raw data.</small><br />
+                                  <small>Each entry is <strong>Rolled-Up Data</strong> that is aggregated for a <strong>specific time frame</strong> defined by a <a href="${timeseriesSettingsUrl}">Time Series Policy</a>.</small>
+                              </li>
+                              <li>
+                                  <small>The rolled-up data is only available when the aggregation time frame defined by the policy has ended.</small>
+                              </li>
+                          </ul>`,
+                placement: "right",
+                html: true,
+                container: ".edit-time-series"
+            })
     }
 }
 

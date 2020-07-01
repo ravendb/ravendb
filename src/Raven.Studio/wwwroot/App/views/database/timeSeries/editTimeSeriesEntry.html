@@ -79,7 +79,7 @@
                             </button>
                         </div>
                     </div>
-                    <div class="form-group" data-bind="visible: $root.isAggregation">
+                    <div class="form-group" data-bind="visible: $root.isAggregation() && $root.lockSeriesName">
                         <label class="control-label">&nbsp;</label>
                         <div class="flex-horizontal bg-warning small padding padding-sm">
                             <i class="icon-warning padding"></i>
