@@ -11,6 +11,7 @@ class timeSeriesModel {
         this.timestamp(dto.Timestamp ? moment.utc(dto.Timestamp) : null);
         this.values(dto.Values.map(x => new timeSeriesValue(x)));
         
+        this.canEditName = !name;
         this.initValidation();
     }
     
@@ -19,6 +20,7 @@ class timeSeriesModel {
     timestamp = ko.observable<moment.Moment>();
     values = ko.observableArray<timeSeriesValue>([]);
     
+    canEditName: boolean;
     validationGroup: KnockoutValidationGroup;
 
     addValue() {
@@ -32,7 +34,13 @@ class timeSeriesModel {
     
     private initValidation() {
         this.name.extend({
-            required: true
+            required: true,
+            validation: [
+                {
+                    validator: () =>  !this.canEditName || !this.name().includes("@"),
+                    message: "A Time Series name cannot contain '@'. This character is reserved for Time Series Rollups."
+                }
+            ]
         });
         
         this.timestamp.extend({
