@@ -67,6 +67,15 @@ namespace Raven.Server.Web.Studio
                 (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
 
+                var unused = new UpdateUnusedDatabaseIdsCommand(Database.Name, new HashSet<string>
+                {
+                    "IG4VwBTOnkqoT/uwgm2OQg",
+                    "6dWg0kD7xEqTZnRQGBCdOw",
+                    "F9I6Egqwm0Kz+K0oFVIR9Q"
+                }, GetRaftRequestIdFromQuery() + "/unused");
+                (index, _) = await ServerStore.SendToLeaderAsync(unused);
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index, Database.ServerStore.Engine.OperationTimeout);
+
                 using (var sampleData = typeof(SampleDataHandler).Assembly
                     .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 {
