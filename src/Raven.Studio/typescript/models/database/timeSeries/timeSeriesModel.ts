@@ -60,12 +60,7 @@ class timeSeriesModel {
         });
 
         this.tag.extend({
-            validation: [
-                {
-                    validator: () => !this.tag() || this.tag().length <= 255,
-                    message: "Number of characters cannot exceed 255."
-                }
-            ]
+            maxLength: 255
         });
         
         this.values.extend({

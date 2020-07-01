@@ -67,6 +67,11 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             return name && name.includes("@");
         });
     }
+
+    compositionComplete() {
+        super.compositionComplete();
+        this.setupDisableReasons(".edit-time-series-entry");
+    }
     
     getColumnName(idx: number) {
         if (this.columnNames.length && idx < this.columnNames.length) {
