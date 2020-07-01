@@ -131,11 +131,13 @@ namespace Raven.Server.ServerWide.Commands
 
         private static void ClusterCommandValidation(ClusterTransactionDataCommand command)
         {
-            var lastChar = command.Id[command.Id.Length - 1];
+            if(string.IsNullOrWhiteSpace(command.Id))
+                throw new RachisApplyException($"In {nameof(ClusterTransactionDataCommand)} document id cannot be null, empty or white spaces as part of cluster transaction. " +
+                                               $"{nameof(command.Type)}:({command.Type}), {nameof(command.Index)}:({command.Index})");
+                
+            var lastChar = command.Id[^1];
             if (lastChar == '/' || lastChar == '|')
-            {
                 throw new RachisApplyException($"Document id {command.Id} cannot end with '|' or '/' as part of cluster transaction");
-            }
         }
 
         public List<string> ExecuteCompareExchangeCommands(TransactionOperationContext context, long index, Table items)
