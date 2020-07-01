@@ -233,9 +233,10 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
-                    .Counters.Count);
+                var countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }));
+                Assert.Equal(1, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
 
                 store.Operations.Send(new CounterBatchOperation(new CounterBatch
                 {
@@ -256,9 +257,10 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/2-A", new[] { "likes" }))
-                    .Counters.Count);
+                countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] { "likes" }));
+                Assert.Equal(1, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
             }
         }
 
@@ -581,9 +583,13 @@ namespace SlowTests.Client.Counters
                 Assert.Equal("downloads", countersDetail.Counters[2].CounterName);
                 Assert.Equal(300, countersDetail.Counters[2].TotalValue);
 
-                Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/1-A", new []{ "dislikes" })).Counters.Count);
-                Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/3-A", new[] { "score" })).Counters.Count);
+                var result = store.Operations.Send(new GetCountersOperation("users/1-A", new []{ "dislikes" }));
+                Assert.Equal(1, result.Counters.Count);
+                Assert.Null(result.Counters[0]);
 
+                result = store.Operations.Send(new GetCountersOperation("users/3-A", new[] { "score" }));
+                Assert.Equal(1, result.Counters.Count);
+                Assert.Null(result.Counters[0]);
             }
         }
 
@@ -644,10 +650,11 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
-                    .Counters.Count);
-
+                var countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] {"likes"}));
+                Assert.Equal(1, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
+                
                 store.Operations.Send(new CounterBatchOperation(new CounterBatch
                 {
                     Documents = new List<DocumentCountersOperation>
@@ -693,9 +700,10 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }))
-                    .Counters.Count);
+                countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes" }));
+                Assert.Equal(1, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
             }
         }
 

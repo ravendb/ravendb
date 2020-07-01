@@ -133,15 +133,17 @@ namespace SlowTests.Client.Counters
                     session.SaveChanges();
                 }
 
-                dic = store.Operations
-                    .Send(new GetCountersOperation("users/1-A", new[] { "likes", "downloads" }))
-                    .Counters
-                    .ToDictionary(c => c.CounterName, c => c.TotalValue);
-                Assert.Equal(0, dic.Count);
+                var countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "likes", "downloads" }));
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/2-A", new[] { "votes" }))
-                    .Counters.Count);
+                Assert.Equal(2, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
+                Assert.Null(countersDetail.Counters[1]);
+
+                countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/2-A", new[] {"votes"}));
+                Assert.Equal(1, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
 
             }
         }

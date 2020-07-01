@@ -294,9 +294,10 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
-                    .Counters.Count);
+                var countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }));
+                Assert.Equal(1, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
 
                 using (var session = store.OpenSession())
                 {
@@ -332,9 +333,10 @@ namespace SlowTests.Client.Counters
                     }
                 }));
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
-                    .Counters.Count);
+                var countersDetail = store.Operations
+                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }));
+                Assert.Equal(1, countersDetail.Counters.Count);
+                Assert.Null(countersDetail.Counters[0]);
             }
         }
 
@@ -434,21 +436,13 @@ namespace SlowTests.Client.Counters
                                   }"
                      })).WaitForCompletion();
 
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/1-A", new[] { "Downloads" }))
-                    .Counters.Count);
-
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/2-A", new[] { "Downloads" }))
-                    .Counters.Count);
-
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/3-A", new[] { "Downloads" }))
-                    .Counters.Count);
-
-                Assert.Equal(0, store.Operations
-                    .Send(new GetCountersOperation("users/4-A", new[] { "Downloads" }))
-                    .Counters.Count);
+                foreach (var id in new [] { "users/1-A" , "users/2-A", "users/3-A", "users/4-A" })
+                {
+                    var countersDetail = store.Operations
+                        .Send(new GetCountersOperation(id, new[] { "Downloads" }));
+                    Assert.Equal(1, countersDetail.Counters.Count);
+                    Assert.Null(countersDetail.Counters[0]);
+                }
             }
         }
 

@@ -210,8 +210,13 @@ namespace SlowTests.Client.Counters
 
                 foreach (var store in stores)
                 {
-                    Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/1", new[] { "likes" })).Counters.Count);
-                    Assert.Equal(0, store.Operations.Send(new GetCountersOperation("users/2", new[] { "downloads" })).Counters.Count);
+                    var countersDetail = store.Operations.Send(new GetCountersOperation("users/1", new[] { "likes" }));
+                    Assert.Equal(1, countersDetail.Counters.Count);
+                    Assert.Null(countersDetail.Counters[0]);
+
+                    countersDetail = store.Operations.Send(new GetCountersOperation("users/2", new[] { "downloads" }));
+                    Assert.Equal(1, countersDetail.Counters.Count);
+                    Assert.Null(countersDetail.Counters[0]);
                 }
             }
             finally
