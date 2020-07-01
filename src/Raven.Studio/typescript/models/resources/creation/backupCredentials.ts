@@ -308,7 +308,7 @@ export class ravenCloudCredentials extends restoreSettings {
                     return "Link has expired";
                 }
                 
-                return generalUtils.formatDurationByDate(this.timeLeft(), false);
+                return generalUtils.formatDurationByDate(this.timeLeft());
             }
             return "unknown";
         });

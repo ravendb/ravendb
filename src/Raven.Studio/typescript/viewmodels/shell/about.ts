@@ -98,12 +98,12 @@ class about extends viewModelBase {
         if (now.isBefore(expiration)) {
             const relativeDurationClass = nextMonth.isBefore(expiration) ? "" : "text-warning";
             
-            const fromDuration = generalUtils.formatDurationByDate(expiration, false);
-            return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(in ${fromDuration})</small>`;
+            const fromDuration = generalUtils.formatDurationByDate(expiration, true);
+            return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
         }
 
         const duration = generalUtils.formatDurationByDate(expiration, true);
-        return `${expiration.format(dateFormat)} <br /><Small class="text-danger">(${duration} ago)</Small>`;
+        return `${expiration.format(dateFormat)} <br /><Small class="text-danger">(${duration})</Small>`;
     });
 
     licenseType = ko.pureComputed(() => {

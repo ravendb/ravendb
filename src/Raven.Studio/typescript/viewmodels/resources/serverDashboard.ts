@@ -776,7 +776,7 @@ class serverDashboard extends viewModelBase {
                 return "a few seconds";
             }
 
-            return generalUtils.formatDurationByDate(startTime, true);
+            return generalUtils.formatDurationByDate(startTime);
         });
 
         this.formattedStartTime = ko.pureComputed(() => {
