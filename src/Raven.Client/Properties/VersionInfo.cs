@@ -4,7 +4,7 @@ using System.Reflection;
 using Raven.Client.Extensions;
 using Raven.Client.Properties;
 
-[assembly: RavenVersion(Build = "42", CommitHash = "a377982", Version = "4.2", FullVersion = "4.2.104-custom-42", EffectiveReleaseDateString = "2019-05-21")]
+[assembly: RavenVersion(Build = "42", CommitHash = "a377982", Version = "4.2", FullVersion = "4.2.104-custom-42", ReleaseDateString = "2020-07-02")]
 
 namespace Raven.Client.Properties
 {
@@ -15,7 +15,7 @@ namespace Raven.Client.Properties
         public string Build { get; set; }
         public string Version { get; set; }
         public string FullVersion { get; set; }
-        public string EffectiveReleaseDateString { get; set; }
+        public string ReleaseDateString { get; set; }
 
         private static int? _buildVersion;
         private static readonly Version _assemblyVersion;
@@ -47,7 +47,7 @@ namespace Raven.Client.Properties
 
         public readonly int PatchVersion;
 
-        internal DateTime EffectiveReleaseDate => DateTime.Parse(EffectiveReleaseDateString);
+        internal DateTime ReleaseDate => DateTime.Parse(ReleaseDateString);
 
         public int BuildVersion
         {

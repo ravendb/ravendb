@@ -68,7 +68,7 @@ namespace Raven.Server.Commercial
                     return true;
 
                 return IsIsv ?
-                    Expiration < RavenVersionAttribute.Instance.EffectiveReleaseDate :
+                    Expiration < RavenVersionAttribute.Instance.ReleaseDate :
                     DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
             }
         }
