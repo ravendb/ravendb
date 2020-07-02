@@ -13,7 +13,7 @@ class timeSeriesConfigurationEntry {
     
     namedValues = ko.observableArray<timeSeriesNamedValues>([]);
 
-    hasRetentionConfig: KnockoutComputed<boolean>;
+    hasPoliciesOrRetentionConfig: KnockoutComputed<boolean>;
     hasNamedValuesConfig: KnockoutComputed<boolean>;
     
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
@@ -24,7 +24,7 @@ class timeSeriesConfigurationEntry {
     constructor(collection: string) {
         this.collection(collection);
 
-        this.hasRetentionConfig = ko.pureComputed(() => this.policies().length > 0 || (this.rawPolicy() && this.rawPolicy().hasRetention()));
+        this.hasPoliciesOrRetentionConfig = ko.pureComputed(() => this.policies().length > 0 || (this.rawPolicy() && this.rawPolicy().hasRetention()));
         this.hasNamedValuesConfig = ko.pureComputed(() => this.namedValues().length > 0);
 
         this.initValidation();
@@ -64,8 +64,8 @@ class timeSeriesConfigurationEntry {
         this.namedValues.extend({
             validation: [
                 {
-                    validator: () => this.hasRetentionConfig() || this.hasNamedValuesConfig(),
-                    message: "Please define retention configuration or at least one named values"
+                    validator: () => this.hasPoliciesOrRetentionConfig() || this.hasNamedValuesConfig(),
+                    message: "No aggregation policy, retention time or named value are defined."
                 }, {
                     validator: () => {
                         const nonEmptyNames = this.namedValues()
@@ -117,7 +117,7 @@ class timeSeriesConfigurationEntry {
         this.namedValues.remove(item);
     }
 
-    toRetentionDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration {
+    toPoliciesDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesCollectionConfiguration {
         return {
             Disabled: this.disabled(),
             Policies: this.policies().map(x => x.toDto()),

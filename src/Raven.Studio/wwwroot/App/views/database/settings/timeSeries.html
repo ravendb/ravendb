@@ -1,4 +1,4 @@
-<form role="form" class="time-series-config flex-vertical absolute-fill content-margin flex-form" data-bind="submit: saveChanges" novalidate>
+<form role="form" class="time-series-config flex-vertical absolute-fill content-margin flex-form" data-bind="submit: saveChanges" novalidate autocomplete="off">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6">
             <div class="flex-header flex-horizontal">
@@ -46,7 +46,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <div data-bind="foreach: perCollectionConfigurations">
                     <div data-bind="template: { name: 'time-series-config-item-template' }">
                     </div>
@@ -98,31 +97,27 @@
                                 </label>
                             </div>
                         </div>
-
                         <div data-bind="collapse: hasRetention, template: { 'name': 'time-series-retention-item-template' }">
                         </div>
                     </div>
-
                     <div class="hr-title">
                         <h5>Aggregation Policies</h5>
                         <hr>
-                        <a href="#" class="aggregation-info" data-toggle="tooltip">
+                        <a class="aggregation-info margin-left margin-left-sm" data-toggle="tooltip">
                             <i class="icon-info text-info"></i>    
                         </a>
                     </div>
-
                     <div class="margin-bottom">
                         <div data-bind="foreach: policies">
                             <div class="form-group" data-bind="validationElement: name">
                                 <label class="control-label">Policy Name</label>
                                 <div class="flex-grow margin-right margin-right-sm">
-                                    <input class="form-control" placeholder="Policy name" data-bind="textInput: name" />
+                                    <input class="form-control" placeholder="Enter policy name" data-bind="textInput: name" />
                                 </div>
                                 <button class="btn btn-danger" title="Delete this policy" data-bind="click: $parent.removePolicy">
                                     <i class="icon-trash"> </i>
                                 </button>
                             </div>
-
                             <div class="form-group" data-bind="validationElement: aggregation">
                                 <label class="control-label">Aggregation Time</label>
                                 <div class="flex-grow" data-bind="with: aggregation">
@@ -143,7 +138,7 @@
                                     </div>
                                     <div class="input-group" data-bind="visible: unit() !== 'custom', validationOptions: { insertMessages: false }">
                                         <span class="input-group-addon"><span class="small-label text-muted">Group every:</span></span>
-                                        <input type="number" class="form-control small" data-bind="numericInput: amount" />
+                                        <input type="number" min="1" class="form-control small" data-bind="numericInput: amount" />
                                         <button class="btn btn-default dropdown-toggle input-group-addon" data-toggle="dropdown">
                                             <span data-bind="text: $parent.aggregationLabel"></span> <i class="caret"></i>
                                         </button>
@@ -158,7 +153,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="form-group">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
@@ -168,11 +162,9 @@
                                     </label>
                                 </div>
                             </div>
-
                             <div class="collapse-margin-fix">
                                 <div data-bind="collapse: hasRetention, template: { 'name': 'time-series-retention-item-template' }"></div>
                             </div>
-
                             <div class="hr-title">
                                 <hr><i class="icon-arrow-filled-down margin-left margin-right" data-bind="visible: $index() < $parent.policies().length - 1"></i><hr>
                             </div>
@@ -184,15 +176,13 @@
                             </button>
                         </div>
                     </div>
-
                     <div class="hr-title">
                         <h5>Named Values</h5>
                         <hr>
-                        <a href="#" class="named-values-info" data-toggle="tooltip">
+                        <a class="named-values-info margin-left margin-left-sm" data-toggle="tooltip">
                             <i class="icon-info text-info"></i>
                         </a>
                     </div>
-                    
                     <div class="margin-left margin-left-lg margin-bottom">
                         <!-- ko foreach: namedValues -->
                         <div>
@@ -208,7 +198,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: timeSeriesName">
-                                            <input class="form-control" placeholder="Time Series Name" data-bind="textInput: timeSeriesName, hasFocus: hasFocus" />
+                                            <input class="form-control" placeholder="Enter time series name" data-bind="textInput: timeSeriesName, hasFocus: hasFocus" />
                                         </div>
                                         <button class="btn btn-danger" title="Delete this entry" data-bind="click: _.partial($parent.removeNamedValues, $data)">
                                             <i class="icon-trash"> </i>
@@ -221,7 +211,7 @@
                                         <div class="form-group item">
                                             <span class="input-group-addon"><span class="text-muted counter"></span></span>
                                             <div class="flex-grow margin-right margin-right-sm" data-bind="validationElement: name">
-                                                <input class="form-control" data-bind="textInput: name, hasFocus: hasFocus" />
+                                                <input class="form-control" placeholder="Enter name" data-bind="textInput: name, hasFocus: hasFocus" />
                                             </div>
                                             <button class="btn btn-danger" title="Delete this entry" data-bind="click: _.partial($parent.removeMapping, $data)">
                                                 <i class="icon-trash"> </i>
@@ -229,32 +219,25 @@
                                         </div>
                                         <!-- /ko -->
                                     </div>
-
                                     <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: namedValues">
                                         <div class="help-block margin-bottom" data-bind="validationMessage: namedValues"></div>
                                     </div>
-
                                     <button class="btn btn-default" data-bind="click: addMapping">
-                                        <i class="icon-plus"> </i><span>Add entry</span>
+                                        <i class="icon-plus"> </i><span>Add Name</span>
                                     </button>
                                 </div>
                             </div>
-
                             <hr />
                         </div>
                         <!-- /ko -->
-                        
-                        
                         <button class="btn btn-default" data-bind="click: addNamedValues">
                             <i class="icon-plus"></i>
                             <span>Add Named Values</span>
                         </button>
                     </div>
-
                     <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: namedValues">
                         <div class="help-block" data-bind="validationMessage: namedValues"></div>
                     </div>
-
                     <div class="text-right margin-top">
                         <button class="btn btn-success" data-bind="click: $root.applyChanges"><i class="icon-check"></i><span>OK</span></button>
                         <button class="btn btn-default" data-bind="click: $root.exitEditMode"><i class="icon-cancel"></i><span>Cancel</span></button>
@@ -267,9 +250,10 @@
 
 <script type="text/html" id="time-series-config-item-template">
     <div class="panel panel-state configuration-item" data-bind="css: { active: $data === $root.currentBackingItem() }">
-        <div class="state" data-bind="attr: { 'data-state-text': hasRetentionConfig() && disabled() ? 'disabled' : 'enabled' }, css: { 'state-success': !hasRetentionConfig() || !disabled(), 'state-warning': hasRetentionConfig() && disabled() }"></div>
+        <div class="state" data-bind="attr: { 'data-state-text': hasPoliciesOrRetentionConfig() && disabled() ? 'disabled' : 'enabled' }, 
+                                      css: { 'state-success': !hasPoliciesOrRetentionConfig() || !disabled(), 'state-warning': hasPoliciesOrRetentionConfig() && disabled() }"></div>
         <div class="padding padding-sm flex-horizontal">
-            <div class="checkbox" data-bind="visible: hasRetentionConfig">
+            <div class="checkbox" data-bind="visible: hasPoliciesOrRetentionConfig">
                 <input type="checkbox" class="styled" data-bind="checked: $root.selectedItems, checkedValue: $data">
                 <label></label>
             </div>
@@ -277,14 +261,13 @@
                 <h3 data-bind="text: collection"></h3>
             </div>
             <div class="flex-grow">
-                
             </div>
             <div class="actions-container">
                 <div class="actions">
-                    <button class="btn btn-default" data-bind="visible: hasRetentionConfig() && !disabled(), click: $root.disableConfiguration">
+                    <button class="btn btn-default" data-bind="visible: hasPoliciesOrRetentionConfig() && !disabled(), click: $root.disableConfiguration">
                         <i class="icon-stop"></i><span>Disable</span>
                     </button>
-                    <button class="btn btn-success" data-bind="visible: hasRetentionConfig() && disabled(), click: $root.enableConfiguration">
+                    <button class="btn btn-success" data-bind="visible: hasPoliciesOrRetentionConfig() && disabled(), click: $root.enableConfiguration">
                         <i class="icon-play"></i><span>Enable</span>
                     </button>
                     <button class="btn btn-default" data-bind="click: $root.editItem" title="Edit configuration"><i class="icon-edit"></i></button>
@@ -292,9 +275,8 @@
                 </div>
             </div>
         </div>
-
         <div class="panel-addon padding padding-sm">
-            <div class="aggregation-flow" data-bind="if: hasRetentionConfig">
+            <div class="aggregation-flow" data-bind="if: hasPoliciesOrRetentionConfig">
                 <div class="item">
                     <div class="item-content">
                         <div class="small-label item-name"><strong>Raw Data</strong></div>
@@ -307,7 +289,6 @@
                     </div>
                     <div class="arrow" data-bind="visible: policies().length"></div>
                 </div>
-                
                 <!-- ko foreach: policies -->
                 <div class="item">
                     <div class="item-content">
@@ -324,12 +305,10 @@
                     </div>
                     <div class="arrow" data-bind="visible: $index() < $parent.policies().length - 1"></div>
                 </div>
-                
                 <!-- /ko -->
             </div>
             <div class="named-values" data-bind="if: namedValues().length, visible: namedValues().length">
                 <h4>Named Values:</h4>
-                
                 <!-- ko foreach: namedValues -->
                 <div class="item">
                     <div class="time-series-name"><i class="icon-etag"></i> <span data-bind="text: timeSeriesName"></span></div>
@@ -338,7 +317,6 @@
                     </div>
                 </div>
                 <!-- /ko -->
-                
             </div>
         </div>
     </div>
@@ -365,7 +343,7 @@
             </div>
             <div class="input-group" data-bind="visible: unit() !== 'custom', validationOptions: { insertMessages: false }">
                 <span class="input-group-addon"><span class="small-label text-muted">keep data for:</span></span>
-                <input type="number" class="form-control small" data-bind="numericInput: amount" />
+                <input type="number" min="1" class="form-control small" data-bind="numericInput: amount" />
                 <button class="btn btn-default dropdown-toggle input-group-addon" data-toggle="dropdown">
                     <span data-bind="text: $parent.retentionLabel"></span> <i class="caret"></i>
                 </button>
