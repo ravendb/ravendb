@@ -104,7 +104,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                   storeValue,
                   storeValueFieldName)
         {
-            _index = index ?? throw new ArgumentNullException(nameof(index));
         }
 
         protected LuceneDocumentConverterBase(
@@ -117,7 +116,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
              bool storeValue = false,
              string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
         {
-            _index = index;
+            _index = index ?? throw new ArgumentNullException(nameof(index));
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
                 dictionary[field.Name] = field;
