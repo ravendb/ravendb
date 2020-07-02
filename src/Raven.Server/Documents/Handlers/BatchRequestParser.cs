@@ -15,6 +15,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide;
 using Sparrow;
 using Sparrow.Json;
@@ -1012,11 +1013,6 @@ namespace Raven.Server.Documents.Handlers
         private static void ThrowUnexpectedEndOfStream()
         {
             throw new EndOfStreamException();
-        }
-
-        public class InvalidCommandTypeException : Exception
-        {
-            public InvalidCommandTypeException(string msg): base(msg) { }
         }
     }
 }

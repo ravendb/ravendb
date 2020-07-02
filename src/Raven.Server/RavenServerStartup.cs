@@ -24,6 +24,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -260,12 +261,17 @@ namespace Raven.Server
 
             static bool HasInvalidCommandTypeException(Exception e)
             {
-                if (e is BatchRequestParser.InvalidCommandTypeException)
+                if (e is InvalidCommandTypeException)
                     return true;
 
                 if (e is AggregateException ae)
-                    return ae.InnerExceptions.Any(HasInvalidCommandTypeException);
-                
+                {
+                    foreach (var innerException in ae.InnerExceptions)
+                    {
+                        if (HasInvalidCommandTypeException(innerException))
+                            return true;
+                    }
+                }
                 return e.InnerException != null && HasInvalidCommandTypeException(e.InnerException);
             }
         }
