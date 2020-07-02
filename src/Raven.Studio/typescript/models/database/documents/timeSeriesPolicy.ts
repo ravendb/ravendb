@@ -105,7 +105,7 @@ class timeSeriesPolicy {
                             return false;
                         }
                     },
-                    message: () => "Aggregation time must be scoped beyond preceding aggregation (" + this.previous().aggregationFormatted() + ")"
+                    message: () => "Time frame must be greater than the preceding aggregation time (" + this.previous().aggregationFormatted() + ")"
                 }, {
                     validator: (time: timeValueEntry) => {
                         const previous = this.previous();
@@ -118,13 +118,13 @@ class timeSeriesPolicy {
                         }
 
                         try {
-                            return previous.retention().compare(time) >= 0;
+                            return previous.retention().compare(time) > 0;
                         } catch (e) {
                             // when unable to compare
                             return false;
                         }
                     },
-                    message: () => "Aggregation time must be scoped beyond preceding retention time (" + this.previous().retentionFormatted() + ")"
+                    message: () => "Time frame must be less than the preceding retention time (" + this.previous().retentionFormatted() + ")"
                 }
             ]
         });
