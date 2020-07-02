@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Indexes.Static
             scope.DynamicFields[name] = field.Indexing;
 
             if (scope.CreateFieldConverter == null)
-                scope.CreateFieldConverter = new LuceneDocumentConverter(new IndexField[] { });
+                scope.CreateFieldConverter = new LuceneDocumentConverter(scope.Index, new IndexField[] { });
 
             var result = new List<AbstractField>();
             scope.CreateFieldConverter.GetRegularFields(new StaticIndexLuceneDocumentWrapper(result), field, value, CurrentIndexingScope.Current.IndexContext, out _);
