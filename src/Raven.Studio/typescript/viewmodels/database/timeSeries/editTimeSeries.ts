@@ -542,7 +542,7 @@ class editTimeSeries extends viewModelBase {
                               <li>
                                   <small> The raw data can be aggregated per time period that is configured in the <a href="${timeseriesSettingsUrl}">Time Series Settings</a> view.</small>
                               </li>
-                           </ul>`,
+                          </ul>`,
                 placement: "right",
                 html: true,
                 container: ".edit-time-series"
@@ -550,7 +550,8 @@ class editTimeSeries extends viewModelBase {
 
         popoverUtils.longWithHover($(".rollups-info"),
             {
-                content: `<ul style="max-width: 700px;">
+                content: `<br>
+                          <ul style="max-width: 700px;">
                               <li>
                                   <small>Data below is not raw data.</small><br />
                                   <small>Each entry is <strong>Rolled-Up Data</strong> that is aggregated for a <strong>specific time frame</strong> defined by a <a href="${timeseriesSettingsUrl}">Time Series Policy</a>.</small>
