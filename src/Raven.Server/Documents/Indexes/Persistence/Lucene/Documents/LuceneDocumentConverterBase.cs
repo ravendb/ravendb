@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             bool storeValue = false,
             string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
             : this(
+                  index,
                   index.Definition.IndexFields.Values,
                   index.Configuration.IndexMissingFieldsAsNull,
                   indexEmptyEntries,
@@ -107,6 +108,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         protected LuceneDocumentConverterBase(
+             Index index,
              ICollection<IndexField> fields,
              bool indexImplicitNull,
              bool indexEmptyEntries,
@@ -115,6 +117,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
              bool storeValue = false,
              string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
         {
+            _index = index;
             var dictionary = new Dictionary<string, IndexField>(fields.Count, default(OrdinalStringStructComparer));
             foreach (var field in fields)
                 dictionary[field.Name] = field;

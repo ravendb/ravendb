@@ -46,7 +46,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Returns_null_value_if_property_is_null()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -71,7 +71,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Returns_empty_string_value_if_property_has_empty_string()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_string_value()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -121,7 +121,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Reuses_cached_document_instance()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -155,7 +155,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_numeric_fields()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -200,7 +200,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_nested_string_value()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -228,7 +228,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_string_value_nested_inside_collection()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -269,7 +269,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_string_value_nested_inside_double_nested_collections()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -327,7 +327,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_complex_value()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -389,7 +389,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_array_value()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {
@@ -419,7 +419,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_array_having_complex_values()
         {
-            _sut = new LuceneDocumentConverter(new IndexField[]
+            _sut = new LuceneDocumentConverter(null, new IndexField[]
             {
                 new IndexField
                 {

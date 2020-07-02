@@ -16,8 +16,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         [Obsolete("Used for testing purposes only")]
-        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false)
-            : base(fields, isMultiMap, indexImplicitNull, indexEmptyEntries, numberOfBaseFields: 1, storeValue: storeValue)
+        public AnonymousLuceneDocumentConverter(Index index,ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, bool storeValue = false)
+            : base(index, fields, isMultiMap, indexImplicitNull, indexEmptyEntries, numberOfBaseFields: 1, storeValue: storeValue)
         {
         }
     }
@@ -34,8 +34,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         }
 
         [Obsolete("Used for testing purposes only")]
-        protected AnonymousLuceneDocumentConverterBase(ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
-          : base(fields, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
+        protected AnonymousLuceneDocumentConverterBase(Index index, ICollection<IndexField> fields, bool isMultiMap, bool indexImplicitNull = false, bool indexEmptyEntries = false, int numberOfBaseFields = 1, string keyFieldName = null, bool storeValue = false, string storeValueFieldName = Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName)
+          : base(index, fields, indexImplicitNull, indexEmptyEntries, numberOfBaseFields, keyFieldName, storeValue, storeValueFieldName)
         {
             _isMultiMap = isMultiMap;
         }
