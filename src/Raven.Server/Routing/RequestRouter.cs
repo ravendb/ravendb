@@ -236,8 +236,7 @@ namespace Raven.Server.Routing
 
             if (currentServerVersion.MajorVersion == clientVersion.Major &&
                 currentServerVersion.BuildVersion >= clientVersion.Revision &&
-                currentServerVersion.BuildVersion != ServerVersion.DevBuildNumber &&
-                (clientVersion.Revision < 40 || clientVersion.Revision >= 50)) 
+                currentServerVersion.BuildVersion != ServerVersion.DevBuildNumber)
                 return true;
             
             innerException =  new ClientVersionMismatchException(

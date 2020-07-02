@@ -260,7 +260,7 @@ namespace Raven.Server
 
             static bool HasInvalidCommandTypeException(Exception e)
             {
-                if (e.GetType() == typeof(BatchRequestParser.InvalidCommandTypeException))
+                if (e is BatchRequestParser.InvalidCommandTypeException)
                     return true;
 
                 if (e is AggregateException ae)
