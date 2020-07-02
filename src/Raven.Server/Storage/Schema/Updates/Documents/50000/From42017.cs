@@ -4,6 +4,7 @@ using System.IO;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -13,8 +14,8 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
+using Voron.Data;
 using Voron.Data.Tables;
-using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.CountersStorage;
 
 
@@ -49,6 +50,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         public bool Update(UpdateStep step)
         {
+            UpdateSchemaForDocumentsAndRevisions(step);
+
             var readTable = new Table(CountersSchema, step.WriteTx);
             var countersTree = readTable.GetTree(CountersSchema.Key);
             if (countersTree == null)
@@ -141,6 +144,23 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             return true;
         }
 
+        private static void UpdateSchemaForDocumentsAndRevisions(UpdateStep step)
+        {
+            using var _ = step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
+            var collections = step.WriteTx.OpenTable(DocumentsStorage.CollectionsSchema, DocumentsStorage.CollectionsSlice);
+            foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
+            {
+                var collection = DocumentsStorage.TableValueToId(context, (int)DocumentsStorage.CollectionsTable.Name, ref tvr.Reader);
+                var collectionName = new CollectionName(collection);
+                var tableTree = step.WriteTx.CreateTree(collectionName.GetTableName(CollectionTableType.Documents), RootObjectType.Table);
+                DocumentsStorage.DocsSchema.SerializeSchemaIntoTableTree(tableTree);
+                
+                var revisionsTree = step.WriteTx.ReadTree(collectionName.GetTableName(CollectionTableType.Revisions), RootObjectType.Table);
+                if(revisionsTree != null)
+                    RevisionsStorage.RevisionsSchema.SerializeSchemaIntoTableTree(revisionsTree);
+            }
+        }
+
         private void PutCounterGroups(UpdateStep step, CounterBatchUpdate batch, DocumentsOperationContext context)
         {
             foreach (var cg in batch.Counters)
@@ -202,7 +222,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
             {
-                var docsTable = new Table(DocsSchema, step.ReadTx);
+                var docsTable = new Table(DocumentsStorage.DocsSchema, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out _) == false)
                 {
                     // document does not exist
@@ -251,7 +271,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var tvr) == false)
                                 continue;
 
-                            using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                            using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
                             {
                                 if (entriesToUpdate.TryGetValue(counterGroupKey, out var putCountersData))
                                 {
@@ -259,7 +279,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 }
                                 else
                                 {
-                                    var existingChangeVector = TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
+                                    var existingChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)CountersTable.ChangeVector, ref tvr);
 
                                     using (data = GetCounterValuesData(context, ref tvr))
                                     {
