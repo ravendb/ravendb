@@ -28,13 +28,11 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Raven.Server.Web.System;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
-using DatabaseSmuggler = Raven.Client.Documents.Smuggler.DatabaseSmuggler;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
@@ -49,7 +47,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         private readonly bool _restoringToDefaultDataDirectory;
 
         public RestoreBackupConfigurationBase RestoreFromConfiguration { get; }
-        
+
         protected RestoreBackupTaskBase(ServerStore serverStore,
             RestoreBackupConfigurationBase restoreFromConfiguration,
             string nodeTag,
@@ -59,11 +57,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             RestoreFromConfiguration = restoreFromConfiguration;
             _nodeTag = nodeTag;
             _operationCancelToken = operationCancelToken;
-            
+
             var dataDirectoryThatWillBeUsed = string.IsNullOrWhiteSpace(RestoreFromConfiguration.DataDirectory) ?
                                        _serverStore.Configuration.Core.DataDirectory.FullPath :
                                        new PathSetting(RestoreFromConfiguration.DataDirectory, _serverStore.Configuration.Core.DataDirectory.FullPath).FullPath;
-            
+
             if (ResourceNameValidator.IsValidResourceName(RestoreFromConfiguration.DatabaseName, dataDirectoryThatWillBeUsed, out string errorMessage) == false)
                 throw new InvalidOperationException(errorMessage);
 
@@ -93,12 +91,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var backupEncryptionSettings = RestoreFromConfiguration.BackupEncryptionSettings;
             if (backupEncryptionSettings != null)
             {
-                if (backupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey && 
+                if (backupEncryptionSettings.EncryptionMode == EncryptionMode.UseProvidedKey &&
                     backupEncryptionSettings.Key == null)
                 {
                     throw new InvalidOperationException($"{nameof(BackupEncryptionSettings.EncryptionMode)} is set to {nameof(EncryptionMode.UseProvidedKey)} but an encryption key wasn't provided");
                 }
-
 
                 if (backupEncryptionSettings.EncryptionMode != EncryptionMode.UseProvidedKey &&
                     backupEncryptionSettings.Key != null)
@@ -120,12 +117,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         }
 
         protected abstract Task<Stream> GetStream(string path);
+
         protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path);
+
         protected abstract Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path);
 
         protected abstract Task<List<string>> GetFilesForRestore();
 
         protected abstract string GetBackupPath(string smugglerFile);
+
         protected abstract string GetSmugglerBackupPath(string smugglerFile);
 
         protected abstract string GetBackupLocation();
@@ -282,16 +282,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                             DisableOngoingTasksIfNeeded(databaseRecord);
 
-                            result.DatabaseRecord.Processed = true;
-                            result.Documents.Processed = true;
-                            result.RevisionDocuments.Processed = true;
-                            result.Conflicts.Processed = true;
-                            result.Indexes.Processed = true;
-                            result.Counters.Processed = true;
-                            result.Identities.Processed = true;
-                            result.CompareExchange.Processed = true;
-                            result.Subscriptions.Processed = true;
-                            result.TimeSeries.Processed = true;
+                            Raven.Server.Smuggler.Documents.DatabaseSmuggler.EnsureProcessed(result, skipped: false);
+
                             onProgress.Invoke(result.Progress);
                         }
                     }
@@ -485,7 +477,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             options.OperateOnTypes |= DatabaseItemType.Counters;
 #pragma warning restore 618
 
-            var oldOperateOnTypes = DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
+            var oldOperateOnTypes = Raven.Client.Documents.Smuggler.DatabaseSmuggler.ConfigureOptionsForIncrementalImport(options);
             var destination = new DatabaseDestination(database);
 
             for (var i = 0; i < filesToRestore.Count - 1; i++)
@@ -563,7 +555,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
                 });
         }
-        
+
         private bool IsDefaultDataDirectory(string dataDirectory, string databaseName)
         {
             var defaultDataDirectory = RavenConfiguration.GetDataDirectoryPath(
@@ -766,7 +758,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         public async Task<long> CalculateBackupSizeInBytes()
         {
             var zipPath = GetBackupLocation();
-             zipPath = Path.Combine(zipPath, RestoreFromConfiguration.LastFileNameToRestore);
+            zipPath = Path.Combine(zipPath, RestoreFromConfiguration.LastFileNameToRestore);
             using (var zip = await GetZipArchiveForSnapshotCalc(zipPath))
                 return zip.Entries.Sum(entry => entry.Length);
         }
