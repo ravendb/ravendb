@@ -317,10 +317,10 @@ namespace SlowTests.Server
                     }
                 }));
 
-                var actualCounters = result.Counters.Select(c => c.CounterName).ToArray();
+                var actualCounters = result.Counters.Select(c => c?.CounterName).ToArray();
                 Assert.Contains(incrementedCounter, actualCounters);
                 Assert.Contains(putCounter, actualCounters);
-                Assert.DoesNotContain(deletedCounter, actualCounters);
+                Assert.Contains(null, actualCounters); // deleted Counter
             }
         }
 
