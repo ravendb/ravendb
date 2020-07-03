@@ -74,6 +74,7 @@ class shell extends viewModelBase {
     rawUrlIsVisible = ko.computed(() => this.currentRawUrl().length > 0);
     showSplash = viewModelBase.showSplash;
     browserAlert = ko.observable<boolean>(false);
+    collapseMenu = ko.observable<boolean>(false);
     dontShowBrowserAlertAgain = ko.observable<boolean>(false);
     currentUrlHash = ko.observable<string>(window.location.hash);
 
@@ -149,6 +150,8 @@ class shell extends viewModelBase {
         window.addEventListener("hashchange", e => {
             this.currentUrlHash(location.hash);
         });
+
+        this.bindToCurrentInstance("toggleMenu");
     }
     
     // Override canActivate: we can always load this page, regardless of any system db prompt.
@@ -223,6 +226,10 @@ class shell extends viewModelBase {
         
         // we await here only for certificate task, as downloading license can take longer
         return clientCertificateTask;
+    }
+
+    toggleMenu() {
+        this.collapseMenu.toggle();
     }
     
     private onGlobalConfiguration(settings: globalSettings) {

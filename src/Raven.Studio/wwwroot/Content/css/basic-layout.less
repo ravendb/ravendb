@@ -106,10 +106,6 @@ body {
 
     &.processing {
         .processing-spinner {
-            -moz-transform: translateX(0%) translateY(0%);
-            -webkit-transform: translateX(0%) translateY(0%);
-            -o-transform: translateX(0%) translateY(0%);
-            -ms-transform: translateX(0%) translateY(0%);
             transform: translateX(0%) translateY(0%);
 
             &:hover {
@@ -448,10 +444,6 @@ body {
     }
 
     .navbar-header {
-        -webkit-transition: width @menu-transition-ease;
-        -moz-transition: width @menu-transition-ease;
-        -ms-transition: width @menu-transition-ease;
-        -o-transition: width @menu-transition-ease;
         transition: width @menu-transition-ease;
 
         @media (min-width:@screen-md) {
@@ -464,16 +456,13 @@ body {
         .navbar-brand {
             color: @brand-primary;
             font-size: 54px;
+            line-height: @navbar-height;
             margin: 0 !important;
             background-repeat: no-repeat;
             background-size: contain;
             background-position: center;
             width: 100%;
             height: 100%;
-            -webkit-transition: opacity @menu-transition-ease;
-            -moz-transition: opacity @menu-transition-ease;
-            -ms-transition: opacity @menu-transition-ease;
-            -o-transition: opacity @menu-transition-ease;
             transition: opacity @menu-transition-ease;
             display: block;
             text-align: center;
@@ -617,10 +606,6 @@ body {
 
     .inputs-container {
         clear: both;
-        -webkit-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
-        -moz-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
-        -ms-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
-        -o-transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
         transition: margin-left @menu-transition-ease, max-height @menu-transition-ease;
         height: 38px;
         flex-grow: 1;
@@ -835,10 +820,6 @@ body {
 
         .search-container {
             @media (min-width:@screen-md) {
-                -webkit-transition: right @menu-transition-ease;
-                -moz-transition: right @menu-transition-ease;
-                -ms-transition: right @menu-transition-ease;
-                -o-transition: right @menu-transition-ease;
                 transition: right @menu-transition-ease;
                 z-index: 22;
 
@@ -967,10 +948,6 @@ body {
     display: flex;
     flex-direction: column;
     width: 100%;
-    -webkit-transition: left @menu-transition-ease;
-    -moz-transition: left @menu-transition-ease;
-    -ms-transition: left @menu-transition-ease;
-    -o-transition: left @menu-transition-ease;
     transition: left @menu-transition-ease;
 
     .content-margin {
@@ -998,10 +975,6 @@ body {
 }
 
 #right-options-panel {
-    -webkit-transition: transform @menu-transition-ease;
-    -moz-transition: transform @menu-transition-ease;
-    -ms-transition: transform @menu-transition-ease;
-    -o-transition: transform @menu-transition-ease;
     transition: transform @menu-transition-ease;
     flex-shrink: 0;
 
