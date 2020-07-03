@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -250,11 +250,11 @@ namespace Raven.Server.Commercial
             {
                 using (var process = Process.GetCurrentProcess())
                 {
-                    var utilizedCores = GetCoresLimitForNode(out var hasLicenseLimits);
+                    var utilizedCores = GetCoresLimitForNode(out var licenseLimits);
                     var clusterSize = GetClusterSize();
                     var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, utilizedCores * _licenseStatus.Ratio);
 
-                    SetAffinity(process, utilizedCores, addPerformanceHint, hasLicenseLimits);
+                    SetAffinity(process, utilizedCores, addPerformanceHint, licenseLimits);
                     SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
                 }
 
@@ -266,19 +266,17 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public int GetCoresLimitForNode(out bool hasLicenseLimits)
+        public int GetCoresLimitForNode(out LicenseLimits licenseLimits)
         {
-            var licenseLimits = _serverStore.LoadLicenseLimits();
+            licenseLimits = _serverStore.LoadLicenseLimits();
             if (licenseLimits?.NodeLicenseDetails != null &&
                 licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
             {
-                hasLicenseLimits = true;
                 return Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
             }
 
             // we don't have any license limits for this node, let's put our info to update it
             Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
-            hasLicenseLimits = false;
             return Math.Min(ProcessorInfo.ProcessorCount, _licenseStatus.MaxCores);
         }
 
@@ -759,14 +757,14 @@ namespace Raven.Server.Commercial
             _serverStore.NotificationCenter.Add(alert);
         }
 
-        private void SetAffinity(Process process, int cores, bool addPerformanceHint, bool hasLicenseLimits)
+        private void SetAffinity(Process process, int cores, bool addPerformanceHint, LicenseLimits licenseLimits)
         {
             if (cores > ProcessorInfo.ProcessorCount)
                 cores = ProcessorInfo.ProcessorCount;
 
             try
             {
-                if (ShouldIgnoreProcessorAffinityChanges(cores, hasLicenseLimits))
+                if (ShouldIgnoreProcessorAffinityChanges(cores, licenseLimits))
                     return;
 
                 var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
@@ -843,12 +841,12 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static bool ShouldIgnoreProcessorAffinityChanges(int cores, bool hasLicenseLimits)
+        private bool ShouldIgnoreProcessorAffinityChanges(int cores, LicenseLimits licenseLimits)
         {
             if (IgnoreProcessorAffinityChanges == false)
                 return false;
 
-            if (hasLicenseLimits == false)
+            if (licenseLimits == null)
             {
                 // at server startup we are setting the amount of cores in the default license (3)
                 return false;
@@ -857,7 +855,12 @@ namespace Raven.Server.Commercial
             if (ProcessorInfo.ProcessorCount == cores)
                 return false;
 
-            Console.WriteLine($"Processor affinity was set and not using all available cores. Requested cores: {cores}. Number of cores on the machine: {ProcessorInfo.ProcessorCount}");
+            Console.WriteLine($"Processor affinity was set and not using all available cores. " +
+                              $"Requested cores: {cores}. " +
+                              $"Number of cores on the machine: {ProcessorInfo.ProcessorCount}. " +
+                              $"License limits: {string.Join(", ", licenseLimits.NodeLicenseDetails.Select(x => $"{x.Key}: {x.Value.UtilizedCores}/{x.Value.NumberOfCores}"))}. " + 
+                              $"Total utilized cores: {licenseLimits.TotalUtilizedCores}. " +
+                              $"Max licensed cores: {_licenseStatus.MaxCores}");
             return true;
 
         }

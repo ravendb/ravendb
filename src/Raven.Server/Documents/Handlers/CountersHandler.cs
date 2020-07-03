@@ -42,6 +42,7 @@ namespace Raven.Server.Documents.Handlers
             private readonly bool _replyWithAllNodesValues;
             private readonly bool _fromEtl;
             private readonly List<CounterOperation> _list;
+
             public ExecuteCounterBatchCommand(DocumentDatabase database, CounterBatch counterBatch)
             {
                 _database = database;
@@ -208,7 +209,7 @@ namespace Raven.Server.Documents.Handlers
                         return null;
 
                     // this is fine, we explicitly support
-                    // setting the flag if we are in conflicted state is 
+                    // setting the flag if we are in conflicted state is
                     // done by the conflict resolver
 
                     // avoid loading same document again, we validate write using the metadata instance
@@ -336,7 +337,6 @@ namespace Raven.Server.Documents.Handlers
                         }
                     };
                 }
-
             }
 
             public void RegisterForDisposal(IDisposable data)
@@ -427,7 +427,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     if (_counterUpdates.TryGetValue(counterGroupDetail.DocumentId, out doc))
                         return;
-                    
+
                     try
                     {
                         doc = _database.DocumentsStorage.Get(context, counterGroupDetail.DocumentId,
@@ -447,7 +447,7 @@ namespace Raven.Server.Documents.Handlers
                     catch (DocumentConflictException)
                     {
                         // this is fine, we explicitly support
-                        // setting the flag if we are in conflicted state is 
+                        // setting the flag if we are in conflicted state is
                         // done by the conflict resolver
 
                         // avoid loading same document again, we validate write using the metadata instance
@@ -537,7 +537,6 @@ namespace Raven.Server.Documents.Handlers
                     }, docId);
 
                     return values;
-
                 }
                 finally
                 {
@@ -571,7 +570,6 @@ namespace Raven.Server.Documents.Handlers
                 _resetContext = null;
 
                 _result.Counters.ErroredCount += ErrorCount;
-
             }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
@@ -622,7 +620,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return result;
-
         }
 
         [RavenAction("/databases/*/counters", "POST", AuthorizationStatus.ValidUser)]
@@ -668,15 +665,11 @@ namespace Raven.Server.Documents.Handlers
         private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId,
             string counterName, bool addFullValues, CountersDetail result)
         {
-            if (string.IsNullOrEmpty(counterName))
-            {
-                result.Counters.Add(null);
-                return;
-            }
-
             long value = 0;
             long etag = 0;
+            result.Counters ??= new List<CounterDetail>();
             Dictionary<string, long> fullValues = null;
+
             if (addFullValues)
             {
                 fullValues = new Dictionary<string, long>();
@@ -694,19 +687,26 @@ namespace Raven.Server.Documents.Handlers
 
                     fullValues[partialValue.ChangeVector] = partialValue.PartialValue;
                 }
+
+                if (fullValues.Count == 0)
+                {
+                    result.Counters.Add(null);
+                    return;
+                }
             }
             else
             {
                 var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName);
+
                 if (v == null)
+                {
+                    result.Counters.Add(null);
                     return;
+                }
 
                 value = v.Value.Value;
                 etag = v.Value.Etag;
             }
-
-            if (result.Counters == null)
-                result.Counters = new List<CounterDetail>();
 
             result.Counters.Add(new CounterDetail
             {

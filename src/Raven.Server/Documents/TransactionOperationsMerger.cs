@@ -849,7 +849,7 @@ namespace Raven.Server.Documents
         private bool _alreadyListeningToPreviousOperationEnd;
 
         private PendingOperations ExecutePendingOperationsInTransaction(
-            List<MergedTransactionCommand> pendingOps,
+            List<MergedTransactionCommand> executedOps,
             DocumentsOperationContext context,
             Task previousOperation, ref PerformanceMetrics.DurationMeasurement meter)
         {
@@ -868,7 +868,7 @@ namespace Raven.Server.Documents
                 if (TryGetNextOperation(previousOperation, out MergedTransactionCommand op, ref meter) == false)
                     break;
 
-                pendingOps.Add(op);
+                executedOps.Add(op);
 
                 var llt = context.Transaction.InnerTransaction.LowLevelTransaction;
 
@@ -925,11 +925,12 @@ namespace Raven.Server.Documents
                 break;
             } while (true);
 
-            var status = GetPendingOperationsStatus(context, pendingOps.Count == 0);
+            var currentOperationsCount = _operations.Count;
+            var status = GetPendingOperationsStatus(context, currentOperationsCount == 0);
             if (_log.IsInfoEnabled)
             {
                 var opType = previousOperation == null ? string.Empty : "(async) ";
-                _log.Info($"Merged {pendingOps.Count:#,#;;0} operations in {sp.Elapsed} {opType}with {_operations.Count:#,#;;0} operations remaining. Status: {status}");
+                _log.Info($"Merged {executedOps.Count:#,#;;0} operations in {sp.Elapsed} {opType}with {currentOperationsCount:#,#;;0} operations remaining. Status: {status}");
             }
             return status;
         }
