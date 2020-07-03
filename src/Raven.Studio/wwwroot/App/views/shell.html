@@ -26,7 +26,7 @@
 <aside class="top-alert" data-bind="visible: developerLicense">
     Developer License - Not for Production Use
  </aside>
-<nav class="navbar">
+<nav class="navbar" data-bind="css: { 'collapse-menu': collapseMenu() }">
     <div class="navbar-header" data-bind="style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
         <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
     </div>
@@ -270,7 +270,8 @@
 
 <div class="prime-container">
     <nav id="main-menu" class="main-menu"
-         data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }, style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
+         data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }, style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }, css: { 'collapse-menu': collapseMenu() }">
+        
         <div class="level-0"
              data-level="0"
              data-level-name="Menu"
@@ -280,6 +281,12 @@
                 <!-- /ko -->
             </ul>
         </div>
+        <button class="btn-collapse-menu" data-bind="click: $root.toggleMenu">
+            <i class="icon-arrow-left"></i> Collapse Menu
+        </button>
+        <button class="btn-expand-menu" data-bind="click: $root.toggleMenu">
+            <i class="icon-arrow-right"></i>
+        </button>
     </nav>
     <div id="page-host-root" class="content-container">
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
