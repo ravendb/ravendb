@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Session
 
                     if (details.Counters?.Count > 0)
                     {
-                        value = details.Counters[0].TotalValue;
+                        value = details.Counters[0]?.TotalValue;
                     }
 
                 }

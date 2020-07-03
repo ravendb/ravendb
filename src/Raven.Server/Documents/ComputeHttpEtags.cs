@@ -59,7 +59,7 @@ namespace Raven.Server.Documents
                     HashNumber(state, countersResult.Value.Count);
                     foreach (var counterDetail in countersResult.Value)
                     {
-                        HashNumber(state, counterDetail.Etag);
+                        HashNumber(state, counterDetail?.Etag ?? 0);
                     }
                 }
             }

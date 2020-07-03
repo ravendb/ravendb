@@ -1730,7 +1730,20 @@ namespace Raven.Client.Http
 
         public static HttpClientHandler CreateHttpMessageHandler(X509Certificate2 certificate, bool setSslProtocols, bool useCompression, bool hasExplicitlySetCompressionUsage = false)
         {
-            var httpMessageHandler = new HttpClientHandler { MaxConnectionsPerServer = DefaultConnectionLimit };
+            HttpClientHandler httpMessageHandler;
+
+            try
+            {
+                httpMessageHandler = new HttpClientHandler
+                {
+                    MaxConnectionsPerServer = DefaultConnectionLimit
+                };
+            }
+            catch (NotImplementedException)
+            {
+                httpMessageHandler = new HttpClientHandler();
+            }
+
             if (httpMessageHandler.SupportsAutomaticDecompression)
             {
                 httpMessageHandler.AutomaticDecompression =

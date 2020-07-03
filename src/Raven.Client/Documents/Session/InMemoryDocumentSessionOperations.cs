@@ -1521,7 +1521,8 @@ more responsive application.
 
             foreach (BlittableJsonReaderObject counterBlittable in counters)
             {
-                if (counterBlittable.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||
+                if (counterBlittable == null ||
+                    counterBlittable.TryGet(nameof(CounterDetail.CounterName), out string name) == false ||
                     counterBlittable.TryGet(nameof(CounterDetail.TotalValue), out long value) == false)
                     continue;
 

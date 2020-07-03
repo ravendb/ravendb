@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(CountersSchema.FixedSizeIndexes[AllCountersEtagSlice], etag, 0))
             {
-                var countersItem  = CreateReplicationBatchItem(context, ref result.Reader);
+                var countersItem = CreateReplicationBatchItem(context, ref result.Reader);
 
                 if (caseInsensitiveNames)
                 {
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents
                 }
 
                 // 4.2 replication destination
-                // need to change the CounterGroup document to match 4.2 format  
+                // need to change the CounterGroup document to match 4.2 format
                 var converted = ConvertToCaseSensitiveFormat(context, countersItem);
                 yield return converted;
             }
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents
                 if (LazyStringValueComparer.Instance.Equals(prop.Name, originalName))
                     continue;
 
-                // remove the lower-cased property, use original casing instead  
+                // remove the lower-cased property, use original casing instead
                 counterValues.Modifications.Remove(prop.Name);
                 counterValues.Modifications[originalName] = prop.Value;
             }
@@ -354,11 +354,10 @@ namespace Raven.Server.Documents
 
                         if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                             ThrowMissingProperty(counterKeySlice, CounterNames);
-                        
 
                         if (data.TryGet(CounterNames, out BlittableJsonReaderObject originalNames) == false)
                             ThrowMissingProperty(counterKeySlice, CounterNames);
-                        
+
                         var counterEtag = _documentsStorage.GenerateNextEtag();
 
                         counters.TryGetMember(lowerName, out object existingCounter);
@@ -788,7 +787,6 @@ namespace Raven.Server.Documents
                             // 4.2 source
                             // need to create @names array and to lower the property names in 'sourceCounters'
 
-
                             var propDetails = new BlittableJsonReaderObject.PropertyDetails();
                             sourceCounters.Modifications = new DynamicJsonValue(sourceCounters);
 
@@ -874,9 +872,9 @@ namespace Raven.Server.Documents
 
                                     putCountersData = new PutCountersData
                                     {
-                                        Data = data, 
-                                        DbIdsHolder = new DbIdsHolder(dbIds), 
-                                        ChangeVector = existingChangeVector, 
+                                        Data = data,
+                                        DbIdsHolder = new DbIdsHolder(dbIds),
+                                        ChangeVector = existingChangeVector,
                                         Modified = false
                                     };
                                 }
@@ -1179,7 +1177,7 @@ namespace Raven.Server.Documents
                     if (string.Equals(current, loweredName) == false)
                         continue;
 
-                    // already added a new counter with the same name but under a different casing 
+                    // already added a new counter with the same name but under a different casing
                     shouldAdd = false;
                     break;
                 }
@@ -1390,7 +1388,7 @@ namespace Raven.Server.Documents
 
             return tx.OpenTable(CountersSchema, tableName);
         }
-        
+
         public IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, string docId)
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
@@ -1423,13 +1421,13 @@ namespace Raven.Server.Documents
                     ThrowMissingProperty(counterGroup.Key, Values);
 
                 all ??= new List<LazyStringValue>();
-                
+
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
                 for (var i = 0; i < names.Count; i++)
                 {
                     names.GetPropertyByIndex(i, ref prop);
                     if (counterValues.TryGet(prop.Name, out object existing) == false ||
-                        existing is LazyStringValue) // skip names of 'dead' counters 
+                        existing is LazyStringValue) // skip names of 'dead' counters
                         continue;
                     var originalName = GetLazyStringCounterName(prop.Name, prop.Value);
                     all.Add(originalName);
@@ -1451,7 +1449,8 @@ namespace Raven.Server.Documents
 
         public CounterValue? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
         {
-            if (TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
+            if (string.IsNullOrEmpty(counterName) ||
+                TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
                 return null;
 
             return new CounterValue(InternalGetCounterValue(blob, docId, counterName), etag);
@@ -1495,6 +1494,9 @@ namespace Raven.Server.Documents
 
         public IEnumerable<CounterPartialValue> GetCounterPartialValues(DocumentsOperationContext context, string docId, string counterName)
         {
+            if (string.IsNullOrEmpty(counterName))
+                yield break;
+
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
@@ -1592,7 +1594,7 @@ namespace Raven.Server.Documents
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
                     return null;
 
-                var lowered = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length); // lowered cased name 
+                var lowered = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length); // lowered cased name
                 if (counters.TryGetMember(lowered, out object counterToDelete) == false)
                     return null; // not found
                 if (counterToDelete is LazyStringValue) // already deleted
@@ -1711,7 +1713,7 @@ namespace Raven.Server.Documents
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, NonPersistentDocumentFlags nonPersistentDocumentFlags)
         {
             var newData = ApplyCounterUpdatesToMetadata(context, document.Data, docId, countersToAdd, countersToRemove, ref document.Flags);
-            if (newData == null) 
+            if (newData == null)
                 return null;
 
             var putResult = _documentDatabase.DocumentsStorage.Put(context, docId, expectedChangeVector: null, newData, flags: document.Flags, nonPersistentFlags: nonPersistentDocumentFlags);
@@ -1742,7 +1744,7 @@ namespace Raven.Server.Documents
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata);
                     metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
-                    data.Modifications = new DynamicJsonValue(data) {[Constants.Documents.Metadata.Key] = metadata};
+                    data.Modifications = new DynamicJsonValue(data) { [Constants.Documents.Metadata.Key] = metadata };
                 }
             }
             else
@@ -1751,11 +1753,11 @@ namespace Raven.Server.Documents
                 data.Modifications = new DynamicJsonValue(data);
                 if (metadata == null)
                 {
-                    data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue {[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)};
+                    data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue { [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters) };
                 }
                 else
                 {
-                    metadata.Modifications = new DynamicJsonValue(metadata) {[Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters)};
+                    metadata.Modifications = new DynamicJsonValue(metadata) { [Constants.Documents.Metadata.Counters] = new DynamicJsonArray(counters) };
                     data.Modifications[Constants.Documents.Metadata.Key] = metadata;
                 }
             }

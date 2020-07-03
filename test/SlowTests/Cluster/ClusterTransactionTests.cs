@@ -21,6 +21,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -1258,6 +1259,44 @@ namespace SlowTests.Cluster
 
                     var compareExchangeValue = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<List<string>>(id);
                     Assert.True(value.SequenceEqual(compareExchangeValue.Value));
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData(" ")]
+        [InlineData(@"
+")]
+        public async Task ClusterWideTransaction_WhenStoreDocWithEmptyStringId_ShouldThrowInformativeError(string id)
+        {
+            var e = await Assert.ThrowsAnyAsync<RavenException>(async () =>
+            {
+                using var store = GetDocumentStore();
+                using var session = store.OpenAsyncSession(new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide
+                });
+                
+                var entity = new User {Id = id};
+                await session.StoreAsync(entity);
+                await session.SaveChangesAsync();
+                WaitForUserToContinueTheTest(store);
+            });
+            Assert.True(ContainsRachisException(e));
+
+            static bool ContainsRachisException(Exception e)
+            {
+                while (true)
+                {
+                    if (e.ToString().Contains(nameof(RachisApplyException)))
+                        return true;
+                    if (e is AggregateException ae) 
+                        return ae.InnerExceptions.Any(ContainsRachisException);
+
+                    if (e.InnerException == null) 
+                        return false;
+                    e = e.InnerException;
                 }
             }
         }
