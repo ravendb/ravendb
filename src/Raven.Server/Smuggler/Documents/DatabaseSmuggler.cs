@@ -126,31 +126,31 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public static void EnsureProcessed(SmugglerResult result)
+        public static void EnsureProcessed(SmugglerResult result, bool skipped = true)
         {
-            EnsureStepProcessed(result.DatabaseRecord);
-            EnsureStepProcessed(result.Documents);
-            EnsureStepProcessed(result.Documents.Attachments);
-            EnsureStepProcessed(result.RevisionDocuments);
-            EnsureStepProcessed(result.RevisionDocuments.Attachments);
-            EnsureStepProcessed(result.Counters);
-            EnsureStepProcessed(result.Tombstones);
-            EnsureStepProcessed(result.Conflicts);
-            EnsureStepProcessed(result.Indexes);
-            EnsureStepProcessed(result.Identities);
-            EnsureStepProcessed(result.CompareExchange);
-            EnsureStepProcessed(result.CompareExchangeTombstones);
-            EnsureStepProcessed(result.Subscriptions);
-            EnsureStepProcessed(result.TimeSeries);
-        }
+            EnsureStepProcessed(result.DatabaseRecord, skipped);
+            EnsureStepProcessed(result.Documents, skipped);
+            EnsureStepProcessed(result.Documents.Attachments, skipped);
+            EnsureStepProcessed(result.RevisionDocuments, skipped);
+            EnsureStepProcessed(result.RevisionDocuments.Attachments, skipped);
+            EnsureStepProcessed(result.Counters, skipped);
+            EnsureStepProcessed(result.Tombstones, skipped);
+            EnsureStepProcessed(result.Conflicts, skipped);
+            EnsureStepProcessed(result.Indexes, skipped);
+            EnsureStepProcessed(result.Identities, skipped);
+            EnsureStepProcessed(result.CompareExchange, skipped);
+            EnsureStepProcessed(result.CompareExchangeTombstones, skipped);
+            EnsureStepProcessed(result.Subscriptions, skipped);
+            EnsureStepProcessed(result.TimeSeries, skipped);
 
-        private static void EnsureStepProcessed(SmugglerProgressBase.Counts counts)
-        {
-            if (counts.Processed)
-                return;
+            static void EnsureStepProcessed(SmugglerProgressBase.Counts counts, bool skipped)
+            {
+                if (counts.Processed)
+                    return;
 
-            counts.Processed = true;
-            counts.Skipped = true;
+                counts.Processed = true;
+                counts.Skipped = skipped;
+            }
         }
 
         private void ProcessType(DatabaseItemType type, SmugglerResult result, BuildVersionType buildType, bool ensureStepsProcessed = true)
