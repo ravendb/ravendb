@@ -1,9 +1,19 @@
-﻿using Lucene.Net.Documents;
+﻿using System.Collections;
+using System.Collections.Generic;
+using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Workers;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Results;
+using Raven.Server.Documents.Queries.Timings;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -36,7 +46,6 @@ namespace FastTests.Server.Documents.Indexing.Lucene
 
         private readonly JsonOperationContext _ctx;
         private readonly ConcurrentSet<BlittableJsonReaderObject> _docs = new ConcurrentSet<BlittableJsonReaderObject>();
-        private readonly ConcurrentSet<LazyStringValue> _lazyStrings = new ConcurrentSet<LazyStringValue>();
 
         public LuceneDocumentConverterTests(ITestOutputHelper output) : base(output)
         {
@@ -46,7 +55,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Returns_null_value_if_property_is_null()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -71,7 +80,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Returns_empty_string_value_if_property_has_empty_string()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -96,7 +105,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_string_value()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -121,7 +130,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Reuses_cached_document_instance()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -155,7 +164,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_numeric_fields()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -200,7 +209,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_nested_string_value()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -228,7 +237,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_string_value_nested_inside_collection()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -269,7 +278,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_string_value_nested_inside_double_nested_collections()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -327,7 +336,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_complex_value()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -389,7 +398,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_array_value()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -419,7 +428,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         [Fact]
         public void Conversion_of_array_having_complex_values()
         {
-            _sut = new LuceneDocumentConverter(null, new IndexField[]
+            _sut = new LuceneDocumentConverter(new FakeIndex(), new IndexField[]
             {
                 new IndexField
                 {
@@ -483,6 +492,49 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _ctx.Dispose();
 
             base.Dispose();
+        }
+
+        public class FakeIndex : Index
+        {
+            public FakeIndex()
+                : base(IndexType.Map, IndexSourceType.Documents, new AutoMapIndexDefinition("Orders", new AutoIndexField[0]))
+            {
+            }
+
+            public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+            {
+                throw new System.NotImplementedException();
+            }
+
+            public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)
+            {
+                throw new System.NotImplementedException();
+            }
+
+            public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
+            {
+                throw new System.NotImplementedException();
+            }
+
+            public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+            {
+                throw new System.NotImplementedException();
+            }
+
+            public override int HandleMap(IndexItem indexItem, IEnumerable mapResults, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
+            {
+                throw new System.NotImplementedException();
+            }
+
+            public override void SaveLastState()
+            {
+                throw new System.NotImplementedException();
+            }
+
+            protected override IIndexingWork[] CreateIndexWorkExecutors()
+            {
+                throw new System.NotImplementedException();
+            }
         }
     }
 }
