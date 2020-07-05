@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Platform;
@@ -702,6 +704,52 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }, 0);
 
                 Assert.Equal(0, value);
+            }
+        }
+
+        [Fact]
+        public async Task CanStoreAndEditServerWideBackupForIdleDatabase()
+        {
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Databases.MaxIdleTime)] = "10",
+                    [RavenConfiguration.GetKey(x => x.Databases.FrequencyToCheckForIdle)] = "3",
+                    [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"
+                }
+            });
+            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false }))
+            {
+                var fullFreq = "0 2 1 1 *";
+                var incFreq = "0 2 * * 0";
+                var putConfiguration = new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = fullFreq,
+                    IncrementalBackupFrequency = incFreq,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = "test/folder"
+                    }
+                };
+
+                Assert.Equal(1, WaitForValue(() => server.ServerStore.IdleDatabases.Count, 1, timeout: 60000, interval: 1000));
+
+                var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                var serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+                Assert.NotNull(serverWideConfiguration);
+                Assert.Equal(fullFreq, serverWideConfiguration.FullBackupFrequency);
+                Assert.Equal(incFreq, serverWideConfiguration.IncrementalBackupFrequency);
+                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
+
+                // update the backup configuration
+                putConfiguration.FullBackupFrequency = "0 2 * * 0";
+
+                result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+                serverWideConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+                Assert.Equal(incFreq, serverWideConfiguration.FullBackupFrequency);
+                Assert.Equal(incFreq, serverWideConfiguration.IncrementalBackupFrequency);
+                Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
             }
         }
 
