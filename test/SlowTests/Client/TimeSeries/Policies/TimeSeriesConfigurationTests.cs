@@ -283,7 +283,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }
                 };
 
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
+                Assert.Contains("The aggregation time of the policy 'By364DaysFor5Years' (364 days) must be divided by the aggregation time of 'By27DaysFor1Year' (27 days) without a reminder", ex.Message);
             }
         }
 
@@ -563,7 +564,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             {
                 var p1 = new TimeSeriesPolicy("BySecond",TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds",TimeValue.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy("By3Seconds",TimeValue.FromSeconds(3));
+                var p3 = new TimeSeriesPolicy("By4Seconds",TimeValue.FromSeconds(4));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -589,7 +590,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     for (int i = 0; i < 100; i++)
                     {
                         session.TimeSeriesFor("users/karmel", "Heartrate")
-                            .Append(baseline.AddSeconds(0.3 * i), new[] {29d * i}, "watches/fitbit");
+                            .Append(baseline.AddSeconds(0.4 * i), new[] {29d * i}, "watches/fitbit");
                     }
                     session.SaveChanges();
                 }
@@ -610,7 +611,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(ts1.Count / 2, ts2.Count);
 
                     var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(ts1.Count / 3, ts3.Count);
+                    Assert.Equal(ts1.Count / 4, ts3.Count);
                 }
             }
         }
@@ -665,7 +666,7 @@ namespace SlowTests.Client.TimeSeries.Policies
             {
                 var p1 = new TimeSeriesPolicy("BySecond",TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds",TimeValue.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy("By3Seconds",TimeValue.FromSeconds(3));
+                var p3 = new TimeSeriesPolicy("By4Seconds",TimeValue.FromSeconds(4));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -724,7 +725,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(10, ts2.Count);
 
                     var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(7, ts3.Count);
+                    Assert.Equal(5, ts3.Count);
                 }
             }
         }
@@ -738,7 +739,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 var p1 = new TimeSeriesPolicy("BySecond",TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds",TimeValue.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy("By3Seconds",TimeValue.FromSeconds(3));
+                var p3 = new TimeSeriesPolicy("By4Seconds",TimeValue.FromSeconds(4));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -792,7 +793,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(10, ts2.Count);
 
                     var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(7, ts3.Count);
+                    Assert.Equal(5, ts3.Count);
                 }
 
                 using (var session = store.OpenSession())
@@ -819,7 +820,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(10, ts2.Count);
 
                     var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(7, ts3.Count);
+                    Assert.Equal(5, ts3.Count);
                 }
 
             }
@@ -834,7 +835,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 var p1 = new TimeSeriesPolicy("BySecond",TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds",TimeValue.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy("By3Seconds",TimeValue.FromSeconds(3));
+                var p3 = new TimeSeriesPolicy("By4Seconds",TimeValue.FromSeconds(4));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -886,7 +887,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(10, ts2.Count);
 
                     var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(7, ts3.Count);
+                    Assert.Equal(5, ts3.Count);
                 }
             }
         }
@@ -912,7 +913,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 var p1 = new TimeSeriesPolicy("BySecond",TimeValue.FromSeconds(1));
                 var p2 = new TimeSeriesPolicy("By2Seconds",TimeValue.FromSeconds(2));
-                var p3 = new TimeSeriesPolicy("By3Seconds",TimeValue.FromSeconds(3));
+                var p3 = new TimeSeriesPolicy("By4Seconds",TimeValue.FromSeconds(4));
 
                 var config = new TimeSeriesConfiguration
                 {
@@ -947,7 +948,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(10, ts2.Count);
 
                     var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
-                    Assert.Equal(7, ts3.Count);
+                    Assert.Equal(5, ts3.Count);
                 }
             }
         }
@@ -1290,8 +1291,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 var p1 = new TimeSeriesPolicy("By1",TimeValue.FromSeconds(1), raw.RetentionTime * 2);
                 var p2 = new TimeSeriesPolicy("By2",TimeValue.FromSeconds(2), raw.RetentionTime * 3);
-                var p3 = new TimeSeriesPolicy("By3",TimeValue.FromSeconds(3), raw.RetentionTime * 4);
-                var p4 = new TimeSeriesPolicy("By4",TimeValue.FromSeconds(4), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By4",TimeValue.FromSeconds(4), raw.RetentionTime * 4);
+                var p4 = new TimeSeriesPolicy("By8",TimeValue.FromSeconds(8), raw.RetentionTime * 5);
 
                 var config = new TimeSeriesConfiguration
                 {

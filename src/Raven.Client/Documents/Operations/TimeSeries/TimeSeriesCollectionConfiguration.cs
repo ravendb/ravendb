@@ -57,6 +57,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                         $"The policy '{prev.Name}' has a retention time of '{prev.RetentionTime}' " +
                         $"but should be aggregated by policy '{policy.Name}' with the aggregation time frame of {policy.AggregationTime}");
 
+                if (index > 0 && // first policy always legit, since the source is the raw data
+                    prev.AggregationTime.IsMultiple(policy.AggregationTime) == false)
+                    throw new InvalidOperationException($"The aggregation time of the policy '{policy.Name}' ({policy.AggregationTime}) must be divided by the aggregation time of '{prev.Name}' ({prev.AggregationTime}) without a reminder.");
+
                 _policyIndexCache[policy.Name] = index + 1;
             }
         }

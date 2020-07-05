@@ -95,9 +95,14 @@ namespace Sparrow
 
         public bool IsMultiple(TimeValue multiple)
         {
-            if (Unit != multiple.Unit)
-                return false;
-            return multiple.Value % Value == 0;
+            if (Unit == multiple.Unit) 
+                return multiple.Value % Value == 0;
+
+            if (multiple.Unit == TimeValueUnit.Month)
+                return SecondsPerDay % Value == 0; // month can be calculated for every unit that can rollup into a day
+
+            return false;
+
         }
 
         private void Append(StringBuilder builder, int value, string singular)

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
@@ -459,39 +460,41 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (_timeseriesStack.TryPop(out var previous))
                 {
-                    // prev start doesn't overlap with the first aggregation frame
-                    if (previous.Start <= stats.Start.Add(policy.AggregationTime))
+                    if (TryFitCurrentPolicy() == false)
                     {
-                        if (policy.AggregationTime.IsMultiple(_groupBy) == false)
-                        {
-                            _timeseriesStack.Push(previous);
-                            continue; // we prefer the higher resolution
-                        }
-
-                        previous.Start = stats.End.Add(policy.AggregationTime);
-                    }
-                    else
-                    {
-                        if (previous.Start <= _from)
-                        {
-                            // previous is in higher resolution and covers the requested range
-                            _timeseriesStack.Push(previous);
-                            continue;
-                        }
-
-                        // prev start overlap with the first aggregation frame
-                        // need to adjust to avoid counting same points twice
-                        var x = policy.AggregationTime.TimesInInterval(stats.Start, previous.Start);
-                        if (x % policy.AggregationTime.Value != 0)
-                            x++;
-
-                        previous.Start = stats.Start.Add((int)x * policy.AggregationTime);
+                        _timeseriesStack.Push(previous);
+                        continue;
                     }
 
                     AlignStartPoints(previous);
                 }
 
                 _timeseriesStack.Push((stats.Start, name));
+
+                bool TryFitCurrentPolicy()
+                {
+                    var foundEarlierStart = previous.Start > stats.Start;
+                    var isMultiple = policy.AggregationTime.IsMultiple(_groupBy);
+
+                    if (isMultiple)
+                    {
+                        previous.Start = stats.End.Add(policy.AggregationTime);
+                        return true;
+                    }
+                    if (foundEarlierStart)
+                    {
+                        // previous is in higher resolution and covers the requested range
+                        if (previous.Start <= _from)
+                            return false;
+
+                        // prev start overlap with the first aggregation frame
+                        // need to adjust to avoid counting same points twice
+                        var x = (int)policy.AggregationTime.TimesInInterval(stats.Start, previous.Start) + 1;
+                        previous.Start = stats.Start.Add(x * policy.AggregationTime);
+                        return true;
+                    }
+                    return false; // we prefer the higher resolution and it can't have points newer then prev
+                }
             }
         }
 
