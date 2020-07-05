@@ -150,7 +150,7 @@ class timeSeries extends viewModelBase {
                                   </li><br>
                                   <li>
                                      Each entry in such auto-generated time series has the following values:<br>
-                                     <i>First, Last, Min, Max, Sum, Count</i><br>
+                                     <i>First, Last, Min, Max, Sum, Count</i> (per each original raw value)<br>
                                      which is rolled-up data <strong>based only on the Aggregation Time Frame defined by the policy!</strong>
                                  </li><br>
                                  <li>
