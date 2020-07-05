@@ -53,6 +53,9 @@ class editTimeSeries extends viewModelBase {
     deleteButtonText: KnockoutComputed<string>;
     isAggregation: KnockoutComputed<boolean>;
     
+    isPoliciesDefined = ko.observable<boolean>(false);
+    hasMoreThanFiveRawValues = ko.observable<boolean>(false);
+        
     namedValuesCache: {[key: string]: Record<string, string[]>} = {};
 
     private gridController = ko.observable<virtualGridController<Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry>>();
@@ -278,6 +281,8 @@ class editTimeSeries extends viewModelBase {
         }
         
         const valuesCount = _.max(result.items.map(x => x.Values.length));
+        this.hasMoreThanFiveRawValues(this.isPoliciesDefined() && !this.isAggregation() && valuesCount > 5)
+        
         if (valuesCount > this.columnsCacheInfo.valuesCount) {
             this.columnsCacheInfo.valuesCount = valuesCount;
             dirty = true;
@@ -333,6 +338,7 @@ class editTimeSeries extends viewModelBase {
             .done(configuration => {
                 if (configuration) {
                     this.namedValuesCache = configuration.NamedValues || {};
+                    this.isPoliciesDefined(!_.isEmpty(configuration.Collections));
                 }
             });
         
