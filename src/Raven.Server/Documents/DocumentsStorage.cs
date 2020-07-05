@@ -38,7 +38,7 @@ namespace Raven.Server.Documents
     {
         private static readonly Slice DocsSlice;
         public static readonly Slice CollectionEtagsSlice;
-        private static readonly Slice AllDocsEtagsSlice;
+        internal static readonly Slice AllDocsEtagsSlice;
         private static readonly Slice TombstonesSlice;
         public static readonly Slice CollectionsSlice;
         private static readonly Slice LastReplicatedEtagsSlice;
@@ -1325,7 +1325,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
+        internal Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr, DocumentFields fields = DocumentFields.All, bool skipValidationInDebug = false)
         {
             var document = ParseDocument(context, ref tvr, fields);
 #if DEBUG

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -94,6 +95,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 // finished processing all counter groups for current document
                                 DeleteProcessedEntries(step, toDeleteByCollection);
                                 PutCounterGroups(step, batch, context);
+                                UpdateDocumentCounters(step, context, currentDocId);
 
                                 if (processedInCurrentTx >= NumberOfCounterGroupsToMigrateInSingleTransaction)
                                 {
@@ -126,14 +128,11 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         continue;
                     }
 
-                    if (toDeleteByCollection.Count > 0)
-                    {
-                        DeleteProcessedEntries(step, toDeleteByCollection);
-                    }
-
                     if (batch.Counters.Count > 0)
                     {
+                        DeleteProcessedEntries(step, toDeleteByCollection);
                         PutCounterGroups(step, batch, context);
+                        UpdateDocumentCounters(step, context, currentDocId);
                     }
 
                     done = true;
@@ -159,6 +158,86 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     RevisionsStorage.RevisionsSchema.SerializeSchemaIntoTableTree(revisionsTree);
             }
         }
+
+        private static unsafe void UpdateDocumentCounters(UpdateStep step, DocumentsOperationContext context, string docId)
+        {
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerDocId))
+            {
+                var docsTable = new Table(DocsSchema, step.ReadTx);
+                if (docsTable.ReadByKey(lowerDocId, out var tvr) == false) 
+                    return; // document doesn't exists 
+                
+                var tableId = tvr.Id;
+                var counterNames = step.DocumentsStorage.CountersStorage.GetCountersForDocumentList(context, step.WriteTx, docId);
+                var doc = step.DocumentsStorage.TableValueToDocument(context, ref tvr, skipValidationInDebug: true);
+                if (doc.TryGetMetadata(out var metadata) == false)
+                {
+                    if (counterNames.Count > 0)
+                    {
+                        doc.Flags |= DocumentFlags.HasCounters;
+
+                        var dvj = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.Counters] = counterNames
+                        };
+                        doc.Data.Modifications = new DynamicJsonValue(doc.Data)
+                        {
+                            [Constants.Documents.Metadata.Key] = dvj
+                        };
+
+                    }
+                    else
+                    {
+                        doc.Flags &= ~DocumentFlags.HasCounters;
+                    }
+                }
+                else
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata);
+                    if (counterNames.Count == 0)
+                    {
+                        doc.Flags &= ~DocumentFlags.HasCounters;
+                        metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    }
+                    else
+                    {
+                        doc.Flags |= DocumentFlags.HasCounters;
+                        metadata.Modifications[Constants.Documents.Metadata.Counters] = counterNames;
+                    }
+
+                    if (metadata.TryGet(Constants.Documents.Metadata.RevisionCounters, out object _))
+                    {
+                        // remove "@counters-snapshot" from metadata
+                        metadata.Modifications.Remove(Constants.Documents.Metadata.RevisionCounters);
+                    }
+                }
+
+                using (doc.Data)
+                {
+                    doc.Data = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
+
+                var collection = CollectionName.GetCollectionName(doc.Data);
+                var collectionName = new CollectionName(collection);
+                var writeTable = step.WriteTx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, doc.Id, out Slice lowerId, out Slice idPtr))
+                using (Slice.From(context.Allocator, doc.ChangeVector, out var cv))
+                using (writeTable.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(lowerId);
+                    tvb.Add(Bits.SwapBytes(doc.Etag));
+                    tvb.Add(idPtr);
+                    tvb.Add(doc.Data.BasePointer, doc.Data.Size);
+                    tvb.Add(cv.Content.Ptr, cv.Size);
+                    tvb.Add(doc.LastModified.Ticks);
+                    tvb.Add((int)doc.Flags);
+                    tvb.Add(doc.TransactionMarker);
+
+                    writeTable.Update(tableId, tvb);
+                }
+            }
+        }
+
 
         private void PutCounterGroups(UpdateStep step, CounterBatchUpdate batch, DocumentsOperationContext context)
         {
