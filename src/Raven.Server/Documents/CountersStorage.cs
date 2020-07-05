@@ -1393,6 +1393,19 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
+            foreach (string c in GetCountersForDocumentInternal(context, docId, table)) 
+                yield return c;
+        }
+        internal IEnumerable<string> GetCountersForDocument(DocumentsOperationContext context, Transaction transaction, string docId)
+        {
+            var table = new Table(CountersSchema, transaction);
+
+            foreach (string c in GetCountersForDocumentInternal(context, docId, table))
+                yield return c;
+        }
+
+        private static IEnumerable<string> GetCountersForDocumentInternal(DocumentsOperationContext context, string docId, Table table)
+        {
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
                 var names = GetCountersOriginalCasing(context, docId, table, key);
@@ -1440,6 +1453,11 @@ namespace Raven.Server.Documents
         public DynamicJsonArray GetCountersForDocumentList(DocumentsOperationContext context, string docId)
         {
             return new DynamicJsonArray(GetCountersForDocument(context, docId));
+        }
+
+        internal DynamicJsonArray GetCountersForDocumentList(DocumentsOperationContext context, Transaction transaction, string docId)
+        {
+            return new DynamicJsonArray(GetCountersForDocument(context, transaction, docId));
         }
 
         internal static BlittableJsonReaderObject GetCounterValuesData(JsonOperationContext context, ref TableValueReader existing)
