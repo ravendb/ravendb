@@ -122,7 +122,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         step.Commit();
                         step.RenewTransactions();
-                        step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
                         currentDocId = null;
                         continue;
                     }
