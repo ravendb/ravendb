@@ -20,7 +20,6 @@ using Voron.Data;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.CountersStorage;
 
-
 namespace Raven.Server.Storage.Schema.Updates.Documents
 {
     public class From42017 : ISchemaUpdate
@@ -60,9 +59,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var countersTree = readTable.GetTree(CountersSchema.Key);
             if (countersTree == null)
                 return true;
-            
+
             step.DocumentsStorage.CountersStorage = new CountersStorage(step.DocumentsStorage.DocumentDatabase, step.WriteTx);
-            
+
             // this schema update uses DocumentsStorage.GenerateNextEtag() so we need to read and set LastEtag in storage
             _dbId = From41016.ReadDbId(step);
             step.DocumentsStorage.InitializeLastEtag(step.ReadTx);
@@ -119,7 +118,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             toDeleteByCollection[counterGroup.Collection] = toDeleteList = new List<long>();
                         }
                         toDeleteList.Add(counterGroup.Etag);
-                        
+
                         processedInCurrentTx++;
                     }
 
@@ -155,9 +154,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 var collectionName = new CollectionName(collection);
                 var tableTree = step.WriteTx.CreateTree(collectionName.GetTableName(CollectionTableType.Documents), RootObjectType.Table);
                 DocumentsStorage.DocsSchema.SerializeSchemaIntoTableTree(tableTree);
-                
+
                 var revisionsTree = step.WriteTx.ReadTree(collectionName.GetTableName(CollectionTableType.Revisions), RootObjectType.Table);
-                if(revisionsTree != null)
+                if (revisionsTree != null)
                     RevisionsStorage.RevisionsSchema.SerializeSchemaIntoTableTree(revisionsTree);
             }
         }
@@ -166,10 +165,10 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerDocId))
             {
-                var docsTable = new Table(DocsSchema, step.ReadTx);
-                if (docsTable.ReadByKey(lowerDocId, out var tvr) == false) 
-                    return; // document doesn't exists 
-                
+                var docsTable = new Table(DocumentsStorage.DocsSchema, step.ReadTx);
+                if (docsTable.ReadByKey(lowerDocId, out var tvr) == false)
+                    return; // document doesn't exists
+
                 var tableId = tvr.Id;
                 var counterNames = step.DocumentsStorage.CountersStorage.GetCountersForDocument(context, step.WriteTx, docId).ToList();
                 var doc = step.DocumentsStorage.TableValueToDocument(context, ref tvr, skipValidationInDebug: true);
@@ -187,7 +186,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         {
                             [Constants.Documents.Metadata.Key] = dvj
                         };
-
                     }
                     else
                     {
@@ -222,7 +220,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                 var collection = CollectionName.GetCollectionName(doc.Data);
                 var collectionName = new CollectionName(collection);
-                var writeTable = step.WriteTx.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+                var writeTable = step.WriteTx.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, doc.Id, out Slice lowerId, out Slice idPtr))
                 using (Slice.From(context.Allocator, doc.ChangeVector, out var cv))
                 using (writeTable.Allocate(out TableValueBuilder tvb))
@@ -240,7 +238,6 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 }
             }
         }
-
 
         private void PutCounterGroups(UpdateStep step, CounterBatchUpdate batch, DocumentsOperationContext context)
         {
@@ -264,7 +261,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     table.DeleteByIndex(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag);
                 }
             }
-            
+
             toDeleteByCollection.Clear();
         }
 
@@ -517,7 +514,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     sourceCounters.Modifications[lowered] = propDetails.Value;
                 }
 
-                sourceData.Modifications = new DynamicJsonValue(sourceData) {[CounterNames] = originalNames};
+                sourceData.Modifications = new DynamicJsonValue(sourceData) { [CounterNames] = originalNames };
             }
 
             BlittableJsonReaderObject data = context.ReadObject(sourceData, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
