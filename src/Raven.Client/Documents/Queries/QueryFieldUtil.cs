@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Queries
                 var c = sb[i];
                 if ( i == 0 && char.IsLetter(c) == false && c != '_' && c != '@')
                 {
-                    sb.Insert(lastTermStart, '"');
+                    sb.Insert(lastTermStart, '\'');
                     needEndQuote = true;
                     continue;
                 }
