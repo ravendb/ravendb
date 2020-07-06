@@ -627,7 +627,7 @@ namespace Raven.Server.Documents.TimeSeries
                             {
                                 var aggregation = Aggregations[index];
                                 var aggIndex = index + (i * Aggregations.Length);
-                                AggregateOnceBySegment(aggregation, aggIndex, val);
+                                AggregateOnceBySegment(aggregation, aggIndex, val, _mode);
                             }
 
                             break;
@@ -635,7 +635,7 @@ namespace Raven.Server.Documents.TimeSeries
                             {
                                 var aggIndex = i % Aggregations.Length;
                                 var aggType = Aggregations[aggIndex];
-                                AggregateOnceBySegment(aggType, i, val);
+                                AggregateOnceBySegment(aggType, i, val, _mode);
                             }
                             break;
                         default:
@@ -644,7 +644,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            private void AggregateOnceBySegment(AggregationType aggregation, int i, StatefulTimestampValue val)
+            private void AggregateOnceBySegment(AggregationType aggregation, int i, StatefulTimestampValue val, AggregationMode mode)
             {
                 switch (aggregation)
                 {
@@ -676,7 +676,11 @@ namespace Raven.Server.Documents.TimeSeries
                     case AggregationType.Count:
                         if (double.IsNaN(Values[i]))
                             Values[i] = 0;
-                        Values[i] += val.Count;
+                        if (mode == AggregationMode.FromAggregated)
+                            Values[i] += val.Sum;
+                        else
+                            Values[i] += val.Count;
+                        
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + aggregation);
@@ -717,7 +721,7 @@ namespace Raven.Server.Documents.TimeSeries
                             Values[i] = 0;
 
                         if (mode == AggregationMode.FromAggregated)
-                            Values[i] = Values[i] + val;
+                            Values[i] += val;
                         else
                             Values[i]++;
                         break;
