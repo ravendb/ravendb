@@ -93,12 +93,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         }
     }
 
-
     public class TimeSeriesReplicationItem : ReplicationBatchItem
     {
-        public Slice Key;
+        public Slice Key; // docId|lower-name|baseline
+        public LazyStringValue Name; // original casing
         public LazyStringValue Collection;
         public TimeSeriesValuesSegment Segment;
+
         public override long AssertChangeVectorSize()
         {
             return sizeof(byte) + // type
@@ -115,7 +116,10 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                    Segment.NumberOfBytes + // data
 
                    sizeof(int) + // size of doc collection
-                   Collection.Size; // doc collection;
+                   Collection.Size + // doc collection
+
+                   sizeof(int) + // size of name
+                   Name.Size; // name;
         }
 
         public override long Size => Segment.NumberOfBytes;
@@ -144,6 +148,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Memory.Copy(pTemp + tempBufferPos, Collection.Buffer, Collection.Size);
                 tempBufferPos += Collection.Size;
 
+                *(int*)(pTemp + tempBufferPos) = Name.Size;
+                tempBufferPos += sizeof(int);
+                Memory.Copy(pTemp + tempBufferPos, Name.Buffer, Name.Size);
+                tempBufferPos += Name.Size;
+
                 stream.Write(tempBuffer, 0, tempBufferPos);
 
                 stats.RecordTimeSeriesOutput(Segment.NumberOfBytes);
@@ -165,6 +174,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             SetLazyStringValueFromString(context, out Collection);
             Debug.Assert(Collection != null);
 
+            SetLazyStringValueFromString(context, out Name);
+            Debug.Assert(Name != null);
         }
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)

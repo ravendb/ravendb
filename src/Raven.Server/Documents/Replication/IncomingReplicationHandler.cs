@@ -1039,9 +1039,9 @@ namespace Raven.Server.Documents.Replication
                                 break;
                             case TimeSeriesReplicationItem segment:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
-                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out var lowerName, out var baseline);
+                                TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out _, out var baseline);
 
-                                if (tss.TryAppendEntireSegment(context, segment, docId, lowerName, baseline))
+                                if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
                                 {
                                     var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, segment.ChangeVector);
@@ -1049,7 +1049,7 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
-                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, lowerName, values, segment.ChangeVector, verifyName: false);
+                                var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, segment.ChangeVector, verifyName: false);
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
                                 break;
