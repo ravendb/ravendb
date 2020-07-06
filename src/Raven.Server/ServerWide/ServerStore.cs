@@ -1086,7 +1086,7 @@ namespace Raven.Server.ServerWide
                 if (Engine.Tag != tag)
                 {
                     if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}' ms");
+                        Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
                     continue;
                 }
 
@@ -1113,7 +1113,7 @@ namespace Raven.Server.ServerWide
                 DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
 
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{wakeup}', with dueTime: {dueTime}");
+                    Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{wakeup}', with dueTime: {dueTime} ms.");
             }
         }
 
