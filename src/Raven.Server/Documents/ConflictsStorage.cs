@@ -335,6 +335,8 @@ namespace Raven.Server.Documents
                     {
                         if (conflicted.Flags.Contain(DocumentFlags.HasCounters))
                             nonPersistentFlags |= NonPersistentDocumentFlags.ResolveCountersConflict;
+                        if (conflicted.Flags.Contain(DocumentFlags.HasTimeSeries))
+                            nonPersistentFlags |= NonPersistentDocumentFlags.ResolveTimeSeriesConflict;
 
                         _documentsStorage.RevisionsStorage.Put(
                             context, conflicted.Id, conflicted.Doc, conflicted.Flags | DocumentFlags.Conflicted | DocumentFlags.HasRevisions, nonPersistentFlags, conflicted.ChangeVector,
