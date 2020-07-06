@@ -1463,7 +1463,9 @@ namespace Raven.Server.Documents.TimeSeries
             if (tss.Stats.GetStats(ctx, docId, tsName).Count == 0)
                 return;
 
-            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId);
+            // if the document is in conflict, this is fine
+            // we will recreate '@timeseries' in metadata when the conflict is resolved
+            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false); 
             if (doc == null)
                 return;
 
@@ -1620,7 +1622,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal static TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -1638,6 +1640,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             item.ToDispose(Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out item.Key));
+
+            item.Name = Stats.GetTimeSeriesNameOriginalCasing(context, item.Key);
 
             return item;
         }
@@ -1873,82 +1877,11 @@ namespace Raven.Server.Documents.TimeSeries
             return tx.OpenTable(tableSchema, tableName);
         }
 
-        public DynamicJsonArray GetTimeSeriesLowerNamesForDocument(DocumentsOperationContext context, string docId)
+        public DynamicJsonArray GetTimeSeriesNamesForDocument(DocumentsOperationContext context, string docId)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
-            var list = new DynamicJsonArray();
-
-            // here we need to find all of the time series names for a given document.
-
-            // for example we have:
-            // doc/heartbeats/123
-            // doc/heartbeats/234
-            // doc/heartbeats/666
-            // doc/pulse/123
-            // doc/pulse/54656
-
-            // so we seek backwards, starting from the end.
-            // extracting the last name and use it as a prefix for the next iteration
-
-            var dummyHolder = new ByteStringStorage
-            {
-                Flags = ByteStringType.Mutable,
-                Length = 0,
-                Ptr = (byte*)0,
-                Size = 0
-            };
-            var slice = new Slice(new ByteString(&dummyHolder));
-
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator))
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out var last, SpecialChars.RecordSeparator + 1))
-            {
-                if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, last, out var reader) == false)
-                    return list;
-
-                var size = documentKeyPrefix.Size;
-                bool excludeValueFromSeek;
-                do
-                {
-                    var lowerName = GetLowerCasedNameAndUpdateSlice(ref reader, size, ref slice);
-                    if (lowerName == null)
-                    {
-                        excludeValueFromSeek = true;
-                        continue;
-                    }
-
-                    excludeValueFromSeek = false;
-                    list.Add(lowerName);
-                } while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader, excludeValueFromSeek));
-
-                list.Items.Reverse();
-                return list;
-            }
+            return new DynamicJsonArray(Stats.GetTimeSeriesNamesForDocumentOriginalCasing(context, docId));
         }
 
-        private static string GetLowerCasedNameAndUpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
-        {
-            var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out var size);
-            var segment = new TimeSeriesValuesSegment(segmentPtr, size);
-            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out size);
-
-            for (int i = 0; i < segment.NumberOfValues; i++)
-            {
-                if (segment.SegmentValues.Span[i].Count > 0)
-                {
-                    var name = Encoding.UTF8.GetString(keyPtr + prefixSize, size - prefixSize - sizeof(long) - 1);
-                    slice.Content._pointer->Ptr = keyPtr;
-                    slice.Content._pointer->Length = size - sizeof(long);
-                    slice.Content._pointer->Size = size - sizeof(long);
-                    return name;
-                }
-            }
-
-            // this segment is empty or marked as deleted, look for the next segment in this time-series
-            slice.Content._pointer->Ptr = keyPtr;
-            slice.Content._pointer->Length = size;
-            slice.Content._pointer->Size = size;
-            return null;
-        }
 
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context)
         {
