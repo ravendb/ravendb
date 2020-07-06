@@ -4,6 +4,7 @@ using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
@@ -22,11 +23,12 @@ namespace Raven.Server.Documents.TimeSeries
 
         private enum StatsColumns
         {
-            Key = 0, // documentId, separator, name
+            Key = 0, // documentId, separator, lower-name
             PolicyName = 1, // policy, separator
             Start = 2,
             End = 3,
-            Count = 4
+            Count = 4,
+            Name = 5 // original casing
         }
 
         static TimeSeriesStats()
@@ -101,6 +103,7 @@ namespace Raven.Server.Documents.TimeSeries
             var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
             var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
 
+            using (DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, ref tvr, out var nameSlice))
             using (table.Allocate(out var tvb))
             {
                 tvb.Add(slicer.StatsKey);
@@ -108,7 +111,8 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount + count);
-                
+                tvb.Add(nameSlice);
+
                 table.Set(tvb);
             }
         }
@@ -120,6 +124,7 @@ namespace Raven.Server.Documents.TimeSeries
                 return;
 
             var previousCount = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
+            using (DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, ref tvr, out var nameSlice))
             using (table.Allocate(out var tvb))
             {
                 tvb.Add(slicer.StatsKey);
@@ -127,6 +132,7 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount);
+                tvb.Add(nameSlice);
 
                 table.Set(tvb);
             }
@@ -142,13 +148,20 @@ namespace Raven.Server.Documents.TimeSeries
             var end = DateTime.MinValue;
 
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-
+            ByteStringContext<ByteStringMemoryCache>.InternalScope nameScope;
+            Slice nameSlice;
+            
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             if (table.ReadByKey(slicer.StatsKey, out var tvr))
             {
                 previousCount = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
                 start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
                 end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
+                nameScope = DocumentsStorage.TableValueToSlice(context, (int)StatsColumns.Name, ref tvr, out nameSlice);
+            }
+            else
+            {
+                nameScope = Slice.From(context.Allocator, slicer.Name, out nameSlice);
             }
 
             var liveEntries = segment.NumberOfLiveEntries;
@@ -167,6 +180,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
+            using (nameScope)
             using (table.Allocate(out var tvb))
             {
                 tvb.Add(slicer.StatsKey);
@@ -174,6 +188,7 @@ namespace Raven.Server.Documents.TimeSeries
                 tvb.Add(Bits.SwapBytes(start.Ticks));
                 tvb.Add(end);
                 tvb.Add(previousCount + liveEntries);
+                tvb.Add(nameSlice);
 
                 table.Set(tvb);
             }
@@ -267,6 +282,39 @@ namespace Raven.Server.Documents.TimeSeries
 
             return (count, start, end);
         }
+
+        public IEnumerable<string> GetTimeSeriesNamesForDocumentOriginalCasing(DocumentsOperationContext context, string docId)
+        {
+            var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
+            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator))
+            {
+                foreach (var result in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
+                {
+                    yield return DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.Name, ref result.Value.Reader);
+                }
+            }
+        }
+
+        public LazyStringValue GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, Slice storageKey)
+        {
+            var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
+            using (ExtractStatsKeyFromStorageKey(context, storageKey, out var statsKey))
+            {
+                if (table.ReadByKey(statsKey, out var tvr) == false)
+                    return null;
+
+                return DocumentsStorage.TableValueToString(context, (int)StatsColumns.Name, ref tvr);
+            }
+        }
+
+        private static IDisposable ExtractStatsKeyFromStorageKey(DocumentsOperationContext context, Slice storageKey, out Slice statsKey)
+        {
+            var size = storageKey.Size - 
+                       sizeof(long) - // baseline
+                       1; // record separator
+            return Slice.External(context.Allocator, storageKey, size, out statsKey);
+        }
+
 
         public IEnumerable<Slice> GetTimeSeriesNameByPolicy(DocumentsOperationContext context, CollectionName collection, string policy, long skip, int take)
         {
