@@ -498,7 +498,19 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                     catch (RollupExceedNumberOfValuesException e)
                     {
-                        var msg = $"Rollup '{item.RollupPolicy}' for time-series '{item.Name}' in document '{item.DocId}' failed.";
+                        var name = item.Name;
+                        var docId = item.DocId;
+                        try
+                        {
+                            var document = context.DocumentDatabase.DocumentsStorage.Get(context, item.DocId, throwOnConflict: false);
+                            docId = document.Id;
+                            name = TimeSeriesStorage.GetOriginalName(item.Name, document.Data) ?? name;
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                        var msg = $"Rollup '{item.RollupPolicy}' for time-series '{name}' in document '{docId}' failed.";
                         if (_logger.IsInfoEnabled)
                             _logger.Info(msg, e);
 
