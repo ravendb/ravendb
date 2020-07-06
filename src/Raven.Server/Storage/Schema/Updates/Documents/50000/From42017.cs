@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents;
@@ -42,6 +43,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 foreach (var counterGroup in Counters)
                 {
+                    counterGroup.Id.Dispose();
+                    counterGroup.Collection.Dispose();
                     counterGroup.Dispose();
                 }
 
@@ -168,7 +171,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     return; // document doesn't exists 
                 
                 var tableId = tvr.Id;
-                var counterNames = step.DocumentsStorage.CountersStorage.GetCountersForDocumentList(context, step.WriteTx, docId);
+                var counterNames = step.DocumentsStorage.CountersStorage.GetCountersForDocument(context, step.WriteTx, docId).ToList();
                 var doc = step.DocumentsStorage.TableValueToDocument(context, ref tvr, skipValidationInDebug: true);
                 if (doc.TryGetMetadata(out var metadata) == false)
                 {
