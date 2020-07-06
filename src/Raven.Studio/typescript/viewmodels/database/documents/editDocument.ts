@@ -1124,6 +1124,10 @@ class editDocument extends viewModelBase {
             this.saveInternal(this.document().getId(), true);
         }
     }
+
+    formatBadge(number: KnockoutObservable<number>): KnockoutComputed<string> {
+        return ko.pureComputed(() => number() ? number().toLocaleString() : "");
+    }
 }
 
 class normalCrudActions implements editDocumentCrudActions {
@@ -1147,6 +1151,10 @@ class normalCrudActions implements editDocumentCrudActions {
         
         _.bindAll(this, "setCounter");
 
+        this.initObservables();
+    }
+    
+    initObservables() {
         this.attachmentsCount = ko.pureComputed(() => {
             const doc = this.document();
             if (!doc || !doc.__metadata || !doc.__metadata.attachments()) {
@@ -1424,6 +1432,10 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
 
         _.bindAll(this, "setCounter");
         
+        this.initObservables();
+    }
+    
+    initObservables() {
         this.attachmentsCount = ko.pureComputed(() => this.attachments().length);
         this.countersCount = ko.pureComputed(() => this.counters().length);
         this.timeSeriesCount = ko.pureComputed(() => this.timeSeries().length);
