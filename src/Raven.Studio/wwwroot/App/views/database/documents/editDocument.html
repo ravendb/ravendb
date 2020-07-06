@@ -178,9 +178,9 @@
                         <dd>
                             <div class="flex-horizontal">
                                 <div data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true" data-bind="tooltipText: $root.changeVectorHtml()">
-                                    <span data-bind="foreach: $root.changeVector">
+                                    <div class="change-vector" data-bind="foreach: $root.changeVector">
                                         <span class="badge badge-default" data-bind="text: shortFormat"></span>
-                                    </span>                                
+                                    </div>                                
                                 </div>
                                 <div>
                                     <a href="#" id="copy-change-vector" title="Copy change vector" data-bind="click: $root.copyChangeVectorToClipboard"><i class="icon-copy"></i></a>
