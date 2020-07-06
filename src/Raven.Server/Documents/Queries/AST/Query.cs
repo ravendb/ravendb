@@ -720,7 +720,7 @@ namespace Raven.Server.Documents.Queries.AST
                 }
 
                 val = values[index + (int)AggregationType.Count];
-                _count[i] += val.Count;
+                _count[i] += (long)val.Sum;
             }
             TotalCount += _count[0];
         }
