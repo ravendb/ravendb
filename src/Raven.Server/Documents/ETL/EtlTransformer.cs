@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.ETL
                 ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
 
             var attachmentName = args[0].AsString();
-            JsValue loadAttachmentReference = (JsValue)Transformation.AttachmentMarker + attachmentName;
+            var loadAttachmentReference = (JsValue)$"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}";
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.ETL
             var from = ScriptRunner.GetDateArg(args[1], signature, "from"); 
             var to = ScriptRunner.GetDateArg(args[2], signature, "to"); 
                 
-            var loadTimeSeriesReference = (JsValue)Transformation.TimeSeriesTransformation.Marker + timeSeriesName + args[1] + args[2];
+            var loadTimeSeriesReference = (JsValue)Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks;
 
             var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
             if(reader.AllValues().Any() == false)

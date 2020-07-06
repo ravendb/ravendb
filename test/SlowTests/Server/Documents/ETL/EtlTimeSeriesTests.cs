@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -19,6 +20,8 @@ using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 using FastTests;
+using Newtonsoft.Json.Converters;
+using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents;
@@ -54,22 +57,15 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             protected const string _script2 = @"
 loadToUsers(this);
 
-function loadAllCounters(){
+function loadAllTimeSeries(){
     return true;
 }
 
-function loadTimeSeriesOfUsersBehavior(docId, counter)
+function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 {
-    return loadAllCounters();
+    return loadAllTimeSeries();
 }";
             
-            protected const string _script3 = @"
-var user = loadToUsers(this);
-user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 26), new Date(2020, 3, 28)));
-";// the month is 0-indexed
-            // var timeSeries = loadTimeSeries('Heartrate', new Date(2020, 3, 26), new Date(2020, 3, 28));
-
-
             protected abstract (string[] Collection, string Script)[] Params { get; }
             private object[] ConvertToParams(int i)
             {
@@ -108,8 +104,37 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 26), new Date(2
         
         private class TestDataForDocChangeTracking<T> : CalculatorTestDataBase<T> where T : TestDataType
         {
+            private const string _script3 = @"
+var user = loadToUsers(this);
+user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 26), new Date(2020, 3, 28)));
+";// the month is 0-indexed
+
+            private const string _script4 = @"
+var user = loadToUsers(this);
+user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 26), new Date(2020, 3, 28)));
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return false;
+};
+";// the month is 0-indexed
+
+            private const string _script5 = @"
+var user = loadToUsers(this);
+user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 1, 26), new Date(2020, 1, 28)));
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return {
+        from: new Date(2020, 3, 26),
+        to: new Date(2020, 3, 28)
+    };
+};
+";// the month is 0-indexed
+
+            
             protected override (string[] Collection, string Script)[] Params => new (string[] Collections, string Script)[]{
                 (new [] {"Users"}, _script3),
+                (new [] {"Users"}, _script4),
+                (new [] {"Users"}, _script5),
             };
             protected override string XUnitMark => "B";
         }
@@ -245,9 +270,10 @@ user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 26), new Date(2
  
                     Assert.Equal(0, result.TransformationErrors.Count);
 
-                    var timeSeriesCommand = result.Commands.OfType<TimeSeriesBatchCommandData>().FirstOrDefault();
+                    var timeSeriesCommand = result.Commands.OfType<TimeSeriesBatchCommandData>().FirstOrDefault(c => 
+                        c.Name == timeSeriesName && c.TimeSeries?.Appends != null && c.TimeSeries.Appends.Any());
+                    
                     Assert.NotNull(timeSeriesCommand);
-                    Assert.Equal(timeSeriesName, timeSeriesCommand.Name);
                     Assert.Equal(CommandType.TimeSeries, timeSeriesCommand.Type);
                     Assert.True(timeSeriesCommand.FromEtl);
                     
@@ -464,7 +490,7 @@ if(this.Name.startsWith('M') === false)
     return;
 loadToUsers(this);
 
-function loadTimeSeriesOfUsersBehavior(docId, counter)
+function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 {
     return {
         from: new Date(2020, 3, 26),
@@ -554,7 +580,7 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
             }
         }
 
-        [Fact(Skip = "https://issues.hibernatingrhinos.com/issue/RavenDB-15150")]
+        [Fact]
         public async Task RavenEtlWithTimeSeries_WhenChangeDocAndThenItsTimeSeries_ShouldNotSendTimeSeriesTwice()
         {
             const int batchSize = 3;
@@ -562,7 +588,7 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
             const string script = @"
 var person = loadToUsers(this);
 
-function loadTimeSeriesOfUsersBehavior(docId, counter)
+function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
 {
     return {
         from: new Date(2020, 3, 26),
@@ -617,10 +643,14 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
                 await AssertWaitForTimeSeriesEntry(dest, users[0].Id, timeSeriesName, times[0]);
 
                 var countOfTsChanged = 0;
-                using var subscription = dest
-                    .Changes()
-                    .ForTimeSeriesOfDocument(users[0].Id, timeSeriesName)
-                    .Subscribe(change => countOfTsChanged++);
+                var database = await GetDatabase(dest.Database);
+
+                void OnTimeSeriesChange(TimeSeriesChange obj)
+                {
+                    if(obj.DocumentId.Equals(users[0].Id, StringComparison.OrdinalIgnoreCase))
+                        countOfTsChanged++;
+                }
+                database.Changes.OnTimeSeriesChange += OnTimeSeriesChange;
 
                 const string changed = "Changed";
                 using (var session = src.OpenAsyncSession())
@@ -641,9 +671,16 @@ function loadTimeSeriesOfUsersBehavior(docId, counter)
                     var session = dest.OpenAsyncSession();
                     var user = await session.LoadAsync<User>(users[batchSize].Id);
                     return user.Name.EndsWith(changed);
-                });
+                }, interval: _waitInterval);
                 
-                Assert.Equal(1, countOfTsChanged);
+                await AssertWaitForTrueAsync(async () =>
+                {
+                    var session = dest.OpenAsyncSession();
+                    var ts = await session.TimeSeriesFor(users[0].Id, timeSeriesName).GetAsync(times[1], times[1]);
+                    return ts.Length == 1;
+                }, interval: _waitInterval);
+                
+                await AssertWaitForValueAsync(async () => countOfTsChanged, 1, interval: _waitInterval);
             }
             catch (Exception e)
             {
@@ -690,6 +727,219 @@ function loadCountersOfUsersBehavior(docId, counter)
                 }
 
                 await AssertWaitForTimeSeriesEntry(dest, documentId, timeSeriesName, time);
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(time + TimeSpan.FromSeconds(1), new[] {value}, tag);
+                    await session.SaveChangesAsync();
+                }
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using var session = dest.OpenAsyncSession();
+                    var ts = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync();
+                    return ts?.Length;
+                }, 2);
+            }
+            catch (Exception e)
+            {
+                ThrowWithEtlErrors(src, e);
+            }
+        }
+
+        [Fact]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters2()
+        {
+            var collections = "Users";
+            string script = @"
+var user = loadToUsers(this);
+user.addCounter(loadCounter(""Like""));
+
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return true;
+}";
+            
+            var src = GetDocumentStore(_options);
+
+            try
+            {
+                var dest = GetDocumentStore();
+                
+                AddEtl(src, dest, collections, script, collections.Length == 0);
+
+                var time = new DateTime(2020, 04, 27);
+                const string timeSeriesName = "Heartrate";
+                const string tag = "fitbit";
+                const double value = 58d;
+                const string documentId = "users/1";
+
+                using (var session = src.OpenAsyncSession())
+                {
+                    var entity = new User { Name = "Joe Doe" };
+                    await session.StoreAsync(entity, documentId);
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(time, new[] {value}, tag);
+                    session.CountersFor(documentId).Increment("Like");
+                    await session.SaveChangesAsync();
+                }
+
+                await AssertWaitForTimeSeriesEntry(dest, documentId, timeSeriesName, time);
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    session.Advanced.Patch<User, string>(documentId, x => x.Name, "Changed");
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(time + TimeSpan.FromSeconds(1), new[] {value}, tag);
+                    await session.SaveChangesAsync();
+                }
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using var session = dest.OpenAsyncSession();
+                    var ts = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync();
+                    return ts?.Length;
+                }, 2);
+            }
+            catch (Exception e)
+            {
+                ThrowWithEtlErrors(src, e);
+            }
+        }
+
+        [Fact]
+        public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndAttachment()
+        {
+            var collections = "Users";
+            string script = @"
+var user = loadToUsers(this);
+user.addAttachment(loadAttachment('photo'));
+
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return true;
+}";
+            
+            var src = GetDocumentStore(_options);
+
+            try
+            {
+                var dest = GetDocumentStore();
+                
+                AddEtl(src, dest, collections, script, collections.Length == 0);
+
+                var time = new DateTime(2020, 04, 27);
+                const string timeSeriesName = "Heartrate";
+                const string tag = "fitbit";
+                const double value = 58d;
+                const string documentId = "users/1";
+                string attachmentSourceName = "photo";
+
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    var entity = new User { Name = "Joe Doe" };
+                    await session.StoreAsync(entity, documentId);
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(time, new[] {value}, tag);
+                    session.Advanced.Attachments.Store("users/1", attachmentSourceName, new MemoryStream(new byte[] { 1 }));
+
+                    await session.SaveChangesAsync();
+                }
+
+                await AssertWaitForTimeSeriesEntry(dest, documentId, timeSeriesName, time);
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    session.Advanced.Patch<User, string>(documentId, x => x.Name, "Changed");
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(time + TimeSpan.FromSeconds(1), new[] {value}, tag);
+                    await session.SaveChangesAsync();
+                }
+                
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using var session = dest.OpenAsyncSession();
+                    var ts = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync();
+                    return ts?.Length;
+                }, 2);
+            }
+            catch (Exception e)
+            {
+                ThrowWithEtlErrors(src, e);
+            }
+        }
+
+        [Fact]
+        public async Task RavenEtlWithTimeSeries_WhenUseAddAttachmentAndLoadTimeSeriesBehaviorFunctionTogether()
+        {
+            var collections = "Users";
+            string script = @"
+var user = loadToUsers(this);
+user.addTimeSeries(loadTimeSeries('Heartrate', new Date(2020, 3, 26), new Date(2020, 3, 28)));
+
+function loadTimeSeriesOfUsersBehavior(doc, ts)
+{
+    return {
+        from: new Date(2020, 3, 10),
+        to: new Date(2020, 3, 13)
+    };
+}";
+
+            var notInRange = new []
+            {
+                new DateTime(2020, 01, 27),
+                new DateTime(2020, 01, 28)
+            };
+            var inLoadTimeSeriesRange = new DateTime(2020, 04, 27);
+            var inLoadBehaviorFunctionRange = new DateTime(2020, 04, 13);
+            
+            var src = GetDocumentStore(_options);
+
+            try
+            {
+                var dest = GetDocumentStore();
+                
+                AddEtl(src, dest, collections, script, collections.Length == 0);
+
+                const string timeSeriesName = "Heartrate";
+                const string tag = "fitbit";
+                const double value = 58d;
+                const string documentId = "users/1";
+
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    var entity = new User { Name = "Joe Doe" };
+                    await session.StoreAsync(entity, documentId);
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(notInRange[0], new[] {value}, tag);
+
+                    await session.SaveChangesAsync();
+                }
+
+                await AssertWaitForNotNullAsync(async () =>
+                {
+                    using var session = dest.OpenAsyncSession();
+                    return await session.LoadAsync<User>(documentId);
+                });
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    session.Advanced.Patch<User, string>(documentId, x => x.Name, "Changed");
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(notInRange[1], new[] {value}, tag);
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(inLoadBehaviorFunctionRange, new[] {value}, tag);
+                    session.TimeSeriesFor(documentId, timeSeriesName).Append(inLoadTimeSeriesRange, new[] {value}, tag);
+                    await session.SaveChangesAsync();
+                }
+
+                TimeSeriesEntry[] ts = null;
+                await AssertWaitForValueAsync(async () =>
+                {
+                    using var session = dest.OpenAsyncSession();
+                    ts = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync();
+                    return ts?.Length;
+                }, 2);
+                
+                Assert.Contains(ts, t=> t.Timestamp == inLoadBehaviorFunctionRange);
+                Assert.Contains(ts, t=> t.Timestamp == inLoadTimeSeriesRange);
+                Assert.DoesNotContain(ts, t=> t.Timestamp == notInRange[0]);
+                Assert.DoesNotContain(ts, t=> t.Timestamp == notInRange[1]);
             }
             catch (Exception e)
             {
@@ -1423,7 +1673,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     await session.SaveChangesAsync();
                 }
 
-                await WaitForNullAsync(async () =>
+                await AssertWaitForNullAsync(async () =>
                 {
                     using var session = dest.OpenAsyncSession();
                     return (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(firstTime, firstTime))
@@ -1481,7 +1731,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     await session.SaveChangesAsync();
                 }
 
-                await WaitForNullAsync(async () =>
+                await AssertWaitForNullAsync(async () =>
                 {
                     using var session = dest.OpenAsyncSession();
                     return (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(firstTime, firstTime))
@@ -1515,7 +1765,8 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 .Select(i => new TimeSeriesEntry {Timestamp = startTime + TimeSpan.FromMilliseconds(i), Tag = tag, Values = new []{100 * random.NextDouble()}})
                 .ToArray();
 
-            List<TimeSeriesEntry> timeSeriesEntriesToAppend = timeSeriesEntries.ToList();
+            random = new Random(0);
+            var randomOrder = timeSeriesEntries.OrderBy(_ => random.Next()).ToList();
 
             var src = GetDocumentStore(_options);
             try
@@ -1526,16 +1777,12 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
                 using (var session = src.OpenAsyncSession())
                 {
-                    User entity = new User { Name = "Joe Doe" };
+                    var entity = new User { Name = "Joe Doe" };
                     await session.StoreAsync(entity, documentId);
-                    
-                    random = new Random(0);
-                    while (timeSeriesEntriesToAppend.Count > 0)
+
+                    foreach (var entry in randomOrder)
                     {
-                        int index = random.Next(0, timeSeriesEntriesToAppend.Count - 1);
-                        TimeSeriesEntry entry = timeSeriesEntriesToAppend[index];
                         session.TimeSeriesFor(documentId, timeSeriesName).Append(entry.Timestamp, entry.Values, entry.Tag);
-                        timeSeriesEntriesToAppend.RemoveAt(index);
                     }
 
                     await session.SaveChangesAsync();
@@ -1557,6 +1804,83 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     Assert.Equal(timeSeriesEntries[i].Timestamp, actual[i].Timestamp);
                     Assert.Equal(timeSeriesEntries[i].Tag, actual[i].Tag);
                     Assert.Equal(timeSeriesEntries[i].Value, actual[i].Value);
+                }
+            }
+            catch (Exception e)
+            {
+                ThrowWithEtlErrors(src, e);
+            }
+        }
+
+        [Theory]
+        [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
+        [ClassData(typeof(TestDataForDocChangeTracking<TestDataType>))]
+        public async Task RavenEtlWithTimeSeries_WhenStoreMultipleTimeSeriesOfDocThatHasEtagOfMultipleBatchAhead(
+            string justForXUint,
+            string[] collections, 
+            string script)
+        {
+            const int toAppendCount = 4 * short.MaxValue;
+            const string timeSeriesName = "Heartrate";
+            const string tag = "fitbit";
+            const string documentId = "users/1";
+            
+            DateTime startTime = new DateTime(2020, 04, 27);
+
+            Random random = new Random(0);
+            var timeSeriesEntries = Enumerable.Range(0, toAppendCount)
+                .Select(i => new TimeSeriesEntry {Timestamp = startTime + TimeSpan.FromMilliseconds(i), Tag = tag, Values = new []{100 * random.NextDouble()}})
+                .ToArray();
+
+            random = new Random(0);
+            var randomOrder = timeSeriesEntries.OrderBy(_ => random.Next()).ToList();
+
+            var options = new Options {ModifyDatabaseRecord = record =>
+            {
+                _options?.ModifyDatabaseRecord(record);
+                record.Settings[RavenConfiguration.GetKey(x => x.Etl.MaxNumberOfExtractedItems)] = "3";
+            }};
+            var src = GetDocumentStore(options);
+            try
+            {
+                var dest = GetDocumentStore();
+                
+                var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
+
+                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
+                {
+                    using (var session = src.OpenAsyncSession())
+                    {
+                        var entity = new User { Name = "Joe Doe" };
+                        await session.StoreAsync(entity, documentId);
+
+                        var i = 0;
+                        foreach (var entry in randomOrder)
+                        {
+                            session.TimeSeriesFor(documentId, timeSeriesName).Append(entry.Timestamp, entry.Values, entry.Tag);
+                            if(i++ % 254 == 0)
+                                await session.StoreAsync(new User());
+                        }
+
+                        await session.SaveChangesAsync();
+                    }
+                    using (var session = src.OpenAsyncSession())
+                    {
+                        session.Advanced.Patch<User, string>(documentId, x => x.Name, "Changed");
+                        await session.SaveChangesAsync();
+                    }
+                }
+                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
+
+                int progress = 0;
+                while (progress < timeSeriesEntries.Length)
+                {
+                    progress = await AssertWaitForGreaterThanAsync(async () =>
+                    {
+                        using var session = dest.OpenAsyncSession();
+                        var result = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
+                        return result?.Count() ?? 0;
+                    }, progress, 5000, interval: 1000);
                 }
             }
             catch (Exception e)
@@ -2125,38 +2449,6 @@ loadToUsers({
             {
                 ThrowWithEtlErrors(src, e);
             }
-        }
-        
-        private void ThrowWithEtlErrors(DocumentStore src, Exception e = null)
-        {
-            string[] notifications = GetEtlErrorNotifications(src);
-
-            string message = string.Join(",\n", notifications);
-            var additionalDetails = new InvalidOperationException(message);
-            if (e == null)
-                throw additionalDetails;
-                
-            throw new AggregateException(e, additionalDetails);
-        }
-
-        private string[] GetEtlErrorNotifications(DocumentStore src)
-        {
-            string[] notifications;
-            var databaseInstanceFor = GetDocumentDatabaseInstanceFor(src);
-            using (databaseInstanceFor.Result.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
-            {
-                notifications = storedNotifications
-                    .Select(n => n.Json)
-                    .Where(n => n.TryGet("AlertType", out string type) && type.StartsWith("Etl_"))
-                    .Where(n => n.TryGet("Details", out BlittableJsonReaderObject _))
-                    .Select(n =>
-                    {
-                        n.TryGet("Details", out BlittableJsonReaderObject details);
-                        return details.ToString();
-                    }).ToArray();
-            }
-
-            return notifications;
         }
         
         private async Task<TimeSeriesEntry> AssertWaitForTimeSeriesEntry(IDocumentStore store, string documentId, string timeSeriesName, DateTime timeDate)

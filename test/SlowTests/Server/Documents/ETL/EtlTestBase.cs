@@ -8,6 +8,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL;
+using Raven.Server.NotificationCenter;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -108,6 +110,38 @@ namespace SlowTests.Server.Documents.ETL
                 throw new TimeoutException($"Etl predicate timeout - {timeout}");
 
             return await taskCompletionSource.Task;
+        }
+        
+        protected void ThrowWithEtlErrors(DocumentStore src, Exception e = null)
+        {
+            string[] notifications = GetEtlErrorNotifications(src);
+
+            string message = string.Join(",\n", notifications);
+            var additionalDetails = new InvalidOperationException(message);
+            if (e == null)
+                throw additionalDetails;
+                
+            throw new AggregateException(e, additionalDetails);
+        }
+
+        private string[] GetEtlErrorNotifications(DocumentStore src)
+        {
+            string[] notifications;
+            var databaseInstanceFor = GetDocumentDatabaseInstanceFor(src);
+            using (databaseInstanceFor.Result.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
+            {
+                notifications = storedNotifications
+                    .Select(n => n.Json)
+                    .Where(n => n.TryGet("AlertType", out string type) && type.StartsWith("Etl_"))
+                    .Where(n => n.TryGet("Details", out BlittableJsonReaderObject _))
+                    .Select(n =>
+                    {
+                        n.TryGet("Details", out BlittableJsonReaderObject details);
+                        return details.ToString();
+                    }).ToArray();
+            }
+
+            return notifications;
         }
     }
 }

@@ -104,32 +104,27 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public void LoadAttachment(JsValue attachmentReference, Attachment attachment)
         {
-            if (_loadedAttachments == null)
-                _loadedAttachments = new Dictionary<JsValue, Attachment>();
-
+            _loadedAttachments ??= new Dictionary<JsValue, Attachment>();
             _loadedAttachments.Add(attachmentReference, attachment);
         }
 
         public void LoadCounter(JsValue counterReference, string name, long value)
         {
-            if (_loadedCountersByJsReference == null)
-                _loadedCountersByJsReference = new Dictionary<JsValue, (string, long)>();
-
-            _loadedCountersByJsReference.Add(counterReference, (name, value));
+            _loadedCountersByJsReference ??= new Dictionary<JsValue, (string, long)>();
+            _loadedCountersByJsReference.TryAdd(counterReference, (name, value));
         }
         
         public void LoadTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> value)
         {
             (_loadedTimeSeriesByJsReference ??= new Dictionary<JsValue, (string, IEnumerable<SingleResult>)>())
-                .Add(reference, (name, value));
+                .TryAdd(reference, (name, value));
         }
 
         public void AddAttachment(JsValue instance, string name, JsValue attachmentReference)
         {
             var attachment = _loadedAttachments[attachmentReference];
 
-            if (_addAttachments == null)
-                _addAttachments = new Dictionary<JsValue, List<(string, Attachment)>>();
+            _addAttachments ??= new Dictionary<JsValue, List<(string, Attachment)>>();
 
             if (_addAttachments.TryGetValue(instance, out var attachments) == false)
             {

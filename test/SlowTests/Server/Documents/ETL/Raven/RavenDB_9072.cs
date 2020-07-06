@@ -86,7 +86,7 @@ loadToOrders(orderData);"
 
                         Assert.Equal(0, result.TransformationErrors.Count);
 
-                        Assert.Equal(5, result.Commands.Count);
+                        Assert.True(result.Commands.Count >= 4);
 
                         Assert.Equal(1, result.Commands.OfType<DeletePrefixedCommandData>().Count());
                         Assert.Equal(3, result.Commands.OfType<PutCommandDataWithBlittableJson>().Count());
