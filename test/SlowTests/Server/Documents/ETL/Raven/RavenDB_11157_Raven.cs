@@ -965,10 +965,9 @@ function loadCountersOfCustomersBehavior(docId, counter) // it's ok
 
             config.Initialize(new RavenConnectionString() { Database = "Foo", TopologyDiscoveryUrls = new[] { "http://localhost:8080" } });
 
-            List<string> errors;
-            config.Validate(out errors);
+            config.Validate(out List<string> errors);
 
-            Assert.Equal(1, errors.Count);
+            Assert.True(0 < errors.Count);
 
             Assert.Equal("There is 'loadCountersOfPeopleBehavior' function defined in 'test' script while the processed collections ('Users', 'Customers') doesn't include 'People'. " +
                          "loadCountersOf<CollectionName>Behavior() function is meant to be defined only for counters of docs from collections that " +

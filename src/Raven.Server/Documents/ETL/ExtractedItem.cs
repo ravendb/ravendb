@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.ETL
                 CollectionFromMetadata = tombstone.Collection;
         }
 
-        public Document Document { get; protected set; }
+        public Document Document { get; set; }
 
         public LazyStringValue DocumentId { get; protected set; }
 

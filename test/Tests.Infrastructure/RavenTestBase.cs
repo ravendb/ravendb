@@ -669,6 +669,12 @@ namespace FastTests
             Assert.NotEqual(ret, default);
             return ret;
         }
+
+        protected async Task AssertWaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
+        {
+            var result = await WaitForNullAsync(act, timeout, interval);
+            Assert.Null(result);
+        }
         
         protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T: class =>
             await WaitForPredicateAsync(a => a != null, act, timeout, interval);
