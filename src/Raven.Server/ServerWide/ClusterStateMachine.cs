@@ -3044,7 +3044,7 @@ namespace Raven.Server.ServerWide
             }
 
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            ApplyDatabaseRecordUpdates(toUpdate, type, taskId: null, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
         }
 
         private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
@@ -3164,7 +3164,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, taskId: null, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
         }
 
         private bool IsServerWideBackupWithTaskName(BlittableJsonReaderObject backup, string backupNameToFind)
@@ -3174,9 +3174,9 @@ namespace Raven.Server.ServerWide
                    backupNameToFind.Equals(backupName, StringComparison.OrdinalIgnoreCase);
         }
 
-        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long? taskId, long index, Table items, TransactionOperationContext context)
+        private void ApplyDatabaseRecordUpdates(List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)> toUpdate, string type, long indexForValueChanges, long index, Table items, TransactionOperationContext context)
         {
-            var tasks = new List<Func<Task>> { () => OnValueChanges(taskId ?? index, type) };
+            var tasks = new List<Func<Task>> { () => OnValueChanges(indexForValueChanges, type) };
 
             foreach (var update in toUpdate)
             {
