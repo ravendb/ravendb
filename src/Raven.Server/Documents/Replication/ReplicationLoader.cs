@@ -967,6 +967,13 @@ namespace Raven.Server.Documents.Replication
                 // this means that we were unable to retrieve the tcp connection info and will try it again later
                 return;
             }
+
+            if (Database == null)
+            {
+                // database was disabled
+                return;
+            }
+
             var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
