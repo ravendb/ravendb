@@ -539,33 +539,6 @@ namespace Raven.Server.Documents
 
                 documentFlags |= type.HasFlag;
 
-                if (currentMetadata != null && type.IsReturningLowerCasedMetadata)
-                {
-                    var casePreservingValues = new DynamicJsonArray();
-
-                    bool hasChanges = false;
-
-                    foreach (object value in values)
-                    {
-                        var location = currentMetadata.BinarySearch((string)value, StringComparison.OrdinalIgnoreCase);
-
-                        if (location >= 0)
-                        {
-                            casePreservingValues.Add(currentMetadata[location]);
-                        }
-                        else
-                        {
-                            casePreservingValues.Add(value);
-                            hasChanges = true;
-                        }
-                    }
-
-                    if (hasChanges == false)
-                        return false;
-
-                    values = casePreservingValues;
-                }
-
                 if (metadata == null)
                 {
                     document.Modifications = new DynamicJsonValue(document)
@@ -613,8 +586,6 @@ namespace Raven.Server.Documents
             NonPersistentDocumentFlags ByUpdateFlag { get; }
 
             Action<string, BlittableJsonReaderObject, DocumentFlags> Assert { get; }
-
-            bool IsReturningLowerCasedMetadata { get; }
         }
 
         private class RecreateAttachments : IRecreationType
@@ -641,8 +612,6 @@ namespace Raven.Server.Documents
 
             public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) => 
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasAttachments, Constants.Documents.Metadata.Attachments);
-
-            public bool IsReturningLowerCasedMetadata { get { return false; } } 
         }
 
         public class RecreateCounters : IRecreationType
@@ -669,8 +638,6 @@ namespace Raven.Server.Documents
 
             public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) => 
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasCounters, Constants.Documents.Metadata.Counters);
-
-            public bool IsReturningLowerCasedMetadata { get { return false; } }
         }
 
         private class RecreateTimeSeries : IRecreationType
@@ -686,7 +653,7 @@ namespace Raven.Server.Documents
 
             public DynamicJsonArray GetMetadata(DocumentsOperationContext context, string id)
             {
-                return _storage.TimeSeriesStorage.GetTimeSeriesLowerNamesForDocument(context, id);
+                return _storage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, id);
             }
 
             public DocumentFlags HasFlag => DocumentFlags.HasTimeSeries;
@@ -697,8 +664,6 @@ namespace Raven.Server.Documents
 
             public Action<string, BlittableJsonReaderObject, DocumentFlags> Assert => (id, o, flags) => 
                 _storage.AssertMetadataKey(id, o, flags, DocumentFlags.HasTimeSeries, Constants.Documents.Metadata.TimeSeries);
-
-            public bool IsReturningLowerCasedMetadata { get { return true; } }
         }
 
         public static void ThrowRequiresTransaction([CallerMemberName]string caller = null)
