@@ -188,7 +188,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                SetLicense(license.Id, LicenseValidator.Validate(license, _rsaParameters));
+                SetLicense(GetLicenseStatus(license));
 
                 RemoveAgplAlert();
             }
@@ -358,29 +358,41 @@ namespace Raven.Server.Commercial
             return detailsPerNode.Sum(x => x.Value.UtilizedCores);
         }
 
-        public async Task Activate(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive = true, bool forceActivate = false)
+        public async Task Activate(License license, string raftRequestId, bool skipGettingUpdatedLicense = false)
         {
-            var newLicenseStatus = GetLicenseStatus(license);
-            if (newLicenseStatus.Expiration.HasValue == false)
+            var licenseStatus = GetLicenseStatus(license);
+            if (licenseStatus.Expiration.HasValue == false)
                 throw new LicenseExpiredException("License doesn't have an expiration date!");
 
-            if (forceActivate == false)
+            if (licenseStatus.Expired)
             {
-                if (await ContinueActivatingLicense(
-                        license, skipLeaseLicense, raftRequestId,
-                        ensureNotPassive,
-                        newLicenseStatus).ConfigureAwait(false) == false)
+                if (skipGettingUpdatedLicense)
+                    throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration}");
+
+                try
+                {
+                    // license expired, we'll try to update it
+                    var updatedLicense = await GetUpdatedLicenseInternal(license);
+                    if (updatedLicense == null)
+                        throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.");
+
+                    await Activate(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
                     return;
+                }
+                catch (Exception e)
+                {
+                    if (e is HttpRequestException)
+                        throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
+
+                    throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we were unable to get an updated license.", e);
+                }
             }
 
-            if (ensureNotPassive)
-                _serverStore.EnsureNotPassive();
+            ThrowIfCannotActivateLicense(licenseStatus);
 
             try
             {
                 await _serverStore.PutLicenseAsync(license, raftRequestId).ConfigureAwait(false);
-
-                SetLicense(license.Id, newLicenseStatus.Attributes);
             }
             catch (Exception e)
             {
@@ -392,7 +404,7 @@ namespace Raven.Server.Commercial
                 if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
 
-                throw new InvalidDataException("Could not save license!", e);
+                throw new InvalidOperationException("Could not save license!", e);
             }
         }
 
@@ -405,56 +417,16 @@ namespace Raven.Server.Commercial
             };
         }
 
-        private void SetLicense(Guid id, Dictionary<string, object> attributes)
+        private void SetLicense(LicenseStatus licenseStatus)
         {
             LicenseStatus = new LicenseStatus
             {
-                Id = id,
+                Id = licenseStatus.Id,
+                LicensedTo = licenseStatus.LicensedTo,
                 ErrorMessage = null,
-                Attributes = attributes,
-                FirstServerStartDate = LicenseStatus.FirstServerStartDate
+                Attributes = licenseStatus.Attributes,
+                FirstServerStartDate = LicenseStatus.FirstServerStartDate,
             };
-        }
-
-        private async Task<bool> ContinueActivatingLicense(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive, LicenseStatus newLicenseStatus)
-        {
-            if (newLicenseStatus.Expired)
-            {
-                if (skipLeaseLicense == false)
-                {
-                    // Here we have an expired license, but it was valid once.
-                    // The user might rely on the license features and we want
-                    // to error on the side of the user in this case, so we'll accept
-                    // the features of the license, even before we check with the
-                    // server
-                    SetLicense(license.Id, newLicenseStatus.Attributes);
-
-                    // license expired, we'll try to update it
-                    try
-                    {
-                        // license expired, we'll try to update it
-                        license = await GetUpdatedLicenseInternal(license);
-                    }
-                    catch (Exception e)
-                    {
-                        if (e is HttpRequestException)
-                            throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
-
-                        throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license.", e);
-                    }
-
-                    if (license != null)
-                    {
-                        await Activate(license, skipLeaseLicense: true, raftRequestId, ensureNotPassive: ensureNotPassive);
-                        return false;
-                    }
-                }
-
-                throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}");
-            }
-
-            ThrowIfCannotActivateLicense(newLicenseStatus);
-            return true;
         }
 
         public static LicenseStatus GetLicenseStatus(License license)
@@ -478,11 +450,14 @@ namespace Raven.Server.Commercial
                 throw new InvalidDataException("Could not validate license!", e);
             }
 
-            var newLicenseStatus = new LicenseStatus
+            var licenseStatus = new LicenseStatus
             {
-                Attributes = licenseAttributes
+                Id = license.Id,
+                Attributes = licenseAttributes,
+                LicensedTo = license.Name
             };
-            return newLicenseStatus;
+
+            return licenseStatus;
         }
 
         public void TryActivateLicense(bool throwOnActivationFailure)
@@ -497,7 +472,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, RaftIdGenerator.NewId(), ensureNotPassive: false));
+                AsyncHelpers.RunSync(() => Activate(license, RaftIdGenerator.NewId()));
             }
             catch (Exception e)
             {
@@ -664,8 +639,19 @@ namespace Raven.Server.Commercial
                 if (updatedLicense == null)
                     return;
 
-                // we'll activate the license from the license server
-                await Activate(updatedLicense, skipLeaseLicense: true, raftRequestId, forceActivate: true);
+                var licenseStatus = GetLicenseStatus(updatedLicense);
+
+                try
+                {
+                    // we'll activate the license from the license server
+                    await _serverStore.PutLicenseAsync(updatedLicense, raftRequestId).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // we want to set the new license status anyway
+                    SetLicense(licenseStatus);
+                    throw;
+                }
 
                 var alert = AlertRaised.Create(
                     null,
