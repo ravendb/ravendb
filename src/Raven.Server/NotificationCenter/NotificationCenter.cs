@@ -134,6 +134,15 @@ namespace Raven.Server.NotificationCenter
             return scope;
         }
 
+        public string GetStoredMessage(string id)
+        {
+            using (_notificationsStorage.Read(id, out var value))
+            {
+                value.Json.TryGet(nameof(Notification.Message), out string message);
+                return message;
+            }
+        }
+
         public long GetAlertCount()
         {
             return _notificationsStorage.GetAlertCount();
