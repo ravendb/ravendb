@@ -38,6 +38,19 @@
         opacity: 1;
         z-index: @zindex-tooltip;
         background-color: @tooltip-bg;
+
+        &.tooltip-inner {
+            max-width: 400px;
+        }
+
+        span {
+            display: block;
+        }
+
+        .name {
+            word-wrap: break-word;
+            line-height: 18px;
+        }
     }
 
 
@@ -199,10 +212,10 @@
                 fill: lighten(@chart-journals-color,5%);
             }
         }
-        
+
         &.temp {
             fill: @chart-temp-files-color;
-            
+
             &:hover {
                 fill: lighten(@chart-temp-files-color,5%);
             }
@@ -401,7 +414,7 @@
                     background-color: lighten(@chart-journals-color,5%);
                 }
             }
-            
+
             &.tempFiles {
                 background-color: @chart-temp-files-color;
 
@@ -436,5 +449,24 @@
             top: -1px;
             margin-left: -4px;
         }
+    }
+
+    .table {
+
+        .column-min-width {
+            min-width: 200px;
+        }
+
+        .table-items {
+            position: absolute;
+            display: flex;
+            width: 100%;
+            padding-right: 20px;
+        }
+    }
+
+    .table-item-name {
+        display: block;
+        white-space: nowrap;
     }
 }
