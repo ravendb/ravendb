@@ -32,6 +32,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         internal static int NumberOfCounterGroupsToMigrateInSingleTransaction = 10_000;
 
+        internal static int MaxSizeToMigrateInSingleTransaction = 64 * 1024 * 1024;
+
         private string _dbId;
 
         private class CounterBatchUpdate
@@ -66,10 +68,11 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             _dbId = From41016.ReadDbId(step);
             step.DocumentsStorage.InitializeLastEtag(step.ReadTx);
 
-            var toDeleteByCollection = new Dictionary<string, List<long>>();
+            var entriesToDelete = new List<long>();
+            var batch = new CounterBatchUpdate();
             string currentDocId = null;
             string currentPrefix = null;
-            var batch = new CounterBatchUpdate();
+            CollectionName currentCollection = null;
             var done = false;
 
             // 4.2 counters processing
@@ -95,11 +98,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             if (currentDocId != null)
                             {
                                 // finished processing all counter groups for current document
-                                DeleteProcessedEntries(step, toDeleteByCollection);
-                                PutCounterGroups(step, batch, context);
-                                UpdateDocumentCounters(step, context, currentDocId);
+                                DeleteProcessedEntries(step, entriesToDelete, currentCollection);
+                                PutCounterGroups(step, batch, context, currentCollection);
+                                UpdateDocumentCounters(step, context, currentDocId, currentCollection);
 
-                                if (processedInCurrentTx >= NumberOfCounterGroupsToMigrateInSingleTransaction)
+                                if (processedInCurrentTx >= NumberOfCounterGroupsToMigrateInSingleTransaction || 
+                                    context.AllocatedMemory >= MaxSizeToMigrateInSingleTransaction)
                                 {
                                     commit = true;
                                     currentPrefix = counterGroup.Id;
@@ -109,15 +113,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                             // start new batch
                             currentDocId = counterGroup.Id;
+                            currentCollection = new CollectionName(counterGroup.Collection);
                             batch.Counters.Add(counterGroup);
                         }
 
                         // add table etag to delete-list
-                        if (toDeleteByCollection.TryGetValue(counterGroup.Collection, out var toDeleteList) == false)
-                        {
-                            toDeleteByCollection[counterGroup.Collection] = toDeleteList = new List<long>();
-                        }
-                        toDeleteList.Add(counterGroup.Etag);
+                        entriesToDelete.Add(counterGroup.Etag);
 
                         processedInCurrentTx++;
                     }
@@ -132,9 +133,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                     if (batch.Counters.Count > 0)
                     {
-                        DeleteProcessedEntries(step, toDeleteByCollection);
-                        PutCounterGroups(step, batch, context);
-                        UpdateDocumentCounters(step, context, currentDocId);
+                        DeleteProcessedEntries(step, entriesToDelete, currentCollection);
+                        PutCounterGroups(step, batch, context, currentCollection);
+                        UpdateDocumentCounters(step, context, currentDocId, currentCollection);
                     }
 
                     done = true;
@@ -161,12 +162,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             }
         }
 
-        private static unsafe void UpdateDocumentCounters(UpdateStep step, DocumentsOperationContext context, string docId)
+        private static unsafe void UpdateDocumentCounters(UpdateStep step, DocumentsOperationContext context, string docId, CollectionName collection)
         {
             using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerDocId))
             {
-                var docsTable = new Table(DocumentsStorage.DocsSchema, step.ReadTx);
-                if (docsTable.ReadByKey(lowerDocId, out var tvr) == false)
+                var table = step.WriteTx.OpenTable(DocumentsStorage.DocsSchema, collection.GetTableName(CollectionTableType.Documents));
+                if (table.ReadByKey(lowerDocId, out var tvr) == false)
                     return; // document doesn't exists
 
                 var tableId = tvr.Id;
@@ -218,12 +219,9 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     doc.Data = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                var collection = CollectionName.GetCollectionName(doc.Data);
-                var collectionName = new CollectionName(collection);
-                var writeTable = step.WriteTx.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, doc.Id, out Slice lowerId, out Slice idPtr))
                 using (Slice.From(context.Allocator, doc.ChangeVector, out var cv))
-                using (writeTable.Allocate(out TableValueBuilder tvb))
+                using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerId);
                     tvb.Add(Bits.SwapBytes(doc.Etag));
@@ -234,35 +232,30 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     tvb.Add((int)doc.Flags);
                     tvb.Add(doc.TransactionMarker);
 
-                    writeTable.Update(tableId, tvb);
+                    table.Update(tableId, tvb);
                 }
             }
         }
 
-        private void PutCounterGroups(UpdateStep step, CounterBatchUpdate batch, DocumentsOperationContext context)
+        private void PutCounterGroups(UpdateStep step, CounterBatchUpdate batch, DocumentsOperationContext context, CollectionName collection)
         {
             foreach (var cg in batch.Counters)
             {
-                PutCounters(context, step, cg.Id, cg.ChangeVector, cg.Values, cg.Collection);
+                PutCounters(context, step, cg.Id, cg.ChangeVector, cg.Values, collection);
             }
 
             batch.Clear();
         }
 
-        private static void DeleteProcessedEntries(UpdateStep step, Dictionary<string, List<long>> toDeleteByCollection)
+        private static void DeleteProcessedEntries(UpdateStep step, List<long> toDelete, CollectionName collection)
         {
-            foreach (var toDeleteForCollection in toDeleteByCollection)
+            var table = step.WriteTx.OpenTable(CountersSchema, collection.GetTableName(CollectionTableType.CounterGroups));
+            foreach (var etag in toDelete)
             {
-                var collection = new CollectionName(toDeleteForCollection.Key);
-                var table = step.WriteTx.OpenTable(CountersSchema, collection.GetTableName(CollectionTableType.CounterGroups));
-
-                foreach (var etag in toDeleteForCollection.Value)
-                {
-                    table.DeleteByIndex(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag);
-                }
+                table.DeleteByIndex(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice], etag);
             }
 
-            toDeleteByCollection.Clear();
+            toDelete.Clear();
         }
 
         private static IEnumerable<CounterReplicationItem> GetCounters(Table table, DocumentsOperationContext ctx, string prefix)
@@ -296,7 +289,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         private readonly ObjectPool<Dictionary<LazyStringValue, PutCountersData>> _dictionariesPool
             = new ObjectPool<Dictionary<LazyStringValue, PutCountersData>>(() => new Dictionary<LazyStringValue, PutCountersData>(LazyStringValueComparer.Instance));
 
-        private unsafe void PutCounters(DocumentsOperationContext context, UpdateStep step, string documentId, string changeVector, BlittableJsonReaderObject sourceData, string collection)
+        private unsafe void PutCounters(DocumentsOperationContext context, UpdateStep step, string documentId, string changeVector, BlittableJsonReaderObject sourceData, CollectionName collection)
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
             {
@@ -311,8 +304,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var entriesToUpdate = _dictionariesPool.Allocate();
             try
             {
-                var collectionName = new CollectionName(collection);
-                var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collectionName);
+                var table = step.DocumentsStorage.CountersStorage.GetCountersTable(step.WriteTx, collection);
 
                 using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 {
@@ -333,7 +325,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         // simplest case of having no counters for this document, can use the raw data from the source as-is
 
-                        CreateFirstEntry(context, documentId, changeVector, sourceData, sourceCounterNames, sourceCounters, collectionName, table, documentKeyPrefix);
+                        CreateFirstEntry(context, documentId, changeVector, sourceData, sourceCounterNames, sourceCounters, collection, table, documentKeyPrefix);
                         return;
                     }
 
@@ -443,7 +435,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                                 using (currentData)
                                 {
-                                    SplitCounterGroup(context, collectionName, table, documentKeyPrefix, countersGroupKey, localCounters, dbIds, originalNames,
+                                    SplitCounterGroup(context, collection, table, documentKeyPrefix, countersGroupKey, localCounters, dbIds, originalNames,
                                         changeVectorToSave, _dbId);
                                 }
 
@@ -452,7 +444,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                             var etag = context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();
                             using (Slice.From(context.Allocator, changeVectorToSave, out var cv))
-                            using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))
+                            using (DocumentIdWorker.GetStringPreserveCase(context, collection.Name, out Slice collectionSlice))
                             using (table.Allocate(out TableValueBuilder tvb))
                             {
                                 tvb.Add(countersGroupKey);
