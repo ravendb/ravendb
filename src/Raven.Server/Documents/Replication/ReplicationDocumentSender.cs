@@ -10,6 +10,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.TcpHandlers;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        public bool ExecuteReplicationOnce(OutgoingReplicationStatsScope stats, ref long next)
+        public bool ExecuteReplicationOnce(TcpConnectionOptions tcpConnectionOptions, OutgoingReplicationStatsScope stats, ref long next)
         {
             EnsureValidStats(stats);
             var wasInterrupted = false;
@@ -342,6 +343,7 @@ namespace Raven.Server.Documents.Replication
                         using (_stats.Network.Start())
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
+                            tcpConnectionOptions.RegisterBytesSent(size);
                             if (MissingAttachmentsInLastBatch)
                                 return false;
                         }

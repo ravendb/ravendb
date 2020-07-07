@@ -220,7 +220,8 @@ namespace Raven.Server.Documents.Replication
 
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
-            var outgoingReplication = new OutgoingReplicationHandler(this, Database, externalReplication, external: true, initialRequest.Info)
+
+            var outgoingReplication = new OutgoingReplicationHandler(tcpConnectionOptions, this, Database, externalReplication, external: true, initialRequest.Info)
             {
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName
             };
@@ -987,7 +988,7 @@ namespace Raven.Server.Documents.Replication
                 if (Database == null)
                     return;
 
-                var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
+                var outgoingReplication = new OutgoingReplicationHandler(null, this, Database, node, external, info);
                 outgoingReplication.Failed += OnOutgoingSendingFailed;
                 outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
                 outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
