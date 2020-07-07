@@ -405,7 +405,7 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    session.Store(new User {Name = "Karmel"}, "users/KARMEL");
                     var big = session.TimeSeriesFor<BigMeasure>("users/karmel");
                     var small = session.TimeSeriesFor<SmallMeasure>("users/karmel");
                     for (int i = 0; i < 100; i++)
@@ -441,7 +441,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
-                Assert.NotNull(database.NotificationCenter.GetDatabaseFor(key));
+                var alert = database.NotificationCenter.GetStoredMessage(key);
+                Assert.Equal("Rollup 'ByMinute' for time-series 'BigMeasures' in document 'users/KARMEL' failed.", alert);
             }
         }
 
@@ -509,7 +510,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
-                Assert.NotNull(database.NotificationCenter.GetDatabaseFor(key));
+                var alert = database.NotificationCenter.GetStoredMessage(key);
+                Assert.NotNull(alert);
 
                 using (var session = store.OpenSession())
                 {
