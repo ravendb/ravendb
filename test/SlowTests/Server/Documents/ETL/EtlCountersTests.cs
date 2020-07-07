@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.ETL
         
         [Theory]
         [InlineData(16)]
-        // [InlineData(1024)]
+        [InlineData(1024)]
         public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest(int count)
         {
             using var src = GetDocumentStore(_options);

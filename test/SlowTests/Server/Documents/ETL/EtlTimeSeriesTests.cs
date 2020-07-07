@@ -1094,9 +1094,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
                 var users = Enumerable.Range(0, usersCount).Select(i => new User{Name = $"User{i}"}).ToArray();
 
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
-                using (var session = src.OpenAsyncSession())
+                await using (OpenEtlOffArea(src, etlResult.TaskId))
                 {
+                    using var session = src.OpenAsyncSession();
                     foreach (var user in users)
                     {
                         await session.StoreAsync(user);
@@ -1104,12 +1104,11 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     }
 
                     await session.SaveChangesAsync();
+                    
+                    var processesProgress = await GetEtlProcessProgress(src);
+                    Assert.Equal(10, processesProgress.NumberOfTimeSeriesSegmentsToProcess);
+                    Assert.Equal(0, processesProgress.NumberOfTimeSeriesDeletedRangesToProcess);
                 }
-                var processesProgress = await GetEtlProcessProgress(src);
-                Assert.Equal(10, processesProgress.NumberOfTimeSeriesSegmentsToProcess);
-                Assert.Equal(0, processesProgress.NumberOfTimeSeriesDeletedRangesToProcess);
-                
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 1);
                 
                 using (var session = src.OpenAsyncSession())
@@ -1135,20 +1134,19 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 3);
                 
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
-                using (var session = src.OpenAsyncSession())
+                await using (OpenEtlOffArea(src, etlResult.TaskId, true))
                 {
+                    using var session = src.OpenAsyncSession();
                     foreach (var user in users)
                     {
                         session.TimeSeriesFor(user.Id, timeSeriesName).Delete(times[1], times[1]);    
                     }
                     await session.SaveChangesAsync();
-                }
-                processesProgress = await GetEtlProcessProgress(src);
-                Assert.Equal(10, processesProgress.NumberOfTimeSeriesSegmentsToProcess);
-                Assert.Equal(10, processesProgress.NumberOfTimeSeriesDeletedRangesToProcess);
-                
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
+                    
+                    var processesProgress = await GetEtlProcessProgress(src);
+                    Assert.Equal(10, processesProgress.NumberOfTimeSeriesSegmentsToProcess);
+                    Assert.Equal(10, processesProgress.NumberOfTimeSeriesDeletedRangesToProcess);
+                }                
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 2);
 
                 using (var session = src.OpenAsyncSession())
@@ -1163,9 +1161,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 1);
 
-                processesProgress = await GetEtlProcessProgress(src);
-                Assert.Equal(10, processesProgress.TotalNumberOfTimeSeriesSegments);
-                Assert.Equal(20, processesProgress.TotalNumberOfTimeSeriesDeletedRanges);
+                var progress = await GetEtlProcessProgress(src);
+                Assert.Equal(10, progress.TotalNumberOfTimeSeriesSegments);
+                Assert.Equal(20, progress.TotalNumberOfTimeSeriesDeletedRanges);
             }
             catch (Exception e)
             {
@@ -1202,9 +1200,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
                 var users = Enumerable.Range(0, usersCount).Select(i => new User{Name = $"User{i}"}).ToArray();
 
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
-                using (var session = src.OpenAsyncSession())
+                await using (OpenEtlOffArea(src, etlResult.TaskId))
                 {
+                    using var session = src.OpenAsyncSession();
                     foreach (var user in users)
                     {
                         await session.StoreAsync(user);
@@ -1213,7 +1211,6 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
                     await session.SaveChangesAsync();
                 }
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 1);
                 
                 using (var session = src.OpenAsyncSession())
@@ -1262,9 +1259,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
                 var users = Enumerable.Range(0, usersCount).Select(i => new User{Name = $"User{i}"}).ToArray();
 
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
-                using (var session = src.OpenAsyncSession())
+                await using (OpenEtlOffArea(src, etlResult.TaskId))
                 {
+                    using var session = src.OpenAsyncSession();
                     foreach (var user in users)
                     {
                         await session.StoreAsync(user);
@@ -1273,7 +1270,6 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
                     await session.SaveChangesAsync();
                 }
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 1);
                 
                 using (var session = src.OpenAsyncSession())
@@ -1323,9 +1319,10 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
                 var users = Enumerable.Range(0, usersCount).Select(i => new User{Name = $"User{i}"}).ToArray();
 
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
-                using (var session = src.OpenAsyncSession())
+                await using (OpenEtlOffArea(src, etlResult.TaskId))
                 {
+                    using var session = src.OpenAsyncSession();
+
                     foreach (var user in users)
                     {
                         await session.StoreAsync(user);
@@ -1334,7 +1331,6 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
 
                     await session.SaveChangesAsync();
                 }
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 1);
                 
                 using (var session = src.OpenAsyncSession())
@@ -1382,28 +1378,28 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
                 var users = Enumerable.Range(0, usersCount).Select(i => new User{Name = $"User{i}"}).ToArray();
 
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
-                using (var session = src.OpenAsyncSession())
+                await using (OpenEtlOffArea(src, etlResult.TaskId))
                 {
-                    foreach (var user in users)
+                    using (var session = src.OpenAsyncSession())
                     {
-                        await session.StoreAsync(user);
-                        session.TimeSeriesFor(user.Id, timeSeriesName).Append(times[0], new[] {value}, tag);    
-                    }
+                        foreach (var user in users)
+                        {
+                            await session.StoreAsync(user);
+                            session.TimeSeriesFor(user.Id, timeSeriesName).Append(times[0], new[] {value}, tag);    
+                        }
 
-                    await session.SaveChangesAsync();
-                }
+                        await session.SaveChangesAsync();
+                    }
                 
-                using (var session = src.OpenAsyncSession())
-                {
-                    foreach (var user in users)
+                    using (var session = src.OpenAsyncSession())
                     {
-                        session.Advanced.Patch<User, string>(user.Id, x => x.Name, user.Name + "Changed");
-                    }
-                    await session.SaveChangesAsync();
+                        foreach (var user in users)
+                        {
+                            session.Advanced.Patch<User, string>(user.Id, x => x.Name, user.Name + "Changed");
+                        }
+                        await session.SaveChangesAsync();
+                    }    
                 }
-
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
                 await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 1);
             }
             catch (Exception e)
@@ -1634,15 +1630,14 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndRemoveTimeSeriesInAnotherSession_ShouldRemoveFromDestination(
             string justForXUint,
             string[] collections, 
-            string script
-        )
+            string script)
         {
             var src = GetDocumentStore(_options);
             try
             {
                 var dest = GetDocumentStore();
             
-                AddEtl(src, dest, collections, script, collections.Length == 0);
+                var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
 
                 var firstTime = new DateTime(2020, 04, 27);
                 var secondTime = firstTime + TimeSpan.FromSeconds(1) ;
@@ -1666,9 +1661,10 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     using var session = dest.OpenAsyncSession();
                     return (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(firstTime, secondTime))?.Count();
                 }, 2, interval: _waitInterval);
-            
-                using (var session = src.OpenAsyncSession())
+
+                await using (OpenEtlOffArea(src, etlResult.TaskId, true))
                 {
+                    using var session = src.OpenAsyncSession();
                     session.TimeSeriesFor(documentId, timeSeriesName).Delete(firstTime, firstTime);
                     await session.SaveChangesAsync();
                 }
@@ -1679,6 +1675,16 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     return (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(firstTime, firstTime))
                         .FirstOrDefault();
                 }, interval: _waitInterval);
+
+                var srcDatabase = await GetDatabase(src.Database);
+                using var toDispose = srcDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
+                await AssertWaitForTrueAsync(async () =>
+                {
+                    await srcDatabase.TombstoneCleaner.ExecuteCleanup();
+                    using var readTransaction = context.OpenReadTransaction();
+                    var array = srcDatabase.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesForDoc(context, documentId).ToArray();
+                    return array.Any() == false;
+                }, interval:_waitInterval);
             }
             catch (Exception e)
             {
@@ -1699,7 +1705,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             {
                 var dest = GetDocumentStore();
             
-                AddEtl(src, dest, collections, script, collections.Length == 0);
+                var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
 
                 var firstTime = new DateTime(2020, 04, 27);
                 var secondTime = firstTime + TimeSpan.FromSeconds(1) ;
@@ -1724,8 +1730,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     return (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(firstTime, secondTime))?.Count();
                 }, 2, interval: _waitInterval);
             
-                using (var session = src.OpenAsyncSession())
+                await using (OpenEtlOffArea(src, etlResult.TaskId, true))
                 {
+                    using var session = src.OpenAsyncSession();
                     session.TimeSeriesFor(documentId, timeSeriesName).Delete(firstTime, firstTime);
                     session.Advanced.Patch<User, string>(documentId, x => x.Name, "Robert");
                     await session.SaveChangesAsync();
@@ -1847,30 +1854,26 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 
                 var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
 
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
+                await using (OpenEtlOffArea(src, etlResult.TaskId))
                 {
-                    using (var session = src.OpenAsyncSession())
-                    {
-                        var entity = new User { Name = "Joe Doe" };
-                        await session.StoreAsync(entity, documentId);
+                    using var session = src.OpenAsyncSession();
+                    
+                    var entity = new User { Name = "Joe Doe" };
+                    await session.StoreAsync(entity, documentId);
 
-                        var i = 0;
-                        foreach (var entry in randomOrder)
-                        {
-                            session.TimeSeriesFor(documentId, timeSeriesName).Append(entry.Timestamp, entry.Values, entry.Tag);
-                            if(i++ % 254 == 0)
-                                await session.StoreAsync(new User());
-                        }
-
-                        await session.SaveChangesAsync();
-                    }
-                    using (var session = src.OpenAsyncSession())
+                    var i = 0;
+                    foreach (var entry in randomOrder)
                     {
-                        session.Advanced.Patch<User, string>(documentId, x => x.Name, "Changed");
-                        await session.SaveChangesAsync();
+                        session.TimeSeriesFor(documentId, timeSeriesName).Append(entry.Timestamp, entry.Values, entry.Tag);
+                        if(i++ % 254 == 0)
+                            await session.StoreAsync(new User());
                     }
+
+                    await session.SaveChangesAsync();
+                    
+                    session.Advanced.Patch<User, string>(documentId, x => x.Name, "Changed");
+                    await session.SaveChangesAsync();
                 }
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
 
                 int progress = 0;
                 while (progress < timeSeriesEntries.Length)
@@ -1982,6 +1985,9 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             
             DateTime startTime = new DateTime(2020, 04, 27);
 
+            var removeFrom = startTime.AddMilliseconds(0.1d * toAppendCount);
+            var removeTo = startTime.AddMilliseconds(0.9d * toAppendCount);
+
             Random random = new Random(0);
             var timeSeriesEntries = Enumerable.Range(0, toAppendCount)
                 .Select(i => new TimeSeriesEntry {Timestamp = startTime + TimeSpan.FromMilliseconds(i), Tag = tag, Values = new []{100 * random.NextDouble()}})
@@ -1992,7 +1998,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             {
                 var dest = GetDocumentStore();
                 
-                AddEtl(src, dest, collections, script, collections.Length == 0);
+                var etlResult = AddEtl(src, dest, collections, script, collections.Length == 0);
 
                 using (var session = src.OpenAsyncSession())
                 {
@@ -2005,16 +2011,28 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     await session.SaveChangesAsync();
                 }
 
-                TimeSeriesEntry[] expected;
-                using (var session = src.OpenAsyncSession())
+                await AssertWaitForValueAsync(async () =>
                 {
-                    var from = startTime.AddMilliseconds(0.1 * toAppendCount);
-                    var to = from.AddMilliseconds(0.9 * toAppendCount);
-                    session.TimeSeriesFor(documentId, timeSeriesName).Delete(from, to);
-                    await session.SaveChangesAsync();
+                    using var session = dest.OpenAsyncSession();
+                    var result = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
+                    return result?.Length ?? 0;
+                }, toAppendCount, 30000, interval: 1000);
+                
+                await using (OpenEtlOffArea(src, etlResult.TaskId, true))
+                {
+                    using (var session = src.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor(documentId, timeSeriesName).Delete(removeFrom, removeTo);
+                        await session.SaveChangesAsync();
+                    }
+                }
+                
+                TimeSeriesEntry[] expected;
+                using (var session = src.OpenAsyncSession(new SessionOptions {NoCaching = true}))
+                {
                     expected = (await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue)).ToArray();
                 }
-            
+                
                 TimeSeriesEntry[] actual = null;
                 await AssertWaitForValueAsync(async () =>
                 {
@@ -2132,7 +2150,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                 var users = new[] {new User {Id = "users/1"}, new User {Id = "users/2"},};
 
                 var srcDatabase = GetDatabase(src.Database).Result;
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, true));
+                await using (OpenEtlOffArea(src, etlResult.TaskId))
                 {
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(srcDatabase))
                     using (var tr = context.OpenWriteTransaction())
@@ -2159,7 +2177,6 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                         await session.SaveChangesAsync();
                     }
                 }
-                src.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlResult.TaskId, OngoingTaskType.RavenEtl, false));
 
                 await AssertWaitForNotNullAsync(async () =>
                 {

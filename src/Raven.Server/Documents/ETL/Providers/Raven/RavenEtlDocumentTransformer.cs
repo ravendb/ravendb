@@ -247,11 +247,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     case EtlItemType.Document:
                         if (_script.HasTransformation)
                         {
-                            // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
-                            // documents loaded to non default collections
+                            DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
                             ApplyDeleteCommands(item, OperationType.Put, out var isLoadedToDefaultCollectionDeleted);
 
-                            DocumentScript.Run(Context, Context, "execute", new object[] { Current.Document }).Dispose();
                             if (_currentRun.IsDocumentLoadedToSameCollection(item.DocumentId) == false)
                                 break;
                             
@@ -810,6 +808,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private void ApplyDeleteCommands(RavenEtlItem item, OperationType operation, out bool isLoadedToDefaultCollectionDeleted)
         {
+            // first, we need to delete docs prefixed by modified document ID to properly handle updates of 
+            // documents loaded to non default collections
             isLoadedToDefaultCollectionDeleted = false;
             for (var i = 0; i < _script.LoadToCollections.Length; i++)
             {
@@ -820,7 +820,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     if (operation != OperationType.Delete 
                         && _transformation.IsAddingAttachments == false 
                         && _transformation.Counters.IsAddingCounters == false 
-                        && _transformation.TimeSeries.IsAddingTimeSeries == false) 
+                        && _transformation.TimeSeries.IsAddingTimeSeries == false
+                        && _currentRun.IsDocumentLoadedToSameCollection(item.DocumentId))
                         continue;
                     _currentRun.Delete(new DeleteCommandData(item.DocumentId, null));
                     isLoadedToDefaultCollectionDeleted = true;
