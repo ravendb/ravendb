@@ -96,7 +96,6 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-
             {
                 if (originalDocument == null && runIfMissing == null)
                 {

@@ -43,7 +43,7 @@ class patchCommand extends commandBase {
         return this.patch<operationIdDto>(url + this.urlEncodeArgs(args), JSON.stringify(payload), this.db)
             .done((response: operationIdDto) => {
                 if (!this.options.test) {
-                    this.reportSuccess("Scheduled patch based on query");
+                    this.reportSuccess("Patch was scheduled based on query");
                 }
                 
                 return response;

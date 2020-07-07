@@ -1,4 +1,3 @@
-
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
@@ -8,7 +7,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import messagePublisher = require("common/messagePublisher");
 import eventsCollector = require("common/eventsCollector");
 import docsIdsBasedOnQueryFetcher = require("viewmodels/database/patch/docsIdsBasedOnQueryFetcher");
-
 import patchCommand = require("commands/database/patch/patchCommand");
 import validationHelpers = require("viewmodels/common/validationHelpers");
 import documentPreviewer = require("models/database/documents/documentPreviewer");
@@ -27,13 +25,24 @@ class patchTester extends viewModelBase {
     afterDoc = ko.observable<string>("");
 
     actions = {
-        loadDocument: ko.observableArray<string>(),
+        loadDocument: ko.observableArray<any>(),
         putDocument: ko.observableArray<any>(),
         deleteDocument: ko.observableArray<string>(),
-        info: ko.observableArray<string>()
+
+        getCounter: ko.observableArray<any>(),
+        incrementCounter: ko.observableArray<any>(),
+        deleteCounter: ko.observableArray<string>(),
+
+        getTimeseries: ko.observableArray<any>(),
+        appendTimeseries: ko.observableArray<any>(),
+        deleteTimeseries: ko.observableArray<any>(),
+        
+        output: ko.observableArray<string>()
     };
 
-    showObjectsInPutSection = ko.observable<boolean>(false);
+    showDocumentsInModified = ko.observable<boolean>(false);
+    showTimeSeriesValuesInLoaded = ko.observable<boolean>(false);
+    showTimeSeriesValuesInModified = ko.observable<boolean>(false);
 
     spinners = {
         testing: ko.observable<boolean>(false),
@@ -138,28 +147,28 @@ class patchTester extends viewModelBase {
         this.testMode(false);
     }
 
-    enterTestMode(documentIdToUse: string) {
+    enterTestMode() {
+        eventsCollector.default.reportEvent("patch", "test-mode");
         this.testMode(true);
-
-        documentIdToUse = documentIdToUse;
-        this.documentId(documentIdToUse);
-
+        this.documentId("");
+        this.resetForm();
         this.validationGroup.errors.showAllMessages(false);
-
-        if (documentIdToUse) {
-            this.loadDocument();
-
-            if (this.isValid(this.validationGroup, false)) {
-                this.runTest();
-            }
-        }
     }
 
     resetForm() {
         this.actions.loadDocument([]);
         this.actions.putDocument([]);
         this.actions.deleteDocument([]);
-        this.actions.info([]);
+
+        this.actions.getCounter([]);
+        this.actions.incrementCounter([]);
+        this.actions.deleteCounter([]);
+
+        this.actions.getTimeseries([]);
+        this.actions.appendTimeseries([]);
+        this.actions.deleteTimeseries([]);
+        
+        this.actions.output([]);
         this.afterDoc("");
         this.beforeDoc("");
     }
@@ -212,14 +221,26 @@ class patchTester extends viewModelBase {
                     .done((result: any) => {
                         const modifiedDocument = new document(result.ModifiedDocument).toDto(true);
                         const originalDocument = new document(result.OriginalDocument).toDto(true);
+                        
                         this.beforeDoc(JSON.stringify(originalDocument, null, 4));
                         this.afterDoc(JSON.stringify(modifiedDocument, null, 4));
+
                         const debug = result.Debug;
                         const actions = debug.Actions as Raven.Server.Documents.Patch.PatchDebugActions;
+                        
+                        this.actions.output(debug.Output);
+                        
                         this.actions.loadDocument(actions.LoadDocument);
                         this.actions.putDocument(actions.PutDocument);
                         this.actions.deleteDocument(actions.DeleteDocument);
-                        this.actions.info(debug.Info);
+                        
+                        this.actions.getCounter(actions.GetCounter);
+                        this.actions.incrementCounter(actions.IncrementCounter);
+                        this.actions.deleteCounter(actions.DeleteCounter);
+                        
+                        this.actions.getTimeseries(actions.GetTimeseries);
+                        this.actions.appendTimeseries(actions.AppendTimeseries);
+                        this.actions.deleteTimeseries(actions.DeleteTimeseries);
 
                         if (result.Status === "Patched") {
                             messagePublisher.reportSuccess("Test completed");
@@ -233,10 +254,46 @@ class patchTester extends viewModelBase {
     previewDocument() {
         const spinner = this.spinners.preview;
         const documentId: KnockoutObservable<string> = this.documentId;
-        const documentIdValidationGroup = this.validationGroup;
+        const documentIdValidationGroup = this.testDocumentValidationGroup;
         const db = this.activeDatabase;
 
         documentPreviewer.preview(documentId, db, documentIdValidationGroup, spinner);
+    }
+
+    getLoadedCount(): KnockoutComputed<string> {
+        return ko.pureComputed(() => {
+            const actions = this.actions;
+            
+            const totalLoadedCount = actions.loadDocument().length +
+                                     actions.getCounter().length +
+                                     actions.getTimeseries().length;
+                                
+            return totalLoadedCount ? totalLoadedCount.toLocaleString() : "";
+        });
+    }
+    
+    getModifiedCount() {
+        return ko.pureComputed(() => {
+            const actions = this.actions;
+
+            const totalModifiedCount = actions.putDocument().length +
+                                       actions.incrementCounter().length +
+                                       actions.appendTimeseries().length;
+
+            return totalModifiedCount ? totalModifiedCount.toLocaleString() : "";
+        });
+    }
+    
+    getDeletedCount() {
+        return ko.pureComputed(() => {
+            const actions = this.actions;
+
+            const totalDeletedCount = actions.deleteDocument().length +
+                                      actions.deleteCounter().length +
+                                      actions.deleteTimeseries().length;
+
+            return totalDeletedCount ? totalDeletedCount.toLocaleString() : "";
+        });
     }
 }
 
