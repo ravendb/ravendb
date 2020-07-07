@@ -470,14 +470,14 @@ class storageReport extends viewModelBase {
         this.tooltip.transition()
             .duration(200)
             .style("opacity", 1);
-        let html = "Name: " + d.name;
+        let html = "<span class='name'>Name: " + d.name + "</span>";
         if (d.showType) {
-            html += "<br />Type: <strong>" + _.upperFirst(d.type) + "</strong>";
+            html += "<span>Type: <strong>" + _.upperFirst(d.type) + "</strong></span>";
         }
         if (this.shouldDisplayNumberOfEntries(d)) {
-            html += "<br />Entries: <strong>" + d.numberOfEntries.toLocaleString() + "</strong>";
+            html += "<span>Entries: <strong>" + d.numberOfEntries.toLocaleString() + "</strong></span>";
         }
-        html += " <br /> <span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
+        html += "<span class='size'>Size: <strong>" + generalUtils.formatBytesToSize(d.size) + "</strong></span>";
 
         this.tooltip.html(html);
         this.onMouseMove(d);
