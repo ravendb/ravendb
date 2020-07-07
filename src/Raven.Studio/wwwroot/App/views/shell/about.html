@@ -76,7 +76,7 @@
                         </div>
                         <div class="big-label" data-bind="visible: formattedExpiration">
                             <div class="content">
-                                <small>Expires</small>
+                                <small data-bind="text: expiresText"></small>
                                 <strong data-bind="html: formattedExpiration"></strong>
                             </div>
                         </div>
@@ -87,6 +87,13 @@
                         <div class="content text-center">
                             <small>License ID</small>
                             <strong data-bind="text: licenseId"></strong>
+                        </div>
+                    </div>
+
+                    <div class="big-label">
+                        <div class="content text-center">
+                            <small>License To</small>
+                            <strong data-bind="text: licensedTo"></strong>
                         </div>
                     </div>
                 </div>
