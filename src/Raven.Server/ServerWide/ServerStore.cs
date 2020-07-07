@@ -1078,16 +1078,43 @@ namespace Raven.Server.ServerWide
                 {
                     topology = rawRecord.Topology;
                     backupConfig = rawRecord.GetPeriodicBackupConfiguration(taskId);
+
+                    if (backupConfig == null)
+                        throw new InvalidOperationException($"Could not reschedule the wakeup timer for idle database '{db}', because there is no backup task with id '{taskId}'.");
                 }
 
                 var tag = topology.WhoseTaskIsIt(Engine.CurrentState, backupConfig, null);
-                if (Engine.Tag == tag)
+                if (Engine.Tag != tag)
                 {
-                    var wakeup = CrontabSchedule.Parse(backupConfig.FullBackupFrequency).GetNextOccurrence(SystemTime.UtcNow);
-                    var dueTime = (int)(wakeup - SystemTime.UtcNow).TotalMilliseconds;
-
-                    DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Could not reschedule the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' belongs to node '{tag}' current node is '{Engine.Tag}'.");
+                    continue;
                 }
+
+                if (backupConfig.Disabled || backupConfig.FullBackupFrequency == null && backupConfig.IncrementalBackupFrequency == null)
+                    continue;
+
+                var now = SystemTime.UtcNow;
+                DateTime wakeup;
+                if (backupConfig.FullBackupFrequency == null)
+                {
+                    wakeup = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
+                }
+                else
+                {
+                    wakeup = CrontabSchedule.Parse(backupConfig.FullBackupFrequency).GetNextOccurrence(now);
+                    if (backupConfig.IncrementalBackupFrequency != null)
+                    {
+                        var incremental = CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency).GetNextOccurrence(now);
+                        wakeup = new DateTime(Math.Min(wakeup.Ticks, incremental.Ticks));
+                    }
+                }
+
+                var dueTime = (int)(wakeup - now).TotalMilliseconds;
+                DatabasesLandlord.RescheduleDatabaseWakeup(db, dueTime, wakeup);
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Rescheduling the wakeup timer for idle database '{db}', because backup task '{backupConfig.Name}' with id '{taskId}' which belongs to node '{Engine.Tag}', new timer is set to: '{wakeup}', with dueTime: {dueTime} ms.");
             }
         }
 

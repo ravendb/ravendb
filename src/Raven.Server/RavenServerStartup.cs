@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,6 +23,8 @@ using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Properties;
 using Raven.Server.Config;
+using Raven.Server.Documents.Handlers;
+using Raven.Server.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -179,14 +182,7 @@ namespace Raven.Server
                 sp?.Stop();
                 exception = e;
 
-                if (context.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var versions))
-                {
-                    var version = versions.ToString();
-                    if (version.Length > 0 && version[0] == '3')
-                        e = new ClientVersionMismatchException(
-                            $"RavenDB does not support interaction between Client API major version 3 and Server version {RavenVersionAttribute.Instance.MajorVersion} when major version does not match. Client: {version}. Server: {RavenVersionAttribute.Instance.AssemblyVersion}",
-                            e);
-                }
+                CheckVersionAndWrapException(context, ref e);
 
                 MaybeSetExceptionStatusCode(context, _server.ServerStore, e);
 
@@ -243,6 +239,40 @@ namespace Raven.Server
                 {
                     _logger.Info($"{context.Request.Method} {context.Request.Path.Value}{context.Request.QueryString.Value} - {context.Response.StatusCode} - {(sp?.ElapsedMilliseconds ?? 0):#,#;;0} ms", exception);
                 }
+            }
+        }
+
+        private static void CheckVersionAndWrapException(HttpContext context, ref Exception e)
+        {
+            if (RequestRouter.TryGetClientVersion(context, out var version) == false) 
+                return;
+            
+            if (version.Major == '3')
+            {
+                e = new ClientVersionMismatchException(
+                    $"RavenDB does not support interaction between Client API major version 3 and Server version {RavenVersionAttribute.Instance.MajorVersion} when major version does not match. Client: {version}. " +
+                    $"Server: {RavenVersionAttribute.Instance.AssemblyVersion}",
+                    e);
+            }
+            else if (HasInvalidCommandTypeException(e))
+            {
+                RequestRouter.CheckClientVersionAndWrapException(version, ref e);
+            }
+
+            static bool HasInvalidCommandTypeException(Exception e)
+            {
+                if (e is InvalidCommandTypeException)
+                    return true;
+
+                if (e is AggregateException ae)
+                {
+                    foreach (var innerException in ae.InnerExceptions)
+                    {
+                        if (HasInvalidCommandTypeException(innerException))
+                            return true;
+                    }
+                }
+                return e.InnerException != null && HasInvalidCommandTypeException(e.InnerException);
             }
         }
 
