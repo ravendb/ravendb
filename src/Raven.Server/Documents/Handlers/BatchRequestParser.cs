@@ -980,7 +980,9 @@ namespace Raven.Server.Documents.Handlers
                         return CommandType.ForceRevisionCreation;
                     break;
             }
-            throw new InvalidCommandTypeException("Invalid command type: " + ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
+
+            ThrowInvalidCommandType(state, ctx);
+            return CommandType.None;
         }
 
         private static void ThrowInvalidUsageOfChangeVectorWithIdentities(CommandData commandData)
@@ -993,6 +995,11 @@ namespace Raven.Server.Documents.Handlers
         {
             throw new InvalidOperationException("Invalid property name: " +
                                                 ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
+        }
+        private static unsafe void ThrowInvalidCommandType(JsonParserState state, JsonOperationContext ctx)
+        {
+            throw new InvalidCommandTypeException("Invalid command type: " 
+                                                  + ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
         }
 
         private static void ThrowUnexpectedToken(JsonParserToken jsonParserToken, JsonParserState state)
