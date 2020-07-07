@@ -7,6 +7,8 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json;
@@ -142,6 +144,21 @@ namespace SlowTests.Server.Documents.ETL
             }
 
             return notifications;
+        }
+        
+        protected IAsyncDisposable OpenEtlOffArea(IDocumentStore store, long etlTaskId, bool cleanTombstones = false)
+        {
+            store.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlTaskId, OngoingTaskType.RavenEtl, true));
+            return new DisposableAsyncAction(async () =>
+            {
+                if (cleanTombstones)
+                {
+                    var srcDatabase = await GetDatabase(store.Database);
+                    await srcDatabase.TombstoneCleaner.ExecuteCleanup();    
+                } 
+                
+                store.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlTaskId, OngoingTaskType.RavenEtl, false));
+            });
         }
     }
 }

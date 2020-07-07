@@ -574,24 +574,28 @@ namespace Raven.Server.Documents.ETL
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
-            if (tombstoneType != ITombstoneAware.TombstoneType.Documents)
-                return null;
-
             var lastProcessedTombstones = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
             var ravenEtls = _databaseRecord.RavenEtls;
-            var sqlEtls = _databaseRecord.SqlEtls;
+            if (tombstoneType == ITombstoneAware.TombstoneType.TimeSeries)
+            {
+                foreach (var config in ravenEtls)
+                    MarkTimeSeriesTombstonesForDeletion(config, lastProcessedTombstones);
+            }
+            else
+            {
+                var sqlEtls = _databaseRecord.SqlEtls;
 
-            foreach (var config in ravenEtls)
-                MarkTombstonesForDeletion(config, lastProcessedTombstones);
+                foreach (var config in ravenEtls)
+                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);
 
-            foreach (var config in sqlEtls)
-                MarkTombstonesForDeletion(config, lastProcessedTombstones);
-
+                foreach (var config in sqlEtls)
+                    MarkDocumentTombstonesForDeletion(config, lastProcessedTombstones);    
+            }
             return lastProcessedTombstones;
         }
 
-        private void MarkTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        private void MarkDocumentTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
         {
             foreach (var transform in config.Transforms)
             {
@@ -613,6 +617,16 @@ namespace Raven.Server.Documents.ETL
                     if (RavenEtl.ShouldTrackAttachmentTombstones(transform))
                         AddOrUpdate(lastProcessedTombstones, AttachmentsStorage.AttachmentsTombstones, etag);
                 }
+            }
+        }
+        private void MarkTimeSeriesTombstonesForDeletion<T>(EtlConfiguration<T> config, Dictionary<string, long> lastProcessedTombstones) where T : ConnectionString
+        {
+            foreach (var transform in config.Transforms)
+            {
+                var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
+                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+
+                AddOrUpdate(lastProcessedTombstones, Constants.TimeSeries.All, etag);
             }
         }
 
