@@ -1,26 +1,26 @@
 .edit-time-series {
     .document-header {
         margin-bottom: 8px;
-        
+
         .dropdown-toggle {
             min-width: 120px;
         }
     }
-    
+
     .documentId {
         font-size: 25px;
     }
-    
+
     .utc-info-container {
         &:before {
             content: 'All dates are in UTC';
             top: 0;
             right: 0;
             position: absolute;
-            background-color: @panel-info-bg;
+            background-color: @state-info-bg;
             font-size: 12px;
-            color: @panel-info-text;
-            padding: 2px 5px;
+            color: @state-info-text;
+            padding: @gutter-xxs @gutter-xs;
             transform: translateY(-100%);
         }
     }
