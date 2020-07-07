@@ -608,6 +608,8 @@ namespace Raven.Server.Documents.Replication
                             $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                     }
 
+                    _connectionOptions.RegisterBytesReceived(incomingReplicationAllocator.TotalDocumentsSizeInBytes);
+
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
                         var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag);
