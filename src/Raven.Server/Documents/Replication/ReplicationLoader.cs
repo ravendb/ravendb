@@ -38,6 +38,7 @@ namespace Raven.Server.Documents.Replication
 {
     public class ReplicationLoader : IDisposable, ITombstoneAware
     {
+        private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
 
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
@@ -971,15 +972,28 @@ namespace Raven.Server.Documents.Replication
                 // this means that we were unable to retrieve the tcp connection info and will try it again later
                 return;
             }
-            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
-            outgoingReplication.Failed += OnOutgoingSendingFailed;
-            outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
-            outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
-            _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
 
-            outgoingReplication.Start();
+            _locker.EnterReadLock();
 
-            OutgoingReplicationAdded?.Invoke(outgoingReplication);
+            try
+            {
+                if (Database == null)
+                    return;
+
+                var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external, info);
+                outgoingReplication.Failed += OnOutgoingSendingFailed;
+                outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+                outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
+                _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
+
+                outgoingReplication.Start();
+
+                OutgoingReplicationAdded?.Invoke(outgoingReplication);
+            }
+            finally
+            {
+                _locker.ExitReadLock();
+            }
         }
 
         private TcpConnectionInfo GetConnectionInfo(ReplicationNode node, bool external)
@@ -1291,36 +1305,45 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
-            var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
+            _locker.EnterWriteLock();
 
-            ea.Execute(() =>
+            try
             {
-                using (var waitHandle = new ManualResetEvent(false))
+                var ea = new ExceptionAggregator("Failed during dispose of document replication loader");
+
+                ea.Execute(() =>
                 {
-                    if (_reconnectAttemptTimer.Dispose(waitHandle))
+                    using (var waitHandle = new ManualResetEvent(false))
                     {
-                        waitHandle.WaitOne();
+                        if (_reconnectAttemptTimer.Dispose(waitHandle))
+                        {
+                            waitHandle.WaitOne();
+                        }
                     }
-                }
-            });
+                });
 
-            ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
+                ea.Execute(() => ConflictResolver?.ResolveConflictsTask.Wait());
 
-            ConflictResolver = null;
+                ConflictResolver = null;
 
-            if (_log.IsInfoEnabled)
-                _log.Info("Closing and disposing document replication connections.");
+                if (_log.IsInfoEnabled)
+                    _log.Info("Closing and disposing document replication connections.");
 
-            foreach (var incoming in _incoming)
-                ea.Execute(incoming.Value.Dispose);
+                foreach (var incoming in _incoming)
+                    ea.Execute(incoming.Value.Dispose);
 
-            foreach (var outgoing in _outgoing)
-                ea.Execute(outgoing.Dispose);
+                foreach (var outgoing in _outgoing)
+                    ea.Execute(outgoing.Dispose);
 
-            Database.TombstoneCleaner?.Unsubscribe(this);
+                Database.TombstoneCleaner?.Unsubscribe(this);
 
-            Database = null;
-            ea.ThrowIfNeeded();
+                Database = null;
+                ea.ThrowIfNeeded();
+            }
+            finally
+            {
+                _locker.ExitWriteLock();
+            }
         }
 
         public string TombstoneCleanerIdentifier => "Replication";
