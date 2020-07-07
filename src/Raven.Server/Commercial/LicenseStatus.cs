@@ -10,6 +10,8 @@ namespace Raven.Server.Commercial
     {
         public Guid? Id { get; set; }
 
+        public string LicensedTo { get; set; }
+
         public Dictionary<string, object> Attributes { get; set; }
 
         public string ErrorMessage { get; set; }
@@ -149,6 +151,9 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
+                [nameof(Id)] = Id?.ToString(),
+                [nameof(LicensedTo)] = LicensedTo,
+                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(ErrorMessage)] = ErrorMessage,
                 [nameof(MaxCores)] = MaxCores,
@@ -159,8 +164,6 @@ namespace Raven.Server.Commercial
                 [nameof(Expired)] = Expired,
                 [nameof(Status)] = Status,
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Id)] = Id?.ToString(),
-                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
                 [nameof(HasDynamicNodesDistribution)] = HasDynamicNodesDistribution,
                 [nameof(HasEncryption)] = HasEncryption,
                 [nameof(HasSnapshotBackups)] = HasSnapshotBackups,
