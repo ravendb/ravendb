@@ -224,12 +224,34 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
+        private class MyRawPolicy : RawTimeSeriesPolicy
+        {
+            public MyRawPolicy(TimeValue retention)
+            {
+                RetentionTime = retention;
+            }
+        }
+
         [Fact]
         public async Task NotValidConfigureShouldThrow()
         {
             using (var store = GetDocumentStore())
             {
+                var raw = new MyRawPolicy(TimeValue.FromMinutes(0));
                 var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                        }
+                    }
+                };
+                var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
+                Assert.Contains("Retention time of the RawPolicy must be greater than zero", ex.Message);
+
+                config = new TimeSeriesConfiguration
                 {
                     Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
                     {
@@ -244,7 +266,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }
                 };
 
-                var ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
+                ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
                 Assert.Contains("month might have different number of days", ex.Message);
 
 
@@ -1214,8 +1236,8 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 var p1 = new TimeSeriesPolicy("By1",TimeValue.FromSeconds(1), raw.RetentionTime * 2);
                 var p2 = new TimeSeriesPolicy("By2",TimeValue.FromSeconds(2), raw.RetentionTime * 3);
-                var p3 = new TimeSeriesPolicy("By3",TimeValue.FromSeconds(3), raw.RetentionTime * 4);
-                var p4 = new TimeSeriesPolicy("By4",TimeValue.FromSeconds(4), raw.RetentionTime * 5);
+                var p3 = new TimeSeriesPolicy("By4",TimeValue.FromSeconds(4), raw.RetentionTime * 4);
+                var p4 = new TimeSeriesPolicy("By8",TimeValue.FromSeconds(8), raw.RetentionTime * 5);
 
                 var config = new TimeSeriesConfiguration
                 {
