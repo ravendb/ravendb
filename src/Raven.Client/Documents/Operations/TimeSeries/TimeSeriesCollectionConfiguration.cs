@@ -26,6 +26,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         {
             RawPolicy ??= RawTimeSeriesPolicy.Default;
 
+            if (RawPolicy.RetentionTime <= TimeValue.Zero)
+                throw new InvalidOperationException("Retention time of the RawPolicy must be greater than zero");
+
             if (Policies == null)
                 return;
 
