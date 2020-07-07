@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
+        internal static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
         {
             if (fromList.Count != toList.Count)
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
