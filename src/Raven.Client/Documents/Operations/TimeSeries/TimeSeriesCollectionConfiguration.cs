@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 if (index > 0 && // first policy always legit, since the source is the raw data
                     prev.AggregationTime.IsMultiple(policy.AggregationTime) == false)
-                    throw new InvalidOperationException($"The aggregation time of the policy '{policy.Name}' ({policy.AggregationTime}) must be divided by the aggregation time of '{prev.Name}' ({prev.AggregationTime}) without a reminder.");
+                    throw new InvalidOperationException($"The aggregation time of the policy '{policy.Name}' ({policy.AggregationTime}) must be divided by the aggregation time of '{prev.Name}' ({prev.AggregationTime}) without a remainder.");
 
                 _policyIndexCache[policy.Name] = index + 1;
             }

@@ -284,7 +284,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
 
                 ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
-                Assert.Contains("The aggregation time of the policy 'By364DaysFor5Years' (364 days) must be divided by the aggregation time of 'By27DaysFor1Year' (27 days) without a reminder", ex.Message);
+                Assert.Contains("The aggregation time of the policy 'By364DaysFor5Years' (364 days) must be divided by the aggregation time of 'By27DaysFor1Year' (27 days) without a remainder", ex.Message);
             }
         }
 

@@ -88,10 +88,23 @@ class timeSeriesPolicy {
         
         this.aggregation.extend({
             validation: [
+                { 
+                    validator: (time: timeValueEntry) => !this.hasAggregation ||
+                                                         (this.aggregation().unit() !== 'second' && this.aggregation().unit() !== 'month') ||
+                                                         time.amount() >= 1,
+                    message: "Minimum value for 'seconds' or 'months' time units is 1"
+                }, 
                 {
                     validator: (time: timeValueEntry) => !this.hasAggregation || time.isPositive(),
                     message: "Aggregation time must be greater than zero"
-                }, {
+                },
+                {
+                    validator: (time: timeValueEntry) => !this.hasAggregation ||
+                                                         (this.aggregation().unit() !== 'second' && this.aggregation().unit() !== 'month') ||
+                                                         time.amount() % 1 === 0,
+                    message: "Please use a whole number for 'seconds' or 'months' time units",
+                },
+                {
                     validator: (time: timeValueEntry) => {
                         const previous = this.previous();
                         if (!previous || !previous.hasAggregation) {
@@ -106,7 +119,8 @@ class timeSeriesPolicy {
                         }
                     },
                     message: () => "Time frame must be greater than the preceding aggregation time (" + this.previous().aggregationFormatted() + ")"
-                }, {
+                },
+                {
                     validator: (time: timeValueEntry) => {
                         const previous = this.previous();
                         if (previous != null) {
@@ -125,6 +139,17 @@ class timeSeriesPolicy {
                         }
                     },
                     message: () => "Time frame must be less than the preceding retention time (" + this.previous().retentionFormatted() + ")"
+                },
+                {
+                    validator: (time: timeValueEntry) => {
+                        const previous = this.previous();
+                        if (!previous || !previous.hasAggregation) {
+                            return true;
+                        }
+
+                        return time.isMultipleOf(previous.aggregation());
+                    },
+                    message: "Time value must be divided by the previous policy aggregation time without a remainder"
                 }
             ]
         });
@@ -132,9 +157,21 @@ class timeSeriesPolicy {
         this.retention.extend({
             validation: [
                 {
+                    validator: (time: timeValueEntry) => !this.hasRetention ||
+                                                         (this.retention().unit() !== 'second' && this.retention().unit() !== 'month') ||
+                                                         time.amount() >= 1,
+                    message: "Minimum value for 'seconds' or 'months' time units is 1",
+                },
+                {
                     validator: (time: timeValueEntry) => !this.hasRetention() || time.isPositive(),
                     message: "Retention time must be greater than zero"
-                }
+                },
+                {
+                    validator: (time: timeValueEntry) => !this.hasRetention ||
+                        (this.retention().unit() !== 'second' && this.retention().unit() !== 'month') ||
+                        time.amount() % 1 === 0,
+                    message: "Please use a whole number for 'seconds' or 'months' time units",
+                },
             ]
         })
     }
