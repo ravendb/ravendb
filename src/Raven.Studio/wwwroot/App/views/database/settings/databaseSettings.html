@@ -147,7 +147,7 @@
                 <span data-bind="text: customizedDatabaseValue"></span>
                 <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu max-height" data-bind="foreach: availableValues">
+            <ul class="dropdown-menu" data-bind="foreach: availableValues">
                 <li><a href="#" data-bind="text: $data, click: _.partial($parent.initCustomizedValue, $data)"></a></li>
             </ul>
         </div>
@@ -179,7 +179,7 @@
             <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" placeholder="Enter a new path"
                    data-bind="textInput: customizedDatabaseValue, attr: {'id': 'localFolderPath_' + keyName(), 'title': customizedDatabaseValue }" />
             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-            <ul class="dropdown-menu max-height" data-bind="foreach: folderPathOptions, autoComplete: '#localFolderPath_' + keyName()">
+            <ul class="dropdown-menu" data-bind="foreach: folderPathOptions, autoComplete: '#localFolderPath_' + keyName()">
                 <li data-bind="click: $parent.pathHasChanged">
                     <a href="#" data-bind="text: $data"></a>
                 </li>

@@ -24,7 +24,7 @@
                             <span data-bind="text: backupType() || 'Select backup type..'"></span>
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu max-height" data-bind="foreach: backupOptions">
+                        <ul class="dropdown-menu" data-bind="foreach: backupOptions">
                             <li><a href="#" data-bind="text: $data, click: $parent.useBackupType.bind($parent, $data)"></a></li>
                         </ul>
                     </div>

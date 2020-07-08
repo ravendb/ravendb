@@ -103,7 +103,7 @@
                                            id="database-name"
                                            placeholder="Database Name"
                                            data-bind="textInput: databaseName, hasFocus: $root.databaseNameHasFocus">
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: createDatabaseNamesAutoCompleter(), autoComplete: '#database-name'">
+                                    <ul class="dropdown-menu" data-bind="foreach: createDatabaseNamesAutoCompleter(), autoComplete: '#database-name'">
                                         <li data-bind="click: $parent.selectDatabaseName.bind($parent, $data)">
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>

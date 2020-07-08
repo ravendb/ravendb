@@ -117,7 +117,7 @@
                 <div class="has-feedback dropdown" style="display: block;">
                     <input id="legacyMigrationDataDirectory" type="text" class="form-control" placeholder="Absolute path to the resource data directory"
                            data-bind="textInput: dataDirectory, hasFocus: dataDirectoryHasFocus" />
-                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.legacyMigrationDataDirectoryPathOptions, autoComplete: '#legacyMigrationDataDirectory'">
+                    <ul class="dropdown-menu" data-bind="foreach: $parent.legacyMigrationDataDirectoryPathOptions, autoComplete: '#legacyMigrationDataDirectory'">
                         <li data-bind="click: _.partial($root.databaseModel.legacyMigrationDataDirectoryHasChanged, $data)">
                             <a href="#" data-bind="text: $data"></a>
                         </li>
@@ -143,7 +143,7 @@
                 <div class="col-md-8 dropdown" style="display: block">
                     <input type="text" id="legacySourceJournalsPath" class="form-control" placeholder="Resource journals location (optional)" 
                            data-bind="textInput: journalsPath, hasFocus: journalsPathHasFocus" />
-                    <ul class="dropdown-menu max-height" data-bind="foreach: $parent.sourceJournalsPathOptions, autoComplete: '#legacySourceJournalsPath'">
+                    <ul class="dropdown-menu" data-bind="foreach: $parent.sourceJournalsPathOptions, autoComplete: '#legacySourceJournalsPath'">
                         <li data-bind="click: _.partial($root.databaseModel.journalsPathHasChanged, $data)">
                             <a href="#" data-bind="text: $data"></a>
                         </li>
@@ -236,7 +236,7 @@
                     <input type="text" class="form-control" id="dataExporterFullPath" data-bind="textInput: dataExporterFullPath, hasFocus: dataExporterFullPathHasFocus" placeholder="Absolute path to Raven.StorageExporter.exe"/>
                     <span class="glyphicon glyphicon-ok text-success form-control-feedback"
                           data-bind="visible: dataExporterFullPath() && dataExporterFullPath.isValid() && !dataExporterFullPath.isValidating()"></span>
-                    <ul class="dropdown-menu max-height" role="menu"
+                    <ul class="dropdown-menu" role="menu"
                         data-bind="autoComplete: '#dataExporterFullPath', foreach: $root.allDataExporterAutoCompleteOptions">
                         <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.dataExporterAutocomplete.complete, $data.path) : _.partial($root.databaseModel.dataExporterPathHasChanged, $data.path)">
                             <a role="menuitem" tabindex="-1" href="#">
@@ -298,7 +298,7 @@
                 <input type="text" class="form-control" id="backupDirectoryrPath"
                        data-bind="textInput: localServerCredentials().backupDirectory"
                        placeholder="Enter backup directory path" />
-                <ul class="dropdown-menu max-height" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#backupDirectoryrPath'">
+                <ul class="dropdown-menu" data-bind="foreach: $parent.backupFolderPathOptions, autoComplete: '#backupDirectoryrPath'">
                     <li data-bind="click: _.partial($root.databaseModel.backupDirectoryHasChanged, $data)">
                         <a href="#" data-bind="text: $data"></a>
                     </li>
@@ -455,7 +455,7 @@
                     </div>
                     <div class="col-md-8">
                         <input type="text" class="form-control" id="remoteFolderAzure" data-bind="textInput: remoteFolder"/>
-                        <ul class="dropdown-menu max-height" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAzure'">
+                        <ul class="dropdown-menu" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAzure'">
                             <li data-bind="click: _.partial($root.databaseModel.remoteFolderAzureChanged, $data)">
                                 <a href="#" data-bind="text: $data"></a>
                             </li>
@@ -510,7 +510,7 @@
                            <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" id="AmazonS3RegionInput"
                                   data-bind="textInput: regionName" placeholder="Select AWS region">
                            <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                           <ul class="dropdown-menu max-height" data-bind="foreach: createAwsRegionAutoCompleter(true), autoComplete: '#AmazonS3RegionInput'">
+                           <ul class="dropdown-menu" data-bind="foreach: createAwsRegionAutoCompleter(true), autoComplete: '#AmazonS3RegionInput'">
                                <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
                                    <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
                                </li>
@@ -532,7 +532,7 @@
                    </div>
                    <div class="col-md-8">
                        <input type="text" class="form-control" id="remoteFolderAmazon" data-bind="textInput: remoteFolder"/>
-                       <ul class="dropdown-menu max-height" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAmazon'">
+                       <ul class="dropdown-menu" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderAmazon'">
                            <li data-bind="click: _.partial($root.databaseModel.remoteFolderAmazonChanged, $data)">
                                <a href="#" data-bind="text: $data"></a>
                            </li>
@@ -582,7 +582,7 @@
                     </div>
                     <div class="col-md-8">
                         <input type="text" class="form-control" id="remoteFolderGoogleCloud" data-bind="textInput: remoteFolder"/>
-                        <ul class="dropdown-menu max-height" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderGoogleCloud'">
+                        <ul class="dropdown-menu" data-bind="foreach: $root.backupFolderPathOptions, autoComplete: '#remoteFolderGoogleCloud'">
                             <li data-bind="click: _.partial($root.databaseModel.remoteFolderGoogleCloudChanged, $data)">    
                                 <a href="#" data-bind="text: $data"></a>
                             </li>
@@ -684,7 +684,7 @@
                        data-bind="textInput: dataPath, attr: { placeholder: $root.databaseModel.name() || 'Enter database path (optional)' }, hasFocus: dataPathHasFocus"
                        title="Enter location for the database files."/>
                 
-                <ul class="dropdown-menu max-height" role="menu"
+                <ul class="dropdown-menu" role="menu"
                     data-bind="autoComplete: '#dataPath', foreach: $root.allAutoCompleteOptions">
                     <li role="presentation" data-bind="click: $data.isRecent ? _.partial($root.recentPathsAutocomplete.complete, $data.path) : _.partial($root.databaseModel.dataPathHasChanged, $data.path)">
                         <a role="menuitem" tabindex="-1" href="#">

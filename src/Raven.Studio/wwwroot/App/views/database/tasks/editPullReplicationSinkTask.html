@@ -81,7 +81,7 @@
                                     <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                 </button>
-                                <ul class="dropdown-menu max-height"
+                                <ul class="dropdown-menu"
                                     data-bind="foreach: $root.ravenEtlConnectionStringsDetails">
                                     <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">                                       
                                         <a href="#">

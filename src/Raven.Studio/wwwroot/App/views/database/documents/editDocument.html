@@ -109,7 +109,7 @@
                         <button type="button" class="btn btn-sm dropdown-toggle" data-toggle="dropdown">
                             Compare with: <span class="caret margin-left margin-left-sm"></span>
                         </button>
-                        <ul class="dropdown-menu max-height" data-bind="foreach: revisionsToCompare">
+                        <ul class="dropdown-menu" data-bind="foreach: revisionsToCompare">
                             <li data-bind="css: { active:  $data === $root.comparingWith() }">
                                 <a href="#" data-bind="text: $data.__metadata.lastModified(), click: _.partial($root.compareRevisions, $data)"></a>
                             </li>
