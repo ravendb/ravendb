@@ -276,29 +276,121 @@
 }
 
 #newDatabase {
+
+    .restore-point-dropdown {
+
+        &.dropdown-menu {
+            padding: 0!important;
+
+            .divider {
+                height: 0;
+            }
+        }
+
+        li > a {
+            padding: 3px 0px !important;
+        }
+
+        .dropdown-header {
+            padding: 3px 10px !important;
+            position: sticky;
+            top: 0;
+            min-height: 30px;
+            z-index: 1;
+
+            &.bg-info {
+                top: 30px;
+                z-index: 1;
+            }
+        }
+
+        li:nth-child(odd) {
+            background-color: @panel-bg;
+        }
+
+        li:nth-child(even) {
+            background-color: darken(@panel-bg, 3%);
+        }
+    }
+
     .restore-point-row {
         display: flex;
+        align-items: center;
+        margin-bottom: 1px;
+        padding: @gutter/6 @gutter/3;
+        text-align: center;
 
         .date {
             flex-grow: 1;
             font-weight: bold;
+            font-size: 12px;
+            color: @text-emphasis;
+        }
+
+        span {
+            display: block;
+            color: @text-emphasis;
+        }
+
+        .type {
+            flex-basis: 120px;
+
+            &.Full {
+                color: @color-3-1;
+            }
+
+            &.Incremental {
+                color: @color-2-3;
+            }
+        }
+
+        .node {
+            white-space: break-spaces;
+            flex-basis: 45px;
+        }
+
+        .files {
+            flex-basis: 60px;
+            white-space: break-spaces;
+        }
+
+        .node, .files {
+            text-align: center;
+            line-height: 14px;
         }
 
         .type, .node, .files {
-            flex-basis: 95px;
             flex-shrink: 0;
-            text-align: center;
         }
 
         .encryption {
-            flex-basis: 80px;
+            flex-basis: 65px;
             flex-shrink: 0;
-            text-align: center;
         }
 
         .dropdown-header {
             font-size: 11px;
             text-transform: uppercase;
+        }
+    }
+
+    .restore-point-row > div {
+        margin: 0 @gutter/4;
+    }
+
+    .restore-point-legend {
+        padding: 2.5px 0 !important;
+
+        .encryption, .date, .type, .node, .files {
+            line-height: 11px;
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: .1em;
+            color: @text-color;
+        }
+
+        .date {
+            font-size: 9px !important;
         }
     }
 

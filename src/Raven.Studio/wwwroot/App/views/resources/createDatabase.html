@@ -622,30 +622,32 @@
                                 <li class="dropdown-header" data-bind="attr: { title: $data.databaseNameTitle }">
                                     <span class="text-success" data-bind="text: $data.databaseName"></span>
                                 </li>
+                                <div class="dropdown-header header bg-info" title="">
+                                    <div class="restore-point-row restore-point-legend">
+                                        <div class="date">Date</div>
+                                        <div class="type">Backup Type</div>
+                                        <div class="encryption">Encrypted</div>
+                                        <div class="node">Node Tag</div>
+                                        <div class="files">Files to Restore</div>
+                                    </div>
+                                </div>
                                 <!-- ko foreach: $data.restorePoints -->
                                 <li>
                                     <a href="#" data-bind="click: _.partial($root.databaseModel.useRestorePoint, $data)" title="">
                                         <div class="restore-point-row">
-                                            <div class="date" data-bind="text: dateTime"></div>
-                                            <div class="type" data-bind="text: backupType"></div>
+                                            <div class="date" data-bind="text: dateTime"><span></span></div>
+                                            <div class="type" data-bind="text: backupType, css: backupType"></div>
+                                            <div class="encryption">
+                                                <i class="icon-lock text-success" data-bind="visible: isEncrypted" title="Encrypted"></i>
+                                                <i class="icon-unsecure" data-bind="visible: !isEncrypted" title="Not encrypted"></i>
+                                            </div>
                                             <div class="node" data-bind="text: nodeTag"></div>
                                             <div class="files" data-bind="text: filesToRestore.toLocaleString()"></div>
-                                            <div class="encryption" data-bind="text: isEncrypted ? 'Yes' : 'No'"></div>
                                         </div>
                                     </a>
                                 </li>
                                 <!-- /ko -->
                             </ul>
-                            <div class="divider"></div>
-                            <div class="dropdown-header header bg-info" title="">
-                                <div class="restore-point-row">
-                                    <div class="date">Date</div>
-                                    <div class="type">Backup Type</div>
-                                    <div class="node">Node Tag</div>
-                                    <div class="files">Files to Restore</div>
-                                    <div class="encryption">Encrypted</div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                     <span class="help-block" data-bind="validationMessage: selectedRestorePoint"></span>
