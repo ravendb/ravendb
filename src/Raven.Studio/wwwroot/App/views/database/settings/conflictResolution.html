@@ -66,7 +66,7 @@
                                            data-bind="textInput: collection, attr: { disable: $root.collections().length === 0 }"
                                            placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height"
+                                    <ul class="dropdown-menu"
                                         data-bind="foreach: $root.createCollectionNameAutocompleter(collection)">
                                         <li data-bind="click: _.partial($root.model().useCollection, $data)">
                                             <a href="#" data-bind="text: $data"></a>

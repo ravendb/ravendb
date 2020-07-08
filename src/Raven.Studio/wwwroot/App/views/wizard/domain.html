@@ -11,7 +11,7 @@
                                    placeholder="Enter domain" data-toggle="dropdown"
                                    data-bind="textInput: domain, attr: { id: 'domainInput' }" />
                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                            <ul class="dropdown-menu max-height" role="menu"
+                            <ul class="dropdown-menu" role="menu"
                                 data-bind="autoComplete: '#domainInput', foreach: $root.createDomainNameAutocompleter(domain)">
                                 <li role="presentation" data-bind="click: $parent.domain.bind($parent, $data)">
                                     <a role="menuitem" tabindex="-1" href="#">
@@ -35,7 +35,7 @@
                                 <span data-bind="text: rootDomain() || 'Select root domain'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu max-height" data-bind="foreach: availableRootDomains">
+                            <ul class="dropdown-menu" data-bind="foreach: availableRootDomains">
                                 <li>
                                     <a href="#" data-bind="text: $data, click: $parent.rootDomain.bind($parent, $data)"></a>
                                 </li>
@@ -74,7 +74,7 @@
                                 <span data-bind="text: userEmail() || 'Select E-mail'"></span>
                                 <span class="caret"></span>
                             </button>
-                            <ul class="dropdown-menu max-height" data-bind="foreach: availableEmails">
+                            <ul class="dropdown-menu" data-bind="foreach: availableEmails">
                                 <li>
                                     <a href="#" data-bind="text: $data, click: $parent.userEmail.bind($parent, $data)"></a>
                                 </li>

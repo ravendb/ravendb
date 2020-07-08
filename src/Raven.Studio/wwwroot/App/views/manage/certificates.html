@@ -330,7 +330,7 @@
                                                    data-bind="textInput: $root.newPermissionDatabaseName"
                                                    placeholder="Select a database">
                                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                            <ul class="dropdown-menu max-height" data-bind="foreach: $root.createDatabaseNameAutocompleter(), autoComplete: '#databaseNameInput'">
+                                            <ul class="dropdown-menu" data-bind="foreach: $root.createDatabaseNameAutocompleter(), autoComplete: '#databaseNameInput'">
                                                 <li data-bind="click: _.partial($root.useDatabase, $data)">
                                                     <a href="#" data-bind="text: $data"></a>
                                                 </li>

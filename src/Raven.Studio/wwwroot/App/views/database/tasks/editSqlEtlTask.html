@@ -81,7 +81,7 @@
                                         <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
                                         <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     </button>
-                                    <ul class="dropdown-menu max-height"
+                                    <ul class="dropdown-menu"
                                         data-bind="foreach: $root.sqlEtlConnectionStringsNames">
                                         <li data-bind="click: _.partial($root.useConnectionString, $data)">
                                             <a href="#" data-bind="text: $data"></a>
@@ -278,7 +278,7 @@
                                     <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" title="Select/enter the collection name"
                                            data-bind="textInput: collection" placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height"
+                                    <ul class="dropdown-menu"
                                         data-bind="foreach: $root.createCollectionNameAutocompleter(collection)">
                                         <li data-bind="click: _.partial($root.useCollection, $data)">
                                             <a href="#" data-bind="text: $data"></a>

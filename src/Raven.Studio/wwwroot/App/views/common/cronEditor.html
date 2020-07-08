@@ -19,7 +19,7 @@
             <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: dayOfWeekLabel"></span> <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu max-height" data-bind="foreach: $root.constructor.daysOfWeek">
+            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.daysOfWeek">
                 <li><a href="#" data-bind="click: _.partial($root.dayOfWeek, value)"><span data-bind="text: label"></span></a></li>
             </ul>
         </div>
@@ -33,7 +33,7 @@
             <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: dayOfMonth"></span> <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu max-height" data-bind="foreach: $root.constructor.daysOfMonth">
+            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.daysOfMonth">
                 <li><a href="#" data-bind="click: _.partial($root.dayOfMonth, $data)"><span data-bind="text: $data"></span></a></li>
             </ul>
         </div>
@@ -47,7 +47,7 @@
             <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: monthLabel"></span> <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu max-height" data-bind="foreach: $root.constructor.months">
+            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.months">
                 <li><a href="#" data-bind="click: _.partial($root.month, value)"><span data-bind="text: label"></span></a></li>
             </ul>
         </div>
@@ -61,7 +61,7 @@
             <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: minutes"></span> <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu max-height" data-bind="foreach: $root.constructor.minutes">
+            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.minutes">
                 <li><a href="#" data-bind="click: _.partial($root.minutes, $data)"><span data-bind="text: $data"></span></a></li>
             </ul>
         </div>
@@ -78,7 +78,7 @@
             <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: hourLabel"></span> <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu max-height" data-bind="foreach: $root.constructor.hours">
+            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.hours">
                 <li><a href="#" data-bind="click: _.partial($root.hour, value)"><span data-bind="text: label"></span></a></li>
             </ul>
         </div>
@@ -91,7 +91,7 @@
             <button type="button" class="btn dropdown-toggle" data-toggle="dropdown">
                 <span data-bind="text: minutes"></span> <span class="caret"></span>
             </button>
-            <ul class="dropdown-menu max-height" data-bind="foreach: $root.constructor.minutes">
+            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.minutes">
                 <li><a href="#" data-bind="click: _.partial($root.minutes, $data)"><span data-bind="text: $data"></span></a></li>
             </ul>
         </div>

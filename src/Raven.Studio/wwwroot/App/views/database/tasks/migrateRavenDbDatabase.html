@@ -21,7 +21,7 @@
                                                id="server-url"
                                                data-bind="textInput: serverUrl"
                                                placeholder="Source server url" />
-                                        <ul class="dropdown-menu max-height" data-bind="foreach: createServerUrlAutoCompleter(), autoComplete: '#server-url'">
+                                        <ul class="dropdown-menu" data-bind="foreach: createServerUrlAutoCompleter(), autoComplete: '#server-url'">
                                             <li data-bind="click: $parent.selectServerUrl.bind($parent, $data)">
                                                 <a href="#" data-bind="text: $data"></a>
                                             </li>
@@ -77,7 +77,7 @@
                                            data-toggle="dropdown"
                                            id="resource-name"
                                            data-bind="textInput: resourceName, attr: { 'placeholder': 'Source ' + resourceTypeName().toLowerCase() + ' name' }" />
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: createResourceNamesAutoCompleter(), autoComplete: '#resource-name'">
+                                    <ul class="dropdown-menu" data-bind="foreach: createResourceNamesAutoCompleter(), autoComplete: '#resource-name'">
                                         <li data-bind="click: $parent.selectResourceName.bind($parent, $data)">
                                             <a href="#" data-bind="text: $data"></a>
                                         </li>
