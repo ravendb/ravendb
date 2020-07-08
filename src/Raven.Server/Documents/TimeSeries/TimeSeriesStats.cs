@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.TimeSeries
             var end = DateTime.MinValue;
 
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
-            ByteStringContext<ByteStringMemoryCache>.InternalScope nameScope;
+            ByteStringContext<ByteStringMemoryCache>.InternalScope? nameScope = null; 
             Slice nameSlice;
             
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
             else
             {
-                nameScope = Slice.From(context.Allocator, slicer.Name, out nameSlice);
+                nameSlice = slicer.NameSlice;
             }
 
             var liveEntries = segment.NumberOfLiveEntries;
@@ -180,7 +180,6 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            using (nameScope)
             using (table.Allocate(out var tvb))
             {
                 tvb.Add(slicer.StatsKey);
@@ -192,6 +191,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 table.Set(tvb);
             }
+
+            nameScope?.Dispose();
 
             void HandleLiveSegment()
             {
@@ -295,26 +296,41 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public LazyStringValue GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, Slice storageKey)
+        public LazyStringValue GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, Slice key)
         {
             var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
-            using (ExtractStatsKeyFromStorageKey(context, storageKey, out var statsKey))
-            {
-                if (table.ReadByKey(statsKey, out var tvr) == false)
-                    return null;
+            if (table.ReadByKey(key, out var tvr) == false)
+                return null;
 
-                return DocumentsStorage.TableValueToString(context, (int)StatsColumns.Name, ref tvr);
+            return DocumentsStorage.TableValueToString(context, (int)StatsColumns.Name, ref tvr);
+        }
+
+        public void UpdateTimeSeriesName(DocumentsOperationContext context, CollectionName collection, TimeSeriesSliceHolder slicer)
+        {
+            // This method should only be called from IncomingReplicationHandler, 
+            // and only when the incoming TS exists locally but under a different casing
+            // and local-name > remote-name lexicographically 
+
+            var table = context.Transaction.InnerTransaction.OpenTable(TimeSeriesStatsSchema, collection.GetTableName(CollectionTableType.TimeSeriesStats));
+            if (table.ReadByKey(slicer.StatsKey, out var tvr) == false)
+                return;
+
+            var count = DocumentsStorage.TableValueToLong((int)StatsColumns.Count, ref tvr);
+            var start = new DateTime(Bits.SwapBytes(DocumentsStorage.TableValueToLong((int)StatsColumns.Start, ref tvr)));
+            var end = DocumentsStorage.TableValueToDateTime((int)StatsColumns.End, ref tvr);
+
+            using (table.Allocate(out var tvb))
+            {
+                tvb.Add(slicer.StatsKey);
+                tvb.Add(GetPolicy(slicer));
+                tvb.Add(Bits.SwapBytes(start.Ticks));
+                tvb.Add(end);
+                tvb.Add(count);
+                tvb.Add(slicer.NameSlice);
+
+                table.Set(tvb);
             }
         }
-
-        private static IDisposable ExtractStatsKeyFromStorageKey(DocumentsOperationContext context, Slice storageKey, out Slice statsKey)
-        {
-            var size = storageKey.Size - 
-                       sizeof(long) - // baseline
-                       1; // record separator
-            return Slice.External(context.Allocator, storageKey, size, out statsKey);
-        }
-
 
         public IEnumerable<Slice> GetTimeSeriesNameByPolicy(DocumentsOperationContext context, CollectionName collection, string policy, long skip, int take)
         {
@@ -411,6 +427,14 @@ namespace Raven.Server.Documents.TimeSeries
                 return RawPolicySlice;
             var offset = index + 1;
             return slicer.PolicyNameWithSeparator(name, offset, name.Content.Length - offset);
+        }
+
+        public static IDisposable ExtractStatsKeyFromStorageKey(DocumentsOperationContext context, Slice storageKey, out Slice statsKey)
+        {
+            var size = storageKey.Size -
+                       sizeof(long) - // baseline
+                       1; // record separator
+            return Slice.External(context.Allocator, storageKey, size, out statsKey);
         }
     }
 }
