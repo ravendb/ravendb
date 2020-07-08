@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, responsibleNodeTag, skipErrorLog: true);
         }
 
-        private DateTime? GetNextWakeupTimeLocal(string databaseName, long lastEtag, PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus)
+        private DateTime? GetNextWakeupTimeLocal(string databaseName, long lastEtag, PeriodicBackupConfiguration configuration, TransactionOperationContext context)
         {
             // we will always wake up the database for a full backup.
             // but for incremental we will wake the database only if there were changes made.
@@ -107,6 +107,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (configuration.Disabled || configuration.IncrementalBackupFrequency == null && configuration.FullBackupFrequency == null)
                 return null;
 
+            var backupStatus = GetBackupStatusFromCluster(_serverStore, context, databaseName, configuration.TaskId);
             if (backupStatus == null)
             {
                 // we want to wait for the backup occurrence
@@ -428,6 +429,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public DateTime? GetWakeDatabaseTimeUtc(string databaseName)
         {
+            if (_periodicBackups.Count == 0)
+                return null;
+
             long lastEtag;
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -437,21 +441,25 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
 
             DateTime? wakeupDatabase = null;
-            foreach (var backup in _periodicBackups)
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                var nextBackup = GetNextWakeupTimeLocal(databaseName, lastEtag, backup.Value.Configuration, backup.Value.BackupStatus);
-                if (nextBackup == null)
-                    continue;
+                foreach (var backup in _periodicBackups)
+                {
+                    var nextBackup = GetNextWakeupTimeLocal(databaseName, lastEtag, backup.Value.Configuration, context);
+                    if (nextBackup == null)
+                        continue;
 
-                if (wakeupDatabase == null)
-                {
-                    // first time
-                    wakeupDatabase = nextBackup;
-                }
-                else if (nextBackup < wakeupDatabase)
-                {
-                    // next backup is earlier than the current one
-                    wakeupDatabase = nextBackup.Value;
+                    if (wakeupDatabase == null)
+                    {
+                        // first time
+                        wakeupDatabase = nextBackup;
+                    }
+                    else if (nextBackup < wakeupDatabase)
+                    {
+                        // next backup is earlier than the current one
+                        wakeupDatabase = nextBackup.Value;
+                    }
                 }
             }
 
