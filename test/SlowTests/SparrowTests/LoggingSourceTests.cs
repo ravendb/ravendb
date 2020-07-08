@@ -43,12 +43,12 @@ namespace SlowTests.SparrowTests
             for (int i = 0; i < artificialLogsCount; i++)
             {
                 var lastModified = now - TimeSpan.FromHours(i);
-                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.GetFileName(lastModified)}.00{artificialLogsCount-i}.log");
+                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(lastModified)}.00{artificialLogsCount-i}.log");
                 toCheckLogFiles.Add((fileName, lastModified > retentionTime));
                 await using (File.Create(fileName)) { }
                 File.SetLastWriteTime(fileName, lastModified);
             }
-
+            
             const long retentionSize = long.MaxValue;
             var loggingSource = new LoggingSource(
                 LogMode.Information,
@@ -110,6 +110,96 @@ namespace SlowTests.SparrowTests
         }
 
         [Theory]
+        [InlineData("log")]
+        [InlineData("log.gz")]
+        public async Task LoggingSource_WhenExistFileFromYesterdayAndCreateNewFileForToday_ShouldResetNumberToZero(string extension)
+        {
+            var testName = GetTestName();
+            var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(path);
+
+            const long retentionSize = long.MaxValue;
+            var retentionTimeConfiguration = TimeSpan.FromDays(3);
+
+            var yesterday = DateTime.Now - TimeSpan.FromDays(1);
+            var yesterdayLog = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(yesterday)}.010.{extension}");
+            await File.Create(yesterdayLog).DisposeAsync();
+            File.SetLastWriteTime(yesterdayLog, yesterday);
+
+            var loggingSource = new LoggingSource(
+                LogMode.Information,
+                path,
+                "LoggingSource" + testName,
+                retentionTimeConfiguration,
+                retentionSize);
+
+            var logger = new Logger(loggingSource, "Source" + testName, "Logger" + testName);
+            await logger.OperationsAsync("Some message");
+
+            var todayLog = string.Empty;
+            await WaitForValueAsync(async () =>
+            {
+                var afterEndFiles = Directory.GetFiles(path);
+                todayLog = afterEndFiles.FirstOrDefault(f =>
+                    LoggingSource.LogInfo.TryGetDate(f, out var date) && date.Date.Equals(DateTime.Today));
+                return todayLog != null;
+            }, true, 10_000, 1_000);
+
+            Assert.True(LoggingSource.LogInfo.TryGetNumber(todayLog, out var n) && n == 0);
+            
+            loggingSource.EndLogging();
+        }
+        [Theory]
+        [InlineData("log")]
+        [InlineData("log.gz")]
+        public async Task LoggingSource_WhenExistFileFromToday_ShouldIncrementNumberByOne(string extension)
+        {
+            const int fileSize = Constants.Size.Kilobyte;
+
+            var testName = GetTestName();
+            var path = NewDataPath(forceCreateDir: true);
+            path = Path.Combine(path, Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(path);
+
+            const long retentionSize = long.MaxValue;
+            var retentionTimeConfiguration = TimeSpan.FromDays(3);
+
+            var now = DateTime.Now;
+            var existLog = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(now)}.010.{extension}");
+            await using (var file = File.Create(existLog))
+            {
+                file.SetLength(fileSize);
+            }
+            var loggingSource = new LoggingSource(
+                LogMode.Information,
+                path,
+                "LoggingSource" + testName,
+                retentionTimeConfiguration,
+                retentionSize){MaxFileSizeInBytes = fileSize};
+            //This is just to make sure the MaxFileSizeInBytes is get action for the first file
+            loggingSource.SetupLogMode(LogMode.Operations, path, retentionTimeConfiguration, retentionSize, false);
+            
+            var logger = new Logger(loggingSource, "Source" + testName, "Logger" + testName);
+            await logger.OperationsAsync("Some message");
+
+            var result = await WaitForValueAsync(async () =>
+            {
+                var strings = Directory.GetFiles(path);
+                return strings.Any(f =>
+                {
+                    if (LoggingSource.LogInfo.TryGetDate(f, out var d) == false || d.Date.Equals(DateTime.Today) == false)
+                        return false;
+
+                    return LoggingSource.LogInfo.TryGetNumber(f, out var n) && n == 11;
+                });
+            }, true, 10_000, 1_000);
+            Assert.True(result);
+            
+            loggingSource.EndLogging();
+        }
+
+        [Theory]
         [InlineData(true)]
         [InlineData(false)]
         public async Task LoggingSource_WhileRetentionByTimeInDays_ShouldKeepRetentionPolicy(bool compressing)
@@ -126,7 +216,7 @@ namespace SlowTests.SparrowTests
             var toCheckLogFiles = new List<(string fileName, bool shouldExist)>();
             for (var date = retentionDate - TimeSpan.FromDays(2); date <= retentionDate + TimeSpan.FromDays(2); date += TimeSpan.FromDays(1))
             {
-                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.GetFileName(date)}.001.log");
+                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(date)}.001.log");
                 toCheckLogFiles.Add((fileName, date > retentionDate));
                 await using (File.Create(fileName)) { }
                 File.SetLastWriteTime(fileName, date);
