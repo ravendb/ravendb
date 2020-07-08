@@ -1040,6 +1040,7 @@ namespace Raven.Server.Documents.Replication
                             case TimeSeriesReplicationItem segment:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out _, out var baseline);
+                                UpdateTimeSeriesNameIfNeeded(context, docId, segment, tss);
 
                                 if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, baseline))
                                 {
@@ -1239,6 +1240,24 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     IsIncomingReplication = false;
+                }
+            }
+
+            private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)
+            {
+                using (var slicer = new TimeSeriesSliceHolder(context, docId, segment.Name))
+                {
+                    var localName = tss.Stats.GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
+                    if (localName == null || localName.CompareTo(segment.Name) <= 0) 
+                        return;
+
+                    // the incoming ts-segment name exists locally but under a different casing
+                    // lexical value of local name > lexical value of remote name =>
+                    // need to replace the local name by the remote name, in TimeSeriesStats and in document's metadata
+
+                    var collectionName = new CollectionName(segment.Collection);
+                    tss.Stats.UpdateTimeSeriesName(context, collectionName, slicer);
+                    tss.ReplaceTimeSeriesNameInMetadata(context, docId, localName, segment.Name);
                 }
             }
 

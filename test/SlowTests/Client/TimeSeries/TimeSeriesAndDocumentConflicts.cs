@@ -389,5 +389,75 @@ namespace SlowTests.Client.TimeSeries
             }
         }
 
+        [Fact]
+        public async Task TimeSeriesConflictsInMetadataOnDifferentCasing()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Now;
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "Aviv"
+                    }, "users/1-A");
+                    session.TimeSeriesFor("users/1-A", "HeartRate").Append(baseline, 1);
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenSession())
+                {
+                    // make sure that ts-segment has a greater etag than document
+                    var tsf = session.TimeSeriesFor("users/1-A", "HeartRate");
+                    tsf.Append(baseline.AddHours(1), 1);
+                    tsf.Append(baseline.AddHours(2), 1);
+                    session.SaveChanges();
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    // create same doc and same ts under a different casing
+                    session.Store(new User
+                    {
+                        Name = "Aviv"
+                    }, "users/1-A");
+                    session.TimeSeriesFor("users/1-A", "heartrate").Append(baseline.AddDays(1), 1);
+                    session.SaveChanges();
+                }
+                
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                var val = storeB.Operations
+                    .Send(new GetTimeSeriesOperation("users/1-A", "heartRate"))
+                    ?.Entries.Length;
+                Assert.Equal(4, val);
+
+                await SetupReplicationAsync(storeB, storeA);
+                EnsureReplicating(storeB, storeA);
+
+                val = storeA.Operations
+                    .Send(new GetTimeSeriesOperation("users/1-A", "heartRate"))
+                    ?.Entries.Length;
+                Assert.Equal(4, val);
+
+                // both stores should have 'HeartRate' in metadata ("HeartRate" < "heartrate")
+                foreach (var store in new [] { storeA, storeB})
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/1-A");
+                        var tsNames = (object[])session.Advanced.GetMetadataFor(user)["@timeseries"];
+
+                        Assert.Equal(1, tsNames.Length);
+                        Assert.Equal("HeartRate", tsNames[0]);
+                    }
+                }
+            }
+        }
+
     }
 }
