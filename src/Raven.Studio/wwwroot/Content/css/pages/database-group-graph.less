@@ -1,8 +1,8 @@
-@db-group-task-node-bg: #39434f;
+@db-group-task-node-bg: @panel-bg-2;
 @db-group-member-color: #6dbe3b;
 @db-group-promotable-color: #488c5d;
 @db-group-rehab-color: #5489a8;
-@db-group-task-name-color: @gray-light;
+@db-group-task-name-color: @text-color;
 
 .fullscreen {
     #databaseGroupGraphContainer {
@@ -116,7 +116,7 @@
         .node-bg {
             fill: @db-group-task-node-bg;
             cursor: move;
-            stroke: #2b2b2b;
+            stroke: @db-group-task-node-bg;
         }
 
         .task-desc {

@@ -107,7 +107,7 @@
             </div>
             <div class="scroll flex-grow">
                 <div class="panel panel-info certificate-item" data-bind="visible: wellKnownAdminCertsVisible">
-                    <div class="padding padding-sm flex-horizontal">
+                    <div class="padding flex-horizontal">
                         <div class="certificate-name">
                             <div class="flex-horizontal">
                                 <div>
@@ -124,13 +124,15 @@
                         <div class="flex-grow"></div>
                     </div>
                     <div class="panel-addon">
-                        <div class="padding padding-sm flex-horizontal">
-                            <div class="margin-right clearance"><i class="icon-clearance"></i><span data-bind="text: $root.clearanceLabelFor('ClusterAdmin')"></span></div>
-                            <div class="flex-horizontal">
-                                <div><i class="icon-database"></i></div>
-                                <div class="flex-horizontal flex-wrap">
-                                    <div>All</div>
-                                </div>
+                        <div class="padding flex-horizontal">
+                            <div class="clearance">
+                                <h5><i class="icon-clearance"></i> SECURITY CLEARANCE</h5>
+                                <strong data-bind="text: $root.clearanceLabelFor('ClusterAdmin')"></strong>
+                            </div>
+                            
+                            <div class="permissions">
+                                <h5><i class="icon-database"></i> DATABASE PERMISSIONS</h5>
+                                <strong>All</strong>
                             </div>
                         </div>
                     </div>

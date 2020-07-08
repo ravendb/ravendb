@@ -26,6 +26,12 @@
         }
     }
 
+    .panel-addon {
+        background-color: desaturate(darken(@background,15%),13%) !important;
+        border-top-color: desaturate(darken(@background,17%),13%) !important;
+        color: @text-color;
+    }
+
     .input-group-addon, .form-control, .btn:not(.btn-default):not(.btn-info):not(.btn-primary):not(.btn-success):not(.btn-warning):not(.btn-danger) {
         border-color: desaturate(lighten(@heading-bg-color, 5%),5%);
         box-shadow: none;
