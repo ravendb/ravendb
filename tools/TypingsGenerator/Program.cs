@@ -489,7 +489,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TimeSeriesDetails));
             scripter.AddType(typeof(TimeSeriesOperation));
             scripter.AddType(typeof(TimeSeriesOperation.AppendOperation));
-            scripter.AddType(typeof(TimeSeriesOperation.RemoveOperation));
+            scripter.AddType(typeof(TimeSeriesOperation.DeleteOperation));
             scripter.AddType(typeof(TimeSeriesConfiguration));
             
             // studio configuration

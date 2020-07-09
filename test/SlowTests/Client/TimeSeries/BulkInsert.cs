@@ -201,7 +201,7 @@ namespace SlowTests.Client.TimeSeries
                 {
                     session.Store(new { Name = "Oren" }, documentId);
                     session.TimeSeriesFor(documentId, "Heartrate")
-                        .Remove(baseline.AddMinutes(2));
+                        .Delete(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }

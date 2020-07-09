@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Patch
                 var append = new ClrFunctionInstance(ScriptEngine, "append", (thisObj, values) =>
                     AppendTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
-                var remove = new ClrFunctionInstance(ScriptEngine, "remove", (thisObj, values) =>
+                var delete = new ClrFunctionInstance(ScriptEngine, "delete", (thisObj, values) =>
                     DeleteRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
                 var get = new ClrFunctionInstance(ScriptEngine, "get", (thisObj, values) =>
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Patch
 
                 var obj = new ObjectInstance(ScriptEngine);
                 obj.Set("append", append);
-                obj.Set("remove", remove);
+                obj.Set("delete", delete);
                 obj.Set("get", get);
                 obj.Set("doc", args[0]);
                 obj.Set("name", args[1]);
@@ -441,10 +441,10 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue DeleteRangeTimeSeries(JsValue document, JsValue name, JsValue[] args)
             {
-                AssertValidDatabaseContext("timeseries(doc, name).remove");
+                AssertValidDatabaseContext("timeseries(doc, name).delete");
 
-                const string removeAll = "remove()";
-                const string removeSignature = "remove(from, to)";
+                const string deleteAll = "delete()";
+                const string deleteSignature = "delete(from, to)";
 
                 DateTime from, to;
                 switch (args.Length)
@@ -454,11 +454,11 @@ namespace Raven.Server.Documents.Patch
                         to = DateTime.MaxValue;
                         break;
                     case 2:
-                        from = GetTimeSeriesDateArg(args[0], removeSignature, "from");
-                        to = GetTimeSeriesDateArg(args[1], removeSignature, "to");
+                        from = GetTimeSeriesDateArg(args[0], deleteSignature, "from");
+                        to = GetTimeSeriesDateArg(args[1], deleteSignature, "to");
                         break;
                     default:
-                        throw new ArgumentException($"'remove' method has only the overloads: '{removeSignature}' or '{removeAll}', but was called with {args.Length} arguments.");
+                        throw new ArgumentException($"'delete' method has only the overloads: '{deleteSignature}' or '{deleteAll}', but was called with {args.Length} arguments.");
                 }
 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
@@ -473,7 +473,7 @@ namespace Raven.Server.Documents.Patch
                     From = from,
                     To = to,
                 };
-                _database.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(_docsCtx, deletionRangeRequest);
+                _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest);
 
                 return JsValue.Undefined;
             }

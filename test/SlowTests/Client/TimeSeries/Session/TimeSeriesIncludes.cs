@@ -1798,7 +1798,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Remove(baseline.AddMinutes(10), baseline.AddMinutes(40));
+                        .Delete(baseline.AddMinutes(10), baseline.AddMinutes(40));
 
                     session.SaveChanges();
                 }
@@ -1893,7 +1893,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Remove(baseline.AddMinutes(10), baseline.AddMinutes(40));
+                        .Delete(baseline.AddMinutes(10), baseline.AddMinutes(40));
 
                     session.SaveChanges();
                 }

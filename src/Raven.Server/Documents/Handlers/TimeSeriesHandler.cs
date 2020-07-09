@@ -717,9 +717,9 @@ namespace Raven.Server.Documents.Handlers
                 var changes = 0L;
                 var tss = _database.DocumentsStorage.TimeSeriesStorage;
 
-                if (_operation.Removals?.Count > 0)
+                if (_operation.Deletes?.Count > 0)
                 {
-                    foreach (var removal in _operation.Removals)
+                    foreach (var removal in _operation.Deletes)
                     {
                         var deletionRange = new TimeSeriesStorage.DeletionRangeRequest
                         {
@@ -730,7 +730,7 @@ namespace Raven.Server.Documents.Handlers
                             To = removal.To ?? DateTime.MaxValue
                         };
 
-                        LastChangeVector = tss.RemoveTimestampRange(context, deletionRange);
+                        LastChangeVector = tss.DeleteTimestampRange(context, deletionRange);
 
                         changes++;
                     }

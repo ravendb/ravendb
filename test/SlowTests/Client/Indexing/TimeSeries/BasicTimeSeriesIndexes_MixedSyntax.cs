@@ -107,7 +107,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company, "HeartRate").Remove(now2);
+                    session.TimeSeriesFor(company, "HeartRate").Delete(now2);
 
                     session.SaveChanges();
                 }
