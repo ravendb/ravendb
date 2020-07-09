@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -9,6 +10,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class TimeSeriesConfiguration : IDynamicJson, IPostJsonDeserialization
     {
         internal const char TimeSeriesRollupSeparator = '@';
+        internal static readonly TimeSpan DefaultPolicyCheckFrequency = TimeSpan.FromMinutes(10);
         public Dictionary<string, TimeSeriesCollectionConfiguration> Collections { get; set; }
 
         public TimeSpan? PolicyCheckFrequency { get; set; }
@@ -30,6 +32,39 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 config?.ValidateAndInitialize();
             }
+        }
+
+        private bool IsNullOrEmpty()
+        {
+            return (Collections?.Count ?? 0) == 0;
+        }
+
+        internal bool PolicyConfigurationChanged(TimeSeriesConfiguration other)
+        {
+            if (IsNullOrEmpty() && other.IsNullOrEmpty())
+                return false;
+
+            if (Collections == null || other.Collections == null)
+                return true;
+
+            if (Collections.Count != other.Collections.Count)
+                return true;
+
+            foreach (var collectionConfiguration in Collections)
+            {
+                var name = collectionConfiguration.Key;
+                var val = collectionConfiguration.Value;
+                if (other.Collections.TryGetValue(name, out var otherCollectionConfiguration) == false)
+                    return true;
+
+                if (Equals(val, otherCollectionConfiguration) == false)
+                    return true;
+            }
+
+            if ((PolicyCheckFrequency ?? DefaultPolicyCheckFrequency) != (other.PolicyCheckFrequency ?? DefaultPolicyCheckFrequency))
+                return true;
+
+            return false;
         }
 
         public DynamicJsonValue ToJson()
