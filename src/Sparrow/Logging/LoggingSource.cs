@@ -53,7 +53,7 @@ namespace Sparrow.Logging
         private readonly string _name;
         private string _dateString;
         private readonly MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
-        private int _logNumber;
+        private int _logNumber = -1;
         private DateTime _today;
         private bool _isInfoEnabled;
         private bool _isOperationsEnabled;
@@ -84,8 +84,8 @@ namespace Sparrow.Logging
             new ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         public LogMode LogMode { get; private set; }
-        public TimeSpan? RetentionTime { get; private set; }
-        public long? RetentionSize { get; private set; }
+        public TimeSpan RetentionTime { get; private set; }
+        public long RetentionSize { get; private set; }
         public bool Compressing => _compressLoggingThread != null;
 
 
@@ -285,19 +285,28 @@ namespace Sparrow.Logging
             if (DateTime.Today != _today)
             {
                 _today = DateTime.Today;
-                _dateString = LogInfo.GetFileName(DateTime.Today);
-                _logNumber = Math.Max(NextLogNumberForExtension(logFiles, "log"), NextLogNumberForExtension(logGzFiles, "log.gz"));
+                _dateString = LogInfo.DateToLogFormat(DateTime.Today);
             }
+
+            if (_logNumber < 0)
+                _logNumber = Math.Max(LastLogNumberForToday(logFiles), LastLogNumberForToday(logGzFiles));
 
             UpdateLocalDateTimeOffset();
 
             string fileName;
             while (true)
             {
-                var nextLogNumber = Interlocked.Increment(ref _logNumber);
-                fileName = Path.Combine(_path, _dateString) + "." + nextLogNumber.ToString("000", CultureInfo.InvariantCulture) + ".log";
-                if (File.Exists(fileName) == false || new FileInfo(fileName).Length < maxFileSize)
+                fileName = Path.Combine(_path, LogInfo.GetNewFileName(_dateString, _logNumber));
+                if (File.Exists(fileName))
+                {
+                    if(new FileInfo(fileName).Length < maxFileSize) 
+                        break;
+                }
+                else if (File.Exists(LogInfo.AddCompressExtension(fileName)) == false)
+                {
                     break;
+                }
+                _logNumber++;
             }
 
             if (Compressing == false)
@@ -313,10 +322,10 @@ namespace Sparrow.Logging
 
         private void LimitLogSize(string[] logFiles)
         {
-            var logFilesInfo = logFiles.Select(f => new LogInfo(f));
+            var logFilesInfo = logFiles.Select(f => new LogInfo(f)).ToArray();
             var totalLogSize = logFilesInfo.Sum(i => i.Size);
 
-            long retentionSizeMinusCurrentFile = (long)RetentionSize - MaxFileSizeInBytes;
+            long retentionSizeMinusCurrentFile = RetentionSize - MaxFileSizeInBytes;
             foreach (var log in logFilesInfo)
             {
                 if (totalLogSize > retentionSizeMinusCurrentFile)
@@ -341,6 +350,8 @@ namespace Sparrow.Logging
 
         internal class LogInfo
         {
+            public const string LogExtension = ".log"; 
+            public const string AdditionalCompressExtension = ".gz"; 
             private const string DateFormat = "yyyy-MM-dd";
             private static readonly int DateFormatLength = DateFormat.Length;
 
@@ -379,10 +390,34 @@ namespace Sparrow.Logging
                 dateTime = default;
                 return false;
             }
-
-            public static string GetFileName(DateTime dateTime)
+            public static bool TryGetNumber(string fileName, out int n)
             {
-                return dateTime.ToString(LogInfo.DateFormat, CultureInfo.InvariantCulture);
+                n = -1;
+                int end = fileName.LastIndexOf(LogExtension, fileName.Length - 1, StringComparison.Ordinal);
+                if (end == -1)
+                    return false;
+                
+                var start = fileName.LastIndexOf('.', end - 1);
+                if (start == -1)
+                    return false;
+                start++;
+                
+                var logNumber = fileName.Substring(start, end - start);
+                return int.TryParse(logNumber, out n);
+            }
+
+            public static string DateToLogFormat(DateTime dateTime)
+            {
+                return dateTime.ToString(DateFormat, CultureInfo.InvariantCulture);
+            }
+
+            public static string GetNewFileName(string dateString, int n)
+            {
+                return dateString + "." + n.ToString("000", CultureInfo.InvariantCulture) + LogExtension;
+            }
+            public static string AddCompressExtension(string dateString)
+            {
+                return dateString + AdditionalCompressExtension;
             }
         }
 
@@ -396,31 +431,18 @@ namespace Sparrow.Logging
                 Interlocked.Exchange(ref LocalToUtcOffsetInTicks, offset);
         }
 
-        private int NextLogNumberForExtension(string[] files, string extension)
+        private int LastLogNumberForToday(string[] files)
         {
-            var lastLogFile = files.LastOrDefault();
-            if (lastLogFile == null)
-                return 0;
-
-            int start = lastLogFile.LastIndexOf('.', lastLogFile.Length - "000.".Length - extension.Length);
-            if (start == -1)
-                return 0;
-
-            try
+            for (int i = files.Length - 1; i >= 0; i--)
             {
-                start++;
-                var length = lastLogFile.Length - ".".Length - extension.Length - start;
-                var logNumber = lastLogFile.Substring(start, length);
-                if (int.TryParse(logNumber, out var number) == false ||
-                    number <= 0)
-                    return 0;
-
-                return --number;
+                if(LogInfo.TryGetDate(files[i], out var fileDate) == false || fileDate.Date.Equals(_today) == false)
+                    continue;
+                
+                if (LogInfo.TryGetNumber(files[i], out var n))
+                    return n;
             }
-            catch
-            {
-                return 0;
-            }
+            
+            return 0;
         }
 
         private void CleanupOldLogFiles(string[] logFiles)
