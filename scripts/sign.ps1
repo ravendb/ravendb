@@ -16,7 +16,12 @@ function SignFile( $projectDir, $filePath, $dryRun ) {
 
             if (!(Test-Path $signTool))
             {
-                throw "Could not find SignTool.exe under the specified path $signTool"
+                $signTool = "C:\Program Files (x86)\Microsoft SDKs\ClickOnce\SignTool\signtool.exe"
+
+                if (!(Test-Path $signTool)) 
+                {
+                    throw "Could not find SignTool.exe under the specified path $signTool"
+                }
             }
         }
     }
@@ -47,7 +52,7 @@ function SignFile( $projectDir, $filePath, $dryRun ) {
     foreach ($time in $timeservers) {
         try {
             Write-Host "Command: $signTool sign /f `"$installerCert`" /p `"PASSWORD`" /d `"RavenDB`" /du `"https://ravendb.net`" /t `"$time`" /v /debug `"$filePath`""
-            &$signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "https://ravendb.net" /t "$time" /v /debug "$filePath"
+            exec { & $signTool sign /f "$installerCert" /p "$certPassword" /d "RavenDB" /du "https://ravendb.net" /t "$time" /v /debug "$filePath" }
             CheckLastExitCode
             return
         }

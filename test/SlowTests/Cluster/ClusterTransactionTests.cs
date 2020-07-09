@@ -1036,6 +1036,7 @@ namespace SlowTests.Cluster
                     Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
                     session.Advanced.ClusterTransaction.CreateCompareExchangeValue("usernames/ayende", user1);
                     await session.StoreAsync(user3, "foo/bar");
+                    await session.StoreAsync(user3, "foo/bar/2");
                     await session.SaveChangesAsync();
 
                     var user = (await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("usernames/ayende")).Value;
@@ -1047,6 +1048,13 @@ namespace SlowTests.Cluster
                     Assert.Equal(1, list.Count);
                     var changeVector = session.Advanced.GetChangeVectorFor(user);
                     Assert.NotNull(await session.Advanced.Revisions.GetAsync<User>(changeVector));
+                }
+
+                using (var session = leaderStore.OpenAsyncSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                {
+                    session.Delete("foo/bar/2");
+                    session.Advanced.WaitForIndexesAfterSaveChanges();
+                    await session.SaveChangesAsync();
                 }
 
                 // bring more nodes down, so only one node is left
@@ -1061,6 +1069,7 @@ namespace SlowTests.Cluster
                 {
                     Assert.Equal(leader.WebUrl, session.Advanced.RequestExecutor.Url);
                     await session.StoreAsync(user1, "foo/bar");
+
                     await session.SaveChangesAsync();
 
                     var list = await session.Advanced.Revisions.GetForAsync<User>(user1.Id);

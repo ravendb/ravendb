@@ -463,8 +463,10 @@ namespace Raven.Server.Documents.Handlers
 
                 if (deleted != null)
                 {
+                    if (deleted.Value.Collection != null)
+                        ModifiedCollections?.Add(deleted.Value.Collection.Name);
+
                     LastTombstoneEtag = deleted.Value.Etag;
-                    ModifiedCollections?.Add(deleted.Value.Collection.Name);
                     reply[nameof(BatchRequestParser.CommandData.ChangeVector)] = deleted.Value.ChangeVector;
                 }
 
