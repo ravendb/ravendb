@@ -191,7 +191,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 {
                     Name = "Heartrate",
                 };
-                timeSeriesOp.Remove(new TimeSeriesOperation.RemoveOperation {From = baseline.AddSeconds(2), To = baseline.AddSeconds(3)});
+                timeSeriesOp.Delete(new TimeSeriesOperation.DeleteOperation {From = baseline.AddSeconds(2), To = baseline.AddSeconds(3)});
                 timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
                 store.Operations.Send(timeSeriesBatch);
@@ -235,7 +235,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 {
                     session.Store(new { Name = "Oren" }, documentId);
                     session.TimeSeriesFor(documentId, "Heartrate")
-                        .Remove(baseline.AddMinutes(2));
+                        .Delete(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }
@@ -324,7 +324,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 using (var session = store.OpenSession())
                 {
                     var tsf = session.TimeSeriesFor("foo/bar", "BloodPressure");
-                    tsf.Remove(baseline.AddSeconds(3600), baseline.AddSeconds(3600 * 10)); // remove 9 hours
+                    tsf.Delete(baseline.AddSeconds(3600), baseline.AddSeconds(3600 * 10)); // remove 9 hours
                     session.SaveChanges();
                 }
 
@@ -414,7 +414,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 timeSeriesOp.Append(new TimeSeriesOperation.AppendOperation {Tag = "watches/fitbit", Timestamp = baseline.AddSeconds(4), Values = new[] {60d}});
                 timeSeriesOp.Append(new TimeSeriesOperation.AppendOperation {Tag = "watches/fitbit", Timestamp = baseline.AddSeconds(5), Values = new[] {62.5d}});
                 timeSeriesOp.Append(new TimeSeriesOperation.AppendOperation {Tag = "watches/fitbit", Timestamp = baseline.AddSeconds(6), Values = new[] {62d}});
-                timeSeriesOp.Remove(new TimeSeriesOperation.RemoveOperation {From = baseline.AddSeconds(2), To = baseline.AddSeconds(3)});
+                timeSeriesOp.Delete(new TimeSeriesOperation.DeleteOperation {From = baseline.AddSeconds(2), To = baseline.AddSeconds(3)});
 
                 timeSeriesBatch = new TimeSeriesBatchOperation(documentId, timeSeriesOp);
 
@@ -464,7 +464,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 {
                     session.Store(new { Name = "Oren" }, documentId);
                     session.TimeSeriesFor(documentId, "Heartrate")
-                        .Remove(baseline.AddMinutes(2));
+                        .Delete(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }
@@ -990,7 +990,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                     Name = "Heartrate",
                 };
 
-                deleteOp.Remove(new TimeSeriesOperation.RemoveOperation());
+                deleteOp.Delete(new TimeSeriesOperation.DeleteOperation());
 
                 store.Operations.Send(new TimeSeriesBatchOperation(docId, deleteOp));
 
@@ -1005,7 +1005,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 {
                     Name = "BloodPressure",
                 };
-                deleteOp.Remove(new TimeSeriesOperation.RemoveOperation {From = baseline.AddMinutes(50), To = null});
+                deleteOp.Delete(new TimeSeriesOperation.DeleteOperation {From = baseline.AddMinutes(50), To = null});
 
                 store.Operations.Send(new TimeSeriesBatchOperation(docId, deleteOp));
 
@@ -1020,7 +1020,7 @@ namespace SlowTests.Client.TimeSeries.Operations
                 {
                     Name = "BodyTemperature",
                 };
-                deleteOp.Remove(new TimeSeriesOperation.RemoveOperation {To = baseline.AddMinutes(19)});
+                deleteOp.Delete(new TimeSeriesOperation.DeleteOperation {To = baseline.AddMinutes(19)});
 
                 store.Operations.Send(new TimeSeriesBatchOperation(docId, deleteOp));
 

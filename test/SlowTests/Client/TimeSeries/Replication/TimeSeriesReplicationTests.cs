@@ -377,7 +377,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                                 tsf.Append(time, new double[] { val }, "watches/fitbit");
                             }
 
-                            tsf.Remove(baseline.AddMinutes(i + 0.5), baseline.AddMinutes(i + 10.5));
+                            tsf.Delete(baseline.AddMinutes(i + 0.5), baseline.AddMinutes(i + 10.5));
 
                             session.SaveChanges();
                         }
@@ -466,7 +466,7 @@ namespace SlowTests.Client.TimeSeries.Replication
                 using (var session = storeA.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Remove(baseline.AddMinutes(10));
+                        .Delete(baseline.AddMinutes(10));
                     session.SaveChanges();
                 }
 

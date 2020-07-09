@@ -265,7 +265,7 @@ namespace Raven.Server.Documents.TimeSeries
             return changeVector;
         }
 
-        public string RemoveTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null)
+        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null)
         {
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
@@ -302,11 +302,11 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var baseline = GetBaseline(segmentValueReader);
                 string changeVector = null;
-                bool removeOccured = false;
+                bool deleteOccured = false;
 
                 while (true)
                 {
-                    if (TryRemoveRange(out var nextSegment) == false)
+                    if (TryDeleteRange(out var nextSegment) == false)
                         break;
 
                     if (nextSegment == null)
@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.TimeSeries
                     baseline = nextSegment.Value;
                 }
 
-                if (removeOccured == false)
+                if (deleteOccured == false)
                     return null; // nothing happened, the deletion request was out of date
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
@@ -331,7 +331,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return changeVector;
 
-                bool TryRemoveRange(out DateTime? next)
+                bool TryDeleteRange(out DateTime? next)
                 {
                     next = default;
 
@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.TimeSeries
                                     status == TimeSeriesValuesSegment.Live)
                                 {
                                     holder.AddNewValue(current, values, tag.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                                    removeOccured = true;
+                                    deleteOccured = true;
                                     segmentChanged = true;
                                     continue;
                                 }

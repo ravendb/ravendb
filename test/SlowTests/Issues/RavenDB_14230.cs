@@ -108,7 +108,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.TimeSeriesFor("users/1", "Likes").Remove(date, date);
+                    session.TimeSeriesFor("users/1", "Likes").Delete(date, date);
                     await session.SaveChangesAsync();
                 }
 
@@ -123,7 +123,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    session.TimeSeriesFor("users/1", "Likes").Remove();
+                    session.TimeSeriesFor("users/1", "Likes").Delete();
                     await session.SaveChangesAsync();
                 }
 

@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.TimeSeries
                     request.Name = name;
                     request.DocumentId = docId;
 
-                    var done = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.RemoveTimestampRange(context, request) != null;
+                    var done = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(context, request) != null;
                     if (done)
                         retained++;
 
@@ -534,7 +534,7 @@ namespace Raven.Server.Documents.TimeSeries
                             To = DateTime.MaxValue,
                         };
 
-                        tss.RemoveTimestampRange(context, removeRequest);
+                        tss.DeleteTimestampRange(context, removeRequest);
                     }
                     
                     tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, verifyName: false);

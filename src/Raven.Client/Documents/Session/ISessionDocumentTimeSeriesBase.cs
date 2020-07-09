@@ -37,17 +37,17 @@ namespace Raven.Client.Documents.Session
         void Append(TimeSeriesRollupEntry<T> entry);
     }
 
-    public interface ISessionDocumentRemoveTimeSeriesBase
+    public interface ISessionDocumentDeleteTimeSeriesBase
     {
         /// <summary>
-        /// Remove all the values in the time series in the range of from .. to.
+        /// Delete all the values in the time series in the range of from .. to.
         /// </summary>
-        void Remove(DateTime? from = null, DateTime? to = null);
+        void Delete(DateTime? from = null, DateTime? to = null);
 
         /// <summary>
-        /// Remove the value in the time series in the specified time stamp
+        /// Delete the value in the time series in the specified time stamp
         /// </summary>
-        void Remove(DateTime at);
+        void Delete(DateTime at);
 
     }
 }

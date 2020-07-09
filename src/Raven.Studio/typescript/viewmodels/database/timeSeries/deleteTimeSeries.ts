@@ -100,7 +100,7 @@ class deleteTimeSeries extends dialogViewModelBase {
         });
     }
     
-    private createDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.RemoveOperation[] {
+    private createDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[] {
         switch (this.criteria.mode) {
             case "all":
                 return [

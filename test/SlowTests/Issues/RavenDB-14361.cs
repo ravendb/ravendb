@@ -63,7 +63,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var q = session.Query<Test>()
-                        .Select(x => x.Headers["ABC.DEF"]);
+                        .Select(x => x.Headers["'ABC.DEF'"]);
 
                     var str = q.FirstOrDefault();
                     Assert.Equal("205fb229-2373-49da-9329-ab0c01096c6c", str);

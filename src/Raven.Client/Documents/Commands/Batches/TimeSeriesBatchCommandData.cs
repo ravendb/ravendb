@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class TimeSeriesBatchCommandData : ICommandData
     {
-        public TimeSeriesBatchCommandData(string documentId, string name, List<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.RemoveOperation> removals)
+        public TimeSeriesBatchCommandData(string documentId, string name, List<TimeSeriesOperation.AppendOperation> appends, List<TimeSeriesOperation.DeleteOperation> deletes)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -34,11 +34,11 @@ namespace Raven.Client.Documents.Commands.Batches
                 }
             }
 
-            if (removals != null)
+            if (deletes != null)
             {
-                foreach (var removeOperation in removals)
+                foreach (var deleteOperation in deletes)
                 {
-                    TimeSeries.Remove(removeOperation);
+                    TimeSeries.Delete(deleteOperation);
                 }
             }
         }

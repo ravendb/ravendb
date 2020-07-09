@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                 {
                     var company = session.Load<Company>("companies/1");
 
-                    session.TimeSeriesFor(company, "HeartRate").Remove();
+                    session.TimeSeriesFor(company, "HeartRate").Delete();
 
                     session.SaveChanges();
                 }
