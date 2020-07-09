@@ -722,12 +722,22 @@ namespace Raven.Server.Documents.Replication
             DropIncomingConnections(changes.RemovedDestiantions, instancesToDispose);
 
             var newDestinations = GetMyNewDestinations(newRecord, changes.AddedDestinations);
-
-            Task.Run(() =>
+            if (newDestinations.Count > 0)
             {
-                // here we might have blocking calls to fetch the tcp info.
-                StartOutgoingConnections(newDestinations, external: true);
-            });
+                Task.Run(() =>
+                {
+                    // here we might have blocking calls to fetch the tcp info.
+                    try
+                    {
+                        StartOutgoingConnections(newDestinations, external: true);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsOperationsEnabled)
+                            _log.Operations($"Failed to start the outgoing connections to {newDestinations.Count} new destinations", e);
+                    }
+                });
+            }
 
             _externalDestinations.RemoveWhere(changes.RemovedDestiantions.Contains);
             foreach (var newDestination in newDestinations)
@@ -904,9 +914,6 @@ namespace Raven.Server.Documents.Replication
 
         private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd, bool external = false)
         {
-            if (connectionsToAdd.Count == 0)
-                return;
-
             if (_log.IsInfoEnabled)
                 _log.Info($"Initializing {connectionsToAdd.Count:#,#} outgoing replications from {Database} on {_server.NodeTag}.");
 
