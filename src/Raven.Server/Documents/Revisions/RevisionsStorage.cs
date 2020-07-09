@@ -129,9 +129,7 @@ namespace Raven.Server.Documents.Revisions
                  };
             }
 
-            var revisionsSchema = _documentsStorage.DocumentPut.DocumentsCompression.CompressRevisions ? 
-                CompressedRevisionsSchema : 
-                RevisionsSchema;
+            var revisionsSchema = CompressedRevisionsSchema;
 
             return tx.OpenTable(revisionsSchema, tableName);
         }

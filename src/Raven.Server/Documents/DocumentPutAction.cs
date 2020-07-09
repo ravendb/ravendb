@@ -258,11 +258,7 @@ namespace Raven.Server.Documents
 
         public TableSchema GetDocsSchemaForCollection(CollectionName collection)
         {
-            if(_compressedCollections.Contains(collection.Name))
-            {
-                return CompressedDocsSchema;
-            } 
-            return DocsSchema;
+            return CompressedDocsSchema;
         }
 
         [Conditional("DEBUG")]
