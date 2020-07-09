@@ -66,7 +66,7 @@ function NpmInstall () {
 
     foreach ($i in 1..3) {
         try {
-            & npm install 
+            exec { npm install }
             CheckLastExitCode
             return
         }
@@ -93,7 +93,7 @@ function BuildStudio ( $srcDir, $version ) {
 
         "{ ""Version"": ""$version"" }" | Out-File $versionJsonPath -Encoding UTF8
 
-        & npm run gulp release
+        exec { npm run gulp release }
         CheckLastExitCode
     } 
     finally {

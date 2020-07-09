@@ -40,6 +40,7 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\runtime.ps1'
 . '.\scripts\Get-DestinationFilePath.ps1'
 . '.\scripts\Copy-FileHash.ps1'
+. '.\scripts\exec.ps1'
 
 if ($Help) {
     Help
