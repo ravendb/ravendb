@@ -239,11 +239,12 @@ namespace Raven.Server.Documents.Revisions
             if (Configuration == null)
                 return ConflictConfiguration.Default;
 
-            if (Configuration.Collections != null &&
-                Configuration.Collections.TryGetValue(collection, out RevisionsCollectionConfiguration configuration))
+            foreach (var col in Configuration.Collections.
+                Where(col => string.Equals(col.Key, collection, StringComparison.InvariantCultureIgnoreCase)))
             {
-                return configuration;
+                return col.Value;
             }
+
             if (flags.Contain(DocumentFlags.Resolved) || flags.Contain(DocumentFlags.Conflicted))
             {
                 return ConflictConfiguration.Default;
