@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.TimeSeries
                     new Dictionary<string, TimeSeriesCollectionConfiguration>(Configuration.Collections, StringComparer.OrdinalIgnoreCase);
 
             Configuration.InitializeRollupAndRetention();
-            _checkFrequency = Configuration.PolicyCheckFrequency ?? TimeSpan.FromMinutes(10);
+            _checkFrequency = Configuration.PolicyCheckFrequency ?? TimeSeriesConfiguration.DefaultPolicyCheckFrequency;
         }
 
         public static TimeSeriesPolicyRunner LoadConfigurations(DocumentDatabase database, DatabaseRecord dbRecord, TimeSeriesPolicyRunner policyRunner)
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (policyRunner != null)
                 {
                     // no changes
-                    if (Equals(policyRunner.Configuration, dbRecord.TimeSeries))
+                    if (policyRunner.Configuration.PolicyConfigurationChanged(dbRecord.TimeSeries) == false)
                         return policyRunner;
                 }
                 policyRunner?.Dispose();
