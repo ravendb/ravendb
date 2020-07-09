@@ -614,7 +614,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var big = session.TimeSeriesFor("users/karmel", "BigMeasures");
-                    big.Remove(to: baseline.AddHours(12));
+                    big.Delete(to: baseline.AddHours(12));
                     session.SaveChanges();
                 }
 
@@ -1657,7 +1657,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 {
                     session.Store(new Company(), "companies/1");
                     var ts = session.TimeSeriesFor("companies/1", "Heartrate");
-                    ts.Remove(t);
+                    ts.Delete(t);
                     session.SaveChanges();
                 }
 

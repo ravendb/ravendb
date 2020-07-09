@@ -70,7 +70,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Remove(DateTime.MinValue, DateTime.MaxValue);
+                        .Delete(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
 
@@ -120,7 +120,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende", "Heartrate2")
-                        .Remove(DateTime.MinValue, DateTime.MaxValue);
+                        .Delete(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
 
@@ -141,7 +141,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Remove(DateTime.MinValue, DateTime.MaxValue);
+                        .Delete(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
 

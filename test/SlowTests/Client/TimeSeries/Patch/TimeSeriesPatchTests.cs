@@ -5,11 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Graph;
-using Raven.Client;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Sparrow;
@@ -282,8 +278,8 @@ for(i = 0; i < args.toAppend.length; i++){
             var toIndex = 4;
 
             var baseline = RavenTestHelper.UtcToday;
-            var toRemoveFrom = baseline.AddMinutes(fromIndex);
-            var toRemoveTo = baseline.AddMinutes(toIndex);
+            var todeleteFrom = baseline.AddMinutes(fromIndex);
+            var todeleteTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
             
             using (var store = GetDocumentStore())
@@ -306,12 +302,12 @@ for(i = 0; i < args.toAppend.length; i++){
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"timeseries(this, args.timeseries).remove(args.from, args.to);",
+                            Script = @"timeseries(this, args.timeseries).delete(args.from, args.to);",
                             Values =
                             {
                                 { "timeseries", timeseries },
-                                { "from", toRemoveFrom.ToString("yyyy-MM-ddTHH:mm") },
-                                { "to", toRemoveTo.ToString("yyyy-MM-ddTHH:mm") },
+                                { "from", todeleteFrom.ToString("yyyy-MM-ddTHH:mm") },
+                                { "to", todeleteTo.ToString("yyyy-MM-ddTHH:mm") },
                             }
                         }, null));
                     await session.SaveChangesAsync();
@@ -325,7 +321,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     Assert.Equal(values.Length - 1 - (toIndex - fromIndex), (entries?.Count ?? 0));
                     foreach (var expected in expectedValues)
                     {
-                        if (expected.Item1 >= toRemoveFrom || expected.Item1 <= toRemoveTo) 
+                        if (expected.Item1 >= todeleteFrom || expected.Item1 <= todeleteTo) 
                             continue;
                         
                         Assert.Equal(expected.Item1, entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -339,7 +335,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"timeseries(this, args.timeseries).remove();",
+                            Script = @"timeseries(this, args.timeseries).delete();",
                             Values =
                             {
                                 { "timeseries", timeseries },
@@ -373,8 +369,8 @@ for(i = 0; i < args.toAppend.length; i++){
             var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
             
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
-            var toRemoveFrom = baseline.AddMinutes(fromIndex);
-            var toRemoveTo = baseline.AddMinutes(toIndex);
+            var todeleteFrom = baseline.AddMinutes(fromIndex);
+            var todeleteTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
             
             using (var store = GetDocumentStore())
@@ -397,12 +393,12 @@ for(i = 0; i < args.toAppend.length; i++){
                     session.Advanced.Defer(new PatchCommandData(documentId, null,
                         new PatchRequest
                         {
-                            Script = @"timeseries(this, args.timeseries).remove(args.from, args.to);",
+                            Script = @"timeseries(this, args.timeseries).delete(args.from, args.to);",
                             Values =
                             {
                                 { "timeseries", timeseries },
-                                { "from", toRemoveFrom },
-                                { "to", toRemoveTo },
+                                { "from", todeleteFrom },
+                                { "to", todeleteTo },
                             }
                         }, null));
                     await session.SaveChangesAsync();
@@ -416,7 +412,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     Assert.Equal(values.Length - 1 - (toIndex - fromIndex), (entries?.Count ?? 0));
                     foreach (var expected in expectedValues)
                     {
-                        if (expected.Item1 >= toRemoveFrom || expected.Item1 <= toRemoveTo) 
+                        if (expected.Item1 >= todeleteFrom || expected.Item1 <= todeleteTo) 
                             continue;
                         
                         Assert.Equal(expected.Item1, entries[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -456,8 +452,8 @@ for(i = 0; i < args.toAppend.length; i++){
             var values = new[] {59.3d, 59.2d, 70.5555d, 72.53399393d, 71.543434d, 70.938457d, 72.53399393d, 60.1d, 59.9d, 0d};
             
             var baseline = DateTime.UtcNow.EnsureMilliseconds();
-            var toRemoveFrom = baseline.AddMinutes(fromIndex);
-            var toRemoveTo = baseline.AddMinutes(toIndex);
+            var todeleteFrom = baseline.AddMinutes(fromIndex);
+            var todeleteTo = baseline.AddMinutes(toIndex);
             var expectedValues = new List<(DateTime, double)>();
             
             using (var store = GetDocumentStore())
@@ -484,8 +480,8 @@ for(i = 0; i < args.toAppend.length; i++){
                             Values =
                             {
                                 { "timeseries", timeseries },
-                                { "from", toRemoveFrom },
-                                { "to", toRemoveTo },
+                                { "from", todeleteFrom },
+                                { "to", todeleteTo },
                             }
                         }, null));
                     await session.SaveChangesAsync();
@@ -498,7 +494,7 @@ for(i = 0; i < args.toAppend.length; i++){
                     Assert.Equal(toIndex - fromIndex + 1, entries.Length);
                     foreach (var expected in expectedValues)
                     {
-                        if (expected.Item1 < toRemoveFrom || expected.Item1 > toRemoveTo) 
+                        if (expected.Item1 < todeleteFrom || expected.Item1 > todeleteTo) 
                             continue;
                         
                         Assert.Equal(expected.Item1, entries[entriesIndex].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
@@ -616,7 +612,7 @@ for(var i = 0; i < args.toAppend.length; i++){
                     }
                 }
 
-                var toRemove = new (DateTime, DateTime)[]
+                var todelete = new (DateTime, DateTime)[]
                 {
                     (baseline.AddMilliseconds(10), baseline.AddMilliseconds(19)),
                     (baseline.AddMilliseconds(40), baseline.AddMilliseconds(49)),
@@ -632,16 +628,16 @@ for(var i = 0; i < args.toAppend.length; i++){
                         {
                             Script = @"
 var ts = timeseries(id(this), args.timeseries);
-for (var i = 0; i < args.toRemove.length; i++)
+for (var i = 0; i < args.todelete.length; i++)
 {
-    var from = new Date(args.toRemove[i].Item1);
-    var to = new Date(args.toRemove[i].Item2);
-    ts.remove(from, to);
+    var from = new Date(args.todelete[i].Item1);
+    var to = new Date(args.todelete[i].Item2);
+    ts.delete(from, to);
 }",
                             Values =
                             {
                                 { "timeseries", timeseries },
-                                { "toRemove", toRemove },
+                                { "todelete", todelete },
                             }
                         }, null));
                     await session.SaveChangesAsync();
@@ -655,10 +651,10 @@ for (var i = 0; i < args.toRemove.length; i++)
 
                     Assert.Equal(toAppend.Length - 40, timeSeriesEntries.Length);
 
-                    for (int i = 0; i < toRemove.Length; i++)
+                    for (int i = 0; i < todelete.Length; i++)
                     {
                         timeSeriesEntries = (await session.TimeSeriesFor(documentId, timeseries)
-                                .GetAsync(toRemove[i].Item1, toRemove[i].Item2))
+                                .GetAsync(todelete[i].Item1, todelete[i].Item2))
                             .ToArray();
 
                         Assert.Empty(timeSeriesEntries);

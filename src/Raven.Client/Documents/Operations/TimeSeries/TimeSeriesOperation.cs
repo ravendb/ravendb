@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
-        internal List<RemoveOperation> Removals;
+        internal List<DeleteOperation> Deletes;
 
         public string Name;
         
@@ -39,12 +39,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             _appends[appendOperation.Timestamp.Ticks] = appendOperation; // on duplicate values the last one overrides
         }
 
-        public void Remove(RemoveOperation removeOperation)
+        public void Delete(DeleteOperation deleteOperation)
         {
-            Removals ??= new List<RemoveOperation>();
-            removeOperation.To = removeOperation.To?.EnsureUtc();
-            removeOperation.From = removeOperation.From?.EnsureUtc();
-            Removals.Add(removeOperation);
+            Deletes ??= new List<DeleteOperation>();
+            deleteOperation.To = deleteOperation.To?.EnsureUtc();
+            deleteOperation.From = deleteOperation.From?.EnsureUtc();
+            Deletes.Add(deleteOperation);
         }
 
         internal static TimeSeriesOperation Parse(BlittableJsonReaderObject input)
@@ -77,9 +77,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 result._appends = sorted;
             }
 
-            if (input.TryGet(nameof(Removals), out operations) && operations != null)
+            if (input.TryGet(nameof(Deletes), out operations) && operations != null)
             {
-                result.Removals = new List<RemoveOperation>();
+                result.Deletes = new List<DeleteOperation>();
 
                 foreach (var op in operations)
                 {
@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                         return null; //never hit
                     }
 
-                    result.Removals.Add(RemoveOperation.Parse(bjro));
+                    result.Deletes.Add(DeleteOperation.Parse(bjro));
                 }
             }
 
@@ -241,7 +241,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             {
                 [nameof(Name)] = Name,
                 [nameof(Appends)] = Appends?.Select(x => x.ToJson()),
-                [nameof(Removals)] = Removals?.Select(x => x.ToJson())
+                [nameof(Deletes)] = Deletes?.Select(x => x.ToJson())
             };
         }
 
@@ -292,16 +292,16 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             }
         }
 
-        public class RemoveOperation
+        public class DeleteOperation
         {
             public DateTime? From, To;
 
-            internal static RemoveOperation Parse(BlittableJsonReaderObject input)
+            internal static DeleteOperation Parse(BlittableJsonReaderObject input)
             {
                 input.TryGet(nameof(From), out DateTime? from); // optional
                 input.TryGet(nameof(To), out DateTime? to); // optional
 
-                return new RemoveOperation
+                return new DeleteOperation
                 {
                     From = from,
                     To = to

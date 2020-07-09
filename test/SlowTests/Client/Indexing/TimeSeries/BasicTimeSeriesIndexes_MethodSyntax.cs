@@ -107,7 +107,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company, "HeartRate").Remove(now2);
+                    session.TimeSeriesFor(company, "HeartRate").Delete(now2);
 
                     session.SaveChanges();
                 }
@@ -506,8 +506,8 @@ namespace SlowTests.Client.Indexing.TimeSeries
 
                     for (int i = 0; i < 10; i++)
                     {
-                        tsf.Remove(today.AddHours(i));
-                        tsf.Remove(tomorrow.AddHours(i));
+                        tsf.Delete(today.AddHours(i));
+                        tsf.Delete(tomorrow.AddHours(i));
                     }
 
                     session.SaveChanges();
@@ -829,7 +829,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company, "HeartRate").Remove(now1);
+                    session.TimeSeriesFor(company, "HeartRate").Delete(now1);
 
                     session.SaveChanges();
                 }
@@ -856,7 +856,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company, "HeartRate").Remove(now2);
+                    session.TimeSeriesFor(company, "HeartRate").Delete(now2);
 
                     session.SaveChanges();
                 }
@@ -1003,7 +1003,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1");
-                    session.TimeSeriesFor(company, "Likes").Remove(now1, now2);
+                    session.TimeSeriesFor(company, "Likes").Delete(now1, now2);
 
                     session.SaveChanges();
                 }

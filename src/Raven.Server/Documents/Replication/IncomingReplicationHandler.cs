@@ -1032,7 +1032,7 @@ namespace Raven.Server.Documents.Replication
                                     From = deletedRange.From,
                                     To = deletedRange.To
                                 };
-                                var removedChangeVector = tss.RemoveTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
+                                var removedChangeVector = tss.DeleteTimestampRange(context, deletionRangeRequest, rcvdChangeVector);
                                 if (removedChangeVector != null)
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
 

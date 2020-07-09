@@ -66,14 +66,14 @@ namespace Raven.Client.Documents.Session
             _asyncSessionTimeSeries.Append(entry.Timestamp, entry.Values, entry.Tag);
         }
 
-        public void Remove(DateTime? from = null, DateTime? to = null)
+        public void Delete(DateTime? from = null, DateTime? to = null)
         {
-            _asyncSessionTimeSeries.Remove(from, to);
+            _asyncSessionTimeSeries.Delete(from, to);
         }
 
-        public void Remove(DateTime at)
+        public void Delete(DateTime at)
         {
-            _asyncSessionTimeSeries.Remove(at);
+            _asyncSessionTimeSeries.Delete(at);
         }
     }
 }
