@@ -60,6 +60,21 @@ class timeValueEntry {
         throw new Error("Unable to compare timeValueEntries: " + this.format() + " with " + second.format());
     }
     
+    isMultipleOf(previousPolicy: timeValueEntry) {
+        const thisDto = this.toDto();
+        const previousDto = previousPolicy.toDto();
+
+        if (thisDto.Unit === previousDto.Unit) {
+            return thisDto.Value % previousDto.Value === 0; 
+        } 
+
+        if (thisDto.Unit === "Month") {
+            return timeValueEntry.SECONDS_PER_DAY % previousDto.Value === 0;
+        }
+
+        return false;
+    }
+    
     private static getBoundsInSeconds(time: Sparrow.TimeValue): [number, number] {
         switch (time.Unit) {
             case "Second":
@@ -84,7 +99,7 @@ class timeValueEntry {
         }
         return this.amount() > 0;
     }
-    
+
     static isMax(timeValue: Sparrow.TimeValue) {
         return timeValue.Value === generalUtils.integerMaxValue;
     }

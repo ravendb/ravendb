@@ -73,12 +73,10 @@ namespace Raven.Client.Documents.Linq
 
                     var itemKey = GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType).ToString();
 
-                    itemKey = QueryFieldUtil.EscapeIfNecessary(itemKey, isPath: true);
-
                     return new Result
                     {
                         MemberType = callExpression.Method.ReturnType,
-                        IsNestedPath = false,
+                        IsNestedPath = true,
                         Path = parent.Path + "." + itemKey
                     };
                 }

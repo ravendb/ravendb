@@ -32,7 +32,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Remove(now1);
+                        .Delete(now1);
 
                     session.SaveChanges();
                 }

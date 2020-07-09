@@ -81,8 +81,22 @@ class editTimeSeries extends viewModelBase {
                 if (!args.name) {
                     return this.activateByCreateNew(args.docId);
                 } else {
-                    return this.activateById(args.docId, args.name);    
+                    const canActivateResult = $.Deferred<canActivateResultDto>();
+
+                    this.activateById(args.docId, args.name)
+                        .done((result) => {
+                            if (result.can) {
+                                return canActivateResult.resolve({can: true});
+                            } else {
+                                return canActivateResult.resolve({ redirect: appUrl.forEditDoc(args.docId, this.activeDatabase()) });
+                            }
+                        })
+                        .fail(() => canActivateResult.resolve({ redirect: appUrl.forDocuments(null, this.activeDatabase()) }));
+
+                    return canActivateResult;
                 }
+
+                return $.Deferred<canActivateResultDto>().resolve({ can: true });
             });
     }
     
@@ -315,7 +329,7 @@ class editTimeSeries extends viewModelBase {
                     return { can: true };
                 } else {
                     messagePublisher.reportWarning("Unable to find time series with name: " + timeSeriesName);
-                    return { redirect: appUrl.forEditDoc(docId, this.activeDatabase()) }
+                    return {can: false };
                 }
             });
     }

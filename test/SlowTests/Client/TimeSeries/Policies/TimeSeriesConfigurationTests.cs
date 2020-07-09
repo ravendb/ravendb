@@ -88,6 +88,56 @@ namespace SlowTests.Client.TimeSeries.Policies
         }
 
         [Fact]
+        public async Task TimeSeriesConfigurationNotChanged()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                new TimeSeriesPolicy("ByHourFor12Hours", TimeValue.FromHours(1), TimeValue.FromHours(48)),
+                                new TimeSeriesPolicy("ByYearFor3Years",TimeValue.FromYears(1), TimeValue.FromYears(3)),
+                                new TimeSeriesPolicy("ByDayFor1Month",TimeValue.FromDays(1), TimeValue.FromMonths(12)),
+                            }
+                        },
+                    },
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                var runner = db.TimeSeriesPolicyRunner;
+
+
+                config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                new TimeSeriesPolicy("ByYearFor3Years",TimeValue.FromYears(1), TimeValue.FromYears(3)),
+                                new TimeSeriesPolicy("ByHourFor12Hours", TimeValue.FromHours(1), TimeValue.FromHours(48)),
+                                new TimeSeriesPolicy("ByDayFor1Month",TimeValue.FromDays(1), TimeValue.FromMonths(12)),
+                            },
+                            RawPolicy = RawTimeSeriesPolicy.Default
+                        }
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromMinutes(10),
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                var runner2 = db.TimeSeriesPolicyRunner;
+
+                Assert.Equal(runner, runner2);
+
+            }
+        }
+
+        [Fact]
         public async Task CanConfigureTimeSeries2()
         {
             using (var store = GetDocumentStore())
@@ -306,7 +356,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 };
 
                 ex = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config)));
-                Assert.Contains("The aggregation time of the policy 'By364DaysFor5Years' (364 days) must be divided by the aggregation time of 'By27DaysFor1Year' (27 days) without a reminder", ex.Message);
+                Assert.Contains("The aggregation time of the policy 'By364DaysFor5Years' (364 days) must be divided by the aggregation time of 'By27DaysFor1Year' (27 days) without a remainder", ex.Message);
             }
         }
 
@@ -564,7 +614,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 using (var session = store.OpenSession())
                 {
                     var big = session.TimeSeriesFor("users/karmel", "BigMeasures");
-                    big.Remove(to: baseline.AddHours(12));
+                    big.Delete(to: baseline.AddHours(12));
                     session.SaveChanges();
                 }
 
@@ -846,7 +896,6 @@ namespace SlowTests.Client.TimeSeries.Policies
                     var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(5, ts3.Count);
                 }
-
             }
         }
 
@@ -1608,7 +1657,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 {
                     session.Store(new Company(), "companies/1");
                     var ts = session.TimeSeriesFor("companies/1", "Heartrate");
-                    ts.Remove(t);
+                    ts.Delete(t);
                     session.SaveChanges();
                 }
 

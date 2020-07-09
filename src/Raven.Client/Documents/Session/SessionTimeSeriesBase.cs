@@ -89,22 +89,22 @@ namespace Raven.Client.Documents.Session
             }
             else
             {
-                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: new List<TimeSeriesOperation.AppendOperation> { op }, removals: null));
+                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: new List<TimeSeriesOperation.AppendOperation> { op }, deletes: null));
             }
         }
 
-        public void Remove(DateTime at)
+        public void Delete(DateTime at)
         {
-            Remove(at, at);
+            Delete(at, at);
         }
 
-        public void Remove(DateTime? from = null, DateTime? to = null)
+        public void Delete(DateTime? from = null, DateTime? to = null)
         {
             if (Session.DocumentsById.TryGetValue(DocId, out DocumentInfo documentInfo) &&
                 Session.DeletedEntities.Contains(documentInfo.Entity))
                 ThrowDocumentAlreadyDeletedInSession(DocId, Name);
 
-            var op = new TimeSeriesOperation.RemoveOperation
+            var op = new TimeSeriesOperation.DeleteOperation
             {
                 From = from?.EnsureUtc(),
                 To = to?.EnsureUtc()
@@ -113,11 +113,11 @@ namespace Raven.Client.Documents.Session
             if (Session.DeferredCommandsDictionary.TryGetValue((DocId, CommandType.TimeSeries, Name), out var command))
             {
                 var tsCmd = (TimeSeriesBatchCommandData)command;
-                tsCmd.TimeSeries.Remove(op);
+                tsCmd.TimeSeries.Delete(op);
             }
             else
             {
-                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, removals: new List<TimeSeriesOperation.RemoveOperation> { op }));
+                Session.Defer(new TimeSeriesBatchCommandData(DocId, Name, appends: null, deletes: new List<TimeSeriesOperation.DeleteOperation> { op }));
             }
         }
 

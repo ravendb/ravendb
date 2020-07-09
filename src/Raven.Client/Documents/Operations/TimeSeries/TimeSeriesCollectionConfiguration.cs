@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
@@ -21,6 +22,60 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// Specify a policy for the original time-series
         /// </summary>
         public RawTimeSeriesPolicy RawPolicy { get; set; }
+
+        protected bool Equals(TimeSeriesCollectionConfiguration other)
+        {
+            try
+            {
+                other.ValidateAndInitialize();
+            }
+            catch
+            {
+                return false;
+            }
+
+
+            if (Disabled != other.Disabled)
+                return false;
+
+            if (Equals(RawPolicy, other.RawPolicy) == false)
+                return false;
+
+            if (Policies.Count != other.Policies.Count)
+                return false;
+
+            return Policies.SequenceEqual(other.Policies);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (obj.GetType() != GetType())
+                return false;
+            return Equals((TimeSeriesCollectionConfiguration)obj);
+        }
+
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = Disabled.GetHashCode();
+                if (RawPolicy != null)
+                    hashCode = (hashCode * 397) ^ RawPolicy.GetHashCode();
+
+                if (Policies != null)
+                {
+                    foreach (var policy in Policies)
+                    {
+                        hashCode = (hashCode * 397) ^ policy.GetHashCode();
+                    }
+                }
+
+                return hashCode;
+            }
+        }
 
         internal void ValidateAndInitialize()
         {
@@ -62,7 +117,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 if (index > 0 && // first policy always legit, since the source is the raw data
                     prev.AggregationTime.IsMultiple(policy.AggregationTime) == false)
-                    throw new InvalidOperationException($"The aggregation time of the policy '{policy.Name}' ({policy.AggregationTime}) must be divided by the aggregation time of '{prev.Name}' ({prev.AggregationTime}) without a reminder.");
+                    throw new InvalidOperationException($"The aggregation time of the policy '{policy.Name}' ({policy.AggregationTime}) must be divided by the aggregation time of '{prev.Name}' ({prev.AggregationTime}) without a remainder.");
 
                 _policyIndexCache[policy.Name] = index + 1;
             }

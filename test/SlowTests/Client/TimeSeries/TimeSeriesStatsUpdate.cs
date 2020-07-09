@@ -56,7 +56,7 @@ namespace SlowTests.Client.TimeSeries
                 a.Append(op);
                 store.Operations.Send(new TimeSeriesBatchOperation("users/1-A", a));
 
-                var opDelete = new TimeSeriesOperation.RemoveOperation
+                var opDelete = new TimeSeriesOperation.DeleteOperation
                 {
                     From = DateTime.Now - TimeSpan.FromDays(2),
                     To = DateTime.Now + TimeSpan.FromDays(2)
@@ -66,14 +66,14 @@ namespace SlowTests.Client.TimeSeries
                 {
                     Name = "test",
                 };
-                ab.Remove(opDelete);
+                ab.Delete(opDelete);
                 store.Operations.Send(new TimeSeriesBatchOperation("users/1-A", ab));
 
                 var abc = new TimeSeriesOperation
                 {
                     Name = "test",
                 };
-                abc.Remove(new TimeSeriesOperation.RemoveOperation {From = DateTime.MinValue, To = DateTime.MaxValue});
+                abc.Delete(new TimeSeriesOperation.DeleteOperation {From = DateTime.MinValue, To = DateTime.MaxValue});
                 store.Operations.Send(new TimeSeriesBatchOperation("users/1-A", abc));
                 var ts = store.Operations.Send(new GetTimeSeriesOperation("users/1-A", "test", DateTime.MinValue, DateTime.MaxValue));
 
@@ -99,14 +99,14 @@ namespace SlowTests.Client.TimeSeries
 
                     session.SaveChanges();
 
-                    ts.Remove(DateTime.Now - TimeSpan.FromDays(2), DateTime.Now + TimeSpan.FromDays(2));
+                    ts.Delete(DateTime.Now - TimeSpan.FromDays(2), DateTime.Now + TimeSpan.FromDays(2));
                     session.SaveChanges();
 
                     var after1delete = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(1, after1delete.Count);
                     Assert.Equal(oldTime, after1delete[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                    ts.Remove(DateTime.MinValue, DateTime.MaxValue);
+                    ts.Delete(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
                 using (var session = store.OpenSession(new SessionOptions
@@ -142,14 +142,14 @@ namespace SlowTests.Client.TimeSeries
                     
                     session.SaveChanges();
 
-                    ts.Remove(oldTime);
+                    ts.Delete(oldTime);
                     session.SaveChanges();
 
                     var after1delete = ts.Get(DateTime.MinValue, DateTime.MaxValue).ToList();
                     Assert.Equal(1, after1delete.Count);
                     Assert.Equal(now.EnsureMilliseconds(), after1delete[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
-                    ts.Remove(DateTime.MinValue, DateTime.MaxValue);
+                    ts.Delete(DateTime.MinValue, DateTime.MaxValue);
                     session.SaveChanges();
                 }
 
@@ -186,7 +186,7 @@ namespace SlowTests.Client.TimeSeries
                     
                     session.SaveChanges();
 
-                    ts.Remove(now);
+                    ts.Delete(now);
                     now = DateTime.Now;
                     ts.Append(now, 76);
                     session.SaveChanges();

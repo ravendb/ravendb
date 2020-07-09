@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public RavenCommand<CertificateRawData> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CreateClientCertificateCommand( _name, _permissions, _clearance, _password);
+            return new CreateClientCertificateCommand(_name, _permissions, _clearance, _password);
         }
 
         private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>, IRaftCommand
@@ -45,7 +45,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 ResponseType = RavenCommandResponseType.Raw;
             }
 
-            public override bool IsReadRequest => true;
+            public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
@@ -72,10 +72,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                         if (_password != null)
                         {
                             writer.WritePropertyName(nameof(CertificateDefinition.Password));
-                            writer.WriteString(_password.ToString());
+                            writer.WriteString(_password);
                             writer.WriteComma();
                         }
-                        
+
                         writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
                         writer.WriteStartObject();
                         bool first = true;

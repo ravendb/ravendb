@@ -1584,7 +1584,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         private string EnsureValidFieldName(string fieldName, bool isNestedPath)
         {
             if (TheSession?.Conventions == null || isNestedPath || IsGroupBy)
-                return QueryFieldUtil.EscapeIfNecessary(fieldName);
+                return QueryFieldUtil.EscapeIfNecessary(fieldName, isNestedPath);
 
             foreach (var rootType in RootTypes)
             {

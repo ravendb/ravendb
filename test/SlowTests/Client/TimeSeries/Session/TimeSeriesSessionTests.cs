@@ -139,7 +139,7 @@ namespace SlowTests.Client.TimeSeries.Session
                 {
                     session.Store(new { Name = "Oren" }, "users/ayende");
                     session.TimeSeriesFor("users/ayende", "Heartrate")
-                        .Remove(baseline.AddMinutes(2));
+                        .Delete(baseline.AddMinutes(2));
 
                     session.SaveChanges();
                 }
@@ -1118,7 +1118,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(100, entries?.Count);
 
                     // null From, To
-                    tsf.Remove();
+                    tsf.Delete();
                     session.SaveChanges();
                 }
 
@@ -1136,7 +1136,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(100, entries?.Count);
 
                     // null To
-                    tsf.Remove(baseline.AddMinutes(50), null);
+                    tsf.Delete(baseline.AddMinutes(50), null);
                     session.SaveChanges();
                 }
 
@@ -1154,7 +1154,7 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(100, entries?.Count);
 
                     // null From
-                    tsf.Remove(null, baseline.AddMinutes(19));
+                    tsf.Delete(null, baseline.AddMinutes(19));
                     session.SaveChanges();
                 }
 
