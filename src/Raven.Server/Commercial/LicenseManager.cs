@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -81,21 +80,21 @@ namespace Raven.Server.Commercial
 
         static LicenseManager()
         {
-                string publicKeyString;
-                const string publicKeyPath = "Raven.Server.Commercial.RavenDB.public.json";
-                using (var stream = typeof(LicenseManager).Assembly.GetManifestResourceStream(publicKeyPath))
-                {
-                    if (stream == null)
-                        throw new InvalidOperationException("Could not find public key for the license");
-                    publicKeyString = new StreamReader(stream).ReadToEnd();
-                }
+            string publicKeyString;
+            const string publicKeyPath = "Raven.Server.Commercial.RavenDB.public.json";
+            using (var stream = typeof(LicenseManager).Assembly.GetManifestResourceStream(publicKeyPath))
+            {
+                if (stream == null)
+                    throw new InvalidOperationException("Could not find public key for the license");
+                publicKeyString = new StreamReader(stream).ReadToEnd();
+            }
 
-                var rsaPublicParameters = JsonConvert.DeserializeObject<RSAPublicParameters>(publicKeyString);
-                _rsaParameters = new RSAParameters
-                {
-                    Modulus = rsaPublicParameters.RsaKeyValue.Modulus,
-                    Exponent = rsaPublicParameters.RsaKeyValue.Exponent
-                };
+            var rsaPublicParameters = JsonConvert.DeserializeObject<RSAPublicParameters>(publicKeyString);
+            _rsaParameters = new RSAParameters
+            {
+                Modulus = rsaPublicParameters.RsaKeyValue.Modulus,
+                Exponent = rsaPublicParameters.RsaKeyValue.Exponent
+            };
         }
 
         public LicenseManager(ServerStore serverStore)
@@ -103,7 +102,7 @@ namespace Raven.Server.Commercial
             _serverStore = serverStore;
             _licenseHelper = new LicenseHelper(serverStore);
             _skipLeasingErrorsLogging = serverStore.Configuration.Licensing.SkipLeasingErrorsLogging;
-            }
+        }
 
         public bool IsEulaAccepted => _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
 
@@ -378,7 +377,7 @@ namespace Raven.Server.Commercial
 
                     await Activate(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
                     return;
-            }
+                }
                 catch (Exception e)
                 {
                     if (e is HttpRequestException)
@@ -643,7 +642,7 @@ namespace Raven.Server.Commercial
 
                 try
                 {
-                // we'll activate the license from the license server
+                    // we'll activate the license from the license server
                     await _serverStore.PutLicenseAsync(updatedLicense, raftRequestId).ConfigureAwait(false);
                 }
                 catch
@@ -833,11 +832,10 @@ namespace Raven.Server.Commercial
             Console.WriteLine($"Processor affinity was set and not using all available cores. " +
                               $"Requested cores: {cores}. " +
                               $"Number of cores on the machine: {ProcessorInfo.ProcessorCount}. " +
-                              $"License limits: {string.Join(", ", licenseLimits.NodeLicenseDetails.Select(x => $"{x.Key}: {x.Value.UtilizedCores}/{x.Value.NumberOfCores}"))}. " + 
+                              $"License limits: {string.Join(", ", licenseLimits.NodeLicenseDetails.Select(x => $"{x.Key}: {x.Value.UtilizedCores}/{x.Value.NumberOfCores}"))}. " +
                               $"Total utilized cores: {licenseLimits.TotalUtilizedCores}. " +
                               $"Max licensed cores: {LicenseStatus.MaxCores}");
             return true;
-
         }
 
         private static void SetMaxWorkingSet(Process process, double ramInGb)
@@ -1146,16 +1144,15 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
         }
 
-
         public void AssertCanUseDocumentsCompression()
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasDocumentsCompression)
+            if (LicenseStatus.HasDocumentsCompression)
                 return;
 
-            var details = $"Your current license ({_licenseStatus.Type}) does not allow documents compression";
+            var details = $"Your current license ({LicenseStatus.Type}) does not allow documents compression";
             throw GenerateLicenseLimit(LimitType.DocumentsCompression, details);
         }
 
@@ -1279,7 +1276,7 @@ namespace Raven.Server.Commercial
                 key: message,
                 details: new MessageDetails
                 {
-                    Message = $"The {taskType} task: '{taskName}' will not be redistributed " + 
+                    Message = $"The {taskType} task: '{taskName}' will not be redistributed " +
                               $"to a healthy node because the current license doesn't include the highly available tasks feature." + Environment.NewLine +
                               $"Task's last responsible node '{lastResponsibleNode}', is currently {nodeState} and will continue to execute the {GetTaskType(databaseTask, lower: true)} task." + Environment.NewLine +
                               $"You can choose a different mentor node that will execute this task " +
