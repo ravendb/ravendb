@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
-using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -26,7 +25,6 @@ namespace StressTests.Client.TimeSeries
 {
     public class TimeSeriesStress : ReplicationTestBase
     {
-
         public TimeSeriesStress(ITestOutputHelper output) : base(output)
         {
         }
@@ -80,13 +78,13 @@ namespace StressTests.Client.TimeSeries
 
                 var sp = Stopwatch.StartNew();
                 await Task.Delay((TimeSpan)retention / 2);
-                
+
                 WaitForUserToContinueTheTest(store);
 
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention / 10),$"too long has passed {sp.Elapsed}, retention is {retention}");
+                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention / 10), $"too long has passed {sp.Elapsed}, retention is {retention}");
                     await Task.Delay(100);
                     check = false;
                     foreach (var server in Servers)
@@ -119,7 +117,6 @@ namespace StressTests.Client.TimeSeries
             }
         }
 
-
         [Fact]
         public async Task ManyTimeSeriesRetention()
         {
@@ -149,7 +146,7 @@ namespace StressTests.Client.TimeSeries
                     },
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
-                
+
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 for (int j = 0; j < 1024; j++)
@@ -161,7 +158,7 @@ namespace StressTests.Client.TimeSeries
                     using (var session = store.OpenSession())
                     {
                         var id = "users/karmel/" + j;
-                        session.Store(new User {Name = "Karmel"}, id);
+                        session.Store(new User { Name = "Karmel" }, id);
 
                         for (int i = 0; i < total; i++)
                         {
@@ -174,7 +171,7 @@ namespace StressTests.Client.TimeSeries
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User(),"marker");
+                    session.Store(new User(), "marker");
                     session.SaveChanges();
 
                     await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
@@ -188,7 +185,7 @@ namespace StressTests.Client.TimeSeries
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < retention.Add(retention / 10),$"too long has passed {sp.Elapsed}, retention is {retention}");
+                    Assert.True(sp.Elapsed < retention.Add(retention / 10), $"too long has passed {sp.Elapsed}, retention is {retention}");
                     await Task.Delay(100);
                     check = false;
                     foreach (var server in Servers)
@@ -232,14 +229,14 @@ namespace StressTests.Client.TimeSeries
             }
         }
 
-          [Fact]
+        [Fact]
         public async Task PatchTimestamp_IntegrationTest()
         {
-            string[] tags = {"tag/1", "tag/2", "tag/3", "tag/4", null};
+            string[] tags = { "tag/1", "tag/2", "tag/3", "tag/4", null };
             const string timeseries = "Heartrate";
             const int timeSeriesPointsAmount = 128;
             const int docAmount = 8_192;
-            
+
             using (var store = GetDocumentStore())
             {
                 await using (var bulkInsert = store.BulkInsert())
@@ -257,12 +254,12 @@ namespace StressTests.Client.TimeSeries
                     {
                         return new TimeSeriesEntry
                         {
-                            Tag = tags[i % tags.Length], 
-                            Timestamp = baseTime.AddSeconds(i).AddSeconds(.1 * (randomValues.NextDouble() - .5)), 
-                            Values = new[] {256 + 16 * randomValues.NextDouble()}
+                            Tag = tags[i % tags.Length],
+                            Timestamp = baseTime.AddSeconds(i).AddSeconds(.1 * (randomValues.NextDouble() - .5)),
+                            Values = new[] { 256 + 16 * randomValues.NextDouble() }
                         };
                     }).ToArray();
-                
+
                 var appendOperation = store
                     .Operations
                     .Send(new PatchByQueryOperation(new IndexQuery
@@ -279,11 +276,12 @@ update
     for(var i = 0; i < $toAppend.length; i++){
         timeseries(this, $timeseries).append($toAppend[i].Timestamp, $toAppend[i].Values, $toAppend[i].Tag);
     }
-}"}));
+}"
+                    }));
                 await appendOperation.WaitForCompletionAsync();
 
-                var deleteFrom = toAppend[timeSeriesPointsAmount * 1/3].Timestamp;
-                var deleteTo = toAppend[timeSeriesPointsAmount * 3/4].Timestamp;
+                var deleteFrom = toAppend[timeSeriesPointsAmount * 1 / 3].Timestamp;
+                var deleteTo = toAppend[timeSeriesPointsAmount * 3 / 4].Timestamp;
                 var deleteOperation = store
                     .Operations
                     .Send(new PatchByQueryOperation(new IndexQuery
@@ -298,12 +296,13 @@ update
 from TimeSeriesResultHolders as c
 update
 {
-  timeseries(this, $timeseries).remove($from, $to);
-}"}));
+  timeseries(this, $timeseries).delete($from, $to);
+}"
+                    }));
                 await deleteOperation.WaitForCompletionAsync();
 
-                var getFrom = toAppend[timeSeriesPointsAmount * 1/5].Timestamp;
-                var getTo = toAppend[timeSeriesPointsAmount * 4/5].Timestamp;
+                var getFrom = toAppend[timeSeriesPointsAmount * 1 / 5].Timestamp;
+                var getTo = toAppend[timeSeriesPointsAmount * 4 / 5].Timestamp;
                 var getOperation = store
                     .Operations
                     .Send(new PatchByQueryOperation(new IndexQuery
@@ -319,9 +318,10 @@ from TimeSeriesResultHolders as c
 update
 {
   this.Result = timeseries(this, $timeseries).get($from, $to);
-}"}));
+}"
+                    }));
                 await getOperation.WaitForCompletionAsync();
-                
+
                 using (var session = store.OpenAsyncSession())
                 {
                     var docs = await session
@@ -335,17 +335,17 @@ update
                             .Where(s => s.Timestamp >= getFrom && s.Timestamp <= getTo)
                             .Where(s => s.Timestamp < deleteFrom || s.Timestamp > deleteTo)
                             .ToArray();
-                        
+
                         Assert.Equal(expectedList.Length, doc.Result.Length);
                         for (int i = 0; i < expectedList.Length; i++)
                         {
                             var expected = expectedList[i];
                             var actual = doc.Result[i];
-                            if (expected.Timestamp < getFrom || expected.Timestamp > getTo) 
+                            if (expected.Timestamp < getFrom || expected.Timestamp > getTo)
                                 continue;
-                            if (expected.Timestamp >= deleteFrom || expected.Timestamp <= deleteTo) 
+                            if (expected.Timestamp >= deleteFrom || expected.Timestamp <= deleteTo)
                                 continue;
-                        
+
                             Assert.Equal(expected.Timestamp, actual.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(expected.Values, actual.Values);
                             Assert.Equal(expected.Tag, actual.Tag);
