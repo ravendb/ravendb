@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
@@ -48,10 +47,9 @@ namespace Raven.Server.Commercial
     public class LicenseManager : IDisposable
     {
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseManager>("Server");
+        private static readonly RSAParameters _rsaParameters;
         private readonly LicenseStorage _licenseStorage = new LicenseStorage();
-        private LicenseStatus _licenseStatus = new LicenseStatus();
         private Timer _leaseLicenseTimer;
-        private RSAParameters? _rsaParameters;
         private readonly ServerStore _serverStore;
         private readonly LicenseHelper _licenseHelper;
 
@@ -76,7 +74,28 @@ namespace Raven.Server.Commercial
             FullVersion = ServerVersion.FullVersion
         };
 
+        public LicenseStatus LicenseStatus { get; private set; } = new LicenseStatus();
+
         internal static bool IgnoreProcessorAffinityChanges = false;
+
+        static LicenseManager()
+        {
+            string publicKeyString;
+            const string publicKeyPath = "Raven.Server.Commercial.RavenDB.public.json";
+            using (var stream = typeof(LicenseManager).Assembly.GetManifestResourceStream(publicKeyPath))
+            {
+                if (stream == null)
+                    throw new InvalidOperationException("Could not find public key for the license");
+                publicKeyString = new StreamReader(stream).ReadToEnd();
+            }
+
+            var rsaPublicParameters = JsonConvert.DeserializeObject<RSAPublicParameters>(publicKeyString);
+            _rsaParameters = new RSAParameters
+            {
+                Modulus = rsaPublicParameters.RsaKeyValue.Modulus,
+                Exponent = rsaPublicParameters.RsaKeyValue.Exponent
+            };
+        }
 
         public LicenseManager(ServerStore serverStore)
         {
@@ -86,33 +105,6 @@ namespace Raven.Server.Commercial
         }
 
         public bool IsEulaAccepted => _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
-
-        private RSAParameters RSAParameters
-        {
-            get
-            {
-                if (_rsaParameters != null)
-                    return _rsaParameters.Value;
-
-                string publicKeyString;
-                const string publicKeyPath = "Raven.Server.Commercial.RavenDB.public.json";
-                using (var stream = typeof(LicenseManager).Assembly.GetManifestResourceStream(publicKeyPath))
-                {
-                    if (stream == null)
-                        throw new InvalidOperationException("Could not find public key for the license");
-                    publicKeyString = new StreamReader(stream).ReadToEnd();
-                }
-
-                var rsaPublicParameters = JsonConvert.DeserializeObject<RSAPublicParameters>(publicKeyString);
-                _rsaParameters = new RSAParameters
-                {
-                    Modulus = rsaPublicParameters.RsaKeyValue.Modulus,
-                    Exponent = rsaPublicParameters.RsaKeyValue.Exponent
-                };
-
-                return _rsaParameters.Value;
-            }
-        }
 
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
@@ -127,7 +119,8 @@ namespace Raven.Server.Commercial
                     _licenseStorage.SetFirstServerStartDate(firstServerStartDate.Value);
                 }
 
-                _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
+                LicenseStatus.FirstServerStartDate = firstServerStartDate.Value;
+                _licenseStorage.SetBuildInfo(BuildInfo);
 
                 ReloadLicense(firstRun: true);
                 ReloadLicenseLimits(addPerformanceHint: true);
@@ -166,7 +159,7 @@ namespace Raven.Server.Commercial
                     OsInfo = nodeInfo.OsInfo
                 };
 
-                await _serverStore.PutNodeLicenseLimitsAsync(_serverStore.NodeTag, detailsPerNode, _licenseStatus.MaxCores);
+                await _serverStore.PutNodeLicenseLimitsAsync(_serverStore.NodeTag, detailsPerNode, LicenseStatus.MaxCores);
             }
             catch (Exception e)
             {
@@ -177,11 +170,6 @@ namespace Raven.Server.Commercial
             {
                 _licenseLimitsSemaphore.Release();
             }
-        }
-
-        public LicenseStatus GetLicenseStatus()
-        {
-            return _licenseStatus;
         }
 
         public void ReloadLicense(bool firstRun = false)
@@ -199,7 +187,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                SetLicense(license.Id, LicenseValidator.Validate(license, RSAParameters));
+                SetLicense(GetLicenseStatus(license));
 
                 RemoveAgplAlert();
             }
@@ -224,7 +212,7 @@ namespace Raven.Server.Commercial
             LicenseChanged?.Invoke();
 
             if (firstRun == false)
-                _licenseHelper.UpdateLocalLicense(license, RSAParameters);
+                _licenseHelper.UpdateLocalLicense(license, _rsaParameters);
         }
 
         private void CreateAgplAlert()
@@ -252,7 +240,7 @@ namespace Raven.Server.Commercial
                 {
                     var utilizedCores = GetCoresLimitForNode(out var licenseLimits);
                     var clusterSize = GetClusterSize();
-                    var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, utilizedCores * _licenseStatus.Ratio);
+                    var maxWorkingSet = Math.Min(LicenseStatus.MaxMemory / (double)clusterSize, utilizedCores * LicenseStatus.Ratio);
 
                     SetAffinity(process, utilizedCores, addPerformanceHint, licenseLimits);
                     SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
@@ -272,12 +260,12 @@ namespace Raven.Server.Commercial
             if (licenseLimits?.NodeLicenseDetails != null &&
                 licenseLimits.NodeLicenseDetails.TryGetValue(_serverStore.NodeTag, out var detailsPerNode))
             {
-                return Math.Min(detailsPerNode.UtilizedCores, _licenseStatus.MaxCores);
+                return Math.Min(detailsPerNode.UtilizedCores, LicenseStatus.MaxCores);
             }
 
             // we don't have any license limits for this node, let's put our info to update it
             Task.Run(async () => await PutMyNodeInfoAsync()).IgnoreUnobservedExceptions();
-            return Math.Min(ProcessorInfo.ProcessorCount, _licenseStatus.MaxCores);
+            return Math.Min(ProcessorInfo.ProcessorCount, LicenseStatus.MaxCores);
         }
 
         private int GetClusterSize()
@@ -337,7 +325,7 @@ namespace Raven.Server.Commercial
                 detailsPerNode.MaxUtilizedCores = maxUtilizedCores;
             }
 
-            await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, _licenseStatus.MaxCores);
+            await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, LicenseStatus.MaxCores);
         }
 
         private async Task<NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)
@@ -369,29 +357,41 @@ namespace Raven.Server.Commercial
             return detailsPerNode.Sum(x => x.Value.UtilizedCores);
         }
 
-        public async Task Activate(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive = true, bool forceActivate = false)
+        public async Task Activate(License license, string raftRequestId, bool skipGettingUpdatedLicense = false)
         {
-            var newLicenseStatus = GetLicenseStatus(license);
-            if (newLicenseStatus.Expiration.HasValue == false)
+            var licenseStatus = GetLicenseStatus(license);
+            if (licenseStatus.Expiration.HasValue == false)
                 throw new LicenseExpiredException("License doesn't have an expiration date!");
 
-            if (forceActivate == false)
+            if (licenseStatus.Expired)
             {
-                if (await ContinueActivatingLicense(
-                        license, skipLeaseLicense, raftRequestId,
-                        ensureNotPassive,
-                        newLicenseStatus).ConfigureAwait(false) == false)
+                if (skipGettingUpdatedLicense)
+                    throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration}");
+
+                try
+                {
+                    // license expired, we'll try to update it
+                    var updatedLicense = await GetUpdatedLicenseInternal(license);
+                    if (updatedLicense == null)
+                        throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.");
+
+                    await Activate(updatedLicense, raftRequestId, skipGettingUpdatedLicense: true);
                     return;
+                }
+                catch (Exception e)
+                {
+                    if (e is HttpRequestException)
+                        throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
+
+                    throw new LicenseExpiredException($"License already expired on: {licenseStatus.Expiration} and we were unable to get an updated license.", e);
+                }
             }
 
-            if (ensureNotPassive)
-                _serverStore.EnsureNotPassive();
+            ThrowIfCannotActivateLicense(licenseStatus);
 
             try
             {
                 await _serverStore.PutLicenseAsync(license, raftRequestId).ConfigureAwait(false);
-
-                SetLicense(license.Id, newLicenseStatus.Attributes);
             }
             catch (Exception e)
             {
@@ -403,78 +403,38 @@ namespace Raven.Server.Commercial
                 if (Logger.IsInfoEnabled)
                     Logger.Info(message, e);
 
-                throw new InvalidDataException("Could not save license!", e);
+                throw new InvalidOperationException("Could not save license!", e);
             }
         }
 
         private void ResetLicense(string error)
         {
-            _licenseStatus = new LicenseStatus
+            LicenseStatus = new LicenseStatus
             {
-                FirstServerStartDate = _licenseStatus.FirstServerStartDate,
+                FirstServerStartDate = LicenseStatus.FirstServerStartDate,
                 ErrorMessage = error,
             };
         }
 
-        private void SetLicense(Guid id, Dictionary<string, object> attributes)
+        private void SetLicense(LicenseStatus licenseStatus)
         {
-            _licenseStatus = new LicenseStatus
+            LicenseStatus = new LicenseStatus
             {
-                Id = id,
+                Id = licenseStatus.Id,
+                LicensedTo = licenseStatus.LicensedTo,
                 ErrorMessage = null,
-                Attributes = attributes,
-                FirstServerStartDate = _licenseStatus.FirstServerStartDate
+                Attributes = licenseStatus.Attributes,
+                FirstServerStartDate = LicenseStatus.FirstServerStartDate,
             };
         }
 
-        private async Task<bool> ContinueActivatingLicense(License license, bool skipLeaseLicense, string raftRequestId, bool ensureNotPassive, LicenseStatus newLicenseStatus)
-        {
-            if (newLicenseStatus.Expired)
-            {
-                if (skipLeaseLicense == false)
-                {
-                    // Here we have an expired license, but it was valid once.
-                    // The user might rely on the license features and we want
-                    // to error on the side of the user in this case, so we'll accept
-                    // the features of the license, even before we check with the
-                    // server
-                    SetLicense(license.Id, newLicenseStatus.Attributes);
-
-                    // license expired, we'll try to update it
-                    try
-                    {
-                        // license expired, we'll try to update it
-                        license = await GetUpdatedLicenseInternal(license);
-                    }
-                    catch (Exception e)
-                    {
-                        if (e is HttpRequestException)
-                            throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license. Please make sure you that you have access to {ApiHttpClient.ApiRavenDbNet}.", e);
-
-                        throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}, and we were unable to get an updated license.", e);
-                    }
-
-                    if (license != null)
-                    {
-                        await Activate(license, skipLeaseLicense: true, raftRequestId, ensureNotPassive: ensureNotPassive);
-                        return false;
-                    }
-                }
-
-                throw new LicenseExpiredException($"License already expired on: {newLicenseStatus.Expiration}");
-            }
-
-            ThrowIfCannotActivateLicense(newLicenseStatus);
-            return true;
-        }
-
-        public LicenseStatus GetLicenseStatus(License license)
+        public static LicenseStatus GetLicenseStatus(License license)
         {
             Dictionary<string, object> licenseAttributes;
 
             try
             {
-                licenseAttributes = LicenseValidator.Validate(license, RSAParameters);
+                licenseAttributes = LicenseValidator.Validate(license, _rsaParameters);
             }
             catch (Exception e)
             {
@@ -489,16 +449,19 @@ namespace Raven.Server.Commercial
                 throw new InvalidDataException("Could not validate license!", e);
             }
 
-            var newLicenseStatus = new LicenseStatus
+            var licenseStatus = new LicenseStatus
             {
-                Attributes = licenseAttributes
+                Id = license.Id,
+                Attributes = licenseAttributes,
+                LicensedTo = license.Name
             };
-            return newLicenseStatus;
+
+            return licenseStatus;
         }
 
         public void TryActivateLicense(bool throwOnActivationFailure)
         {
-            if (_licenseStatus.Type != LicenseType.None)
+            if (LicenseStatus.Type != LicenseType.None)
                 return;
 
             var license = _licenseHelper.TryGetLicenseFromString(throwOnActivationFailure) ??
@@ -508,7 +471,7 @@ namespace Raven.Server.Commercial
 
             try
             {
-                AsyncHelpers.RunSync(() => Activate(license, skipLeaseLicense: false, RaftIdGenerator.NewId(), ensureNotPassive: false));
+                AsyncHelpers.RunSync(() => Activate(license, RaftIdGenerator.NewId()));
             }
             catch (Exception e)
             {
@@ -617,7 +580,7 @@ namespace Raven.Server.Commercial
 
                         if (string.IsNullOrWhiteSpace(leasedLicense.ErrorMessage) == false)
                         {
-                            _licenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
+                            LicenseStatus.ErrorMessage = leasedLicense.ErrorMessage;
                         }
 
                         return licenseChanged ? leasedLicense.License : null;
@@ -675,8 +638,19 @@ namespace Raven.Server.Commercial
                 if (updatedLicense == null)
                     return;
 
-                // we'll activate the license from the license server
-                await Activate(updatedLicense, skipLeaseLicense: true, raftRequestId, forceActivate: true);
+                var licenseStatus = GetLicenseStatus(updatedLicense);
+
+                try
+                {
+                    // we'll activate the license from the license server
+                    await _serverStore.PutLicenseAsync(updatedLicense, raftRequestId).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // we want to set the new license status anyway
+                    SetLicense(licenseStatus);
+                    throw;
+                }
 
                 var alert = AlertRaised.Create(
                     null,
@@ -709,19 +683,19 @@ namespace Raven.Server.Commercial
 
             var utilizedCores = licenseLimits.NodeLicenseDetails.Sum(x => x.Value.UtilizedCores);
             string errorMessage = null;
-            if (utilizedCores > _licenseStatus.MaxCores)
+            if (utilizedCores > LicenseStatus.MaxCores)
             {
                 errorMessage = $"The number of utilized cores is {utilizedCores}, " +
-                              $"while the license limit is {_licenseStatus.MaxCores} cores";
+                              $"while the license limit is {LicenseStatus.MaxCores} cores";
             }
-            else if (licenseLimits.NodeLicenseDetails.Count > _licenseStatus.MaxClusterSize)
+            else if (licenseLimits.NodeLicenseDetails.Count > LicenseStatus.MaxClusterSize)
             {
                 errorMessage = $"The cluster size is {licenseLimits.NodeLicenseDetails.Count}, " +
-                              $"while the license limit is {_licenseStatus.MaxClusterSize}";
+                              $"while the license limit is {LicenseStatus.MaxClusterSize}";
             }
 
             if (errorMessage != null)
-                _licenseStatus.ErrorMessage = errorMessage;
+                LicenseStatus.ErrorMessage = errorMessage;
         }
 
         private void AddLeaseLicenseError(string errorMessage, Exception exception = null)
@@ -729,9 +703,9 @@ namespace Raven.Server.Commercial
             if (_skipLeasingErrorsLogging)
                 return;
 
-            if (_licenseStatus.Expired == false &&
-                _licenseStatus.Expiration != null &&
-                _licenseStatus.Expiration.Value.Subtract(DateTime.UtcNow).TotalDays > 3 &&
+            if (LicenseStatus.Expired == false &&
+                LicenseStatus.Expiration != null &&
+                LicenseStatus.Expiration.Value.Subtract(DateTime.UtcNow).TotalDays > 3 &&
                 (exception == null || exception is HttpRequestException))
             {
                 // ignore the error if the license isn't expired yet
@@ -858,11 +832,10 @@ namespace Raven.Server.Commercial
             Console.WriteLine($"Processor affinity was set and not using all available cores. " +
                               $"Requested cores: {cores}. " +
                               $"Number of cores on the machine: {ProcessorInfo.ProcessorCount}. " +
-                              $"License limits: {string.Join(", ", licenseLimits.NodeLicenseDetails.Select(x => $"{x.Key}: {x.Value.UtilizedCores}/{x.Value.NumberOfCores}"))}. " + 
+                              $"License limits: {string.Join(", ", licenseLimits.NodeLicenseDetails.Select(x => $"{x.Key}: {x.Value.UtilizedCores}/{x.Value.NumberOfCores}"))}. " +
                               $"Total utilized cores: {licenseLimits.TotalUtilizedCores}. " +
-                              $"Max licensed cores: {_licenseStatus.MaxCores}");
+                              $"Max licensed cores: {LicenseStatus.MaxCores}");
             return true;
-
         }
 
         private static void SetMaxWorkingSet(Process process, double ramInGb)
@@ -1101,20 +1074,20 @@ namespace Raven.Server.Commercial
                 throw licenseLimit;
 
             var allNodesCount = _serverStore.GetClusterTopology().AllNodes.Count;
-            if (_licenseStatus.MaxCores <= allNodesCount)
+            if (LicenseStatus.MaxCores <= allNodesCount)
             {
-                var message = $"Cannot add the node to the cluster because the number of licensed cores is {_licenseStatus.MaxCores} " +
+                var message = $"Cannot add the node to the cluster because the number of licensed cores is {LicenseStatus.MaxCores} " +
                               $"while the number of nodes is {allNodesCount}. This will bring the number of utilized cores over the limit";
                 throw GenerateLicenseLimit(LimitType.Cores, message);
             }
 
-            if (_licenseStatus.DistributedCluster == false)
+            if (LicenseStatus.DistributedCluster == false)
             {
-                var message = $"Your current license ({_licenseStatus.Type}) does not allow adding nodes to the cluster";
+                var message = $"Your current license ({LicenseStatus.Type}) does not allow adding nodes to the cluster";
                 throw GenerateLicenseLimit(LimitType.ForbiddenHost, message);
             }
 
-            var maxClusterSize = _licenseStatus.MaxClusterSize;
+            var maxClusterSize = LicenseStatus.MaxClusterSize;
             var clusterSize = GetClusterSize();
             if (++clusterSize > maxClusterSize)
             {
@@ -1129,19 +1102,19 @@ namespace Raven.Server.Commercial
                 throw licenseLimit;
 
             if (configuration.BackupType == BackupType.Snapshot &&
-                _licenseStatus.HasSnapshotBackups == false)
+                LicenseStatus.HasSnapshotBackups == false)
             {
                 const string details = "Your current license doesn't include the snapshot backups feature";
                 throw GenerateLicenseLimit(LimitType.SnapshotBackup, details);
             }
 
-            if (configuration.HasCloudBackup() && _licenseStatus.HasCloudBackups == false)
+            if (configuration.HasCloudBackup() && LicenseStatus.HasCloudBackups == false)
             {
                 const string details = "Your current license doesn't include the backup to cloud or ftp feature!";
                 throw GenerateLicenseLimit(LimitType.CloudBackup, details);
             }
 
-            if (HasEncryptedBackup(configuration) && _licenseStatus.HasEncryptedBackups == false)
+            if (HasEncryptedBackup(configuration) && LicenseStatus.HasEncryptedBackups == false)
             {
                 const string details = "Your current license doesn't include the encrypted backup feature!";
                 throw GenerateLicenseLimit(LimitType.CloudBackup, details);
@@ -1164,23 +1137,22 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasExternalReplication)
+            if (LicenseStatus.HasExternalReplication)
                 return;
 
-            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding external replication";
+            var details = $"Your current license ({LicenseStatus.Type}) does not allow adding external replication";
             throw GenerateLicenseLimit(LimitType.ExternalReplication, details);
         }
-
 
         public void AssertCanUseDocumentsCompression()
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasDocumentsCompression)
+            if (LicenseStatus.HasDocumentsCompression)
                 return;
 
-            var details = $"Your current license ({_licenseStatus.Type}) does not allow documents compression";
+            var details = $"Your current license ({LicenseStatus.Type}) does not allow documents compression";
             throw GenerateLicenseLimit(LimitType.DocumentsCompression, details);
         }
 
@@ -1189,7 +1161,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasDelayedExternalReplication)
+            if (LicenseStatus.HasDelayedExternalReplication)
                 return;
 
             const string message = "Your current license doesn't include the delayed replication feature";
@@ -1201,10 +1173,10 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasPullReplicationAsHub)
+            if (LicenseStatus.HasPullReplicationAsHub)
                 return;
 
-            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding pull replication as hub";
+            var details = $"Your current license ({LicenseStatus.Type}) does not allow adding pull replication as hub";
             throw GenerateLicenseLimit(LimitType.PullReplicationAsHub, details);
         }
 
@@ -1213,10 +1185,10 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasPullReplicationAsSink)
+            if (LicenseStatus.HasPullReplicationAsSink)
                 return;
 
-            var details = $"Your current license ({_licenseStatus.Type}) does not allow adding pull replication as sink";
+            var details = $"Your current license ({LicenseStatus.Type}) does not allow adding pull replication as sink";
             throw GenerateLicenseLimit(LimitType.PullReplicationAsSink, details);
         }
 
@@ -1225,7 +1197,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasRavenEtl)
+            if (LicenseStatus.HasRavenEtl)
                 return;
 
             const string message = "Your current license doesn't include the RavenDB ETL feature";
@@ -1237,7 +1209,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasSqlEtl != false)
+            if (LicenseStatus.HasSqlEtl != false)
                 return;
 
             const string message = "Your current license doesn't include the SQL ETL feature";
@@ -1249,7 +1221,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out _) == false)
                 return false;
 
-            var value = _licenseStatus.HasSnmpMonitoring;
+            var value = LicenseStatus.HasSnmpMonitoring;
             if (withNotification == false)
                 return value;
 
@@ -1269,7 +1241,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out licenseLimit) == false)
                 return false;
 
-            var value = _licenseStatus.HasDynamicNodesDistribution;
+            var value = LicenseStatus.HasDynamicNodesDistribution;
             if (withNotification == false)
                 return value;
 
@@ -1286,7 +1258,7 @@ namespace Raven.Server.Commercial
 
         public bool HasHighlyAvailableTasks()
         {
-            return _licenseStatus.HasHighlyAvailableTasks;
+            return LicenseStatus.HasHighlyAvailableTasks;
         }
 
         public static AlertRaised CreateHighlyAvailableTasksAlert(DatabaseTopology databaseTopology, IDatabaseTask databaseTask, string lastResponsibleNode)
@@ -1304,7 +1276,7 @@ namespace Raven.Server.Commercial
                 key: message,
                 details: new MessageDetails
                 {
-                    Message = $"The {taskType} task: '{taskName}' will not be redistributed " + 
+                    Message = $"The {taskType} task: '{taskName}' will not be redistributed " +
                               $"to a healthy node because the current license doesn't include the highly available tasks feature." + Environment.NewLine +
                               $"Task's last responsible node '{lastResponsibleNode}', is currently {nodeState} and will continue to execute the {GetTaskType(databaseTask, lower: true)} task." + Environment.NewLine +
                               $"You can choose a different mentor node that will execute this task " +
@@ -1355,7 +1327,7 @@ namespace Raven.Server.Commercial
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (_licenseStatus.HasEncryption)
+            if (LicenseStatus.HasEncryption)
                 return;
 
             const string message = "Your current license doesn't include the encryption feature";
@@ -1381,7 +1353,7 @@ namespace Raven.Server.Commercial
 
         private bool IsValid(out LicenseLimitException licenseLimit)
         {
-            if (_licenseStatus.Type != LicenseType.Invalid)
+            if (LicenseStatus.Type != LicenseType.Invalid)
             {
                 licenseLimit = null;
                 return true;

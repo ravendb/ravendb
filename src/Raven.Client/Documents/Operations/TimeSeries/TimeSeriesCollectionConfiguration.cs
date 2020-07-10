@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
@@ -11,7 +10,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
     public class TimeSeriesCollectionConfiguration : IDynamicJson
     {
         public bool Disabled { get; set; }
-        
+
         /// <summary>
         /// Specify roll up and retention policy.
         /// Each policy will create a new time-series aggregated from the previous one
@@ -34,7 +33,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 return false;
             }
 
-
             if (Disabled != other.Disabled)
                 return false;
 
@@ -47,7 +45,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return Policies.SequenceEqual(other.Policies);
         }
 
-        public override bool Equals(object? obj)
+        public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
                 return false;
@@ -55,7 +53,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 return false;
             return Equals((TimeSeriesCollectionConfiguration)obj);
         }
-
 
         public override int GetHashCode()
         {
@@ -255,10 +252,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         /// </summary>
         public TimeValue AggregationTime { get; private set; }
 
-
         internal static TimeSeriesPolicy AfterAllPolices = new TimeSeriesPolicy();
         internal static TimeSeriesPolicy BeforeAllPolices = new TimeSeriesPolicy();
-        
+
         protected TimeSeriesPolicy()
         {
         }
@@ -274,10 +270,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public TimeSeriesPolicy(string name, TimeValue aggregationTime) : this(name, aggregationTime, TimeValue.MaxValue)
         {
         }
-        
+
         public TimeSeriesPolicy(string name, TimeValue aggregationTime, TimeValue retentionTime)
         {
-            if(string.IsNullOrEmpty(name))
+            if (string.IsNullOrEmpty(name))
                 throw new ArgumentNullException(name);
 
             if (aggregationTime <= TimeValue.Zero)
@@ -316,9 +312,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((TimeSeriesPolicy)obj);
         }
 

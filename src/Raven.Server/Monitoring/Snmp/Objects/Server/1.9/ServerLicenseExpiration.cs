@@ -16,7 +16,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override OctetString GetData()
         {
-            var status = _store.LicenseManager.GetLicenseStatus();
+            var status = _store.LicenseManager.LicenseStatus;
             if (status.Expiration.HasValue == false)
                 return null;
 
