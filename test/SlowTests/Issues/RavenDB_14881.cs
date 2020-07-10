@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async void can_get_detailed_collection_statistics()
+        public async Task can_get_detailed_collection_statistics()
         {
             string strCollectionName = "Companies";
             using (var store = GetDocumentStore())

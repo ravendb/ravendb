@@ -35,7 +35,7 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(options))
             {
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var notInDbGroupServer = Servers.Single(s => record.Topology.Members.Contains(s.ServerStore.NodeTag) == false);
+                var notInDbGroupServer = Servers.Single(s => record.Topology.AllNodes.Contains(s.ServerStore.NodeTag) == false);
                 await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database)));
 
                 var dbName = store.Database;

@@ -43,12 +43,13 @@ namespace SlowTests.SparrowTests
             for (int i = 0; i < artificialLogsCount; i++)
             {
                 var lastModified = now - TimeSpan.FromHours(i);
-                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(lastModified)}.00{artificialLogsCount-i}.log");
+                var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(lastModified)}.00{artificialLogsCount - i}.log");
                 toCheckLogFiles.Add((fileName, lastModified > retentionTime));
-                await using (File.Create(fileName)) { }
+                await using (File.Create(fileName))
+                { }
                 File.SetLastWriteTime(fileName, lastModified);
             }
-            
+
             const long retentionSize = long.MaxValue;
             var loggingSource = new LoggingSource(
                 LogMode.Information,
@@ -56,7 +57,8 @@ namespace SlowTests.SparrowTests
                 "LoggingSource" + name,
                 retentionTimeConfiguration,
                 retentionSize,
-                compressing) {MaxFileSizeInBytes = fileSize};
+                compressing)
+            { MaxFileSizeInBytes = fileSize };
             //This is just to make sure the MaxFileSizeInBytes is get action for the first file
             loggingSource.SetupLogMode(LogMode.Operations, path, retentionTimeConfiguration, retentionSize, compressing);
 
@@ -138,7 +140,7 @@ namespace SlowTests.SparrowTests
             await logger.OperationsAsync("Some message");
 
             var todayLog = string.Empty;
-            await WaitForValueAsync(async () =>
+            WaitForValue(() =>
             {
                 var afterEndFiles = Directory.GetFiles(path);
                 todayLog = afterEndFiles.FirstOrDefault(f =>
@@ -147,9 +149,10 @@ namespace SlowTests.SparrowTests
             }, true, 10_000, 1_000);
 
             Assert.True(LoggingSource.LogInfo.TryGetNumber(todayLog, out var n) && n == 0);
-            
+
             loggingSource.EndLogging();
         }
+
         [Theory]
         [InlineData("log")]
         [InlineData("log.gz")]
@@ -176,14 +179,15 @@ namespace SlowTests.SparrowTests
                 path,
                 "LoggingSource" + testName,
                 retentionTimeConfiguration,
-                retentionSize){MaxFileSizeInBytes = fileSize};
+                retentionSize)
+            { MaxFileSizeInBytes = fileSize };
             //This is just to make sure the MaxFileSizeInBytes is get action for the first file
             loggingSource.SetupLogMode(LogMode.Operations, path, retentionTimeConfiguration, retentionSize, false);
-            
+
             var logger = new Logger(loggingSource, "Source" + testName, "Logger" + testName);
             await logger.OperationsAsync("Some message");
 
-            var result = await WaitForValueAsync(async () =>
+            var result = WaitForValue(() =>
             {
                 var strings = Directory.GetFiles(path);
                 return strings.Any(f =>
@@ -195,7 +199,7 @@ namespace SlowTests.SparrowTests
                 });
             }, true, 10_000, 1_000);
             Assert.True(result);
-            
+
             loggingSource.EndLogging();
         }
 
@@ -218,7 +222,8 @@ namespace SlowTests.SparrowTests
             {
                 var fileName = Path.Combine(path, $"{LoggingSource.LogInfo.DateToLogFormat(date)}.001.log");
                 toCheckLogFiles.Add((fileName, date > retentionDate));
-                await using (File.Create(fileName)) { }
+                await using (File.Create(fileName))
+                { }
                 File.SetLastWriteTime(fileName, date);
             }
 
@@ -229,7 +234,8 @@ namespace SlowTests.SparrowTests
                 "LoggingSource" + name,
                 retentionTime,
                 retentionSize,
-                compressing) {MaxFileSizeInBytes = fileSize};
+                compressing)
+            { MaxFileSizeInBytes = fileSize };
             //This is just to make sure the MaxFileSizeInBytes is get action for the first file
             loggingSource.SetupLogMode(LogMode.Operations, path, retentionTime, retentionSize, compressing);
 
