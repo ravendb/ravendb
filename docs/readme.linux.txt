@@ -45,7 +45,7 @@ Open browser, if not opened automatically, at url printed in "Server available o
 Follow the web setup instructions at: https://ravendb.net/docs/article-page/5.0/csharp/start/installation/setup-wizard
 
 * Upgrading to a New Version
-Follow the upgrade instructions available at: https://ravendb.net/docs/article-page/4.2/csharp/start/installation/upgrading-to-new-version
+Follow the upgrade instructions available at: https://ravendb.net/docs/article-page/5.0/csharp/start/installation/upgrading-to-new-version
 
 
 

@@ -25,7 +25,7 @@ $ docker run -p 8080:8080 ravendb/ravendb:5.0-ubuntu-latest
 Ubuntu ARM image:
 
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:4.2-ubuntu-arm-latest
+$ docker run -p 8080:8080 ravendb/ravendb:5.0-ubuntu-arm-latest
 ```
 
 Windows image:
