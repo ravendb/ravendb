@@ -10,7 +10,7 @@ function SetBuiltAtEnvironmentVariableInTeamCity($builtAt) {
     SetTeamCityEnvironmentVariable 'env.BUILT_AT' $($builtAt.ToString('o'))
 }
 
-$DEV_BUILD_NUMBER = 50
+$DEV_BUILD_NUMBER = 51
 function GetBuildNumber () {
     if ($env:BUILD_NUMBER) {
         $result = $env:BUILD_NUMBER
@@ -91,7 +91,7 @@ function BumpVersion ($projectDir, $versionPrefix, $buildType, $dryRun = $False)
     $repo = @{
         "Owner"  = "ravendb"
         "Name"   = "ravendb"
-        "Branch" = "v5.0"
+        "Branch" = "v5.1"
     }
 
     $remoteFilePath = 'src/CommonAssemblyInfo.cs'
@@ -224,12 +224,12 @@ function GetVersionInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCont
 
     $result = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($srcFileContent))
 
-    $pattern = [regex]'\[assembly: RavenVersion\(Build = "50", CommitHash = "([^"]*)", Version = "5.0", FullVersion = "[^"]*"\)\]'
+    $pattern = [regex]'\[assembly: RavenVersion\(Build = "51", CommitHash = "([^"]*)", Version = "5.1", FullVersion = "[^"]*"\)\]'
     $m = $pattern.Match($result)
     $commit = $m.Groups[1]
     $result = $pattern.Replace(
         $result,
-        "[assembly: RavenVersion(Build = ""50"", CommitHash = ""$commit"", Version = ""5.0"", FullVersion = ""$newVersion-custom-50"")]")
+        "[assembly: RavenVersion(Build = ""51"", CommitHash = ""$commit"", Version = ""5.1"", FullVersion = ""$newVersion-custom-51"")]")
 
     if (!$result) {
         throw "Could not get VersionInfo.cs file contents with bumped version."

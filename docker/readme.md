@@ -1,16 +1,16 @@
 ## RavenDB Docker Support
 
-The files here support building and running RavenDB 5.0 in a docker container on either Linux or Windows (nanoserver).
+The files here support building and running RavenDB 5.1 in a docker container on either Linux or Windows (nanoserver).
 
 ### Official images
 
  Official Docker images are available on our [Docker Hub](https://hub.docker.com/r/ravendb/ravendb/). We provide images in two flavors: ubuntu-based (to be run on Linux containers) and nanoserver-based (to be run using Windows containers). The following tags are available:
 
-- `5.0-ubuntu-latest` - contains the latest version of RavenDB 5.0 running on Ubuntu 18.04 container
+- `5.1-ubuntu-latest` - contains the latest version of RavenDB 5.1 running on Ubuntu 18.04 container
 
-- `5.0-windows-nanoserver-latest` - contains the latest version of RavenDB 5.0 running running on Windows nanoserver
+- `5.1-windows-nanoserver-latest` - contains the latest version of RavenDB 5.1 running running on Windows nanoserver
 
-- every 5.0 release is going to have its own image set for both Ubuntu and Windows containers
+- every 5.1 release is going to have its own image set for both Ubuntu and Windows containers
 
 ### Running
 
@@ -19,28 +19,28 @@ Simplest way to run and try RavenDB out is:
 Linux image:
 
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:5.0-ubuntu-latest
+$ docker run -p 8080:8080 ravendb/ravendb:5.1-ubuntu-latest
 ```
 
 Ubuntu ARM image:
 
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:4.2-ubuntu-arm-latest
+$ docker run -p 8080:8080 ravendb/ravendb:5.1-ubuntu-arm-latest
 ```
 
 Windows image:
 
 ```
-$ docker run -p 8080:8080 ravendb/ravendb:5.0-windows-nanoserver-latest
+$ docker run -p 8080:8080 ravendb/ravendb:5.1-windows-nanoserver-latest
 ```
 
 Optionally nightly images can be used from [ravendb/ravendb-nightly](https://hub.docker.com/r/ravendb/ravendb-nightly/)
 
 You can run RavenDB docker container manually by invoking `docker run`, yet if you don't feel that docker-savvy we recommend using our scripts:
 
-Run Ubuntu-based image: [run-linux.ps1](https://github.com/ravendb/ravendb/blob/v5.0/docker/run-linux.ps1)
+Run Ubuntu-based image: [run-linux.ps1](https://github.com/ravendb/ravendb/blob/v5.1/docker/run-linux.ps1)
 
-Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v5.0/docker/run-nanoserver.ps1)
+Run Windows-based image: [run-nanoserver.ps1](https://github.com/ravendb/ravendb/blob/v5.1/docker/run-nanoserver.ps1)
 
 Above mentioned Powershell scripts are simplifying usage of our images allowing you to pass various switches and options to configure RavenDB inside the container:
 
@@ -54,8 +54,8 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 | `-BindTcpPort [port]` | 38888 | the port number on which RavenDB Server listens for TCP connections exposed on the container |
 | `-NoSetup` | | disable setup wizard |
 | `-RemoveOnExit` || removes container on server process exit |
-| `-PublicServerUrl`                 |            | set the public url under which server is available to other nodes or admins (e.g. http://4.live-test.ravendb.net:80)                    |
-| `-PublicTcpServerUrl` || set the url under which server is available to the outside world (e.g. tcp://4.live-test.ravendb.net:38888) |
+| `-PublicServerUrl`                 |            | set the public url under which server is available to other nodes or admins (e.g. http://live-test.ravendb.net:80)                    |
+| `-PublicTcpServerUrl` || set the url under which server is available to the outside world (e.g. tcp://live-test.ravendb.net:38888) |
 | `-Unsecured` | | HERE BE DRAGONS - disable authentication for RavenDB server |
 
 Once run RavenDB server should be exposed on port 8080 by default.
@@ -135,8 +135,8 @@ Mount it as a docker volume and use `--config-path PATH_TO_CONFIG` command line 
 
 These images were built using the following Dockerfiles:
 
-- [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.0/docker/ravendb-nanoserver/Dockerfile)
+- [Windows Nanoserver image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.1/docker/ravendb-nanoserver/Dockerfile)
 
--   [Ubuntu 18.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.0/docker/ravendb-ubuntu/Dockerfile.x64)
+-   [Ubuntu 18.04 image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.1/docker/ravendb-ubuntu/Dockerfile.x64)
 
--   [Ubuntu 18.04 ARM image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.0/docker/ravendb-ubuntu/Dockerfile.arm32v7)
+-   [Ubuntu 18.04 ARM image Dockerfile](https://github.com/ravendb/ravendb/blob/v5.1/docker/ravendb-ubuntu/Dockerfile.arm32v7)
