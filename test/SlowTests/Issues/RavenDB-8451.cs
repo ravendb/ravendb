@@ -7,11 +7,13 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Microsoft.Azure.Documents.SystemFunctions;
 using Orders;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -35,13 +37,19 @@ namespace SlowTests.Issues
         }
 
         [Fact64Bit]
+        public async Task CanRecoverEncryptedDatabase_Compressed()
+        {
+            await CanRecoverEncryptedDatabaseInternal(compressDocuments:true);
+        }
+
+        [Fact64Bit]
         public async Task RecoveryOfEncryptedDatabaseWithoutMasterKeyShouldThrow()
         {
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await CanRecoverEncryptedDatabaseInternal(true));
 
         }
-        public async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false)
+        public async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false, bool compressDocuments=false)
         {
             string dbName = SetupEncryptedDatabase(out var certificates, out var masterKey);
             
@@ -60,7 +68,18 @@ namespace SlowTests.Issues
                 AdminCertificate = certificates.ServerCertificate.Value,
                 ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
-                ModifyDatabaseRecord = record => record.Encrypted = true,
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Encrypted = true;
+                    if (compressDocuments)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration
+                        {
+                            Collections = new[] {"Orders", "Employees", "Companies", "Products"}, 
+                            CompressRevisions = true
+                        };
+                    }
+                },
                 Path = dbPath
             }))
             {

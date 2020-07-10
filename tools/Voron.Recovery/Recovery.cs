@@ -626,7 +626,7 @@ namespace Voron.Recovery
                 var subKeyLen = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
                 var subKey = stackalloc byte[subKeyLen];
 
-                var recoveryFiles = Directory.GetFiles(_config.DataFileDirectory, "*.Recovery");
+                var recoveryFiles = Directory.GetFiles(_config.DataFileDirectory, TableValueCompressor.CompressionRecoveryExtensionGlob);
                 foreach (string recoveryFile in recoveryFiles)
                 {
                     try
