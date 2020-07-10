@@ -497,7 +497,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             OsInfo = nodeInfo.OsInfo
                         };
 
-                        var maxCores = ServerStore.LicenseManager.GetLicenseStatus().MaxCores;
+                        var maxCores = ServerStore.LicenseManager.LicenseStatus.MaxCores;
 
                         try
                         {

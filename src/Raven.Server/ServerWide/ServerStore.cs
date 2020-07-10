@@ -647,6 +647,7 @@ namespace Raven.Server.ServerWide
 
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
+            options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;
             options.ForceUsing32BitsPager = Configuration.Storage.ForceUsing32BitsPager;
             options.EnablePrefetching = Configuration.Storage.EnablePrefetching;
 
@@ -2297,13 +2298,15 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addDatabaseCommand);
         }
 
-        public void EnsureNotPassive(string publicServerUrl = null, string nodeTag = "A")
+        public void EnsureNotPassive(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)
         {
             if (_engine.CurrentState != RachisState.Passive)
                 return;
 
             _engine.Bootstrap(publicServerUrl ?? _server.ServerStore.GetNodeHttpServerUrl(), nodeTag);
-            LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure);
+
+            if (skipLicenseActivation == false)
+                LicenseManager.TryActivateLicense(Server.ThrowOnLicenseActivationFailure);
 
             // we put a certificate in the local state to tell the server who to trust, and this is done before
             // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we
@@ -2442,10 +2445,18 @@ namespace Raven.Server.ServerWide
 
         public License LoadLicense()
         {
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            return LoadLicense(ContextPool);
+        }
+
+        public License LoadLicense(TransactionContextPool contextPool)
+        {
+            var lowerName = LicenseStorageKey.ToLowerInvariant();
+
+            using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
+            using (Slice.From(context.Allocator, lowerName, out Slice key))
             {
-                var licenseBlittable = Cluster.Read(context, LicenseStorageKey);
+                var licenseBlittable = ClusterStateMachine.ReadInternal(context, out _, key);
                 if (licenseBlittable == null)
                     return null;
 

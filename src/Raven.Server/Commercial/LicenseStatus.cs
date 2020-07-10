@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Properties;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -8,6 +9,8 @@ namespace Raven.Server.Commercial
     public class LicenseStatus
     {
         public Guid? Id { get; set; }
+
+        public string LicensedTo { get; set; }
 
         public Dictionary<string, object> Attributes { get; set; }
 
@@ -66,7 +69,9 @@ namespace Raven.Server.Commercial
                 if (Expiration == null)
                     return true;
 
-                return DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
+                return IsIsv ?
+                    Expiration < RavenVersionAttribute.Instance.ReleaseDate :
+                    DateTime.Compare(Expiration.Value, DateTime.UtcNow) < 0;
             }
         }
 
@@ -148,6 +153,9 @@ namespace Raven.Server.Commercial
         {
             return new DynamicJsonValue
             {
+                [nameof(Id)] = Id?.ToString(),
+                [nameof(LicensedTo)] = LicensedTo,
+                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
                 [nameof(FirstServerStartDate)] = FirstServerStartDate,
                 [nameof(ErrorMessage)] = ErrorMessage,
                 [nameof(MaxCores)] = MaxCores,
@@ -158,8 +166,6 @@ namespace Raven.Server.Commercial
                 [nameof(Expired)] = Expired,
                 [nameof(Status)] = Status,
                 [nameof(Type)] = Type.ToString(),
-                [nameof(Id)] = Id?.ToString(),
-                [nameof(Attributes)] = TypeConverter.ToBlittableSupportedType(Attributes),
                 [nameof(HasDynamicNodesDistribution)] = HasDynamicNodesDistribution,
                 [nameof(HasEncryption)] = HasEncryption,
                 [nameof(HasDocumentsCompression)] = HasDocumentsCompression,

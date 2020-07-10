@@ -15,7 +15,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override Integer32 GetData()
         {
-            var status = _store.LicenseManager.GetLicenseStatus();
+            var status = _store.LicenseManager.LicenseStatus;
             return new Integer32(status.MaxCores);
         }
     }
