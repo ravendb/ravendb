@@ -74,11 +74,10 @@ class leafMenuItem implements menuItem {
         });
 
         this.countPrefix = ko.pureComputed(() => {
-            if (!this.badgeData) {
-                return null;
+            if (this.badgeData != null) {
+                return generalUtils.getCountPrefix(this.badgeData());
             }
-
-            return generalUtils.getCountPrefix(this.badgeData());
+            return null;
         });
     }
 }

@@ -227,9 +227,9 @@
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav, attr: { href: path, title: disableWithReason && disableWithReason(), 'data-toggle': disableWithReason && disableWithReason() ? 'tooltip' : undefined }, css: { 'active': $parent.menu.activeItem() === $data, 'disabled': disableWithReason && disableWithReason() }">
             <i data-bind="css: css"></i>
             <span data-bind="text: title"></span>
-            <div data-bind="if: badgeData">
+            <div data-bind="if: badgeData() != null">
                 <div class="collection-count" data-bind="attr: { title: badgeData().toLocaleString() }">
-                    <div class="value label label-danger" data-bind="text: countPrefix"></div> 
+                    <div class="value label" data-bind="text: countPrefix, css: { 'label-default': !badgeData() , 'label-danger': badgeData() }"></div> 
                     <div data-bind="attr: { class: sizeClass }"></div>
                 </div>
             </div>           
