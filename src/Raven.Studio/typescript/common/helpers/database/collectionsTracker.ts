@@ -54,7 +54,7 @@ class collectionsTracker {
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
         this.collections([allDocsCollection].concat(collections));
 
-        this.conflictsCount(collectionsStats.numberOfConflicts || null);
+        this.conflictsCount(collectionsStats.numberOfConflicts);
     }
 
     getCollectionCount(collectionName: string) {
@@ -99,7 +99,7 @@ class collectionsTracker {
             }
         });
         
-        this.conflictsCount(notification.CountOfConflicts || null);
+        this.conflictsCount(notification.CountOfConflicts);
     }
 
     getCollectionNames() {
