@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.ETL
                 ThrowInvalidScriptMethodCall($"{Transformation.LoadAttachment}(name) must have a single string argument");
 
             var attachmentName = args[0].AsString();
-            var loadAttachmentReference = (JsValue)$"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}";
+            var loadAttachmentReference = CreateLoadAttachmentReference(attachmentName);
 
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
@@ -153,13 +153,18 @@ namespace Raven.Server.Documents.ETL
             return loadAttachmentReference;
         }
 
+        private static JsValue CreateLoadAttachmentReference(string attachmentName)
+        {
+            return $"{Transformation.AttachmentMarker}{attachmentName}{Guid.NewGuid():N}";
+        }
+
         private JsValue LoadCounter(JsValue self, JsValue[] args)
         {
             if (args.Length != 1 || args[0].IsString() == false)
                 ThrowInvalidScriptMethodCall($"{Transformation.CountersTransformation.Load}(name) must have a single string argument");
 
             var counterName = args[0].AsString();
-            var loadCounterReference = (JsValue)Transformation.CountersTransformation.Marker + counterName;
+            var loadCounterReference = CreateLoadCounterReference(counterName);
 
             if ((Current.Document.Flags & DocumentFlags.HasCounters) == DocumentFlags.HasCounters)
             {
@@ -176,6 +181,11 @@ namespace Raven.Server.Documents.ETL
             }
 
             return loadCounterReference;
+        }
+
+        private static JsValue CreateLoadCounterReference(string counterName)
+        {
+            return Transformation.CountersTransformation.Marker + counterName;
         }
 
         private JsValue LoadTimeSeries(JsValue self, JsValue[] args)
@@ -196,7 +206,7 @@ namespace Raven.Server.Documents.ETL
             var from = ScriptRunner.GetDateArg(args[1], signature, "from"); 
             var to = ScriptRunner.GetDateArg(args[2], signature, "to"); 
                 
-            var loadTimeSeriesReference = (JsValue)Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks;
+            var loadTimeSeriesReference = CreateLoadTimeSeriesReference(timeSeriesName, @from, to);
 
             var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(Context, Current.DocumentId, timeSeriesName, from, to);
             if(reader.AllValues().Any() == false)
@@ -206,7 +216,12 @@ namespace Raven.Server.Documents.ETL
 
             return loadTimeSeriesReference;
         }
-        
+
+        private static JsValue CreateLoadTimeSeriesReference(string timeSeriesName, DateTime from, DateTime to)
+        {
+            return Transformation.TimeSeriesTransformation.Marker + timeSeriesName + from.Ticks + ':' + to.Ticks;
+        }
+
         private JsValue GetAttachments(JsValue self, JsValue[] args)
         {
             if (args.Length != 0)

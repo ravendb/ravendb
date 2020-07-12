@@ -125,17 +125,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 return false;
             }
 
-            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
-
+            attachmentName = value;
             return true;
         }
 
         protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
         {
-            if (_loadedAttachments.TryGetValue(name, out var loadedAttachments) == false)
+            var strReference = reference.ToString();
+            if (_loadedAttachments.TryGetValue(strReference, out var loadedAttachments) == false)
             {
                 loadedAttachments = new Queue<Attachment>();
-                _loadedAttachments.Add(name, loadedAttachments);
+                _loadedAttachments.Add(strReference, loadedAttachments);
             }
 
             loadedAttachments.Enqueue(attachment);

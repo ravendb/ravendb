@@ -7,7 +7,7 @@
 using System;
 using System.Threading.Tasks;
 
-namespace Raven.Client.Util
+namespace Tests.Infrastructure.Utils
 {
     /// <summary>
     /// A helper class that translate between Disposable and async action

@@ -473,11 +473,6 @@ namespace Raven.Server.Documents.ETL
 
         private bool CanContinueBatch(EtlStatsScope stats, TExtracted currentItem, int batchSize, DocumentsOperationContext ctx)
         {
-            /*
-            TODO We will keep processing time-series (and counter) even if the batch end because of cpuCredit/timeout/lowMemory/batchSize. I 
-            This comes to prevent skip on counters/time-series while there are couple of batch with only documents (that update the lastProcess Etag and the counter/time-series has lower Etag)
-            Need to think how to handle that 
-            */
             if (currentItem.Type == EtlItemType.CounterGroup || currentItem.Type == EtlItemType.TimeSeries)
             {
                 // we have special counters/time-series enumerator which ensures that we iterate counters up to last processed doc etag
