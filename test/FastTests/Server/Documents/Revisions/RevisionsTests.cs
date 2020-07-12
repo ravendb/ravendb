@@ -1088,7 +1088,7 @@ namespace FastTests.Server.Documents.Revisions
         }
 
         [Fact]
-        public async Task CollectionCaseSensitiveTest()
+        public async Task CollectionCaseSensitiveTest1()
         {
             using (var store = GetDocumentStore())
             {
@@ -1098,6 +1098,46 @@ namespace FastTests.Server.Documents.Revisions
                     Collections = new Dictionary<string, RevisionsCollectionConfiguration>
                     {
                         ["uSErs"] = new RevisionsCollectionConfiguration { Disabled = false }
+                    }
+                };
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);
+
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "raven" }, id);
+                    await session.SaveChangesAsync();
+                }
+
+                for (int i = 0; i < 10; i++)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<Company>(id);
+                        user.Name = "raven " + i;
+                        await session.SaveChangesAsync();
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
+                    Assert.Equal(11, revisionsMetadata.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CollectionCaseSensitiveTest2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var id = "uSEr/1";
+                var configuration = new RevisionsConfiguration
+                {
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["users"] = new RevisionsCollectionConfiguration { Disabled = false }
                     }
                 };
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration);

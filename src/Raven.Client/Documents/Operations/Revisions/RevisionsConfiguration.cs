@@ -4,13 +4,16 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
-using System.Linq;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Revisions
 {
-    public class RevisionsConfiguration
+    public class RevisionsConfiguration : IFillFromBlittableJson
     {
         public RevisionsCollectionConfiguration Default { get; set; }
 
@@ -59,6 +62,18 @@ namespace Raven.Client.Documents.Operations.Revisions
                     hash = hash ^ (collection.Value.GetHashCode() * 397);
                 }
                 return hash ;
+            }
+        }
+
+        public void FillFromBlittableJson(BlittableJsonReaderObject json)
+        {
+            var configuration = (RevisionsConfiguration)EntityToBlittable.ConvertToEntity(typeof(RevisionsConfiguration), "RevisionsConfiguration", json, DocumentConventions.Default);
+            Default = configuration.Default;
+            Collections = new Dictionary<string, RevisionsCollectionConfiguration>(StringComparer.OrdinalIgnoreCase);
+            if (configuration.Collections == null) return;
+            foreach (var collection in configuration.Collections)
+            {
+                Collections.Add(collection.Key, collection.Value);
             }
         }
 
