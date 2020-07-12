@@ -464,6 +464,7 @@ namespace Raven.Server.Smuggler.Documents
         public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)
         {
             Debug.Assert(_context != null);
+            var isFull = _startDocumentEtag == 0;
 
             if (collectionsToExport?.Count > 0)
             {
@@ -471,6 +472,9 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, collection, _startDocumentEtag, long.MaxValue))
                     {
+                        if (isFull && ts.Segment.NumberOfLiveEntries == 0)
+                            continue;
+
                         yield return new TimeSeriesItem
                         {
                             Name =  GetOriginalName(_context, ts.DocId, ts.Name),
@@ -490,6 +494,9 @@ namespace Raven.Server.Smuggler.Documents
 
             foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag, long.MaxValue))
             {
+                if (isFull && ts.Segment.NumberOfLiveEntries == 0)
+                    continue;
+
                 yield return new TimeSeriesItem
                 {
                     Name = GetOriginalName(_context, ts.DocId, ts.Name),

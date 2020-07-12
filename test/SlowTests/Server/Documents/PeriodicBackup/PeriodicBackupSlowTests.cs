@@ -740,7 +740,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact]
         public async Task can_backup_and_restore_with_timeseries()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -855,6 +855,135 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             Assert.Equal("watches/2", values[i].Tag);
                         }
                     }
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task FullBackupShouldSkipDeadSegments()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/1", "Heartrate")
+                            .Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.TimeSeriesFor("users/1", "Heartrate").Delete();
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                var result = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                await result.WaitForCompletionAsync();
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName
+                }))
+                {
+                    var stats = await store.Maintenance.ForDatabase(databaseName).SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1,stats.CountOfDocuments);
+                    Assert.Equal(0,stats.CountOfTimeSeriesSegments);
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task IncrementalBackupShouldIncludeDeadSegments()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+
+                    for (int i = 0; i < 360; i++)
+                    {
+                        session.TimeSeriesFor("users/1", "Heartrate")
+                            .Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                var result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                await result.WaitForCompletionAsync();
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.TimeSeriesFor("users/1", "Heartrate").Delete();
+                    await session.SaveChangesAsync();
+                }
+
+                result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, backupTaskId));
+                await result.WaitForCompletionAsync();
+
+                // restore the database with a different name
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (RestoreDatabase(store, new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    DatabaseName = databaseName
+                }))
+                {
+                    var stats = await store.Maintenance.ForDatabase(databaseName).SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1,stats.CountOfDocuments);
+                    Assert.Equal(1,stats.CountOfTimeSeriesSegments);
+
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var user = await session.LoadAsync<User>("users/1");
+                        Assert.NotNull(user);
+                        Assert.Null(await session.TimeSeriesFor("users/1", "Heartrate").GetAsync());
+                    }
+                    
                 }
             }
         }
