@@ -12,6 +12,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter;
 using Sparrow.Json;
+using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
