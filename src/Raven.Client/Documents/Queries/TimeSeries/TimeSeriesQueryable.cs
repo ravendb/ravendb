@@ -27,7 +27,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public interface ITimeSeriesQueryable<T> where T : new()
     {
-        ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesEntry, bool>> predicate);
+        
+        ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesEntry<T>, bool>> predicate);
 
         ITimeSeriesQueryable<T> Offset(TimeSpan offset);
 
@@ -71,7 +72,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public interface ITimeSeriesLoadQueryable<T, TTag> : ITimeSeriesQueryable where T : new()
     {
-        ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesEntry, TTag, bool>> predicate);
+        ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesEntry<T>, TTag, bool>> predicate);
     }
 
     public interface ITimeSeriesGrouping
