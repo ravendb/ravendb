@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.RecoveryTests
         {
         }
 
-        [Fact(Skip = "RavenDB-13765")]
+        [Fact64Bit(Skip = "RavenDB-13765")]
         public async Task CanRecoverSampleData()
         {
             var rootPath = NewDataPath(prefix: Guid.NewGuid().ToString());
@@ -45,11 +46,10 @@ namespace SlowTests.RecoveryTests
 
             using (var store = await RecoverDatabase(recoveryOptions))
             {
-
             }
         }
 
-        [Fact]
+        [Fact64Bit]
         public async Task CanRecoverTimeSeries()
         {
             var rootPath = NewDataPath(prefix: Guid.NewGuid().ToString());
@@ -68,7 +68,7 @@ namespace SlowTests.RecoveryTests
             {
                 using (var session = store.OpenAsyncSession())
                 {
-                    var user = new User {Name = "karmel"};
+                    var user = new User { Name = "karmel" };
                     await session.StoreAsync(user, "Users/karmel");
                     var ts = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>(user);
                     for (int i = 0; i < 1000; i++)
