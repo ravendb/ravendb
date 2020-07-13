@@ -38,6 +38,8 @@ namespace Raven.Server.Documents.Queries.Results
         private string[] _namedValues;
         private bool _configurationFetched;
 
+        private (long Count, DateTime Start, DateTime End) _stats;
+
         private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
         {
             new TimeSeriesAggregation(AggregationType.First),
@@ -61,16 +63,21 @@ namespace Raven.Server.Documents.Queries.Results
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
         }
 
-
+        
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, bool addProjectionToResult = false)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
             
             _source = GetSourceAndId();
+
+            _stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
+            if (_stats.Count == 0)
+                return GetFinalResult(null, 0, addProjectionToResult);
+            
             _collection = GetCollection(documentId);
 
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
-            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, _source, offset);
+            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, offset);
 
             var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
             RangeGroup rangeSpec;
@@ -805,7 +812,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
+        private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, TimeSpan? offset)
         {
             DateTime from, to;
             if (timeSeriesFunction.Last != null)
@@ -813,16 +820,14 @@ namespace Raven.Server.Documents.Queries.Results
                 var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
 
                 to = DateTime.MaxValue;
-                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                from = stats.End.Add(-timeFromLast);
+                from = _stats.End.Add(-timeFromLast);
             }
             else if (timeSeriesFunction.First != null)
             {
                 var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
 
                 from = DateTime.MinValue;
-                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                to = stats.Start.Add(timeFromFirst);
+                to = _stats.Start.Add(timeFromFirst);
             }
             else
             {
