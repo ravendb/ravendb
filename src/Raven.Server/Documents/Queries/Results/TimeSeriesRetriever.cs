@@ -5,12 +5,10 @@ using System.Globalization;
 using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.TimeSeries;
@@ -31,10 +29,14 @@ namespace Raven.Server.Documents.Queries.Results
 
         private readonly DocumentsOperationContext _context;
 
-        private DatabaseRecordWithEtag _databaseRecord;
-
         private Dictionary<string, Document> _loadedDocuments;
         private readonly bool _isFromStudio;
+
+        private string _source;
+        private string _collection;
+
+        private string[] _namedValues;
+        private bool _configurationFetched;
 
         private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
         {
@@ -59,9 +61,6 @@ namespace Raven.Server.Documents.Queries.Results
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
         }
 
-        
-        private string _source;
-        private string _collection;
 
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, bool addProjectionToResult = false)
         {
@@ -740,30 +739,29 @@ namespace Raven.Server.Documents.Queries.Results
 
         private object GetNamedValue(string fieldValue, SingleResult singleResult, bool isRaw)
         {
-            if (_databaseRecord == null)
+            if (_configurationFetched == false)
             {
-                var dbId = Constants.Documents.Prefix + _context.DocumentDatabase.Name;
                 using (_context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
                 using (txContext.OpenReadTransaction())
-                using (var dbDoc = _context.DocumentDatabase.ServerStore.Cluster.Read(txContext, dbId, out long etag))
+                using (var rawRecord = _context.DocumentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(txContext, _context.DocumentDatabase.Name))
                 {
-                    _databaseRecord = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<DatabaseRecordWithEtag>(dbDoc, "database/record");
+                    _namedValues = rawRecord?.TimeSeriesConfiguration?.GetNames(_collection, _source);
                 }
+
+                _configurationFetched = true;
             }
 
-            if (_databaseRecord.TimeSeries?.NamedValues == null ||
-                _databaseRecord.TimeSeries.NamedValues.TryGetValue(_collection, out var dictionary) == false ||
-                dictionary.TryGetValue(_source, out var namedValues) == false)
+            if (_namedValues == null)
                 return null;
-            
+
             int index;
-            for (index = 0; index < namedValues.Length; index++)
+            for (index = 0; index < _namedValues.Length; index++)
             {
-                if (namedValues[index] == fieldValue)
+                if (_namedValues[index] == fieldValue)
                     break;
             }
 
-            if (index == namedValues.Length ||
+            if (index == _namedValues.Length ||
                 index >= singleResult.Values.Length) // shouldn't happen
                 return null;
 
