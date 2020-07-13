@@ -5,10 +5,12 @@ using System.Globalization;
 using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.TimeSeries;
@@ -28,6 +30,8 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly BlittableJsonReaderObject _queryParameters;
 
         private readonly DocumentsOperationContext _context;
+
+        private DatabaseRecordWithEtag _databaseRecord;
 
         private Dictionary<string, Document> _loadedDocuments;
         private readonly bool _isFromStudio;
@@ -601,15 +605,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (reader.IsRaw)
                                 return singleResult.Values.Span[index];
 
-                            // we are working with a rolled-up series
-                            // here an entry has 6 different values (min, max, first, last, sum, count) per each 'original' measurement
-                            // we need to return the average value (sum / count)
-                            index *= 6;
-                            if (index + (int)AggregationType.Count >= singleResult.Values.Length)
-                                return null;
-                            if (singleResult.Values.Span[index + (int)AggregationType.Count] == 0)
-                                return double.NaN;
-                            return singleResult.Values.Span[index + (int)AggregationType.Sum] / singleResult.Values.Span[index + (int)AggregationType.Count];
+                            return GetValueFromRolledUpEntry(index, singleResult);
 
                         case "VALUE":
                         case "Value":
@@ -637,7 +633,11 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fe.Compound[0].Value == timeSeriesFunction.LoadTagAs?.Value)
                                 return GetValueFromLoadedTag(fe, singleResult);
 
-                            if (_argumentValuesDictionary.TryGetValue(fe, out var val) == false)
+                            var val = GetNamedValue(fe.Compound[0].Value, singleResult, reader.IsRaw);
+                            if (val != null)
+                                return val;
+
+                            if (_argumentValuesDictionary.TryGetValue(fe, out val) == false)
                                 _argumentValuesDictionary[fe] = val = GetValueFromArgument(declaredFunction, args, fe);
 
                             return val;
@@ -722,6 +722,55 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return field.FieldValueWithoutAlias;
             }
+        }
+
+        private static object GetValueFromRolledUpEntry(int index, SingleResult singleResult)
+        {
+            // we are working with a rolled-up series
+            // here an entry has 6 different values (min, max, first, last, sum, count) per each 'original' measurement
+            // we need to return the average value (sum / count)
+
+            index *= 6;
+            if (index + (int)AggregationType.Count >= singleResult.Values.Length)
+                return null;
+            if (singleResult.Values.Span[index + (int)AggregationType.Count] == 0)
+                return double.NaN;
+            return singleResult.Values.Span[index + (int)AggregationType.Sum] / singleResult.Values.Span[index + (int)AggregationType.Count];
+        }
+
+        private object GetNamedValue(string fieldValue, SingleResult singleResult, bool isRaw)
+        {
+            if (_databaseRecord == null)
+            {
+                var dbId = Constants.Documents.Prefix + _context.DocumentDatabase.Name;
+                using (_context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
+                using (txContext.OpenReadTransaction())
+                using (var dbDoc = _context.DocumentDatabase.ServerStore.Cluster.Read(txContext, dbId, out long etag))
+                {
+                    _databaseRecord = DocumentConventions.Default.Serialization.DefaultConverter.FromBlittable<DatabaseRecordWithEtag>(dbDoc, "database/record");
+                }
+            }
+
+            if (_databaseRecord.TimeSeries?.NamedValues == null ||
+                _databaseRecord.TimeSeries.NamedValues.TryGetValue(_collection, out var dictionary) == false ||
+                dictionary.TryGetValue(_source, out var namedValues) == false)
+                return null;
+            
+            int index;
+            for (index = 0; index < namedValues.Length; index++)
+            {
+                if (namedValues[index] == fieldValue)
+                    break;
+            }
+
+            if (index == namedValues.Length ||
+                index >= singleResult.Values.Length) // shouldn't happen
+                return null;
+
+            if (isRaw)
+                return singleResult.Values.Span[index];
+
+            return GetValueFromRolledUpEntry(index, singleResult);
         }
 
         private BlittableJsonReaderObject GetFinalResult(DynamicJsonArray array, long count, bool addProjectionToResult)
