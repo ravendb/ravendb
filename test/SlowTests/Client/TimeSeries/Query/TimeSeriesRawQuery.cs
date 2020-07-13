@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -111,6 +114,14 @@ namespace SlowTests.Client.TimeSeries.Query
             public string Name { get; set; }
         }
 
+        private struct StockPrice
+        {
+            [TimeSeriesValue(0)] public double Open;
+            [TimeSeriesValue(1)] public double Close;
+            [TimeSeriesValue(2)] public double High;
+            [TimeSeriesValue(3)] public double Low;
+            [TimeSeriesValue(4)] public double Volume;
+        }
 
         [Fact]
         public unsafe void CanQueryTimeSeriesAggregation_DeclareSyntax_AllDocsQuery()
@@ -7291,6 +7302,148 @@ select out(doc)
 
                     var ex = Assert.Throws<InvalidQueryException>(() => query.ToList());
                     Assert.Contains("Cannot have both 'First' and 'Last' in the same Time Series query function", ex.Message);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanQueryTimeSeriesUsingNamedValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.TimeSeries.RegisterAsync<Company, StockPrice>();
+
+                var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
+
+                var stock = updated.GetNames("companies", nameof(StockPrice) + "s");
+                Assert.Equal(5, stock.Length);
+                Assert.Equal(nameof(StockPrice.Open), stock[0]);
+                Assert.Equal(nameof(StockPrice.Close), stock[1]);
+                Assert.Equal(nameof(StockPrice.High), stock[2]);
+                Assert.Equal(nameof(StockPrice.Low), stock[3]);
+                Assert.Equal(nameof(StockPrice.Volume), stock[4]);
+
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company(), "companies/1");
+                    var tsf = session.TimeSeriesFor<StockPrice>("companies/1", "StockPrices");
+                    var random = new Random();
+                    for (int i = 0; i < 10; i++)
+                    {
+                        var rand = random.Next(1, 10) / 10.0;
+                        var even = i % 2 == 0;
+                        var add = even ? rand : -rand;
+
+                        tsf.Append(baseline.AddHours(i), new StockPrice
+                        {
+                            Open = 45.37 + add,
+                            Close = 45.72 + add,
+                            High = 45.99 + add,
+                            Low = 45.21 + add,
+                            Volume = 719.636 + add
+                        }, tag: even ? "tags/1" : "tags/2");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesRawResult<StockPrice>>(@"
+declare timeseries out(c){
+    from c.StockPrices 
+    between $start and $end
+    where High > 45.99
+}
+from Companies as c 
+where id() == 'companies/1'
+select out(c)
+")
+                        .AddParameter("start", baseline.AddDays(-1).EnsureUtc())
+                        .AddParameter("end", baseline.AddDays(1).EnsureUtc());
+
+                    var result = query.First();
+
+                    Assert.Equal(5, result.Count);
+                    foreach (var entry in result.Results)
+                    {
+                        Assert.True(entry.Value.High > 45.99);
+                        Assert.Equal(entry.Tag, "tags/1");
+                    }
+                }
+            }
+        }
+
+
+        [Fact]
+        public async Task CanQueryTimeSeriesAggregationUsingNamedValues()
+        {
+            const string seriesName = "StockPrices";
+            using (var store = GetDocumentStore())
+            {
+                await store.TimeSeries.RegisterAsync<Company, StockPrice>();
+
+                var updated = (await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database))).TimeSeries;
+
+                var stock = updated.GetNames("companies", seriesName);
+                Assert.Equal(5, stock.Length);
+                Assert.Equal(nameof(StockPrice.Open), stock[0]);
+                Assert.Equal(nameof(StockPrice.Close), stock[1]);
+                Assert.Equal(nameof(StockPrice.High), stock[2]);
+                Assert.Equal(nameof(StockPrice.Low), stock[3]);
+                Assert.Equal(nameof(StockPrice.Volume), stock[4]);
+
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company(), "companies/1");
+                    var tsf = session.TimeSeriesFor<StockPrice>("companies/1", seriesName);
+                    var random = new Random();
+                    for (int i = 0; i < 70; i++)
+                    {
+                        var rand = random.Next(1, 10) / 10.0;
+                        var add = i % 7 != 0 ? rand : -rand;
+
+                        tsf.Append(baseline.AddDays(i), new StockPrice
+                        {
+                            Open = 45.37 + add,
+                            Close = 45.72 + add,
+                            High = 45.99 + add,
+                            Low = 45.21 + add,
+                            Volume = 719.636 + add
+                        });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult<StockPrice>>(@"
+from Companies
+where id() == 'companies/1'
+select timeseries(
+    from StockPrices 
+    between $start and $end
+    where High > 45.99
+    group by '7 days'
+    select max())
+")
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddMonths(3));
+
+                    var result = query.First();
+
+                    Assert.Equal(60, result.Count);
+                    Assert.Equal(10, result.Results.Length);
+                    foreach (var entry in result.Results)
+                    {
+                        Assert.True(entry.Max.High > 45.99);
+                        Assert.Equal(6, entry.Count.High);
+                    }
                 }
             }
         }
