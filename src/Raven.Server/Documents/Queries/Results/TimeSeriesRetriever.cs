@@ -741,13 +741,8 @@ namespace Raven.Server.Documents.Queries.Results
         {
             if (_configurationFetched == false)
             {
-                using (_context.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext txContext))
-                using (txContext.OpenReadTransaction())
-                using (var rawRecord = _context.DocumentDatabase.ServerStore.Cluster.ReadRawDatabaseRecord(txContext, _context.DocumentDatabase.Name))
-                {
-                    _namedValues = rawRecord?.TimeSeriesConfiguration?.GetNames(_collection, _source);
-                }
-
+                var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
+                _namedValues = config?.GetNames(_collection, _source);
                 _configurationFetched = true;
             }
 
@@ -798,12 +793,15 @@ namespace Raven.Server.Documents.Queries.Results
                 return;
 
             var metadata = (DynamicJsonValue)(result[Constants.Documents.Metadata.Key] ?? (result[Constants.Documents.Metadata.Key] = new DynamicJsonValue()));
-
-            var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
-            var names = config?.GetNames(_collection, _source);
-            if (names != null)
+            if (_configurationFetched == false)
             {
-                metadata[Constants.Documents.Metadata.TimeSeriesNamedValues] = new DynamicJsonArray(names);
+                var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
+                _namedValues = config?.GetNames(_collection, _source);
+            }
+
+            if (_namedValues != null)
+            {
+                metadata[Constants.Documents.Metadata.TimeSeriesNamedValues] = new DynamicJsonArray(_namedValues);
             }
         }
 
