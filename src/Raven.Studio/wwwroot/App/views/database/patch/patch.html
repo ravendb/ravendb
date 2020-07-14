@@ -68,6 +68,7 @@
     </div>
     <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()"></div>
 </div>
+<div class="backdrop"></div>
 
 <script type="text/html" id="test-component">
     <div class="row margin-bottom form-horizontal" data-bind="with: test">
@@ -108,34 +109,34 @@
     <div class="row tabs-left form-horizontal">
         <div class="col-sm-3 col-lg-2">
             <ul class="nav nav-tabs nav-stacked" data-bind="with: test">
-                <li class="active">
+                <li data-bind="click: previewTabClicked">
                     <a href="#preview" data-toggle="tab" title="Show document before and after patch">
                         <i class="icon-preview"></i>
                         <span>Document Preview</span>
                     </a>
                 </li>
-                <li>
+                <li data-bind="click: loadedTabClicked">
                     <a href="#loaded" data-toggle="tab" title="Show information about loaded items during test execution">
                         <i class="icon-import"></i>
                         <span>Loaded</span>
-                        <span class="label label-primary pull-right" data-bind="text: getLoadedCount()"></span>
+                        <span class="label label-primary pull-right" data-bind="text: loadedCount"></span>
                     </a>
                 </li>
-                <li>
+                <li data-bind="click: modifiedTabClicked">
                     <a href="#modified" data-toggle="tab" title="Show information about created/modified items during test execution">
                         <i class="icon-export"></i>
                         <span>Modified</span>
-                        <span class="label label-primary pull-right" data-bind="text: getModifiedCount()"></span>
+                        <span class="label label-primary pull-right" data-bind="text: modifiedCount"></span>
                     </a>
                 </li>
-                <li>
+                <li data-bind="click: deletedTabClicked">
                     <a href="#deleted" data-toggle="tab" title="Show information about deleted items during test execution">
                         <i class="icon-trash"></i>
                         <span>Deleted</span>
-                        <span class="label label-primary pull-right" data-bind="text: getDeletedCount()"></span>
+                        <span class="label label-primary pull-right" data-bind="text: deletedCount"></span>
                     </a>
                 </li>
-                <li>
+                <li data-bind="click: outputTabClicked">
                     <a href="#output" data-toggle="tab" title="Show output generated during test execution"> 
                         <i class="icon-administrator-js-console"></i>
                         <span>Output</span>
@@ -148,7 +149,7 @@
             <div class="panel">
                 <div data-bind="with: test">
                     <div class="tab-content scroll">
-                        <div class="tab-pane fade in active" id="preview">
+                        <div class="tab-pane fade in active" id="preview" data-bind="if: isPreviewTabActive">
                             <div class="row">
                                 <div class="col-sm-6">
                                     <h3>Before</h3>
@@ -162,34 +163,34 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="loaded">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="loaded" data-bind="if: isLoadedTabActive">
                             <h2 class="text-center">Loaded Data</h2>
-                            <div data-bind="visible: actions.loadDocument().length">
+                            <div data-bind="if: actions.loadDocument().length">
                                 <hr>
                                 <h3><i class="icon-document"></i><span>Documents</span></h3>
                                 <ul data-bind="foreach: actions.loadDocument">
                                     <li class="margin-left margin-left-lg row">
-                                        <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: $data.Id"></span></small>
-                                        <small class="col-sm-2" data-bind="visible: !$data.Exists"><span class="tab-data">&lt;Document not found&gt;</span></small>
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: Id"></span></small>
+                                        <small class="col-sm-2" data-bind="visible: !Exists"><span class="tab-data">&lt;Document not found&gt;</span></small>
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: actions.getCounter().length">
+                            <div data-bind="if: actions.getCounter().length">
                                 <hr>
                                 <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
                                 <ul data-bind="foreach: actions.getCounter">
                                     <li class="margin-left margin-left-lg row">
-                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data.Name"></span></small>
-                                        <span data-bind="visible: !$data.Exists">
-                                            <small class="col-sm-2" data-bind="visible: !$data.Exists"><span class="tab-data">&lt;Counter not found&gt;</span></small>
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <span data-bind="visible: !Exists">
+                                            <small class="col-sm-2" data-bind="visible: !Exists"><span class="tab-data">&lt;Counter not found&gt;</span></small>
                                         </span>
-                                        <span data-bind="visible: $data.Exists">
-                                            <small class="col-sm-2"><label>Value:</label><span class="margin-left tab-data" data-bind="text: $data.Value"></span></small>
+                                        <span data-bind="visible: Exists">
+                                            <small class="col-sm-2"><label>Value:</label><span class="margin-left tab-data" data-bind="text: Value"></span></small>
                                         </span>
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: actions.getTimeseries().length">
+                            <div data-bind="if: actions.getTimeSeries().length">
                                 <hr>
                                 <div class="flex-horizontal">
                                     <h3><i class="icon-document"></i><span>Time Series</span></h3>
@@ -199,27 +200,27 @@
                                         <label for="showValuesInLoaded">Show values</label>
                                     </div>
                                 </div>
-                                <ul data-bind="foreach: actions.getTimeseries">
+                                <ul data-bind="foreach: actions.getTimeSeries">
                                     <li class="margin-left margin-left-lg row">
-                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data.Name"></span></small>
-                                        <span data-bind="visible: !$data.Exists">
-                                            <small class="col-sm-2" data-bind="visible: !$data.Exists"><span class="tab-data">&lt;No entries found&gt;</span></small>
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <span data-bind="visible: !Exists">
+                                            <small class="col-sm-2" data-bind="visible: !Exists"><span class="tab-data">&lt;No entries found&gt;</span></small>
                                         </span>
-                                        <span data-bind="visible: $data.Exists">
-                                            <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: $data.Tag ? $data.Tag : '<None>'"></span></small>
-                                            <small class="col-sm-3"><label>Time Stamp:</label><span class="margin-left tab-data" data-bind="text: $data.Timestamp"></span></small>
+                                        <span data-bind="visible: Exists">
+                                            <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: Tag || '<None>'"></span></small>
+                                            <small class="col-sm-3"><label>Time Stamp:</label><span class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
                                             <small class="col-sm-2" data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Values:</label><span class="margin-left tab-data">{ ... }</span></small>
-                                            <small class="col-sm-2" data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Type:</label><span class="margin-left tab-data" data-bind="text: $data.Type"></span></small>
-                                            <pre data-bind="html: $parent.formatAsJson($data.Values), css: { 'show' : $parent.showTimeSeriesValuesInLoaded }"></pre>
+                                            <small class="col-sm-2" data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Type:</label><span class="margin-left tab-data" data-bind="text: Type"></span></small>
+                                            <pre data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInLoaded }"></pre>
                                         </span>
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: !getLoadedCount()()"><hr>No data available.</div>
+                            <div data-bind="if: !loadedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="modified">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="modified" data-bind="if: isModifiedTabActive">
                             <h2 class="text-center">Modified Data</h2>
-                            <div data-bind="visible: actions.putDocument().length">
+                            <div data-bind="if: actions.putDocument().length">
                                 <hr>
                                 <div class="flex-horizontal">
                                     <h3><i class="icon-document"></i><span>Documents</span></h3>
@@ -231,28 +232,28 @@
                                 </div>
                                 <ul data-bind="foreach: actions.putDocument">
                                     <li class="margin-left margin-left-lg row">
-                                        <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: $data.Id"></span></small>
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: Id"></span></small>
                                         <small class="col-sm-2">
                                             <label>Put Document:</label>
                                             <span class="margin-left tab-data"  data-bind="css: { 'hide' : $parent.showDocumentsInModified }">{ ... }</span>
                                         </small>
-                                        <pre data-bind="html: $parent.formatAsJson($data.Data), css: { 'show' : $parent.showDocumentsInModified }"></pre>
+                                        <pre data-bind="html: $parent.formatAsJson(Data), css: { 'show' : $parent.showDocumentsInModified }"></pre>
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: actions.incrementCounter().length">
+                            <div data-bind="if: actions.incrementCounter().length">
                                 <hr>
                                 <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
                                 <ul data-bind="foreach: actions.incrementCounter">
                                     <li class="margin-left margin-left-lg row">
-                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data.Name"></span></small>
-                                        <small class="col-sm-2"><label>Value Before:</label><span class="margin-left tab-data" data-bind="text: $data.Created ? '&lt;None&gt;' : $data.OldValue"></span></small>
-                                        <small class="col-sm-2"><label>Value After:</label><span class="margin-left tab-data" data-bind="text: $data.NewValue"></span></small>
-                                        <small class="col-sm-2"><span class="tab-data" data-bind="text: $data.Created ? '&lt;Counter created&gt;' : ''"></span></small>
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <small class="col-sm-2"><label>Value Before:</label><span class="margin-left tab-data" data-bind="text: Created ? '&lt;None&gt;' : OldValue"></span></small>
+                                        <small class="col-sm-2"><label>Value After:</label><span class="margin-left tab-data" data-bind="text: NewValue"></span></small>
+                                        <small class="col-sm-2"><span class="tab-data" data-bind="text: Created ? '&lt;Counter created&gt;' : ''"></span></small>
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: actions.appendTimeseries().length">
+                            <div data-bind="if: actions.appendTimeSeries().length">
                                 <hr>
                                 <div class="flex-horizontal">
                                     <h3><i class="icon-document"></i><span>Time Series</span></h3>
@@ -262,22 +263,22 @@
                                         <label for="showValuesInModified">Show values</label>
                                     </div>
                                 </div>
-                                <ul data-bind="foreach: actions.appendTimeseries">
+                                <ul data-bind="foreach: actions.appendTimeSeries">
                                     <li class="margin-left margin-left-lg row">
-                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data.Name"></span></small>
-                                        <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: $data.Tag || '&lt;None&gt;'"></span></small>
-                                        <small class="col-sm-3"><label>Timestamp:</label><span class="margin-left tab-data" data-bind="text: $data.Timestamp"></span></small>
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: Tag || '&lt;None&gt;'"></span></small>
+                                        <small class="col-sm-3"><label>Timestamp:</label><span class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
                                         <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><label>Values Appended:</label><span class="margin-left tab-data">{ ... }</span></small>
-                                        <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><span class="tab-data" data-bind="text: $data.Created ? '&lt;Time Series created&gt;' : ''"></span></small>
-                                        <pre data-bind="html: $parent.formatAsJson($data.Values), css: { 'show' : $parent.showTimeSeriesValuesInModified }"></pre>
+                                        <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><span class="tab-data" data-bind="text: Created ? '&lt;Time series created&gt;' : ''"></span></small>
+                                        <pre data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInModified }"></pre>
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: !getModifiedCount()()"><hr>No data available.</div>
+                            <div data-bind="if: !modifiedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="deleted">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="deleted" data-bind="if: isDeletedTabActive">
                             <h2 class="text-center">Deleted Data</h2>
-                            <div data-bind="visible: actions.deleteDocument().length">
+                            <div data-bind="if: actions.deleteDocument().length">
                                 <hr>
                                 <h3><i class="icon-document"></i><span>Documents</span></h3>
                                 <ul data-bind="foreach: actions.deleteDocument">
@@ -286,7 +287,7 @@
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: actions.deleteCounter().length">
+                            <div data-bind="if: actions.deleteCounter().length">
                                 <hr>
                                 <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
                                 <ul data-bind="foreach: actions.deleteCounter">
@@ -295,20 +296,20 @@
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: actions.deleteTimeseries().length">
+                            <div data-bind="if: actions.deleteTimeSeries().length">
                                 <hr>
                                 <h3><i class="icon-timeseries"></i><span>Time Series</span></h3>
-                                <ul data-bind="foreach: actions.deleteTimeseries">
+                                <ul data-bind="foreach: actions.deleteTimeSeries">
                                     <li class="margin-left margin-left-lg row">
-                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data.Name"></span></small>
-                                        <small class="col-sm-3"><label>Entries From:</label><span class="margin-left tab-data" data-bind="text: $data.From"></span></small>
-                                        <small class="col-sm-3"><label>To:</label><span class="margin-left tab-data" data-bind="text: $data.To"></span></small>
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <small class="col-sm-3"><label>Entries From:</label><span class="margin-left tab-data" data-bind="text: From"></span></small>
+                                        <small class="col-sm-3"><label>To:</label><span class="margin-left tab-data" data-bind="text: To"></span></small>
                                     </li>
                                 </ul>
                             </div>
-                            <div data-bind="visible: !getDeletedCount()()"><hr>No data available.</div>
+                            <div data-bind="if: !deletedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="output">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="output" data-bind="if: isOutputTabActive">
                             <h2 class="text-center">Output Data</h2>
                             <hr>
                             <ul data-bind="foreach: actions.output">
@@ -316,7 +317,7 @@
                                     <small data-bind="text: $data"></small>
                                 </li>
                             </ul>
-                            <p data-bind="visible: actions.output().length === 0">No data available.</p>
+                            <p data-bind="if: actions.output().length === 0">No data available.</p>
                         </div>
                     </div>
                     <div class="clearfix"></div>
@@ -344,7 +345,7 @@
                                 <div class="col-xs-9">
                                    Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().Name : ''"></strong>
                                 </div>
-                                <div class="col-xs-3">                                 
+                                <div class="col-xs-3">
                                     <span class="pull-right"> 
                                         <button title="Load saved patch" class="btn btn-success btn-sm close-panel" data-bind="click: usePatch , enable: previewItem()">Load</button>
                                     </span>

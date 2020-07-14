@@ -12,9 +12,9 @@ namespace Raven.Server.Documents.Patch
         public readonly DynamicJsonArray IncrementCounter = new DynamicJsonArray();
         public readonly DynamicJsonArray DeleteCounter = new DynamicJsonArray();
         
-        public readonly DynamicJsonArray GetTimeseries = new DynamicJsonArray();
-        public readonly DynamicJsonArray AppendTimeseries = new DynamicJsonArray();
-        public readonly DynamicJsonArray DeleteTimeseries = new DynamicJsonArray();
+        public readonly DynamicJsonArray GetTimeSeries = new DynamicJsonArray();
+        public readonly DynamicJsonArray AppendTimeSeries = new DynamicJsonArray();
+        public readonly DynamicJsonArray DeleteTimeSeries = new DynamicJsonArray();
      
         public DynamicJsonValue GetDebugActions()
         {
@@ -28,9 +28,9 @@ namespace Raven.Server.Documents.Patch
                 [nameof(IncrementCounter)] = new DynamicJsonArray(IncrementCounter.Items),
                 [nameof(DeleteCounter)] = new DynamicJsonArray(DeleteCounter.Items),
                   
-                [nameof(GetTimeseries)] = new DynamicJsonArray(GetTimeseries.Items),
-                [nameof(AppendTimeseries)] = new DynamicJsonArray(AppendTimeseries.Items),
-                [nameof(DeleteTimeseries)] = new DynamicJsonArray(DeleteTimeseries.Items)
+                [nameof(GetTimeSeries)] = new DynamicJsonArray(GetTimeSeries.Items),
+                [nameof(AppendTimeSeries)] = new DynamicJsonArray(AppendTimeSeries.Items),
+                [nameof(DeleteTimeSeries)] = new DynamicJsonArray(DeleteTimeSeries.Items)
             };
         }
 
@@ -44,9 +44,9 @@ namespace Raven.Server.Documents.Patch
             IncrementCounter.Clear();
             DeleteCounter.Clear();
             
-            GetTimeseries.Clear();
-            AppendTimeseries.Clear();
-            DeleteTimeseries.Clear();
+            GetTimeSeries.Clear();
+            AppendTimeSeries.Clear();
+            DeleteTimeSeries.Clear();
         }
     }
 }

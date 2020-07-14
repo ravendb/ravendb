@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.Patch
 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
+                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
                 var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
 
                 double[] valuesBuffer = null;
@@ -415,11 +415,11 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
                     }
 
-                    bool timeseriesExists = false;
+                    bool timeSeriesExists = false;
                     if (DebugMode)
                     {
-                        var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeseries, DateTime.MinValue, DateTime.MaxValue);
-                        timeseriesExists = reader.AllValues().Any();
+                        var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, DateTime.MinValue, DateTime.MaxValue);
+                        timeSeriesExists = reader.AllValues().Any();
                     }
 
                     var toAppend = new SingleResult
@@ -434,18 +434,18 @@ namespace Raven.Server.Documents.Patch
                         _docsCtx,
                         id,
                         CollectionName.GetCollectionName(doc),
-                        timeseries,
+                        timeSeries,
                         new[] { toAppend });
                     
                     if (DebugMode) 
                     {
-                        DebugActions.AppendTimeseries.Add(new DynamicJsonValue
+                        DebugActions.AppendTimeSeries.Add(new DynamicJsonValue
                         {
-                            ["Name"] = timeseries,
+                            ["Name"] = timeSeries,
                             ["Timestamp"] = timestamp,
                             ["Tag"] = lsTag,
                             ["Values"] = values.ToArray().Cast<object>(),
-                            ["Created"] = timeseriesExists == false
+                            ["Created"] = timeSeriesExists == false
                         });
                     }
                 }
@@ -482,13 +482,13 @@ namespace Raven.Server.Documents.Patch
 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
+                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
 
                 var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
                 {
                     DocumentId = id,
                     Collection = CollectionName.GetCollectionName(doc),
-                    Name = timeseries,
+                    Name = timeSeries,
                     From = from,
                     To = to,
                 };
@@ -496,9 +496,9 @@ namespace Raven.Server.Documents.Patch
 
                 if (DebugMode) 
                 {
-                    DebugActions.DeleteTimeseries.Add(new DynamicJsonValue
+                    DebugActions.DeleteTimeSeries.Add(new DynamicJsonValue
                     {
-                        ["Name"] = timeseries,
+                        ["Name"] = timeSeries,
                         ["From"] = from,
                         ["To"] = to
                     });
@@ -515,7 +515,7 @@ namespace Raven.Server.Documents.Patch
                 const string getAllSignature = "get()";
 
                 var id = GetIdFromArg(document, _timeSeriesSignature);
-                var timeseries = GetStringArg(name, _timeSeriesSignature, "name");
+                var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
 
                 DateTime from, to;
                 switch (args.Length)
@@ -532,7 +532,7 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
                 }
 
-                var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeseries, from, to);
+                var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
 
                 var entries = new List<JsValue>();
                 foreach (var singleResult in reader.AllValues())
@@ -556,9 +556,9 @@ namespace Raven.Server.Documents.Patch
                     
                     if (DebugMode) 
                     {
-                        DebugActions.GetTimeseries.Add(new DynamicJsonValue
+                        DebugActions.GetTimeSeries.Add(new DynamicJsonValue
                         {
-                            ["Name"] = timeseries,
+                            ["Name"] = timeSeries,
                             ["Timestamp"] = singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true),
                             ["Tag"] = singleResult.Tag?.ToString(),
                             ["Values"] = singleResult.Values.ToArray().Cast<object>(),
@@ -570,9 +570,9 @@ namespace Raven.Server.Documents.Patch
                
                 if (DebugMode && entries.Count == 0) 
                 {
-                    DebugActions.GetTimeseries.Add(new DynamicJsonValue
+                    DebugActions.GetTimeSeries.Add(new DynamicJsonValue
                     {
-                        ["Name"] = timeseries,
+                        ["Name"] = timeSeries,
                         ["Exists"] = false
                     });
                 }
