@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.TcpHandlers
         private MeterMetric _bytesReceivedMetric;
         private MeterMetric _bytesSentMetric;
         private readonly DateTime _connectedAt;
+        public long lastEtagSent;
+        public long lastEtagReceived;
 
         private bool _isDisposed;
 
@@ -135,12 +137,15 @@ namespace Raven.Server.Documents.TcpHandlers
                 ["Operation"] = Operation.ToString(),
                 ["ClientUri"] = TcpClient?.Client?.RemoteEndPoint?.ToString(),
                 ["ConnectedAt"] = _connectedAt,
-                ["Duration"] = (DateTime.UtcNow - _connectedAt).ToString()
+                ["Duration"] = (DateTime.UtcNow - _connectedAt).ToString(),
+                ["lastEtagReceived"] = lastEtagReceived,
+                ["lastEtagSent"] = lastEtagSent
             };
 
 
             _bytesReceivedMetric?.SetMinimalHumaneMeterData("Received", stats);
             _bytesSentMetric?.SetMinimalHumaneMeterData("Sent", stats);
+
 
             _bytesReceivedMetric?.SetMinimalMeterData("Received", stats);
             _bytesSentMetric?.SetMinimalMeterData("Sent", stats);

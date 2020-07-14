@@ -343,6 +343,7 @@ namespace Raven.Server.Documents.Replication
                         using (_stats.Network.Start())
                         {
                             SendDocumentsBatch(documentsContext, _stats.Network);
+                            tcpConnectionOptions.lastEtagSent = _lastEtag;
                             tcpConnectionOptions.RegisterBytesSent(size);
                             if (MissingAttachmentsInLastBatch)
                                 return false;
