@@ -54,7 +54,7 @@ namespace Voron.Recovery
             _option = CreateOptions();
 
             _progressIntervalInSec = config.ProgressIntervalInSec;
-            _previouslyWrittenDocs = new Dictionary<string, long>();
+            _previouslyWrittenDocs = new Dictionary<string, long>(OrdinalIgnoreCaseStringStructComparer.Instance);
             if (config.LoggingMode != LogMode.None)
                 LoggingSource.Instance.SetupLogMode(config.LoggingMode, Path.Combine(Path.GetDirectoryName(_output), LogFileName), TimeSpan.FromDays(3), long.MaxValue, false);
             _logger = LoggingSource.Instance.GetLogger<Recovery>("Voron Recovery");
@@ -698,7 +698,7 @@ namespace Voron.Recovery
             {
                 return;
             }
-            _documentsAttachments.Sort((x, y) => Compare(x.hash, y.hash, StringComparison.Ordinal));
+            _documentsAttachments.Sort((x, y) => Compare(x.Hash, y.Hash, StringComparison.Ordinal));
             //We rely on the fact that the attachment hash are unique in the _attachmentsHashs list (no duplicated values).
             int index = 0;
             foreach (var (hash, docId, size) in _attachmentsHashs)
@@ -710,7 +710,7 @@ namespace Voron.Recovery
                 var foundEqual = false;
                 while (_documentsAttachments.Count > index)
                 {
-                    var documentHash = _documentsAttachments[index].hash;
+                    var documentHash = _documentsAttachments[index].Hash;
                     var compareResult = Compare(hash, documentHash, StringComparison.Ordinal);
                     if (compareResult == 0)
                     {
@@ -722,7 +722,7 @@ namespace Voron.Recovery
                     if (compareResult > 0)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Document {_documentsAttachments[index].docId} contains attachment with hash {documentHash} but we were not able to recover such attachment.");
+                            _logger.Operations($"Document {_documentsAttachments[index].DocId} contains attachment with hash {documentHash} but we were not able to recover such attachment.");
                         index++;
                         continue;
                     }
@@ -759,15 +759,17 @@ namespace Voron.Recovery
                 return;
             }
 
-            var orphans = new Dictionary<string, HashSet<string>>();
             if (_documentsCounters.Count == 0)
             {
-                foreach (var (name, docId) in _uniqueCountersDiscovered)
+                foreach (var kvp in _uniqueCountersDiscovered)
                 {
-                    AddOrphanCounter(orphans, docId, name);
+                    if (_previouslyWrittenDocs.ContainsKey(kvp.Key))
+                        continue;
+
+                    // orphan counters
+                    WriteDummyDocumentForCounters(documentWriter, kvp.Key, kvp.Value);
                 }
 
-                ReportOrphanCountersDocumentIds(orphans, documentWriter);
                 return;
             }
             writer.WriteLine("Starting to compute orphan and missing counters. this may take a while.");
@@ -775,71 +777,46 @@ namespace Voron.Recovery
             {
                 return;
             }
-            _documentsCounters.Sort((x, y) => Compare(x.docId + SpecialChars.RecordSeparator + x.name,
-                y.docId + SpecialChars.RecordSeparator + y.name, StringComparison.OrdinalIgnoreCase));
+            _documentsCounters.Sort((x, y) => Compare(x.DocId + SpecialChars.RecordSeparator + x.Name,
+                y.DocId + SpecialChars.RecordSeparator + y.Name, StringComparison.OrdinalIgnoreCase));
             //We rely on the fact that the counter id+name is unique in the _discoveredCounters list (no duplicated values).
             int index = 0;
-            foreach (var (name, docId) in _uniqueCountersDiscovered)
+            foreach (var (docId, names) in _uniqueCountersDiscovered)
             {
-                var discoveredKey = docId + SpecialChars.RecordSeparator + name;
-                if (ct.IsCancellationRequested)
+                if (_previouslyWrittenDocs.ContainsKey(docId) == false)
                 {
-                    return;
+                    // orphan counters
+                    WriteDummyDocumentForCounters(documentWriter, docId, names);
                 }
-                var foundEqual = false;
-                while (_documentsCounters.Count > index)
+
+                foreach (var name in names)
                 {
-                    var documentsCountersKey = _documentsCounters[index].docId + SpecialChars.RecordSeparator + _documentsCounters[index].name;
-                    var compareResult = Compare(discoveredKey, documentsCountersKey, StringComparison.OrdinalIgnoreCase);
-                    if (compareResult == 0)
+                    var discoveredKey = docId + SpecialChars.RecordSeparator + name;
+                    if (ct.IsCancellationRequested)
                     {
-                        index++;
-                        foundEqual = true;
-                        continue;
+                        return;
                     }
-                    if (compareResult > 0)
+                    while (_documentsCounters.Count > index)
                     {
-                        //this is the case where we have a document with a counter that wasn't recovered
-                        if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Document {_documentsCounters[index].docId} contains a counter with name {_documentsCounters[index].name} but we were not able to recover such counter.");
+                        var documentsCountersKey = _documentsCounters[index].DocId + SpecialChars.RecordSeparator + _documentsCounters[index].Name;
+                        var compareResult = Compare(discoveredKey, documentsCountersKey, StringComparison.OrdinalIgnoreCase);
+                        if (compareResult < 0)
+                            break;
+
+                        if (compareResult > 0)
+                        {
+                            // missing counter - found a document with a counter that wasn't recovered
+                            if (_logger.IsOperationsEnabled)
+                                _logger.Operations($"Document {_documentsCounters[index].DocId} contains a counter with name {_documentsCounters[index].Name} but we were not able to recover such counter.");
+                        }
+
                         index++;
-                        continue;
                     }
-                    break;
-                }
-                if (foundEqual == false)
-                {
-                    AddOrphanCounter(orphans, docId, name);
                 }
             }
-
-            if (orphans.Count > 0)
-            {
-                ReportOrphanCountersDocumentIds(orphans, documentWriter);
-            }
         }
 
-        private static void AddOrphanCounter(Dictionary<string, HashSet<string>> orphans, string docId, string name)
-        {
-            if (orphans.TryGetValue(docId, out var existing) == false)
-            {
-                orphans[docId] = new HashSet<string> { name };
-            }
-            else
-            {
-                existing.Add(name);
-            }
-        }
-
-        private void ReportOrphanCountersDocumentIds(Dictionary<string, HashSet<string>> orphans, BlittableJsonTextWriter writer)
-        {
-            foreach (var kvp in orphans)
-            {
-                WriteDummyDocumentForCounters(writer, kvp.Key, kvp.Value);
-            }
-        }
-
-        private void WriteDummyDocumentForCounters(BlittableJsonTextWriter writer, string docId, HashSet<string> counters)
+        private void WriteDummyDocumentForCounters(BlittableJsonTextWriter writer, string docId, IEnumerable<string> counters)
         {
             if (_documentWritten)
                 writer.WriteComma();
@@ -1053,8 +1030,30 @@ namespace Voron.Recovery
                     _logger.Info($"Found counter item with document Id={counterGroup.DocumentId} and counter values={counterGroup.Values}");
 
                 _lastRecoveredDocumentKey = counterGroup.DocumentId;
-                _uniqueCountersDiscovered.Add((null, counterGroup.DocumentId));
-                _numberOfCountersRetrieved++;
+
+                if (counterGroup.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject countersData) == false)
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        using (var key = DocumentsStorage.TableValueToString(context, (int)CountersStorage.CountersTable.CounterKey, ref tvr))
+                        {
+                            _logger.Info(
+                                $"Found counter-group item (key = '{key}') with counter-data document that is missing '{CountersStorage.Values}' property.");
+                        }
+                    }
+
+                    return true;
+                }
+
+                var names = countersData.GetPropertyNames();
+
+                if (_uniqueCountersDiscovered.TryGetValue(counterGroup.DocumentId, out var list) == false)
+                {
+                    _uniqueCountersDiscovered[counterGroup.DocumentId] = list = new List<string>();
+                }
+                list.AddRange(names);
+
+                _numberOfCountersRetrieved += names.Length;
 
                 return true;
             }
@@ -1066,7 +1065,7 @@ namespace Voron.Recovery
             }
         }
 
-        private bool WriteDocument(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, JsonOperationContext context, long startOffest)
+        private bool WriteDocument(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, JsonOperationContext context, long startOffset)
         {
             try
             {
@@ -1084,7 +1083,7 @@ namespace Voron.Recovery
                     if (document == null)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to convert table value to document at position {GetFilePosition(startOffest, mem)}");
+                            _logger.Operations($"Failed to convert table value to document at position {GetFilePosition(startOffset, mem)}");
                         return false;
                     }
                     document.EnsureMetadata();
@@ -1104,7 +1103,7 @@ namespace Voron.Recovery
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Found invalid blittable document at pos={GetFilePosition(startOffest, mem)} with key={document?.Id ?? "null"}{Environment.NewLine}{e}");
+                        _logger.Operations($"Found invalid blittable document at pos={GetFilePosition(startOffset, mem)} with key={document?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
 
@@ -1125,7 +1124,7 @@ namespace Voron.Recovery
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Unexpected exception while writing document at position {GetFilePosition(startOffest, mem)}: {e}");
+                    _logger.Operations($"Unexpected exception while writing document at position {GetFilePosition(startOffset, mem)}: {e}");
                 return false;
             }
         }
@@ -1172,7 +1171,7 @@ namespace Voron.Recovery
             }
         }
 
-        private bool WriteRevision(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, JsonOperationContext context, long startOffest)
+        private bool WriteRevision(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, JsonOperationContext context, long startOffset)
         {
             try
             {
@@ -1190,7 +1189,7 @@ namespace Voron.Recovery
                     if (revision == null)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to convert table value to revision document at position {GetFilePosition(startOffest, mem)}");
+                            _logger.Operations($"Failed to convert table value to revision document at position {GetFilePosition(startOffset, mem)}");
                         return false;
                     }
                     revision.EnsureMetadata();
@@ -1199,7 +1198,7 @@ namespace Voron.Recovery
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Found invalid blittable revision document at pos={GetFilePosition(startOffest, mem)} with key={revision?.Id ?? "null"}{Environment.NewLine}{e}");
+                        _logger.Operations($"Found invalid blittable revision document at pos={GetFilePosition(startOffset, mem)} with key={revision?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
 
@@ -1215,12 +1214,12 @@ namespace Voron.Recovery
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Unexpected exception while writing revision document at position {GetFilePosition(startOffest, mem)}: {e}");
+                    _logger.Operations($"Unexpected exception while writing revision document at position {GetFilePosition(startOffset, mem)}: {e}");
                 return false;
             }
         }
 
-        private bool WriteConflict(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, JsonOperationContext context, long startOffest)
+        private bool WriteConflict(byte* mem, int sizeInBytes, BlittableJsonTextWriter writer, JsonOperationContext context, long startOffset)
         {
             try
             {
@@ -1238,7 +1237,7 @@ namespace Voron.Recovery
                     if (conflict == null)
                     {
                         if (_logger.IsOperationsEnabled)
-                            _logger.Operations($"Failed to convert table value to conflict document at position {GetFilePosition(startOffest, mem)}");
+                            _logger.Operations($"Failed to convert table value to conflict document at position {GetFilePosition(startOffset, mem)}");
                         return false;
                     }
                     conflict.Doc.BlittableValidation();
@@ -1246,7 +1245,7 @@ namespace Voron.Recovery
                 catch (Exception e)
                 {
                     if (_logger.IsOperationsEnabled)
-                        _logger.Operations($"Found invalid blittable conflict document at pos={GetFilePosition(startOffest, mem)} with key={conflict?.Id ?? "null"}{Environment.NewLine}{e}");
+                        _logger.Operations($"Found invalid blittable conflict document at pos={GetFilePosition(startOffset, mem)} with key={conflict?.Id ?? "null"}{Environment.NewLine}{e}");
                     return false;
                 }
 
@@ -1262,7 +1261,7 @@ namespace Voron.Recovery
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)
-                    _logger.Operations($"Unexpected exception while writing conflict document at position {GetFilePosition(startOffest, mem)}: {e}");
+                    _logger.Operations($"Unexpected exception while writing conflict document at position {GetFilePosition(startOffset, mem)}: {e}");
                 return false;
             }
         }
@@ -1297,9 +1296,9 @@ namespace Voron.Recovery
         private readonly string _datafile;
         private readonly bool _copyOnWrite;
         private readonly Dictionary<string, long> _previouslyWrittenDocs;
-        private readonly List<(string hash, string docId)> _documentsAttachments = new List<(string hash, string docId)>();
-        private readonly List<(string name, string docId)> _documentsCounters = new List<(string name, string docId)>();
-        private readonly SortedSet<(string name, string docId)> _uniqueCountersDiscovered = new SortedSet<(string name, string docId)>(new ByDocIdAndCounterName());
+        private readonly List<(string Hash, string DocId)> _documentsAttachments = new List<(string Hash, string DocId)>();
+        private readonly List<(string Name, string DocId)> _documentsCounters = new List<(string Name, string DocId)>();
+        private readonly Dictionary<string, List<string>> _uniqueCountersDiscovered = new Dictionary<string, List<string>>(OrdinalIgnoreCaseStringStructComparer.Instance);
 
         private long _numberOfCountersRetrieved;
         private int _dummyDocNumber;

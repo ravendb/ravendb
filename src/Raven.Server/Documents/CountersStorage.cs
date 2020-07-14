@@ -54,7 +54,7 @@ namespace Raven.Server.Documents
             TableType = (byte)TableType.Counters
         };
 
-        private enum CountersTable
+        internal enum CountersTable
         {
             // Format of this is:
             // lower document id, record separator, prefix 
