@@ -165,17 +165,22 @@ namespace Raven.Server.Documents.Replication
 
             var certificate = _parent.GetCertificateForReplication(Destination, out var authorizationInfo);
 
+            if (_parent.Database == null)
+                throw new InvalidOperationException("The database got disposed. Stopping the replication.");
+
+            var databaseName = _parent.Database.Name;
+
             using (_parent._server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                using (var rawRecord = _parent._server.Cluster.ReadRawDatabaseRecord(context, _parent.Database.Name))
+                using (var rawRecord = _parent._server.Cluster.ReadRawDatabaseRecord(context, databaseName))
                 {
                     if (rawRecord == null)
-                        throw new InvalidOperationException($"The database record for {_parent.Database.Name} does not exist?!");
+                        throw new InvalidOperationException($"The database record for {databaseName} does not exist?!");
 
                     if (rawRecord.IsEncrypted&& Destination.Url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                         throw new InvalidOperationException(
-                            $"{_parent.Database.Name} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
+                            $"{databaseName} is encrypted, and require HTTPS for replication, but had endpoint with url {Destination.Url} to database {Destination.Database}");
                 }
             }
 
