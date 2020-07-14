@@ -38,6 +38,9 @@ namespace Raven.Client.Documents.Session
             from = from?.EnsureUtc();
             to = to?.EnsureUtc();
 
+            if (pageSize == 0)
+                return null;
+
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
                 cache.TryGetValue(Name, out var ranges) &&
                 ranges.Count > 0)
@@ -60,6 +63,8 @@ namespace Raven.Client.Documents.Session
 
                     if (rangeResult == null)
                         return null;
+
+                    await FixRange(from, to, start, pageSize, rangeResult, token).ConfigureAwait(false);
 
                     if (Session.NoTracking == false)
                     {
@@ -96,8 +101,10 @@ namespace Raven.Client.Documents.Session
                     new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
-            if (rangeResult == null)
+            if ( (rangeResult == null) || ((rangeResult.Entries.Length == 0) && ( start > 0)))
                 return null;
+
+            await FixRange(from, to, start, pageSize, rangeResult, token).ConfigureAwait(false);
 
             if (Session.NoTracking == false)
             {
@@ -113,6 +120,33 @@ namespace Raven.Client.Documents.Session
             }
 
             return rangeResult.Entries;
+        }
+
+        private async Task FixRange<TTValues>(DateTime? from,
+            DateTime? to,
+            int start,
+            int pageSize,
+            TimeSeriesRangeResult<TTValues> rangeResult,
+            CancellationToken token = default)
+            where TTValues : TimeSeriesEntry
+        {
+            if (rangeResult.Entries.Length == 0)
+                return;
+
+            if (start > 0)
+                rangeResult.From = rangeResult.Entries[0].Timestamp;
+
+            if (pageSize == rangeResult.Entries.Length)
+            {
+                Session.IncrementRequestCount();
+
+                var temp = await Session.Operations.SendAsync(
+                        new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, pageSize + 1, 1), Session._sessionInfo, token: token)
+                    .ConfigureAwait(false);
+
+                if (temp.Entries.Length == 1)
+                    rangeResult.To = rangeResult.Entries[rangeResult.Entries.Length - 1].Timestamp;
+            }
         }
 
         private static IEnumerable<TimeSeriesEntry> SkipAndTrimRangeIfNeeded(
@@ -173,11 +207,17 @@ namespace Raven.Client.Documents.Session
             {
                 if (ranges[toRangeIndex].From <= from)
                 {
-                    if (ranges[toRangeIndex].To >= to)
+                    if ((ranges[toRangeIndex].To >= to) || (ranges[toRangeIndex].Entries.Length > pageSize))
                     {
                         // we have the entire range in cache
-
-                        resultToUser = ChopRelevantRange(ranges[toRangeIndex], from, to);
+                        if (start > 0)
+                        {
+                            if (start >= ranges[toRangeIndex].Entries.Length)
+                                return (false, null, null, 0, 0);
+                            from = ranges[toRangeIndex].Entries[start].Timestamp;
+                        }
+                        
+                        resultToUser = ChopRelevantRange(ranges[toRangeIndex], from, to, pageSize);
                         return (true, resultToUser, null, -1, -1);
                     }
 
@@ -206,7 +246,7 @@ namespace Raven.Client.Documents.Session
                 if (ranges[toRangeIndex].To >= to)
                     break;
             }
-
+            var count = 0;
             if (toRangeIndex == ranges.Count)
             {
                 // requested range [from, to] ends after all ranges in cache
@@ -220,15 +260,50 @@ namespace Raven.Client.Documents.Session
                     From = ranges[ranges.Count - 1].To,
                     To = to
                 });
+
+                for (int i = fromRangeIndex < 0 ? 0 : fromRangeIndex; i < toRangeIndex; i++)
+                {
+                    count += ranges[i].Entries.Length;
+                }
             }
 
+            var partialPageSize = pageSize != int.MaxValue? pageSize - count + 1 : pageSize;
             // get all the missing parts from server
 
             Session.IncrementRequestCount();
 
             var details = await Session.Operations.SendAsync(
-                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize), Session._sessionInfo, token: token)
+                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, partialPageSize), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
+
+            var changeStart = true;
+            foreach (var tsrr in details.Values.SelectMany(detail => detail.Value))
+            {
+                if (tsrr.Entries.Length == 0) continue;
+
+                if (changeStart)
+                {
+                    tsrr.From = tsrr.Entries[0].Timestamp;
+                    changeStart = false;
+                }
+
+                if (partialPageSize != tsrr.Entries.Length) continue;
+
+                Session.IncrementRequestCount();
+
+                var temp = await Session.Operations.SendAsync(
+                        new GetTimeSeriesOperation(DocId, Name, from, to, pageSize + 1, 1), Session._sessionInfo, token: token)
+                    .ConfigureAwait(false);
+
+                if (temp.Entries.Length == 1)
+                {
+                    tsrr.To = tsrr.Entries[tsrr.Entries.Length - 1].Timestamp;
+                    break;
+                }
+
+                partialPageSize -= tsrr.Entries.Length;
+
+            }
 
             // merge all the missing parts we got from server
             // with all the ranges in cache that are between 'fromRange' and 'toRange'
@@ -332,18 +407,23 @@ namespace Raven.Client.Documents.Session
             return mergedValues.ToArray();
         }
 
-        private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
+        private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to, int pageSize)
         {
             if (range.Entries == null)
                 yield break;
 
             foreach (var value in range.Entries)
             {
+                if (pageSize == 0)
+                    yield break;
+
                 if (value.Timestamp > to)
                     yield break;
 
                 if (value.Timestamp < from)
                     continue;
+
+                pageSize--;
 
                 yield return value;
             }
