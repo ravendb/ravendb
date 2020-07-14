@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 using Raven.Client.Util;
 using Sparrow.Binary;
 using Sparrow.Collections;
@@ -13,7 +12,7 @@ namespace Raven.Server.Utils
 {
     public class AffinityHelper
     {
-        private static readonly ReaderWriterLockSlim _affinityLocker = new ReaderWriterLockSlim();
+        private static readonly EasyReaderWriterLock _affinityLocker = new EasyReaderWriterLock();
         private static readonly ConcurrentSet<PoolOfThreads.PooledThread> _customAffinityThreads = new ConcurrentSet<PoolOfThreads.PooledThread>();
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<AffinityHelper>("Server");
 
@@ -57,7 +56,7 @@ namespace Raven.Server.Utils
 
             _affinityLocker.EnterWriteLock();
 
-            try
+            using (_affinityLocker.EnterWriteLock())
             {
                 process.ProcessorAffinity = new IntPtr(bitMask);
 
@@ -76,15 +75,11 @@ namespace Raven.Server.Utils
                     }
                 }
             }
-            finally
-            {
-                _affinityLocker.ExitWriteLock();
-            }
         }
 
         internal static void SetThreadAffinity(PoolOfThreads.PooledThread pooledThread)
         {
-            using (AffinityReadLocker())
+            using (_affinityLocker.EnterReadLock())
             {
                 pooledThread.CurrentProcess.Refresh();
                 var affinity = pooledThread.CurrentProcess.ProcessorAffinity.ToInt64();
@@ -97,7 +92,7 @@ namespace Raven.Server.Utils
             if (pooledThread.NumberOfCoresToReduce <= 0 && pooledThread.ThreadMask == null)
                 return;
 
-            using (AffinityReadLocker())
+            using (_affinityLocker.EnterReadLock())
             {
                 _customAffinityThreads.TryAdd(pooledThread);
 
@@ -199,15 +194,8 @@ namespace Raven.Server.Utils
 
         internal static void RemoveCustomAffinityThread(PoolOfThreads.PooledThread pooledThread)
         {
-            using (AffinityReadLocker())
+            using (_affinityLocker.EnterReadLock())
                 _customAffinityThreads.TryRemove(pooledThread);
-        }
-
-        private static DisposableAction AffinityReadLocker()
-        {
-            _affinityLocker.EnterReadLock();
-
-            return new DisposableAction(() => _affinityLocker.ExitReadLock());
         }
     }
 }
