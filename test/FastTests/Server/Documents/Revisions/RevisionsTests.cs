@@ -1167,6 +1167,25 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
+        [Fact]
+        public void CollectionCaseSensitiveTest3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var configuration = new RevisionsConfiguration
+                {
+                    Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                    {
+                        ["users"] = new RevisionsCollectionConfiguration { Disabled = false },
+                        ["USERS"] = new RevisionsCollectionConfiguration { Disabled = false }
+                    }
+                };
+
+                var argumentException = Assert.ThrowsAsync<ArgumentException>( () =>
+                    RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, configuration));
+            }
+        }
+
         public class DeleteRevisionsOperation : IMaintenanceOperation
         {
             private readonly AdminRevisionsHandler.Parameters _parameters;
