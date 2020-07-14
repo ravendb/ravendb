@@ -255,7 +255,6 @@ namespace Raven.Server.Utils
                         return false;
                     }
 
-                    AffinityHelper.RemoveCustomAffinityThread(this);
                     _parent._pool.Enqueue(this);
                 }
 
@@ -269,7 +268,7 @@ namespace Raven.Server.Utils
 
                 try
                 {
-                    AffinityHelper.SetThreadAffinity(this);
+                    AffinityHelper.ResetThreadAffinity(this);
                     return true;
                 }
                 catch (PlatformNotSupportedException)
@@ -329,7 +328,7 @@ namespace Raven.Server.Utils
                         throw new InvalidOperationException("Unable to get the current process thread: " + CurrentUnmanagedThreadId + ", this should not be possible");
                 }
 
-                AffinityHelper.SetThreadAffinity(this);
+                AffinityHelper.ResetThreadAffinity(this);
             }
 
             public static void ResetCurrentThreadName()
