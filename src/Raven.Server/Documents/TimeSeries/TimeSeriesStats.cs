@@ -243,7 +243,12 @@ namespace Raven.Server.Documents.TimeSeries
                     start = first.Timestamp;
                 }
 
-                if (baseline <= end && end <= last)
+                var readerOfLastValue = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
+                readerOfLastValue.Last();
+
+                var lastValueInCurrentSegment = readerOfLastValue.ReadBaselineAsDateTime() == baseline;
+
+                if (baseline <= end && end <= last || lastValueInCurrentSegment)
                 {
                     var lastEntry = tss.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).Last();
                     if (lastEntry == default)
