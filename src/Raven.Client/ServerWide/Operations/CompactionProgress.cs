@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json.Parsing;
 
@@ -98,8 +100,10 @@ namespace Raven.Client.ServerWide.Operations
         
         public override Dictionary<string, CompactionProgressBase> IndexesResults
         {
-            get => _result.IndexesResults;
-            set => _result.IndexesResults = value;
+            get => _result.IndexesResults.ToDictionary(
+                x => x.Key, 
+                x => ((CompactionResult)x.Value).Progress as CompactionProgressBase);
+            set => throw new NotSupportedException();
         }
         
         public override bool Skipped
