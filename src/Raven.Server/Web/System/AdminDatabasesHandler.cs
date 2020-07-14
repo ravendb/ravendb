@@ -1172,7 +1172,10 @@ namespace Raven.Server.Web.System
                                 {
                                     var index = database.IndexStore.GetIndex(indexName);
                                     var indexCompactionResult = overallResult.IndexesResults[indexName];
-                                    index.Compact(onProgress, (CompactionResult)indexCompactionResult, indexCts.Token);
+                                    var compactionResult = (CompactionResult)indexCompactionResult;
+                                    
+                                    // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction 
+                                    index.Compact(progress => onProgress(overallResult.Progress), compactionResult, indexCts.Token);
                                     indexCompactionResult.Processed = true;
                                 }
 

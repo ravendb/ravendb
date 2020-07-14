@@ -70,7 +70,18 @@ class compactDatabaseDetails extends abstractOperationDetails {
                 return previousMessages.concat(...errors);
             } else if (this.op.isCompleted()) {
                 const result = this.op.result() as Raven.Client.ServerWide.Operations.CompactionResult;
-                return result ? result.Messages : [];
+                const messages = [] as string[];
+
+                if (result) {
+                    for (const indexResult of Object.keys(result.IndexesResults)) {
+                        const indexMessages = (result.IndexesResults[indexResult] as Raven.Client.ServerWide.Operations.CompactionResult).Messages;
+                        messages.push(...indexMessages.map(x => "[" + indexResult + "] " + x));
+                    }   
+                    
+                    messages.push(...result.Messages);
+                }
+                
+                return messages;
             } else {
                 const progress = this.op.progress() as Raven.Client.ServerWide.Operations.CompactionResult;
                 if (progress) {
@@ -154,6 +165,29 @@ class compactDatabaseDetails extends abstractOperationDetails {
             stage: stage
         }
     }
+    
+    static findEffectiveMessage(result: Raven.Client.ServerWide.Operations.CompactionResult) {
+        if (result.Message) {
+            return result.Message;
+        }
+
+        // looks like we in the middle of index compaction, try to find index being compacted
+
+        for (const indexResult of Object.keys(result.IndexesResults)) {
+            if (result.IndexesResults[indexResult].Processed || result.IndexesResults[indexResult].Skipped) {
+                continue;
+            }
+
+            const message = result.IndexesResults[indexResult].Message;
+            if (!message) {
+                continue;
+            }
+
+            return "[" + indexResult + "] " + message;
+        }
+        
+        return "";
+    }
 
     static merge(existing: operation, incoming: Raven.Server.NotificationCenter.Notifications.OperationChanged): boolean {
         if (!compactDatabaseDetails.supportsDetailsFor(existing)) {
@@ -167,14 +201,12 @@ class compactDatabaseDetails extends abstractOperationDetails {
 
             if (!existing.isCompleted()) {
                 const result = existing.progress() as Raven.Client.ServerWide.Operations.CompactionResult;
-                result.Messages = [result.Message];
+                result.Messages = [compactDatabaseDetails.findEffectiveMessage(result)];
             }
-
-        } else if (incoming.State.Status === "InProgress") { // if incoming operaton is in progress, then merge messages into existing item
+        } else if (incoming.State.Status === "InProgress") { // if incoming operation is in progress, then merge messages into existing item
             const incomingResult = incoming.State.Progress as Raven.Client.ServerWide.Operations.CompactionResult;
             const existingResult = existing.progress() as Raven.Client.ServerWide.Operations.CompactionResult;
-
-            incomingResult.Messages = existingResult.Messages.concat(incomingResult.Message);
+            incomingResult.Messages = existingResult.Messages.concat(compactDatabaseDetails.findEffectiveMessage(incomingResult));
         }
 
         if (isUpdate) {
