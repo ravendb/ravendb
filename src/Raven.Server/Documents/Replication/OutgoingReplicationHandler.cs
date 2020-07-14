@@ -222,6 +222,7 @@ namespace Raven.Server.Documents.Replication
                     using (_interruptibleRead)
                     {
                         InitialHandshake();
+                        _tcpConnectionOptions.DocumentDatabase.RunningTcpConnections.Add(_tcpConnectionOptions);
                         Replicate();
                     }
                 }
@@ -358,8 +359,6 @@ namespace Raven.Server.Documents.Replication
         private void Replicate()
         {
             var documentSender = new ReplicationDocumentSender(_stream, this, _log);
-
-            _tcpConnectionOptions.DocumentDatabase.RunningTcpConnections.Add(_tcpConnectionOptions);
 
             while (_cts.IsCancellationRequested == false)
             {
