@@ -54,8 +54,6 @@ namespace Raven.Server.Utils
                 bitMask = processAffinityMask.Value;
             }
 
-            _affinityLocker.EnterWriteLock();
-
             using (_affinityLocker.EnterWriteLock())
             {
                 process.ProcessorAffinity = new IntPtr(bitMask);
@@ -77,10 +75,12 @@ namespace Raven.Server.Utils
             }
         }
 
-        internal static void SetThreadAffinity(PoolOfThreads.PooledThread pooledThread)
+        internal static void ResetThreadAffinity(PoolOfThreads.PooledThread pooledThread)
         {
             using (_affinityLocker.EnterReadLock())
             {
+                _customAffinityThreads.TryRemove(pooledThread);
+
                 pooledThread.CurrentProcess.Refresh();
                 var affinity = pooledThread.CurrentProcess.ProcessorAffinity.ToInt64();
                 SetThreadAffinityInternal(pooledThread, affinity);
@@ -190,12 +190,6 @@ namespace Raven.Server.Utils
                         $"Failed to set affinity for thread: {pooledThread.CurrentUnmanagedThreadId}, " +
                         $"affinity: {affinity}, result: {result}, error: {Marshal.GetLastWin32Error()}");
             }
-        }
-
-        internal static void RemoveCustomAffinityThread(PoolOfThreads.PooledThread pooledThread)
-        {
-            using (_affinityLocker.EnterReadLock())
-                _customAffinityThreads.TryRemove(pooledThread);
         }
     }
 }
