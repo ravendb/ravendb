@@ -33,17 +33,27 @@ class patchTester extends viewModelBase {
         incrementCounter: ko.observableArray<any>(),
         deleteCounter: ko.observableArray<string>(),
 
-        getTimeseries: ko.observableArray<any>(),
-        appendTimeseries: ko.observableArray<any>(),
-        deleteTimeseries: ko.observableArray<any>(),
+        getTimeSeries: ko.observableArray<any>(),
+        appendTimeSeries: ko.observableArray<any>(),
+        deleteTimeSeries: ko.observableArray<any>(),
         
         output: ko.observableArray<string>()
     };
 
+    loadedCount: KnockoutComputed<string>;
+    modifiedCount: KnockoutComputed<string>;
+    deletedCount: KnockoutComputed<string>;
+    
     showDocumentsInModified = ko.observable<boolean>(false);
     showTimeSeriesValuesInLoaded = ko.observable<boolean>(false);
     showTimeSeriesValuesInModified = ko.observable<boolean>(false);
 
+    isPreviewTabActive = ko.observable<boolean>(true);
+    isLoadedTabActive = ko.observable<boolean>(false);
+    isModifiedTabActive = ko.observable<boolean>(false);
+    isDeletedTabActive = ko.observable<boolean>(false);
+    isOutputTabActive = ko.observable<boolean>(false);
+    
     spinners = {
         testing: ko.observable<boolean>(false),
         loadingDocument: ko.observable<boolean>(false),
@@ -65,6 +75,7 @@ class patchTester extends viewModelBase {
         super();
         this.query = query;
         this.db = db;
+        
         this.initObservables();
 
         this.bindToCurrentInstance(
@@ -141,6 +152,36 @@ class patchTester extends viewModelBase {
                 })
                 .always(() => this.spinners.autocomplete(false));
         });
+        
+        this.loadedCount = ko.pureComputed(() => {
+            const actions = this.actions;
+
+            const totalLoadedCount = actions.loadDocument().length +
+                                     actions.getCounter().length +
+                                     actions.getTimeSeries().length;
+
+            return totalLoadedCount ? totalLoadedCount.toLocaleString() : "";
+        });
+
+        this.modifiedCount = ko.pureComputed(() => {
+            const actions = this.actions;
+
+            const totalModifiedCount = actions.putDocument().length +
+                                       actions.incrementCounter().length +
+                                       actions.appendTimeSeries().length;
+
+            return totalModifiedCount ? totalModifiedCount.toLocaleString() : "";
+        });
+
+        this.deletedCount = ko.pureComputed(() => {
+            const actions = this.actions;
+
+            const totalDeletedCount = actions.deleteDocument().length +
+                                      actions.deleteCounter().length +
+                                      actions.deleteTimeSeries().length;
+
+            return totalDeletedCount ? totalDeletedCount.toLocaleString() : "";
+        });
     }
 
     closeTestMode() {
@@ -164,9 +205,9 @@ class patchTester extends viewModelBase {
         this.actions.incrementCounter([]);
         this.actions.deleteCounter([]);
 
-        this.actions.getTimeseries([]);
-        this.actions.appendTimeseries([]);
-        this.actions.deleteTimeseries([]);
+        this.actions.getTimeSeries([]);
+        this.actions.appendTimeSeries([]);
+        this.actions.deleteTimeSeries([]);
         
         this.actions.output([]);
         this.afterDoc("");
@@ -238,9 +279,9 @@ class patchTester extends viewModelBase {
                         this.actions.incrementCounter(actions.IncrementCounter);
                         this.actions.deleteCounter(actions.DeleteCounter);
                         
-                        this.actions.getTimeseries(actions.GetTimeseries);
-                        this.actions.appendTimeseries(actions.AppendTimeseries);
-                        this.actions.deleteTimeseries(actions.DeleteTimeseries);
+                        this.actions.getTimeSeries(actions.GetTimeSeries);
+                        this.actions.appendTimeSeries(actions.AppendTimeSeries);
+                        this.actions.deleteTimeSeries(actions.DeleteTimeSeries);
 
                         if (result.Status === "Patched") {
                             messagePublisher.reportSuccess("Test completed");
@@ -260,40 +301,24 @@ class patchTester extends viewModelBase {
         documentPreviewer.preview(documentId, db, documentIdValidationGroup, spinner);
     }
 
-    getLoadedCount(): KnockoutComputed<string> {
-        return ko.pureComputed(() => {
-            const actions = this.actions;
-            
-            const totalLoadedCount = actions.loadDocument().length +
-                                     actions.getCounter().length +
-                                     actions.getTimeseries().length;
-                                
-            return totalLoadedCount ? totalLoadedCount.toLocaleString() : "";
-        });
+    previewTabClicked() {
+        this.isPreviewTabActive(true);
     }
-    
-    getModifiedCount() {
-        return ko.pureComputed(() => {
-            const actions = this.actions;
 
-            const totalModifiedCount = actions.putDocument().length +
-                                       actions.incrementCounter().length +
-                                       actions.appendTimeseries().length;
-
-            return totalModifiedCount ? totalModifiedCount.toLocaleString() : "";
-        });
+    loadedTabClicked() {
+        this.isLoadedTabActive(true);
     }
-    
-    getDeletedCount() {
-        return ko.pureComputed(() => {
-            const actions = this.actions;
 
-            const totalDeletedCount = actions.deleteDocument().length +
-                                      actions.deleteCounter().length +
-                                      actions.deleteTimeseries().length;
+    modifiedTabClicked() {
+        this.isModifiedTabActive(true);
+    }
 
-            return totalDeletedCount ? totalDeletedCount.toLocaleString() : "";
-        });
+    deletedTabClicked() {
+        this.isDeletedTabActive(true);
+    }
+
+    outputTabClicked() {
+        this.isOutputTabActive(true);
     }
 }
 
