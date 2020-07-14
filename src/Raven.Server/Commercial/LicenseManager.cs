@@ -742,65 +742,28 @@ namespace Raven.Server.Commercial
                 if (ShouldIgnoreProcessorAffinityChanges(cores, licenseLimits))
                     return;
 
-                var currentlyAssignedCores = Bits.NumberOfSetBits(process.ProcessorAffinity.ToInt64());
+                AffinityHelper.SetProcessAffinity(process, cores, _serverStore.Configuration.Server.ProcessAffinityMask, out var currentlyAssignedCores);
+
+                if (addPerformanceHint == false || cores == ProcessorInfo.ProcessorCount)
+                    return;
+
                 if (currentlyAssignedCores == cores &&
                     _lastPerformanceHint != null &&
                     _lastPerformanceHint.Value.AddDays(7) > DateTime.UtcNow)
                 {
-                    // we already set the correct number of assigned cores
                     return;
                 }
 
-                var bitMask = 1L;
-                var processAffinityMask = _serverStore.Configuration.Server.ProcessAffinityMask;
-                if (processAffinityMask == null)
-                {
-                    for (var i = 0; i < cores; i++)
-                    {
-                        bitMask |= 1L << i;
-                    }
-                }
-                else if (Bits.NumberOfSetBits(processAffinityMask.Value) > cores)
-                {
-                    var affinityMask = processAffinityMask.Value;
-                    var bitNumber = 0;
-                    while (cores > 0)
-                    {
-                        if ((affinityMask & 1) != 0)
-                        {
-                            bitMask |= 1L << bitNumber;
-                            cores--;
-                        }
+                _lastPerformanceHint = DateTime.UtcNow;
 
-                        affinityMask = affinityMask >> 1;
-                        bitNumber++;
-                    }
-                }
-                else
-                {
-                    bitMask = processAffinityMask.Value;
-                }
-
-                process.ProcessorAffinity = new IntPtr(bitMask);
-
-                // changing the process affinity resets the thread affinity
-                // we need to change the threads affinity as well
-                PoolOfThreads.GlobalRavenThreadPool.SetThreadsAffinityIfNeeded();
-
-                if (addPerformanceHint &&
-                    ProcessorInfo.ProcessorCount > cores)
-                {
-                    _lastPerformanceHint = DateTime.UtcNow;
-                    var notification = PerformanceHint.Create(
-                        null,
-                        "Your database can be faster - not all cores are used",
-                        $"Your server is currently using only {cores} core{Pluralize(cores)} " +
-                        $"out of the {Environment.ProcessorCount} that it has available",
-                        PerformanceHintType.UnusedCapacity,
-                        NotificationSeverity.Info,
-                        "LicenseManager");
-                    _serverStore.NotificationCenter.Add(notification);
-                }
+                _serverStore.NotificationCenter.Add(PerformanceHint.Create(
+                    null,
+                    "Your database can be faster - not all cores are used",
+                    $"Your server is currently using only {cores} core{Pluralize(cores)} " +
+                    $"out of the {Environment.ProcessorCount} that it has available",
+                    PerformanceHintType.UnusedCapacity,
+                    NotificationSeverity.Info,
+                    nameof(LicenseManager)));
             }
             catch (PlatformNotSupportedException)
             {
