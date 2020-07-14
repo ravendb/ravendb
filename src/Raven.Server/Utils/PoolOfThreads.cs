@@ -266,24 +266,7 @@ namespace Raven.Server.Utils
                 NumberOfCoresToReduce = 0;
                 ThreadMask = null;
 
-                try
-                {
-                    AffinityHelper.ResetThreadAffinity(this);
-                    return true;
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    // nothing to be done
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Unable to reset this thread affinity to the processor default, we'll just let it exit", e);
-                    }
-                    return false;
-                }
+                return AffinityHelper.ResetThreadAffinity(this);
             }
 
             private static bool ResetThreadPriority()
