@@ -212,7 +212,7 @@ namespace Raven.Server.Commercial
             if (firstRun == false)
                 _licenseHelper.UpdateLocalLicense(license, RSAParameters);
 
-            ReloadLicenseLimits(addPerformanceHint: firstRun);
+            ReloadLicenseLimits();
         }
 
         private void CreateAgplAlert()
@@ -232,7 +232,7 @@ namespace Raven.Server.Commercial
             _serverStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.LicenseManager_AGPL3, null));
         }
 
-        public void ReloadLicenseLimits(bool addPerformanceHint = false)
+        public void ReloadLicenseLimits()
         {
             try
             {
@@ -242,7 +242,7 @@ namespace Raven.Server.Commercial
                     var clusterSize = GetClusterSize();
                     var maxWorkingSet = Math.Min(_licenseStatus.MaxMemory / (double)clusterSize, utilizedCores * _licenseStatus.Ratio);
 
-                    SetAffinity(process, utilizedCores, addPerformanceHint);
+                    SetAffinity(process, utilizedCores);
                     SetMaxWorkingSet(process, Math.Max(1, maxWorkingSet));
                 }
             }
@@ -730,7 +730,7 @@ namespace Raven.Server.Commercial
 
                 await CalculateLicenseLimits(forceFetchingNodeInfo: true);
 
-                ReloadLicenseLimits(addPerformanceHint: true);
+                ReloadLicenseLimits();
             }
             catch (Exception e)
             {
@@ -1055,7 +1055,7 @@ namespace Raven.Server.Commercial
             _serverStore.NotificationCenter.Add(alert);
         }
 
-        private void SetAffinity(Process process, int cores, bool addPerformanceHint)
+        private void SetAffinity(Process process, int cores)
         {
             if (cores > ProcessorInfo.ProcessorCount)
                 cores = ProcessorInfo.ProcessorCount;
@@ -1064,8 +1064,12 @@ namespace Raven.Server.Commercial
             {
                 AffinityHelper.SetProcessAffinity(process, cores, _serverStore.Configuration.Server.ProcessAffinityMask, out var currentlyAssignedCores);
 
-                if (addPerformanceHint == false || cores == ProcessorInfo.ProcessorCount)
+                if (cores == ProcessorInfo.ProcessorCount)
+                {
+                    _serverStore.NotificationCenter.Dismiss(PerformanceHint.GetKey(PerformanceHintType.UnusedCapacity, nameof(LicenseManager)));
+                    _lastPerformanceHint = null;
                     return;
+                }
 
                 if (currentlyAssignedCores == cores &&
                     _lastPerformanceHint != null &&
