@@ -201,8 +201,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
 
                     var databaseRecord = restoreSettings.DatabaseRecord;
-                    if (databaseRecord.Settings == null)
-                        databaseRecord.Settings = new Dictionary<string, string>();
+                    databaseRecord.Settings ??= new Dictionary<string, string>();
 
                     var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
                     databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
@@ -247,8 +246,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // we are currently restoring, shouldn't try to access it
                         databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId(), restoreSettings.DatabaseValues, isRestore: true);
-                        await _serverStore.Cluster.WaitForIndexNotification(index);
+                        await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
 
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
@@ -295,15 +293,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.DontCareId, isRestore: true);
-                    await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
-
-                    if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
-                    {
-                        // we need to wait for the database record change to be propagated properly
-                        var db = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                        await db.RachisLogIndexNotifications.WaitForIndexNotification(updateIndex, _operationCancelToken.Token);
-                    }
+                    await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
 
                     return result;
                 }
@@ -337,12 +327,22 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
                     else
                     {
-                        var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
-                        await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
+                        try
+                        {
+                            var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] {_serverStore.NodeTag},
+                                RaftIdGenerator.DontCareId);
+                            await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index, TimeSpan.FromSeconds(60));
+                        }
+                        catch (TimeoutException te)
+                        {
+                            result.AddError($"Failed to delete the database {databaseName} after a failed restore. " +
+                                            $"In order to restart the restore process this database needs to be deleted manually. Exception: {te}.");
+                            onProgress.Invoke(result.Progress);
+                        }
                     }
                 }
 
-                result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e.Message}");
+                result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e}");
                 onProgress.Invoke(result.Progress);
                 throw;
             }
@@ -350,6 +350,45 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 Dispose();
             }
+        }
+
+        private async Task SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string, 
+            BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
+        {
+            const int maxRetries = 10;
+            var retries = 0;
+            long index;
+
+            // at this point we restored a large portion of the database or all of it
+            // we'll retry saving the database record as failure here will cause us to abort the whole restore operation
+
+            while(true)
+            {
+                try
+                {
+                    _operationCancelToken.Token.ThrowIfCancellationRequested();
+
+                    restoreResult.AddInfo("Saving the database record");
+                    onProgress.Invoke(restoreResult.Progress);
+
+                    var result = await _serverStore.WriteDatabaseRecordAsync(
+                        databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
+                    index = result.Index;
+                    break;
+                }
+                catch (TimeoutException)
+                {
+                    if (++retries < maxRetries)
+                        continue;
+
+                    restoreResult.AddError("Failed to save the database record, the restore is aborted");
+                    onProgress.Invoke(restoreResult.Progress);
+                    throw;
+                }
+            }
+
+            // we are waiting for the command to propagate to this node after it was accepted by the leader
+            await _serverStore.Cluster.WaitForIndexNotification(index, TimeSpan.FromSeconds(60));
         }
 
         private async Task<List<string>> GetOrderedFilesToRestore()
