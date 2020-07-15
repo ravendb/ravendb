@@ -1680,6 +1680,25 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
+        public bool FindByIndex(TableSchema.FixedSizeSchemaIndexDef index, long value, out TableValueReader reader)
+        {
+            AssertWritableTable();
+            reader = default;
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(value) == false)
+                    return false;
+
+                if (it.CurrentKey != value)
+                    return false;
+
+                GetTableValueReader(it, out reader);
+                return true;
+            }
+        }
+
         public bool DeleteByIndex(TableSchema.FixedSizeSchemaIndexDef index, long value)
         {
             AssertWritableTable();

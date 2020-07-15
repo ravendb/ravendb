@@ -85,6 +85,84 @@ namespace SlowTests.Client.TimeSeries.Session
         }
 
         [Fact]
+        public async Task TimeSeriesShouldBeCaseInsensitiveAndKeepOriginalCasing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "HeartRate")
+                        .Append(baseline.AddMinutes(2), 60d, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var val = session.TimeSeriesFor("users/ayende", "heartrate").Get().ToList();
+                        
+                    Assert.Equal(new[] { 59d }, val[0].Values);
+                    Assert.Equal("watches/fitbit", val[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(new[] { 60d }, val[1].Values);
+                    Assert.Equal("watches/fitbit", val[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(2), val[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal("Heartrate", session.Advanced.GetTimeSeriesFor(user).Single());
+                }
+
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "HeartRatE").Delete();
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "HeArtRate")
+                        .Append(baseline.AddMinutes(3), 61d, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var val = session.TimeSeriesFor("users/ayende", "heartrate").Get().Single();
+                        
+                    Assert.Equal(new[] { 61d }, val.Values);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(3), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal("HeArtRate", session.Advanced.GetTimeSeriesFor(user).Single());
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var name = database.DocumentsStorage.TimeSeriesStorage.Stats.GetTimeSeriesNamesForDocumentOriginalCasing(ctx, "users/ayende").Single();
+                    Assert.Equal("HeArtRate", name);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ThrowIfAppendIsLessThen1Ms()
         {
             using (var store = GetDocumentStore())

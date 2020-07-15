@@ -453,7 +453,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     foreach (var item in ReplicatedAttachmentStreams.Values)
                     {
-                        item.Dispose();
+                        item?.Dispose();
                     }
 
                     ReplicatedAttachmentStreams?.Clear();
@@ -463,7 +463,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     foreach (var item in ReplicatedItems)
                     {
-                        item.Dispose();
+                        item?.Dispose();
                     }
                 }
 

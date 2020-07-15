@@ -17,6 +17,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
+using SlowTests.Client.TimeSeries.Replication;
 using SlowTests.Client.TimeSeries.Session;
 using Sparrow;
 using Sparrow.Json;
@@ -1271,10 +1272,10 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-        [NightlyBuildFact]
+        [Fact]
         public async Task RapidRetentionAndRollupInACluster()
         {
-            var cluster = await CreateRaftCluster(3);
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
             using (var store = GetDocumentStore(new Options
             {
                 Server = cluster.Leader,
@@ -1329,8 +1330,6 @@ namespace SlowTests.Client.TimeSeries.Policies
                 await Task.Delay((TimeSpan)(p4.RetentionTime + TimeValue.FromSeconds(10)));
                 // nothing should be left
 
-                WaitForUserToContinueTheTest(store);
-
                 foreach (var node in cluster.Nodes)
                 {
                     using (var nodeStore = GetDocumentStore(new Options
@@ -1349,6 +1348,8 @@ namespace SlowTests.Client.TimeSeries.Policies
                         {
                             var user = session.Load<User>("users/karmel");
                             Assert.Equal(0,session.Advanced.GetTimeSeriesFor(user)?.Count ?? 0);
+                            var db = await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                            await TimeSeriesReplicationTests.AssertNoLeftOvers(db);
                         }
                     }
                 }
