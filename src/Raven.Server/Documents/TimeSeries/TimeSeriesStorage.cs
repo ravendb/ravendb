@@ -1701,6 +1701,14 @@ namespace Raven.Server.Documents.TimeSeries
             return item;
         }
 
+        internal LazyStringValue GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, string documentId, string name)
+        {
+            using (var slicer = new TimeSeriesSliceHolder(context, documentId, name))
+            {
+                return Stats.GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
+            }
+        }
+        
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesFrom(DocumentsOperationContext context, long etag, long toEtag = long.MaxValue)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
