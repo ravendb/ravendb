@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+$ErrorActionPreference = 'Stop'
 
 $COMMAND=".\Raven.Server.exe"
 $hostname = & "hostname.exe"
@@ -17,3 +17,4 @@ try {
 } finally {
     exit $LASTEXITCODE
 }
+
