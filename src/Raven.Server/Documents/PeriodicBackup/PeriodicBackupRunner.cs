@@ -95,7 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackupStatus backupStatus,
             string responsibleNodeTag)
         {
-            var taskStatus = GetTaskStatus(databaseRecord.Topology, configuration, skipErrorLog: true);
+            var taskStatus = GetTaskStatus(databaseRecord.Topology, configuration, disableLog: true);
             return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, responsibleNodeTag, skipErrorLog: true);
         }
 
@@ -899,17 +899,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             ClusterDown
         }
 
-        private TaskStatus GetTaskStatus(
-            DatabaseTopology topology,
-            PeriodicBackupConfiguration configuration,
-            bool skipErrorLog = false)
+        private TaskStatus GetTaskStatus(DatabaseTopology topology, PeriodicBackupConfiguration configuration, bool disableLog = false)
         {
             if (configuration.Disabled)
                 return TaskStatus.Disabled;
 
             if (configuration.HasBackup() == false)
             {
-                if (skipErrorLog == false)
+                if (disableLog == false)
                 {
                     var message = $"All backup destinations are disabled for backup task id: {configuration.TaskId}";
                     _database.NotificationCenter.Add(AlertRaised.Create(
@@ -931,7 +928,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (whoseTaskIsIt == _serverStore.NodeTag)
                 return TaskStatus.ActiveByCurrentNode;
 
-            if (_logger.IsInfoEnabled)
+            if (disableLog == false && _logger.IsInfoEnabled)
                 _logger.Info($"Backup job is skipped at {SystemTime.UtcNow}, because it is managed " +
                              $"by '{whoseTaskIsIt}' node and not the current node ({_serverStore.NodeTag})");
 
