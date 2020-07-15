@@ -18,6 +18,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         private Action<JsonSerializer> _customizeJsonDeserializer;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private JsonEnumerableConverter _jsonEnumerableConverter;
+        private bool _throwOnByRefFields;
+        private bool _throwOnUnsafeMembers;
 
         public DocumentConventions Conventions { get; private set; }
 
@@ -26,6 +28,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             _defaultConverter = new BlittableJsonConverter(this);
             _jsonEnumerableConverter = new JsonEnumerableConverter(this);
             JsonContractResolver = new DefaultRavenContractResolver(this);
+            _throwOnByRefFields = true;
+            _throwOnUnsafeMembers = true;
             CustomizeJsonSerializer = _ => { };
             CustomizeJsonDeserializer = _ => { };
         }
@@ -90,6 +94,26 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         }
 
         IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;
+
+        public bool ThrowOnByRefMembers 
+        {
+            get => _throwOnByRefFields;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _throwOnByRefFields = value;
+            }
+        }
+
+        public bool ThrowOnUnsafeMembers
+        {
+            get => _throwOnUnsafeMembers;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _throwOnUnsafeMembers = value;
+            }
+        }
 
         ISessionBlittableJsonConverter ISerializationConventions.CreateConverter(InMemoryDocumentSessionOperations session)
         {
