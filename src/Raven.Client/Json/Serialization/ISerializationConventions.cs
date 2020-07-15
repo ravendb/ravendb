@@ -7,6 +7,10 @@ namespace Raven.Client.Json.Serialization
 {
     public interface ISerializationConventions
     {
+        bool ThrowOnByRefMembers { get; set; }
+
+        bool ThrowOnUnsafeMembers { get; set; }
+
         DocumentConventions Conventions { get; }
 
         void Initialize(DocumentConventions conventions);
