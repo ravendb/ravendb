@@ -43,7 +43,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
                 return [];
             }
 
-            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.ServerWide.Operations.CompactionProgressBase;
+            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.ServerWide.Operations.CompactionProgressBase<Raven.Client.ServerWide.Operations.CompactionProgress | Raven.Client.ServerWide.Operations.CompactionResult>;
 
             if (!status) {
                 return [];
@@ -133,7 +133,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
         return app.showBootstrapDialog(new compactDatabaseDetails(op, center));
     }
 
-    private mapToCompactItem(name: string, item: Raven.Client.ServerWide.Operations.CompactionProgressBase): compactListItem {
+    private mapToCompactItem(name: string, item: Raven.Client.ServerWide.Operations.CompactionProgressBase<Raven.Client.ServerWide.Operations.CompactionProgress | Raven.Client.ServerWide.Operations.CompactionResult>): compactListItem {
         let stage: compactListItemStatus = "pending";
         if (item.Processed) {
             if (item.Skipped) {

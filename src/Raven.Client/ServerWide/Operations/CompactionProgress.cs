@@ -6,9 +6,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class CompactionProgressBase
+    public class CompactionProgressBase<T> where T : CompactionProgressBase<T>
     {
-        public virtual Dictionary<string, CompactionProgressBase> IndexesResults { get; set; } = new Dictionary<string, CompactionProgressBase>();
+        public virtual Dictionary<string, T> IndexesResults { get; set; } = new Dictionary<string, T>();
         public virtual string Message { get; set; }
         public virtual string TreeName { get; set; }
         public virtual long TreeProgress { get; set; }
@@ -48,7 +48,7 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class CompactionProgress : CompactionProgressBase, IOperationProgress
+    public class CompactionProgress : CompactionProgressBase<CompactionProgress>, IOperationProgress
     {
         private readonly CompactionResult _result;
 
@@ -98,11 +98,9 @@ namespace Raven.Client.ServerWide.Operations
             set => _result.GlobalTotal = value;
         }
         
-        public override Dictionary<string, CompactionProgressBase> IndexesResults
+        public override Dictionary<string, CompactionProgress> IndexesResults
         {
-            get => _result.IndexesResults.ToDictionary(
-                x => x.Key, 
-                x => ((CompactionResult)x.Value).Progress as CompactionProgressBase);
+            get => _result.IndexesResults.ToDictionary(x => x.Key, x => x.Value.Progress);
             set => throw new NotSupportedException();
         }
         
