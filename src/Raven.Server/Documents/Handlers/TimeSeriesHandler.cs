@@ -590,6 +590,8 @@ namespace Raven.Server.Documents.Handlers
 
                 current.InitializeRollupAndRetention();
 
+                ServerStore.LicenseManager.AssertCanAddTimeSeriesAggregationAndRetention(current);
+
                 var editTimeSeries = new EditTimeSeriesConfigurationCommand(current, Database.Name, GetRaftRequestIdFromQuery());
                 var (index, _) = await ServerStore.SendToLeaderAsync(editTimeSeries);
 

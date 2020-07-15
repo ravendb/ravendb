@@ -128,6 +128,8 @@ namespace Raven.Server.Commercial
 
         public bool HasPullReplicationAsSink => GetValue<bool>("pullReplicationAsSink");
 
+        public bool HasTimeSeriesAggregationAndRetention => GetValue<bool>("timeSeriesAggregationAndRetention");
+
         public bool IsIsv => GetValue<bool>("redist");
 
         public bool IsCloud => GetValue<bool>("cloud");
@@ -181,6 +183,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasHighlyAvailableTasks)] = HasHighlyAvailableTasks,
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
                 [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
+                [nameof(HasTimeSeriesAggregationAndRetention)] = HasTimeSeriesAggregationAndRetention,
                 [nameof(IsIsv)] = IsIsv,
                 [nameof(IsCloud)] = IsCloud,
                 [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate
