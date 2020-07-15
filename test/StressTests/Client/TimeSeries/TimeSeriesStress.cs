@@ -17,6 +17,7 @@ using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Patch;
+using SlowTests.Client.TimeSeries.Replication;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -114,6 +115,12 @@ namespace StressTests.Client.TimeSeries
                 await EnsureNoReplicationLoop(Servers[0], store.Database);
                 await EnsureNoReplicationLoop(Servers[1], store.Database);
                 await EnsureNoReplicationLoop(Servers[2], store.Database);
+
+                foreach (var server in Servers)
+                {
+                    var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    await TimeSeriesReplicationTests.AssertNoLeftOvers(database);
+                }
             }
         }
 
