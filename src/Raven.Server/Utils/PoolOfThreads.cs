@@ -237,10 +237,9 @@ namespace Raven.Server.Utils
                 ResetCurrentThreadName();
                 Thread.CurrentThread.Name = "Available Pool Thread";
 
-                if (ResetThreadPriority() == false)
-                    return false;
-
-                if (ResetThreadAffinity() == false)
+                var resetThread = ResetThreadPriority();
+                resetThread &= ResetThreadAffinity();
+                if (resetThread == false)
                     return false;
 
                 _waitForWork.Reset();
