@@ -543,7 +543,7 @@ namespace Raven.Server.ServerWide
                     options.DoNotConsiderMemoryLockFailureAsCatastrophicError = Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                     try
                     {
-                        options.MasterKey = Secrets.Unprotect(buffer);
+                        options.Encryption.MasterKey = Secrets.Unprotect(buffer);
 
                     }
                     catch (Exception e)

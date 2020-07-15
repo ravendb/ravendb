@@ -118,7 +118,7 @@ namespace Voron.Impl.Journal
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ZeroLazyTransactionBufferIfNeeded(TempPagerTransaction tx)
         {
-            if (_options.EncryptionEnabled == false)
+            if (_options.Encryption.IsEnabled == false)
                 return;
             
             var lazyTxBufferSize = _lazyTransactionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
