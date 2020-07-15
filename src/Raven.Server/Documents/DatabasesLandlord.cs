@@ -130,6 +130,16 @@ namespace Raven.Server.Documents
                     if (task.IsCanceled || task.IsFaulted)
                         return;
 
+                    if (changeType == ClusterDatabaseChangeType.RecordRestored)
+                    {
+                        // - a successful restore operation ends when we successfully restored
+                        // the database files and saved the updated the database record
+                        // - this is the first time that the database was loaded so there is no need to call
+                        // StateChanged after the database was restored
+                        // - waiting for the database to load after a restore can take time (running recovery on an existing database)
+                        return;
+                    }
+
                     var database = await task;
 
                     switch (changeType)
@@ -891,6 +901,7 @@ namespace Raven.Server.Documents
         public enum ClusterDatabaseChangeType
         {
             RecordChanged,
+            RecordRestored,
             ValueChanged,
             PendingClusterTransactions,
             ClusterTransactionCompleted
