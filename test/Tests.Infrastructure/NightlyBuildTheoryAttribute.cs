@@ -37,7 +37,7 @@ namespace Tests.Infrastructure
                 return;
 
             var now = SystemTime.UtcNow;
-            IsNightlyBuild = now.Hour >= 21 || now.Hour <= 6;
+            IsNightlyBuild = now.Hour >= 18 || now.Hour <= 6;
         }
 
         public override string Skip
