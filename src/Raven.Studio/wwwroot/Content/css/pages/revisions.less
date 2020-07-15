@@ -36,10 +36,17 @@
         }
 
         .name {
-            width: 150px;
+            width: 125px;
+            flex-shrink: 0;
+            @media (min-width: 1440px) {
+                flex-basis: 20%;
+            }
 
             h3 {
                 margin: 0;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
             }
         }
 
