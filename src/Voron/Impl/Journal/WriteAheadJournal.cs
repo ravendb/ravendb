@@ -36,7 +36,7 @@ using Constants = Voron.Global.Constants;
 
 namespace Voron.Impl.Journal
 {
-    public unsafe class WriteAheadJournal : IDisposable
+    public unsafe class WriteAheadJournal : IJournalCompressionBufferCryptoHandler, IDisposable
     {
         private readonly StorageEnvironment _env;
         private readonly AbstractPager _dataPager;
@@ -256,7 +256,7 @@ namespace Voron.Impl.Journal
                 }
             }
 
-            if (_env.Options.EncryptionEnabled == false) // for encryption, we already use AEAD, so no need
+            if (_env.Options.Encryption.IsEnabled == false) // for encryption, we already use AEAD, so no need
             {
                 // here we want to check that the checksum on all the modified pages is valid
                 // we can't do that during the journal application process because we may have modifications
@@ -1226,7 +1226,7 @@ namespace Voron.Impl.Journal
                                     scratchPagerStates.Add(scratchNumber, pagerState);
                                 }
 
-                                if (_waj._env.Options.EncryptionEnabled == false)
+                                if (_waj._env.Options.Encryption.IsEnabled == false)
                                 {
                                     using (tempTx) // release any resources, we just wanted to validate things
                                     {
@@ -1440,7 +1440,7 @@ namespace Voron.Impl.Journal
 
                 IPagerLevelTransactionState tempEncCompressionPagerTxState = null;
 
-                if (_env.Options.EncryptionEnabled && _is32Bit)
+                if (_env.Options.Encryption.IsEnabled && _is32Bit)
                 {
                     // RavenDB-12854: in 32 bits locking/unlocking the memory is done separately for each mapping
                     // we use temp tx for dealing with compression buffers pager to avoid locking (zeroing) it's content during tx dispose
@@ -1490,7 +1490,11 @@ namespace Voron.Impl.Journal
                         CurrentFile = null;
                     }
 
-                    ZeroCompressionBufferIfNeeded(tempEncCompressionPagerTxState ?? tx);
+                    if (_env.Options.Encryption.IsEnabled && _env.Options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration == false)
+                    {
+                        ZeroCompressionBuffer(tempEncCompressionPagerTxState ?? tx);
+                    }
+
                     ReduceSizeOfCompressionBufferIfNeeded();
 
                     return journalEntry;
@@ -1555,7 +1559,7 @@ namespace Voron.Impl.Journal
                 var pageHeader = (PageHeader*)scratchPage;
 
                 // When encryption is off, we do validation by checksum
-                if (_env.Options.EncryptionEnabled == false)
+                if (_env.Options.Encryption.IsEnabled == false)
                 {
                     pageHeader->Checksum = StorageEnvironment.CalculatePageChecksum(scratchPage, pageHeader->PageNumber, pageHeader->Flags, pageHeader->OverflowSize);
                 }
@@ -1566,7 +1570,7 @@ namespace Voron.Impl.Journal
                 *(long*)write = pageHeader->PageNumber;
                 write += sizeof(long);
 
-                if (_env.Options.EncryptionEnabled == false && performCompression)
+                if (_env.Options.Encryption.IsEnabled == false && performCompression)
                 {
                     _diffPage.Output = write;
 
@@ -1688,7 +1692,7 @@ namespace Voron.Impl.Journal
             txHeader->CompressedSize = reportedCompressionLength;
             txHeader->UncompressedSize = totalSizeWritten;
             txHeader->PageCount = numberOfPages;
-            if (_env.Options.EncryptionEnabled == false)
+            if (_env.Options.Encryption.IsEnabled == false)
             {
                 if (performCompression)
                     txHeader->Hash = Hashing.XXHash64.Calculate(txHeaderPtr + sizeof(TransactionHeader), (ulong)compressedLen, (ulong)txHeader->TransactionId);
@@ -1712,7 +1716,7 @@ namespace Voron.Impl.Journal
             Memory.Copy(txHeaderPtr, (byte*)txHeader, sizeof(TransactionHeader));
             Debug.Assert(((long)txHeaderPtr % (4 * Constants.Size.Kilobyte)) == 0, "Memory must be 4kb aligned");
 
-            if (_env.Options.EncryptionEnabled)
+            if (_env.Options.Encryption.IsEnabled)
                 EncryptTransaction(txHeaderPtr);
 
             return prepareToWriteToJournal;
@@ -1752,7 +1756,7 @@ namespace Voron.Impl.Journal
             ulong macLen = (ulong)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes();
             var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
             var subKey = stackalloc byte[(int)subKeyLen];
-            fixed (byte* mk = _env.Options.MasterKey)
+            fixed (byte* mk = _env.Options.Encryption.MasterKey)
             fixed (byte* ctx = Context)
             {
                 var num = txHeader->TransactionId;
@@ -1852,8 +1856,11 @@ namespace Voron.Impl.Journal
             var maxSize = _env.Options.MaxScratchBufferSize;
             if (ShouldReduceSizeOfCompressionPager(maxSize, forceReduce) == false)
             {
-                //PERF: Compression buffer will be reused, it is safe to discard the content to clear the modified bit.
-                _compressionPager.DiscardWholeFile();
+                // PERF: Compression buffer will be reused, it is safe to discard the content to clear the modified bit.
+                // For encrypted databases, discarding locked memory is *expensive*, so we avoid it
+                if (_env.Options.Encryption.IsEnabled == false)
+                    _compressionPager.DiscardWholeFile();
+
                 return;
             }
 
@@ -1874,14 +1881,12 @@ namespace Voron.Impl.Journal
             _compressionPager = CreateCompressionPager(maxSize);
         }
 
-        public void ZeroCompressionBufferIfNeeded(IPagerLevelTransactionState tx)
+        public void ZeroCompressionBuffer(IPagerLevelTransactionState tx)
         {
-            if (_env.Options.EncryptionEnabled == false)
-                return;
-
             var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             _compressionPager.EnsureMapped(tx, 0, checked((int)_compressionPager.NumberOfAllocatedPages));
             var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
+
             Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
         }
 

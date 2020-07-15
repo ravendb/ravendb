@@ -47,7 +47,7 @@ namespace rvn
             var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
             var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
 
-            dstOptions.MasterKey = masterKey;
+            dstOptions.Encryption.MasterKey = masterKey;
 
             var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey);
 
@@ -73,7 +73,7 @@ namespace rvn
             var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
             var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
 
-            srcOptions.MasterKey = new SecretProtection(new SecurityConfiguration()).Unprotect(bytes);
+            srcOptions.Encryption.MasterKey = new SecretProtection(new SecurityConfiguration()).Unprotect(bytes);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
 

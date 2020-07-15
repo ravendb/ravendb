@@ -487,7 +487,7 @@ namespace Voron.Impl
         [Conditional("DEBUG")]
         private void ZeroPageHeaderChecksumToEnsureNoUseOfCryptoReservedSpace(byte* page)
         {
-            if (_env.Options.EncryptionEnabled)
+            if (_env.Options.Encryption.IsEnabled)
             {
                 // we don't want to mark all pages as changed by the crypto pager
                 // that check for the full page hash, and it isn't relevant for 
@@ -568,7 +568,7 @@ namespace Voron.Impl
                     Debug.Assert(p.PageNumber == pageNumber, string.Format("Requested ReadOnly page #{0}. Got #{1} from data file", pageNumber, p.PageNumber));
 
                     // When encryption is off, we do validation by checksum
-                    if (_env.Options.EncryptionEnabled == false)
+                    if (_env.Options.Encryption.IsEnabled == false)
                         _env.ValidatePageChecksum(pageNumber, (PageHeader*)p.Pointer);
                 }
             }

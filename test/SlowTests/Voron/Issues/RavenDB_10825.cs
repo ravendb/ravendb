@@ -21,7 +21,7 @@ namespace SlowTests.Voron.Issues
         {
             base.Configure(options);
 
-            options.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
+            options.Encryption.MasterKey = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes());
             options.ManualFlushing = true;
         }
         
