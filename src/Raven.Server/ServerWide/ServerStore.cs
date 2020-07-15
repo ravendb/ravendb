@@ -2261,8 +2261,7 @@ namespace Raven.Server.ServerWide
             string databaseName, DatabaseRecord record, long? index, string raftRequestId,
             Dictionary<string, BlittableJsonReaderObject> databaseValues = null, bool isRestore = false)
         {
-            if (databaseValues == null)
-                databaseValues = new Dictionary<string, BlittableJsonReaderObject>();
+            databaseValues ??= new Dictionary<string, BlittableJsonReaderObject>();
 
             Debug.Assert(record.Topology != null);
 
