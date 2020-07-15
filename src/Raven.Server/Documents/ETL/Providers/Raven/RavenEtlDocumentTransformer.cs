@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             var docId = Current.DocumentId;
             var segmentEntry = Current.TimeSeriesSegmentEntry; 
-            var doc = Database.DocumentsStorage.Get(Context, docId);
+            var doc = Database.DocumentsStorage.Get(Context, docId, DocumentFields.Default);
             if (doc == null)
             {
                 //Through replication the Etl source database can have time-series without its document.
@@ -469,6 +469,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (doc.Etag > segmentEntry.Etag && doc.Etag > stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document))
             {
                 //There is a chance that the document didn't Etl yet so we push it with the time-series to be sure
+                doc = Database.DocumentsStorage.Get(Context, docId);
+
                 if (DocumentScript != null)
                 {
                     Current.Document = doc;
@@ -485,16 +487,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (loadBehaviorFunction != null && FilterSingleTimeSeriesSegmentByLoadBehaviourScript(ref timeSeriesEntries, docId, segmentEntry, loadBehaviorFunction))
                 return;
 
-            if (doc.TryGetMetadata(out var metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
-                throw new InvalidOperationException($"Document {docId} has time-series but its metadata doesn't");
-
-            //TODO Time-series name should be taken from time-series storage after the relevant implementation will change
-            var index = timeSeriesNames.BinarySearch(segmentEntry.Name, StringComparison.OrdinalIgnoreCase);
-            if(index < 0)
-                throw new InvalidOperationException($"Document {docId} has time-series {segmentEntry.Name} but its metadata doesn't");
-            var timeSeriesName = timeSeriesNames.GetStringByIndex(index);
-
+            var timeSeriesName = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesNameOriginalCasing(Context, docId, segmentEntry.Name);
+            
             foreach (var entry in timeSeriesEntries)
             {
                 _currentRun.AddTimeSeries(docId, timeSeriesName, entry);
@@ -665,7 +659,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) != DocumentFlags.HasTimeSeries)
                 return null;
             
-            //TODO Time-series name should be taken from time-series storage after the relevant implementation will change
             if (item.Document.TryGetMetadata(out var metadata) == false ||
                 metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeriesNames) == false)
                 return null;
