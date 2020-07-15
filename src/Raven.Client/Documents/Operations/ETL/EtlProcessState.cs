@@ -23,6 +23,9 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public string NodeTag { get; set; }
 
+        // In a regular case we load time-series only when the time-series change.
+        // When there is time-series without document (that can happen if the time-series was replicated but its document didn't yet)
+        // we mark the time-series of the document as skipped so when we load the document we will load all its time-series with it
         public HashSet<string> SkippedTimeSeriesDocs { get; set; }
         
         public long GetLastProcessedEtagForNode(string nodeTag)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -283,18 +283,25 @@ namespace FastTests
 
         public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
-            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+            return await GetDatabase(Server, databaseName);
+        }
+
+        protected static async Task<DocumentDatabase> GetDatabase(RavenServer ravenServer, string databaseName)
+        {
+            var database = await ravenServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
             if (database == null)
             {
                 // Throw and get more info why database is null
-                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (ravenServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     context.OpenReadTransaction();
-                    var lastCommit = Server.ServerStore.Engine.GetLastCommitIndex(context);
-                    var doc = Server.ServerStore.Cluster.Read(context, "db/" + databaseName.ToLowerInvariant());
-                    throw new InvalidOperationException("For " + databaseName + ". Database is null and database record is: " + (doc == null ? "null" : doc.ToString()) + " Last commit: " + lastCommit);
+                    var lastCommit = ravenServer.ServerStore.Engine.GetLastCommitIndex(context);
+                    var doc = ravenServer.ServerStore.Cluster.Read(context, "db/" + databaseName.ToLowerInvariant());
+                    throw new InvalidOperationException("For " + databaseName + ". Database is null and database record is: " + (doc == null ? "null" : doc.ToString()) +
+                                                        " Last commit: " + lastCommit);
                 }
             }
+
             return database;
         }
 
