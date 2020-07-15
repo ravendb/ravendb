@@ -21,6 +21,8 @@ namespace SlowTests.Server.Documents.ETL
     [Trait("Category", "ETL")]
     public abstract class EtlTestBase : RavenTestBase
     {
+        private DocumentStore _src;
+        
         protected EtlTestBase(ITestOutputHelper output) : base(output)
         {
         }
@@ -58,7 +60,7 @@ namespace SlowTests.Server.Documents.ETL
                             Disabled = disabled
                         }
                     },
-                MentorNode = mentor
+                MentorNode = mentor,
             },
                 new RavenConnectionString
                 {
@@ -67,6 +69,20 @@ namespace SlowTests.Server.Documents.ETL
                     TopologyDiscoveryUrls = dst.Urls,
                 }
             );
+        }
+        
+        protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(string collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null)
+        {
+            return CreateSrcDestAndAddEtl(new[] {collections}, script, applyToAllDocuments, disabled, mentor, srcOptions);
+        }
+        
+        protected (DocumentStore src, DocumentStore dest, AddEtlOperationResult result) CreateSrcDestAndAddEtl(IEnumerable<string> collections, string script, bool applyToAllDocuments = false, bool disabled = false, string mentor = null, Options srcOptions = null)
+        {
+            _src = GetDocumentStore(srcOptions);
+            var dest = GetDocumentStore();
+
+            var result = AddEtl(_src, dest, collections, script, applyToAllDocuments);
+            return (_src, dest, result);
         }
 
         protected ManualResetEventSlim WaitForEtl(DocumentStore store, Func<string, EtlProcessStatistics, bool> predicate)
@@ -114,26 +130,13 @@ namespace SlowTests.Server.Documents.ETL
 
             return await taskCompletionSource.Task;
         }
-        
-        protected void ThrowWithEtlErrors(DocumentStore src, Exception e = null)
-        {
-            string[] notifications = GetEtlErrorNotifications(src);
 
-            string message = string.Join(",\n", notifications);
-            var additionalDetails = new InvalidOperationException(message);
-            if (e == null)
-                throw additionalDetails;
-                
-            throw new AggregateException(e, additionalDetails);
-        }
-
-        private string[] GetEtlErrorNotifications(DocumentStore src)
+        private async Task<string[]> GetEtlErrorNotifications(DocumentStore src)
         {
-            string[] notifications;
-            var databaseInstanceFor = GetDocumentDatabaseInstanceFor(src);
-            using (databaseInstanceFor.Result.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
+            var databaseInstanceFor = await GetDocumentDatabaseInstanceFor(src);
+            using (databaseInstanceFor.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
             {
-                notifications = storedNotifications
+                var notifications = storedNotifications
                     .Select(n => n.Json)
                     .Where(n => n.TryGet("AlertType", out string type) && type.StartsWith("Etl_"))
                     .Where(n => n.TryGet("Details", out BlittableJsonReaderObject _))
@@ -142,9 +145,8 @@ namespace SlowTests.Server.Documents.ETL
                         n.TryGet("Details", out BlittableJsonReaderObject details);
                         return details.ToString();
                     }).ToArray();
+                return notifications;
             }
-
-            return notifications;
         }
         
         protected IAsyncDisposable OpenEtlOffArea(IDocumentStore store, long etlTaskId, bool cleanTombstones = false)
@@ -160,6 +162,32 @@ namespace SlowTests.Server.Documents.ETL
                 
                 store.Maintenance.Send(new ToggleOngoingTaskStateOperation(etlTaskId, OngoingTaskType.RavenEtl, false));
             });
+        }
+
+        public override void Dispose()
+        {
+            try
+            {
+                if (_src != null)
+                {
+                    var b = Context.TestException;
+                    var notifications = GetEtlErrorNotifications(_src).Result;
+
+                    var a = Context.TestOutput?.ToString();
+                    
+                    if (notifications.Any() && Context.TestException != null && Context.TestOutput != null)
+                    {
+                        string message = string.Join(",\n", notifications);
+                        Context.TestOutput.WriteLine(message);
+                    }
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+
+            base.Dispose();
         }
     }
 }
