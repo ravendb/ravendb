@@ -224,7 +224,8 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         using (Slice.External(context.Allocator, tsKey, tsKey.Size - 1, out var statsKey))
                         {
-                            Stats.DeleteStats(context, collectionName, statsKey);
+                            if (Stats.GetStats(context, statsKey).Count == 0)
+                                Stats.DeleteStats(context, collectionName, statsKey);
                         }
                     }
                 }
