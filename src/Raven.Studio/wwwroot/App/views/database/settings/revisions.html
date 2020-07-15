@@ -147,7 +147,7 @@
             <label></label>
         </div>
         <div class="name">
-            <h3 data-bind="text: isDefault() ? 'Default' : collection()"></h3>
+            <h3 data-bind="text: isDefault() ? 'Default' : collection(), attr: { title: collection() }"></h3>
         </div>
         <div class="flex-grow">
             <ul class="properties">
