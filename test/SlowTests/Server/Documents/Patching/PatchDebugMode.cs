@@ -48,16 +48,10 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
-                    
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
+
                     // Documents Load Check
-                    if (actions.TryGet("LoadDocument", out BlittableJsonReaderArray loadDocument) == false)
-                    {
-                        throw new Exception("<LoadDocument> section not found");
-                    }
+                    Assert.True(actions.TryGet("LoadDocument", out BlittableJsonReaderArray loadDocument), "<LoadDocument> section not found");
 
                     (loadDocument[0] as BlittableJsonReaderObject).TryGet("Id", out string id); 
                     Assert.Equal("cars/1", id);
@@ -70,10 +64,7 @@ namespace SlowTests.Server.Documents.Patching
                     Assert.Equal(false, exists);
                     
                     // Counters Load Check
-                    if (actions.TryGet("GetCounter", out BlittableJsonReaderArray getCounter) == false)
-                    {
-                        throw new Exception("<GetCounter> section not found");
-                    }
+                    Assert.True(actions.TryGet("GetCounter", out BlittableJsonReaderArray getCounter), "<GetCounter> section not found");
 
                     (getCounter[0] as BlittableJsonReaderObject).TryGet("Name", out string name); 
                     Assert.Equal("Counter1", name);
@@ -88,10 +79,7 @@ namespace SlowTests.Server.Documents.Patching
                     Assert.Equal(false, exists);
                     
                     // Time Series Load Check
-                    if (actions.TryGet("GetTimeSeries", out BlittableJsonReaderArray getTimeSeries) == false)
-                    {
-                        throw new Exception("<GetTimeSeries> section not found");
-                    }
+                    Assert.True(actions.TryGet("GetTimeSeries", out BlittableJsonReaderArray getTimeSeries), "<GetTimeSeries> section not found");
 
                     (getTimeSeries[0] as BlittableJsonReaderObject).TryGet("Name", out name); 
                     Assert.Equal("TimeSeries1", name);
@@ -139,16 +127,10 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
-                    
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
+
                     // Document Put Check
-                    if (actions.TryGet("PutDocument", out BlittableJsonReaderArray putDocument) == false)
-                    {
-                        throw new Exception("<PutDocument> section not found");
-                    }
+                    Assert.True(actions.TryGet("PutDocument", out BlittableJsonReaderArray putDocument), "<PutDocument> section not found");
 
                     (putDocument[0] as BlittableJsonReaderObject).TryGet("Id", out string id); 
                     Assert.Equal("cars/2", id);
@@ -184,16 +166,10 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
                     
                     // Counters Modifications Check
-                    if (actions.TryGet("IncrementCounter", out BlittableJsonReaderArray incrementCounter) == false)
-                    {
-                        throw new Exception("<IncrementCounter> section not found");
-                    }
+                    Assert.True(actions.TryGet("IncrementCounter", out BlittableJsonReaderArray incrementCounter), "<IncrementCounter> section not found");
 
                     (incrementCounter[0] as BlittableJsonReaderObject).TryGet("Name", out string name); 
                     Assert.Equal("Counter1", name);
@@ -254,16 +230,10 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
                     
                     // Time Series Modifications Check
-                    if (actions.TryGet("AppendTimeSeries", out BlittableJsonReaderArray appendTimeSeries) == false)
-                    {
-                        throw new Exception("<AppendTimeSeries> section not found");
-                    }
+                    Assert.True(actions.TryGet("AppendTimeSeries", out BlittableJsonReaderArray appendTimeSeries), "<AppendTimeSeries> section not found");
 
                     (appendTimeSeries[0] as BlittableJsonReaderObject).TryGet("Name", out string name); 
                     Assert.Equal("TimeSeries1", name);
@@ -327,26 +297,14 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
                     
                     // Document Delete Check
-                    if (actions.TryGet("DeleteDocument", out BlittableJsonReaderArray deleteDocument) == false)
-                    {
-                        throw new Exception("<DeleteDocument> section not found");
-                    }
-
+                    Assert.True(actions.TryGet("DeleteDocument", out BlittableJsonReaderArray deleteDocument), "<DeleteDocument> section not found");
                     Assert.Equal("cars/2", deleteDocument[0].ToString());
-                   
-                    
-                    // Counters Delete Check
-                    if (actions.TryGet("DeleteCounter", out BlittableJsonReaderArray deleteCounter) == false)
-                    {
-                        throw new Exception("<DeleteCounter> section not found");
-                    }
 
+                    // Counters Delete Check
+                    Assert.True(actions.TryGet("DeleteCounter", out BlittableJsonReaderArray deleteCounter), "<DeleteCounter> section not found");
                     Assert.Equal("Counter1", deleteCounter[0].ToString());
                 }
             }
@@ -393,16 +351,10 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
                     
                     // Time Series Delete Check
-                    if (actions.TryGet("DeleteTimeSeries", out BlittableJsonReaderArray deleteTimeSeries) == false)
-                    {
-                        throw new Exception("<DeleteTimeSeries> section not found");
-                    }
+                    Assert.True(actions.TryGet("DeleteTimeSeries", out BlittableJsonReaderArray deleteTimeSeries), "<DeleteTimeSeries> section not found");
                     
                     (deleteTimeSeries[0] as BlittableJsonReaderObject).TryGet("Name", out string name); 
                     Assert.Equal("TimeSeries1", name);
@@ -465,16 +417,10 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
                     
                     // Document Put Check
-                    if (actions.TryGet("PutDocument", out BlittableJsonReaderArray putDocument) == false)
-                    {
-                        throw new Exception("<PutDocument> section not found");
-                    }
+                    Assert.True(actions.TryGet("PutDocument", out BlittableJsonReaderArray putDocument), "<PutDocument> section not found");
 
                     (putDocument[0] as BlittableJsonReaderObject).TryGet("Id", out string id); 
                     Assert.Equal("cars/2", id);
@@ -483,10 +429,7 @@ namespace SlowTests.Server.Documents.Patching
                     Assert.Equal("Toyota", model);
                     
                     // Counters Modifications Check
-                    if (actions.TryGet("IncrementCounter", out BlittableJsonReaderArray incrementCounter) == false)
-                    {
-                        throw new Exception("<IncrementCounter> section not found");
-                    }
+                    Assert.True(actions.TryGet("IncrementCounter", out BlittableJsonReaderArray incrementCounter), "<IncrementCounter> section not found");
 
                     (incrementCounter[0] as BlittableJsonReaderObject).TryGet("Name", out string name); 
                     Assert.Equal("Counter1", name);
@@ -511,10 +454,7 @@ namespace SlowTests.Server.Documents.Patching
                     Assert.Equal(true, created);
                     
                     // Time Series Modifications Check
-                    if (actions.TryGet("AppendTimeSeries", out BlittableJsonReaderArray appendTimeSeries) == false)
-                    {
-                        throw new Exception("<AppendTimeSeries> section not found");
-                    }
+                    Assert.True(actions.TryGet("AppendTimeSeries", out BlittableJsonReaderArray appendTimeSeries), "<AppendTimeSeries> section not found");
 
                     (appendTimeSeries[0] as BlittableJsonReaderObject).TryGet("Name", out name); 
                     Assert.Equal("TimeSeries1", name);
@@ -603,33 +543,18 @@ namespace SlowTests.Server.Documents.Patching
                     var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
                     store.Commands().Execute(cmd);
                     
-                    if (cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions) == false)
-                    {
-                        throw new Exception("<Actions> section not found");
-                    }
+                    Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
                     
                     // Document Delete Check
-                    if (actions.TryGet("DeleteDocument", out BlittableJsonReaderArray deleteDocument) == false)
-                    {
-                        throw new Exception("<DeleteDocument> section not found");
-                    }
-
+                    Assert.True(actions.TryGet("DeleteDocument", out BlittableJsonReaderArray deleteDocument), "<DeleteDocument> section not found");
                     Assert.Equal("cars/2", deleteDocument[0].ToString());
-                   
-                    
-                    // Counters Delete Check
-                    if (actions.TryGet("DeleteCounter", out BlittableJsonReaderArray deleteCounter) == false)
-                    {
-                        throw new Exception("<DeleteCounter> section not found");
-                    }
 
+                    // Counters Delete Check
+                    Assert.True(actions.TryGet("DeleteCounter", out BlittableJsonReaderArray deleteCounter), "<DeleteCounter> section not found");
                     Assert.Equal("Counter1", deleteCounter[0].ToString());
                     
                     // Time Series Delete Check
-                    if (actions.TryGet("DeleteTimeSeries", out BlittableJsonReaderArray deleteTimeSeries) == false)
-                    {
-                        throw new Exception("<DeleteTimeSeries> section not found");
-                    }
+                    Assert.True(actions.TryGet("DeleteTimeSeries", out BlittableJsonReaderArray deleteTimeSeries), "<DeleteTimeSeries> section not found");
                     
                     (deleteTimeSeries[0] as BlittableJsonReaderObject).TryGet("Name", out string name); 
                     Assert.Equal("TimeSeries1", name);
