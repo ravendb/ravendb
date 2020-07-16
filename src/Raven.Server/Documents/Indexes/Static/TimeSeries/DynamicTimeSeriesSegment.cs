@@ -50,7 +50,8 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
                 if (_name == null)
                 {
                     var context = CurrentIndexingScope.Current.QueryContext;
-                    _name = TimeSeriesStorage.GetOriginalName(context.Documents, _segmentEntry.DocId, _segmentEntry.Name);
+                    var ts = context.Documents.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
+                    _name = ts.GetOriginalName(context.Documents, _segmentEntry.DocId, _segmentEntry.Name);
                 }
 
                 return _name;

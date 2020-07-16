@@ -1494,7 +1494,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             try
             {
-                newName = EnsureOriginalName(ctx, docId, newName);
+                newName = GetOriginalName(ctx, docId, newName);
             }
             catch (Exception e)
             {
@@ -1581,7 +1581,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             try
             {
-                tsName = EnsureOriginalName(ctx, docId, tsName);
+                tsName = GetOriginalName(ctx, docId, tsName);
             }
             catch (Exception e)
             {
@@ -1650,80 +1650,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static string EnsureOriginalName(DocumentsOperationContext ctx, string docId, string tsName)
+        public string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
         {
-            var parts = tsName.Split(TimeSeriesConfiguration.TimeSeriesRollupSeparator);
-            if (parts.Length == 1)
-                return tsName;
+            var name = Stats.GetTimeSeriesNameOriginalCasing(context, docId, lowerName);
+            if (name == null)
+                throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in document '{docId}'");
 
-            if (parts.Length == 2)
-            {
-                var raw = GetOriginalName(ctx, docId, parts[0]);
-                return $"{raw}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{parts[1]}";
-            }
-
-            Debug.Assert(false, $"The time-series '{tsName}' in document '{docId}', has invalid number of parts ({parts.Length}).");
-            return tsName;
-        }
-
-        public static string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
-        {
-            try
-            {
-                using (DocumentIdWorker.GetLower(context.Allocator, docId, out var docIdSlice))
-                {
-                    if (context.DocumentDatabase.DocumentsStorage.GetTableValueReaderForDocument(context, docIdSlice, throwOnConflict: true, out var tvr) == false)
-                        throw new InvalidOperationException($"Can't find document '{docId}'");
-
-                    var doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsStorage.DocumentsTable.Data, out int size), size, context);
-                    using (doc)
-                    {
-                        var name = GetOriginalName(lowerName, doc);
-                        if (name == null)
-                            throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in document '{docId}'");
-
-                        return name;
-                    }
-                }
-            }
-            catch (DocumentConflictException)
-            {
-                // will try to get it from the conflict storage
-                foreach (var conflict in context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, lowerName))
-                {
-                    if (conflict.Doc == null)
-                        continue;
-
-                    using (conflict.Doc)
-                    {
-                        var name = GetOriginalName(lowerName, conflict.Doc);
-                        if (name == null)
-                            continue;
-                        return name;
-                    }
-                }
-                throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in conflicted documents '{docId}'");
-            }
-        }
-
-        public static string GetOriginalName(string lowerName, BlittableJsonReaderObject doc)
-        {
-            if (doc == null)
-                return null;
-
-            if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                return null;
-
-            if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray ts) == false)
-                return null;
-
-            foreach (LazyStringValue item in ts)
-            {
-                if (string.Equals(item, lowerName, StringComparison.OrdinalIgnoreCase))
-                    return item;
-            }
-
-            return null;
+            return name;
         }
 
         public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag)
