@@ -2171,8 +2171,8 @@ namespace Raven.Server.ServerWide
                 }
                 catch (Exception e)
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Error during idle operations for the server", e);
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Error during idle operations for the server", e);
                 }
             }
             finally
