@@ -361,10 +361,11 @@ namespace Raven.Server.Documents.Replication
             {
                 while (_database.Time.GetUtcNow().Ticks > NextReplicateTicks)
                 {
-                    if (_parent.DebugWaitAndRunReplicationOnce != null)
+                    var once = _parent.DebugWaitAndRunReplicationOnce;
+                    if (once != null)
                     {
-                        _parent.DebugWaitAndRunReplicationOnce.Wait(_cts.Token);
-                        _parent.DebugWaitAndRunReplicationOnce?.Reset();
+                        once.Reset();
+                        once.Wait(_cts.Token);
                     }
 
                     var sp = Stopwatch.StartNew();

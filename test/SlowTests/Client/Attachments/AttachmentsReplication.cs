@@ -1179,43 +1179,45 @@ namespace SlowTests.Client.Attachments
                 }
 
                 var db1 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store1.Database);
-                var mre = new ManualResetEventSlim(true);
-                db1.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
-
-                await SetupReplicationAsync(store1, store2);
-
-                var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
-
-                var count = WaitForValue(() =>
+                using (var controller1 = new ReplicationController(db1))
                 {
-                    using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                    await SetupReplicationAsync(store1, store2);
+                    controller1.ReplicateOnce();
+
+                    var db2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store2.Database);
+
+                    var count = WaitForValue(() =>
                     {
-                        return db2.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
+                        using (db2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            return db2.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
+                        }
+                    }, 1);
+                    Assert.Equal(1, count);
+
+                    db2.ServerStore.DatabasesLandlord.UnloadDirectly(db2.Name);
+
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User(), "bar");
+                        await session.SaveChangesAsync();
                     }
-                }, 1);
-                Assert.Equal(1, count);
 
-                db2.ServerStore.DatabasesLandlord.UnloadDirectly(db2.Name);
+                    await SetupReplicationAsync(store2, store3);
 
-                using (var session = store2.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User(), "bar");
-                    await session.SaveChangesAsync();
+                    var db3 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
+                    count = WaitForValue(() =>
+                    {
+                        using (db3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            return db3.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
+                        }
+                    }, 1);
+                    Assert.Equal(1, count);
                 }
-
-                await SetupReplicationAsync(store2, store3);
-
-                var db3 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store3.Database);
-                count = WaitForValue(() =>
-                {
-                    using (db3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
-                    {
-                        return db3.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx).AttachmentCount;
-                    }
-                }, 1);
-                Assert.Equal(1, count);
+                
             }
         }
 
@@ -1226,57 +1228,57 @@ namespace SlowTests.Client.Attachments
             using (var store2 = GetDocumentStore())
             {
                 var database1 = await GetDocumentDatabaseInstanceFor(store1);
-                database1.Configuration.Replication.MaxItemsCount = 1;
-                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim();
-
-                using (var session = store1.OpenAsyncSession())
+                using (var controller = new ReplicationController(database1))
                 {
-                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
-                    using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
+                    using (var session = store1.OpenAsyncSession())
                     {
-                        session.Advanced.Attachments.Store("users/1", "a1", a1, "a1/png");
-                        await session.SaveChangesAsync();
+                        await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                        using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
+                        {
+                            session.Advanced.Attachments.Store("users/1", "a1", a1, "a1/png");
+                            await session.SaveChangesAsync();
+                        }
                     }
-                }
 
-                using (var session = store1.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "Karmel" }, "users/2");
-                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    using (var session = store1.OpenAsyncSession())
                     {
-                        session.Advanced.Attachments.Store("users/2", "a2", a1, "a2/png");
-                        await session.SaveChangesAsync();
+                        await session.StoreAsync(new User {Name = "Karmel"}, "users/2");
+                        using (var a1 = new MemoryStream(new byte[] {1, 2, 3, 4}))
+                        {
+                            session.Advanced.Attachments.Store("users/2", "a2", a1, "a2/png");
+                            await session.SaveChangesAsync();
+                        }
                     }
-                }
 
-                await SetupReplicationAsync(store1, store2);
-                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
+                    await SetupReplicationAsync(store1, store2);
+                    controller.ReplicateOnce();
 
-                Assert.True(WaitForDocument(store2, "users/1"));
+                    Assert.True(WaitForDocument(store2, "users/1"));
 
-                using (var session = store2.OpenAsyncSession())
-                {
-                    var user = await session.LoadAsync<User>("users/1");
-                    Assert.NotNull(user);
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/1");
+                        Assert.NotNull(user);
 
-                    var metadata = session.Advanced.GetMetadataFor(user);
-                    Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                    Assert.Equal(1, attachments.Length);
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                        Assert.Equal(1, attachments.Length);
 
-                    Assert.Null(await session.LoadAsync<User>("users/2"));
-                }
+                        Assert.Null(await session.LoadAsync<User>("users/2"));
+                    }
 
-                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
-                Assert.True(WaitForDocument(store2, "users/2"));
+                    controller.ReplicateOnce();
+                    Assert.True(WaitForDocument(store2, "users/2"));
 
-                using (var session = store2.OpenAsyncSession())
-                {
-                    var user = await session.LoadAsync<User>("users/2");
-                    var metadata = session.Advanced.GetMetadataFor(user);
-                    Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
-                    var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
-                    Assert.Equal(1, attachments.Length);
+                    using (var session = store2.OpenAsyncSession())
+                    {
+                        var user = await session.LoadAsync<User>("users/2");
+                        var metadata = session.Advanced.GetMetadataFor(user);
+                        Assert.Contains(DocumentFlags.HasAttachments.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                        var attachments = metadata.GetObjects(Constants.Documents.Metadata.Attachments);
+                        Assert.Equal(1, attachments.Length);
+                    }
                 }
             }
         }
