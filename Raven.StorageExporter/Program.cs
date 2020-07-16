@@ -141,6 +141,44 @@ namespace Raven.StorageExporter
                         currArgPos += 2;
 
                         break;
+                    case "-LogFileSize":
+                        if (currArgPos + 1 == args.Length)
+                        {
+                            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, $"{nameof(configuration.LogFileSize)} argument should have a number value.\n");
+                            return false;
+                        }
+                        int logFileSizeValue;
+                        var logFileSize = args[currArgPos + 1];
+                        if (int.TryParse(logFileSize, out logFileSizeValue) && logFileSizeValue > 0)
+                        {
+                            configuration.LogFileSize = logFileSize;
+                            currArgPos += 2;
+                        }
+                        else
+                        {
+                            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, $"{nameof(configuration.LogFileSize)} should be a number greater than 0 ({nameof(configuration.LogFileSize)}={logFileSize}).\n");
+                            return false;
+                        }
+                        break;
+                    case "-MaxVerPages":
+                        if (currArgPos + 1 == args.Length)
+                        {
+                            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, $"{nameof(configuration.MaxVerPages)} argument should have a number value.\n");
+                            return false;
+                        }
+                        int maxVerPagesValue;
+                        var maxVerPages = args[currArgPos + 1];
+                        if (int.TryParse(maxVerPages, out maxVerPagesValue) && maxVerPagesValue > 0)
+                        {
+                            configuration.MaxVerPages = maxVerPages;
+                            currArgPos += 2;
+                        }
+                        else
+                        {
+                            ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, $"{nameof(configuration.MaxVerPages)} should be a number greater than 0 ({nameof(configuration.MaxVerPages)}={maxVerPages}).\n");
+                            return false;
+                        }
+                        break;
                     default:
                         ConsoleUtils.ConsoleWriteLineWithColor(ConsoleColor.Red, "Unidentified argument {0}.\n", args[currArgPos]);
                         return false;
@@ -172,6 +210,8 @@ Parameters:
  --Compression : Indicates that the database has the compression bundle.
  -Encryption <Encryption Key> <Algorithm Type> <Prefered Encryption Key Bits Size>: Encryption bundle key, algorithm type and bits size.
  -JournalsPath <Path> : The custom path to Voron journal files or Esent logs 
+ -LogFileSize <integer number> : LogFileSize configuration for ESENT storage (default size is 64).
+ -MaxVerPages <integer number> : The MaxVerPages configuration for ESENT storage (default size is 512).
  ");
             Console.WriteLine();
         }

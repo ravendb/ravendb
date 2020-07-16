@@ -9,6 +9,8 @@ namespace Raven.StorageExporter
         public string DatabaseDataDir { get; set; }
         public string OutputDumpPath { get; set; }
         public string JournalsPath { get; set; }
+        public string LogFileSize { get; set; }
+        public string MaxVerPages { get; set; }
         public string TableName { get; set; }
         public int BatchSize { get; set; }
         public bool IsRavendbFs { get; set; }
@@ -33,7 +35,7 @@ namespace Raven.StorageExporter
             {
                 int batchSize = BatchSize == 0 ? DefaultBatchSize : BatchSize;
 
-                using (var storageExporter = new StorageExporter(DatabaseDataDir, OutputDumpPath, batchSize, DocumentsStartEtag, HasCompression, Encryption, JournalsPath, IsRavendbFs))
+                using (var storageExporter = new StorageExporter(DatabaseDataDir, OutputDumpPath, batchSize, DocumentsStartEtag, HasCompression, Encryption, JournalsPath, IsRavendbFs, LogFileSize, MaxVerPages))
                 {
                     if (IsRavendbFs)
                     {
