@@ -51,6 +51,7 @@ namespace Raven.Client.ServerWide.Operations
     public class CompactionProgress : CompactionProgressBase<CompactionProgress>, IOperationProgress
     {
         private readonly CompactionResult _result;
+        private Dictionary<string, CompactionProgress> _cachedIndexesResults;
 
         public CompactionProgress() : this(new CompactionResult())
         {
@@ -100,10 +101,18 @@ namespace Raven.Client.ServerWide.Operations
         
         public override Dictionary<string, CompactionProgress> IndexesResults
         {
-            get => _result.IndexesResults.ToDictionary(x => x.Key, x => x.Value.Progress);
+            get
+            {
+                if (_cachedIndexesResults == null)
+                {
+                    _cachedIndexesResults =_result.IndexesResults.ToDictionary(x => x.Key, x => x.Value.Progress);
+                }
+                
+                return _cachedIndexesResults;
+            }
             set => throw new NotSupportedException();
         }
-        
+
         public override bool Skipped
         {
             get => _result.Skipped;
