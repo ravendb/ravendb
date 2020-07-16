@@ -34,7 +34,7 @@ namespace Raven.StorageExporter
         private readonly string _tmpFolder;
 
         public StorageExporter(string databaseBaseDirectory, string databaseOutputFile, 
-            int batchSize, Etag documentsStartEtag, bool hasCompression, EncryptionConfiguration encryption, string journalsPath, bool isRavenFs)
+            int batchSize, Etag documentsStartEtag, bool hasCompression, EncryptionConfiguration encryption, string journalsPath, bool isRavenFs, string logFileSize, string maxVerPages)
         {
             HasCompression = hasCompression;
             Encryption = encryption;
@@ -58,6 +58,11 @@ namespace Raven.StorageExporter
                     }
                 }
             };
+
+            if (string.IsNullOrEmpty(logFileSize) == false)
+                ravenConfiguration.Settings.Add(Constants.Esent.LogFileSize, logFileSize);
+            if (string.IsNullOrEmpty(maxVerPages) == false)
+                ravenConfiguration.Settings.Add(Constants.Esent.MaxVerPages, maxVerPages);
 
             if (isRavenFs)
             {
@@ -656,7 +661,12 @@ namespace Raven.StorageExporter
                 }
                 catch (InvalidOperationException ioe)
                 {
-                    ConsoleUtils.PrintErrorAndFail(string.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}", ioe.Message), ioe.StackTrace);
+                    var msg = string.Empty;
+                    if (ioe.InnerException != null)
+                    {
+                        msg = $"{Environment.NewLine}Inner error: {ioe.InnerException.Message}{Environment.NewLine}";
+                    }
+                    ConsoleUtils.PrintErrorAndFail(string.Format("Failed to initialize the storage it is probably been locked by RavenDB.\nError message:\n{0}{1}", ioe.Message, msg), ioe.StackTrace);
                 }
                 catch (Exception e)
                 {
