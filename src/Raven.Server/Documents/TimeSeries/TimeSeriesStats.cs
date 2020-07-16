@@ -285,6 +285,14 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public string GetTimeSeriesNameOriginalCasing(DocumentsOperationContext context, string docId, string name)
+        {
+            using (var slicer = new TimeSeriesSliceHolder(context, docId, name))
+            {
+                return GetTimeSeriesNameOriginalCasing(context, slicer.StatsKey);
+            }
+        }
+
         public (long Count, DateTime Start, DateTime End) GetStats(DocumentsOperationContext context, TimeSeriesSliceHolder slicer)
         {
             return GetStats(context, slicer.StatsKey);
