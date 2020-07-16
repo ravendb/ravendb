@@ -31,6 +31,7 @@ namespace Raven.Server.Documents.TimeSeries
                     new Dictionary<string, TimeSeriesCollectionConfiguration>(Configuration.Collections, StringComparer.OrdinalIgnoreCase);
 
             Configuration.InitializeRollupAndRetention();
+
             _checkFrequency = Configuration.PolicyCheckFrequency ?? TimeSeriesConfiguration.DefaultPolicyCheckFrequency;
         }
 
@@ -44,6 +45,8 @@ namespace Raven.Server.Documents.TimeSeries
                     return null;
                 }
 
+                database.ServerStore.LicenseManager.AssertCanAddTimeSeriesRollupsAndRetention(dbRecord.TimeSeries);
+
                 if (policyRunner != null)
                 {
                     // no changes
@@ -51,6 +54,7 @@ namespace Raven.Server.Documents.TimeSeries
                         return policyRunner;
                 }
                 policyRunner?.Dispose();
+
                 var runner = new TimeSeriesPolicyRunner(database, dbRecord.TimeSeries);
                 runner.Start();
                 return runner;
@@ -58,10 +62,10 @@ namespace Raven.Server.Documents.TimeSeries
             catch (Exception e)
             {
                 
-                const string msg = "Cannot enable retention policy runner as the configuration record is not valid.";
+                const string msg = "Cannot enable policy runner as the configuration record is not valid.";
                 database.NotificationCenter.Add(AlertRaised.Create(
                     database.Name,
-                    $"retention policy runner error in {database.Name}", msg,
+                    $"policy runner error in {database.Name}", msg,
                     AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
                 var logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(database.Name);
