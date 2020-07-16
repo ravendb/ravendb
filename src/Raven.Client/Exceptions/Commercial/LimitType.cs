@@ -55,8 +55,8 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Pull Replication As Sink")]
         PullReplicationAsSink,
 
-        [Description("Time Series Aggregation and Retention")]
-        TimeSeriesAggregationAndRetention,
+        [Description("Time Series Rollups and Retention")]
+        TimeSeriesRollupsAndRetention,
 
         [Description("Encrypted Backup")]
         EncryptedBackup

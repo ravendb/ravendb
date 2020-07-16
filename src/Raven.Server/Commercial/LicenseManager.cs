@@ -857,7 +857,7 @@ namespace Raven.Server.Commercial
             var pullReplicationAsHubCount = 0;
             var documentsCompressionCount = 0;
             var pullReplicationAsSinkCount = 0;
-            var timeSeriesAggregationAndRetentionCount = 0;
+            var timeSeriesRollupsAndRetentionCount = 0;
             var ravenEtlCount = 0;
             var sqlEtlCount = 0;
             var snapshotBackupsCount = 0;
@@ -896,8 +896,8 @@ namespace Raven.Server.Commercial
                         databaseRecord.SinkPullReplications.Count > 0)
                         pullReplicationAsSinkCount++;
 
-                    if (HasTimeSeriesAggregationAndRetention(databaseRecord.TimeSeries))
-                        timeSeriesAggregationAndRetentionCount++;
+                    if (HasTimeSeriesRollupsAndRetention(databaseRecord.TimeSeries))
+                        timeSeriesRollupsAndRetentionCount++;
 
                     if (HasRavenEtl(databaseRecord.RavenEtls,
                         databaseRecord.RavenConnectionStrings))
@@ -949,10 +949,10 @@ namespace Raven.Server.Commercial
                 throw GenerateLicenseLimit(LimitType.PullReplicationAsSink, message);
             }
 
-            if (timeSeriesAggregationAndRetentionCount > 0 && newLicenseStatus.HasTimeSeriesAggregationAndRetention == false)
+            if (timeSeriesRollupsAndRetentionCount > 0 && newLicenseStatus.HasTimeSeriesRollupsAndRetention == false)
             {
-                var message = GenerateDetails(timeSeriesAggregationAndRetentionCount, "time series aggregation and retention");
-                throw GenerateLicenseLimit(LimitType.TimeSeriesAggregationAndRetention, message);
+                var message = GenerateDetails(timeSeriesRollupsAndRetentionCount, "time series rollups and retention");
+                throw GenerateLicenseLimit(LimitType.TimeSeriesRollupsAndRetention, message);
             }
 
             if (ravenEtlCount > 0 && newLicenseStatus.HasRavenEtl == false)
@@ -1027,7 +1027,7 @@ namespace Raven.Server.Commercial
             return false;
         }
 
-        private static bool HasTimeSeriesAggregationAndRetention(TimeSeriesConfiguration configuration)
+        private static bool HasTimeSeriesRollupsAndRetention(TimeSeriesConfiguration configuration)
         {
             if (configuration?.Collections == null)
                 return false;
@@ -1178,19 +1178,19 @@ namespace Raven.Server.Commercial
             throw GenerateLicenseLimit(LimitType.PullReplicationAsSink, details);
         }
 
-        public void AssertCanAddTimeSeriesAggregationAndRetention(TimeSeriesConfiguration configuration)
+        public void AssertCanAddTimeSeriesRollupsAndRetention(TimeSeriesConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
 
-            if (LicenseStatus.HasTimeSeriesAggregationAndRetention)
+            if (LicenseStatus.HasTimeSeriesRollupsAndRetention)
                 return;
 
-            if (HasTimeSeriesAggregationAndRetention(configuration) == false)
+            if (HasTimeSeriesRollupsAndRetention(configuration) == false)
                 return;
 
-            var details = $"Your current license ({LicenseStatus.Type}) does not allow adding time series aggregation and retention";
-            throw GenerateLicenseLimit(LimitType.TimeSeriesAggregationAndRetention, details);
+            var details = $"Your current license ({LicenseStatus.Type}) does not allow adding time series rollups and retention";
+            throw GenerateLicenseLimit(LimitType.TimeSeriesRollupsAndRetention, details);
         }
 
         public void AssertCanAddRavenEtl()
