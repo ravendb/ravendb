@@ -19,10 +19,7 @@ class inlineTimeSeriesColumn extends timeSeriesColumn<document> {
     }
     
     getCellValue(item: document): any {
-        return {
-            Count: (item as any).Count,
-            Results: (item as any).Results
-        };
+        return item.toDto(true);
     }
 }
 

@@ -503,8 +503,8 @@ namespace Raven.Server.Documents.TimeSeries
                         try
                         {
                             var document = context.DocumentDatabase.DocumentsStorage.Get(context, item.DocId, throwOnConflict: false);
-                            docId = document.Id;
-                            name = TimeSeriesStorage.GetOriginalName(item.Name, document.Data) ?? name;
+                            docId = document?.Id ?? docId;
+                            name = tss.GetOriginalName(context, docId, name);
                         }
                         catch
                         {

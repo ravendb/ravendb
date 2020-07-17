@@ -502,9 +502,9 @@ namespace FastTests
         {
             var admin = store.Maintenance.ForDatabase(dbName);
 
-            timeout = timeout ?? (Debugger.IsAttached
-                          ? TimeSpan.FromMinutes(15)
-                          : TimeSpan.FromMinutes(1));
+            timeout ??= (Debugger.IsAttached
+                ? TimeSpan.FromMinutes(15)
+                : TimeSpan.FromMinutes(1));
 
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)

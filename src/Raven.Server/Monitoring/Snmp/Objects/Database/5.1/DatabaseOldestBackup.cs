@@ -53,6 +53,9 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 if (databaseRecord == null)
                     return null; // should not happen
 
+                if (databaseRecord.IsDisabled)
+                    return null; // we do not monitor disabled databases (RavenDB-15335)
+
                 var periodicBackupTaskIds = databaseRecord.PeriodicBackupsTaskIds;
                 if (periodicBackupTaskIds == null || periodicBackupTaskIds.Count == 0)
                     return null; // no backup

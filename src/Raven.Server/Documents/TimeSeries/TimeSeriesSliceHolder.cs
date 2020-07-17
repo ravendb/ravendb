@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.TimeSeries
         private readonly List<ByteStringContext.ExternalScope> _externalScopesToDispose = new List<ByteStringContext.ExternalScope>();
 
         public ByteString SegmentBuffer, TimeSeriesKeyBuffer;
-        public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, LowerTimeSeriesName, DocumentKeyPrefix, StatsKey, CollectionSlice;
+        public Slice TimeSeriesKeySlice, TimeSeriesPrefixSlice, LowerTimeSeriesName, DocumentKeyPrefix, StatsKey, CollectionSlice, NameSlice;
         public DateTime CurrentBaseline;
 
         public TimeSeriesSliceHolder(DocumentsOperationContext context, string documentId, string name, string collection = null)
@@ -72,6 +72,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (Collection != null)
                 _internalScopesToDispose.Add(DocumentIdWorker.GetStringPreserveCase(_context, Collection, out CollectionSlice));
+        
+            _internalScopesToDispose.Add(Slice.From(_context.Allocator, Name, out NameSlice));
         }
 
         public void SetBaselineToKey(DateTime time)

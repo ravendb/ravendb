@@ -980,7 +980,11 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
-            _locker.EnterReadLock();
+            if (_locker.TryEnterReadLock(0) == false)
+            {
+                // the db being disposed
+                return;
+            }
 
             try
             {

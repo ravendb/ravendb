@@ -41,6 +41,8 @@ namespace Raven.Server.ServerWide.Context
     public abstract class TransactionOperationContext<TTransaction> : JsonOperationContext
         where TTransaction : RavenTransaction
     {
+        internal const short DefaultTransactionMarker = 2;
+
         public readonly ByteStringContext Allocator;
         public readonly TransactionPersistentContext PersistentContext;
 
@@ -89,7 +91,7 @@ namespace Raven.Server.ServerWide.Context
             var value = (short)(CurrentTxMarker + TransactionMarkerOffset);
 
             if (value == 0)
-                return 2;
+                return DefaultTransactionMarker;
             if (value < 0)
                 return (short)-value;
 

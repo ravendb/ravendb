@@ -278,6 +278,47 @@ namespace FastTests.Server.Replication
             return resList;
         }
 
+
+        public class ReplicationController : IDisposable
+        {
+            private readonly DocumentDatabase _database;
+            private readonly ManualResetEventSlim _mre;
+            public ReplicationController(DocumentDatabase database, bool passSingleTx = true)
+            {
+                _database = database;
+                if (passSingleTx)
+                    database.Configuration.Replication.MaxItemsCount = 1;
+
+                database.ReplicationLoader.DebugWaitAndRunReplicationOnce ??= new ManualResetEventSlim(true);
+                _mre = database.ReplicationLoader.DebugWaitAndRunReplicationOnce;
+            }
+            public void ReplicateOnce()
+            {
+                WaitForReset();
+                _mre.Set();
+                WaitForReset();
+            }
+
+            private void WaitForReset(int timeout = 15_000)
+            {
+                var sp = Stopwatch.StartNew();
+                while (sp.ElapsedMilliseconds < timeout)
+                {
+                    if (_mre.IsSet == false)
+                        return;
+
+                    Thread.Sleep(150);
+                }
+
+                throw new TimeoutException();
+            }
+
+            public void Dispose()
+            {
+                _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
+                _mre.Set();
+            }
+        }
         public static async Task SetScriptResolutionAsync(DocumentStore store, string script, string collection)
         {
             var resolveByCollection = new Dictionary<string, ScriptResolver>

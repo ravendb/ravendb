@@ -76,7 +76,7 @@
                         </div>
                         <div class="big-label" data-bind="visible: formattedExpiration">
                             <div class="content">
-                                <small>Expires</small>
+                                <small data-bind="text: expiresText"></small>
                                 <strong data-bind="html: formattedExpiration"></strong>
                             </div>
                         </div>
@@ -87,6 +87,13 @@
                         <div class="content text-center">
                             <small>License ID</small>
                             <strong data-bind="text: licenseId"></strong>
+                        </div>
+                    </div>
+
+                    <div class="big-label">
+                        <div class="content text-center">
+                            <small>License To</small>
+                            <strong data-bind="text: licensedTo"></strong>
                         </div>
                     </div>
                 </div>
@@ -117,6 +124,7 @@
                     <div class="name">Attachments</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Counters</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Time Series</div><div class="value"><i class="icon-checkmark"></i></div>
+                    <div class="name">Time Series Rollups & Retention</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasTimeSeriesRollupsAndRetention') }"></i></div>
 
                     <h4>External Replication</h4>
                     <div class="name">Immediate</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasExternalReplication') }"></i></div>

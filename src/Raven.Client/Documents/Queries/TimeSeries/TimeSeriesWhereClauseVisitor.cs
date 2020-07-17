@@ -53,13 +53,30 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         protected override Expression VisitMember(MemberExpression node)
         {
-            if (node.Expression is ParameterExpression p && p.Name == _alias)
+            if (node.Expression is MemberExpression innerMember && 
+                IsWhereAlias(innerMember.Expression) &&
+                innerMember.Member.Name == "Value" && 
+                innerMember.Type != typeof(double))
+            {
+                // e.g. 'Where(entry => entry.Value.NamedVal ... )'
+                // do not include 'entry.Value' in generated RQL, just 'NamedVal'
                 return Expression.Parameter(node.Type, node.Member.Name);
+            }
+
+            if (IsWhereAlias(node.Expression))
+            {
+                return Expression.Parameter(node.Type, node.Member.Name);
+            }
 
             if (JavascriptConversionExtensions.IsWrappedConstantExpression(node))
                 return AddAsQueryParameter(node);
             
             return base.VisitMember(node);
+        }
+
+        private bool IsWhereAlias(Expression expression)
+        {
+            return expression is ParameterExpression p && p.Name == _alias;
         }
 
         protected override Expression VisitConstant(ConstantExpression node)

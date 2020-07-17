@@ -1,9 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,16 +19,24 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
-        public async void can_get_detailed_collection_statistics()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task can_get_detailed_collection_statistics(bool compressed)
         {
             string strCollectionName = "Companies";
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.DocumentsCompression = new DocumentsCompressionConfiguration
+                ModifyDatabaseRecord = record =>
                 {
-                    Collections = null,
-                    CompressRevisions = false
+                    if (!compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration
+                        {
+                            Collections = null,
+                            CompressRevisions = false
+                        };
+                    }
                 }
             }))
             {
@@ -45,12 +56,18 @@ namespace SlowTests.Issues
 
                 var result = await store.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
 
+                
+
                 // insert sample data
                 using (var bulk = store.BulkInsert())
                 {
                     for (var i = 0; i < 20; i++)
                     {
-                        bulk.Store(new Company { Id = "company/" + i, Name = "name" + i });
+                        bulk.Store(new Company
+                        {
+                            Id = "company/" + i,
+                            Name = Convert.ToBase64String(Sodium.GenerateRandomBuffer(128 * 8))
+                        });
                     }
                 }
 
@@ -67,7 +84,7 @@ namespace SlowTests.Issues
                     using (var session = store.OpenAsyncSession())
                     {
                         var company = await session.LoadAsync<Company>("company/1");
-                        company.Name += i;
+                        company.Name = Convert.ToBase64String(Sodium.GenerateRandomBuffer(128*8));
                         await session.StoreAsync(company);
                         await session.SaveChangesAsync();
                     }
@@ -83,7 +100,6 @@ namespace SlowTests.Issues
                 // query the detailed collection statistics again, to check if the physical size changed after the revisions were created
                 var detailedCollectionStats_afterDataChanged = await store.Maintenance.SendAsync(new GetDetailedCollectionStatisticsOperation());
                 Assert.Equal(20, detailedCollectionStats_afterDataChanged.Collections[strCollectionName].CountOfDocuments);
-
                 long sizeInBytesWithRevisions = detailedCollectionStats_afterDataChanged.Collections[strCollectionName].Size.SizeInBytes;
                 Assert.True(sizeInBytesWithRevisions > sizeInBytesWithoutRevisions);
             }

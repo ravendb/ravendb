@@ -302,10 +302,6 @@ namespace Voron.Data.Tables
                 oldDataDecompressedScope = DecompressValue(_tx, oldData, oldDataSize, out var buffer);
                 oldData = buffer.Ptr;
                 oldDataSize = buffer.Length;
-            }
-
-            if (_schema.Compressed)
-            {
                 _tx.CachedDecompressedBuffersByStorageId?.Remove(id);
             }
 
@@ -422,7 +418,7 @@ namespace Voron.Data.Tables
 
             var ptr = DirectReadRaw(id, out int size, out bool compressed);
 
-            if (_schema.Compressed)
+            if (compressed)
                 _tx.CachedDecompressedBuffersByStorageId?.Remove(id);
 
             ByteStringContext<ByteStringMemoryCache>.InternalScope decompressValue = default;
@@ -1684,6 +1680,25 @@ namespace Voron.Data.Tables
             return deleted;
         }
 
+        public bool FindByIndex(TableSchema.FixedSizeSchemaIndexDef index, long value, out TableValueReader reader)
+        {
+            AssertWritableTable();
+            reader = default;
+            var fst = GetFixedSizeTree(index);
+
+            using (var it = fst.Iterate())
+            {
+                if (it.Seek(value) == false)
+                    return false;
+
+                if (it.CurrentKey != value)
+                    return false;
+
+                GetTableValueReader(it, out reader);
+                return true;
+            }
+        }
+
         public bool DeleteByIndex(TableSchema.FixedSizeSchemaIndexDef index, long value)
         {
             AssertWritableTable();
@@ -2038,15 +2053,18 @@ namespace Voron.Data.Tables
             var inactiveSections = InactiveSections;
             report.AddStructure(inactiveSections, includeDetails);
 
-            using (var it = inactiveSections.Iterate())
+            foreach(var section in new []{inactiveSections, activeCandidateSection})
             {
-                if (it.Seek(0))
+                using (var it = section.Iterate())
                 {
-                    do
+                    if (it.Seek(0))
                     {
-                        var inactiveSection = new RawDataSection(_tx.LowLevelTransaction, it.CurrentKey);
-                        report.AddData(inactiveSection, includeDetails);
-                    } while (it.MoveNext());
+                        do
+                        {
+                            var referencedSection = new RawDataSection(_tx.LowLevelTransaction, it.CurrentKey);
+                            report.AddData(referencedSection, includeDetails);
+                        } while (it.MoveNext());
+                    }
                 }
             }
 

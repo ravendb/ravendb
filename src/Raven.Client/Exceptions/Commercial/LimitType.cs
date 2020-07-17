@@ -7,9 +7,6 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Invalid License")]
         InvalidLicense,
 
-        [Description("Forbidden Downgrade")]
-        ForbiddenDowngrade,
-
         [Description("Forbidden Host")]
         ForbiddenHost,
 
@@ -43,9 +40,6 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Cores Limit")]
         Cores,
 
-        [Description("Downgrade")]
-        Downgrade,
-
         [Description("SNMP")]
         Snmp,
 
@@ -60,6 +54,9 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Pull Replication As Sink")]
         PullReplicationAsSink,
+
+        [Description("Time Series Rollups and Retention")]
+        TimeSeriesRollupsAndRetention,
 
         [Description("Encrypted Backup")]
         EncryptedBackup

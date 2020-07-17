@@ -10,6 +10,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -52,6 +53,102 @@ namespace SlowTests.Client.TimeSeries.Replication
                     Assert.Equal(new[] { 59d }, val.Values);
                     Assert.Equal("watches/fitbit", val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task TimeSeriesShouldBeCaseInsensitiveAndKeepOriginalCasing()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                await SetupReplicationAsync(storeA, storeB);
+
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(1), 59d, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "HeartRate")
+                        .Append(baseline.AddMinutes(2), 60d, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+
+                Validate1(storeA, baseline);
+                Validate1(storeB, baseline);
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "HeartRatE").Delete();
+                    session.SaveChanges();
+                }
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "HeArtRate")
+                        .Append(baseline.AddMinutes(3), 61d, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+
+                await Validate2(storeA, baseline);
+                await Validate2(storeB, baseline);
+            }
+
+            void Validate1(DocumentStore storeA, DateTime baseline)
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var val = session.TimeSeriesFor("users/ayende", "heartrate").Get().ToList();
+
+                    Assert.Equal(new[] {59d}, val[0].Values);
+                    Assert.Equal("watches/fitbit", val[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(new[] {60d}, val[1].Values);
+                    Assert.Equal("watches/fitbit", val[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(2), val[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal("Heartrate", session.Advanced.GetTimeSeriesFor(user).Single());
+                }
+            }
+
+            async Task Validate2(DocumentStore storeA, DateTime baseline)
+            {
+                using (var session = storeA.OpenSession())
+                {
+                    var user = session.Load<User>("users/ayende");
+                    var val = session.TimeSeriesFor("users/ayende", "heartrate").Get().Single();
+
+                    Assert.Equal(new[] {61d}, val.Values);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(3), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal("HeArtRate", session.Advanced.GetTimeSeriesFor(user).Single());
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(storeA);
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var name = database.DocumentsStorage.TimeSeriesStorage.Stats.GetTimeSeriesNamesForDocumentOriginalCasing(ctx, "users/ayende").Single();
+                    Assert.Equal("HeArtRate", name);
                 }
             }
         }
@@ -499,6 +596,87 @@ namespace SlowTests.Client.TimeSeries.Replication
                         }
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CanReplicateDeadSegment()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete();
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+                
+                var a = await GetDocumentDatabaseInstanceFor(storeA);
+                await AssertNoLeftOvers(a);
+
+                var b = await GetDocumentDatabaseInstanceFor(storeB);
+                await AssertNoLeftOvers(b);
+            }
+        }
+
+        [Fact]
+        public async Task ReplicatingDeletedDocumentShouldRemoveTimeseries()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Delete("users/ayende");
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+                
+                var a = await GetDocumentDatabaseInstanceFor(storeA);
+                await AssertNoLeftOvers(a);
+
+                var b = await GetDocumentDatabaseInstanceFor(storeB);
+                await AssertNoLeftOvers(b);
+            }
+        }
+
+        public static async Task AssertNoLeftOvers(DocumentDatabase db)
+        {
+            await db.TombstoneCleaner.ExecuteCleanup();
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(ctx));
+                Assert.Equal(0, db.DocumentsStorage.TimeSeriesStorage.Stats.GetNumberOfEntries(ctx));
             }
         }
 

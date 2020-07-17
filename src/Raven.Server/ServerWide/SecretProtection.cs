@@ -727,7 +727,7 @@ namespace Raven.Server.ServerWide
                     Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
                 
 
-            if (serverStore.LicenseManager.GetLicenseStatus().Type == LicenseType.Developer)
+            if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
             {
                 // Do not allow long range certificates in developer mode.
                 if (loadedCertificate.NotAfter > DateTime.UtcNow.AddMonths(4))
