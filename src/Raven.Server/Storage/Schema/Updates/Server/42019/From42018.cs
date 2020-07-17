@@ -91,7 +91,7 @@ namespace Raven.Server.Storage.Schema.Updates.Server
 
                 if (continueAfterCommit)
                 {
-                    step.Commit();
+                    step.Commit(null);
                     step.RenewTransactions();
                 }
             }

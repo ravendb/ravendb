@@ -85,6 +85,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                 using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
+                    context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
+
                     var commit = false;
 
                     foreach (var counterGroup in GetCounters(readTable, context, currentPrefix))
@@ -125,7 +127,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
                     if (commit)
                     {
-                        step.Commit();
+                        step.Commit(context);
                         step.RenewTransactions();
                         currentDocId = null;
                         continue;
