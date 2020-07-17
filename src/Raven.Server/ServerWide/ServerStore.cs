@@ -1717,11 +1717,11 @@ namespace Raven.Server.ServerWide
             var editExpiration = new EditExpirationCommand(expiration, databaseName, raftRequestId);
             return SendToLeaderAsync(editExpiration);
         }
-        
+
         public Task<(long Index, object Result)> ModifyDocumentsCompression(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var documentsCompression = JsonDeserializationCluster.DocumentsCompressionConfiguration(configurationJson);
-            
+
             var editDocumentsCompression = new EditDocumentsCompressionCommand(documentsCompression, databaseName, raftRequestId);
             return SendToLeaderAsync(editDocumentsCompression);
         }
@@ -1906,6 +1906,7 @@ namespace Raven.Server.ServerWide
         {
             var configuration = JsonDeserializationCluster.TimeSeriesConfiguration(configurationJson);
             configuration?.InitializeRollupAndRetention();
+            LicenseManager.AssertCanAddTimeSeriesRollupsAndRetention(configuration);
             var editTimeSeries = new EditTimeSeriesConfigurationCommand(configuration, name, raftRequestId);
             return SendToLeaderAsync(editTimeSeries);
         }
