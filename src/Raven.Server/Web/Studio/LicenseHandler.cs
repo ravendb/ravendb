@@ -46,7 +46,7 @@ namespace Raven.Server.Web.Studio
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, ServerStore.LicenseManager.GetLicenseStatus().ToJson());
+                context.Write(writer, ServerStore.LicenseManager.LicenseStatus.ToJson());
             }
 
             return Task.CompletedTask;
@@ -87,7 +87,8 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
-            await ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false, GetRaftRequestIdFromQuery());
+            ServerStore.EnsureNotPassive(skipLicenseActivation: true);
+            await ServerStore.LicenseManager.Activate(license, GetRaftRequestIdFromQuery());
 
             NoContentStatus();
         }

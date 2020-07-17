@@ -57,6 +57,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Debugging;
 using Sparrow.Threading;
+using Voron;
 using DateTime = System.DateTime;
 
 namespace Raven.Server
@@ -97,6 +98,8 @@ namespace Raven.Server
         public ICpuUsageCalculator CpuUsageCalculator;
 
         internal bool ThrowOnLicenseActivationFailure;
+
+        internal Action<StorageEnvironment> BeforeSchemaUpgrade;
 
         internal string DebugTag;
 
@@ -367,7 +370,7 @@ namespace Raven.Server
 
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
-                    if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate)
+                    if (ServerStore.LicenseManager.LicenseStatus.CanAutoRenewLetsEncryptCertificate)
                     {
                         msg += " You are using a Let's Encrypt server certificate which was supposed to renew automatically. Please check the logs for errors and contact support@ravendb.net.";
                     }
@@ -1095,7 +1098,7 @@ namespace Raven.Server
                 return null;
             }
 
-            if (ServerStore.LicenseManager.GetLicenseStatus().CanAutoRenewLetsEncryptCertificate == false && forceRenew == false)
+            if (ServerStore.LicenseManager.LicenseStatus.CanAutoRenewLetsEncryptCertificate == false && forceRenew == false)
             {
                 var msg =
                     "It's time to renew your Let's Encrypt server certificate but automatic renewal is not supported by your license. Go to the certificate page in the studio and trigger the renewal manually.";

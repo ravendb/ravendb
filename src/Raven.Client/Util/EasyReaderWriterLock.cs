@@ -7,6 +7,10 @@ namespace Raven.Client.Util
     {
         readonly ReaderWriterLockSlim _inner = new ReaderWriterLockSlim();
 
+        public bool IsReadLockHeld => _inner.IsReadLockHeld;
+
+        public bool IsWriteLockHeld => _inner.IsWriteLockHeld;
+
         public IDisposable EnterReadLock()
         {
             if (_inner.IsReadLockHeld || _inner.IsWriteLockHeld)
@@ -32,9 +36,8 @@ namespace Raven.Client.Util
 
             if (_inner.TryEnterWriteLock(ts) == false)
                 return null;
+
             return new DisposableAction(_inner.ExitWriteLock);
         }
-
-
     }
 }

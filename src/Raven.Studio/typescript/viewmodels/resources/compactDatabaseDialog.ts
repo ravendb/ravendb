@@ -77,7 +77,7 @@ class compactDatabaseDialog extends dialogViewModelBase {
     compactDatabase() {
         this.database.inProgressAction("Compacting...");
 
-        new compactDatabaseCommand(this.database.name, true, this.indexesToCompact())
+        new compactDatabaseCommand(this.database.name, this.compactDocuments(), this.indexesToCompact())
             .execute()
             .done(result => {
                 notificationCenter.instance.monitorOperation(null, result.OperationId)

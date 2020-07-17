@@ -135,6 +135,12 @@ namespace Raven.Server.Config.Categories
                     if (settingValue.KeyExistsInDatabaseRecord)
                     {
                         value = settingValue.CurrentValue;
+
+                        if (value == null && property.Info.Type() == typeof(PathSetting))
+                        {
+                            // for backward compatibility purposes let's ignore null on PathSetting and default to server value - RavenDB-15384
+                            value = settingValue.ServerValue;
+                        }
                     }
                     else if (settingValue.KeyExistsInServerSettings)
                     {

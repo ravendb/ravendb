@@ -284,6 +284,8 @@ namespace Voron
 
         private void UpgradeSchemaIfRequired()
         {
+            Options.BeforeSchemaUpgrade?.Invoke(this);
+
             try
             {
                 int schemaVersionVal;

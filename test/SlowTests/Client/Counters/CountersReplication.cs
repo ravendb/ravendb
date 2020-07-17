@@ -613,26 +613,26 @@ namespace SlowTests.Client.Counters
             using (var storeB = GetDocumentStore())
             {
                 var database1 = await GetDocumentDatabaseInstanceFor(storeA);
-                database1.Configuration.Replication.MaxItemsCount = 1;
-                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim();
-
-                using (var session = storeA.OpenAsyncSession())
+                using (var controller = new ReplicationController(database1))
                 {
-                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
-                    session.CountersFor("users/1").Increment("likes", 100);
-                    await session.StoreAsync(new User { Name = "Name2" }, "users/2");
-                    session.CountersFor("users/2").Increment("downloads", 500);
-                    await session.SaveChangesAsync();
-                }
+                    using (var session = storeA.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                        session.CountersFor("users/1").Increment("likes", 100);
+                        await session.StoreAsync(new User { Name = "Name2" }, "users/2");
+                        session.CountersFor("users/2").Increment("downloads", 500);
+                        await session.SaveChangesAsync();
+                    }
 
-                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce.Set();
-                await SetupReplicationAsync(storeA, storeB);
+                    await SetupReplicationAsync(storeA, storeB);
+                    controller.ReplicateOnce();
 
-                WaitForDocument(storeB, "users/1");
+                    WaitForDocument(storeB, "users/1");
 
-                using (var session = storeB.OpenAsyncSession())
-                {
-                    Assert.NotNull(await session.LoadAsync<User>("users/2"));
+                    using (var session = storeB.OpenAsyncSession())
+                    {
+                        Assert.NotNull(await session.LoadAsync<User>("users/2"));
+                    }
                 }
             }
         }

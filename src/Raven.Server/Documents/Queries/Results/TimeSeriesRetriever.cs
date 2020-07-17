@@ -32,6 +32,14 @@ namespace Raven.Server.Documents.Queries.Results
         private Dictionary<string, Document> _loadedDocuments;
         private readonly bool _isFromStudio;
 
+        private string _source;
+        private string _collection;
+
+        private string[] _namedValues;
+        private bool _configurationFetched;
+
+        private (long Count, DateTime Start, DateTime End) _stats;
+
         private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
         {
             new TimeSeriesAggregation(AggregationType.First),
@@ -56,18 +64,20 @@ namespace Raven.Server.Documents.Queries.Results
         }
 
         
-        private string _source;
-        private string _collection;
-
         public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, bool addProjectionToResult = false)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
             
             _source = GetSourceAndId();
+
+            _stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
+            if (_stats.Count == 0)
+                return GetFinalResult(null, 0, addProjectionToResult);
+            
             _collection = GetCollection(documentId);
 
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
-            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, _source, offset);
+            var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, offset);
 
             var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
             RangeGroup rangeSpec;
@@ -601,15 +611,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (reader.IsRaw)
                                 return singleResult.Values.Span[index];
 
-                            // we are working with a rolled-up series
-                            // here an entry has 6 different values (min, max, first, last, sum, count) per each 'original' measurement
-                            // we need to return the average value (sum / count)
-                            index *= 6;
-                            if (index + (int)AggregationType.Count >= singleResult.Values.Length)
-                                return null;
-                            if (singleResult.Values.Span[index + (int)AggregationType.Count] == 0)
-                                return double.NaN;
-                            return singleResult.Values.Span[index + (int)AggregationType.Sum] / singleResult.Values.Span[index + (int)AggregationType.Count];
+                            return GetValueFromRolledUpEntry(index, singleResult);
 
                         case "VALUE":
                         case "Value":
@@ -637,7 +639,11 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fe.Compound[0].Value == timeSeriesFunction.LoadTagAs?.Value)
                                 return GetValueFromLoadedTag(fe, singleResult);
 
-                            if (_argumentValuesDictionary.TryGetValue(fe, out var val) == false)
+                            var val = GetNamedValue(fe.Compound[0].Value, singleResult, reader.IsRaw);
+                            if (val != null)
+                                return val;
+
+                            if (_argumentValuesDictionary.TryGetValue(fe, out val) == false)
                                 _argumentValuesDictionary[fe] = val = GetValueFromArgument(declaredFunction, args, fe);
 
                             return val;
@@ -724,6 +730,49 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
+        private static object GetValueFromRolledUpEntry(int index, SingleResult singleResult)
+        {
+            // we are working with a rolled-up series
+            // here an entry has 6 different values (min, max, first, last, sum, count) per each 'original' measurement
+            // we need to return the average value (sum / count)
+
+            index *= 6;
+            if (index + (int)AggregationType.Count >= singleResult.Values.Length)
+                return null;
+            if (singleResult.Values.Span[index + (int)AggregationType.Count] == 0)
+                return double.NaN;
+            return singleResult.Values.Span[index + (int)AggregationType.Sum] / singleResult.Values.Span[index + (int)AggregationType.Count];
+        }
+
+        private object GetNamedValue(string fieldValue, SingleResult singleResult, bool isRaw)
+        {
+            if (_configurationFetched == false)
+            {
+                var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
+                _namedValues = config?.GetNames(_collection, _source);
+                _configurationFetched = true;
+            }
+
+            if (_namedValues == null)
+                return null;
+
+            int index;
+            for (index = 0; index < _namedValues.Length; index++)
+            {
+                if (_namedValues[index] == fieldValue)
+                    break;
+            }
+
+            if (index == _namedValues.Length ||
+                index >= singleResult.Values.Length) // shouldn't happen
+                return null;
+
+            if (isRaw)
+                return singleResult.Values.Span[index];
+
+            return GetValueFromRolledUpEntry(index, singleResult);
+        }
+
         private BlittableJsonReaderObject GetFinalResult(DynamicJsonArray array, long count, bool addProjectionToResult)
         {
             var result = new DynamicJsonValue
@@ -751,16 +800,19 @@ namespace Raven.Server.Documents.Queries.Results
                 return;
 
             var metadata = (DynamicJsonValue)(result[Constants.Documents.Metadata.Key] ?? (result[Constants.Documents.Metadata.Key] = new DynamicJsonValue()));
-
-            var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
-            var names = config?.GetNames(_collection, _source);
-            if (names != null)
+            if (_configurationFetched == false)
             {
-                metadata[Constants.Documents.Metadata.TimeSeriesNamedValues] = new DynamicJsonArray(names);
+                var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
+                _namedValues = config?.GetNames(_collection, _source);
+            }
+
+            if (_namedValues != null)
+            {
+                metadata[Constants.Documents.Metadata.TimeSeriesNamedValues] = new DynamicJsonArray(_namedValues);
             }
         }
 
-        private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, string source, TimeSpan? offset)
+        private (DateTime From, DateTime To) GetFromAndTo(DeclaredFunction declaredFunction, string documentId, object[] args, TimeSeriesFunction timeSeriesFunction, TimeSpan? offset)
         {
             DateTime from, to;
             if (timeSeriesFunction.Last != null)
@@ -768,16 +820,14 @@ namespace Raven.Server.Documents.Queries.Results
                 var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
 
                 to = DateTime.MaxValue;
-                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                from = stats.End.Add(-timeFromLast);
+                from = _stats.End.Add(-timeFromLast);
             }
             else if (timeSeriesFunction.First != null)
             {
                 var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
 
                 from = DateTime.MinValue;
-                var stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, source);
-                to = stats.Start.Add(timeFromFirst);
+                to = _stats.Start.Add(timeFromFirst);
             }
             else
             {

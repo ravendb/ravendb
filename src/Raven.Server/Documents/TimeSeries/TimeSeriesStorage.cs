@@ -169,6 +169,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             var pendingDeletion = context.Transaction.InnerTransaction.CreateTree(PendingDeletionSegments);
             var outdated = new List<Slice>();
+            var uniqueTimeSeries = new HashSet<Slice>(SliceComparer.Instance);
+
             var hasMore = true;
             var deletedCount = 0;
             while (hasMore)
@@ -187,6 +189,20 @@ namespace Raven.Server.Documents.TimeSeries
                             break;
                         }
 
+                        if (table.FindByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag, out var reader))
+                        {
+                            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
+                            using (Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out var key))
+                            {
+                                var size = key.Size - sizeof(long);
+                                using (Slice.External(context.Allocator, key, size, out var tsKey))
+                                {
+                                    if (uniqueTimeSeries.Contains(tsKey) == false)
+                                        uniqueTimeSeries.Add(tsKey.Clone(context.Allocator));
+                                }
+                            }
+                        }
+
                         if (table.DeleteByIndex(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice], etag))
                             deletedCount++;
 
@@ -200,8 +216,20 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     pendingDeletion.MultiDelete(collectionName.Name, etagSlice);
                 }
-
                 outdated.Clear();
+
+                foreach (var tsKey in uniqueTimeSeries)
+                {
+                    if (table.SeekOnePrimaryKeyWithPrefix(tsKey, Slices.BeforeAllKeys, out _) == false)
+                    {
+                        using (Slice.External(context.Allocator, tsKey, tsKey.Size - 1, out var statsKey))
+                        {
+                            if (Stats.GetStats(context, statsKey).Count == 0)
+                                Stats.DeleteStats(context, collectionName, statsKey);
+                        }
+                    }
+                }
+                uniqueTimeSeries.Clear();
             }
 
             return deletedCount;
@@ -302,7 +330,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var baseline = GetBaseline(segmentValueReader);
                 string changeVector = null;
-                bool deleteOccured = false;
+                var deleted = 0;
 
                 while (true)
                 {
@@ -315,7 +343,8 @@ namespace Raven.Server.Documents.TimeSeries
                     baseline = nextSegment.Value;
                 }
 
-                if (deleteOccured == false)
+
+                if (deleted == 0)
                     return null; // nothing happened, the deletion request was out of date
 
                 context.Transaction.AddAfterCommitNotification(new TimeSeriesChange
@@ -397,8 +426,8 @@ namespace Raven.Server.Documents.TimeSeries
                                     status == TimeSeriesValuesSegment.Live)
                                 {
                                     holder.AddNewValue(current, values, tag.AsSpan(), ref newSegment, TimeSeriesValuesSegment.Dead);
-                                    deleteOccured = true;
                                     segmentChanged = true;
+                                    deleted++;
                                     continue;
                                 }
 
@@ -585,7 +614,7 @@ namespace Raven.Server.Documents.TimeSeries
                     //     {
                     //         var segmentReadOnlyBuffer = tvr.Read((int)TimeSeriesTable.Segment, out int size);
                     //         var readOnlySegment = new TimeSeriesValuesSegment(segmentReadOnlyBuffer, size);
-                    //         Stats.UpdateCount(context, documentId, name, collectionName, -readOnlySegment.NumberOfLiveEntries);
+                    //         Stats.UpdateCountOfExistingStats(context, documentId, name, collectionName, -readOnlySegment.NumberOfLiveEntries);
                     //
                     //         AppendEntireSegment();
                     //
@@ -838,7 +867,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 // we modified this segment so we need to reduce the original count
                 _countWasReduced = true;
-                _tss.Stats.UpdateCount(_context, SliceHolder, _collection, -ReadOnlySegment.NumberOfLiveEntries);
+                _tss.Stats.UpdateCountOfExistingStats(_context, SliceHolder, _collection, -ReadOnlySegment.NumberOfLiveEntries);
             }
 
             public void AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
@@ -1172,9 +1201,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (newSeries)
             {
-                var stats = Stats.GetStats(context, documentId, name);
-                if (stats.Count > 0)
-                    AddTimeSeriesNameToMetadata(context, documentId, name);
+                AddTimeSeriesNameToMetadata(context, documentId, name);
             }
 
             return context.LastDatabaseChangeVector;
@@ -1457,19 +1484,104 @@ namespace Raven.Server.Documents.TimeSeries
             return CompareResult.Remote;
         }
 
+        public void ReplaceTimeSeriesNameInMetadata(DocumentsOperationContext ctx, string docId, string oldName, string newName)
+        {
+            // if the document is in conflict, that's fine
+            // we will recreate '@timeseries' in metadata when the conflict is resolved
+            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false);
+            if (doc == null)
+                return;
+
+            try
+            {
+                newName = GetOriginalName(ctx, docId, newName);
+            }
+            catch (Exception e)
+            {
+                var error = $"Unable to locate the original time-series '{newName}' in document '{docId}'";
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(error, e);
+            }
+
+            var data = doc.Data;
+            BlittableJsonReaderArray tsNames = null;
+            if (doc.TryGetMetadata(out var metadata))
+            {
+                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out tsNames);
+            }
+
+            if (tsNames == null)
+            {
+                // shouldn't happen
+
+                if (metadata == null)
+                {
+                    data.Modifications = new DynamicJsonValue(data)
+                    {
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.TimeSeries] = new[] { newName }
+                        }
+                    };
+                }
+                else
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.TimeSeries] = new[] { newName }
+                    };
+                }
+            }
+            else
+            {
+                var tsNamesList = new List<string>(tsNames.Length + 1);
+                for (var i = 0; i < tsNames.Length; i++)
+                {
+                    var val = tsNames.GetStringByIndex(i);
+                    if (val == null)
+                        continue;
+                    tsNamesList.Add(val);
+                }
+
+                var location = tsNames.BinarySearch(newName, StringComparison.Ordinal);
+                if (location < 0)
+                {
+                    tsNamesList.Insert(~location, newName);
+                }
+
+                tsNamesList.Remove(oldName);
+
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [Constants.Documents.Metadata.TimeSeries] = tsNamesList
+                };
+            }
+
+            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+            flags |= DocumentFlags.HasTimeSeries;
+
+            using (data)
+            {
+                var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+            }
+        }
+
         public void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName)
         {
             var tss = _documentDatabase.DocumentsStorage.TimeSeriesStorage;
             if (tss.Stats.GetStats(ctx, docId, tsName).Count == 0)
                 return;
 
-            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId);
+            // if the document is in conflict, that's fine
+            // we will recreate '@timeseries' in metadata when the conflict is resolved
+            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false); 
             if (doc == null)
                 return;
 
             try
             {
-                tsName = EnsureOriginalName(ctx, docId, tsName);
+                tsName = GetOriginalName(ctx, docId, tsName);
             }
             catch (Exception e)
             {
@@ -1487,16 +1599,22 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (tsNames == null)
             {
-                data.Modifications = new DynamicJsonValue(data);
                 if (metadata == null)
                 {
-                    data.Modifications[Constants.Documents.Metadata.Key] =
-                        new DynamicJsonValue { [Constants.Documents.Metadata.TimeSeries] = new[] { tsName } };
+                    data.Modifications = new DynamicJsonValue(data)
+                    {
+                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        {
+                            [Constants.Documents.Metadata.TimeSeries] = new[] {tsName}
+                        }
+                    };
                 }
                 else
                 {
-                    metadata.Modifications = new DynamicJsonValue(metadata) { [Constants.Documents.Metadata.TimeSeries] = new[] { tsName } };
-                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Constants.Documents.Metadata.TimeSeries] = new[] { tsName }
+                    };
                 }
             }
             else
@@ -1516,11 +1634,10 @@ namespace Raven.Server.Documents.TimeSeries
 
                 tsNamesList.Insert(~location, tsName);
 
-                data.Modifications = new DynamicJsonValue(data);
-
-                metadata.Modifications = new DynamicJsonValue(metadata) { [Constants.Documents.Metadata.TimeSeries] = tsNamesList };
-
-                data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [Constants.Documents.Metadata.TimeSeries] = tsNamesList
+                };
             }
 
             var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
@@ -1533,80 +1650,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static string EnsureOriginalName(DocumentsOperationContext ctx, string docId, string tsName)
+        public string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
         {
-            var parts = tsName.Split(TimeSeriesConfiguration.TimeSeriesRollupSeparator);
-            if (parts.Length == 1)
-                return tsName;
+            var name = Stats.GetTimeSeriesNameOriginalCasing(context, docId, lowerName);
+            if (name == null)
+                throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in document '{docId}'");
 
-            if (parts.Length == 2)
-            {
-                var raw = GetOriginalName(ctx, docId, parts[0]);
-                return $"{raw}{TimeSeriesConfiguration.TimeSeriesRollupSeparator}{parts[1]}";
-            }
-
-            Debug.Assert(false, $"The time-series '{tsName}' in document '{docId}', has invalid number of parts ({parts.Length}).");
-            return tsName;
-        }
-
-        public static string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
-        {
-            try
-            {
-                using (DocumentIdWorker.GetLower(context.Allocator, docId, out var docIdSlice))
-                {
-                    if (context.DocumentDatabase.DocumentsStorage.GetTableValueReaderForDocument(context, docIdSlice, throwOnConflict: true, out var tvr) == false)
-                        throw new InvalidOperationException($"Can't find document '{docId}'");
-
-                    var doc = new BlittableJsonReaderObject(tvr.Read((int)DocumentsStorage.DocumentsTable.Data, out int size), size, context);
-                    using (doc)
-                    {
-                        var name = GetOriginalName(lowerName, doc);
-                        if (name == null)
-                            throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in document '{docId}'");
-
-                        return name;
-                    }
-                }
-            }
-            catch (DocumentConflictException)
-            {
-                // will try to get it from the conflict storage
-                foreach (var conflict in context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, lowerName))
-                {
-                    if (conflict.Doc == null)
-                        continue;
-
-                    using (conflict.Doc)
-                    {
-                        var name = GetOriginalName(lowerName, conflict.Doc);
-                        if (name == null)
-                            continue;
-                        return name;
-                    }
-                }
-                throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in conflicted documents '{docId}'");
-            }
-        }
-
-        public static string GetOriginalName(string lowerName, BlittableJsonReaderObject doc)
-        {
-            if (doc == null)
-                return null;
-
-            if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
-                return null;
-
-            if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray ts) == false)
-                return null;
-
-            foreach (LazyStringValue item in ts)
-            {
-                if (string.Equals(item, lowerName, StringComparison.OrdinalIgnoreCase))
-                    return item;
-            }
-
-            return null;
+            return name;
         }
 
         public IEnumerable<TimeSeriesReplicationItem> GetSegmentsFrom(DocumentsOperationContext context, long etag)
@@ -1620,7 +1670,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal static TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
+        internal TimeSeriesReplicationItem CreateTimeSeriesSegmentItem(DocumentsOperationContext context, ref TableValueReader reader)
         {
             var etag = *(long*)reader.Read((int)TimeSeriesTable.Etag, out _);
             var changeVectorPtr = reader.Read((int)TimeSeriesTable.ChangeVector, out int changeVectorSize);
@@ -1638,6 +1688,11 @@ namespace Raven.Server.Documents.TimeSeries
 
             var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
             item.ToDispose(Slice.From(context.Allocator, keyPtr, keySize, ByteStringType.Immutable, out item.Key));
+
+            using (TimeSeriesStats.ExtractStatsKeyFromStorageKey(context, item.Key, out var statsKey))
+            {
+                item.Name = Stats.GetTimeSeriesNameOriginalCasing(context, statsKey);
+            }
 
             return item;
         }
@@ -1873,82 +1928,11 @@ namespace Raven.Server.Documents.TimeSeries
             return tx.OpenTable(tableSchema, tableName);
         }
 
-        public DynamicJsonArray GetTimeSeriesLowerNamesForDocument(DocumentsOperationContext context, string docId)
+        public DynamicJsonArray GetTimeSeriesNamesForDocument(DocumentsOperationContext context, string docId)
         {
-            var table = new Table(TimeSeriesSchema, context.Transaction.InnerTransaction);
-            var list = new DynamicJsonArray();
-
-            // here we need to find all of the time series names for a given document.
-
-            // for example we have:
-            // doc/heartbeats/123
-            // doc/heartbeats/234
-            // doc/heartbeats/666
-            // doc/pulse/123
-            // doc/pulse/54656
-
-            // so we seek backwards, starting from the end.
-            // extracting the last name and use it as a prefix for the next iteration
-
-            var dummyHolder = new ByteStringStorage
-            {
-                Flags = ByteStringType.Mutable,
-                Length = 0,
-                Ptr = (byte*)0,
-                Size = 0
-            };
-            var slice = new Slice(new ByteString(&dummyHolder));
-
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator))
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out var last, SpecialChars.RecordSeparator + 1))
-            {
-                if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, last, out var reader) == false)
-                    return list;
-
-                var size = documentKeyPrefix.Size;
-                bool excludeValueFromSeek;
-                do
-                {
-                    var lowerName = GetLowerCasedNameAndUpdateSlice(ref reader, size, ref slice);
-                    if (lowerName == null)
-                    {
-                        excludeValueFromSeek = true;
-                        continue;
-                    }
-
-                    excludeValueFromSeek = false;
-                    list.Add(lowerName);
-                } while (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, slice, out reader, excludeValueFromSeek));
-
-                list.Items.Reverse();
-                return list;
-            }
+            return new DynamicJsonArray(Stats.GetTimeSeriesNamesForDocumentOriginalCasing(context, docId));
         }
 
-        private static string GetLowerCasedNameAndUpdateSlice(ref TableValueReader reader, int prefixSize, ref Slice slice)
-        {
-            var segmentPtr = reader.Read((int)TimeSeriesTable.Segment, out var size);
-            var segment = new TimeSeriesValuesSegment(segmentPtr, size);
-            var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out size);
-
-            for (int i = 0; i < segment.NumberOfValues; i++)
-            {
-                if (segment.SegmentValues.Span[i].Count > 0)
-                {
-                    var name = Encoding.UTF8.GetString(keyPtr + prefixSize, size - prefixSize - sizeof(long) - 1);
-                    slice.Content._pointer->Ptr = keyPtr;
-                    slice.Content._pointer->Length = size - sizeof(long);
-                    slice.Content._pointer->Size = size - sizeof(long);
-                    return name;
-                }
-            }
-
-            // this segment is empty or marked as deleted, look for the next segment in this time-series
-            slice.Content._pointer->Ptr = keyPtr;
-            slice.Content._pointer->Length = size;
-            slice.Content._pointer->Size = size;
-            return null;
-        }
 
         public long GetLastTimeSeriesEtag(DocumentsOperationContext context)
         {

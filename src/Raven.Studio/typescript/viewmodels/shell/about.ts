@@ -84,9 +84,17 @@ class about extends viewModelBase {
         latestVersionUpdates: ko.observable<boolean>(false)
     };
 
+    expiresText = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        if (!licenseStatus || !licenseStatus.Expiration) {
+            return null;
+        }
+
+        return licenseStatus.IsIsv ? "Updates Expiration" : "Expires";
+    });
+
     formattedExpiration = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
-
         if (!licenseStatus || !licenseStatus.Expiration) {
             return null;
         }
@@ -102,8 +110,9 @@ class about extends viewModelBase {
             return `${expiration.format(dateFormat)} <br /><small class="${relativeDurationClass}">(${fromDuration})</small>`;
         }
 
+        const expiredClass = licenseStatus.Expired ? "text-danger" : "";
         const duration = generalUtils.formatDurationByDate(expiration, true);
-        return `${expiration.format(dateFormat)} <br /><Small class="text-danger">(${duration})</Small>`;
+        return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
     });
 
     licenseType = ko.pureComputed(() => {
@@ -124,6 +133,10 @@ class about extends viewModelBase {
 
         if (licenseStatus.IsCloud) {
             licenseType += " (Cloud)";
+        }
+
+        if (licenseStatus.IsIsv) {
+            licenseType += " (ISV)";
         }
 
         return licenseType;
@@ -154,6 +167,15 @@ class about extends viewModelBase {
         return licenseId;
     });
     
+    licensedTo = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        if (!licenseStatus) {
+            return null;
+        }
+
+        return licenseStatus.LicensedTo;
+    });
+
     registered = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         if (!licenseStatus) {

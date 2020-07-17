@@ -77,8 +77,13 @@ function UpdateCommonAssemblyInfo ( $projectDir, $buildNumber, $version, $commit
 function UpdateRavenVersion ( $projectDir, $buildNumber, $version, $commit, $versionInfoFile ) {
     write-host "Set version in $versionInfoFile"
 
+    $releaseDate = $(Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
     $content = (Get-Content $versionInfoFile) |
-        Foreach-Object { $_ -replace 'RavenVersion\(Build = ".*", CommitHash = ".*", Version = "5.1", FullVersion = ".*"\)', "RavenVersion(Build = ""$buildNumber"", CommitHash = ""$commit"", Version = ""5.1"", FullVersion = ""$version"")" }
+        Foreach-Object { 
+            $_ -replace `
+                'RavenVersion\(Build = ".*", CommitHash = ".*", Version = "5.1", FullVersion = ".*", ReleaseDateString = ".*"\)', `
+                "RavenVersion(Build = ""$buildNumber"", CommitHash = ""$commit"", Version = ""5.1"", FullVersion = ""$version"", ReleaseDateString = ""$releaseDate"")" 
+            }
 
     Set-Content -Path $versionInfoFile -Value $content -Encoding UTF8
 }

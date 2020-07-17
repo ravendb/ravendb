@@ -34,6 +34,8 @@ namespace Raven.Client.ServerWide.Operations.Migration
         public bool IsRavenFs { get; set; }
         public bool IsCompressed { get; set; }
         public string JournalsPath { get; set; }
+        public int? LogFileSize { get; set; }
+        public int? MaxVerPages { get; set; }
         public string EncryptionKey { get; set; }
         public string EncryptionAlgorithm { get; set; }
         public int? EncryptionKeyBitsSize { get; set; }
@@ -125,6 +127,16 @@ namespace Raven.Client.ServerWide.Operations.Migration
             if (string.IsNullOrEmpty(JournalsPath) == false)
             {
                 sb.Append($" -JournalsPath {EnsureStringsAreQuoted(JournalsPath)}");
+            }
+
+            if (LogFileSize.HasValue)
+            {
+                sb.Append($" -LogFileSize {LogFileSize.Value}");
+            }
+
+            if (MaxVerPages.HasValue)
+            {
+                sb.Append($" -MaxVerPages {MaxVerPages.Value}");
             }
 
             if (string.IsNullOrEmpty(EncryptionKey) == false && string.IsNullOrEmpty(EncryptionAlgorithm) == false && EncryptionKeyBitsSize.HasValue)

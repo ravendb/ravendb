@@ -5,6 +5,7 @@ using FastTests;
 using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -354,7 +355,12 @@ select p", parameters: new StalenessParameters { WaitForIndexing = false, WaitFo
 with {from index 'Orders/Totals'} as o
 with {from index 'Product/Search'} as p
 match (o)-[Lines where PricePerUnit > 200 select Product]->(p)
-select p", parameters: new StalenessParameters { WaitForIndexing = false, WaitForNonStaleResults = true, WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(0) }));
+select p", mutate: (store)=>
+            {
+                // we need to reset those indexes, since our sample data is larger now and they will be non-stale until the import is completed
+                store.Maintenance.Send(new ResetIndexOperation("Orders/Totals"));
+                store.Maintenance.Send(new ResetIndexOperation("Product/Search"));
+            },parameters: new StalenessParameters { WaitForIndexing = false, WaitForNonStaleResults = true, WaitForNonStaleResultsDuration = TimeSpan.FromSeconds(0)}));
         }
 
         [Fact]

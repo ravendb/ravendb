@@ -3,14 +3,10 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
-using Sparrow.Binary;
-using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
-using Sparrow.Server.Platform.Posix;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Constants = Voron.Global.Constants;
@@ -43,26 +39,6 @@ namespace Raven.Server.Utils
         public PoolOfThreads()
         {
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
-        }
-
-        public void SetThreadsAffinityIfNeeded()
-        {
-            foreach (var pooledThread in _pool)
-            {
-                try
-                {
-                    var numberOfCoresToReduce = pooledThread.NumberOfCoresToReduce;
-                    if (numberOfCoresToReduce == null)
-                        continue;
-
-                    pooledThread.SetThreadAffinity(numberOfCoresToReduce.Value, pooledThread.ThreadMask);
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsOperationsEnabled)
-                        _log.Operations("Failed to set thread affinity", e);
-                }
-            }
         }
 
         private readonly ConcurrentQueue<PooledThread> _pool = new ConcurrentQueue<PooledThread>();
@@ -159,11 +135,12 @@ namespace Raven.Server.Utils
             private string _name;
             private readonly PoolOfThreads _parent;
             private LongRunningWork _workIsDone;
-            private ulong _currentUnmanagedThreadId;
-            private ProcessThread _currentProcessThread;
-            private Process _currentProcess;
 
-            public int? NumberOfCoresToReduce { get; private set; }
+            public Process CurrentProcess { get; private set; }
+            public ulong CurrentUnmanagedThreadId { get; private set; }
+            public ProcessThread CurrentProcessThread { get; private set; }
+
+            public int NumberOfCoresToReduce { get; private set; }
             public long? ThreadMask { get; private set; }
 
             public DateTime StartedAt { get; internal set; }
@@ -260,10 +237,9 @@ namespace Raven.Server.Utils
                 ResetCurrentThreadName();
                 Thread.CurrentThread.Name = "Available Pool Thread";
 
-                if (ResetThreadPriority() == false)
-                    return false;
-
-                if (ResetThreadAffinity() == false)
+                var resetThread = ResetThreadPriority();
+                resetThread &= ResetThreadAffinity();
+                if (resetThread == false)
                     return false;
 
                 _waitForWork.Reset();
@@ -286,30 +262,10 @@ namespace Raven.Server.Utils
 
             private bool ResetThreadAffinity()
             {
-                if (PlatformDetails.RunningOnMacOsx)
-                    return true;
-
-                NumberOfCoresToReduce = null;
+                NumberOfCoresToReduce = 0;
                 ThreadMask = null;
 
-                try
-                {
-                    _currentProcess.Refresh();
-                    SetThreadAffinityByPlatform(_currentProcess.ProcessorAffinity.ToInt64());
-                    return true;
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    return true; // nothing to be done
-                }
-                catch (Exception e)
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info($"Unable to reset this thread affinity to the processor default, we'll just let it exit", e);
-                    }
-                    return false;
-                }
+                return AffinityHelper.ResetThreadAffinity(this);
             }
 
             private static bool ResetThreadPriority()
@@ -334,39 +290,27 @@ namespace Raven.Server.Utils
             private void InitializeProcessThreads()
             {
                 if (PlatformDetails.RunningOnMacOsx)
-                {
-                    // Mac OSX threads API doesn't provide a way to set thread affinity
-                    // we can use thread_policy_set which will make sure that two threads will run
-                    // on different cpus, however we cannot choose which cpus will be used
-
-                    // from thread_policy.h about using THREAD_AFFINITY_POLICY:
-                    // This may be used to express affinity relationships between threads in
-                    // the task. Threads with the same affinity tag will be scheduled to
-                    // share an L2 cache if possible. That is, affinity tags are a hint to
-                    // the scheduler for thread placement.
-
                     return;
-                }
 
-                _currentUnmanagedThreadId = NativeMemory.GetCurrentUnmanagedThreadId.Invoke();
-                _currentProcess = Process.GetCurrentProcess();
+                CurrentUnmanagedThreadId = NativeMemory.GetCurrentUnmanagedThreadId.Invoke();
+                CurrentProcess = Process.GetCurrentProcess();
 
                 if (PlatformDetails.RunningOnPosix == false)
                 {
-                    foreach (ProcessThread pt in _currentProcess.Threads)
+                    foreach (ProcessThread pt in CurrentProcess.Threads)
                     {
-                        if (pt.Id == (uint)_currentUnmanagedThreadId)
+                        if (pt.Id == (uint)CurrentUnmanagedThreadId)
                         {
-                            _currentProcessThread = pt;
+                            CurrentProcessThread = pt;
                             break;
                         }
                     }
 
-                    if (_currentProcessThread == null)
-                        throw new InvalidOperationException("Unable to get the current process thread: " + _currentUnmanagedThreadId + ", this should not be possible");
+                    if (CurrentProcessThread == null)
+                        throw new InvalidOperationException("Unable to get the current process thread: " + CurrentUnmanagedThreadId + ", this should not be possible");
                 }
 
-                SetThreadAffinityByPlatform(_currentProcess.ProcessorAffinity.ToInt64());
+                AffinityHelper.ResetThreadAffinity(this);
             }
 
             public static void ResetCurrentThreadName()
@@ -383,87 +327,7 @@ namespace Raven.Server.Utils
                 NumberOfCoresToReduce = numberOfCoresToReduce;
                 ThreadMask = threadMask;
 
-                if (numberOfCoresToReduce <= 0 && threadMask == null)
-                    return;
-
-                _currentProcess.Refresh();
-                var currentAffinity = _currentProcess.ProcessorAffinity.ToInt64();
-                // we can't reduce the number of cores to a zero or negative number, in this case, just use the processor cores
-                if (threadMask == null && Bits.NumberOfSetBits(currentAffinity) <= numberOfCoresToReduce)
-                {
-                    try
-                    {
-                        SetThreadAffinityByPlatform(currentAffinity);
-                    }
-                    catch (PlatformNotSupportedException)
-                    {
-                        // some platforms don't support it
-                        return;
-                    }
-                    catch (Exception)
-                    {
-                        // race with the setting of the processor cores? we can live with it, since it has little
-                        // impact and should be very rare
-                    }
-                    return;
-                }
-
-                if (threadMask == null)
-                {
-                    for (int i = 0; i < numberOfCoresToReduce; i++)
-                    {
-                        // remove the N least significant bits
-                        // we do that because it is typical that the first cores (0, 1, etc) are more
-                        // powerful and we want to keep them for other things, such as request processing
-                        currentAffinity &= currentAffinity - 1;
-                    }
-                }
-                else
-                {
-                    currentAffinity &= threadMask.Value;
-                }
-
-                try
-                {
-                    SetThreadAffinityByPlatform(currentAffinity);
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    // some platforms don't support it
-                    return;
-                }
-                catch (Exception)
-                {
-                    // race with the setting of the processor cores? we can live with it, since it has little
-                    // impact and should be very rare
-                }
-            }
-
-            private void SetThreadAffinityByPlatform(long affinity)
-            {
-                Debug.Assert(PlatformDetails.RunningOnMacOsx == false);
-
-                if (PlatformDetails.RunningOnPosix == false)
-                {
-                    // windows
-                    _currentProcessThread.ProcessorAffinity = new IntPtr(affinity);
-                    return;
-                }
-
-                if (PlatformDetails.RunningOnLinux)
-                {
-                    SetLinuxThreadAffinity(affinity);
-                }
-
-                void SetLinuxThreadAffinity(long affinity)
-                {
-                    var ulongAffinity = (ulong)affinity;
-                    var result = Syscall.sched_setaffinity((int)_currentUnmanagedThreadId, new IntPtr(sizeof(ulong)), ref ulongAffinity);
-                    if (result != 0)
-                        throw new InvalidOperationException(
-                            $"Failed to set affinity for thread: {_currentUnmanagedThreadId}, " +
-                            $"affinity: {affinity}, result: {result}, error: {Marshal.GetLastWin32Error()}");
-                }
+                AffinityHelper.SetCustomThreadAffinity(this);
             }
         }
     }

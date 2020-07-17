@@ -550,7 +550,7 @@ select out(doc)
                     var query = session.Query<User>()
                         .Where(p => p.Age > 21)
                         .Select(p => RavenQuery.TimeSeries<HeartRateMeasure>(p, "Heartrate", baseline, baseline.AddMonths(2))
-                            .Where(ts => ts.Value > 75 && ts.Value < 175)
+                            .Where(ts => ts.Values[0] > 75 && ts.Values[0] < 175)
                             .ToList());
 
                     var result = query.First();

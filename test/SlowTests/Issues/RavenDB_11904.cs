@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Raven.Client.ServerWide;
 using Tests.Infrastructure;
 using Voron.Recovery;
 using Xunit;
@@ -20,7 +21,18 @@ namespace SlowTests.Issues
         }
 
         [Fact64Bit]
-        public async Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
+        public  Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode()
+        {
+            return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(false);
+        }
+        
+        [Fact64Bit]
+        public  Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteModeCompressed()
+        {
+            return CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(true);
+        }
+
+        public async Task CanLoadDatabaseAfterUsingVoronRecoveryOnItWithCopyOnWriteMode(bool compressed)
         {
             var dbPath = NewDataPath(prefix: Guid.NewGuid().ToString());
             var recoveryExportPath = NewDataPath(prefix: Guid.NewGuid().ToString());
@@ -30,7 +42,18 @@ namespace SlowTests.Issues
             // create db with sample data
             using (var store = GetDocumentStore(new Options()
             {
-                Path = dbPath
+                Path = dbPath,
+                ModifyDatabaseRecord = record =>
+                {
+                    if (compressed)
+                    {
+                        record.DocumentsCompression = new DocumentsCompressionConfiguration
+                        {
+                            Collections = new[] { "Orders", "Employees", "Companies", "Products" },
+                            CompressRevisions = true
+                        };
+                    }
+                }
             }))
             {
                 await CreateLegacyNorthwindDatabase(store);

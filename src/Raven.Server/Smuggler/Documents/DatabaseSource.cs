@@ -508,7 +508,7 @@ namespace Raven.Server.Smuggler.Documents
         {
             try
             {
-                return TimeSeriesStorage.GetOriginalName(context, docId, name);
+                return _database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
             }
             catch (Exception e)
             {

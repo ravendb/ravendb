@@ -28,7 +28,7 @@ class cloneAttachmentsAndCountersCommand extends commandBase {
         if (this.counters.length) {
             const operations = this.counters.map(c => {
                 return {
-                    Type: "Put", 
+                    Type: "Increment",
                     Delta: c.value,
                     CounterName: c.name
                 } as Raven.Client.Documents.Operations.Counters.CounterOperation;

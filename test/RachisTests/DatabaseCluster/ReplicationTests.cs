@@ -951,22 +951,21 @@ namespace RachisTests.DatabaseCluster
                     session.SaveChanges();
                 }
                 
-                var mre = database.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim(true);
+                using (var controller = new ReplicationController(database))
+                {
+                    var databaseWatcher1 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_1");
+                    await AddWatcherToReplicationTopology(src, databaseWatcher1, src.Urls);
+                    controller.ReplicateOnce();
 
-                var databaseWatcher1 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_1");
-                await AddWatcherToReplicationTopology(src, databaseWatcher1, src.Urls);
-                
-                Assert.NotNull(WaitForDocumentToReplicate<User>(dst, "foo/bar", 10_000));
-                await Task.Delay(ReplicationLoader.MaxInactiveTime.Add(TimeSpan.FromSeconds(10)));
+                    Assert.NotNull(WaitForDocumentToReplicate<User>(dst, "foo/bar", 10_000));
+                    await Task.Delay(ReplicationLoader.MaxInactiveTime.Add(TimeSpan.FromSeconds(10)));
 
-                var databaseWatcher2 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_2");
-                await AddWatcherToReplicationTopology(src, databaseWatcher2, src.Urls);
+                    var databaseWatcher2 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_2");
+                    await AddWatcherToReplicationTopology(src, databaseWatcher2, src.Urls);
 
-                await Task.Delay(TimeSpan.FromSeconds(5));
+                    await Task.Delay(TimeSpan.FromSeconds(5));
 
-                database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
-                mre.Set();
-
+                }
                 EnsureReplicating(src, dst);
             }
         }
@@ -979,59 +978,39 @@ namespace RachisTests.DatabaseCluster
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 1,
-                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology
-                {
-                    Members = new List<string>{cluster.Leader.ServerStore.NodeTag}
-                }
+                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = new List<string> {cluster.Leader.ServerStore.NodeTag}}
             }))
             {
                 var database = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                var mre = new ManualResetEventSlim(false);
-                database.ReplicationLoader.DebugWaitAndRunReplicationOnce = mre;
+                using (var controller = new ReplicationController(database))
+                {
+                    using (var session = store.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                    {
+                        session.Store(new User(), "users/1");
+                        session.Store(new User(), "users/2");
+                        session.SaveChanges();
+                    }
 
-                using (var session = store.OpenSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    session.Store(new User(),"users/1");
-                    session.Store(new User(),"users/2");
-                    session.SaveChanges();
+                    await Task.Delay(3000); // wait for cleanup
+                    cluster.Leader.ServerStore.Observer.Suspended = true;
+                    await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
+
+                    using (var session = store.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                    {
+                        session.Store(new User(), "users/3");
+                        session.SaveChanges();
+                    }
+                    controller.ReplicateOnce();
+                    Assert.False(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/3", null,
+                        TimeSpan.FromSeconds(10)));
                 }
 
-                await Task.Delay(3000); // wait for cleanup
-                cluster.Leader.ServerStore.Observer.Suspended = true;
-                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
-
-                using (var session = store.OpenSession(new SessionOptions
-                {
-                    TransactionMode = TransactionMode.ClusterWide
-                }))
-                {
-                    session.Store(new User(),"users/3");
-                    session.SaveChanges();
-                }
-
-                Assert.False(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
-                {
-                    Members = new List<string>{"A","B"}
-                }, store.Database, "users/3", null, TimeSpan.FromSeconds(10)));
-
-                database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
-                mre.Set();
-
-                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
-                {
-                    Members = new List<string>{"A","B"}
-                }, store.Database, "users/3", null, TimeSpan.FromSeconds(10)));
-                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
-                {
-                    Members = new List<string>{"A","B"}
-                }, store.Database, "users/2", null, TimeSpan.FromSeconds(10)));
-                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology
-                {
-                    Members = new List<string>{"A","B"}
-                }, store.Database, "users/1", null, TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/3", null,
+                    TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/2", null,
+                    TimeSpan.FromSeconds(10)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/1", null,
+                    TimeSpan.FromSeconds(10)));
             }
         }
     }
