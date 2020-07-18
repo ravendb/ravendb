@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
@@ -53,6 +55,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (policyRunner.Configuration.PolicyConfigurationChanged(dbRecord.TimeSeries) == false)
                         return policyRunner;
                 }
+
                 policyRunner?.Dispose();
 
                 var runner = new TimeSeriesPolicyRunner(database, dbRecord.TimeSeries);
@@ -61,12 +64,19 @@ namespace Raven.Server.Documents.TimeSeries
             }
             catch (Exception e)
             {
-                
                 const string msg = "Cannot enable policy runner as the configuration record is not valid.";
-                database.NotificationCenter.Add(AlertRaised.Create(
-                    database.Name,
-                    $"policy runner error in {database.Name}", msg,
-                    AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
+
+                if (e is LicenseLimitException lle)
+                {
+                    LicenseLimitWarning.AddLicenseLimitNotification(database.ServerStore.NotificationCenter, lle);
+                }
+                else
+                {
+                    database.NotificationCenter.Add(AlertRaised.Create(
+                        database.Name,
+                        $"policy runner error in {database.Name}", msg,
+                        AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
+                }
 
                 var logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(database.Name);
                 if (logger.IsOperationsEnabled)
