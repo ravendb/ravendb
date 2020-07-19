@@ -710,4 +710,8 @@ interface timeSeriesRawItemResultDto {
 type timeUnit = "year" | "month" | "day" | "hour" | "minute" | "second";
 
 type settingsTemplateType = Raven.Server.Config.ConfigurationEntryType | "StringArray" | "EnumArray" | "ServeWide";
-type setttingsItem = { key: string, value: string | null };
+
+interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation {
+    Appends: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation[];
+    Deletes: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[];
+}
