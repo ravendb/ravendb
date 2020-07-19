@@ -1,13 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
-using Microsoft.Extensions.Primitives;
-using Raven.Server.Documents.Handlers;
-using Raven.Server.ServerWide.Context;
+using Raven.Client.Documents.Operations.TimeSeries;
 
 namespace SlowTests.Client.TimeSeries.Issues
 {
@@ -39,29 +37,172 @@ namespace SlowTests.Client.TimeSeries.Issues
                     var ts = session.TimeSeriesFor(user, "Heartrate");
 
                     var res = ts.Get(pageSize: 0);
-                    Assert.Null(res);
+                    Assert.Empty(res);
 
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(pageSize: 10);
                     Assert.Equal(10, res.Length);
 
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(pageSize: 7);
                     Assert.Equal(7, res.Length);
 
-                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(pageSize: 20);
                     Assert.Equal(20, res.Length);
 
-                    Assert.Equal(5, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(pageSize: 25);
-                    Assert.Equal(20, res.Length);
+                    Assert.Equal(21, res.Length);
 
-                    Assert.Equal(5, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+
+        [Fact]
+        public void TestRanges()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+                var id = "users/1-A";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), id);
+                    var tsf = session.TimeSeriesFor(id, "raven");
+                    for (int i = 0; i <= 10; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), new[] { (double)i }, "watches/apple");
+                    }
+                    for (int i = 12; i <= 13; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), new[] { (double)i }, "watches/apple");
+                    }
+                    for (int i = 16; i <= 20; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), new[] { (double)i }, "watches/apple");
+                    }
+                    session.SaveChanges();
+                }
+
+                var rangesList = new List<TimeSeriesRange>
+                {
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(1), To = baseline.AddMinutes(7)
+                    }
+                };
+                var re = store.GetRequestExecutor();
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, int.MaxValue);
+                    re.Execute(tsCommand, context);
+                    var res = tsCommand.Result;
+
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(1, res.Values["raven"].Count);
+                }
+                rangesList = new List<TimeSeriesRange>
+                {
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(8), To = baseline.AddMinutes(11)
+                    }
+                };
+
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, int.MaxValue);
+                    re.Execute(tsCommand, context);
+                    var res = tsCommand.Result;
+
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(1, res.Values["raven"].Count);
+
+                }
+                rangesList = new List<TimeSeriesRange>
+                {
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(8), To = baseline.AddMinutes(17)
+                    }
+                };
+
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, int.MaxValue);
+                    re.Execute(tsCommand, context);
+                    var res = tsCommand.Result;
+
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(1, res.Values["raven"].Count);
+
+                }
+                rangesList = new List<TimeSeriesRange>
+                {
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(14), To = baseline.AddMinutes(15)
+                    }
+                };
+
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, int.MaxValue);
+                    re.Execute(tsCommand, context);
+                    var res = tsCommand.Result;
+
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(1, res.Values["raven"].Count);
+
+                }
+                rangesList = new List<TimeSeriesRange>
+                {
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(23), To = baseline.AddMinutes(25)
+                    }
+                };
+
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, int.MaxValue);
+                    re.Execute(tsCommand, context);
+                    var res = tsCommand.Result;
+
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(1, res.Values["raven"].Count);
+
+                }
+                rangesList = new List<TimeSeriesRange>
+                {
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(20), To = baseline.AddMinutes(26)
+                    }
+                };
+
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, int.MaxValue);
+                    re.Execute(tsCommand, context);
+                    var res = tsCommand.Result;
+
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(1, res.Values["raven"].Count);
+
                 }
             }
         }
@@ -110,7 +251,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal(4, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(start: 20);
-                    Assert.Null(res);
+                    Assert.Empty(res);
 
                 }
             }
@@ -122,11 +263,11 @@ namespace SlowTests.Client.TimeSeries.Issues
             using (var store = GetDocumentStore())
             {
                 var baseline = DateTime.Today;
+                var id = "users/1-A";
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new Company { Name = "HR" }, "companies/1-A");
-                    session.Store(new Order { Company = "companies/1-A" }, "orders/1-A");
-                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    session.Store(new User(), id);
+                    var tsf = session.TimeSeriesFor(id, "raven");
                     for (int i = 0; i < 8; i++)
                     {
                         tsf.Append(baseline.AddMinutes(i), new[] { 64d }, "watches/apple");
@@ -134,80 +275,63 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     session.SaveChanges();
 
-
-                    var db = await GetDocumentDatabaseInstanceFor(store);
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                    var rangesList = new List<TimeSeriesRange>
                     {
-                        var tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                            ctx,
-                            "orders/1-A",
-                            new[] { "Heartrate", "Heartrate", "Heartrate" },
-                            new[]
-                            {
-                                baseline.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(4).ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(8).ToString("yyyy-MM-ddTHH:mm:ss")
-                            },
-                            new[]
-                            {
-                                baseline.ToUniversalTime().AddMinutes(3).ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(7).ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(11).ToString("yyyy-MM-ddTHH:mm:ss")
-                            },
+                        new TimeSeriesRange
+                        {
+                            Name = "raven", From = baseline.AddMinutes(0), To = baseline.AddMinutes(3)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "raven", From = baseline.AddMinutes(4), To = baseline.AddMinutes(7)
+                        },
+                        new TimeSeriesRange
+                        {
+                            Name = "raven", From = baseline.AddMinutes(8), To = baseline.AddMinutes(11)
+                        }
+                    };
 
-                            0, 10);
+                    var re = store.GetRequestExecutor();
 
-                        var range = tsr["Heartrate"];
-                        Assert.Equal(3, range.Count);
+                    using (re.ContextPool.AllocateOperationContext(out var context))
+                    {
+                        var tsCommand = new GetMultipleTimeSeriesOperation.
+                            GetMultipleTimeSeriesCommand(id, rangesList, 0, 10);
+                        re.Execute(tsCommand, context);
+                        var res = tsCommand.Result;
 
-                        Assert.Equal(4, range[0].Entries.Length);
-                        Assert.Equal(4, range[1].Entries.Length);
-                        Assert.Equal(0, range[2].Entries.Length);
+                        Assert.Equal(1, res.Values.Count);
+                        Assert.Equal(3, res.Values["raven"].Count);
 
+                        Assert.Equal(4, res.Values["raven"][0].Entries.Length);
+                        Assert.Equal(4, res.Values["raven"][1].Entries.Length);
+                        Assert.Equal(0, res.Values["raven"][2].Entries.Length);
                     }
-
-
-                    tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+          
+                    tsf = session.TimeSeriesFor(id, "raven");
                     for (int i = 8; i < 11; i++)
                     {
                         tsf.Append(baseline.AddMinutes(i), new[] { 1000d }, "watches/apple");
                     }
-
+        
                     session.SaveChanges();
 
-                    using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                    using (ctx.OpenReadTransaction())
+                    using (re.ContextPool.AllocateOperationContext(out var context))
                     {
-                        var tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                            ctx,
-                            "orders/1-A",
-                            new[] { "Heartrate", "Heartrate", "Heartrate" },
-                            new[]
-                            {
-                                baseline.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(4).ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(8).ToString("yyyy-MM-ddTHH:mm:ss")
-                            },
-                            new[]
-                            {
-                                baseline.ToUniversalTime().AddMinutes(3).ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(7).ToString("yyyy-MM-ddTHH:mm:ss"),
-                                baseline.ToUniversalTime().AddMinutes(11).ToString("yyyy-MM-ddTHH:mm:ss")
-                            },
+                        var tsCommand = new GetMultipleTimeSeriesOperation.
+                            GetMultipleTimeSeriesCommand(id, rangesList, 0, 10);
+                        re.Execute(tsCommand, context);
+                        var res = tsCommand.Result;
 
-                            0, 10);
+                        Assert.Equal(1, res.Values.Count);
+                        Assert.Equal(3, res.Values["raven"].Count);
 
-                        var range = tsr["Heartrate"];
-                        Assert.Equal(3, range.Count);
-
-                        Assert.Equal(4, range[0].Entries.Length);
-                        Assert.Equal(4, range[1].Entries.Length);
-                        Assert.Equal(2, range[2].Entries.Length);
+                        Assert.Equal(4, res.Values["raven"][0].Entries.Length);
+                        Assert.Equal(4, res.Values["raven"][1].Entries.Length);
+                        Assert.Equal(2, res.Values["raven"][2].Entries.Length);
                     }
                 }
             }
-
         }
 
         [Fact]
@@ -229,74 +353,62 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                StringValues fromRangeList = new[]
-                    {
-                        baseline.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(4).ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(8).ToString("yyyy-MM-ddTHH:mm:ss")
-                    };
-                StringValues toRangeList = new[]
-                    {
-                        baseline.ToUniversalTime().AddMinutes(3).ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(7).ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(11).ToString("yyyy-MM-ddTHH:mm:ss")
-                    };
-
-                var db = await GetDocumentDatabaseInstanceFor(store);
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
+                var rangesList = new List<TimeSeriesRange>
                 {
-                    var tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                        ctx,
-                        id,
-                        new[] { tag, tag, tag },
-                        fromRangeList,
-                        toRangeList,
-                        0, 0);
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(0), To = baseline.AddMinutes(3)
+                    },
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(4), To = baseline.AddMinutes(7)
+                    },
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(8), To = baseline.AddMinutes(11)
+                    }
+                };
 
-                    var range = tsr[tag];
+                var re = store.GetRequestExecutor();
 
-                    Assert.Equal(3, range.Count);
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, 0);
+                    re.Execute(tsCommand, context);
 
-                    Assert.Equal(0, range[0].Entries.Length);
-                    Assert.Equal(0, range[1].Entries.Length);
-                    Assert.Equal(0, range[2].Entries.Length);
+                    var res = tsCommand.Result;
 
-                    tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                        ctx,
-                        id,
-                        new[] {tag, tag, tag},
-                        fromRangeList,
-                        toRangeList,
-                        0, 30);
+                    Assert.Empty(res.Values);
 
-                    range = tsr[tag];
+                    tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, 30);
+                    re.Execute(tsCommand, context);
 
-                    Assert.Equal(3, range.Count);
+                    res = tsCommand.Result;
 
-                    Assert.Equal(4, range[0].Entries.Length);
-                    Assert.Equal(4, range[1].Entries.Length);
-                    Assert.Equal(4, range[2].Entries.Length);
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(3, res.Values["raven"].Count);
 
-                    tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                        ctx,
-                        id,
-                        new[] { tag, tag, tag },
-                        fromRangeList,
-                        toRangeList,
-                        0, 6);
+                    Assert.Equal(4, res.Values["raven"][0].Entries.Length);
+                    Assert.Equal(4, res.Values["raven"][1].Entries.Length);
+                    Assert.Equal(4, res.Values["raven"][2].Entries.Length);
 
-                    range = tsr[tag];
+                    tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, 6);
+                    re.Execute(tsCommand, context);
 
-                    Assert.Equal(3, range.Count);
+                    res = tsCommand.Result;
 
-                    Assert.Equal(4, range[0].Entries.Length);
-                    Assert.Equal(2, range[1].Entries.Length);
-                    Assert.Equal(0, range[2].Entries.Length);
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(2, res.Values["raven"].Count);
+
+                    Assert.Equal(4, res.Values["raven"][0].Entries.Length);
+                    Assert.Equal(2, res.Values["raven"][1].Entries.Length);
                 }
             }
         }
-
+        
         [Fact]
         public async Task ResultsWithRangeAndStart()
         {
@@ -316,72 +428,63 @@ namespace SlowTests.Client.TimeSeries.Issues
                     session.SaveChanges();
                 }
 
-                StringValues fromRangeList = new[]
-                    {
-                        baseline.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(4).ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(8).ToString("yyyy-MM-ddTHH:mm:ss")
-                    };
-                StringValues toRangeList = new[]
-                    {
-                        baseline.ToUniversalTime().AddMinutes(3).ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(7).ToString("yyyy-MM-ddTHH:mm:ss"),
-                        baseline.ToUniversalTime().AddMinutes(11).ToString("yyyy-MM-ddTHH:mm:ss")
-                    };
-
-                var db = await GetDocumentDatabaseInstanceFor(store);
-                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
+                var rangesList = new List<TimeSeriesRange>
                 {
-                    var tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                        ctx,
-                        id,
-                        new[] { tag, tag, tag },
-                        fromRangeList,
-                        toRangeList,
-                        0, 20);
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(0), To = baseline.AddMinutes(3)
+                    },
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(4), To = baseline.AddMinutes(7)
+                    },
+                    new TimeSeriesRange
+                    {
+                        Name = "raven", From = baseline.AddMinutes(8), To = baseline.AddMinutes(11)
+                    }
+                };
 
-                    var range = tsr[tag];
+                var re = store.GetRequestExecutor();
 
-                    Assert.Equal(3, range.Count);
+                using (re.ContextPool.AllocateOperationContext(out var context))
+                {
+                    var tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 0, 20);
+                    re.Execute(tsCommand, context);
 
-                    Assert.Equal(4, range[0].Entries.Length);
-                    Assert.Equal(4, range[1].Entries.Length);
-                    Assert.Equal(4, range[2].Entries.Length);
+                    var res = tsCommand.Result;
 
-                    tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                            ctx,
-                            id,
-                            new[] { tag, tag, tag },
-                            fromRangeList,
-                            toRangeList,
-                            3, 20);
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(3, res.Values["raven"].Count);
 
-                    range = tsr[tag];
+                    Assert.Equal(4, res.Values["raven"][0].Entries.Length);
+                    Assert.Equal(4, res.Values["raven"][1].Entries.Length);
+                    Assert.Equal(4, res.Values["raven"][2].Entries.Length);
 
-                    Assert.Equal(3, range.Count);
+                    tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 3, 20);
+                    re.Execute(tsCommand, context);
 
-                    Assert.Equal(1, range[0].Entries.Length);
-                    Assert.Equal(4, range[1].Entries.Length);
-                    Assert.Equal(4, range[2].Entries.Length);
+                    res = tsCommand.Result;
 
-                    tsr = TimeSeriesHandler.GetTimeSeriesRangeResults(
-                        ctx,
-                        id,
-                        new[] { tag, tag, tag },
-                        fromRangeList,
-                        toRangeList,
-                        9, 20);
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(3, res.Values["raven"].Count);
 
-                    range = tsr[tag];
+                    Assert.Equal(1, res.Values["raven"][0].Entries.Length);
+                    Assert.Equal(4, res.Values["raven"][1].Entries.Length);
+                    Assert.Equal(4, res.Values["raven"][2].Entries.Length);
 
-                    Assert.Equal(3, range.Count);
+                    tsCommand = new GetMultipleTimeSeriesOperation.
+                        GetMultipleTimeSeriesCommand(id, rangesList, 9, 20);
+                    re.Execute(tsCommand, context);
 
-                    Assert.Equal(0, range[0].Entries.Length);
-                    Assert.Equal(0, range[1].Entries.Length);
-                    Assert.Equal(3, range[2].Entries.Length);
+                    res = tsCommand.Result;
+
+                    Assert.Equal(1, res.Values.Count);
+                    Assert.Equal(1, res.Values["raven"].Count);
+
+                    Assert.Equal(3, res.Values["raven"][0].Entries.Length);
                 }
-
             }
         }
     }
