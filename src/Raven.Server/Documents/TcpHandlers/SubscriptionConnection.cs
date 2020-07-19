@@ -485,10 +485,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     BlittableJsonDocumentBuilder.UsageMode.None,
                     _copiedBuffer.Buffer))
                 {
-                    if (blittable.TryGet("ChangeVector", out string cv))
-                    {
-                        TcpConnection.lastEtagReceived = cv.ToChangeVector()[0].Etag;
-                    }
+                    TcpConnection._lastEtagReceived = -1;
                     TcpConnection.RegisterBytesReceived(blittable.Size);
                     return JsonDeserializationServer.SubscriptionConnectionClientMessage(blittable);
                 }
@@ -753,7 +750,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         writer.WriteEndObject();
                         docsToFlush++;
 
-                        TcpConnection.lastEtagSent = result.Doc.Etag;
+                        TcpConnection._lastEtagSent = -1;
                         // perform flush for current batch after 1000ms of running or 1 MB
                         if (_buffer.Length > Constants.Size.Megabyte ||
                             sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)

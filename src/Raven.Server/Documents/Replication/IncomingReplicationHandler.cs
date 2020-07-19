@@ -608,7 +608,7 @@ namespace Raven.Server.Documents.Replication
                             $"took: {sw.ElapsedMilliseconds:#,#;;0}ms");
                     }
 
-                    _connectionOptions.lastEtagReceived = _lastDocumentEtag;
+                    _connectionOptions._lastEtagReceived = _lastDocumentEtag;
                     _connectionOptions.RegisterBytesReceived(incomingReplicationAllocator.TotalDocumentsSizeInBytes);
 
                     using (stats.For(ReplicationOperation.Incoming.Storage))
