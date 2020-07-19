@@ -109,34 +109,34 @@
     <div class="row tabs-left form-horizontal">
         <div class="col-sm-3 col-lg-2">
             <ul class="nav nav-tabs nav-stacked" data-bind="with: test">
-                <li data-bind="click: previewTabClicked">
+                <li data-bind="click: tabClicked('preview')">
                     <a href="#preview" data-toggle="tab" title="Show document before and after patch">
                         <i class="icon-preview"></i>
                         <span>Document Preview</span>
                     </a>
                 </li>
-                <li data-bind="click: loadedTabClicked">
+                <li data-bind="click: tabClicked('loaded')">
                     <a href="#loaded" data-toggle="tab" title="Show information about loaded items during test execution">
                         <i class="icon-import"></i>
                         <span>Loaded</span>
                         <span class="label label-primary pull-right" data-bind="text: loadedCount"></span>
                     </a>
                 </li>
-                <li data-bind="click: modifiedTabClicked">
+                <li data-bind="click: tabClicked('modified')">
                     <a href="#modified" data-toggle="tab" title="Show information about created/modified items during test execution">
                         <i class="icon-export"></i>
                         <span>Modified</span>
                         <span class="label label-primary pull-right" data-bind="text: modifiedCount"></span>
                     </a>
                 </li>
-                <li data-bind="click: deletedTabClicked">
+                <li data-bind="click: tabClicked('deleted')">
                     <a href="#deleted" data-toggle="tab" title="Show information about deleted items during test execution">
                         <i class="icon-trash"></i>
                         <span>Deleted</span>
                         <span class="label label-primary pull-right" data-bind="text: deletedCount"></span>
                     </a>
                 </li>
-                <li data-bind="click: outputTabClicked">
+                <li data-bind="click: tabClicked('output')">
                     <a href="#output" data-toggle="tab" title="Show output generated during test execution"> 
                         <i class="icon-administrator-js-console"></i>
                         <span>Output</span>
@@ -149,7 +149,7 @@
             <div class="panel">
                 <div data-bind="with: test">
                     <div class="tab-content scroll">
-                        <div class="tab-pane fade in active" id="preview" data-bind="if: isPreviewTabActive">
+                        <div class="tab-pane fade in active" id="preview" data-bind="if: activeTestTab() === 'preview'">
                             <div class="row">
                                 <div class="col-sm-6">
                                     <h3>Before</h3>
@@ -163,7 +163,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="loaded" data-bind="if: isLoadedTabActive">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="loaded" data-bind="if: activeTestTab() === 'loaded'">
                             <h2 class="text-center">Loaded Data</h2>
                             <div data-bind="if: actions.loadDocument().length">
                                 <hr>
@@ -182,9 +182,9 @@
                                     <li class="margin-left margin-left-lg row">
                                         <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
                                         <span data-bind="visible: !Exists">
-                                            <small class="col-sm-2" data-bind="visible: !Exists"><span class="tab-data">&lt;Counter not found&gt;</span></small>
+                                            <small class="col-sm-2"><span class="tab-data">&lt;Counter not found&gt;</span></small>
                                         </span>
-                                        <span data-bind="visible: Exists">
+                                        <span data-bind="if: Exists">
                                             <small class="col-sm-2"><label>Value:</label><span class="margin-left tab-data" data-bind="text: Value"></span></small>
                                         </span>
                                     </li>
@@ -204,9 +204,9 @@
                                     <li class="margin-left margin-left-lg row">
                                         <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
                                         <span data-bind="visible: !Exists">
-                                            <small class="col-sm-2" data-bind="visible: !Exists"><span class="tab-data">&lt;No entries found&gt;</span></small>
+                                            <small class="col-sm-2"><span class="tab-data">&lt;No entries found&gt;</span></small>
                                         </span>
-                                        <span data-bind="visible: Exists">
+                                        <span data-bind="if: Exists">
                                             <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: Tag || '<None>'"></span></small>
                                             <small class="col-sm-3"><label>Time Stamp:</label><span class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
                                             <small class="col-sm-2" data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Values:</label><span class="margin-left tab-data">{ ... }</span></small>
@@ -218,7 +218,7 @@
                             </div>
                             <div data-bind="if: !loadedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="modified" data-bind="if: isModifiedTabActive">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="modified" data-bind="if: activeTestTab() === 'modified'">
                             <h2 class="text-center">Modified Data</h2>
                             <div data-bind="if: actions.putDocument().length">
                                 <hr>
@@ -276,7 +276,7 @@
                             </div>
                             <div data-bind="if: !modifiedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="deleted" data-bind="if: isDeletedTabActive">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="deleted" data-bind="if: activeTestTab() === 'deleted'">
                             <h2 class="text-center">Deleted Data</h2>
                             <div data-bind="if: actions.deleteDocument().length">
                                 <hr>
@@ -309,7 +309,7 @@
                             </div>
                             <div data-bind="if: !deletedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="output" data-bind="if: isOutputTabActive">
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="output" data-bind="if: activeTestTab() === 'output'">
                             <h2 class="text-center">Output Data</h2>
                             <hr>
                             <ul data-bind="foreach: actions.output">
