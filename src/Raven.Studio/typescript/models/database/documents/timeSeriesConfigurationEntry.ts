@@ -65,7 +65,7 @@ class timeSeriesConfigurationEntry {
             validation: [
                 {
                     validator: () => this.hasPoliciesOrRetentionConfig() || this.hasNamedValuesConfig(),
-                    message: "No aggregation policy, retention time or named value are defined."
+                    message: "No rollup policy, retention time or named value are defined."
                 }, {
                     validator: () => {
                         const nonEmptyNames = this.namedValues()
