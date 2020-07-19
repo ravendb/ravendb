@@ -186,8 +186,20 @@ namespace Raven.Server.Web.Studio
 
             if (metadata != null)
             {
-                metadata.Modifications = extraMetadataProperties;
-                metadata = context.ReadObject(metadata, document.Id);
+                metadata.Modifications = new DynamicJsonValue(metadata);
+                metadata.Modifications.Properties.AddRange(extraMetadataProperties.Properties);
+
+                if (document.Flags.Contain(DocumentFlags.HasCounters) || document.Flags.Contain(DocumentFlags.HasAttachments) || document.Flags.Contain(DocumentFlags.HasTimeSeries))
+                {
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Counters);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                    metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+                }
+
+                using (var old = metadata)
+                {
+                    metadata = context.ReadObject(metadata, document.Id);
+                }
             }
             else
             {
