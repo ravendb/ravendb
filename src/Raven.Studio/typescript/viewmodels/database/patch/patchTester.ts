@@ -13,6 +13,8 @@ import documentPreviewer = require("models/database/documents/documentPreviewer"
 import queryUtil = require("common/queryUtil");
 import getIndexesDefinitionsCommand = require("commands/database/index/getIndexesDefinitionsCommand");
 
+type testTabType = "preview" | "loaded" | "modified" | "deleted" | "output";
+
 class patchTester extends viewModelBase {
 
     private db: KnockoutObservable<database>;
@@ -48,11 +50,7 @@ class patchTester extends viewModelBase {
     showTimeSeriesValuesInLoaded = ko.observable<boolean>(false);
     showTimeSeriesValuesInModified = ko.observable<boolean>(false);
 
-    isPreviewTabActive = ko.observable<boolean>(true);
-    isLoadedTabActive = ko.observable<boolean>(false);
-    isModifiedTabActive = ko.observable<boolean>(false);
-    isDeletedTabActive = ko.observable<boolean>(false);
-    isOutputTabActive = ko.observable<boolean>(false);
+    activeTestTab = ko.observable<testTabType>();
     
     spinners = {
         testing: ko.observable<boolean>(false),
@@ -132,6 +130,7 @@ class patchTester extends viewModelBase {
 
         this.documentId.throttle(250).subscribe(item => {
            if (!item) {
+               this.resetForm();
                return;
            }
 
@@ -193,6 +192,7 @@ class patchTester extends viewModelBase {
         this.testMode(true);
         this.documentId("");
         this.resetForm();
+        this.activeTestTab("preview");
         this.validationGroup.errors.showAllMessages(false);
     }
 
@@ -300,25 +300,9 @@ class patchTester extends viewModelBase {
 
         documentPreviewer.preview(documentId, db, documentIdValidationGroup, spinner);
     }
-
-    previewTabClicked() {
-        this.isPreviewTabActive(true);
-    }
-
-    loadedTabClicked() {
-        this.isLoadedTabActive(true);
-    }
-
-    modifiedTabClicked() {
-        this.isModifiedTabActive(true);
-    }
-
-    deletedTabClicked() {
-        this.isDeletedTabActive(true);
-    }
-
-    outputTabClicked() {
-        this.isOutputTabActive(true);
+    
+    tabClicked(tab: testTabType) {
+       this.activeTestTab(tab); 
     }
 }
 
