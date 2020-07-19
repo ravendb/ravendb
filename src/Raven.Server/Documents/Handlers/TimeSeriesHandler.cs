@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
+                var rangeResult = pageSize > 0 ? GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize) : new TimeSeriesRangeResult();
 
                 var etag = GetStringFromHeaders("If-None-Match");
                 if (etag == rangeResult.Hash)
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
+        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
         {
             if (fromList.Count != toList.Count)
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
@@ -215,8 +215,11 @@ namespace Raven.Server.Documents.Handlers
                                                     $"Received {names.Count} 'name' arguments, and {fromList.Count} 'from'/'to' arguments.");
             if (fromList.Count == 0)
                 return null;
-            
+
             var rangeResultDictionary = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
+
+            if (pageSize == 0)
+                return rangeResultDictionary;
 
             for (int i = 0; i < fromList.Count; i++)
             {
@@ -230,14 +233,20 @@ namespace Raven.Server.Documents.Handlers
                 var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : ParseDate(toList[i], name);
 
                 var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
-                if (rangeResultDictionary.TryGetValue(name, out var list) == false)
+                if (rangeResult.Hash != null)
                 {
-                    rangeResultDictionary[name] = new List<TimeSeriesRangeResult> { rangeResult };
+                    if (rangeResultDictionary.TryGetValue(name, out var list) == false)
+                    {
+                        rangeResultDictionary[name] = new List<TimeSeriesRangeResult> { rangeResult };
+                    }
+                    else
+                    {
+                        list.Add(rangeResult);
+                    }
                 }
-                else
-                {
-                    list.Add(rangeResult);
-                }
+
+                if (pageSize <= 0)
+                    break;
             }
 
             return rangeResultDictionary;
@@ -246,6 +255,7 @@ namespace Raven.Server.Documents.Handlers
         internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
             List<TimeSeriesEntry> values = new List<TimeSeriesEntry>();
+
             var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);
 
             // init hash 
@@ -255,6 +265,9 @@ namespace Raven.Server.Documents.Handlers
             var state = stackalloc byte[cryptoGenerichashStatebytes];
             if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
                 ComputeHttpEtags.ThrowFailToInitHash();
+
+            var oldStart = start;
+            var lastResult = true;
 
             foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
             {
@@ -273,7 +286,10 @@ namespace Raven.Server.Documents.Handlers
                         continue;
 
                     if (pageSize-- <= 0)
+                    {
+                        lastResult = false;
                         break;
+                    }
 
                     values.Add(new TimeSeriesEntry
                     {
@@ -290,10 +306,13 @@ namespace Raven.Server.Documents.Handlers
                     break;
             }
 
+            if ((oldStart > 0 ) && (values.Count == 0))
+                return new TimeSeriesRangeResult();
+
             return new TimeSeriesRangeResult
             {
-                From = from,
-                To = to,
+                From = (oldStart > 0) ? values[0].Timestamp : from,
+                To = lastResult ? to : values.Last().Timestamp,
                 Entries = values.ToArray(),
                 Hash = ComputeHttpEtags.FinalizeHash(size, state)
             };
