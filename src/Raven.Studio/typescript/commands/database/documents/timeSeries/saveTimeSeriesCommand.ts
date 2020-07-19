@@ -15,13 +15,13 @@ class saveTimeSeriesCommand extends commandBase {
 
         const url = endpoints.databases.timeSeries.timeseries + this.urlEncodeArgs(args);
         
-        const payload = {
+        const payload: TimeSeriesOperation = {
             Name: this.name,
-            Removals: [],
+            Deletes: [],
             Appends: [
                 this.dto
             ]
-        } as Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation;
+        };
         
         return this.post(url, JSON.stringify(payload), this.db, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Failed to save time series.", response.responseText, response.statusText));
