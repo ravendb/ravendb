@@ -199,7 +199,17 @@ namespace Raven.Server.Documents.TimeSeries
 
                 DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, ref item.Result.Reader, out var key);
                 SplitKey(key, out var docId, out var name);
-                name = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
+                try
+                {
+                    name = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"skipped '{item.Key}'. ", e);
+
+                    continue;
+                }
 
                 var state = new RollupState
                 {
