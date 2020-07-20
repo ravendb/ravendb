@@ -66,12 +66,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return Task.CompletedTask;
         }
 
-        private DynamicJsonArray ToJson(List<TransactionInfo> txInfos)
+        internal static DynamicJsonArray ToJson(List<TransactionInfo> txInfos)
         {
             return new DynamicJsonArray(txInfos.Select(ToJson));
         }
 
-        private DynamicJsonValue ToJson(TransactionInfo txinfo)
+        private static DynamicJsonValue ToJson(TransactionInfo txinfo)
         {
             return new DynamicJsonValue
             {
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             };
         }
 
-        private DynamicJsonValue ToJson(LowLevelTransaction lowLevelTransaction)
+        private static DynamicJsonValue ToJson(LowLevelTransaction lowLevelTransaction)
         {
             return new DynamicJsonValue
             {
