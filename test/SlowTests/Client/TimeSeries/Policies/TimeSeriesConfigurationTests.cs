@@ -509,7 +509,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(ts1Minutes, minutes);
                 }
 
-                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/BigMeasures");
                 var alert = database.NotificationCenter.GetStoredMessage(key);
                 Assert.Equal("Rollup 'ByMinute' for time-series 'BigMeasures' in document 'users/KARMEL' failed.", alert);
             }
@@ -578,7 +578,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Null(session.TimeSeriesRollupFor<BigMeasure>("users/karmel", p1.Name).Get()?.ToList());
                 }
 
-                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/BigMeasures");
                 var alert = database.NotificationCenter.GetStoredMessage(key);
                 Assert.NotNull(alert);
 
