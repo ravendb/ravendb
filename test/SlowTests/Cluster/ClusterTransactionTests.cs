@@ -1301,7 +1301,7 @@ namespace SlowTests.Cluster
                     if (e.ToString().Contains(nameof(RachisApplyException)))
                         return true;
                     if (e is AggregateException ae) 
-                        return ae.InnerExceptions.Any(ContainsRachisException);
+                        return ae.InnerExceptions.Any(ex => ContainsRachisException(ex));
 
                     if (e.InnerException == null) 
                         return false;
