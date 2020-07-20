@@ -1781,7 +1781,6 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-
         [Fact]
         public async Task CanReRollAfterUpdate()
         {
@@ -1849,6 +1848,63 @@ namespace SlowTests.Client.TimeSeries.Policies
                     var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
                     Assert.Equal(29, res.Values[4] / 2);
                     Assert.Equal(2, res.Values[5]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RollupNamesShouldKeepOriginalCasing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var p1 = new TimeSeriesPolicy("By10Seconds", TimeValue.FromSeconds(10));
+                var p2 = new TimeSeriesPolicy("By1Minutes", TimeValue.FromMinutes(1));
+                var p3 = new TimeSeriesPolicy("By2Hours", TimeValue.FromHours(2));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1, p2 ,p3
+                            }
+                        },
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                var baseline = DateTime.Today.AddHours(-4);
+                var rawName = "HeartRate";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/karmel");
+
+                    for (int i = 0; i <= TimeSpan.FromHours(4).TotalSeconds; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", rawName)
+                            .Append(baseline.AddSeconds(i), i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.RunRollups();
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<User>("users/karmel");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(doc);
+                    Assert.Equal(4, tsNames.Count);
+                    
+                    Assert.Equal(rawName, tsNames[0]);
+                    Assert.Equal($"{rawName}@{p1.Name}", tsNames[1]);
+                    Assert.Equal($"{rawName}@{p2.Name}", tsNames[2]);
+                    Assert.Equal($"{rawName}@{p3.Name}", tsNames[3]);
                 }
             }
         }
