@@ -16,7 +16,6 @@ namespace Raven.Client.Documents.Commands
             _remoteDatabase = remoteDatabase ?? throw new ArgumentNullException(nameof(remoteDatabase));
             _databaseGroupId = databaseGroupId ?? throw new ArgumentNullException(nameof(databaseGroupId));
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
-            Timeout = TimeSpan.FromSeconds(15);
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

@@ -7,15 +7,14 @@ using System.Threading.Tasks;
 using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
-using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
@@ -23,7 +22,6 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -890,124 +888,6 @@ namespace RachisTests.DatabaseCluster
                     }
 
                     Assert.True(WaitForDocument(dstStore, "users/2", 30_000));
-                }
-            }
-        }
-
-        [Fact]
-        public async Task GetFirstTopologyShouldTimeout()
-        {
-            var clusterSize = 1;
-            var srcLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-            var dstLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-
-            var dstDB = GetDatabaseName();
-            var srcDB = GetDatabaseName();
-
-            var dstTopology = await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
-            var srcTopology = await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
-
-            using (var srcStore = new DocumentStore()
-            {
-                Urls = new[] { srcLeader.WebUrl },
-                Database = srcDB,
-            }.Initialize())
-            using (var dstStore = new DocumentStore
-            {
-                Urls = new[] { dstLeader.WebUrl },
-                Database = dstDB,
-            }.Initialize())
-            {
-                
-                dstLeader.ServerStore.InitializationCompleted.Reset(true);
-                dstLeader.ServerStore.Initialized = false;
-
-                try
-                {
-                    var db = await srcLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDB);
-                    var ex = await Assert.ThrowsAsync<AggregateException>(async () =>
-                    {
-                        var wait = Task.Delay(TimeSpan.FromSeconds(30));
-                        var exec = Task.Run(() =>
-                        {
-                            using (var requestExecutor = RequestExecutor.Create(new[] {dstLeader.WebUrl}, dstDB, null, DocumentConventions.DefaultForServer))
-                            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                            {
-                                var cmd = new GetTcpInfoCommand("external-replication", db.Name, db.DbId.ToString(), db.ReadLastEtag());
-                                requestExecutor.Execute(cmd, ctx);
-                            }
-                        });
-
-                        var t = await Task.WhenAny(exec, wait);
-                        await t;
-                    });
-                    Assert.Contains("failed with timeout after 00:00:15", ex.Message);
-                }
-                finally
-                {
-                    dstLeader.ServerStore.Initialized = true;
-                    dstLeader.ServerStore.InitializationCompleted.Set();
-                }
-            }
-        }
-
-        [Fact]
-        public async Task GetTcpInfoShouldTimeout()
-        {
-            var clusterSize = 1;
-            var srcLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-            var dstLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-
-            var dstDB = GetDatabaseName();
-            var srcDB = GetDatabaseName();
-
-            await CreateDatabaseInCluster(dstDB, clusterSize, dstLeader.WebUrl);
-            await CreateDatabaseInCluster(srcDB, clusterSize, srcLeader.WebUrl);
-
-            using (var srcStore = new DocumentStore()
-            {
-                Urls = new[] { srcLeader.WebUrl },
-                Database = srcDB,
-            }.Initialize())
-            using (var dstStore = new DocumentStore
-            {
-                Urls = new[] { dstLeader.WebUrl },
-                Database = dstDB,
-            }.Initialize())
-            {
-                try
-                {
-                    var db = await srcLeader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(srcDB);
-                    var ex = await Assert.ThrowsAsync<RavenException>(async () =>
-                    {
-                        var wait = Task.Delay(TimeSpan.FromSeconds(30));
-                        var exec = Task.Run(() =>
-                        {
-                            using (var requestExecutor = RequestExecutor.Create(new[] {dstLeader.WebUrl}, dstDB, null,
-                                DocumentConventions.DefaultForServer))
-                            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
-                            {
-                                var cmd = new GetTcpInfoCommand("external-replication", dstDB, db.DbId.ToString(), db.ReadLastEtag());
-                                requestExecutor.Execute(cmd, ctx);
-
-                                dstLeader.ServerStore.InitializationCompleted.Reset(true);
-                                dstLeader.ServerStore.Initialized = false;
-
-                                cmd = new GetTcpInfoCommand("external-replication", dstDB, db.DbId.ToString(), db.ReadLastEtag());
-                                requestExecutor.Execute(cmd, ctx);
-                            }
-                        });
-
-                        var t = await Task.WhenAny(exec, wait);
-                        await t;
-                    });
-
-                    Assert.Contains("failed with timeout after 00:00:15", ex.Message);
-                }
-                finally
-                {
-                    dstLeader.ServerStore.Initialized = true;
-                    dstLeader.ServerStore.InitializationCompleted.Set();
                 }
             }
         }

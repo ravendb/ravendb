@@ -1,5 +1,4 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
@@ -17,7 +16,6 @@ namespace Raven.Client.ServerWide.Commands
         public GetTcpInfoCommand(string tag)
         {
             _tag = tag;
-            Timeout = TimeSpan.FromSeconds(15);
         }
 
         public GetTcpInfoCommand(string tag, string dbName = null) : this(tag)
