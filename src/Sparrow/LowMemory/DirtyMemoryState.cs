@@ -5,7 +5,5 @@
         public bool IsHighDirty;
 
         public long TotalDirtyInBytes;
-
-        public long TotalDirtyInMb => new Size(TotalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes);
     }
 }
