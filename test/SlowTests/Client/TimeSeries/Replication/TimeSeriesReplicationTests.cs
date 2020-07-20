@@ -58,6 +58,55 @@ namespace SlowTests.Client.TimeSeries.Replication
         }
 
         [Fact]
+        public async Task CanSplitAndMergeLargeRange()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    for (int i = 0; i < 100; i++)
+                    {
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddDays(i), new[] { 59d }, "watches/fitbit");
+                    }
+                   
+                    session.SaveChanges();
+                }
+
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    for (int i = 0; i < 100; i++)
+                    {
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddDays(-10).AddDays(i), new[] { 60d }, "watches/fitbit");
+                    }
+                   
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+
+                WaitForUserToContinueTheTest(storeB);
+
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    var val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get()
+                        .ToList();
+                    Assert.Equal(110, val.Count);
+                }
+            }
+        }
+
+        [Fact]
         public async Task TimeSeriesShouldBeCaseInsensitiveAndKeepOriginalCasing()
         {
             using (var storeA = GetDocumentStore())

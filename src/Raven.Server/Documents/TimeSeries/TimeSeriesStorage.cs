@@ -976,8 +976,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void AddValueInternal(DateTime time, Span<double> values, Span<byte> tagSlice, ref TimeSeriesValuesSegment segment, ulong status)
             {
-                var timestampDiff = (int)((time - BaselineDate).Ticks / 10_000);
-                if (segment.Append(_context.Allocator, timestampDiff, values, tagSlice, status) == false)
+                var timestampDiff = ((time - BaselineDate).Ticks / 10_000);
+                var inRange = timestampDiff < int.MaxValue;
+                if (inRange == false || segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
                 {
                     FlushCurrentSegment(ref segment, values, tagSlice, status);
                     UpdateBaseline(timestampDiff);
