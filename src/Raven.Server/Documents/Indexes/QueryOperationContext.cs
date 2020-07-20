@@ -104,6 +104,12 @@ namespace Raven.Server.Documents.Indexes
 
         public void Dispose()
         {
+            if (Documents.Transaction != null)
+                throw new InvalidOperationException($"Documents transaction wasn't disposed");
+
+            if (Server?.Transaction != null)
+                throw new InvalidOperationException($"Server transaction wasn't disposed");
+
             _releaseDocuments?.Dispose();
             _releaseDocuments = null;
 
