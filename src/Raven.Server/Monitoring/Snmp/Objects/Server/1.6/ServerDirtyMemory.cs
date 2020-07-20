@@ -13,7 +13,8 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override Gauge32 GetData()
         {
-            return new Gauge32(MemoryInformation.GetDirtyMemoryState().TotalDirtyInMb);
+            var totalDirtyInBytes = MemoryInformation.GetDirtyMemoryState().TotalDirtyInBytes;
+            return new Gauge32(new Size(totalDirtyInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes));
         }
     }
 }
