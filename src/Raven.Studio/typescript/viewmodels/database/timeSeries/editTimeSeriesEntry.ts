@@ -1,12 +1,12 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
-import timeSeriesModel = require("models/database/timeSeries/timeSeriesModel");
+import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/saveTimeSeriesCommand");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
 
-    static aggregationColumns = timeSeriesModel.aggregationColumns;
+    static aggregationColumns = timeSeriesEntryModel.aggregationColumns;
     
     static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     static localTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
@@ -20,11 +20,10 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         sideBySide: true
     };
     
-    model = ko.observable<timeSeriesModel>();
+    model = ko.observable<timeSeriesEntryModel>();
     
     dateFormattedAsUtc: KnockoutComputed<string>;
     dateFormattedAsLocal: KnockoutComputed<string>;
-    isAggregation: KnockoutComputed<boolean>;
     
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
@@ -40,8 +39,8 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         this.lockSeriesName = !!this.timeSeriesName;
         
         const model = editDto 
-            ? new timeSeriesModel(timeSeriesName, editDto) 
-            : timeSeriesModel.empty(timeSeriesName || undefined);
+            ? new timeSeriesEntryModel(timeSeriesName, editDto) 
+            : timeSeriesEntryModel.empty(timeSeriesName || undefined);
         
         this.model(model);
         
@@ -61,11 +60,6 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             const date = moment(model.timestamp());
             return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
         });
-        
-        this.isAggregation = ko.pureComputed(() => {
-            const name = this.model().name();
-            return name && name.includes("@");
-        });
     }
 
     compositionComplete() {
@@ -80,7 +74,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         
         const aggregationsCount = editTimeSeriesEntry.aggregationColumns.length;
         
-        if (this.isAggregation()) {
+        if (this.model().isRollupEntry()) {
             return editTimeSeriesEntry.aggregationColumns[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")"
         }
         
@@ -88,9 +82,19 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         return null;
     }
     
+    extractValueName(idx: number) {
+        const columnName = this.getColumnName(idx);
+        const first = columnName.indexOf('(') + 1;
+        const last = columnName.lastIndexOf(')');
+        return columnName.substring(first, last);
+    }
+    
     save() {
-        if (!this.isValid(this.model().validationGroup) ||
-            this.model().values().filter(x => !this.isValid(x.validationGroup)).length) {
+        const valid = this.model().isRollupEntry() ?
+            !this.model().rollupValues().filter(x => !this.isValid(x.validationGroup)).length :
+            !this.model().values().filter(x => !this.isValid(x.validationGroup)).length;
+        
+        if (!this.isValid(this.model().validationGroup) || !valid) {
             return false;
         }
         
