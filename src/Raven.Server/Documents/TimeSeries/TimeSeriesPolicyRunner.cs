@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     database.NotificationCenter.Add(AlertRaised.Create(
                         database.Name,
-                        $"policy runner error in {database.Name}", msg,
+                        $"Time series policy runner for database '{database.Name}' encountered an error", msg,
                         AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
                 }
 
