@@ -14,7 +14,6 @@ namespace Raven.Client.ServerWide.Commands
         public GetDatabaseTopologyCommand()
         {
             CanCacheAggressively = false;
-            Timeout = TimeSpan.FromSeconds(15);
         }
 
         public GetDatabaseTopologyCommand(string debugTag, Guid? applicationIdentifier)
@@ -27,7 +26,6 @@ namespace Raven.Client.ServerWide.Commands
         {
             _debugTag = debugTag;
             CanCacheAggressively = false;
-            Timeout = TimeSpan.FromSeconds(15);
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
