@@ -1,4 +1,4 @@
-.edit-time-series {
+.edit-time-series {    
     .document-header {
         margin-bottom: 8px;
         
@@ -26,7 +26,59 @@
     }
 }
 
+.fit-dialog-content {
+    width: fit-content;
+}
+
 .edit-time-series-entry {
+    
+    table {
+        td {
+            width: 200px;
+             
+            &.delete-column {
+                width: 100px;
+            }
+        }
+
+        thead {
+            tr {
+                th {
+                    padding: 2px;
+                    border-top: none;
+                    border-bottom-width: 0px;
+                    color: @text-emphasis;
+                }
+
+                td {
+                    padding: 2px;
+                    border-top: none;
+                }
+            }
+        }
+
+        tbody {
+            tr {
+                th, td {
+                    padding: 2px;
+                    border-top: none;
+                }
+            }
+        }
+
+        .name-value {
+            width: 80px;
+            max-width: 200px;
+            overflow-x: auto;
+            vertical-align: inherit;
+            color: @text-emphasis;
+        }
+
+        .form-control {
+            color: @rollup-data-color;
+        }
+    }
+    
     .aggregation-name {
         width: 200px;
         text-align: right;

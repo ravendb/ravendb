@@ -14,7 +14,7 @@ import actionColumn = require("widgets/virtualGrid/columns/actionColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import deleteTimeSeries = require("viewmodels/database/timeSeries/deleteTimeSeries");
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
-import timeSeriesModel = require("models/database/timeSeries/timeSeriesModel");
+import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 import getTimeSeriesConfigurationCommand = require("commands/database/documents/timeSeries/getTimeSeriesConfigurationCommand");
 import getDocumentMetadataCommand = require("commands/database/documents/getDocumentMetadataCommand");
 import queryUtil = require("common/queryUtil");
@@ -132,7 +132,7 @@ class editTimeSeries extends viewModelBase {
         }
         
         if (this.isAggregation()) {
-            const aggregationColumnNames = timeSeriesModel.aggregationColumns;
+            const aggregationColumnNames = timeSeriesEntryModel.aggregationColumns;
             const aggregationsCount = aggregationColumnNames.length;
             
             if (namedColumns) {
@@ -229,14 +229,14 @@ class editTimeSeries extends viewModelBase {
     }
     
     private editItem(item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
-        const editTimeSeriesDialog = new editTimeSeriesEntry(
+        const editTimeSeriesEntryDialog = new editTimeSeriesEntry(
             this.documentId(), 
             this.activeDatabase(), 
             this.timeSeriesName(), 
             this.getValueColumnNames(1024),
             item
         );
-        app.showBootstrapDialog(editTimeSeriesDialog)
+        app.showBootstrapDialog(editTimeSeriesEntryDialog)
             .done((seriesName) => {
                 if (seriesName) {
                     this.refresh();
@@ -406,7 +406,10 @@ class editTimeSeries extends viewModelBase {
     
     createTimeSeries(createNew: boolean) {
         const tsNameToUse = createNew ? null : this.timeSeriesName();
-        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse, []);
+        const columnsToUse = createNew ? [] : this.getValueColumnNames(1024);
+        
+        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse,  columnsToUse);
+        
         app.showBootstrapDialog(createTimeSeriesDialog)
             .done((seriesName) => {
                 if (seriesName) {
