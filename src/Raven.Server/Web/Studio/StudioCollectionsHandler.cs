@@ -66,7 +66,7 @@ namespace Raven.Server.Web.Studio
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
-                
+
                 HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
                 if (string.IsNullOrEmpty(collection))
@@ -86,7 +86,7 @@ namespace Raven.Server.Web.Studio
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    
+
                     writer.WriteStartArray();
 
                     var first = true;
@@ -103,7 +103,7 @@ namespace Raven.Server.Web.Studio
                     }
 
                     writer.WriteEndArray();
-                   
+
                     writer.WriteComma();
 
                     writer.WritePropertyName("TotalResults");
@@ -176,8 +176,8 @@ namespace Raven.Server.Web.Studio
             }
             if (first == false)
                 writer.WriteComma();
-                    
-            var extraMetadataProperties = new DynamicJsonValue
+
+            var extraMetadataProperties = new DynamicJsonValue(metadata)
             {
                 [ObjectStubsKey] = objectStubsJson,
                 [ArrayStubsKey] = arrayStubsJson,
@@ -186,8 +186,7 @@ namespace Raven.Server.Web.Studio
 
             if (metadata != null)
             {
-                metadata.Modifications = new DynamicJsonValue(metadata);
-                metadata.Modifications.Properties.AddRange(extraMetadataProperties.Properties);
+                metadata.Modifications = extraMetadataProperties;
 
                 if (document.Flags.Contain(DocumentFlags.HasCounters) || document.Flags.Contain(DocumentFlags.HasAttachments) || document.Flags.Contain(DocumentFlags.HasTimeSeries))
                 {
