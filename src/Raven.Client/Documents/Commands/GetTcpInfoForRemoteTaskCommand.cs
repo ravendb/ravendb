@@ -20,6 +20,7 @@ namespace Raven.Client.Documents.Commands
             _remoteTask = remoteTask ?? throw new ArgumentNullException(nameof(remoteTask));
             _tag = tag;
             _verifyDatabase = verifyDatabase;
+            Timeout = TimeSpan.FromSeconds(15);
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
