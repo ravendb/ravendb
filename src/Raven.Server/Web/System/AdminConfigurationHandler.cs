@@ -39,7 +39,7 @@ namespace Raven.Server.Web.System
                 if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                     continue;
 
-                var entry = new ConfigurationEntryServerValue(Server.Configuration, configurationEntryMetadata, status);
+                var entry = new ConfigurationEntryServerValue(Server.Configuration.Settings, configurationEntryMetadata, status);
                 settingsResult.Settings.Add(entry);
             }
 

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminConfigurationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/configuration/settings", "GET", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/configuration/settings", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public Task GetSettings()
         {
             ConfigurationEntryScope? scope = null;

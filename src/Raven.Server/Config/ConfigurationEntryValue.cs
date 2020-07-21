@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Configuration;
 using Raven.Client.ServerWide;
 using Raven.Server.Config.Attributes;
 using Sparrow.Json.Parsing;
@@ -45,13 +46,13 @@ namespace Raven.Server.Config
 
     public class ConfigurationEntryServerValue : ConfigurationEntryValue
     {
-        public ConfigurationEntryServerValue(RavenConfiguration configuration, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
+        public ConfigurationEntryServerValue(IConfiguration configuration, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
             : base(metadata)
         {
             ServerValues = new Dictionary<string, ConfigurationEntrySingleValue>();
             foreach (var key in Metadata.Keys)
             {
-                var value = configuration.GetServerWideSetting(key);
+                var value = configuration[key];
                 if (value == null)
                     continue;
 
@@ -59,7 +60,8 @@ namespace Raven.Server.Config
                 ServerValues[key] = new ConfigurationEntrySingleValue
                 {
                     Value = hasAccess && Metadata.IsSecured == false ? value : null,
-                    HasAccess = hasAccess
+                    HasAccess = hasAccess,
+                    HasValue = true,
                 };
             }
         }
@@ -83,7 +85,7 @@ namespace Raven.Server.Config
     public class ConfigurationEntryDatabaseValue : ConfigurationEntryServerValue
     {
         public ConfigurationEntryDatabaseValue(RavenConfiguration configuration, DatabaseRecord dbRecord, ConfigurationEntryMetadata metadata, RavenServer.AuthenticationStatus authenticationStatus)
-            : base(configuration, metadata, authenticationStatus)
+            : base(configuration.ServerWideSettings, metadata, authenticationStatus)
         {
             if (Metadata.Scope == ConfigurationEntryScope.ServerWideOnly)
                 return;

@@ -86,7 +86,7 @@ namespace Raven.Server.Config
 
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
-        protected IConfigurationRoot Settings { get; set; }
+        internal IConfigurationRoot Settings { get; set; }
 
         internal string ConfigPath => _customConfigPath
                        ?? Path.Combine(AppContext.BaseDirectory, "settings.json");
