@@ -1441,9 +1441,7 @@ namespace Raven.Server.ServerWide
             {
                 LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
-                    addDatabaseCommand.IsRestore
-                        ? DatabasesLandlord.ClusterDatabaseChangeType.RecordRestored
-                        : DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
 
