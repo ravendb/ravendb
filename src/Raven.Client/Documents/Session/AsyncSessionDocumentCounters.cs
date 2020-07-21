@@ -91,7 +91,7 @@ namespace Raven.Client.Documents.Session
                 {
                     if (cache.Values.TryGetValue(counter, out var val) ||
                         (document != null &&
-                         metadataCounters?.BinarySearch(counter, StringComparison.Ordinal) < 0) ||
+                         metadataCounters?.BinarySearch(counter, StringComparison.OrdinalIgnoreCase) < 0) ||
                         cache.GotAll)
                     {
                         // we either have value in cache,
