@@ -295,6 +295,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
                     await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
 
+                    // wait for the database to be loaded
+                    await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+
                     return result;
                 }
             }
