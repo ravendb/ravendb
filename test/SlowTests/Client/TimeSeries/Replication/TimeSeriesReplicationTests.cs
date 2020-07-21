@@ -684,6 +684,45 @@ namespace SlowTests.Client.TimeSeries.Replication
         }
 
         [Fact]
+        public async Task CanReplicateDeadSegment2()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete();
+                    session.TimeSeriesFor("users/ayende", "Heartrate2")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                WaitForUserToContinueTheTest(storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    var user = session.Load<dynamic>("users/ayende");
+                    List<string> names = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(1, names.Count);
+                }
+            }
+        }
+
+        [Fact]
         public async Task ReplicatingDeletedDocumentShouldRemoveTimeseries()
         {
             using (var storeA = GetDocumentStore())

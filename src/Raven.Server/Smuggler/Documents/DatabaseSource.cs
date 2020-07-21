@@ -473,7 +473,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         yield return new TimeSeriesItem
                         {
-                            Name =  GetOriginalName(_context, ts.DocId, ts.Name),
+                            Name =  _database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(_context, ts.DocId, ts.Name),
                             DocId = ts.DocId,
                             Baseline = ts.Start,
                             ChangeVector = ts.ChangeVector,
@@ -492,7 +492,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 yield return new TimeSeriesItem
                 {
-                    Name = GetOriginalName(_context, ts.DocId, ts.Name),
+                    Name = _database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(_context, ts.DocId, ts.Name),
                     DocId = ts.DocId,
                     Baseline = ts.Start,
                     ChangeVector = ts.ChangeVector,
@@ -502,22 +502,6 @@ namespace Raven.Server.Smuggler.Documents
                     Etag = ts.Etag
                 };
             }
-        }
-
-        public string GetOriginalName(DocumentsOperationContext context, string docId, string name)
-        {
-            try
-            {
-                return _database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
-            }
-            catch (Exception e)
-            {
-                var error = $"An error occured during finding the original time-series '{name}' in document '{docId}'";
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(error, e);
-            }
-
-            return name;
         }
 
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
