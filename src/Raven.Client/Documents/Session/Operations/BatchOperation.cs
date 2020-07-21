@@ -152,6 +152,8 @@ namespace Raven.Client.Documents.Session.Operations
                     case CommandType.TimeSeries:
                         //TODO: RavenDB-13474 add to time series cache
                         break;
+                    case CommandType.TimeSeriesCopy:
+                        break;
                     case CommandType.BatchPATCH:
                         break;
                     default:

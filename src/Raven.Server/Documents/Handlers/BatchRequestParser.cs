@@ -1019,6 +1019,10 @@ namespace Raven.Server.Documents.Handlers
                     break;
 
                 case 14:
+                    if (*(long*)state.StringBuffer == 7598246930185808212 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1866691429)
+                        return CommandType.TimeSeriesCopy;
+
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1329820782 &&
                         *(short*)(state.StringBuffer + sizeof(long) + sizeof(int)) == 22864)

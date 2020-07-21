@@ -1000,6 +1000,43 @@ namespace Raven.Server.Documents.Handlers
                             });
 
                             break;
+                        case CommandType.TimeSeriesCopy:
+
+                            var names = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, cmd.Id);
+                            foreach (var name in names)
+                            {
+                                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, name.ToString(), DateTime.MinValue, DateTime.MaxValue);
+
+                                var tso = new TimeSeriesOperation()
+                                {
+                                    Name = name.ToString()
+                                };
+
+                                foreach (var singleResult in reader.AllValues())
+                                {
+                                    var temp = new TimeSeriesOperation.AppendOperation()
+                                    {
+                                        Tag = singleResult.Tag,
+                                        Timestamp = singleResult.Timestamp,
+                                        Values = singleResult.Values.ToArray()
+                                    };
+                                    tso.Append(temp);
+                                }
+
+                                var ts = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Name, tso, false);
+
+                                ts.ExecuteDirectly(context);
+
+                                LastChangeVector = ts.LastChangeVector;
+                            }
+
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                [nameof(BatchRequestParser.CommandData.Id)] = cmd.DestinationId,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = LastChangeVector,
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
+                            });
+                            break;
                         case CommandType.Counters:
 
                             var counterDocId = cmd.Counters.DocumentId;
