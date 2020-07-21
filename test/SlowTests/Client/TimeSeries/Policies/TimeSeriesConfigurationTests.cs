@@ -1411,6 +1411,56 @@ namespace SlowTests.Client.TimeSeries.Policies
         }
 
         [Fact]
+        public async Task SkipRollupDeadSegmentAfterCleanup()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                new TimeSeriesPolicy("By1",TimeValue.FromSeconds(1))
+                            }
+                        },
+                    },
+                };
+                await storeB.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete();
+                    session.TimeSeriesFor("users/ayende", "Heartrate2")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+                var b = await GetDocumentDatabaseInstanceFor(storeB);
+                await b.TombstoneCleaner.ExecuteCleanup();
+                await b.TimeSeriesPolicyRunner.RunRollups();
+            }
+        }
+
+
+        [Fact]
         public async Task FullRetentionAndRollupInACluster()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);

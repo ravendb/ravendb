@@ -105,9 +105,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 await WaitOrThrowOperationCanceled(_checkFrequency);
 
-                await RunRollups();
+                await RunRollups(propagateException: false);
 
-                await DoRetention();
+                await DoRetention(propagateException: false);
             }
         }
 
@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal async Task RunRollups()
+        internal async Task RunRollups(bool propagateException = true)
         {
             var now = _database.Time.GetUtcNow();
             try
@@ -314,10 +314,14 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to roll-up time series for '{_database.Name}' which are older than {now}", e);
+
+                if (propagateException)
+                    throw;
+
             }
         }
 
-        internal async Task DoRetention()
+        internal async Task DoRetention(bool propagateException = true)
         {
             var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
             var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
@@ -362,6 +366,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to execute time series retention for database '{_database.Name}'", e);
+
+                if (propagateException)
+                    throw;
             }
         }
 
