@@ -41,6 +41,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
+
     }
 
     internal class SeriesSummary
@@ -160,6 +161,25 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        internal List<TimeSeriesStorage.SegmentSummary> GetSegmantsSummary()
+        {
+            if (Init() == false)
+                return null;
+
+            InitializeSegment(out _, out _currentSegment);
+
+            return SegmentsOrValues().Select(seg =>
+                new TimeSeriesStorage.SegmentSummary()
+                {
+                    documentId = _documentId,
+                    name = _name,
+                    startTime = seg.Segment.Start,
+                    numberOfEntries = _currentSegment.NumberOfEntries,
+                    numberOfLiveEntries = _currentSegment.NumberOfLiveEntries,
+                    changeVector = seg.Segment.ChangeVector
+                }).ToList();
+
+        }
         internal SeriesSummary GetSummary()
         {
             if (Init() == false)
