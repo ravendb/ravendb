@@ -115,7 +115,7 @@ namespace SlowTests.Authentication
                 Path = NewDataPath()
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes: DatabaseSmugglerOptions.DefaultOperateOnTypes));
 
                 using (var commands = store.Commands())
                 {
@@ -209,7 +209,7 @@ namespace SlowTests.Authentication
                 Path = path
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes: DatabaseSmugglerOptions.DefaultOperateOnTypes));
 
                 for (int i = 0; i < 3; i++)
                 {
