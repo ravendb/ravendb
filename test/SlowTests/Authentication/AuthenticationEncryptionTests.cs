@@ -40,7 +40,7 @@ namespace SlowTests.Authentication
                 Path = NewDataPath()
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
                 WaitForIndexing(store);
 
