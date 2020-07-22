@@ -246,8 +246,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         // we are currently restoring, shouldn't try to access it
                         databaseRecord.DatabaseState = DatabaseStateStatus.RestoreInProgress;
 
-                        var (index, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.NewId(), restoreSettings.DatabaseValues, isRestore: true);
-                        await _serverStore.Cluster.WaitForIndexNotification(index);
+                        await SaveDatabaseRecordAsync(databaseName, databaseRecord, restoreSettings.DatabaseValues, result, onProgress);
 
                         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
@@ -294,15 +293,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                     // after the db for restore is done, we can safely set the db state to normal and write the DatabaseRecord
                     databaseRecord.DatabaseState = DatabaseStateStatus.Normal;
-                    var (updateIndex, _) = await _serverStore.WriteDatabaseRecordAsync(databaseName, databaseRecord, null, RaftIdGenerator.DontCareId, isRestore: true);
-                    await _serverStore.Cluster.WaitForIndexNotification(updateIndex);
-
-                    if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag))
-                    {
-                        // we need to wait for the database record change to be propagated properly
-                        var db = await _serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-                        await db.RachisLogIndexNotifications.WaitForIndexNotification(updateIndex, _operationCancelToken.Token);
-                    }
+                    await SaveDatabaseRecordAsync(databaseName, databaseRecord, null, result, onProgress);
 
                     return result;
                 }
@@ -358,6 +349,58 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             finally
             {
                 Dispose();
+            }
+        }
+
+        private async Task SaveDatabaseRecordAsync(string databaseName, DatabaseRecord databaseRecord, Dictionary<string,
+            BlittableJsonReaderObject> databaseValues, RestoreResult restoreResult, Action<IOperationProgress> onProgress)
+        {
+            // at this point we restored a large portion of the database or all of it	
+            // we'll retry saving the database record since a failure here will cause us to abort the entire restore operation	
+
+            var index = await RunWithRetries(async () =>
+                {
+                    var result = await _serverStore.WriteDatabaseRecordAsync(
+                        databaseName, databaseRecord, null, RaftIdGenerator.NewId(), databaseValues, isRestore: true);
+                    return result.Index;
+                },
+                "Saving the database record",
+                "Failed to save the database record, the restore is aborted");
+
+            await RunWithRetries(async () =>
+                {
+                    await _serverStore.Cluster.WaitForIndexNotification(index, TimeSpan.FromSeconds(30));
+                    return index;
+                },
+                $"Verifying that the change to the database record propagated to node {_serverStore.NodeTag}",
+                $"Failed to verify that the change to the database record was propagated to node {_serverStore.NodeTag}, the restore is aborted");
+
+            async Task<long> RunWithRetries(Func<Task<long>> action, string infoMessage, string errorMessage)
+            {
+                const int maxRetries = 10;
+                var retries = 0;
+
+                while (true)
+                {
+                    try
+                    {
+                        _operationCancelToken.Token.ThrowIfCancellationRequested();
+
+                        restoreResult.AddInfo(infoMessage);
+                        onProgress.Invoke(restoreResult.Progress);
+
+                        return await action();
+                    }
+                    catch (TimeoutException)
+                    {
+                        if (++retries < maxRetries)
+                            continue;
+
+                        restoreResult.AddError(errorMessage);
+                        onProgress.Invoke(restoreResult.Progress);
+                        throw;
+                    }
+                }
             }
         }
 
