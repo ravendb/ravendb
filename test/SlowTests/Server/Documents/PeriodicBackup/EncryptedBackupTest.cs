@@ -1213,7 +1213,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
                 WaitForIndexing(store);
 
