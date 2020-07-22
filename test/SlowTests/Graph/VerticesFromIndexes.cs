@@ -20,7 +20,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -50,7 +50,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -74,7 +74,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -94,7 +94,7 @@ namespace SlowTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
