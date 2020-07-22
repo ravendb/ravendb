@@ -770,6 +770,17 @@ namespace Raven.Server.Documents.TimeSeries
             return null;
         }
 
+        public class SegmentSummary
+        {
+            public string documentId;
+            public string name;
+            public DateTime startTime;
+            public int numberOfEntries;
+            public int numberOfLiveEntries;
+            public string changeVector;
+
+        }
+
         public class TimeSeriesSegmentHolder : IDisposable
         {
             private readonly TimeSeriesStorage _tss;
@@ -1821,6 +1832,12 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         private static readonly StandardFormat FormatD18 = new StandardFormat('D', 18);
+
+        internal List<SegmentSummary> GetSegmantsSummary(DocumentsOperationContext context, string documentId, string name)
+        {
+            var reader = GetReader(context, documentId, name, DateTime.MinValue, DateTime.MaxValue);
+            return reader.GetSegmantsSummary();
+        }
 
         internal SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)
         {
