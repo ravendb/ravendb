@@ -41,11 +41,24 @@ right to use the provided Software and modify non-compiled
 source files of the provided Software, all for your own internal commercial purposes,
 and subject to the terms and conditions of this Agreement and any other
 restrictions and obligations set forth on the Buy Page.
+For the sake of clarity it is hereby clarified that for as long as you have effective
+license key, you may switch or upgrade to a new released version for no additional
+charge, however if such new version comprises additional features that were
+not available to you under the current version, then you will be required to pay
+the applicable prices under the Buy Page in order to use such new features.
+Once your license key expires and you choose not to renew the subscription period,
+then you shall no longer be entitled to use RavenDB software under the terms
+of this EULA and must delete the software from your servers or otherwise
+use it under the terms of the AGPLv3 license, as mentioned above. 
+
 
 Notwithstanding anything to the contrary in the foregoing paragraph, 
 you may host the Software on behalf of your end users solely in conjunction with your 
 applications; provided that yours' end users shall not, at any time, access the Software
 directly, without a written consent of the Licensor.
+For the avoidance of all doubt, if you use a developer license you may be required
+to manually renew your license every 6 months (or such other period determined by Licensor),
+and manually obtain the applicable certificates for the new period. 
 
 2. Ownership
 
@@ -118,6 +131,11 @@ be expressly set forth therein. Late payments shall bear interest at the lower
 of either 1.5% per month or the highest rate permitted under applicable law.
 All payments must be made according to instructions provided by Licensor
 from time to time.
+Licensor may modify the price, content, or nature of the offered subscription
+at any time. Licensor may provide notice of any such changes by email,
+notice to you upon log-in, or by publishing them on the Site.
+Licensor may change the fees and charges in effect or add new fees
+and charges from time to time to offered subscriptions.
 
 5. Termination
 
