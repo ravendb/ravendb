@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal List<TimeSeriesStorage.SegmentSummary> GetSegmantsSummary()
+        internal List<TimeSeriesStorage.SegmentSummary> GetSegmentsSummary()
         {
             if (Init() == false)
                 return null;
