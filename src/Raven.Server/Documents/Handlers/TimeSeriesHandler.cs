@@ -644,6 +644,59 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser)]
+
+        [RavenAction("/databases/*/timeseries/debug", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSegmantSummary()
+        {
+            var documentId = GetStringQueryString("docId");
+            var name = GetStringQueryString("name");
+            var from = GetDateTimeQueryString("from") ?? DateTime.MinValue;
+            var to = GetDateTimeQueryString("to") ?? DateTime.MaxValue;
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var segmantsSummary = Database.DocumentsStorage.TimeSeriesStorage.GetSegmantsSummary(context, documentId, name, from, to);
+
+                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+                {
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(TimeSeriesStorage.SegmentSummary.documentId));
+                    writer.WriteString(documentId);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(TimeSeriesStorage.SegmentSummary.name));
+                    writer.WriteString(name);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName(nameof(TimeSeriesStorage.SegmentSummary));
+                    writer.WriteStartArray();
+                    foreach (var seg in segmantsSummary)
+                    {
+                        writer.WriteStartObject();
+                        writer.WritePropertyName(nameof(TimeSeriesStorage.SegmentSummary.numberOfEntries));
+                        writer.WriteInteger(seg.numberOfEntries);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TimeSeriesStorage.SegmentSummary.numberOfLiveEntries));
+                        writer.WriteInteger(seg.numberOfLiveEntries);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TimeSeriesStorage.SegmentSummary.startTime));
+                        writer.WriteDateTime(seg.startTime, true);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TimeSeriesStorage.SegmentSummary.changeVector));
+                        writer.WriteString(seg.changeVector);
+                        writer.WriteComma();
+                        writer.WriteEndObject();
+                    }
+
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                }
+            }
+            return Task.CompletedTask;
+        }
+
         public async Task ConfigTimeSeriesNames()
         {
             ServerStore.EnsureNotPassive();
