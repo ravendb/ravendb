@@ -769,9 +769,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public async Task<long> CalculateBackupSizeInBytes()
         {
-            var zipPath = GetBackupLocation();
-             zipPath = Path.Combine(zipPath, RestoreFromConfiguration.LastFileNameToRestore);
-            using (var zip = await GetZipArchiveForSnapshotCalc(zipPath))
+            using (var zip = await GetZipArchiveForSnapshotCalc(RestoreFromConfiguration.LastFileNameToRestore))
                 return zip.Entries.Sum(entry => entry.Length);
         }
     }
