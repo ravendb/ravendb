@@ -123,6 +123,7 @@ namespace Raven.Server.Commercial
                 LicenseStatus.FirstServerStartDate = firstServerStartDate.Value;
                 _licenseStorage.SetBuildInfo(BuildInfo);
 
+                // on a fresh server we are setting the amount of cores in the default license (3)
                 ReloadLicense(firstRun: true);
                 ReloadLicenseLimits();
 
@@ -785,26 +786,28 @@ namespace Raven.Server.Commercial
 
         private bool ShouldIgnoreProcessorAffinityChanges(int cores, LicenseLimits licenseLimits)
         {
-            if (IgnoreProcessorAffinityChanges == false)
-                return false;
-
-            if (licenseLimits == null)
+            if (IgnoreProcessorAffinityChanges)
             {
-                // at server startup we are setting the amount of cores in the default license (3)
-                return false;
+                if (ProcessorInfo.ProcessorCount != cores)
+                {
+                    var basicMessage = "Ignore request for setting processor affinity. " +
+                                       $"Requested cores: {cores}. " +
+                                       $"Number of cores on the machine: {ProcessorInfo.ProcessorCount}. ";
+                    var licenseMessage = string.Empty;
+
+                    if (licenseLimits != null)
+                    {
+                        licenseMessage = $"License limits: {string.Join(", ", licenseLimits.NodeLicenseDetails.Select(x => $"{x.Key}: {x.Value.UtilizedCores}/{x.Value.NumberOfCores}"))}. " + 
+                                         $"Total utilized cores: {licenseLimits.TotalUtilizedCores}. " +
+                                         $"Max licensed cores: {LicenseStatus.MaxCores}";
+                    }
+                    Console.WriteLine(basicMessage + " " + licenseMessage);
+                }
+
+                return true;
             }
 
-            if (ProcessorInfo.ProcessorCount == cores)
-                return false;
-
-            Console.WriteLine($"Processor affinity was set and not using all available cores. " +
-                              $"Requested cores: {cores}. " +
-                              $"Number of cores on the machine: {ProcessorInfo.ProcessorCount}. " +
-                              $"License limits: {string.Join(", ", licenseLimits.NodeLicenseDetails.Select(x => $"{x.Key}: {x.Value.UtilizedCores}/{x.Value.NumberOfCores}"))}. " + 
-                              $"Total utilized cores: {licenseLimits.TotalUtilizedCores}. " +
-                              $"Max licensed cores: {LicenseStatus.MaxCores}");
-            return true;
-
+            return false;
         }
 
         private static void SetMaxWorkingSet(Process process, double ramInGb)
