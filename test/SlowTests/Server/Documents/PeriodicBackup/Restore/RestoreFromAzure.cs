@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -158,6 +163,83 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     {
                         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
                         Assert.Equal($"A:7-{originalDatabase.DbBase64Id}, A:8-{restoredDatabase.DbBase64Id}", databaseChangeVector);
+                    }
+                }
+            }
+        }
+
+        [AzureStorageEmulatorFact]
+        public async Task can_create_azure_snapshot_and_restore_using_restore_point()
+        {
+            var azureSettings = GenerateAzureSettings();
+            InitContainer(azureSettings);
+            azureSettings.RemoteFolderName = "testFolder";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "oren" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    session.SaveChanges();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    AzureSettings = azureSettings,
+                    IncrementalBackupFrequency = "0 0 1 1 *"
+                };
+
+                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
+                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                PeriodicBackupStatus status = null;
+                var value = WaitForValue(() =>
+                {
+                    status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 4);
+                Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
+
+                var client = store.GetRequestExecutor().HttpClient;
+                var data = new StringContent(JsonConvert.SerializeObject(azureSettings), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Azure ", data);
+                string result = response.Content.ReadAsStringAsync().Result;
+                var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
+                Assert.Equal(1, restorePoints.List.Count);
+                var point = restorePoints.List.First();
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                azureSettings.RemoteFolderName = azureSettings.RemoteFolderName + "/" + status.FolderName;
+                var restoreOperation = await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreFromAzureConfiguration()
+                {
+                    DatabaseName = databaseName,
+                    Settings = azureSettings,
+                    DisableOngoingTasks = true,
+                    LastFileNameToRestore = point.FileName,
+                }));
+
+                await restoreOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
+                {
+                    using (var session = store2.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>(new[] { "users/1", "users/2" });
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+
+                        var val = session.CountersFor("users/1").Get("likes");
+                        Assert.Equal(100, val);
+                    }
+
+                    var originalDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result;
+                    var restoredDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                    using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                        Assert.Equal($"A:4-{originalDatabase.DbBase64Id}", databaseChangeVector);
                     }
                 }
             }
