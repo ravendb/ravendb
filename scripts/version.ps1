@@ -178,7 +178,7 @@ function UpdateFileInGitHub($fileUri, $newFileContent, $commitMessage, $branch, 
     
     write-host "Update $fileUri file in GIT repo." 
 
-    (Invoke-WebRequest -TimeoutSec 120 -Uri $fileUri -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyJson).content | ConvertFrom-Json
+    (Invoke-WebRequest -UseBasicParsing -TimeoutSec 120 -Uri $fileUri -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyJson).content | ConvertFrom-Json
     
     write-host "Updated content under $fileUri"
 }
@@ -207,7 +207,7 @@ function GetAssemblyInfoWithBumpedVersion ($projectDir, $newVersion, $srcFileCon
     $result = $assemblyVersionPattern.Replace($result, "[assembly: AssemblyVersion(""$newVersion"")]")
 
     $assemblyFileVersionPattern = [regex]'\[assembly: AssemblyFileVersion\(".*"\)\]'
-    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.42"")]")
+    $result = $assemblyFileVersionPattern.Replace($result, "[assembly: AssemblyFileVersion(""$newVersion.50"")]")
 
     $assemblyInfoVersionPattern = [regex]'\[assembly: AssemblyInformationalVersion\(".*"\)\]';
     $result = $assemblyInfoVersionPattern.Replace($result, "[assembly: AssemblyInformationalVersion(""$newVersion"")]")
