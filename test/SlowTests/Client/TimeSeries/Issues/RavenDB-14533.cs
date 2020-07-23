@@ -41,13 +41,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmantsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
+                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
 
                     sum += summary.Sum(seg => seg.numberOfEntries);
                 }
 
                 Assert.Equal(15000, sum);
-
+                WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/1", "Heartrate").Delete(baseline, baseline.AddMinutes(99));
@@ -58,7 +58,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmantsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
+                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
 
                     sum += summary.Sum(seg => seg.numberOfLiveEntries);
                 }
