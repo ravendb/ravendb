@@ -178,7 +178,7 @@ function UpdateFileInGitHub($fileUri, $newFileContent, $commitMessage, $branch, 
     
     write-host "Update $fileUri file in GIT repo." 
 
-    (Invoke-WebRequest -TimeoutSec 120 -Uri $fileUri -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyJson).content | ConvertFrom-Json
+    (Invoke-WebRequest -UseBasicParsing -TimeoutSec 120 -Uri $fileUri -Method PUT -Headers $headers -ContentType "application/json" -Body $bodyJson).content | ConvertFrom-Json
     
     write-host "Updated content under $fileUri"
 }
