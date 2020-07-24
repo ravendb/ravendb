@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,7 +38,6 @@ namespace FastTests.Client
             }
         }
 
-
         [Fact]
         public void Should_throw_error_by_default_on_by_ref_fields()
         {
@@ -60,7 +58,10 @@ namespace FastTests.Client
             {
                 ModifyDocumentStore = store =>
                 {
-                    store.Conventions.Serialization.ThrowOnByRefMembers = false;
+                    store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    {
+                        IgnoreByRefMembers = true
+                    };
                 }
             }))
             {
@@ -86,7 +87,10 @@ namespace FastTests.Client
             {
                 ModifyDocumentStore = store =>
                 {
-                    store.Conventions.Serialization.ThrowOnUnsafeMembers = false;
+                    store.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
+                    {
+                        IgnoreUnsafeMembers = true
+                    };
                 }
             }))
             {

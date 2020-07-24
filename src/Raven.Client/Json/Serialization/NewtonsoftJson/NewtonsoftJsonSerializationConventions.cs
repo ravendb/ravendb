@@ -18,8 +18,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         private Action<JsonSerializer> _customizeJsonDeserializer;
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private JsonEnumerableConverter _jsonEnumerableConverter;
-        private bool _throwOnByRefFields;
-        private bool _throwOnUnsafeMembers;
+        private bool _ignoreByRefMembers;
+        private bool _ignoreUnsafeMembers;
 
         public DocumentConventions Conventions { get; private set; }
 
@@ -28,8 +28,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             _defaultConverter = new BlittableJsonConverter(this);
             _jsonEnumerableConverter = new JsonEnumerableConverter(this);
             JsonContractResolver = new DefaultRavenContractResolver(this);
-            _throwOnByRefFields = true;
-            _throwOnUnsafeMembers = true;
+            _ignoreByRefMembers = false;
+            _ignoreUnsafeMembers = false;
             CustomizeJsonSerializer = _ => { };
             CustomizeJsonDeserializer = _ => { };
         }
@@ -95,23 +95,23 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
 
         IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;
 
-        public bool ThrowOnByRefMembers 
+        public bool IgnoreByRefMembers
         {
-            get => _throwOnByRefFields;
+            get => _ignoreByRefMembers;
             set
             {
                 Conventions?.AssertNotFrozen();
-                _throwOnByRefFields = value;
+                _ignoreByRefMembers = value;
             }
         }
 
-        public bool ThrowOnUnsafeMembers
+        public bool IgnoreUnsafeMembers
         {
-            get => _throwOnUnsafeMembers;
+            get => _ignoreUnsafeMembers;
             set
             {
                 Conventions?.AssertNotFrozen();
-                _throwOnUnsafeMembers = value;
+                _ignoreUnsafeMembers = value;
             }
         }
 
