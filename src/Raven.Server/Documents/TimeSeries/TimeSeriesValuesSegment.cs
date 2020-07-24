@@ -137,6 +137,8 @@ namespace Raven.Server.Documents.TimeSeries
                 ThrowInvalidNumberOfValues(vals);
             if (tag.Length > byte.MaxValue)
                 ThrowInvalidTagLength();
+            if (deltaFromStart < 0)
+                ThrowInvalidDelta();
 
             if (Header->NumberOfEntries == ushort.MaxValue)
                 return false;
@@ -303,6 +305,11 @@ namespace Raven.Server.Documents.TimeSeries
         private static void ThrowInvalidTagLength()
         {
             throw new ArgumentOutOfRangeException("TimeSeries tag value cannot exceed 256 bytes");
+        }
+
+        private static void ThrowInvalidDelta()
+        {
+            throw new ArgumentOutOfRangeException("Delta can't be negative");
         }
 
         [Pure]

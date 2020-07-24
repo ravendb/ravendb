@@ -212,6 +212,9 @@
     <None Update="Smuggler\Data\SampleDataEsent.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Smuggler\Data\SampleDataEsentLogFileSize4.zip">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Smuggler\Data\SampleDataVoron.zip">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

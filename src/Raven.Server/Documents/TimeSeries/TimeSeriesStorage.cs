@@ -976,8 +976,9 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void AddValueInternal(DateTime time, Span<double> values, Span<byte> tagSlice, ref TimeSeriesValuesSegment segment, ulong status)
             {
-                var timestampDiff = (int)((time - BaselineDate).Ticks / 10_000);
-                if (segment.Append(_context.Allocator, timestampDiff, values, tagSlice, status) == false)
+                var timestampDiff = ((time - BaselineDate).Ticks / 10_000);
+                var inRange = timestampDiff < int.MaxValue;
+                if (inRange == false || segment.Append(_context.Allocator, (int)timestampDiff, values, tagSlice, status) == false)
                 {
                     FlushCurrentSegment(ref segment, values, tagSlice, status);
                     UpdateBaseline(timestampDiff);
@@ -1492,70 +1493,42 @@ namespace Raven.Server.Documents.TimeSeries
             if (doc == null)
                 return;
 
-            try
-            {
-                newName = GetOriginalName(ctx, docId, newName);
-            }
-            catch (Exception e)
-            {
-                var error = $"Unable to locate the original time-series '{newName}' in document '{docId}'";
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(error, e);
-            }
+            newName = GetOriginalName(ctx, docId, newName);
 
             var data = doc.Data;
-            BlittableJsonReaderArray tsNames = null;
-            if (doc.TryGetMetadata(out var metadata))
-            {
-                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out tsNames);
-            }
+            if (doc.TryGetMetadata(out var metadata) == false)
+                return;
+
+            if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray tsNames) == false)
+                return;
 
             if (tsNames == null)
+                return;
+
+            if (tsNames.BinarySearch(newName, StringComparison.OrdinalIgnoreCase) < 0)
+                return;
+
+            var tsNamesList = new List<string>(tsNames.Length + 1);
+            for (var i = 0; i < tsNames.Length; i++)
             {
-                // shouldn't happen
-
-                if (metadata == null)
-                {
-                    data.Modifications = new DynamicJsonValue(data)
-                    {
-                        [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                        {
-                            [Constants.Documents.Metadata.TimeSeries] = new[] { newName }
-                        }
-                    };
-                }
-                else
-                {
-                    metadata.Modifications = new DynamicJsonValue(metadata)
-                    {
-                        [Constants.Documents.Metadata.TimeSeries] = new[] { newName }
-                    };
-                }
+                var val = tsNames.GetStringByIndex(i);
+                if (val == null)
+                    continue;
+                tsNamesList.Add(val);
             }
-            else
+
+            var location = tsNames.BinarySearch(newName, StringComparison.Ordinal);
+            if (location < 0)
             {
-                var tsNamesList = new List<string>(tsNames.Length + 1);
-                for (var i = 0; i < tsNames.Length; i++)
-                {
-                    var val = tsNames.GetStringByIndex(i);
-                    if (val == null)
-                        continue;
-                    tsNamesList.Add(val);
-                }
-
-                var location = tsNames.BinarySearch(newName, StringComparison.Ordinal);
-                if (location < 0)
-                {
-                    tsNamesList.Insert(~location, newName);
-                }
-
-                tsNamesList.Remove(oldName);
-
-                metadata.Modifications = new DynamicJsonValue(metadata)
-                {
-                    [Constants.Documents.Metadata.TimeSeries] = tsNamesList
-                };
+                tsNamesList.Insert(~location, newName);
             }
+
+            tsNamesList.Remove(oldName);
+
+            metadata.Modifications = new DynamicJsonValue(metadata)
+            {
+                [Constants.Documents.Metadata.TimeSeries] = tsNamesList
+            };
 
             var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
             flags |= DocumentFlags.HasTimeSeries;
@@ -1579,16 +1552,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (doc == null)
                 return;
 
-            try
-            {
-                tsName = GetOriginalName(ctx, docId, tsName);
-            }
-            catch (Exception e)
-            {
-                var error = $"Unable to locate the original time-series '{tsName}' in document '{docId}'";
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(error, e);
-            }
+            tsName = GetOriginalName(ctx, docId, tsName);
 
             var data = doc.Data;
             BlittableJsonReaderArray tsNames = null;
@@ -1650,11 +1614,27 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public string GetOriginalName(DocumentsOperationContext context, string docId, string lowerName)
+        public string GetOriginalName(DocumentsOperationContext ctx, string docId, string tsName)
+        {
+            try
+            {
+                return GetOriginalNameInternal(ctx, docId, tsName);
+            }
+            catch (Exception e)
+            {
+                var error = $"Unable to locate the original time-series '{tsName}' of document '{docId}'";
+                if (_logger.IsInfoEnabled)
+                    _logger.Info(error, e);
+            }
+
+            return tsName;
+        }
+
+        private string GetOriginalNameInternal(DocumentsOperationContext context, string docId, string lowerName)
         {
             var name = Stats.GetTimeSeriesNameOriginalCasing(context, docId, lowerName);
             if (name == null)
-                throw new InvalidOperationException($"Can't find the time-series '{lowerName}' in document '{docId}'");
+                throw new InvalidOperationException($"Can't find the time-series '{lowerName}' of document '{docId}'");
 
             return name;
         }

@@ -19,7 +19,7 @@ namespace SlowTests.Voron.Issues
         {
             base.Configure(options);
 
-            options.MasterKey = _masterKey.ToArray();
+            options.Encryption.MasterKey = _masterKey.ToArray();
         }
 
         [Fact]

@@ -2,7 +2,6 @@
 
 .patch-save {
 
-
     .form-control {
         margin-right: -30px;
         opacity: 0;
@@ -184,6 +183,14 @@
             height: 40vh;
         }
     }   
+    
+    .tab-content {
+        max-height: 40vh;
+    }
+    
+    .tab-data {
+        color: @text-emphasis;
+    }
 }
 
 .patch-container {
@@ -276,54 +283,25 @@
         }
     }
 
-    #puts {
-        .put-item {
-            display: flex;
-
-            .put-heading {
-                background-color: transparent;
-                padding: 0 @grid-gutter-width/4;
-                width: 25%;
-                flex-shrink: 0;
-            }
-
-            pre {
-                padding: 0 @grid-gutter-width/4;
-                border: none;
-                flex-grow: 1;
-                display: none;
-            }
-
-            & + .put-item {
-                margin-top: @grid-gutter-width/4;
-                border-top: 1px solid @gray-dark;
-            }
-        }
-
-        &.show-objects {
-            .put-placeholder {
-                display: none;
-            }
-
-            pre {
-                display: block;
-            }
+    #modified, #loaded {
+        pre {
+            padding: 0 @grid-gutter-width/4;
+            border: none;
+            flex-grow: 1;
+            display: none;
         }
     }
-
-    #loads, #output {
+  
+    #loaded, #modified, #deleted ,#output {
         ul {
             list-style: none;
             padding: 0;
             margin: 0;
-
-            li {
-                padding: @grid-gutter-width/4;
-
-                & + li {
-                    border-top: 1px solid @gray-dark;
-                }
-            }
+        }
+        
+        small {
+            padding-left: 0px;
+            padding-right: 0px;
         }
     }
 }

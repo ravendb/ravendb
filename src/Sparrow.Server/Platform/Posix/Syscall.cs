@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using Sparrow.Platform;
+using Sparrow.Server.Exceptions;
 
 namespace Sparrow.Server.Platform.Posix
 {
@@ -296,13 +297,16 @@ namespace Sparrow.Server.Platform.Posix
         {
             if (Enum.IsDefined(typeof(Errno), lastError) == false)
                 throw new InvalidOperationException("Unknown errror ='" + lastError + "'. Message: " + msg);
+
             var error = (Errno)lastError;
             switch (error)
             {
                 case Errno.ENOMEM:
-                    throw new OutOfMemoryException("ENOMEM on " + msg);
+                    throw new OutOfMemoryException($"ENOMEM on {msg}");
                 case Errno.ENOENT:
-                    throw new FileNotFoundException("ENOENT on " + msg);
+                    throw new FileNotFoundException($"ENOENT on {msg}");
+                case Errno.ENOSPC:
+                    throw new DiskFullException($"ENOSPC on {msg}");
                 default:
                     throw new InvalidOperationException(error + " " + msg);
             }

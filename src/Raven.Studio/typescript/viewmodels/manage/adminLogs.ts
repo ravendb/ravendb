@@ -99,7 +99,7 @@ class adminLogs extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", 
+        this.bindToCurrentInstance("toggleTail", "itemHeightProvider", "applyConfiguration", "loadLogsConfig",
             "includeFilter", "excludeFilter", "removeConfigurationEntry", "itemHtmlProvider", "setAdminLogMode");
         
         this.initObservables();
@@ -159,7 +159,7 @@ class adminLogs extends viewModelBase {
         }
     }
     
-    private loadLogsConfig() {
+    loadLogsConfig() {
         return new getAdminLogsConfigurationCommand().execute()
             .done(result => this.onDiskConfiguration(new adminLogsOnDiskConfig(result)));
     }

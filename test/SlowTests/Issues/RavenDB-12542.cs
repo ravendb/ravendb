@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -31,7 +31,6 @@ namespace SlowTests.Issues
                         session.Advanced.RawQuery<JObject>("match (Orders as o)").ToArray();
 
                     Assert.Equal(queryResultsFromCollection, queryResultsFromIndex);
-
                 }
             }
         }
@@ -41,7 +40,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new Index_Orders_ByEmployee().Execute(store);
                 WaitForIndexing(store);
 
@@ -54,7 +53,6 @@ namespace SlowTests.Issues
                         session.Advanced.RawQuery<JObject>("from index 'Orders/ByEmployee' where Employee = 'employees/4-A'").ToArray();
 
                     Assert.Equal(queryResultsFromCollection, queryResultsFromIndex);
-
                 }
             }
         }
@@ -80,7 +78,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -90,13 +88,12 @@ namespace SlowTests.Issues
             }
         }
 
-
         [Fact]
         public void Select_clause_inside_node_expressions_should_throw()
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
@@ -111,7 +108,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                CreateNorthwindDatabase(store);
+                CreateNorthwindDatabase(store, Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes);
                 new IndexOrdersProductsWithPricePerUnit().Execute(store);
                 WaitForIndexing(store);
                 using (var session = store.OpenSession())
@@ -124,7 +121,7 @@ namespace SlowTests.Issues
 
                     var referenceQueryResults = session.Advanced.RawQuery<Order>(@"from index 'Orders/ProductsWithPricePerUnit' where PricePerUnit > 200")
                         .ToArray()
-                        .SelectMany(x => x.Lines).ToArray().Where(x => x.PricePerUnit > 200).Select(x =>x.Product).ToArray();
+                        .SelectMany(x => x.Lines).ToArray().Where(x => x.PricePerUnit > 200).Select(x => x.Product).ToArray();
 
                     Assert.Equal(referenceQueryResults, queryResults);
                 }

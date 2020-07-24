@@ -26,12 +26,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
         }
 
-        protected override IEnumerable<IndexItem> GetItems(DocumentsOperationContext databaseContext, Slice key)
-        {
-            yield return GetItem(databaseContext, key);
-        }
-
-        private unsafe IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
+        protected override unsafe IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
         {
             using (DocumentIdWorker.GetLower(databaseContext.Allocator, key.Content.Ptr, key.Size, out var loweredKey))
             {
@@ -321,26 +316,25 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
             {
-                foreach (var item in GetItems(queryContext.Documents, key))
+                var item = GetItem(queryContext.Documents, key);
+
+                if (item == null)
+                    continue;
+
+                if (item.Etag > lastIndexedEtag)
                 {
-                    if (item == null)
-                        continue;
-
-                    if (item.Etag > lastIndexedEtag)
-                    {
-                        item.Dispose();
-                        continue;
-                    }
-
-                    if (item.Etag > referencedDocument.Etag)
-                    {
-                        //If the map worker already mapped this "doc" version it must be with this version of "referencedDocument" and if the map worker didn't mapped the "doc" so it will process it later 
-                        item.Dispose();
-                        continue;
-                    }
-
-                    yield return item;
+                    item.Dispose();
+                    continue;
                 }
+
+                if (item.Etag > referencedDocument.Etag)
+                {
+                    //If the map worker already mapped this "doc" version it must be with this version of "referencedDocument" and if the map worker didn't mapped the "doc" so it will process it later 
+                    item.Dispose();
+                    continue;
+                }
+
+                yield return item;
             }
         }
 
@@ -370,7 +364,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
-        protected abstract IEnumerable<IndexItem> GetItems(DocumentsOperationContext databaseContext, Slice key);
+        protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 

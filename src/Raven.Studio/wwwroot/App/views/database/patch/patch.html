@@ -46,13 +46,13 @@
                                     <i class="icon-play2 icon-lg"></i><br />
                                     <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                                 </button>
-                                <button class="btn btn-default btn-block text-center margin-top" data-bind="click: enterTestMode" title="Dry patch run. It doesn't modify any data">
+                                <button class="btn btn-default btn-block text-center margin-top" data-bind="click: test.enterTestMode" title="Dry patch run. No data is modified.">
                                     <i class="icon-rocket"></i><span>Test</span>
                                 </button>
                             </div>
                             <div class="test-controls">
                                 <div class="flex-separator"></div>
-                                <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
+                                <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" title="Test the patch script on the selected document">
                                     <i class="icon-rocket"></i><span>Test</span><br />
                                     <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                                 </button>
@@ -68,17 +68,18 @@
     </div>
     <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()"></div>
 </div>
-<div class="backdrop" data-bind="click: test.closeTestMode"></div>
+<div class="backdrop"></div>
 
 <script type="text/html" id="test-component">
     <div class="row margin-bottom form-horizontal" data-bind="with: test">
-        <label class="control-label col-sm-3 col-lg-2">Document ID</label>
-        <div class="col-sm-9 col-lg-10">
+        <label class="control-label col-sm-offset-3 col-lg-offset-2 col-sm-2 col-lg-1">Document ID</label>
+        <div class="col-sm-8 col-lg-9">
             <div class="row">
-                <div class="col-sm-6">
-                    <div class="input-group">
-                        <input type="text" id="documentId" data-bind="textInput: documentId" class="form-control" placeholder="Document id" autocomplete="off"
-                            title="This field is required." data-orig-title=""/><span class="help-block" style="display: none;"></span>
+                <div class="col-sm-8">
+                    <div class="input-group" data-bind="validationOptions: { insertMessages: false }, validationElement: documentId">
+                        <input type="text" id="documentId" data-bind="textInput: documentId" 
+                               class="form-control" placeholder="Enter document id for the patch test" autocomplete="off" />
+                        <span class="help-block" data-bind="validationMessage: documentId"></span>
                         <ul class="documentIdAutocomplete dropdown-menu autocomplete-list" role="menu" 
                              data-bind="autoComplete: '#documentId', foreach: docsIdsAutocompleteResults">
                             <li role="presentation" data-bind="click: _.partial($parent.onAutocompleteOptionSelected, $data)">
@@ -93,7 +94,7 @@
                                 <i class="icon-preview"></i>
                             </button>
                         </span>
-                        <button class="btn btn-default" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }" >
+                        <button class="btn btn-default" data-bind="click: loadDocument, css: { 'btn-spinner': spinners.loadingDocument }, disable: spinners.loadingDocument() || !documentId()" >
                             <i class="icon-import"></i>
                             <span>Load document</span>
                         </button>
@@ -108,101 +109,215 @@
     <div class="row tabs-left form-horizontal">
         <div class="col-sm-3 col-lg-2">
             <ul class="nav nav-tabs nav-stacked" data-bind="with: test">
-                <li class="active">
+                <li data-bind="click: tabClicked('preview')">
                     <a href="#preview" data-toggle="tab" title="Show document before and after patch">
                         <i class="icon-preview"></i>
-                        <span>Preview</span>
+                        <span>Document Preview</span>
                     </a>
                 </li>
-                <li>
-                    <a href="#puts" data-toggle="tab" title="Show information about documents saved during patch execution">
-                        <i class="icon-export"></i>
-                        <span>Puts</span>
-                        <span class="label label-primary pull-right" data-bind="text: actions.putDocument().length || ''"></span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#loads" data-toggle="tab" title="Show information about loaded documents during patch execution">
+                <li data-bind="click: tabClicked('loaded')">
+                    <a href="#loaded" data-toggle="tab" title="Show information about loaded items during test execution">
                         <i class="icon-import"></i>
-                        <span>Loads</span>
-                        <span class="label label-primary pull-right" data-bind="text: actions.loadDocument().length || ''"></span>
+                        <span>Loaded</span>
+                        <span class="label label-primary pull-right" data-bind="text: loadedCount"></span>
                     </a>
                 </li>
-                <li>
-                    <a href="#deletes" data-toggle="tab" title="Show information about deleted documents during patch execution">
+                <li data-bind="click: tabClicked('modified')">
+                    <a href="#modified" data-toggle="tab" title="Show information about created/modified items during test execution">
+                        <i class="icon-export"></i>
+                        <span>Modified</span>
+                        <span class="label label-primary pull-right" data-bind="text: modifiedCount"></span>
+                    </a>
+                </li>
+                <li data-bind="click: tabClicked('deleted')">
+                    <a href="#deleted" data-toggle="tab" title="Show information about deleted items during test execution">
                         <i class="icon-trash"></i>
-                        <span>Deletes</span>
-                        <span class="label label-primary pull-right" data-bind="text: actions.deleteDocument().length || ''"></span>
+                        <span>Deleted</span>
+                        <span class="label label-primary pull-right" data-bind="text: deletedCount"></span>
                     </a>
                 </li>
-                <li>
-                    <a href="#output" data-toggle="tab" title="Show log generated during patch execution">
+                <li data-bind="click: tabClicked('output')">
+                    <a href="#output" data-toggle="tab" title="Show output generated during test execution"> 
                         <i class="icon-administrator-js-console"></i>
                         <span>Output</span>
-                        <span class="label label-primary pull-right" data-bind="text: actions.info().length || ''"></span>
+                        <span class="label label-primary pull-right" data-bind="text: actions.output().length || ''"></span>
                     </a>
                 </li>
             </ul>
         </div>
         <div class="col-sm-9 col-lg-10">
-            <div class="panel ">
-                <div class="" data-bind="with: test">
-                    <div class="tab-content">
-                        <div class="tab-pane fade in active" id="preview">
-                            <div class="row flex-row">
-                                <div class="col-sm-6 flex-vertical">
-                                    <h3 class="flex-header">Before</h3>
+            <div class="panel">
+                <div data-bind="with: test">
+                    <div class="tab-content scroll">
+                        <div class="tab-pane fade in active" id="preview" data-bind="if: activeTestTab() === 'preview'">
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <h3>Before</h3>
                                     <pre id="beforeDocEditor"
                                          data-bind="aceEditor: { code: beforeDoc, fontSize:'14px', lang: 'ace/mode/raven_document', readOnly: true }"></pre>
                                 </div>
-                                <div class="col-sm-6 flex-vertical">
-                                    <h3 class="flex-header">After</h3>
-                                    <pre id="afterDocEditor" 
+                                <div class="col-sm-6">
+                                    <h3>After</h3>
+                                    <pre id="afterDocEditor"
                                          data-bind="aceEditor: { code: afterDoc, fontSize:'14px', lang: 'ace/mode/raven_document', readOnly: true }"></pre>
                                 </div>
                             </div>
                         </div>
-                        <div class="tab-pane fade flex-vertical" id="puts" data-bind="css: { 'show-objects': showObjectsInPutSection }">
-                            <div class="flex-header">
-                                <div class="clearfix">
-                                    <h3 class="pull-left">Puts</h3>
-                                    <div class="pull-right">
-                                        <div class="toggle toggle-inline">
-                                            <input type="checkbox" class="styled" id="showObjects" data-bind="checked: showObjectsInPutSection">
-                                            <label for="showObjects"> Show objects </label>
-                                        </div>
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="loaded" data-bind="if: activeTestTab() === 'loaded'">
+                            <h2 class="text-center">Loaded Data</h2>
+                            <div data-bind="if: actions.loadDocument().length">
+                                <hr>
+                                <h3><i class="icon-document"></i><span>Documents</span></h3>
+                                <ul data-bind="foreach: actions.loadDocument">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: Id"></span></small>
+                                        <small class="col-sm-2" data-bind="visible: !Exists"><span class="tab-data">&lt;Document not found&gt;</span></small>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div data-bind="if: actions.getCounter().length">
+                                <hr>
+                                <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
+                                <ul data-bind="foreach: actions.getCounter">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <span data-bind="visible: !Exists">
+                                            <small class="col-sm-2"><span class="tab-data">&lt;Counter not found&gt;</span></small>
+                                        </span>
+                                        <span data-bind="if: Exists">
+                                            <small class="col-sm-2"><label>Value:</label><span class="margin-left tab-data" data-bind="text: Value"></span></small>
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div data-bind="if: actions.getTimeSeries().length">
+                                <hr>
+                                <div class="flex-horizontal">
+                                    <h3><i class="icon-document"></i><span>Time Series</span></h3>
+                                    <div class="flex-separator"></div>
+                                    <div class="toggle toggle-inline">
+                                        <input type="checkbox" id="showValuesInLoaded" data-bind="checked: showTimeSeriesValuesInLoaded">
+                                        <label for="showValuesInLoaded">Show values</label>
                                     </div>
                                 </div>
+                                <ul data-bind="foreach: actions.getTimeSeries">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <span data-bind="visible: !Exists">
+                                            <small class="col-sm-2"><span class="tab-data">&lt;No entries found&gt;</span></small>
+                                        </span>
+                                        <span data-bind="if: Exists">
+                                            <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: Tag || '<None>'"></span></small>
+                                            <small class="col-sm-3"><label>Time Stamp:</label><span class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
+                                            <small class="col-sm-2" data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Values:</label><span class="margin-left tab-data">{ ... }</span></small>
+                                            <small class="col-sm-2" data-bind="css: { 'hide': $parent.showTimeSeriesValuesInLoaded }"><label>Type:</label><span class="margin-left tab-data" data-bind="text: Type"></span></small>
+                                            <pre data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInLoaded }"></pre>
+                                        </span>
+                                    </li>
+                                </ul>
                             </div>
-                            <div class="flex-grow scroll" data-bind="foreach: actions.putDocument">
-                                <div class="put-item">
-                                    <div class="put-heading" data-bind="text: Id"></div>
-                                    <div class="put-placeholder">{ ... }</div>
-                                    <pre data-bind="html: $parent.formatAsJson(Data)"></pre>
+                            <div data-bind="if: !loadedCount()"><hr>No data available.</div>
+                        </div>
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="modified" data-bind="if: activeTestTab() === 'modified'">
+                            <h2 class="text-center">Modified Data</h2>
+                            <div data-bind="if: actions.putDocument().length">
+                                <hr>
+                                <div class="flex-horizontal">
+                                    <h3><i class="icon-document"></i><span>Documents</span></h3>
+                                    <div class="flex-separator"></div>
+                                    <div class="toggle toggle-inline">
+                                        <input type="checkbox" id="showDocuments" data-bind="checked: showDocumentsInModified">
+                                        <label for="showDocuments">Show documents</label>
+                                    </div>
                                 </div>
+                                <ul data-bind="foreach: actions.putDocument">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: Id"></span></small>
+                                        <small class="col-sm-2">
+                                            <label>Put Document:</label>
+                                            <span class="margin-left tab-data"  data-bind="css: { 'hide' : $parent.showDocumentsInModified }">{ ... }</span>
+                                        </small>
+                                        <pre data-bind="html: $parent.formatAsJson(Data), css: { 'show' : $parent.showDocumentsInModified }"></pre>
+                                    </li>
+                                </ul>
                             </div>
-                            <p data-bind="visible: actions.putDocument().length === 0">No data available.</p>
+                            <div data-bind="if: actions.incrementCounter().length">
+                                <hr>
+                                <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
+                                <ul data-bind="foreach: actions.incrementCounter">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <small class="col-sm-2"><label>Value Before:</label><span class="margin-left tab-data" data-bind="text: Created ? '&lt;None&gt;' : OldValue"></span></small>
+                                        <small class="col-sm-2"><label>Value After:</label><span class="margin-left tab-data" data-bind="text: NewValue"></span></small>
+                                        <small class="col-sm-2"><span class="tab-data" data-bind="text: Created ? '&lt;Counter created&gt;' : ''"></span></small>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div data-bind="if: actions.appendTimeSeries().length">
+                                <hr>
+                                <div class="flex-horizontal">
+                                    <h3><i class="icon-document"></i><span>Time Series</span></h3>
+                                    <div class="flex-separator"></div>
+                                    <div class="toggle toggle-inline">
+                                        <input type="checkbox" id="showValuesInModified" data-bind="checked: showTimeSeriesValuesInModified">
+                                        <label for="showValuesInModified">Show values</label>
+                                    </div>
+                                </div>
+                                <ul data-bind="foreach: actions.appendTimeSeries">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <small class="col-sm-2"><label>Entry Tag:</label><span class="margin-left tab-data" data-bind="text: Tag || '&lt;None&gt;'"></span></small>
+                                        <small class="col-sm-3"><label>Timestamp:</label><span class="margin-left tab-data" data-bind="text: Timestamp"></span></small>
+                                        <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><label>Values Appended:</label><span class="margin-left tab-data">{ ... }</span></small>
+                                        <small class="col-sm-2" data-bind="css: { 'hide' : $parent.showTimeSeriesValuesInModified }"><span class="tab-data" data-bind="text: Created ? '&lt;Time series created&gt;' : ''"></span></small>
+                                        <pre data-bind="html: $parent.formatAsJson(Values), css: { 'show' : $parent.showTimeSeriesValuesInModified }"></pre>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div data-bind="if: !modifiedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade flex-vertical" id="loads">
-                            <h3 class="flex-header">Loads</h3>
-                            <ul class="flex-grow scroll" data-bind="foreach: actions.loadDocument">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                            <p data-bind="visible: actions.loadDocument().length === 0">No data available.</p>
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="deleted" data-bind="if: activeTestTab() === 'deleted'">
+                            <h2 class="text-center">Deleted Data</h2>
+                            <div data-bind="if: actions.deleteDocument().length">
+                                <hr>
+                                <h3><i class="icon-document"></i><span>Documents</span></h3>
+                                <ul data-bind="foreach: actions.deleteDocument">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>ID:</label><span class="margin-left tab-data" data-bind="text: $data"></span></small>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div data-bind="if: actions.deleteCounter().length">
+                                <hr>
+                                <h3><i class="icon-new-counter"></i><span>Counters</span></h3>
+                                <ul data-bind="foreach: actions.deleteCounter">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: $data"></span></small>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div data-bind="if: actions.deleteTimeSeries().length">
+                                <hr>
+                                <h3><i class="icon-timeseries"></i><span>Time Series</span></h3>
+                                <ul data-bind="foreach: actions.deleteTimeSeries">
+                                    <li class="margin-left margin-left-lg row">
+                                        <small class="col-sm-2 margin-left margin-left-lg"><label>Name:</label><span class="margin-left tab-data" data-bind="text: Name"></span></small>
+                                        <small class="col-sm-3"><label>Entries From:</label><span class="margin-left tab-data" data-bind="text: From"></span></small>
+                                        <small class="col-sm-3"><label>To:</label><span class="margin-left tab-data" data-bind="text: To"></span></small>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div data-bind="if: !deletedCount()"><hr>No data available.</div>
                         </div>
-                        <div class="tab-pane fade flex-vertical" id="deletes">
-                            <h3 class="flex-header">Deletes</h3>
-                            <ul class="flex-grow scroll" data-bind="foreach: actions.deleteDocument">
-                                <li data-bind="text: $data"></li>
+                        <div class="tab-pane fade margin-bottom margin-bottom-lg" id="output" data-bind="if: activeTestTab() === 'output'">
+                            <h2 class="text-center">Output Data</h2>
+                            <hr>
+                            <ul data-bind="foreach: actions.output">
+                                <li>
+                                    <small data-bind="text: $data"></small>
+                                </li>
                             </ul>
-                            <p data-bind="visible: actions.deleteDocument().length === 0">No data available.</p>
-                        </div>
-                        <div class="tab-pane fade flex-vertical" id="output">
-                            <h3 class="flex-header">Output</h3>
-                            <ul class="flex-grow scroll" data-bind="foreach: actions.info">
-                                <li data-bind="text: $data"></li>
-                            </ul>
-                            <p data-bind="visible: actions.info().length === 0">No data available.</p>
+                            <p data-bind="if: actions.output().length === 0">No data available.</p>
                         </div>
                     </div>
                     <div class="clearfix"></div>
@@ -230,7 +345,7 @@
                                 <div class="col-xs-9">
                                    Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().Name : ''"></strong>
                                 </div>
-                                <div class="col-xs-3">                                 
+                                <div class="col-xs-3">
                                     <span class="pull-right"> 
                                         <button title="Load saved patch" class="btn btn-success btn-sm close-panel" data-bind="click: usePatch , enable: previewItem()">Load</button>
                                     </span>

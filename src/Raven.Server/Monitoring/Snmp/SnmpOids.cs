@@ -88,7 +88,10 @@ namespace Raven.Server.Monitoring.Snmp
             
             [Description("Server working set swap usage in MB")]
             public const string WorkingSetSwapUsage = "1.6.5";
-            
+
+            [Description("Dirty Memory that is used by the scratch buffers in MB")]
+            public const string DirtyMemory = "1.6.6";
+
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
 

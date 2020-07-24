@@ -4,9 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
@@ -53,6 +55,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (policyRunner.Configuration.PolicyConfigurationChanged(dbRecord.TimeSeries) == false)
                         return policyRunner;
                 }
+
                 policyRunner?.Dispose();
 
                 var runner = new TimeSeriesPolicyRunner(database, dbRecord.TimeSeries);
@@ -61,12 +64,19 @@ namespace Raven.Server.Documents.TimeSeries
             }
             catch (Exception e)
             {
-                
                 const string msg = "Cannot enable policy runner as the configuration record is not valid.";
-                database.NotificationCenter.Add(AlertRaised.Create(
-                    database.Name,
-                    $"policy runner error in {database.Name}", msg,
-                    AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
+
+                if (e is LicenseLimitException lle)
+                {
+                    LicenseLimitWarning.AddLicenseLimitNotification(database.ServerStore.NotificationCenter, lle);
+                }
+                else
+                {
+                    database.NotificationCenter.Add(AlertRaised.Create(
+                        database.Name,
+                        $"Time series policy runner for database '{database.Name}' encountered an error", msg,
+                        AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
+                }
 
                 var logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(database.Name);
                 if (logger.IsOperationsEnabled)
@@ -95,9 +105,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 await WaitOrThrowOperationCanceled(_checkFrequency);
 
-                await RunRollups();
+                await RunRollups(propagateException: false);
 
-                await DoRetention();
+                await DoRetention(propagateException: false);
             }
         }
 
@@ -257,7 +267,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal async Task RunRollups()
+        internal async Task RunRollups(bool propagateException = true)
         {
             var now = _database.Time.GetUtcNow();
             try
@@ -304,10 +314,14 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to roll-up time series for '{_database.Name}' which are older than {now}", e);
+
+                if (propagateException)
+                    throw;
+
             }
         }
 
-        internal async Task DoRetention()
+        internal async Task DoRetention(bool propagateException = true)
         {
             var topology = _database.ServerStore.LoadDatabaseTopology(_database.Name);
             var isFirstInTopology = string.Equals(topology.Members.FirstOrDefault(), _database.ServerStore.NodeTag, StringComparison.OrdinalIgnoreCase);
@@ -352,6 +366,9 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Failed to execute time series retention for database '{_database.Name}'", e);
+
+                if (propagateException)
+                    throw;
             }
         }
 

@@ -197,8 +197,9 @@ namespace Raven.Server.Documents.TimeSeries
                 if (rollUpTime > currentTicks)
                     return;
 
-                DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, ref item.Result.Reader,out var key);
+                DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, ref item.Result.Reader, out var key);
                 SplitKey(key, out var docId, out var name);
+                name = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
 
                 var state = new RollupState
                 {

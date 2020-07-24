@@ -124,6 +124,30 @@ namespace SlowTests.Smuggler
             }
         }
 
+        [NonLinuxFact]
+        public async Task CanOfflineMigrateEsentWithCustomizedLogFileSize()
+        {
+            string dataDir = UnzipTheZips("SampleDataEsentLogFileSize4.zip", out PathSetting storageExplorer);
+
+            var db = new DatabaseRecord($"restoredSampleDataEsentWithCustomizedLogFileSize_{Guid.NewGuid()}");
+            var config = new OfflineMigrationConfiguration(dataDir, storageExplorer.FullPath, db)
+            {
+                LogFileSize = 4
+            };
+            using (var store = GetDocumentStore(new Options() { CreateDatabase = false }))
+            {
+                var o = await store.Maintenance.Server.SendAsync(new OfflineMigrationOperation(config));
+                await o.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+
+                using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => db.DatabaseName }))
+                {
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1059, stats.CountOfDocuments);
+                    Assert.Equal(3, stats.CountOfIndexes);
+                }
+            }
+        }
+
         private string UnzipTheZips(string data, out PathSetting storageExplorer)
         {
             var dataDir = NewDataPath(forceCreateDir: true, prefix: Guid.NewGuid().ToString());
