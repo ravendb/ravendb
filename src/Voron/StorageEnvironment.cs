@@ -152,6 +152,9 @@ namespace Voron
 
                 _journal = new WriteAheadJournal(this);
 
+                if (options.Encryption.HasExternalJournalCompressionBufferHandlerRegistration) 
+                    options.Encryption.SetExternalCompressionBufferHandler(_journal);
+
                 if (isNew)
                     CreateNewDatabase();
                 else // existing db, let us load it
@@ -1246,7 +1249,7 @@ namespace Voron
             {
                 try
                 {
-                    if (_env.Options.EncryptionEnabled)
+                    if (_env.Options.Encryption.IsEnabled)
                         Sodium.sodium_memzero(_tmp.TempPagePointer, (UIntPtr)_tmp.PageSize);
                     
                     _tmp.UnpinMemory();

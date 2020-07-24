@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Voron.Data.Fixed;
-using Voron.Data.RawData;
 using Voron.Global;
 using Voron.Impl;
 
@@ -23,8 +19,9 @@ namespace Voron.Data.Tables
         // we require a bit more because we want to ensure that we aren't wasting
         // resources by needlessly compressing data
         private const int OverheadSize = 32;
+
         private const string CompressionRecoveryExtension = ".compression-recovery";
-        public  const string CompressionRecoveryExtensionGlob = "*" + CompressionRecoveryExtension;
+        public const string CompressionRecoveryExtensionGlob = "*" + CompressionRecoveryExtension;
         private readonly TableValueBuilder _builder;
 
         public bool Compressed;
@@ -44,9 +41,11 @@ namespace Voron.Data.Tables
         {
             get
             {
-                if (Compressed) return CompressedBuffer.Length;
+                if (Compressed)
+                    return CompressedBuffer.Length;
 
-                if (RawBuffer.HasValue) return RawBuffer.Length;
+                if (RawBuffer.HasValue)
+                    return RawBuffer.Length;
 
                 return _builder.Size;
             }
@@ -79,7 +78,7 @@ namespace Voron.Data.Tables
                     // training dictionaries is expensive, only do that if we see that the current compressed
                     // value is significantly worse than the previous one
                     var etagTree = table.GetFixedSizeTree(schema.CompressedEtagSourceIndex);
-                    if(ShouldRetrain(etagTree))
+                    if (ShouldRetrain(etagTree))
                         MaybeTrainCompressionDictionary(table, etagTree);
                 }
 
@@ -145,7 +144,6 @@ namespace Voron.Data.Tables
             return count;
         }
 
-
         private void MaybeTrainCompressionDictionary(Table table, FixedSizeTree etagsTree)
         {
             // the idea is that we'll get better results by including the most recently modified documents
@@ -157,7 +155,7 @@ namespace Voron.Data.Tables
                 int used = 0;
                 var totalSize = 0;
                 int totalSkipped = 0;
-            
+
                 using (var it = etagsTree.Iterate())
                 {
                     if (it.SeekToLast() == false)
@@ -198,11 +196,10 @@ namespace Voron.Data.Tables
                     }
 
                     using (tx.Allocator.Allocate(
-                        // the dictionary 
+                        // the dictionary
                         Constants.Storage.PageSize - PageHeader.SizeOf - sizeof(CompressionDictionaryInfo)
                         , out var dictionaryBuffer))
                     {
-
                         Span<byte> dictionaryBufferSpan = dictionaryBuffer.ToSpan();
                         ZstdLib.Train(new ReadOnlySpan<byte>(buffer.Ptr, totalSize),
                             new ReadOnlySpan<UIntPtr>(sizes, 0, used),
@@ -227,7 +224,7 @@ namespace Voron.Data.Tables
                         using (dictionariesTree.DirectAdd(slice, sizeof(CompressionDictionaryInfo) + dictionaryBufferSpan.Length, out var dest))
                         {
                             *((CompressionDictionaryInfo*)dest) =
-                                new CompressionDictionaryInfo {ExpectedCompressionRatio = compressionDictionary.ExpectedCompressionRatio};
+                                new CompressionDictionaryInfo { ExpectedCompressionRatio = compressionDictionary.ExpectedCompressionRatio };
                             Memory.Copy(dest + sizeof(CompressionDictionaryInfo), dictionaryBuffer.Ptr, dictionaryBufferSpan.Length);
                         }
 
@@ -280,7 +277,7 @@ namespace Voron.Data.Tables
                         .FullPath;
 
                     using var fs = File.Open(newPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
-                    using var zip = new ZipArchive(fs,ZipArchiveMode.Update);
+                    using var zip = new ZipArchive(fs, ZipArchiveMode.Update);
                     int lastWritten = 0;
                     if (zip.Entries.Count > 0)
                     {
@@ -300,19 +297,19 @@ namespace Voron.Data.Tables
                     do
                     {
                         var dicId = it.CurrentKey.CreateReader().ReadBigEndianInt32();
-                        var entry = zip.CreateEntry(dicId.ToString("D8")+ ".dic",
-                            obj.Environment.Options.EncryptionEnabled ? CompressionLevel.NoCompression : CompressionLevel.Optimal
+                        var entry = zip.CreateEntry(dicId.ToString("D8") + ".dic",
+                            obj.Environment.Options.Encryption.IsEnabled ? CompressionLevel.NoCompression : CompressionLevel.Optimal
                             );
                         using var stream = entry.Open();
                         Span<byte> data = it.CreateReaderForCurrent().AsSpan();
-                        if (obj.Environment.Options.EncryptionEnabled)
+                        if (obj.Environment.Options.Encryption.IsEnabled)
                         {
                             Sodium.randombytes_buf(nonceBuffer, Sodium.crypto_stream_xchacha20_noncebytes());
-                            var nonceEntry = zip.CreateEntry(dicId.ToString("D8")+ ".nonce", CompressionLevel.NoCompression);
+                            var nonceEntry = zip.CreateEntry(dicId.ToString("D8") + ".nonce", CompressionLevel.NoCompression);
                             using var nonceStream = nonceEntry.Open();
                             nonceStream.Write(new ReadOnlySpan<byte>(nonceBuffer, nonceSize));
 
-                            fixed (byte* pKey = obj.Environment.Options.MasterKey)
+                            fixed (byte* pKey = obj.Environment.Options.Encryption.MasterKey)
                             fixed (byte* d = data)
                             fixed (byte* ctx = EncryptionContext)
                             {
@@ -334,7 +331,7 @@ namespace Voron.Data.Tables
                                 if (rc != 0)
                                     throw new InvalidOperationException("Failed to encrypt dictionary");
 
-                                var macEntry = zip.CreateEntry(dicId.ToString("D8")+ ".mac", CompressionLevel.NoCompression);
+                                var macEntry = zip.CreateEntry(dicId.ToString("D8") + ".mac", CompressionLevel.NoCompression);
                                 using var macStream = macEntry.Open();
                                 macStream.Write(new ReadOnlySpan<byte>(macBuffer, (int)macLen));
                             }
@@ -342,11 +339,8 @@ namespace Voron.Data.Tables
 
                         stream.Write(data);
                     } while (it.MoveNext());
-
                 }
-
             }
-
         }
 
         public bool ShouldReplaceDictionary(Transaction tx, ZstdLib.CompressionDictionary newDic)
@@ -372,7 +366,7 @@ namespace Voron.Data.Tables
                 }
 
                 Compressed = true;
-               
+
                 _compressedScope.Dispose();
                 CompressedBuffer = newCompressBuffer;
                 _compressedScope = newCompressBufferScope;

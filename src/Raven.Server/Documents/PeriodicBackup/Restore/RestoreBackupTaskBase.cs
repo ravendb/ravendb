@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     {
                         try
                         {
-                            var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] {_serverStore.NodeTag},
+                            var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag },
                                 RaftIdGenerator.DontCareId);
                             await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index, TimeSpan.FromSeconds(60));
                         }
@@ -766,9 +766,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public async Task<long> CalculateBackupSizeInBytes()
         {
-            var zipPath = GetBackupLocation();
-            zipPath = Path.Combine(zipPath, RestoreFromConfiguration.LastFileNameToRestore);
-            using (var zip = await GetZipArchiveForSnapshotCalc(zipPath))
+            using (var zip = await GetZipArchiveForSnapshotCalc(RestoreFromConfiguration.LastFileNameToRestore))
                 return zip.Entries.Sum(entry => entry.Length);
         }
     }

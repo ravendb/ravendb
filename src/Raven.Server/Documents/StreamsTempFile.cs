@@ -28,7 +28,7 @@ namespace Raven.Server.Documents
                 throw new NotSupportedException("The temp file was already moved to reading mode");
 
             _previousInstance?.Flush();
-            if (_environment.Options.EncryptionEnabled)
+            if (_environment.Options.Encryption.IsEnabled)
             {
                 _previousInstance = new TempCryptoStream(_file);
             }

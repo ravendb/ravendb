@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
             options.EnablePrefetching = db.Configuration.Storage.EnablePrefetching;
             options.TimeToSyncAfterFlushInSec = (int)db.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = db.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-            options.MasterKey = db.MasterKey?.ToArray();
+            options.Encryption.MasterKey = db.MasterKey?.ToArray();
 
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = db.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (db.Configuration.Storage.MaxScratchBufferSize.HasValue)

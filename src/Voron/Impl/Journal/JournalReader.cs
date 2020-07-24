@@ -46,7 +46,7 @@ namespace Voron.Impl.Journal
             _journalPagerNumberOfAllocated4Kb = 
                 _journalPager.TotalAllocationSize /(4*Constants.Size.Kilobyte);
 
-            if (journalPager.Options.EncryptionEnabled)
+            if (journalPager.Options.Encryption.IsEnabled)
                 _encryptionBuffers = new List<EncryptionBuffer>();
         }
 
@@ -181,7 +181,7 @@ namespace Voron.Impl.Journal
 
                     var journalPagePtr = outputPage + totalRead;
 
-                    if (options.EncryptionEnabled == false)
+                    if (options.Encryption.IsEnabled == false)
                     {
                         var pageHeader = (PageHeader*)journalPagePtr;
 
@@ -193,7 +193,7 @@ namespace Voron.Impl.Journal
                     Memory.Copy(pagePtr, journalPagePtr, pageInfoPtr[i].Size);
                     totalRead += pageInfoPtr[i].Size;
 
-                    if (options.EncryptionEnabled)
+                    if (options.Encryption.IsEnabled)
                     {
                         var pageHeader = (PageHeader*)pagePtr;
 
@@ -287,7 +287,7 @@ namespace Voron.Impl.Journal
 
         public void ZeroRecoveryBufferIfNeeded(IPagerLevelTransactionState tx, StorageEnvironmentOptions options)
         {
-            if (options.EncryptionEnabled == false)
+            if (options.Encryption.IsEnabled == false)
                 return;
             var recoveryBufferSize = _recoveryPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
             _recoveryPager.EnsureMapped(tx, 0, checked((int)_recoveryPager.NumberOfAllocatedPages));
@@ -310,7 +310,7 @@ namespace Voron.Impl.Journal
 
             var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
             var subKey = stackalloc byte[(int)subKeyLen ];
-            fixed (byte* mk = options.MasterKey)
+            fixed (byte* mk = options.Encryption.MasterKey)
             fixed (byte* ctx = WriteAheadJournal.Context)
             {
                 if (Sodium.crypto_kdf_derive_from_key(subKey, subKeyLen, (ulong)num, ctx, mk) != 0)
@@ -375,7 +375,7 @@ namespace Voron.Impl.Journal
 
             current = EnsureTransactionMapped(current, pageNumber, positionInsidePage);
             bool hashIsValid;
-            if (options.EncryptionEnabled)
+            if (options.Encryption.IsEnabled)
             {
                 // We use temp buffers to hold the transaction before decrypting, and release the buffers afterwards.
                 var pagesSize = current->CompressedSize != -1 ? current->CompressedSize : current->UncompressedSize;

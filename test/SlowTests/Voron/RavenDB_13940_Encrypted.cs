@@ -34,7 +34,7 @@ namespace SlowTests.Voron
             options.ManualFlushing = true;
             options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = true;
-            options.MasterKey = _masterKey.ToArray();
+            options.Encryption.MasterKey = _masterKey.ToArray();
         }
 
         [Fact]

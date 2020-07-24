@@ -640,7 +640,7 @@ namespace Voron.Impl.Paging
 
                 size = 0;
                 baseAddress = null;
-            }            
+            }
         }
 
         public void TryPrefetchingWholeFile()
