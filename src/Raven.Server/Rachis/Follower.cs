@@ -395,6 +395,7 @@ namespace Raven.Server.Rachis
 
             long prevTerm;
             bool requestSnapshot;
+            bool requestFullSnapshot = false;
             using (context.OpenReadTransaction())
             {
                 prevTerm = _engine.GetTermFor(context, negotiation.PrevLogIndex) ?? 0;
@@ -414,6 +415,7 @@ namespace Raven.Server.Rachis
                     CurrentTerm = _term,
                     LastLogIndex = 0
                 });
+                requestFullSnapshot = true;
             }
             else if (prevTerm != negotiation.PrevLogTerm)
             {
@@ -424,7 +426,7 @@ namespace Raven.Server.Rachis
                 }
                 // we now have a mismatch with the log position, and need to negotiate it with 
                 // the leader
-                NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
+                requestFullSnapshot = NegotiateMatchEntryWithLeaderAndApplyEntries(context, _connection, negotiation);
             }
             else
             {
@@ -464,7 +466,10 @@ namespace Raven.Server.Rachis
             // going on
             using (var cts = new CancellationTokenSource())
             {
-                KeepAliveAndExecuteAction(() => _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex, cts.Token), cts, "SnapshotInstalledAsync");
+                KeepAliveAndExecuteAction(() =>
+                {
+                    _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex, requestFullSnapshot, cts.Token);
+                }, cts, "SnapshotInstalledAsync");
             }
 
             _debugRecorder.Record("Done with StateMachine.SnapshotInstalled");
@@ -809,7 +814,7 @@ namespace Raven.Server.Rachis
             });
         }
 
-        private void NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context, RemoteConnection connection, LogLengthNegotiation negotiation)
+        private bool NegotiateMatchEntryWithLeaderAndApplyEntries(TransactionOperationContext context, RemoteConnection connection, LogLengthNegotiation negotiation)
         {
             long minIndex;
             long maxIndex;
@@ -822,7 +827,7 @@ namespace Raven.Server.Rachis
                 if (minIndex == 0) // no entries at all
                 {
                     RequestAllEntries(context, connection, "No entries at all here, give me everything from the start");
-                    return; // leader will know where to start from here
+                    return true; // leader will know where to start from here
                 }
 
                 maxIndex = Math.Min(
@@ -847,7 +852,7 @@ namespace Raven.Server.Rachis
                     if (CanHandleLogDivergence(context, negotiation, ref midpointIndex, ref midpointTerm, ref minIndex, ref maxIndex) == false)
                     {
                         RequestAllEntries(context, connection, "all my entries are invalid, will require snapshot.");
-                        return;
+                        return true;
                     }
                 }
 
@@ -874,7 +879,7 @@ namespace Raven.Server.Rachis
                     }
 
                     RequestAllEntries(context, connection, "We have entries that are already truncated at the leader, will ask for full snapshot");
-                    return;
+                    return true;
                 }
 
                 using (context.OpenReadTransaction())
@@ -906,6 +911,8 @@ namespace Raven.Server.Rachis
                 CurrentTerm = _term,
                 LastLogIndex = midpointIndex,
             });
+
+            return false;
         }
 
         private bool CanHandleLogDivergence(TransactionOperationContext context, LogLengthNegotiation negotiation, ref long midpointIndex, ref long midpointTerm,

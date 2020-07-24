@@ -542,7 +542,7 @@ namespace Tests.Infrastructure
                     }
                     var follower = clusterNodes[i];
                     // ReSharper disable once PossibleNullReferenceException
-                    await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster);
+                    await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token);
                     if (watcherCluster)
                     {
                         await follower.ServerStore.WaitForTopology(Leader.TopologyModification.NonVoter, cts.Token);
