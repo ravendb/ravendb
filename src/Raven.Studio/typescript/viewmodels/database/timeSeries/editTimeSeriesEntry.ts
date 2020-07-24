@@ -31,7 +31,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     constructor(private documentId: string, 
                 private db: database, 
                 private timeSeriesName: string,
-                private columnNames: string[],
+                private valuesNames: string[],
                 private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         super();
         
@@ -67,26 +67,16 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         this.setupDisableReasons(".edit-time-series-entry");
     }
     
-    getColumnName(idx: number) {
-        if (this.columnNames.length && idx < this.columnNames.length) {
-            return this.columnNames[idx];
-        } 
-        
-        const aggregationsCount = editTimeSeriesEntry.aggregationColumns.length;
-        
-        if (this.model().isRollupEntry()) {
-            return editTimeSeriesEntry.aggregationColumns[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")"
+    getValueName(idx: number) {
+        if (this.valuesNames.length) {
+            // for an existing timeseries
+            return this.valuesNames[idx];
+        } else {
+            // for a new timeseries
+            const possibleValuesCount = timeSeriesEntryModel.numberOfPossibleValues;
+            const possibleValuesNames = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+            return possibleValuesNames[idx];
         }
-        
-        // don't display any name!
-        return null;
-    }
-    
-    extractValueName(idx: number) {
-        const columnName = this.getColumnName(idx);
-        const first = columnName.indexOf('(') + 1;
-        const last = columnName.lastIndexOf(')');
-        return columnName.substring(first, last);
     }
     
     save() {

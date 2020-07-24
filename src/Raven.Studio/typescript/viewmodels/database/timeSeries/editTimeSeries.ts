@@ -51,7 +51,7 @@ class editTimeSeries extends viewModelBase {
     canDeleteSelected: KnockoutComputed<boolean>;
     deleteCriteria: KnockoutComputed<timeSeriesDeleteCriteria>;
     deleteButtonText: KnockoutComputed<string>;
-    isAggregation: KnockoutComputed<boolean>;
+    isRollupTimeSeries: KnockoutComputed<boolean>;
     
     isPoliciesDefined = ko.observable<boolean>(false);
     hasMoreThanFiveRawValues = ko.observable<boolean>(false);
@@ -101,7 +101,7 @@ class editTimeSeries extends viewModelBase {
     }
     
     private getSourceTimeSeriesName(): string {
-        if (this.isAggregation()) {
+        if (this.isRollupTimeSeries()) {
             const tsName = this.timeSeriesName();
             const atIdx = tsName.indexOf("@");
             return tsName.substring(0, atIdx);
@@ -110,67 +110,77 @@ class editTimeSeries extends viewModelBase {
         }
     }
     
-    private getValueColumnNames(valuesCount: number): string[] {
-        const collection = this.documentCollection();
-        const sourceTimeSeriesName = this.getSourceTimeSeriesName();
+    private getColumnnNamesToUse(columnsCount: number): string[] {
         
-        let namedColumns: string[];
-        if (collection && sourceTimeSeriesName) {
-            const matchingCollection = Object.keys(this.namedValuesCache)
-                .find(x => x.toLocaleLowerCase() === collection.toLocaleLowerCase());
-            
-            if (matchingCollection) {
-                const perCollectionConfig = this.namedValuesCache[matchingCollection];
-                
-                const matchingTimeSeriesConfig = Object.keys(perCollectionConfig)
-                    .find(x => x.toLocaleLowerCase() === sourceTimeSeriesName.toLocaleLowerCase());
-                
-                if (matchingTimeSeriesConfig) {
-                    namedColumns = perCollectionConfig[matchingTimeSeriesConfig];
-                }
-            }
-        }
-        
-        if (this.isAggregation()) {
+        if (this.isRollupTimeSeries()) {
+            const definedNamedValues = this.getDefinedNamedValues();
             const aggregationColumnNames = timeSeriesEntryModel.aggregationColumns;
             const aggregationsCount = aggregationColumnNames.length;
             
-            if (namedColumns) {
-                const columnNames = _.range(0, valuesCount)
+            if (definedNamedValues) {
+                const columnNames = _.range(0, columnsCount)
                     .map(idx => aggregationColumnNames[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")");
                 
-                for (let i = 0; i < Math.min(valuesCount, namedColumns.length * aggregationsCount); i++) {
-                    columnNames[i] = aggregationColumnNames[i % aggregationsCount] + " (" + namedColumns[Math.floor(i / aggregationsCount)] + ")";
+                for (let i = 0; i < Math.min(columnsCount, definedNamedValues.length * aggregationsCount); i++) {
+                    columnNames[i] = aggregationColumnNames[i % aggregationsCount] + " (" + definedNamedValues[Math.floor(i / aggregationsCount)] + ")";
                 }
                 return columnNames;
             } else {
-                if (valuesCount > aggregationsCount) {
-                    // looks like we have aggregation on more than one value - include value index 
-                    return _.range(0, valuesCount)
+                if (columnsCount > aggregationsCount) {
+                    return _.range(0, columnsCount)
                         .map(idx => aggregationColumnNames[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")");
                 } else {
                     return aggregationColumnNames;
                 }
             }
         } else {
-            const columnNames = _.range(0, valuesCount)
-                .map(idx => "Value #" + idx);
+            return this.getValuesNamesToUse(columnsCount);
+        }
+    }
+    
+    private getValuesNamesToUse(possibleValuesCount: number) : string[] {
+        const definedNamedValues = this.getDefinedNamedValues();
             
-            if (namedColumns) {
-                for (let i = 0; i < Math.min(valuesCount, namedColumns.length); i++) {
-                    columnNames[i] = namedColumns[i];
+        const valuesNamesToUse = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+
+        if (definedNamedValues) {
+            for (let i = 0; i < Math.min(possibleValuesCount, definedNamedValues.length); i++) {
+                valuesNamesToUse[i] = definedNamedValues[i];
+            }
+        }
+        
+        return valuesNamesToUse;
+    }
+    
+    private getDefinedNamedValues() : string[] {
+        const collection = this.documentCollection();
+        const sourceTimeSeriesName = this.getSourceTimeSeriesName();
+
+        let namedValues: string[];
+        if (collection && sourceTimeSeriesName) {
+            const matchingCollection = Object.keys(this.namedValuesCache)
+                .find(x => x.toLocaleLowerCase() === collection.toLocaleLowerCase());
+
+            if (matchingCollection) {
+                const perCollectionConfig = this.namedValuesCache[matchingCollection];
+
+                const matchingTimeSeriesConfig = Object.keys(perCollectionConfig)
+                    .find(x => x.toLocaleLowerCase() === sourceTimeSeriesName.toLocaleLowerCase());
+
+                if (matchingTimeSeriesConfig) {
+                    namedValues = perCollectionConfig[matchingTimeSeriesConfig];
                 }
             }
-            
-            return columnNames;
         }
+        
+        return namedValues;
     }
     
     compositionComplete() {
         super.compositionComplete();
         
         if (!this.timeSeriesName()) {
-            this.createTimeSeries(true);    
+            this.createTimeSeries(true);
         }
         
         const formatTimeSeriesDate = (input: string) => {
@@ -194,7 +204,7 @@ class editTimeSeries extends viewModelBase {
         grid.init((s, t) => this.fetchSeries(s, t).done(result => this.checkColumns(result)), () => {
             const { valuesCount, hasTag } = this.columnsCacheInfo;
             
-            const columnNames = this.getValueColumnNames(valuesCount);
+            const columnNames = this.getColumnnNamesToUse(valuesCount);
             
             const valueColumns = columnNames
                 .map((name, idx) => 
@@ -229,13 +239,18 @@ class editTimeSeries extends viewModelBase {
     }
     
     private editItem(item: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
+        const possibleValuesCount = this.isRollupTimeSeries() ? 
+            timeSeriesEntryModel.numberOfPossibleRollupValues : 
+            timeSeriesEntryModel.numberOfPossibleValues;
+        
         const editTimeSeriesEntryDialog = new editTimeSeriesEntry(
-            this.documentId(), 
-            this.activeDatabase(), 
-            this.timeSeriesName(), 
-            this.getValueColumnNames(1024),
+            this.documentId(),
+            this.activeDatabase(),
+            this.timeSeriesName(),
+            this.getValuesNamesToUse(possibleValuesCount),
             item
         );
+        
         app.showBootstrapDialog(editTimeSeriesEntryDialog)
             .done((seriesName) => {
                 if (seriesName) {
@@ -295,7 +310,7 @@ class editTimeSeries extends viewModelBase {
         }
         
         const valuesCount = _.max(result.items.map(x => x.Values.length));
-        this.hasMoreThanFiveRawValues(this.isPoliciesDefined() && !this.isAggregation() && valuesCount > 5)
+        this.hasMoreThanFiveRawValues(this.isPoliciesDefined() && !this.isRollupTimeSeries() && valuesCount > 5)
         
         if (valuesCount > this.columnsCacheInfo.valuesCount) {
             this.columnsCacheInfo.valuesCount = valuesCount;
@@ -406,9 +421,9 @@ class editTimeSeries extends viewModelBase {
     
     createTimeSeries(createNew: boolean) {
         const tsNameToUse = createNew ? null : this.timeSeriesName();
-        const columnsToUse = createNew ? [] : this.getValueColumnNames(1024);
+        const valuesNamesToUse = createNew ? [] : this.getValuesNamesToUse(timeSeriesEntryModel.numberOfPossibleValues);
         
-        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse,  columnsToUse);
+        const createTimeSeriesDialog = new editTimeSeriesEntry(this.documentId(), this.activeDatabase(), tsNameToUse, valuesNamesToUse);
         
         app.showBootstrapDialog(createTimeSeriesDialog)
             .done((seriesName) => {
@@ -443,7 +458,7 @@ class editTimeSeries extends viewModelBase {
     }
 
     private initObservables() {
-        this.isAggregation = ko.pureComputed(() => this.timeSeriesName() && this.timeSeriesName().includes("@"));
+        this.isRollupTimeSeries = ko.pureComputed(() => this.timeSeriesName() && this.timeSeriesName().includes("@"));
         
         this.urlForDocument = ko.pureComputed(() => {
             return appUrl.forEditDoc(this.documentId(), this.activeDatabase());

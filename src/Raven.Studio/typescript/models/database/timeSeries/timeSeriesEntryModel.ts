@@ -1,4 +1,4 @@
-import timeSeriesValue  = require("models/database/timeSeries/timeSeriesValue");
+import timeSeriesValue = require("models/database/timeSeries/timeSeriesValue");
 import generalUtils = require("common/generalUtils");
 
 class rollupDataModel {
@@ -11,13 +11,13 @@ class rollupDataModel {
 
     validationGroup: KnockoutValidationGroup;
     
-    constructor (...values: number[]) {
+    constructor(...values: number[]) {
         this.first = new timeSeriesValue(values[0]);
         this.last = new timeSeriesValue(values[1]);
         this.min = new timeSeriesValue(values[2]);
         this.max = new timeSeriesValue(values[3]);
         this.sum = new timeSeriesValue(values[4]);
-        this.count(values[5]);
+        this.count(values[5] || 0);
 
         this.count.extend({
             required: true,
@@ -32,6 +32,15 @@ class rollupDataModel {
             sum: this.sum.value,
             count: this.count
         });
+    }
+    
+    getValues() : number[] {
+        return [this.first.value(),
+                this.last.value(),
+                this.min.value(),
+                this.max.value(),
+                this.sum.value(),
+                this.count()];
     }
 }
 
@@ -66,15 +75,15 @@ class timeSeriesEntryModel {
             // Check if rollup data values are Not a multiple of the 6 pre-defined aggregationColumns columns
             // Add null values for the template if needed.
             const currentLength = values.length;
-            const remainder = currentLength % 6;
-            const numberOfMissingValues = remainder ?  6 - remainder : 0;
+            const remainder = currentLength % timeSeriesEntryModel.aggregationColumns.length;
+            const numberOfMissingValues = remainder ? timeSeriesEntryModel.aggregationColumns.length - remainder : 0;
             
             for (let i = 0; i < numberOfMissingValues; i++) {
                 values[currentLength + i] = null;
             }
             
-            for (let i = 0; i < values.length; i += 6) {
-                const rollup = new rollupDataModel(values[i], values[i+1], values[i+2], values[i+3], values[i+4], values[i+5])
+            for (let i = 0; i < values.length; i += timeSeriesEntryModel.aggregationColumns.length) {
+                const rollup = new rollupDataModel(values[i], values[i+1], values[i+2], values[i+3], values[i+4], values[i+5]);
                 this.rollupValues().push(rollup);
             }
         } else {
@@ -99,10 +108,10 @@ class timeSeriesEntryModel {
 
     addValue() {
         if (this.isRollupEntry()) {
-            const newRollupData = new rollupDataModel(); // todo check..
+            const newRollupData = new rollupDataModel();
             this.rollupValues.push(newRollupData);
         } else {
-            const newValue = new timeSeriesValue(0);
+            const newValue = new timeSeriesValue();
             this.values.push(newValue);
         }
     }
@@ -120,7 +129,7 @@ class timeSeriesEntryModel {
             required: true,
             validation: [
                 {
-                    validator: () =>  this.isRollupEntry() || !this.canEditName || !this.name().includes("@"),
+                    validator: () => this.isRollupEntry() || !this.canEditName || !this.name().includes("@"),
                     message: "A Time Series name cannot contain '@'. This character is reserved for Time Series Rollups."
                 }
             ]
@@ -174,12 +183,7 @@ class timeSeriesEntryModel {
         }, []);
 
         function addToResult(result: number[], item: rollupDataModel) {
-            result.push(item.first.value());
-            result.push(item.last.value());
-            result.push(item.min.value());
-            result.push(item.max.value());
-            result.push(item.sum.value());
-            result.push(item.count());
+            result.push(...item.getValues());
         }
     }
     
@@ -187,7 +191,7 @@ class timeSeriesEntryModel {
         return {
             Tag: this.tag(),
             Timestamp: this.timestamp().utc().format(generalUtils.utcFullDateFormat),
-            Values: this.isRollupEntry() ?  this.flattenRollupValues() : this.values().map(x => x.value())
+            Values: this.isRollupEntry() ? this.flattenRollupValues() : this.values().map(x => x.value())
         }
     }
     
@@ -196,7 +200,7 @@ class timeSeriesEntryModel {
             Timestamp: null,
             Tag: null,
             Values: [],
-            IsRollup:  timeSeriesName && timeSeriesName.includes("@")
+            IsRollup: timeSeriesName && timeSeriesName.includes("@")
         });
     }
 }
