@@ -45,7 +45,7 @@ namespace Raven.Server.Indexing
         {
             try
             {
-                if (options.EncryptionEnabled)
+                if (options.Encryption.IsEnabled)
                     return new TempCryptoStream(_fileTempPath);
 
                 return SafeFileStream.Create(_fileTempPath, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.ReadWrite, 4096, FileOptions.DeleteOnClose);

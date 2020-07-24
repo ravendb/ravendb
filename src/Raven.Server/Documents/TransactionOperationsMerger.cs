@@ -24,6 +24,7 @@ using Voron;
 using Voron.Debugging;
 using Voron.Global;
 using Voron.Impl;
+using Voron.Impl.Journal;
 
 namespace Raven.Server.Documents
 {
@@ -320,6 +321,17 @@ namespace Raven.Server.Documents
 
                         if (_operations.IsEmpty)
                         {
+                            if (_parent.IsEncrypted)
+                            {
+                                using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                                {
+                                    using (ctx.OpenWriteTransaction())
+                                    {
+                                        ctx.Environment.Options.Encryption.JournalCompressionBufferHandler.ZeroCompressionBuffer(ctx.Transaction.InnerTransaction.LowLevelTransaction);
+                                    }
+                                }
+                            }
+
                             using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
                             {
                                 generalMeter.IncrementCounter(1);
@@ -1039,7 +1051,7 @@ namespace Raven.Server.Documents
                 return PendingOperations.CompletedAll;
 
             // This optimization is disabled when encryption is on
-            if (context.Environment.Options.EncryptionEnabled)
+            if (context.Environment.Options.Encryption.IsEnabled)
                 return PendingOperations.CompletedAll;
 
             if (forceCompletion)
