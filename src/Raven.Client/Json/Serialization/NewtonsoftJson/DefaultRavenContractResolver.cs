@@ -30,7 +30,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         private static ExtensionDataGetter _currentExtensionGetter;
 
         public static BindingFlags? MembersSearchFlag = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        private readonly ISerializationConventions _conventions;
+        private readonly NewtonsoftJsonSerializationConventions _conventions;
 
         [ThreadStatic]
         internal static bool RemovedIdentityProperty;
@@ -40,8 +40,14 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
 
         public DefaultRavenContractResolver(ISerializationConventions conventions)
         {
-            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            
+            if (conventions == null)
+                throw new ArgumentNullException(nameof(conventions));
+
+            if (conventions is NewtonsoftJsonSerializationConventions == false)
+                throw new ArgumentException($"Conventions must be of '{nameof(NewtonsoftJsonSerializationConventions)}' type.", nameof(conventions));
+
+            _conventions = (NewtonsoftJsonSerializationConventions)conventions;
+
             if (MembersSearchFlag == null)
             {
                 return; // use the JSON.Net default, primarily here because it allows user to turn this off if this is a compact issue.
@@ -187,23 +193,23 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             var fieldInfo = info as FieldInfo;
             if (fieldInfo != null)
             {
+                if (fieldInfo.IsPublic == false)
+                    return true;
+
 #if NETSTANDARD2_0
                 if (fieldInfo.FieldType.IsByRef)
 #else
                 if (fieldInfo.FieldType.IsByRef || fieldInfo.FieldType.IsByRefLike)
 #endif
                 {
-                    if (_conventions.ThrowOnByRefMembers)
+                    if (_conventions.IgnoreByRefMembers == false)
                         ThrowByRefNotSupported();
                     return true;
                 }
 
-                if (fieldInfo.IsPublic == false)
-                    return true;
-
                 if (fieldInfo.FieldType == typeof(IntPtr) || fieldInfo.FieldType.IsPointer)
                 {
-                    if (_conventions.ThrowOnUnsafeMembers)
+                    if (_conventions.IgnoreUnsafeMembers == false)
                         ThrowPointersNotSupported();
                     return true;
                 }
@@ -218,14 +224,14 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
                 if (propertyInfo.PropertyType.IsByRef || propertyInfo.PropertyType.IsByRefLike)
 #endif
                 {
-                    if (_conventions.ThrowOnByRefMembers)
+                    if (_conventions.IgnoreByRefMembers == false)
                         ThrowByRefNotSupported();
                     return true;
                 }
 
                 if (propertyInfo.PropertyType == typeof(IntPtr) || propertyInfo.PropertyType.IsPointer)
                 {
-                    if(_conventions.ThrowOnUnsafeMembers)
+                    if (_conventions.IgnoreUnsafeMembers == false)
                         ThrowPointersNotSupported();
                     return true;
                 }
