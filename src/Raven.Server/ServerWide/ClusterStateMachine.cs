@@ -3194,7 +3194,7 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore, CancellationToken token)
+        public override Task OnSnapshotInstalledAsync(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
         {
             using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
@@ -3229,6 +3229,8 @@ namespace Raven.Server.ServerWide
                         var t2 = Task.Run(async () =>
                         {
                             await OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                            if (fullSnapshot)
+                                await OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
                         }, token);
                     }
                 };
@@ -3237,11 +3239,8 @@ namespace Raven.Server.ServerWide
             }
             token.ThrowIfCancellationRequested();
 
-            // reload license can send a notification which will open a write tx
-            serverStore.LicenseManager.ReloadLicense();
-            await serverStore.LicenseManager.PutMyNodeInfoAsync();
-
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+            return Task.CompletedTask;
         }
 
         protected override RachisVersionValidation InitializeValidator()
