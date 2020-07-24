@@ -54,7 +54,7 @@ namespace Voron.Data.Compression
 
                     _scratchSpaceMonitor.Decrease(_compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize);
                 }
-                
+
                 foreach (var pager in _oldPagers)
                 {
                     if (pager.Disposed == false)
@@ -183,7 +183,7 @@ namespace Voron.Data.Compression
             }
 
             Interlocked.Add(ref _currentlyUsedBytes, pageSize);
-            
+
             return tmp.ReturnTemporaryPageToPool;
         }
 
@@ -246,13 +246,13 @@ namespace Voron.Data.Compression
 
             if (_oldPagers.Count == 0)
                 return;
-            
+
             var necessaryPages = Interlocked.Read(ref _currentlyUsedBytes) / Constants.Storage.PageSize;
 
             var availablePages = _compressionPager.NumberOfAllocatedPages;
 
             var pagers = _oldPagers;
-            
+
             for (var i = pagers.Count - 1; i >= 0; i--)
             {
                 var old = pagers[i];
@@ -265,12 +265,12 @@ namespace Voron.Data.Compression
                     continue;
                 }
 
-                // PERF: We dont care about the pager data content anymore. So we can discard the whole context to 
-                //       clean up the modified bit. 
+                // PERF: We dont care about the pager data content anymore. So we can discard the whole context to
+                //       clean up the modified bit.
                 old.DiscardWholeFile();
                 availablePages += old.NumberOfAllocatedPages;
             }
-            
+
             _oldPagers = _oldPagers.RemoveWhile(x => x.Disposed);
         }
 
@@ -294,7 +294,7 @@ namespace Voron.Data.Compression
 
                 TempPage = new TemporaryPage(ptr, size) { ReturnTemporaryPageToPool = this };
             }
-            
+
             public readonly TemporaryPage TempPage;
 
             public void EnsureValidPointer(LowLevelTransaction tx)
@@ -309,9 +309,9 @@ namespace Voron.Data.Compression
 
             public void Dispose()
             {
-                if (_pager.Options.EncryptionEnabled)
+                if (_pager.Options.Encryption.IsEnabled)
                     Sodium.sodium_memzero(TempPage.TempPagePointer, (UIntPtr)TempPage.PageSize);
-                
+
                 // return it to the pool
                 _pool._pool[_index].Enqueue(this);
 

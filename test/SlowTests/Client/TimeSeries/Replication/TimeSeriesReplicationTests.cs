@@ -58,6 +58,55 @@ namespace SlowTests.Client.TimeSeries.Replication
         }
 
         [Fact]
+        public async Task CanSplitAndMergeLargeRange()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    for (int i = 0; i < 100; i++)
+                    {
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddDays(i), new[] { 59d }, "watches/fitbit");
+                    }
+                   
+                    session.SaveChanges();
+                }
+
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    for (int i = 0; i < 100; i++)
+                    {
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddDays(-10).AddDays(i), new[] { 60d }, "watches/fitbit");
+                    }
+                   
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+
+                WaitForUserToContinueTheTest(storeB);
+
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    var val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get()
+                        .ToList();
+                    Assert.Equal(110, val.Count);
+                }
+            }
+        }
+
+        [Fact]
         public async Task TimeSeriesShouldBeCaseInsensitiveAndKeepOriginalCasing()
         {
             using (var storeA = GetDocumentStore())
@@ -631,6 +680,45 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 var b = await GetDocumentDatabaseInstanceFor(storeB);
                 await AssertNoLeftOvers(b);
+            }
+        }
+
+        [Fact]
+        public async Task CanReplicateDeadSegment2()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete();
+                    session.TimeSeriesFor("users/ayende", "Heartrate2")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                WaitForUserToContinueTheTest(storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenSession())
+                {
+                    var user = session.Load<dynamic>("users/ayende");
+                    List<string> names = session.Advanced.GetTimeSeriesFor(user);
+                    Assert.Equal(1, names.Count);
+                }
             }
         }
 

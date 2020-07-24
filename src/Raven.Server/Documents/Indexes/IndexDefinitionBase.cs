@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Indexes
                 {
                     using (var metadata = File.Open(options.BasePath.Combine(MetadataFileName).FullPath, FileMode.Create))
                     {
-                        if (options.EncryptionEnabled)
+                        if (options.Encryption.IsEnabled)
                         {
                             EncryptStream(options, stream);
                         }
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents.Indexes
             fixed (byte* pData = data)
             fixed (byte* pEncryptedData = encryptedData)
             fixed (byte* pNonce = nonce)
-            fixed (byte* pKey = options.MasterKey)
+            fixed (byte* pKey = options.Encryption.MasterKey)
             {
                 var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
                 var subKey = stackalloc byte[(int)subKeyLen];
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Indexes
                 return null;
 
             var stream = result.Reader.AsStream();
-            if (environment.Options.EncryptionEnabled)
+            if (environment.Options.Encryption.IsEnabled)
             {
                 using (stream)
                 {
@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Indexes
             fixed (byte* pData = data)
             fixed (byte* pDecryptedData = decryptedData)
             fixed (byte* pNonce = nonce)
-            fixed (byte* pKey = options.MasterKey)
+            fixed (byte* pKey = options.Encryption.MasterKey)
             {
                 var subKeyLen = Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
                 var subKey = stackalloc byte[(int)subKeyLen];
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.Indexes
                 var metadata = File.ReadAllBytes(options.BasePath.Combine(MetadataFileName).FullPath);
                 var stream = new MemoryStream(metadata);
 
-                if (options.EncryptionEnabled)
+                if (options.Encryption.IsEnabled)
                 {
                     DecryptStream(options, stream);
                 }

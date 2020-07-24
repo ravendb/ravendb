@@ -1975,7 +1975,7 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public bool IsEncrypted => _persistentState.Options.EncryptionEnabled;
+        public bool IsEncrypted => _persistentState.Options.Encryption.IsEnabled;
 
         public abstract X509Certificate2 ClusterCertificate { get; }
 

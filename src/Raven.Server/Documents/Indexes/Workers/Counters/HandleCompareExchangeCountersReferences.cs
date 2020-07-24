@@ -20,13 +20,14 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
             _countersStorage = countersStorage;
         }
 
-        protected override IEnumerable<IndexItem> GetItems(DocumentsOperationContext databaseContext, Slice key)
+        protected override IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key)
         {
-            using (_countersStorage.Indexing.ExtractDocumentIdFromKey(databaseContext, key, out var documentId))
-            {
-                foreach (var counter in _countersStorage.Indexing.GetCountersMetadata(databaseContext, documentId))
-                    yield return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
-            }
+            var counter = _countersStorage.Indexing.GetCountersMetadata(databaseContext, key);
+
+            if (counter == null)
+                return null;
+
+            return new CounterIndexItem(counter.LuceneKey, counter.DocumentId, counter.Etag, counter.CounterName, counter.Size, counter);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

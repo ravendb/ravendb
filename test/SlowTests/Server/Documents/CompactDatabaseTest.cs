@@ -31,7 +31,7 @@ namespace SlowTests.Server.Documents
                 Path = path
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
                 for (int i = 0; i < 3; i++)
                 {

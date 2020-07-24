@@ -590,7 +590,8 @@ namespace Raven.Server.Documents.Indexes
             options.EnablePrefetching = documentDatabase.Configuration.Storage.EnablePrefetching;
             options.TimeToSyncAfterFlushInSec = (int)documentDatabase.Configuration.Storage.TimeToSyncAfterFlush.AsTimeSpan.TotalSeconds;
             options.NumOfConcurrentSyncsPerPhysDrive = documentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-            options.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
+            options.Encryption.MasterKey = documentDatabase.MasterKey?.ToArray(); //clone
+            options.Encryption.RegisterForJournalCompressionHandler();
             options.DoNotConsiderMemoryLockFailureAsCatastrophicError = documentDatabase.Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
             if (documentDatabase.Configuration.Storage.MaxScratchBufferSize.HasValue)
                 options.MaxScratchBufferSize = documentDatabase.Configuration.Storage.MaxScratchBufferSize.Value.GetValue(SizeUnit.Bytes);
@@ -1386,6 +1387,14 @@ namespace Raven.Server.Documents.Indexes
                             if (forceMemoryCleanup || _mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
                             {
                                 Interlocked.Exchange(ref _allocationCleanupNeeded, 0);
+
+                                if (_environment.Options.Encryption.IsEnabled)
+                                {
+                                    using (var tx = _environment.WriteTransaction())
+                                    {
+                                        _environment.Options.Encryption.JournalCompressionBufferHandler.ZeroCompressionBuffer(tx.LowLevelTransaction);
+                                    }
+                                }
 
                                 // allocation cleanup has been requested multiple times or
                                 // there is no work to be done, and hasn't been for a while,

@@ -2078,28 +2078,28 @@ namespace Raven.Server.Documents
                 return null;
             }
 
-            public IEnumerable<CounterGroupItemMetadata> GetCountersMetadata(DocumentsOperationContext context, Slice documentId)
+            public CounterGroupItemMetadata GetCountersMetadata(DocumentsOperationContext context, Slice counterKeySlice)
             {
                 var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-                using (ConvertToKeyWithPrefix(out var key))
+                using (ExtractDocumentIdAndCounterNameFromKey(context, counterKeySlice, out var documentIdPrefix, out var loweredCounterNameSlice))
                 {
-                    foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
+                    if (table.SeekOneBackwardByPrimaryKeyPrefix(documentIdPrefix, counterKeySlice, out var tvr) == false)
+                        return null;
+
+                    var loweredCounterName = CounterNameLsv();
+
+                    foreach (var item in TableValueToCounterGroupItemMetadata(context, tvr, loweredCounterNameToFilter: loweredCounterName))
                     {
-                        foreach (var item in TableValueToCounterGroupItemMetadata(context, result.Value.Reader))
-                            yield return item;
+                        return item;
                     }
-                }
 
-                IDisposable ConvertToKeyWithPrefix(out Slice key)
-                {
-                    var scope = context.Allocator.Allocate(documentId.Size + 1, out var keyByte);
+                    return null;
 
-                    documentId.CopyTo(keyByte.Ptr);
-                    keyByte.Ptr[documentId.Size] = SpecialChars.RecordSeparator;
-
-                    key = new Slice(keyByte);
-                    return scope;
+                    unsafe LazyStringValue CounterNameLsv()
+                    {
+                        return context.GetLazyString(loweredCounterNameSlice.Content.Ptr, loweredCounterNameSlice.Size);
+                    }
                 }
             }
 
@@ -2138,7 +2138,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            public IDisposable ExtractDocumentIdFromKey(DocumentsOperationContext context, Slice key, out Slice documentId)
+            public IDisposable ExtractDocumentIdAndCounterNameFromKey(DocumentsOperationContext context, Slice key, out Slice loweredDocumentIdPrefix, out Slice loweredCounterName)
             {
                 int sizeOfDocId = 0;
                 for (; sizeOfDocId < key.Size; sizeOfDocId++)
@@ -2147,10 +2147,13 @@ namespace Raven.Server.Documents
                         break;
                 }
 
-                return Slice.External(context.Allocator, key, sizeOfDocId, out documentId);
+                var docIdScope = Slice.External(context.Allocator, key, sizeOfDocId + 1, out loweredDocumentIdPrefix);
+                var counterNameScope = Slice.External(context.Allocator, key.Content, sizeOfDocId + 1, key.Size - sizeOfDocId - 1, out loweredCounterName);
+
+                return new ExtractScopes(docIdScope, counterNameScope);
             }
 
-            private static IEnumerable<CounterGroupItemMetadata> TableValueToCounterGroupItemMetadata(DocumentsOperationContext context, TableValueReader tvr)
+            private static IEnumerable<CounterGroupItemMetadata> TableValueToCounterGroupItemMetadata(DocumentsOperationContext context, TableValueReader tvr, LazyStringValue loweredCounterNameToFilter = null)
             {
                 var etag = TableValueToEtag((int)CountersTable.Etag, ref tvr);
 
@@ -2171,7 +2174,12 @@ namespace Raven.Server.Documents
                         for (var i = 0; i < originalNames.Count; i++)
                         {
                             originalNames.GetPropertyByIndex(i, ref propertyDetails);
-                            var counterName = GetLazyStringCounterName(propertyDetails.Name, propertyDetails.Value);
+                            LazyStringValue originalLoweredCounterName = propertyDetails.Name;
+
+                            if (loweredCounterNameToFilter != null && loweredCounterNameToFilter.Equals(originalLoweredCounterName) == false)
+                                continue;
+
+                            var counterName = GetLazyStringCounterName(originalLoweredCounterName, propertyDetails.Value);
                             var docId = ExtractDocId();
                             using (ToDocumentIdPrefix(docId, out var documentIdPrefix))
                             {
@@ -2245,6 +2253,27 @@ namespace Raven.Server.Documents
                             return context.GetLazyString(buffer.Ptr, size);
                         }
                     }
+                }
+            }
+        }
+
+        private readonly struct ExtractScopes : IDisposable
+        {
+            private readonly ByteStringContext<ByteStringMemoryCache>.ExternalScope _docIdScope;
+            private readonly ByteStringContext<ByteStringMemoryCache>.ExternalScope _counterNameScope;
+
+            public ExtractScopes(ByteStringContext.ExternalScope docIdScope, ByteStringContext.ExternalScope counterNameScope)
+            {
+                _docIdScope = docIdScope;
+                _counterNameScope = counterNameScope;
+            }
+
+            public void Dispose()
+            {
+                using (_docIdScope)
+                using (_counterNameScope)
+                {
+
                 }
             }
         }

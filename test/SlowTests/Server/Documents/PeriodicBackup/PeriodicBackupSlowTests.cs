@@ -1,19 +1,25 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
+using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
@@ -22,6 +28,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -961,6 +968,134 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact, Trait("Category", "Smuggler")]
+        public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInFirstSnapshot()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var timeSeriesConfiguration = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromHours(96)),
+                            Policies = new List<TimeSeriesPolicy> {new TimeSeriesPolicy("BySecond",TimeValue.FromSeconds(1))}
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfiguration));
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings { FolderPath = backupPath },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                await WaitForValueAsync(async () =>
+                {
+                    var status =  (await store.Maintenance.SendAsync(operation)).Status;
+                    return status != null;
+                }, true);
+
+                await RestoreAndCheckTimeSeriesConfiguration(store, backupPath, timeSeriesConfiguration);
+            }
+        }
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInIncrementalSnapshot()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                var entity = new User();
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(entity);
+                    await session.SaveChangesAsync();
+                }
+                
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings { FolderPath = backupPath },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                long? statusLastEtag = null;
+                await WaitForValueAsync(async () =>
+                {
+                    var status =  (await store.Maintenance.SendAsync(operation)).Status;
+                    if (status == null)
+                        return false;
+                    statusLastEtag = status.LastEtag;
+                    return statusLastEtag > 0;
+                }, true);
+
+                var timeSeriesConfiguration = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromHours(96)),
+                            Policies = new List<TimeSeriesPolicy> {new TimeSeriesPolicy("BySecond",TimeValue.FromSeconds(1))}
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(1)
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfiguration));
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Patch<User, string>(entity.Id, u => u.Name, "Patched");
+                    await session.SaveChangesAsync();
+                }
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                
+                await WaitForValueAsync(async () =>
+                {
+                    var status =  (await store.Maintenance.SendAsync(operation)).Status;
+                    return status != null && status.LastEtag > statusLastEtag;
+                }, true);
+                
+                await RestoreAndCheckTimeSeriesConfiguration(store, backupPath, timeSeriesConfiguration);
+            }
+        }
+
+        private async Task RestoreAndCheckTimeSeriesConfiguration(IDocumentStore store, string backupPath, TimeSeriesConfiguration timeSeriesConfiguration)
+        {
+            string restoredDatabaseName = $"{store.Database}-restored";
+            using (RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoredDatabaseName}))
+            {
+                using var client = new HttpClient();
+                var url = Uri.EscapeUriString($"{store.Urls.First()}/databases/{restoredDatabaseName}/timeseries/config");
+                var actualStr = await (await client.GetAsync(url)).Content.ReadAsStringAsync();
+                var jsonSerializer = (JsonSerializer)new DocumentConventions().Serialization.CreateSerializer();
+                var actual = jsonSerializer.Deserialize<TimeSeriesConfiguration>(new JsonTextReader(new StringReader(actualStr)));
+
+                Assert.NotNull(actual);
+                Assert.Equal(timeSeriesConfiguration.Collections.Count, actual.Collections.Count);
+                Assert.Equal(timeSeriesConfiguration.PolicyCheckFrequency, actual.PolicyCheckFrequency);
+                foreach (var (key, expectedCollection) in timeSeriesConfiguration.Collections)
+                {
+                    Assert.True(actual.Collections.TryGetValue(key, out var actualCollection));
+                    Assert.Equal(expectedCollection.Policies, actualCollection.Policies);
+                    Assert.Equal(expectedCollection.RawPolicy, actualCollection.RawPolicy);
+                }
+            }
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
         public async Task restore_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1600,6 +1735,83 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(periodicBackupTaskId);
                 val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 333);
                 Assert.True(val, "Failed to complete the backup in time");
+            }
+        }
+
+        [Fact]
+        public async Task can_create_local_snapshot_and_restore_using_restore_point()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "oren" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100);
+                    session.SaveChanges();
+                }
+                var localSettings = new LocalSettings()
+                {
+                    FolderPath = backupPath
+                };
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = localSettings,
+                    IncrementalBackupFrequency = "0 0 1 1 *"
+                };
+
+                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
+                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                PeriodicBackupStatus status = null;
+                var value = WaitForValue(() =>
+                {
+                    status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 4);
+                Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
+
+                var client = store.GetRequestExecutor().HttpClient;
+
+                var data = new StringContent(JsonConvert.SerializeObject(localSettings), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(store.Urls.First() + "/admin/restore/points?type=Local ", data);
+                string result = response.Content.ReadAsStringAsync().Result;
+                var restorePoints = JsonConvert.DeserializeObject<RestorePoints>(result);
+                Assert.Equal(1, restorePoints.List.Count);
+                var point = restorePoints.List.First();
+                var backupDirectory = Directory.GetDirectories(backupPath).First();
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                var restoreOperation = await store.Maintenance.Server.SendAsync(new RestoreBackupOperation(new RestoreBackupConfiguration()
+                {
+                    DatabaseName = databaseName,
+                    BackupLocation = backupDirectory,
+                    DisableOngoingTasks = true,
+                    LastFileNameToRestore = point.FileName,
+                }));
+
+                await restoreOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
+                using (var store2 = GetDocumentStore(new Options() { CreateDatabase = false, ModifyDatabaseName = s => databaseName }))
+                {
+                    using (var session = store2.OpenSession(databaseName))
+                    {
+                        var users = session.Load<User>(new[] { "users/1", "users/2" });
+                        Assert.True(users.Any(x => x.Value.Name == "oren"));
+
+                        var val = session.CountersFor("users/1").Get("likes");
+                        Assert.Equal(100, val);
+                    }
+
+                    var originalDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result;
+                    var restoredDatabase = Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                    using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                        Assert.Equal($"A:4-{originalDatabase.DbBase64Id}", databaseChangeVector);
+                    }
+                }
             }
         }
 

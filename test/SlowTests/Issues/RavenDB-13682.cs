@@ -209,7 +209,7 @@ select {
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                store.Maintenance.Send(new CreateSampleDataOperation(Raven.Client.Documents.Smuggler.DatabaseItemType.Documents | Raven.Client.Documents.Smuggler.DatabaseItemType.Indexes));
 
                 WaitForIndexing(store);
 

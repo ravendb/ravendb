@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -18,10 +17,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Query;
 using SlowTests.Client.TimeSeries.Replication;
-using SlowTests.Client.TimeSeries.Session;
 using Sparrow;
-using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -513,7 +509,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(ts1Minutes, minutes);
                 }
 
-                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/BigMeasures");
                 var alert = database.NotificationCenter.GetStoredMessage(key);
                 Assert.Equal("Rollup 'ByMinute' for time-series 'BigMeasures' in document 'users/KARMEL' failed.", alert);
             }
@@ -582,7 +578,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Null(session.TimeSeriesRollupFor<BigMeasure>("users/karmel", p1.Name).Get()?.ToList());
                 }
 
-                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/bigmeasures");
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/BigMeasures");
                 var alert = database.NotificationCenter.GetStoredMessage(key);
                 Assert.NotNull(alert);
 
@@ -1415,6 +1411,56 @@ namespace SlowTests.Client.TimeSeries.Policies
         }
 
         [Fact]
+        public async Task SkipRollupDeadSegmentAfterCleanup()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                new TimeSeriesPolicy("By1",TimeValue.FromSeconds(1))
+                            }
+                        },
+                    },
+                };
+                await storeB.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete();
+                    session.TimeSeriesFor("users/ayende", "Heartrate2")
+                        .Append(baseline.AddMinutes(10), new double[] { 1 }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                EnsureReplicating(storeA, storeB);
+                var b = await GetDocumentDatabaseInstanceFor(storeB);
+                await b.TombstoneCleaner.ExecuteCleanup();
+                await b.TimeSeriesPolicyRunner.RunRollups();
+            }
+        }
+
+
+        [Fact]
         public async Task FullRetentionAndRollupInACluster()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
@@ -1489,6 +1535,111 @@ namespace SlowTests.Client.TimeSeries.Policies
                     }))
                     {
                        await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(nodeStore, config.Collections["Users"]); 
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task FullRetentionAndRollupInAClusterLargeTimeSpan()
+        {
+            var cluster = await CreateRaftCluster(3, watcherCluster: true);
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = cluster.Leader,
+                ReplicationFactor = 3
+            }))
+            {
+                var raw = new RawTimeSeriesPolicy(TimeValue.FromHours(24));
+
+                var p1 = new TimeSeriesPolicy("Daily",TimeValue.FromHours(24), TimeValue.FromMonths(6));
+                var p2 = new TimeSeriesPolicy("Monthly",TimeValue.FromMonths(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1 ,p2
+                            }
+                        },
+                    },
+                    PolicyCheckFrequency = TimeSpan.FromSeconds(5)
+                };
+
+                var now = DateTime.UtcNow;
+                var baseline = now.AddYears(-3);
+                var total = (now - baseline).TotalHours;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddHours(i), new[] {29d * i, i}, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+
+                    session.Store(new User {Name = "Karmel"}, "marker");
+                    session.SaveChanges();
+
+                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
+                }
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                await Task.Delay(config.PolicyCheckFrequency.Value * 3);
+                WaitForUserToContinueTheTest(store);
+
+                foreach (var node in cluster.Nodes)
+                {
+                    using (var nodeStore = GetDocumentStore(new Options
+                    {
+                        Server = node,
+                        CreateDatabase =  false,
+                        DeleteDatabaseOnDispose = false,
+                        ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                        {
+                            DisableTopologyUpdates = true
+                        },
+                        ModifyDatabaseName = _ => store.Database
+                    }))
+                    {
+                        await WaitForValueAsync(() =>
+                        {
+                            using (var session = store.OpenSession())
+                            {
+                                var ts = session.TimeSeriesFor("users/karmel", "Heartrate")
+                                    .Get()?
+                                    .Where(entry => entry.IsRollup == false)
+                                    .ToList();
+
+                                Assert.NotNull(ts);
+                                Assert.Equal(((TimeSpan)raw.RetentionTime).TotalHours, ts.Count);
+
+                                var daily = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate"))
+                                    .Get()?
+                                    .ToList();
+
+                                Assert.NotNull(daily);
+                                Assert.True(daily.Count > 168);
+                                Assert.True(daily.Count < 186);
+
+                                var monthly  = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate"))
+                                    .Get()?
+                                    .ToList();
+
+                                Assert.NotNull(monthly);
+                                Assert.Equal(12 * 3, monthly.Count);
+                            }
+                            return true;
+                        }, true);
                     }
                 }
             }
@@ -1680,7 +1831,6 @@ namespace SlowTests.Client.TimeSeries.Policies
             }
         }
 
-
         [Fact]
         public async Task CanReRollAfterUpdate()
         {
@@ -1748,6 +1898,63 @@ namespace SlowTests.Client.TimeSeries.Policies
                     var res = session.TimeSeriesFor("companies/1", "Heartrate@byyear").Get().Single();
                     Assert.Equal(29, res.Values[4] / 2);
                     Assert.Equal(2, res.Values[5]);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task RollupNamesShouldKeepOriginalCasing()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var p1 = new TimeSeriesPolicy("By10Seconds", TimeValue.FromSeconds(10));
+                var p2 = new TimeSeriesPolicy("By1Minutes", TimeValue.FromMinutes(1));
+                var p3 = new TimeSeriesPolicy("By2Hours", TimeValue.FromHours(2));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p1, p2 ,p3
+                            }
+                        },
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+
+                var baseline = DateTime.Today.AddHours(-4);
+                var rawName = "HeartRate";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), "users/karmel");
+
+                    for (int i = 0; i <= TimeSpan.FromHours(4).TotalSeconds; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", rawName)
+                            .Append(baseline.AddSeconds(i), i);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.RunRollups();
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<User>("users/karmel");
+                    var tsNames = session.Advanced.GetTimeSeriesFor(doc);
+                    Assert.Equal(4, tsNames.Count);
+                    
+                    Assert.Equal(rawName, tsNames[0]);
+                    Assert.Equal($"{rawName}@{p1.Name}", tsNames[1]);
+                    Assert.Equal($"{rawName}@{p2.Name}", tsNames[2]);
+                    Assert.Equal($"{rawName}@{p3.Name}", tsNames[3]);
                 }
             }
         }

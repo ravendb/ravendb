@@ -16,15 +16,15 @@ namespace Tryouts
         public static async Task Main(string[] args)
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
-            //for (int i = 0; i < 10_000; i++)
+            for (int i = 0; i < 10_000; i++)
             {
-                // Console.WriteLine($"Starting to run {i}");
+                 Console.WriteLine($"Starting to run {i}");
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenDB_9645(testOutputHelper))
+                    using (var test = new RavenDB_15215(testOutputHelper))
                     {
-                        test.Should_correctly_reduce_after_updating_all_documents(5000, compressed: true);
+                       await test.CanReduceCountersMetadataWhenLoadingDocumentsPage();
                     }
                 }
                 catch (Exception e)

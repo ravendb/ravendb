@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.Patch
 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
+                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
                 var timestamp = GetTimeSeriesDateArg(args[0], signature, "timestamp");
 
                 double[] valuesBuffer = null;
@@ -415,6 +415,13 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"{signature}: The values should be an array but got {GetTypes(valuesArg)}");
                     }
 
+                    bool timeSeriesExists = false;
+                    if (DebugMode)
+                    {
+                        var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, DateTime.MinValue, DateTime.MaxValue);
+                        timeSeriesExists = reader.AllValues().Any();
+                    }
+
                     var toAppend = new SingleResult
                     {
                         Values = values,
@@ -427,8 +434,20 @@ namespace Raven.Server.Documents.Patch
                         _docsCtx,
                         id,
                         CollectionName.GetCollectionName(doc),
-                        timeseries,
+                        timeSeries,
                         new[] { toAppend });
+                    
+                    if (DebugMode) 
+                    {
+                        DebugActions.AppendTimeSeries.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = timeSeries,
+                            ["Timestamp"] = timestamp,
+                            ["Tag"] = lsTag,
+                            ["Values"] = values.ToArray().Cast<object>(),
+                            ["Created"] = timeSeriesExists == false
+                        });
+                    }
                 }
                 finally
                 {
@@ -463,17 +482,27 @@ namespace Raven.Server.Documents.Patch
 
                 var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
 
-                string timeseries = GetStringArg(name, _timeSeriesSignature, "name");
+                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
 
                 var deletionRangeRequest = new TimeSeriesStorage.DeletionRangeRequest
                 {
                     DocumentId = id,
                     Collection = CollectionName.GetCollectionName(doc),
-                    Name = timeseries,
+                    Name = timeSeries,
                     From = from,
                     To = to,
                 };
                 _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest);
+
+                if (DebugMode) 
+                {
+                    DebugActions.DeleteTimeSeries.Add(new DynamicJsonValue
+                    {
+                        ["Name"] = timeSeries,
+                        ["From"] = from,
+                        ["To"] = to
+                    });
+                }
 
                 return JsValue.Undefined;
             }
@@ -486,7 +515,7 @@ namespace Raven.Server.Documents.Patch
                 const string getAllSignature = "get()";
 
                 var id = GetIdFromArg(document, _timeSeriesSignature);
-                var timeseries = GetStringArg(name, _timeSeriesSignature, "name");
+                var timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
 
                 DateTime from, to;
                 switch (args.Length)
@@ -503,7 +532,7 @@ namespace Raven.Server.Documents.Patch
                         throw new ArgumentException($"'get' method has only the overloads: '{getRangeSignature}' or '{getAllSignature}', but was called with {args.Length} arguments.");
                 }
 
-                var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeseries, from, to);
+                var reader = _database.DocumentsStorage.TimeSeriesStorage.GetReader(_docsCtx, id, timeSeries, from, to);
 
                 var entries = new List<JsValue>();
                 foreach (var singleResult in reader.AllValues())
@@ -524,7 +553,30 @@ namespace Raven.Server.Documents.Patch
                     entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
                     entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
                     entries.Add(entry);
+                    
+                    if (DebugMode) 
+                    {
+                        DebugActions.GetTimeSeries.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = timeSeries,
+                            ["Timestamp"] = singleResult.Timestamp.GetDefaultRavenFormat(isUtc: true),
+                            ["Tag"] = singleResult.Tag?.ToString(),
+                            ["Values"] = singleResult.Values.ToArray().Cast<object>(),
+                            ["Type"] = singleResult.Type,
+                            ["Exists"] = true
+                        });
+                    }
                 }
+               
+                if (DebugMode && entries.Count == 0) 
+                {
+                    DebugActions.GetTimeSeries.Add(new DynamicJsonValue
+                    {
+                        ["Name"] = timeSeries,
+                        ["Exists"] = false
+                    });
+                }
+                
                 return ScriptEngine.Array.Construct(entries.ToArray());
             }
 
@@ -875,12 +927,16 @@ namespace Raven.Server.Documents.Patch
                 PutOrDeleteCalled = true;
                 AssertValidDatabaseContext("delete document");
                 AssertNotReadOnly();
-                if (DebugMode)
-                    DebugActions.DeleteDocument.Add(id);
+
                 var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
 
                 if (RefreshOriginalDocument && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
                     RefreshOriginalDocument = false;
+
+                if (DebugMode)
+                {
+                    DebugActions.DeleteDocument.Add(id);
+                }
 
                 return result != null;
             }
@@ -1019,7 +1075,19 @@ namespace Raven.Server.Documents.Patch
 
                 if (raw == false)
                 {
-                    return _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value ?? JsValue.Null;
+                    var counterValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value ?? JsValue.Null;
+                  
+                    if (DebugMode)
+                    {
+                        DebugActions.GetCounter.Add(new DynamicJsonValue
+                        {
+                            ["Name"] = name,
+                            ["Value"] = counterValue.ToString(),
+                            ["Exists"] = counterValue != JsValue.Null
+                        });
+                    }
+                    
+                    return counterValue;
                 }
 
                 var rawValues = new ObjectInstance(ScriptEngine);
@@ -1084,6 +1152,12 @@ namespace Raven.Server.Documents.Patch
                     value = args[2].AsNumber();
                 }
 
+                long? currentValue = null;
+                if (DebugMode)
+                {
+                    currentValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value;
+                }
+
                 _database.DocumentsStorage.CountersStorage.IncrementCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name, (long)value, out var exists);
 
                 if (exists == false)
@@ -1097,6 +1171,20 @@ namespace Raven.Server.Documents.Patch
                     tuple.CountersToRemove?.Remove(name);
 
                     DocumentCountersToUpdate[id] = tuple;
+                }
+                
+                if (DebugMode)
+                {
+                    var newValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value;
+                    
+                    DebugActions.IncrementCounter.Add(new DynamicJsonValue
+                    {
+                        ["Name"] = name,
+                        ["OldValue"] = currentValue,
+                        ["AddedValue"] = value,
+                        ["NewValue"] = newValue,
+                        ["Created"] = exists == false
+                    });
                 }
 
                 return JsBoolean.True;
@@ -1156,6 +1244,11 @@ namespace Raven.Server.Documents.Patch
 
                 DocumentCountersToUpdate[id] = tuple;
 
+                if (DebugMode)
+                {
+                    DebugActions.DeleteCounter.Add(name);
+                }
+                
                 return JsBoolean.True;
             }
 
@@ -1579,9 +1672,18 @@ namespace Raven.Server.Documents.Patch
             {
                 if (string.IsNullOrEmpty(id))
                     return JsValue.Undefined;
-                if (DebugMode)
-                    DebugActions.LoadDocument.Add(id);
+
                 var document = _database.DocumentsStorage.Get(_docsCtx, id);
+
+                if (DebugMode)
+                {
+                    DebugActions.LoadDocument.Add(new DynamicJsonValue
+                    {
+                        ["Id"] = id,
+                        ["Exists"] = document != null
+                    });
+                }
+                
                 return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 

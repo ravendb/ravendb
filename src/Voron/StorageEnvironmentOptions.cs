@@ -22,7 +22,6 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
-using Voron.Platform;
 using Voron.Platform.Posix;
 using Voron.Platform.Win32;
 using Voron.Util;
@@ -150,6 +149,8 @@ namespace Voron
         {
             throw new ArgumentOutOfRangeException("InitialLogFileSize", "The initial log for the Voron must be above zero");
         }
+
+        public StorageEncryptionOptions Encryption { get; } = new StorageEncryptionOptions();
 
         public int PageSize => Constants.Storage.PageSize;
 
@@ -762,7 +763,7 @@ namespace Voron
             {
                 var pager = GetTemporaryPager(name, initialSize, GetMemoryMapPagerInternal);
 
-                if (EncryptionEnabled)
+                if (Encryption.IsEnabled)
                 {
                     // even though we don't need encryption here, we still need to ensure that this
                     // isn't paged to disk
@@ -782,7 +783,7 @@ namespace Voron
             {
                 var pager = GetMemoryMapPagerInternal(options, initialSize, file, deleteOnClose, usePageProtection);
 
-                return EncryptionEnabled == false
+                return Encryption.IsEnabled == false
                     ? pager
                     : new CryptoPager(pager);
             }
@@ -1004,7 +1005,7 @@ namespace Voron
             {
                 var pager = GetTempMemoryMapPagerInternal(options, path, intialSize,
                     Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary);
-                return EncryptionEnabled == false
+                return Encryption.IsEnabled == false
                     ? pager
                     : new CryptoPager(pager);
             }
@@ -1054,7 +1055,7 @@ namespace Voron
             {
                 var pager = OpenPagerInternal(filename);
 
-                return EncryptionEnabled == false ? pager : new CryptoPager(pager);
+                return Encryption.IsEnabled == false ? pager : new CryptoPager(pager);
             }
 
             private AbstractPager OpenPagerInternal(VoronPathSetting filename)
@@ -1102,19 +1103,11 @@ namespace Voron
             return string.Format("scratch.{0:D10}.buffers", number);
         }
 
-        public unsafe void Dispose()
+        public void Dispose()
         {
             NullifyHandlers();
 
-            var copy = MasterKey;
-            if (copy != null)
-            {
-                fixed (byte* key = copy)
-                {
-                    Sodium.sodium_memzero(key, (UIntPtr)copy.Length);
-                    MasterKey = null;
-                }
-            }
+            Encryption.Dispose();
 
             ScratchSpaceUsage?.Dispose();
 
@@ -1147,8 +1140,6 @@ namespace Voron
         public abstract AbstractPager OpenJournalPager(long journalNumber, JournalInfo journalInfo);
 
         public abstract AbstractPager OpenPager(VoronPathSetting filename);
-
-        public bool EncryptionEnabled => MasterKey != null;
 
         public bool DoNotConsiderMemoryLockFailureAsCatastrophicError;
 
@@ -1190,7 +1181,6 @@ namespace Voron
         public long PrefetchSegmentSize { get; set; }
         public long PrefetchResetThreshold { get; set; }
         public long SyncJournalsCountThreshold { get; set; }
-        public byte[] MasterKey;
 
         internal bool SimulateFailureOnDbCreation { get; set; }
         internal bool ManualSyncing { get; set; } = false;
@@ -1323,6 +1313,55 @@ namespace Voron
         public ConcurrentSet<CryptoPager> GetActiveCryptoPagers()
         {
             return _activeCryptoPagers;
+        }
+
+        public class StorageEncryptionOptions : IDisposable
+        {
+            private IJournalCompressionBufferCryptoHandler _journalCompressionBufferHandler;
+
+            public IJournalCompressionBufferCryptoHandler JournalCompressionBufferHandler
+            {
+                get
+                {
+                    if (HasExternalJournalCompressionBufferHandlerRegistration == false)
+                        throw new InvalidOperationException($"You have to {nameof(RegisterForJournalCompressionHandler)} before you try to access {nameof(JournalCompressionBufferHandler)}");
+                    
+                    return _journalCompressionBufferHandler;
+                }
+                private set => _journalCompressionBufferHandler = value;
+            }
+
+            public byte[] MasterKey;
+
+            public bool IsEnabled => MasterKey != null;
+
+            public bool HasExternalJournalCompressionBufferHandlerRegistration { get; private set; }
+
+            public void RegisterForJournalCompressionHandler()
+            {
+                if (IsEnabled == false)
+                    return;
+
+                HasExternalJournalCompressionBufferHandlerRegistration = true;
+            }
+
+            public void SetExternalCompressionBufferHandler(IJournalCompressionBufferCryptoHandler handler)
+            {
+                JournalCompressionBufferHandler = handler;
+            }
+
+            public unsafe void Dispose()
+            {
+                var copy = MasterKey;
+                if (copy != null)
+                {
+                    fixed (byte* key = copy)
+                    {
+                        Sodium.sodium_memzero(key, (UIntPtr)copy.Length);
+                        MasterKey = null;
+                    }
+                }
+            }
         }
     }
 }

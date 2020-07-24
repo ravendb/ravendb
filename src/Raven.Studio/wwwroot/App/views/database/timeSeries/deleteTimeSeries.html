@@ -60,9 +60,12 @@
                 <div data-bind="if: showWarning, visible: showWarning">
                     <div class="bg-warning text-warning padding flex-horizontal">
                         <div class="flex-start"><i class="icon-warning"></i></div>
-                        <div>
+                        <div data-bind="visible: !useMinStartDate() || !useMaxEndDate()">
                             <div>You're deleting all time series entries matching time range:</div>
-                            <div><strong data-bind="text: startDateToUse"></strong> - <strong data-bind="text: endDateToUse"></strong></div>
+                            <strong data-bind="text: startDateToUse() || 'Minimum'"></strong> - <strong data-bind="text: endDateToUse() || 'Maximum'"></strong>
+                        </div>
+                        <div data-bind="visible: useMinStartDate() && useMaxEndDate()">
+                            <div>You're deleting all time series entries</div>
                         </div>
                     </div>
                 </div>

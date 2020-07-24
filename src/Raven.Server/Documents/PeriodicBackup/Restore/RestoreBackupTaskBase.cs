@@ -202,8 +202,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
 
                     var databaseRecord = restoreSettings.DatabaseRecord;
-                    if (databaseRecord.Settings == null)
-                        databaseRecord.Settings = new Dictionary<string, string>();
+                    databaseRecord.Settings ??= new Dictionary<string, string>();
 
                     var runInMemoryConfigurationKey = RavenConfiguration.GetKey(x => x.Core.RunInMemory);
                     databaseRecord.Settings.Remove(runInMemoryConfigurationKey);
@@ -332,12 +331,22 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
                     else
                     {
-                        var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag }, RaftIdGenerator.DontCareId);
-                        await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index);
+                        try
+                        {
+                            var deleteResult = await _serverStore.DeleteDatabaseAsync(RestoreFromConfiguration.DatabaseName, true, new[] { _serverStore.NodeTag },
+                                RaftIdGenerator.DontCareId);
+                            await _serverStore.Cluster.WaitForIndexNotification(deleteResult.Index, TimeSpan.FromSeconds(60));
+                        }
+                        catch (TimeoutException te)
+                        {
+                            result.AddError($"Failed to delete the database {databaseName} after a failed restore. " +
+                                            $"In order to restart the restore process this database needs to be deleted manually. Exception: {te}.");
+                            onProgress.Invoke(result.Progress);
+                        }
                     }
                 }
 
-                result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e.Message}");
+                result.AddError($"Error occurred during restore of database {databaseName}. Exception: {e}");
                 onProgress.Invoke(result.Progress);
                 throw;
             }
@@ -757,9 +766,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public async Task<long> CalculateBackupSizeInBytes()
         {
-            var zipPath = GetBackupLocation();
-            zipPath = Path.Combine(zipPath, RestoreFromConfiguration.LastFileNameToRestore);
-            using (var zip = await GetZipArchiveForSnapshotCalc(zipPath))
+            using (var zip = await GetZipArchiveForSnapshotCalc(RestoreFromConfiguration.LastFileNameToRestore))
                 return zip.Entries.Sum(entry => entry.Length);
         }
     }

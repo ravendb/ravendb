@@ -8,9 +8,6 @@ import generalUtils = require("common/generalUtils");
 
 class deleteTimeSeries extends dialogViewModelBase {
 
-    static readonly minDate = "0001-01-01T00:00:00.000Z";
-    static readonly maxDate = "9999-12-31T23:59:59.999Z";
-    
     spinners = {
         delete: ko.observable<boolean>(false)
     };
@@ -37,11 +34,11 @@ class deleteTimeSeries extends dialogViewModelBase {
         criteria.selection = criteria.selection || [];
         
         this.startDateToUse = ko.pureComputed(() => {
-            return this.useMinStartDate() ? deleteTimeSeries.minDate : this.startDate().utc().format(generalUtils.utcFullDateFormat);
+            return this.useMinStartDate() ? null : this.startDate().utc().format(generalUtils.utcFullDateFormat);
         });
         
         this.endDateToUse = ko.pureComputed(() => {
-            return this.useMaxEndDate() ? deleteTimeSeries.maxDate : this.endDate().utc().format(generalUtils.utcFullDateFormat);
+            return this.useMaxEndDate() ? null : this.endDate().utc().format(generalUtils.utcFullDateFormat);
         });
         
         this.showWarning = ko.pureComputed(() => {
@@ -88,7 +85,18 @@ class deleteTimeSeries extends dialogViewModelBase {
                     message: "Please enter a valid date"
                 },
                 {
-                    validator: () => this.endDate() && this.endDate().diff(this.startDate()) >= 0,
+                    validator: () => {
+                        if (this.useMaxEndDate() || this.useMinStartDate()) {
+                            return true;
+                        }
+                        
+                        if (!this.startDate() || !this.startDate().isValid()) {
+                            return true;
+                        }
+                        
+                        // at this point both start/end are defined and valid, we can compare
+                        return this.endDate().diff(this.startDate()) >= 0;
+                    },
                     message: "End Date must be greater than Start Date"
                 }
             ]
@@ -105,8 +113,8 @@ class deleteTimeSeries extends dialogViewModelBase {
             case "all":
                 return [
                     {
-                        From: deleteTimeSeries.minDate,
-                        To: deleteTimeSeries.maxDate
+                        From: null,
+                        To: null
                     }
                 ];
             case "selection":

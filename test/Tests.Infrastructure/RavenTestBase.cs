@@ -58,9 +58,9 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database ?? store.Database);
         }
 
-        protected static void CreateNorthwindDatabase(DocumentStore store)
+        protected static void CreateNorthwindDatabase(DocumentStore store, DatabaseItemType operateOnTypes = DatabaseItemType.Documents)
         {
-            store.Maintenance.Send(new CreateSampleDataOperation());
+            store.Maintenance.Send(new CreateSampleDataOperation(operateOnTypes));
         }
 
         protected async Task CreateLegacyNorthwindDatabase(DocumentStore store)

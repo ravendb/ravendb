@@ -323,7 +323,11 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
                 {
-                    yield return DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.Name, ref result.Value.Reader);
+                    var name = DocumentsStorage.TableValueToChangeVector(context, (int)StatsColumns.Name, ref result.Value.Reader);
+                    if (GetStats(context, docId, name).Count == 0)
+                        continue;
+
+                    yield return name;
                 }
             }
         }

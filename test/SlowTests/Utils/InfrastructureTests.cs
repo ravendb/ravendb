@@ -21,7 +21,16 @@ namespace SlowTests.Utils
                 var cluster = await CreateRaftCluster(2, leaderIndex: 0);
                 using (var store = GetDocumentStore(new Options { Server = cluster.Leader }))
                 {
-                    cluster.Nodes[1].Dispose();
+                    try
+                    {
+                        cluster.Nodes[1].Dispose();
+                    }
+                    catch
+                    {
+                       // we don't care if it throws here,
+                       // the important thing is to test the exception below will be thrown before the expected exception in the dispose of the document store
+                    }
+
                     throw new InvalidOperationException("Cows can fly!"); // this is the real exception
                 }
             });

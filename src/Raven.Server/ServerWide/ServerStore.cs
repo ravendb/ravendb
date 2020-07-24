@@ -544,7 +544,7 @@ namespace Raven.Server.ServerWide
                     options.DoNotConsiderMemoryLockFailureAsCatastrophicError = Configuration.Security.DoNotConsiderMemoryLockFailureAsCatastrophicError;
                     try
                     {
-                        options.MasterKey = Secrets.Unprotect(buffer);
+                        options.Encryption.MasterKey = Secrets.Unprotect(buffer);
                     }
                     catch (Exception e)
                     {
@@ -2273,8 +2273,7 @@ namespace Raven.Server.ServerWide
             string databaseName, DatabaseRecord record, long? index, string raftRequestId,
             Dictionary<string, BlittableJsonReaderObject> databaseValues = null, bool isRestore = false)
         {
-            if (databaseValues == null)
-                databaseValues = new Dictionary<string, BlittableJsonReaderObject>();
+            databaseValues ??= new Dictionary<string, BlittableJsonReaderObject>();
 
             Debug.Assert(record.Topology != null);
 
