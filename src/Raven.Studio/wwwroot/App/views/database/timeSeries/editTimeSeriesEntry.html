@@ -61,7 +61,7 @@
                             <div data-bind="if: !isRollupEntry()">
                                 <div data-bind="foreach: values">
                                     <div class="input-group margin-bottom margin-bottom-xs">
-                                        <div class="form-control-static margin-right margin-right-sm aggregation-name" data-bind="text: $root.getColumnName($index()), visible: $root.getColumnName($index())">
+                                        <div class="form-control-static margin-right margin-right-sm aggregation-name" data-bind="text: $root.getValueName($index())">
                                         </div>
                                         <div data-bind="validationOptions: { insertMessages: false }, validationElement: value">
                                             <input type="number" class="form-control" data-bind="numericInput: value" style="width: 100%" />
@@ -75,9 +75,8 @@
                                     </div>
                                 </div>
                             </div>
-                            
                             <div data-bind="if: rollupValues().length">
-                                <table class="table margin-top">
+                                <table class="margin-top margin-bottom">
                                     <thead>
                                         <tr>
                                             <th>&nbsp;</th>
@@ -94,7 +93,7 @@
                                     <!-- ko foreach: rollupValues -->
                                     <tr>
                                         <td class="name-value">
-                                            <label class="form-control-static" data-bind="text: $root.extractValueName($index() * 6)"></label>
+                                            <label class="form-control-static" data-bind="text: $root.getValueName($index())"></label>
                                         </td>
                                         <td data-bind="validationOptions: { insertMessages: false }, validationElement: first.value">
                                             <input type="number" class="form-control margin-left" data-bind="numericInput: first.value" />
@@ -153,7 +152,7 @@
                                 </div>
                             </div>
                             <span class="has-disable-reason" data-placement="right"
-                                  data-bind="attr: { 'data-original-title': maxNumberOfValuesReachedWarning() ?  maxNumberOfValuesReachedWarning() : '' }">
+                                  data-bind="attr: { 'data-original-title': maxNumberOfValuesReachedWarning() ? maxNumberOfValuesReachedWarning() : '' }">
                                 <button class="btn btn-default btn-sm" data-bind="click: addValue, disable: maxNumberOfValuesReachedWarning()">
                                     <i class="icon-plus"></i>
                                     <span>Add Value</span>
