@@ -47,7 +47,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 }
 
                 Assert.Equal(15000, sum);
-                WaitForUserToContinueTheTest(store);
+
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/1", "Heartrate").Delete(baseline, baseline.AddMinutes(99));
