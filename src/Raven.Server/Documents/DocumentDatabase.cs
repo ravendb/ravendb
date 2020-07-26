@@ -303,7 +303,7 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
 
                 _addToInitLog("Initializing IndexStore (async)");
-                _indexStoreTask = IndexStore.InitializeAsync(record, _addToInitLog);
+                _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog("Initializing Replication");
                 ReplicationLoader?.Initialize(record);
                 _addToInitLog("Initializing ETL");
@@ -663,156 +663,152 @@ namespace Raven.Server.Documents
             var lockTaken = false;
             Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref lockTaken);
 
-            try
+            if (lockTaken == false && _logger.IsOperationsEnabled)
+                _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
+
+            exceptionAggregator.Execute(() =>
             {
-                if (lockTaken == false && _logger.IsOperationsEnabled)
-                    _logger.Operations("Failed to acquire lock during database dispose for cluster notifications. Will dispose rudely...");
+                _serverStore.StorageSpaceMonitor.Unsubscribe(this);
+            });
 
-                exceptionAggregator.Execute(() =>
-                {
-                    _serverStore.StorageSpaceMonitor.Unsubscribe(this);
-                });
-
-                foreach (var connection in RunningTcpConnections)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        connection.Dispose();
-                    });
-                }
-
-                exceptionAggregator.Execute(() =>
-                {
-                    TxMerger?.Dispose();
-                });
-
-                var indexStoreTask = _indexStoreTask;
-                if (indexStoreTask != null)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        // we need to wait here for the task to complete
-                        // if we will not do that the process will continue
-                        // and we will be left with opened files
-                        // we are checking cancellation token before each index initialization
-                        // so in worst case we will have to wait for 1 index to be opened
-                        // if the cancellation is requested during index store initialization
-                        indexStoreTask.Wait();
-                    });
-                }
-
-                exceptionAggregator.Execute(() =>
-                {
-                    IndexStore?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    ExpiredDocumentsCleaner?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    PeriodicBackupRunner?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    TombstoneCleaner?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    ReplicationLoader?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    EtlLoader?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    Operations?.Dispose(exceptionAggregator);
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    HugeDocuments?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    NotificationCenter?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    SubscriptionStorage?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    ConfigurationStorage?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    DocumentsStorage?.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    _databaseShutdown.Dispose();
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    if (MasterKey == null)
-                        return;
-                    fixed (byte* pKey = MasterKey)
-                    {
-                        Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
-                    }
-                });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    if (_writeLockFile != null)
-                    {
-                        try
-                        {
-                            _writeLockFile.Unlock(0, 1);
-                        }
-                        catch (PlatformNotSupportedException)
-                        {
-                            // Unlock isn't supported on macOS
-                        }
-
-                        _writeLockFile.Dispose();
-
-                        try
-                        {
-                            if (File.Exists(_lockFile))
-                                File.Delete(_lockFile);
-                        }
-                        catch (IOException)
-                        {
-                        }
-                    }
-                });
-                
-                exceptionAggregator.Execute(RachisLogIndexNotifications);
-                
-                exceptionAggregator.Execute(_hasClusterTransaction);
-
-                exceptionAggregator.ThrowIfNeeded();
-            }
-            finally
+            foreach (var connection in RunningTcpConnections)
             {
-                if (lockTaken)
-                    Monitor.Exit(_clusterLocker);
+                exceptionAggregator.Execute(() =>
+                {
+                    connection.Dispose();
+                });
             }
+
+            exceptionAggregator.Execute(() =>
+            {
+                TxMerger?.Dispose();
+            });
+
+            // must acquire the lock in order to prevent concurrent access to index files
+            if (lockTaken == false)
+                Monitor.Enter(_clusterLocker);
+
+            var indexStoreTask = _indexStoreTask;
+            if (indexStoreTask != null)
+            {
+                exceptionAggregator.Execute(() =>
+                {
+                    // we need to wait here for the task to complete
+                    // if we will not do that the process will continue
+                    // and we will be left with opened files
+                    // we are checking cancellation token before each index initialization
+                    // so in worst case we will have to wait for 1 index to be opened
+                    // if the cancellation is requested during index store initialization
+                    indexStoreTask.Wait();
+                });
+            }
+
+            exceptionAggregator.Execute(() =>
+            {
+                IndexStore?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                ExpiredDocumentsCleaner?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                PeriodicBackupRunner?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                TombstoneCleaner?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                ReplicationLoader?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                EtlLoader?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                Operations?.Dispose(exceptionAggregator);
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                HugeDocuments?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                NotificationCenter?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                SubscriptionStorage?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                ConfigurationStorage?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                DocumentsStorage?.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                _databaseShutdown.Dispose();
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                if (MasterKey == null)
+                    return;
+                fixed (byte* pKey = MasterKey)
+                {
+                    Sodium.sodium_memzero(pKey, (UIntPtr)MasterKey.Length);
+                }
+            });
+
+            exceptionAggregator.Execute(() =>
+            {
+                if (_writeLockFile != null)
+                {
+                    try
+                    {
+                        _writeLockFile.Unlock(0, 1);
+                    }
+                    catch (PlatformNotSupportedException)
+                    {
+                        // Unlock isn't supported on macOS
+                    }
+
+                    _writeLockFile.Dispose();
+
+                    try
+                    {
+                        if (File.Exists(_lockFile))
+                            File.Delete(_lockFile);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                }
+            });
+
+            exceptionAggregator.Execute(RachisLogIndexNotifications);
+
+            exceptionAggregator.Execute(_hasClusterTransaction);
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public DynamicJsonValue GenerateOfflineDatabaseInfo()
@@ -1194,15 +1190,17 @@ namespace Raven.Server.Documents
             while (taken == false)
             {
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
+
                 try
                 {
                     if (CanSkipDatabaseRecordChange(record.DatabaseName, index))
                         return;
 
+                    if (DatabaseShutdown.IsCancellationRequested)
+                        return;
+
                     if (taken == false)
                         continue;
-
-                    DatabaseShutdown.ThrowIfCancellationRequested();
 
                     Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                         $"{Name} != {record.DatabaseName}");
@@ -1295,9 +1293,13 @@ namespace Raven.Server.Documents
             while (taken == false)
             {
                 Monitor.TryEnter(_clusterLocker, TimeSpan.FromSeconds(5), ref taken);
+
                 try
                 {
                     if (CanSkipValueChange(record.DatabaseName, index))
+                        return;
+
+                    if (DatabaseShutdown.IsCancellationRequested)
                         return;
 
                     if (taken == false)

@@ -454,6 +454,8 @@ namespace Raven.Server.Documents.ETL
             {
                 foreach (var process in x.Value)
                 {
+                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
+
                     try
                     {
                         string reason = GetStopReason(process, myRavenEtl, mySqlEtl, responsibleNodes);
@@ -474,6 +476,8 @@ namespace Raven.Server.Documents.ETL
             {
                 foreach (var process in x.Value)
                 {
+                    _database.DatabaseShutdown.ThrowIfCancellationRequested();
+
                     try
                     {
                         process.Dispose();
