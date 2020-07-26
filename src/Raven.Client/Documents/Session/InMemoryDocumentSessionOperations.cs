@@ -235,7 +235,29 @@ namespace Raven.Client.Documents.Session
             SessionInfo = new SessionInfo(_clientSessionId, false, _documentStore.GetLastTransactionIndex(DatabaseName), options.NoCaching);
             TransactionMode = options.TransactionMode;
 
-            _javascriptCompilationOptions = new JavascriptCompilationOptions
+            var extensions = new JavascriptConversionExtension[]
+            {
+                JavascriptConversionExtensions.MathSupport.Instance,
+                new JavascriptConversionExtensions.DictionarySupport(),
+                JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                new JavascriptConversionExtensions.ConstSupport(Conventions),
+                JavascriptConversionExtensions.ToStringSupport.Instance,
+                JavascriptConversionExtensions.DateTimeSupport.Instance,
+                JavascriptConversionExtensions.InvokeSupport.Instance,
+                JavascriptConversionExtensions.NullCoalescingSupport.Instance,
+                JavascriptConversionExtensions.StringSupport.Instance,
+                JavascriptConversionExtensions.NestedConditionalSupport.Instance,
+                JavascriptConversionExtensions.ReservedWordsSupport.Instance,
+                JavascriptConversionExtensions.ValueTypeParseSupport.Instance,
+                JavascriptConversionExtensions.JsonPropertyAttributeSupport.Instance,
+                JavascriptConversionExtensions.NullComparisonSupport.Instance,
+                JavascriptConversionExtensions.NullableSupport.Instance,
+                JavascriptConversionExtensions.NewSupport.Instance,
+                JavascriptConversionExtensions.ListInitSupport.Instance,
+                MemberInitAsJson.ForAllTypes
+            };
+
+            _javascriptCompilationOptions = new JavascriptCompilationOptions(extensions)
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
             };
