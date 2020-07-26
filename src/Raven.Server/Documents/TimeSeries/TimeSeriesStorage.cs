@@ -1846,7 +1846,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private static readonly StandardFormat FormatD18 = new StandardFormat('D', 18);
 
-        internal List<SegmentSummary> GetSegmentsSummary(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
+        internal IEnumerable<SegmentSummary> GetSegmentsSummary(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
         {
             var reader = GetReader(context, documentId, name, from, to);
             return reader.GetSegmentsSummary();

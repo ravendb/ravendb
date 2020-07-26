@@ -48,6 +48,16 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 Assert.Equal(15000, sum);
 
+                sum = 0;
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(100));
+
+                    sum += summary.Sum(seg => seg.numberOfEntries);
+                }
+                Assert.NotEqual(15000, sum);
+
                 using (var session = store.OpenSession())
                 {
                     session.TimeSeriesFor("users/1", "Heartrate").Delete(baseline, baseline.AddMinutes(99));

@@ -161,24 +161,26 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal List<TimeSeriesStorage.SegmentSummary> GetSegmentsSummary()
+        internal IEnumerable<TimeSeriesStorage.SegmentSummary> GetSegmentsSummary()
         {
             if (Init() == false)
-                return null;
-
-            var list = new List<TimeSeriesStorage.SegmentSummary>();
+                yield return null;
 
             InitializeSegment(out var baselineMilliseconds, out _currentSegment);
 
             do
             {
                 var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
+
+                if (baseline > _to)
+                    yield break;
+
                 if (_offset.HasValue)
                 {
                     baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
                 }
 
-                list.Add(new TimeSeriesStorage.SegmentSummary()
+                yield return new TimeSeriesStorage.SegmentSummary()
                 {
                     documentId = _documentId,
                     name = _name,
@@ -186,10 +188,8 @@ namespace Raven.Server.Documents.TimeSeries
                     numberOfEntries = _currentSegment.NumberOfEntries,
                     numberOfLiveEntries = _currentSegment.NumberOfLiveEntries,
                     changeVector = GetCurrentSegmentChangeVector()
-                });
+                };
             } while (NextSegment(out baselineMilliseconds));
-
-            return list;
         }
 
         internal SeriesSummary GetSummary()
