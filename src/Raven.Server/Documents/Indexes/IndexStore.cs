@@ -82,10 +82,10 @@ namespace Raven.Server.Documents.Indexes
             StoppedConcurrentIndexBatches = new SemaphoreSlim(stoppedConcurrentIndexBatches);
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex)
+        public int HandleDatabaseRecordChange(DatabaseRecord record, long raftIndex)
         {
             if (record == null)
-                return;
+                return 0;
 
             var indexesToStart = new List<Index>();
 
@@ -96,12 +96,12 @@ namespace Raven.Server.Documents.Indexes
             HandleChangesForAutoIndexes(record, raftIndex, indexesToStart);
 
             if (indexesToStart.Count <= 0)
-                return;
+                return 0;
 
             var sp = Stopwatch.StartNew();
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Starting {indexesToStart.Count} indexes");
+                Logger.Info($"Starting {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}");
 
             ExecuteForIndexes(indexesToStart, index =>
             {
@@ -134,7 +134,9 @@ namespace Raven.Server.Documents.Indexes
             });
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Started {indexesToStart.Count} indexes, took: {sp.ElapsedMilliseconds}ms");
+                Logger.Info($"Started {indexesToStart.Count} new index{(indexesToStart.Count > 1 ? "es" : string.Empty)}, took: {sp.ElapsedMilliseconds}ms");
+
+            return indexesToStart.Count;
         }
 
         private void ExecuteForIndexes(IEnumerable<Index> indexes, Action<Index> action)
@@ -524,7 +526,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record, Action<string> addToInitLog)
+        public Task InitializeAsync(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -538,7 +540,7 @@ namespace Raven.Server.Documents.Indexes
 
             return Task.Run(() =>
             {
-                OpenIndexesFromRecord(record, addToInitLog);
+                OpenIndexesFromRecord(record, raftIndex, addToInitLog);
             });
         }
 
@@ -1198,7 +1200,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private void OpenIndexesFromRecord(DatabaseRecord record, Action<string> addToInitLog)
+        private void OpenIndexesFromRecord(DatabaseRecord record, long raftIndex, Action<string> addToInitLog)
         {
             var path = _documentDatabase.Configuration.Indexing.StoragePath;
 
@@ -1278,6 +1280,13 @@ namespace Raven.Server.Documents.Indexes
                         Logger.Info($"Initialized auto index: `{name}`, took: {sp.ElapsedMilliseconds:#,#;;0}ms");
                 }
             }
+
+            // loading the new indexes
+            var startIndexSp = Stopwatch.StartNew();
+
+            addToInitLog("Starting new indexes");
+            var startedIndexes = HandleDatabaseRecordChange(record, raftIndex);
+            addToInitLog($"Started {startedIndexes} new index{(startedIndexes > 1 ? "es" : string.Empty)}, took: {startIndexSp.ElapsedMilliseconds}ms");
 
             addToInitLog($"IndexStore initialization is completed, took: {totalSp.ElapsedMilliseconds:#,#;;0}ms");
 
