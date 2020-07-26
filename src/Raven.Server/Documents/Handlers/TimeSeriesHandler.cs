@@ -667,8 +667,8 @@ namespace Raven.Server.Documents.Handlers
 
         [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser)]
 
-        [RavenAction("/databases/*/timeseries/debug", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetSegmantSummary()
+        [RavenAction("/databases/*/timeseries/debug/segments-summery", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSegmentSummary()
         {
             var documentId = GetStringQueryString("docId");
             var name = GetStringQueryString("name");

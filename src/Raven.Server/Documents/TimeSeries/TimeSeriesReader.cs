@@ -166,20 +166,32 @@ namespace Raven.Server.Documents.TimeSeries
             if (Init() == false)
                 return null;
 
-            InitializeSegment(out _, out _currentSegment);
+            var list = new List<TimeSeriesStorage.SegmentSummary>();
 
-            return SegmentsOrValues().Select(seg =>
-                new TimeSeriesStorage.SegmentSummary()
+            InitializeSegment(out var baselineMilliseconds, out _currentSegment);
+
+            do
+            {
+                var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
+                if (_offset.HasValue)
+                {
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+                }
+
+                list.Add(new TimeSeriesStorage.SegmentSummary()
                 {
                     documentId = _documentId,
                     name = _name,
-                    startTime = seg.Segment.Start,
+                    startTime = baseline,
                     numberOfEntries = _currentSegment.NumberOfEntries,
                     numberOfLiveEntries = _currentSegment.NumberOfLiveEntries,
-                    changeVector = seg.Segment.ChangeVector
-                }).ToList();
+                    changeVector = GetCurrentSegmentChangeVector()
+                });
+            } while (NextSegment(out baselineMilliseconds));
 
+            return list;
         }
+
         internal SeriesSummary GetSummary()
         {
             if (Init() == false)
