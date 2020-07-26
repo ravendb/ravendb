@@ -1077,11 +1077,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             string restoredDatabaseName = $"{store.Database}-restored";
             using (RestoreDatabase(store, new RestoreBackupConfiguration {BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = restoredDatabaseName}))
             {
-                using var client = new HttpClient();
-                var url = Uri.EscapeUriString($"{store.Urls.First()}/databases/{restoredDatabaseName}/timeseries/config");
-                var actualStr = await (await client.GetAsync(url)).Content.ReadAsStringAsync();
-                var jsonSerializer = (JsonSerializer)new DocumentConventions().Serialization.CreateSerializer();
-                var actual = jsonSerializer.Deserialize<TimeSeriesConfiguration>(new JsonTextReader(new StringReader(actualStr)));
+                var db = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabaseName));
+                var actual = db.TimeSeries;
 
                 Assert.NotNull(actual);
                 Assert.Equal(timeSeriesConfiguration.Collections.Count, actual.Collections.Count);
