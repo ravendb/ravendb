@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Queries.AST
         public QueryExpression Where;
         public List<(QueryExpression QueryExpression, StringSegment? StringSegment)> Select;
         public StringSegment? LoadTagAs;
-        public ValueExpression Last, First, GroupBy, Offset;
+        public ValueExpression Last, First, GroupBy, Offset, Scale;
     }
 
     public unsafe struct RangeGroup
@@ -784,7 +784,7 @@ namespace Raven.Server.Documents.Queries.AST
             TotalCount += (long)values[(int)AggregationType.Count];
         }
 
-        public IEnumerable<object> GetFinalValues()
+        public IEnumerable<object> GetFinalValues(double? scale = null)
         {
             switch (Aggregation)
             {
@@ -812,7 +812,9 @@ namespace Raven.Server.Documents.Queries.AST
                     throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
             }
 
-            return _values.Cast<object>();
+            return scale.HasValue 
+                ? _values.Select(v => (object)(v * scale.Value)) 
+                : _values.Cast<object>();
         }
     }
 

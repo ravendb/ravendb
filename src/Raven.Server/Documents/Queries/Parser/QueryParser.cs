@@ -1441,6 +1441,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 tsf.Select = SelectClauseExpressions("SELECT", false);
             }
 
+            if (Scanner.TryScan("SCALE"))
+            {
+                if (Value(out var scale) == false)
+                    ThrowInvalidQueryException($"Failed to parse a value expression after SCALE in time series function '{name}'");
+
+                tsf.Scale = scale;
+            }
+
             if (Scanner.TryScan("OFFSET"))
             {
                 if (Value(out var offset) == false)
@@ -1757,7 +1765,8 @@ namespace Raven.Server.Documents.Queries.Parser
             "INCLUDE",
             "UPDATE",
             "OFFSET",
-            "LIMIT"
+            "LIMIT",
+            "SCALE"
         };
 
         private DocumentsStorage _documentsStorage;

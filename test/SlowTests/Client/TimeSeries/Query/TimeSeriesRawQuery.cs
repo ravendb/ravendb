@@ -102,7 +102,6 @@ namespace SlowTests.Client.TimeSeries.Query
 
         }
 
-
         public class RawQueryResult
         {
             public TimeSeriesAggregationResult HeartRate { get; set; }
@@ -1322,7 +1321,6 @@ select timeseries(from doc.HeartRate between $start and $end
                 }
             }
         }
-
 
         [Theory]
         [InlineData("months")]
@@ -7376,7 +7374,6 @@ select out(c)
             }
         }
 
-
         [Fact]
         public async Task CanQueryTimeSeriesAggregationUsingNamedValues()
         {
@@ -7447,5 +7444,405 @@ select timeseries(
                 }
             }
         }
+    
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingScale()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday.EnsureUtc();
+                var id = "people/1";
+                var totalHours = TimeSpan.FromDays(3).TotalHours;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i < totalHours; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesRawResult>(
+                            @"
+declare timeseries out(doc)
+{
+    from doc.HeartRate 
+    between $start and $end
+    scale 0.001
+}
+from People as p
+where id(p) = $id
+select out(p)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(3))
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+
+                    var scale = 0.001;
+                    var tolerance = double.Epsilon;
+
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        var expectedTimestamp = baseline.AddHours(i);
+                        Assert.Equal(expectedTimestamp, result.Results[i].Timestamp);
+
+                        var expectedVal = i * scale;
+                        var val = result.Results[i].Value;
+
+                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.Equal(expectedVal, result.Results[i].Value);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingScale_AsLong()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i < totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
+                            @"
+declare timeseries out(doc)
+{
+    from doc.HeartRate between $start and $end
+    group by 1h
+    select min(), max()
+    scale 10_000
+}
+from People as p
+where id(p) = $id
+select out(p)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(3))
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalMinutes;
+                    var expectedBucketCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+                    Assert.Equal(expectedBucketCount, result.Results.Length);
+
+                    var scale = 10_000;
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        Assert.Equal(60, result.Results[i].Count[0]);
+
+                        var min = result.Results[i].Min[0];
+                        var expectedMin = scale * i * 60;
+                        Assert.Equal(expectedMin, min);
+
+                        var max = result.Results[i].Max[0];
+                        var expectedMax = scale * ((i + 1) * 60 - 1);
+                        Assert.Equal(expectedMax, max);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingScale_AsDouble()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i < totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
+                            @"
+declare timeseries out(doc)
+{
+    from doc.HeartRate between $start and $end
+    group by 1h
+    select min(), max()
+    scale 0.01
+}
+from People as p
+where id(p) = $id
+select out(p)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(3))
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalMinutes;
+                    var expectedBucketCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+                    Assert.Equal(expectedBucketCount, result.Results.Length);
+
+                    var scale = 0.01;
+                    var tolerance = 0.000000000001;
+
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        Assert.Equal(60, result.Results[i].Count[0]);
+
+                        var min = result.Results[i].Min[0];
+                        var expectedMin = scale * i * 60;
+                        Assert.True(Math.Abs(expectedMin - min) < tolerance);
+
+                        var max = result.Results[i].Max[0];
+                        var expectedMax = scale * ((i + 1) * 60 - 1);
+                        Assert.True(Math.Abs(expectedMax - max) < tolerance);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingScaleAsQueryParameter()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday.EnsureUtc();
+                var id = "people/1";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i < totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    // test with double 
+
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
+                            @"
+declare timeseries out(doc)
+{
+    from doc.HeartRate between $start and $end
+    group by 1h
+    select min(), max()
+    scale $scale
+}
+from People as p
+where id(p) = $id
+select out(p)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("scale", 0.01)
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(3))
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalMinutes;
+                    var expectedBucketCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+                    Assert.Equal(expectedBucketCount, result.Results.Length);
+
+                    var scale = 0.01;
+                    var tolerance = 0.000000000001;
+
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        Assert.Equal(60, result.Results[i].Count[0]);
+
+                        var min = result.Results[i].Min[0];
+                        var expectedMin = scale * i * 60;
+                        Assert.True(Math.Abs(expectedMin - min) < tolerance);
+
+                        var max = result.Results[i].Max[0];
+                        var expectedMax = scale * ((i + 1) * 60 - 1);
+                        Assert.True(Math.Abs(expectedMax - max) < tolerance);
+                    }
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    // test with long 
+
+                    var result = session.Advanced.RawQuery<TimeSeriesAggregationResult>(
+                            @"
+declare timeseries out(doc)
+{
+    from doc.HeartRate between $start and $end
+    group by 1h
+    select min(), max()
+    scale $scale
+}
+from People as p
+where id(p) = $id
+select out(p)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("scale", 10_000) 
+                        .AddParameter("start", baseline)
+                        .AddParameter("end", baseline.AddDays(3))
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalMinutes;
+                    var expectedBucketCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+                    Assert.Equal(expectedBucketCount, result.Results.Length);
+
+                    var scale = 10_000;
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        Assert.Equal(60, result.Results[i].Count[0]);
+
+                        var min = result.Results[i].Min[0];
+                        var expectedMin = scale * i * 60;
+                        Assert.Equal(expectedMin, min);
+
+                        var max = result.Results[i].Max[0];
+                        var expectedMax = scale * ((i + 1) * 60 - 1);
+                        Assert.Equal(expectedMax, max);
+                    }
+                }
+
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingScaleAndOffset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday.EnsureUtc();
+                var id = "people/1";
+                var totalHours = TimeSpan.FromDays(3).TotalHours;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    for (int i = 0; i < totalHours; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var offset = TimeZoneInfo.Local.BaseUtcOffset;
+                    var scale = 0.001;
+
+                    var result = session.Advanced.RawQuery<TimeSeriesRawResult>(
+                            @"
+declare timeseries out(doc)
+{
+    from doc.HeartRate 
+    between $start and $end
+    scale $scale
+    offset $offset
+}
+from People as p
+where id(p) = $id
+select out(p)
+")
+                        .AddParameter("id", id)
+                        .AddParameter("start", baseline)
+                        .AddParameter("scale", scale)
+                        .AddParameter("offset", offset)
+                        .AddParameter("end", baseline.AddDays(3))
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+
+                    var tolerance = double.Epsilon;
+                    var baselineWithOffset = baseline.Add(offset);
+
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        var expectedTimestamp = baselineWithOffset.AddHours(i);
+                        Assert.Equal(expectedTimestamp, result.Results[i].Timestamp);
+
+                        var expectedVal = i * scale;
+                        var val = result.Results[i].Value;
+
+                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.Equal(expectedVal, result.Results[i].Value);
+                    }
+                }
+            }
+        }
+
     }
 }
