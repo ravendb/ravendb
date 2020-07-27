@@ -49,10 +49,10 @@ namespace Raven.Client.Documents.Operations
     
     public interface IOperationProcessedDetails
     {
-        public long Total { get; set; }
-        public long DocumentsProcessed { get; set; }
-        public long AttachmentsProcessed { get; set; }
-        public long CountersProcessed { get; set; }
-        public long TimeSeriesProcessed { get; set; }
+        long Total { get; set; }
+        long DocumentsProcessed { get; set; }
+        long AttachmentsProcessed { get; set; }
+        long CountersProcessed { get; set; }
+        long TimeSeriesProcessed { get; set; }
     }
 }
