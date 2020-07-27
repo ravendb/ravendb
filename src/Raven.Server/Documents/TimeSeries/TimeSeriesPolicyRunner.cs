@@ -267,9 +267,10 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        internal async Task RunRollups(bool propagateException = true)
+        internal async Task<long> RunRollups(bool propagateException = true)
         {
             var now = _database.Time.GetUtcNow();
+            var total = 0L;
             try
             {
                 var states = new List<TimeSeriesRollups.RollupState>();
@@ -287,7 +288,7 @@ namespace Raven.Server.Documents.TimeSeries
                         {
                             _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollups(context, now, 1024, states, out duration);
                             if (states.Count == 0)
-                                return;
+                                return total;
                         }
 
                         Cts.Token.ThrowIfCancellationRequested();
@@ -299,11 +300,14 @@ namespace Raven.Server.Documents.TimeSeries
                         await _database.TxMerger.Enqueue(command);
                         if (command.RolledUp == 0)
                             break;
+                        total += command.RolledUp;
 
                         if (Logger.IsInfoEnabled)
                             Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
                     }
                 }
+
+                return total;
             }
             catch (OperationCanceledException)
             {
@@ -318,6 +322,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (propagateException)
                     throw;
 
+                return total;
             }
         }
 
