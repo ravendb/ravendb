@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
         private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
-        private string _src, _between, _where, _groupBy, _last, _first, _loadTag, _offset;
+        private string _src, _between, _where, _groupBy, _last, _first, _loadTag, _offset, _scale;
 
         public List<string> Parameters { get; internal set; }
 
@@ -40,8 +40,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesAggregationQueryable.Select):
                     Select(mce.Arguments[0]);
                     break;
-                case nameof(ITimeSeriesAggregationQueryable.Offset):
+                case nameof(ITimeSeriesQueryable.Offset):
                     Offset(mce.Arguments[0]);
+                    break;
+                case nameof(ITimeSeriesQueryable.Scale):
+                    Scale(mce.Arguments[0]);
                     break;
                 case nameof(ITimeSeriesQueryable.FromLast):
                     Last(mce.Arguments[0]);
@@ -172,6 +175,17 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var ts);
 
             _offset = $" offset '{ts}'";
+        }
+
+        private void Scale(Expression expression)
+        {
+            if (expression.Type != typeof(double))
+                throw new InvalidOperationException($"Invalid argument in method '{nameof(ITimeSeriesQueryable.Scale)}'. " +
+                                                    $"Expected argument of type 'double' but got : '{expression.Type}'");
+
+            LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
+
+            _scale = $" scale {value}";
         }
 
         private void TimeSeriesCall(MethodCallExpression mce)
@@ -391,6 +405,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 queryBuilder.Append(_groupBy);
             if (_selectFields != null)
                 queryBuilder.Append(" select ").Append(_selectFields);
+            if (_scale != null)
+                queryBuilder.Append(_scale);
             if (_offset != null)
                 queryBuilder.Append(_offset);
 

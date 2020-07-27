@@ -3924,5 +3924,194 @@ namespace SlowTests.Client.TimeSeries.Query
                 }
             }
         }
+
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingScale()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday.EnsureUtc();
+                var id = "people/1";
+                var totalHours = TimeSpan.FromDays(3).TotalHours;
+
+                var name = "HeartRate";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, name);
+
+                    for (int i = 0; i < totalHours; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var result = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, name, baseline, baseline.AddDays(3))
+                            .Scale(0.001)
+                            .ToList())
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+
+                    var scale = 0.001;
+                    var tolerance = double.Epsilon;
+
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        var expectedTimestamp = baseline.AddHours(i);
+                        Assert.Equal(expectedTimestamp, result.Results[i].Timestamp);
+
+                        var expectedVal = i * scale;
+                        var val = result.Results[i].Value;
+
+                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.Equal(expectedVal, result.Results[i].Value);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesAggregation_UsingScale()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                var id = "people/1";
+                var name = "HeartRate";
+                var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, name);
+
+                    for (int i = 0; i < totalMinutes; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var scale = 0.01;
+
+                    var result = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, name, baseline, baseline.AddDays(3))
+                            .GroupBy(g => g.Hours(1))
+                            .Select(x => new
+                            {
+                                Max = x.Max(),
+                                Min = x.Min()
+                            })
+                            .Scale(scale)
+                            .ToList())
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalMinutes;
+                    var expectedBucketCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+                    Assert.Equal(expectedBucketCount, result.Results.Length);
+
+                    var tolerance = 0.0000001;
+
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        Assert.Equal(60, result.Results[i].Count[0]);
+
+                        var min = result.Results[i].Min[0];
+                        var expectedMin = scale * i * 60;
+                        Assert.True(Math.Abs(expectedMin - min) < tolerance);
+
+                        var max = result.Results[i].Max[0];
+                        var expectedMax = scale * ((i + 1) * 60 - 1);
+
+                        Assert.True(Math.Abs(expectedMax - max) < tolerance);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryTimeSeriesRaw_UsingScaleAndOffset()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday.EnsureUtc();
+                var id = "people/1";
+                var name = "HeartRate";
+                var totalHours = TimeSpan.FromDays(3).TotalHours;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Name = "Oren",
+                    }, id);
+
+                    var tsf = session.TimeSeriesFor(id, name);
+
+                    for (int i = 0; i < totalHours; i++)
+                    {
+                        tsf.Append(baseline.AddHours(i), i, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var offset = TimeZoneInfo.Local.BaseUtcOffset;
+                    var scale = 0.001;
+
+                    var result = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, name, baseline, baseline.AddDays(3))
+                            .Scale(scale)
+                            .Offset(offset)
+                            .ToList())
+                        .First();
+
+                    var expectedTotalCount = TimeSpan.FromDays(3).TotalHours;
+
+                    Assert.Equal(expectedTotalCount, result.Count);
+
+                    var tolerance = double.Epsilon;
+                    var baselineWithOffset = baseline.Add(offset);
+
+                    for (int i = 0; i < result.Results.Length; i++)
+                    {
+                        var expectedTimestamp = baselineWithOffset.AddHours(i);
+                        Assert.Equal(expectedTimestamp, result.Results[i].Timestamp);
+
+                        var expectedVal = i * scale;
+                        var val = result.Results[i].Value;
+
+                        Assert.True(Math.Abs(expectedVal - val) < tolerance);
+                        Assert.Equal(expectedVal, result.Results[i].Value);
+                    }
+                }
+            }
+        }
     }
 }
