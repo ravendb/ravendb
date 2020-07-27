@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
@@ -73,9 +74,14 @@ namespace FastTests
 
         private IDictionary<string, string> _customServerSettings;
 
+        public static void IgnoreProcessorAffinityChanges(bool ignore)
+        {
+            LicenseManager.IgnoreProcessorAffinityChanges = ignore;
+        }
+
         static TestBase()
         {
-            LicenseManager.IgnoreProcessorAffinityChanges = true;
+            IgnoreProcessorAffinityChanges(ignore: true);
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>

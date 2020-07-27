@@ -118,6 +118,16 @@ namespace Raven.Server.Documents
                         }
                     }
 
+                    if (changeType == ClusterDatabaseChangeType.RecordRestored)
+                    {
+                        // - a successful restore operation ends when we successfully restored	
+                        // the database files and saved the updated the database record	
+                        // - this is the first time that the database was loaded so there is no need to call	
+                        // StateChanged after the database was restored	
+                        // - the database will be started on demand
+                        return;
+                    }
+
                     if (DatabasesCache.TryGetValue(databaseName, out var task) == false)
                     {
                         // if the database isn't loaded, but it is relevant for this node, we need to create
@@ -891,6 +901,7 @@ namespace Raven.Server.Documents
         public enum ClusterDatabaseChangeType
         {
             RecordChanged,
+            RecordRestored,
             ValueChanged,
             PendingClusterTransactions,
             ClusterTransactionCompleted

@@ -501,7 +501,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         try
                         {
-                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores);
+                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores,$"{raftRequestId}/put-license-limits");
                         }
                         catch
                         {

@@ -913,39 +913,57 @@ namespace Sparrow.Logging
                 {
                     _tasks[i] = socket.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    RemoveWebSocket(socket);
+                    RemoveWebSocket(socket, e.ToString());
                 }
             }
 
-            bool success;
             try
             {
-                success = Task.WaitAll(_tasks, 250);
+                if (Task.WaitAll(_tasks, 250)) 
+                    return;
             }
-            catch (Exception)
+            catch
             {
-                success = false;
+                // ignored
             }
 
-            if (success == false)
+            for (int i = 0; i < _tasks.Length; i++)
             {
-                for (int i = 0; i < _tasks.Length; i++)
+                var task = _tasks[i];
+                string error = null;
+                if (task.IsFaulted)
                 {
-                    if (_tasks[i].IsFaulted || _tasks[i].IsCanceled ||
-                        _tasks[i].IsCompleted == false)
-                    {
-                        // this either timed out or errored, removing it.
-                        RemoveWebSocket(item.WebSocketsList[i]);
-                    }
+                    error = task.Exception?.ToString() ?? "Faulted";
                 }
+                else if (task.IsCanceled)
+                {
+                    error = "Canceled";
+                }
+                else if (task.IsCompleted == false)
+                {
+                    error = "Timeout - 250 milliseconds";
+                }
+                if(error != null)
+                    RemoveWebSocket(item.WebSocketsList[i], error);
             }
         }
 
-        private void RemoveWebSocket(WebSocket socket)
+        private void RemoveWebSocket(WebSocket socket, string cause)
         {
-            _listeners.TryRemove(socket, out WebSocketContext _);
+            try
+            {
+                //To release the socket.ReceiveAsync call in Register function we must to close the socket 
+                socket.CloseAsync(WebSocketCloseStatus.EndpointUnavailable, cause, CancellationToken.None)
+                    .ContinueWith(t => GC.KeepAlive(t.Exception), TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.OnlyOnFaulted);
+            }
+            catch
+            {
+                // ignored
+            }
+
+            _listeners.TryRemove(socket, out _);
             if (LogMode == LogMode.None)
             {
                 SetupLogMode(LogMode, _path, RetentionTime, RetentionSize, Compressing);
