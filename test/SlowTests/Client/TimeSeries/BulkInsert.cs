@@ -1220,7 +1220,7 @@ namespace SlowTests.Client.TimeSeries
             }
         }
         
-         [Fact]
+        [Fact]
         public async Task CanHaveBulkInsertWithDocumentsAndAttachmentAndCountersAndTimeSeries()
         {
             int count = 100;

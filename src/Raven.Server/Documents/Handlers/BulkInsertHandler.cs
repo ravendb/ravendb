@@ -60,11 +60,6 @@ namespace Raven.Server.Documents.Handlers
                             long totalSize = 0;
                             int operationsCount = 0;
                             
-                            long documentsProcessed = 0;
-                            long attachmentsProcessed = 0;
-                            long countersProcessed = 0;
-                            long timeSeriesProcessed = 0;
-                            
                             while (true)
                             {
                                 using (var modifier = new BlittableMetadataModifier(docsCtx))
