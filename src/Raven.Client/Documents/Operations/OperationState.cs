@@ -46,4 +46,13 @@ namespace Raven.Client.Documents.Operations
         Faulted,
         Canceled
     }
+    
+    public interface IOperationProcessedDetails
+    {
+        public long Total { get; set; }
+        public long DocumentsProcessed { get; set; }
+        public long AttachmentsProcessed { get; set; }
+        public long CountersProcessed { get; set; }
+        public long TimeSeriesProcessed { get; set; }
+    }
 }

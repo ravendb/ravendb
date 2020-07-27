@@ -36,7 +36,7 @@ class bulkInsertDetails extends abstractOperationDetails {
                 return "N/A";
             }
             
-            const processingSpeed = this.calculateProcessingSpeed(progress.Processed);
+            const processingSpeed = this.calculateProcessingSpeed(progress.DocumentsProcessed);
             if (processingSpeed === 0) {
                 return "N/A";
             }

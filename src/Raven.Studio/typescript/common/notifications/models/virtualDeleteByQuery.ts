@@ -45,7 +45,7 @@ class virtualDeleteByQuery extends abstractNotification {
             id: dto.Id,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
-            items: bulkResult.Total,
+            totalItemsProcessed: bulkResult.Total,
             query: query,
             indexOrCollectionUsed: indexOrCollection
         } as queryBasedVirtualBulkOperationItem;

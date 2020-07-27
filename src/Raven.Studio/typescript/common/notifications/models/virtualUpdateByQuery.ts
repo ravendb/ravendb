@@ -38,7 +38,7 @@ class virtualUpdateByQuery extends abstractNotification {
             id: dto.Id,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
-            items: bulkResult.Total,
+            totalItemsProcessed: bulkResult.Total,
             indexOrCollectionUsed: dto.Message,
             query: (dto.DetailedDescription as Raven.Client.Documents.Operations.BulkOperationResult.OperationDetails).Query
         } as queryBasedVirtualBulkOperationItem;

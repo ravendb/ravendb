@@ -30,14 +30,23 @@ class virtualBulkInsertDetails extends dialogViewModelBase {
 
         grid.init((s, t) => this.fetcher(s, t), () => {
             return [
-                new textColumn<virtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "40%", {
+                new textColumn<virtualBulkOperationItem>(grid, x => generalUtils.formatUtcDateAsLocal(x.date), "Date", "25%", {
                     sortable: x => x.date
                 }),
-                new textColumn<virtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "30%", {
+                new textColumn<virtualBulkOperationItem>(grid, x => x.duration, "Duration (ms)", "15%", {
                     sortable: "number",
                     defaultSortOrder: "desc"
                 }),
-                new textColumn<virtualBulkOperationItem>(grid, x => x.items, "Inserted documents", "20%", {
+                new textColumn<virtualBulkOperationItem>(grid, x => x.documentsProcessed, "Documents", "15%", {
+                    sortable: "number"
+                }),
+                new textColumn<virtualBulkOperationItem>(grid, x => x.attachmentsProcessed, "Attachments", "15%", {
+                    sortable: "number"
+                }),
+                new textColumn<virtualBulkOperationItem>(grid, x => x.countersProcessed, "Counters", "15%", {
+                    sortable: "number"
+                }),
+                new textColumn<virtualBulkOperationItem>(grid, x => x.timeSeriesProcessed, "Time Series", "15%", {
                     sortable: "number"
                 })
             ];

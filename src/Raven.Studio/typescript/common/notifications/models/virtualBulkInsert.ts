@@ -30,28 +30,34 @@ class virtualBulkInsert extends abstractNotification {
     merge(dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         this.createdAt(dto.CreatedAt ? moment.utc(dto.CreatedAt) : null);
         
-        const existingItemIndex = this.operations().findIndex(x => x.id === dto.Id);
-        
+        const progress = dto.State.Progress as Raven.Client.Documents.Operations.BulkInsertProgress;
         const bulkResult = dto.State.Result as Raven.Client.Documents.Operations.BulkOperationResult;
+        const bulkInsertInfo = bulkResult || progress;
         
         const item = {
             id: dto.Id,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
-            items: bulkResult.Total
+            totalItemsProcessed: bulkInsertInfo.Total,
+            documentsProcessed: bulkInsertInfo.DocumentsProcessed,
+            attachmentsProcessed: bulkInsertInfo.AttachmentsProcessed,
+            countersProcessed: bulkInsertInfo.CountersProcessed,
+            timeSeriesProcessed: bulkInsertInfo.TimeSeriesProcessed,
+            
         } as virtualBulkOperationItem;
         
+        const existingItemIndex = this.operations().findIndex(x => x.id === dto.Id);
         if (existingItemIndex !== -1) {
             this.operations.splice(existingItemIndex, 1, item);
         } else {
             this.operations.unshift(item);
         }
         
-        const totalDocumentsCount = _.sumBy(this.operations(), x => x.items);
+        const totalItemsCount = _.sumBy(this.operations(), x => x.totalItemsProcessed);
         this.message(pluralizeHelpers.pluralize(this.operations().length, "bulk insert", "bulk inserts")
             + " to database " + this.database.name
             + " completed successfully. "
-            + pluralizeHelpers.pluralize(totalDocumentsCount, " document was created.", "documents were created.") );
+            + pluralizeHelpers.pluralize(totalItemsCount, " item was inserted.", "items were inserted.") );
     }
 }
 
