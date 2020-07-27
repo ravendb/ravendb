@@ -863,7 +863,8 @@ namespace SlowTests.Smuggler
                     }
 
                     var db = await GetDocumentDatabaseInstanceFor(store1);
-                    await db.TimeSeriesPolicyRunner.RunRollups();
+                    var total = await db.TimeSeriesPolicyRunner.RunRollups();
+                    Assert.Equal(1, total);
 
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -876,10 +877,14 @@ namespace SlowTests.Smuggler
                     }
 
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                    var exportResult = await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)) as SmugglerResult;
+                    Assert.NotNull(exportResult);
+                    Assert.Equal(12, exportResult.TimeSeries.ReadCount);
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
-                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                    var importResult = await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1)) as SmugglerResult;
+                    Assert.NotNull(importResult);
+                    Assert.Equal(12, importResult.TimeSeries.ReadCount);
 
                     var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(1, stats.CountOfDocuments);
