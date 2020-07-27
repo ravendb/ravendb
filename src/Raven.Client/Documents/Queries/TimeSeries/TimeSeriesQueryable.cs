@@ -10,6 +10,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable Offset(TimeSpan offset);
 
+        ITimeSeriesQueryable Scale(double value);
+
         ITimeSeriesQueryable FromLast(Action<ITimePeriodBuilder> timePeriod);
 
         ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod);
@@ -32,6 +34,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesQueryable<T> Offset(TimeSpan offset);
 
+        ITimeSeriesQueryable<T> Scale(double value);
+
         ITimeSeriesQueryable<T> FromLast(Action<ITimePeriodBuilder> timePeriod);
 
         ITimeSeriesQueryable<T> FromFirst(Action<ITimePeriodBuilder> timePeriod);
@@ -53,6 +57,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesAggregationQueryable Offset(TimeSpan offset);
 
+        ITimeSeriesAggregationQueryable Scale(double value);
+
         TimeSeriesAggregationResult ToList();
     }
 
@@ -61,6 +67,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         ITimeSeriesAggregationQueryable<T> Select(Expression<Func<ITimeSeriesGrouping, object>> selector);
 
         ITimeSeriesAggregationQueryable<T> Offset(TimeSpan offset);
+
+        ITimeSeriesAggregationQueryable<T> Scale(double value);
 
         TimeSeriesAggregationResult<T> ToList();
     }
