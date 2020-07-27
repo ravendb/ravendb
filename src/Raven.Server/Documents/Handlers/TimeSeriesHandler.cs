@@ -645,39 +645,6 @@ namespace Raven.Server.Documents.Handlers
 
         [RavenAction("/databases/*/timeseries/names/config", "POST", AuthorizationStatus.ValidUser)]
 
-        [RavenAction("/databases/*/timeseries/debug/segments-summery", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetSegmentSummary()
-        {
-            var documentId = GetStringQueryString("docId");
-            var name = GetStringQueryString("name");
-            var from = GetDateTimeQueryString("from", false) ?? DateTime.MinValue;
-            var to = GetDateTimeQueryString("to", false) ?? DateTime.MaxValue;
-
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var segmantsSummary = Database.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(context, documentId, name, from, to);
-
-                using(var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Segments Summary");
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (var summery in segmantsSummary)
-                    {
-                        if (!first)
-                            writer.WriteComma();
-                        context.Write(writer, summery.ToJson());
-                        first = false;
-                    }
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
-                }
-            }
-            return Task.CompletedTask;
-        }
-
         public async Task ConfigTimeSeriesNames()
         {
             ServerStore.EnsureNotPassive();
@@ -901,6 +868,39 @@ namespace Raven.Server.Documents.Handlers
             {
                 throw new System.NotImplementedException();
             }
+        }
+
+        [RavenAction("/databases/*/timeseries/debug/segments-summary", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSegmentSummary()
+        {
+            var documentId = GetStringQueryString("docId");
+            var name = GetStringQueryString("name");
+            var from = GetDateTimeQueryString("from", false) ?? DateTime.MinValue;
+            var to = GetDateTimeQueryString("to", false) ?? DateTime.MaxValue;
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var segmantsSummary = Database.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(context, documentId, name, from, to);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var summery in segmantsSummary)
+                    {
+                        if (!first)
+                            writer.WriteComma();
+                        context.Write(writer, summery.ToJson());
+                        first = false;
+                    }
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                }
+            }
+            return Task.CompletedTask;
         }
     }
 }

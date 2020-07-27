@@ -772,23 +772,23 @@ namespace Raven.Server.Documents.TimeSeries
 
         public class SegmentSummary
         {
-            public string documentId;
-            public string name;
-            public DateTime startTime;
-            public int numberOfEntries;
-            public int numberOfLiveEntries;
-            public string changeVector;
+            public string DocumentId;
+            public string Name;
+            public DateTime StartTime;
+            public int NumberOfEntries;
+            public int NumberOfLiveEntries;
+            public string ChangeVector;
 
             public DynamicJsonValue ToJson()
             {
                 var json = new DynamicJsonValue
                 {
-                    [nameof(documentId)] = documentId,
-                    [nameof(name)] = name,
-                    [nameof(startTime)] = startTime,
-                    [nameof(numberOfEntries)] = numberOfEntries,
-                    [nameof(numberOfLiveEntries)] = numberOfLiveEntries,
-                    [nameof(changeVector)] = changeVector,
+                    [nameof(DocumentId)] = DocumentId,
+                    [nameof(Name)] = Name,
+                    [nameof(StartTime)] = StartTime,
+                    [nameof(NumberOfEntries)] = NumberOfEntries,
+                    [nameof(NumberOfLiveEntries)] = NumberOfLiveEntries,
+                    [nameof(ChangeVector)] = ChangeVector,
                 };
                 return json;
             }

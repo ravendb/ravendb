@@ -16,7 +16,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
-        public async Task TimeSeriesSegmantsSummary()
+        public async Task TimeSeriesSegmentsSummary()
         {
             using (var store = GetDocumentStore())
             {
@@ -43,7 +43,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
 
-                    sum += summary.Sum(seg => seg.numberOfEntries);
+                    sum += summary.Sum(seg => seg.NumberOfEntries);
                 }
 
                 Assert.Equal(15000, sum);
@@ -54,7 +54,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(100));
 
-                    sum += summary.Sum(seg => seg.numberOfEntries);
+                    sum += summary.Sum(seg => seg.NumberOfEntries);
                 }
                 Assert.NotEqual(15000, sum);
 
@@ -70,7 +70,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 {
                     var summary = db.DocumentsStorage.TimeSeriesStorage.GetSegmentsSummary(ctx, "users/1", "Heartrate", baseline, baseline.AddMinutes(16000));
 
-                    sum += summary.Sum(seg => seg.numberOfLiveEntries);
+                    sum += summary.Sum(seg => seg.NumberOfLiveEntries);
                 }
                 Assert.Equal(14900, sum);
             }

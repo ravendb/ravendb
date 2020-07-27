@@ -182,12 +182,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                 yield return new TimeSeriesStorage.SegmentSummary()
                 {
-                    documentId = _documentId,
-                    name = _name,
-                    startTime = baseline,
-                    numberOfEntries = _currentSegment.NumberOfEntries,
-                    numberOfLiveEntries = _currentSegment.NumberOfLiveEntries,
-                    changeVector = GetCurrentSegmentChangeVector()
+                    DocumentId = _documentId,
+                    Name = _name,
+                    StartTime = baseline,
+                    NumberOfEntries = _currentSegment.NumberOfEntries,
+                    NumberOfLiveEntries = _currentSegment.NumberOfLiveEntries,
+                    ChangeVector = GetCurrentSegmentChangeVector()
                 };
             } while (NextSegment(out baselineMilliseconds));
         }
