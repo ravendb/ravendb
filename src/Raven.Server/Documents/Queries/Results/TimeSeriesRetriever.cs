@@ -40,6 +40,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         private (long Count, DateTime Start, DateTime End) _stats;
 
+        private double? _scale;
+
         private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
         {
             new TimeSeriesAggregation(AggregationType.First),
@@ -94,6 +96,7 @@ namespace Raven.Server.Documents.Queries.Results
                 ? new TimeSeriesReader(_context, documentId, _source, from, to, offset)
                 : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
 
+            _scale = GetScale(declaredFunction, timeSeriesFunction.Scale);
             var array = new DynamicJsonArray();
 
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
@@ -157,7 +160,11 @@ namespace Raven.Server.Documents.Queries.Results
                     var vals = new DynamicJsonArray();
                     for (var index = 0; index < singleResult.Values.Span.Length; index++)
                     {
-                        vals.Add(singleResult.Values.Span[index]);
+                        var val = singleResult.Values.Span[index];
+                        if (_scale.HasValue)
+                            val *= _scale.Value;
+                        
+                        vals.Add(val);
                     }
 
                     array.Add(new DynamicJsonValue
@@ -730,6 +737,28 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
+        private double? GetScale(DeclaredFunction declaredFunction, ValueExpression scaleExpression)
+        {
+            if (scaleExpression == null)
+                return null;
+
+            var scale = scaleExpression.GetValue(_queryParameters);
+
+            switch (scale)
+            {
+                case double d:
+                    return d;
+                case long l:
+                    return l;
+                case LazyNumberValue lnv:
+                    return lnv;
+                default:
+                    throw new InvalidOperationException($"Failed to execute time series query function '{declaredFunction.Name}'. " +
+                                                        $"Invalid type on 'scale' argument : expected 'scale' to be of type '{typeof(double)}', " +
+                                                        $"'{typeof(long)}' or '{nameof(LazyNumberValue)}', but got : '{scale.GetType()}'.");
+            }
+        }
+
         private static object GetValueFromRolledUpEntry(int index, SingleResult singleResult)
         {
             // we are working with a rolled-up series
@@ -1016,7 +1045,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private static DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
+        private DynamicJsonValue AddTimeSeriesResult(TimeSeriesFunction func, TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
         {
             DateTime? from = start, to = next;
             if (start == DateTime.MinValue)
@@ -1034,7 +1063,7 @@ namespace Raven.Server.Documents.Queries.Results
             for (int i = 0; i < aggStates.Length; i++)
             {
                 var name = func.Select?[i].StringSegment?.ToString() ?? aggStates[i].Aggregation.ToString();
-                result[name] = new DynamicJsonArray(aggStates[i].GetFinalValues());
+                result[name] = new DynamicJsonArray(aggStates[i].GetFinalValues(_scale));
             }
 
             return result;
