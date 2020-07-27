@@ -37,7 +37,7 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
                     sortable: "number",
                     defaultSortOrder: "desc"
                 }),
-                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.items, "Processed documents", "15%", {
+                new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.totalItemsProcessed, "Processed documents", "15%", {
                     sortable: "number"
                 }),
                 new textColumn<queryBasedVirtualBulkOperationItem>(grid, x => x.indexOrCollectionUsed, "Collection/Index", "20%", {

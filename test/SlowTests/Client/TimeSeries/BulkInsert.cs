@@ -1,13 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.BulkInsert;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.Attachments;
+using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -1209,6 +1216,89 @@ namespace SlowTests.Client.TimeSeries
                     Assert.Equal(new[] { 59d }, val.Values);
                     Assert.Equal("watches/fitbit", val.Tag);
                     Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                }
+            }
+        }
+        
+         [Fact]
+        public async Task CanHaveBulkInsertWithDocumentsAndAttachmentAndCountersAndTimeSeries()
+        {
+            int count = 100;
+            int size = 64 * 1024;
+            
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc();
+                var streams = new Dictionary<string, Dictionary<string, MemoryStream>>();
+                var counters = new Dictionary<string, string>();
+                var bulks = new Dictionary<string, BulkInsertOperation.AttachmentsBulkInsert>();
+                
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var id = $"name/{i}";
+                        streams[id] = new Dictionary<string, MemoryStream>();
+
+                        // insert Documents
+                        bulkInsert.Store(new User {Name = $"Name_{i}" }, id);
+
+                        bulks[id] = bulkInsert.AttachmentsFor(id);
+                    }
+
+                    foreach (var bulk in bulks)
+                    {
+                        var rnd = new Random(DateTime.Now.Millisecond);
+                        var bArr = new byte[size];
+                        rnd.NextBytes(bArr);
+                        var name = $"{bulk.Key}_{rnd.Next(100)}";
+                        var stream = new MemoryStream(bArr);
+                        
+                        // insert Attachments
+                        await bulk.Value.StoreAsync(name, stream);
+
+                        stream.Position = 0;
+                        streams[bulk.Key][name] = stream;
+                        
+                        // insert Counters
+                        await bulkInsert.CountersFor(bulk.Key).IncrementAsync(name);
+                        counters[bulk.Key] = name;
+
+                        // insert Time Series
+                        using (var timeSeriesBulkInsert = bulkInsert.TimeSeriesFor(bulk.Key, "HeartRate"))
+                        {
+                            timeSeriesBulkInsert.Append(baseline.AddMinutes(1), 59d, "watches/fitBit");
+                        }
+                    }
+                }
+
+                foreach (var id in streams.Keys)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        
+                        var timeSeriesVal = session.TimeSeriesFor(id, "HeartRate")
+                            .Get(DateTime.MinValue, DateTime.MaxValue)
+                            .FirstOrDefault();
+
+                        Assert.Equal(new[] { 59d }, timeSeriesVal.Values);
+                        Assert.Equal("watches/fitBit", timeSeriesVal.Tag);
+                        Assert.Equal(baseline.AddMinutes(1), timeSeriesVal.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                        
+                        var attachmentsNames = streams.Select(x => new AttachmentRequest(id, x.Key));
+                        var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentsNames);
+                
+                        while (attachmentsEnumerator.MoveNext())
+                        {
+                            Assert.NotNull(attachmentsEnumerator.Current != null);
+                            Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[id][attachmentsEnumerator.Current.Details.Name]));
+                        }
+                    }
+                
+                    var val = store.Operations
+                        .Send(new GetCountersOperation(id, new[] { counters[id] }))
+                        .Counters[0]?.TotalValue;
+                    Assert.Equal(1, val);
                 }
             }
         }

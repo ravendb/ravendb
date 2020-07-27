@@ -528,7 +528,11 @@ interface virtualBulkOperationItem {
     id: string;
     date: string;
     duration: number;
-    items: number;
+    totalItemsProcessed: number,
+    documentsProcessed: number,
+    attachmentsProcessed: number,
+    countersProcessed: number,
+    timeSeriesProcessed: number
 }
 
 interface queryBasedVirtualBulkOperationItem extends virtualBulkOperationItem {

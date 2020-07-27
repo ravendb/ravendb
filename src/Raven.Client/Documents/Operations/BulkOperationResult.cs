@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class BulkOperationResult : IOperationResult
+    public class BulkOperationResult : IOperationResult, IOperationProcessedDetails
     {
         public BulkOperationResult()
         {
@@ -11,6 +11,10 @@ namespace Raven.Client.Documents.Operations
         }
 
         public long Total { get; set; }
+        public long DocumentsProcessed { get; set; }
+        public long AttachmentsProcessed { get; set; }
+        public long CountersProcessed { get; set; }
+        public long TimeSeriesProcessed { get; set; }
         
         public string Query { get; set; }
 
@@ -32,7 +36,11 @@ namespace Raven.Client.Documents.Operations
                 [nameof(Total)] = Total,
                 [nameof(Message)] = Message,
                 [nameof(Details)] = details,
-                [nameof(Query)] = Query
+                [nameof(Query)] = Query,
+                [nameof(DocumentsProcessed)] = DocumentsProcessed,
+                [nameof(AttachmentsProcessed)] = AttachmentsProcessed,
+                [nameof(CountersProcessed)] = CountersProcessed,
+                [nameof(TimeSeriesProcessed)] = TimeSeriesProcessed
             };
         }
 

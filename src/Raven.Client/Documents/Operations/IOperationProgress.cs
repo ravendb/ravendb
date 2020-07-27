@@ -41,17 +41,20 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class BulkInsertProgress : IOperationProgress
+    public class BulkInsertProgress : IOperationProgress, IOperationProcessedDetails
     {
-        public long Processed { get; set; }
-
+        public long Total { get; set; }
         public long BatchCount { get; set; }
-
         public string LastProcessedId { get; set; }
+        
+        public long DocumentsProcessed { get; set; }
+        public long AttachmentsProcessed { get; set; }
+        public long CountersProcessed { get; set; }
+        public long TimeSeriesProcessed { get; set; }
 
         public override string ToString()
         {
-            var msg = $"Inserted {Processed:#,#;;0} documents in {BatchCount:#,#;;0} batches.";
+            var msg = $"Inserted {Total:#,#;;0} items in {BatchCount:#,#;;0} batches.";
 
             if (LastProcessedId != null)
                 msg += $" Last document ID: '{LastProcessedId}'";
@@ -63,9 +66,13 @@ namespace Raven.Client.Documents.Operations
         {
             return new DynamicJsonValue(GetType())
             {
-                [nameof(Processed)] = Processed,
+                [nameof(Total)] = Total,
                 [nameof(BatchCount)] = BatchCount,
-                [nameof(LastProcessedId)] = LastProcessedId
+                [nameof(LastProcessedId)] = LastProcessedId,
+                [nameof(DocumentsProcessed)] = DocumentsProcessed,
+                [nameof(AttachmentsProcessed)] = AttachmentsProcessed,
+                [nameof(CountersProcessed)] = CountersProcessed,
+                [nameof(TimeSeriesProcessed)] = TimeSeriesProcessed
             };
         }
     }
