@@ -179,7 +179,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var rangeResult = pageSize > 0 ? GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize) : new TimeSeriesRangeResult();
+                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize) ;
 
                 var etag = GetStringFromHeaders("If-None-Match");
                 if (etag == rangeResult.Hash)
@@ -254,6 +254,9 @@ namespace Raven.Server.Documents.Handlers
 
         internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
         {
+            if (pageSize == 0 )
+                return new TimeSeriesRangeResult();
+
             List<TimeSeriesEntry> values = new List<TimeSeriesEntry>();
 
             var reader = new TimeSeriesReader(context, docId, name, from, to, offset: null);

@@ -349,17 +349,17 @@ namespace Raven.Client.Documents.Session
 
             foreach (var value in range.Entries)
             {
-                if (pageSize-- <= 0)
-                    yield break;
-
                 if (value.Timestamp > to)
                     yield break;
+
+                if (value.Timestamp < from)
+                    continue;
 
                 if (start-- > 0)
                     continue;
 
-                if (value.Timestamp < from)
-                    continue;
+                if (pageSize-- <= 0)
+                    yield break;
 
                 yield return value;
             }
