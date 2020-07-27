@@ -34,7 +34,7 @@ class rollupDataModel {
         });
     }
     
-    getValues() : number[] {
+    getValues(): number[] {
         return [this.first.value(),
                 this.last.value(),
                 this.min.value(),
@@ -178,13 +178,9 @@ class timeSeriesEntryModel {
     
     private flattenRollupValues() {
         return this.rollupValues().reduce((result: number[], next: rollupDataModel) => {
-            addToResult(result, next);
+            result.push(...next.getValues());
             return result;
         }, []);
-
-        function addToResult(result: number[], item: rollupDataModel) {
-            result.push(...item.getValues());
-        }
     }
     
     public toDto(): Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation {

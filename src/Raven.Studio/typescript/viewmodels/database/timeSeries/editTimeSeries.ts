@@ -138,7 +138,7 @@ class editTimeSeries extends viewModelBase {
         }
     }
     
-    private getValuesNamesToUse(possibleValuesCount: number) : string[] {
+    private getValuesNamesToUse(possibleValuesCount: number): string[] {
         const definedNamedValues = this.getDefinedNamedValues();
             
         const valuesNamesToUse = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
@@ -152,7 +152,7 @@ class editTimeSeries extends viewModelBase {
         return valuesNamesToUse;
     }
     
-    private getDefinedNamedValues() : string[] {
+    private getDefinedNamedValues(): string[] {
         const collection = this.documentCollection();
         const sourceTimeSeriesName = this.getSourceTimeSeriesName();
 
