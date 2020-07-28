@@ -76,6 +76,39 @@ namespace Raven.Server.Documents.Indexes.Static
             _loadCompareExchangeValueStats = null;
         }
 
+        public unsafe dynamic LoadAttachments(DynamicBlittableJson document)
+        {
+            using (_loadAttachmentStats?.Start() ?? (_loadAttachmentStats = _stats?.For(IndexingOperation.LoadAttachment)))
+            {
+                if (document == null)
+                    return DynamicNullObject.Null;
+
+                var id = GetSourceId(document);
+
+                var metadata = document[Constants.Documents.Metadata.Key] as DynamicBlittableJson;
+
+                if (metadata == null)
+                    return DynamicNullObject.Null;
+
+                var attachments = metadata[Constants.Documents.Metadata.Attachments] as DynamicArray;
+                if (attachments == null)
+                    return DynamicNullObject.Null;
+
+                var results = new List<DynamicAttachment>();
+                foreach (dynamic attachmentMetadata in attachments)
+                {
+                    var attachmentName = attachmentMetadata.Name;
+                    var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, id, attachmentName, AttachmentType.Document, null);
+                    if (attachment == null)
+                        continue;
+
+                    results.Add(new DynamicAttachment(attachment));
+                }
+
+                return new DynamicArray(results);
+            }
+        }
+
         public unsafe dynamic LoadAttachment(DynamicBlittableJson document, string attachmentName)
         {
             using (_loadAttachmentStats?.Start() ?? (_loadAttachmentStats = _stats?.For(IndexingOperation.LoadAttachment)))
