@@ -770,6 +770,30 @@ namespace Raven.Server.Documents.TimeSeries
             return null;
         }
 
+        public class SegmentSummary
+        {
+            public string DocumentId;
+            public string Name;
+            public DateTime StartTime;
+            public int NumberOfEntries;
+            public int NumberOfLiveEntries;
+            public string ChangeVector;
+
+            public DynamicJsonValue ToJson()
+            {
+                var json = new DynamicJsonValue
+                {
+                    [nameof(DocumentId)] = DocumentId,
+                    [nameof(Name)] = Name,
+                    [nameof(StartTime)] = StartTime,
+                    [nameof(NumberOfEntries)] = NumberOfEntries,
+                    [nameof(NumberOfLiveEntries)] = NumberOfLiveEntries,
+                    [nameof(ChangeVector)] = ChangeVector,
+                };
+                return json;
+            }
+        }
+
         public class TimeSeriesSegmentHolder : IDisposable
         {
             private readonly TimeSeriesStorage _tss;
@@ -1821,6 +1845,12 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         private static readonly StandardFormat FormatD18 = new StandardFormat('D', 18);
+
+        internal IEnumerable<SegmentSummary> GetSegmentsSummary(DocumentsOperationContext context, string documentId, string name, DateTime from, DateTime to)
+        {
+            var reader = GetReader(context, documentId, name, from, to);
+            return reader.GetSegmentsSummary();
+        }
 
         internal SeriesSummary GetSeriesSummary(DocumentsOperationContext context, string documentId, string name)
         {

@@ -12,3 +12,4 @@
 [assembly: InternalsVisibleTo("rvn")]
 [assembly: InternalsVisibleTo("Raven.TestDriver")]
 [assembly: InternalsVisibleTo("Tryouts")]
+[assembly: InternalsVisibleTo("LicenseTests")]

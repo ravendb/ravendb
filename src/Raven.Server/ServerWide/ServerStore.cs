@@ -1046,6 +1046,7 @@ namespace Raven.Server.ServerWide
                     LastClientConfigurationIndex = index;
                     break;
                 case nameof(PutLicenseCommand):
+                    // reload license can send a notification which will open a write tx
                     LicenseManager.ReloadLicense();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
 
@@ -1057,6 +1058,7 @@ namespace Raven.Server.ServerWide
                     LicenseManager.ReloadLicenseLimits();
                     ConcurrentBackupsCounter.ModifyMaxConcurrentBackups();
                     NotifyAboutClusterTopologyAndConnectivityChanges();
+
                     break;
                 case nameof(PutServerWideBackupConfigurationCommand):
                     RescheduleTimerForIdleDatabases(index);
@@ -2489,7 +2491,7 @@ namespace Raven.Server.ServerWide
             await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
         }
 
-        public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, int maxLicensedCores)
+        public async Task PutNodeLicenseLimitsAsync(string nodeTag, DetailsPerNode detailsPerNode, int maxLicensedCores, string raftRequestId = null)
         {
             var nodeLicenseLimits = new NodeLicenseLimits
             {
@@ -2499,7 +2501,7 @@ namespace Raven.Server.ServerWide
                 AllNodes = GetClusterTopology().AllNodes.Keys.ToList()
             };
 
-            var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, nodeLicenseLimits, RaftIdGenerator.NewId());
+            var command = new UpdateLicenseLimitsCommand(LicenseLimitsStorageKey, nodeLicenseLimits, raftRequestId ?? RaftIdGenerator.NewId());
 
             var result = await SendToLeaderAsync(command);
 

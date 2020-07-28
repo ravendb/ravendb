@@ -30,7 +30,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         private static ExtensionDataGetter _currentExtensionGetter;
 
         public static BindingFlags? MembersSearchFlag = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        private readonly ISerializationConventions _conventions;
+        private readonly NewtonsoftJsonSerializationConventions _conventions;
 
         [ThreadStatic]
         internal static bool RemovedIdentityProperty;
@@ -40,7 +40,13 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
 
         public DefaultRavenContractResolver(ISerializationConventions conventions)
         {
-            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            if (conventions == null)
+                throw new ArgumentNullException(nameof(conventions));
+
+            if (conventions is NewtonsoftJsonSerializationConventions == false)
+                throw new ArgumentException($"Conventions must be of '{nameof(NewtonsoftJsonSerializationConventions)}' type.", nameof(conventions));
+
+            _conventions = (NewtonsoftJsonSerializationConventions)conventions;
 
             if (MembersSearchFlag == null)
             {
@@ -180,14 +186,66 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             return serializableMembers;
         }
 
-        private static bool MembersToFilterOut(MemberInfo info)
+        private bool MembersToFilterOut(MemberInfo info)
         {
             if (info is EventInfo)
                 return true;
             var fieldInfo = info as FieldInfo;
-            if (fieldInfo?.IsPublic == false)
-                return true;
+            if (fieldInfo != null)
+            {
+                if (fieldInfo.IsPublic == false)
+                    return true;
+
+#if NETSTANDARD2_0
+                if (fieldInfo.FieldType.IsByRef)
+#else
+                if (fieldInfo.FieldType.IsByRef || fieldInfo.FieldType.IsByRefLike)
+#endif
+                {
+                    if (_conventions.IgnoreByRefMembers == false)
+                        ThrowByRefNotSupported();
+                    return true;
+                }
+
+                if (fieldInfo.FieldType == typeof(IntPtr) || fieldInfo.FieldType.IsPointer)
+                {
+                    if (_conventions.IgnoreUnsafeMembers == false)
+                        ThrowPointersNotSupported();
+                    return true;
+                }
+            }
+
+            var propertyInfo = info as PropertyInfo;
+            if (propertyInfo != null)
+            {
+#if NETSTANDARD2_0
+                if (propertyInfo.PropertyType.IsByRef)
+#else
+                if (propertyInfo.PropertyType.IsByRef || propertyInfo.PropertyType.IsByRefLike)
+#endif
+                {
+                    if (_conventions.IgnoreByRefMembers == false)
+                        ThrowByRefNotSupported();
+                    return true;
+                }
+
+                if (propertyInfo.PropertyType == typeof(IntPtr) || propertyInfo.PropertyType.IsPointer)
+                {
+                    if (_conventions.IgnoreUnsafeMembers == false)
+                        ThrowPointersNotSupported();
+                    return true;
+                }
+            }
+
             return info.GetCustomAttributes(typeof(CompilerGeneratedAttribute), true).Length > 0;
         }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowByRefNotSupported() =>
+            throw new NotSupportedException("By-ref fields and properties in documents cannot be serialized. You can set RavenDB to ignore them by setting DocumentConventions::Serialization::ThrowErrorOnByRefFields to 'false'. For more details, see https://github.com/JamesNK/Newtonsoft.Json/issues/1552.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowPointersNotSupported() =>
+            throw new NotSupportedException("Pointer type fields and properties in documents cannot be serialized. You can set RavenDB to ignore them by setting DocumentConventions::Serialization::ThrowOnUnsafeMembers to 'false'");
     }
 }
