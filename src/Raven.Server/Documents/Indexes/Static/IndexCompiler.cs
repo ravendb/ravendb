@@ -84,6 +84,7 @@ namespace Raven.Server.Documents.Indexes.Static
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Collections.Generic")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Globalization")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Linq")),
+            SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Text")),
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("System.Text.RegularExpressions")),
 
             SyntaxFactory.UsingDirective(SyntaxFactory.IdentifierName("Lucene.Net.Documents")),

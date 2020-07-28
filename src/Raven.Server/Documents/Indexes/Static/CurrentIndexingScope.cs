@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -17,6 +18,7 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         private IndexingStatsScope _stats;
         private IndexingStatsScope _loadDocumentStats;
+        private IndexingStatsScope _loadAttachmentStats;
         private IndexingStatsScope _loadCompareExchangeValueStats;
         private JavaScriptUtils _javaScriptUtils;
         private readonly DocumentsStorage _documentsStorage;
@@ -70,7 +72,28 @@ namespace Raven.Server.Documents.Indexes.Static
             SourceCollection = collection;
             _stats = stats;
             _loadDocumentStats = null;
+            _loadAttachmentStats = null;
             _loadCompareExchangeValueStats = null;
+        }
+
+        public unsafe dynamic LoadAttachment(DynamicBlittableJson document, string attachmentName)
+        {
+            using (_loadAttachmentStats?.Start() ?? (_loadAttachmentStats = _stats?.For(IndexingOperation.LoadAttachment)))
+            {
+                if (document == null)
+                    return DynamicNullObject.Null;
+
+                var id = GetSourceId(document);
+
+                if (attachmentName == null)
+                    return DynamicNullObject.Null;
+
+                var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, id, attachmentName, AttachmentType.Document, null);
+                if (attachment == null)
+                    return DynamicNullObject.Null;
+
+                return new DynamicAttachment(attachment);
+            }
         }
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)

@@ -52,6 +52,14 @@ namespace Raven.Client.Documents.Indexes
         }
 
         /// <summary>
+        /// Allows to retrieve attachment of the document
+        /// </summary>
+        public IAttachmentObject LoadAttachment(object doc, string name)
+        {
+            throw new NotSupportedException("This is here as a marker only");
+        }
+
+        /// <summary>
         /// Allow to access an entity as a document
         /// </summary>
         protected IJsonObject AsJson(object doc)

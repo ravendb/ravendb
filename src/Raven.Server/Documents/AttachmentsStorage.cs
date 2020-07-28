@@ -608,6 +608,7 @@ namespace Raven.Server.Documents
             if (stream == null)
                 throw new FileNotFoundException($"Attachment's stream {name} on {documentId} was not found. This should not happen and is likely a bug.");
             attachment.Stream = stream;
+            attachment.Size = stream.Length;
 
             return attachment;
         }

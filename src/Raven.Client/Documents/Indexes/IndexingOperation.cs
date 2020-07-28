@@ -10,6 +10,8 @@ namespace Raven.Client.Documents.Indexes
     {
         public const string LoadDocument = nameof(AbstractIndexCreationTask.LoadDocument);
 
+        public const string LoadAttachment = nameof(AbstractIndexCreationTask.LoadAttachment);
+
         public const string LoadCompareExchangeValue = nameof(AbstractIndexCreationTask.LoadCompareExchangeValue);
 
         internal static class Map
