@@ -250,6 +250,21 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
+        public dynamic LoadAttachments(dynamic doc)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException($"Indexing scope was not initialized.");
+
+            if (doc is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            var document = doc as DynamicBlittableJson;
+            if (document == null)
+                throw new InvalidOperationException($"{nameof(LoadAttachments)} may only be called with a non-null entity as a parameter, but was called with a parameter of type {doc.GetType().FullName}: {doc}");
+
+            return CurrentIndexingScope.Current.LoadAttachments(document);
+        }
+
         public dynamic LoadAttachment(dynamic doc, object attachmentName)
         {
             if (CurrentIndexingScope.Current == null)
