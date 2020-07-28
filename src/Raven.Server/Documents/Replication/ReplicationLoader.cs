@@ -16,6 +16,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
@@ -321,14 +322,15 @@ namespace Raven.Server.Documents.Replication
                 BlittableJsonDocumentBuilder.UsageMode.None,
                 buffer))
             {
-                if (readerObject.TryGet("Type", out string type) && type == "Error")
+
+                var exceptionSchema = JsonDeserializationClient.ExceptionSchema(readerObject);
+                if (exceptionSchema.Type.Equals("Error"))
                 {
-                    readerObject.TryGet("Exception", out string exceptionAsString);
                     if (_log.IsInfoEnabled)
                     {
-                        _log.Info(exceptionAsString);
+                        _log.Info("Hub database is disabled", new DatabaseDisabledException(exceptionSchema.Message));
                     }
-                    throw new Exception(exceptionAsString);
+                    throw new DatabaseDisabledException(exceptionSchema.Message);
                 }
 
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
