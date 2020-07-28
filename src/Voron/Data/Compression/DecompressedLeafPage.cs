@@ -58,6 +58,8 @@ namespace Voron.Data.Compression
                     using (TreeNodeHeader.ToSlicePtr(tx.Allocator, node, out var slice))
                         Original.CopyNodeDataToEndOfPage(node, slice);
                 }
+
+                tree.DecompressionsCache.Invalidate(PageNumber, DecompressionUsage.Write);
             }
             else
             {

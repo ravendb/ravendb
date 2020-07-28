@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -13,15 +13,20 @@ using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests.Server
+namespace LicenseTests
 {
-    public class LicenseLimits : ReplicationTestBase
+   public class LicenseLimitsTests : ReplicationTestBase
     {
-        public LicenseLimits(ITestOutputHelper output) : base(output)
+        static LicenseLimitsTests()
+        {
+            IgnoreProcessorAffinityChanges(ignore: false);
+        }
+
+        public LicenseLimitsTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
+        [Fact]
         public async Task WillUtilizeAllAvailableCores()
         {
             var server = GetNewServer(new ServerCreationOptions
@@ -57,7 +62,7 @@ namespace FastTests.Server
             Assert.True(detailsPerNode.UtilizedCores == ProcessorInfo.ProcessorCount, $"detailsPerNode.UtilizedCores == {ProcessorInfo.ProcessorCount}");
         }
 
-        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
+        [Fact]
         public async Task WillUtilizeAllAvailableCoresInACluster()
         {
             DoNotReuseServer();
@@ -72,7 +77,7 @@ namespace FastTests.Server
                 var licenseLimits = server.ServerStore.LoadLicenseLimits();
                 Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out var detailsPerNode),
                     "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
-                Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
+                Assert.Equal(1, detailsPerNode.UtilizedCores);
             }
 
             var seenNodeTags = new HashSet<string>();
@@ -84,7 +89,7 @@ namespace FastTests.Server
                 var licenseLimits = server.ServerStore.LoadLicenseLimits();
                 Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out var detailsPerNode),
                     "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
-                Assert.True(detailsPerNode.UtilizedCores == ProcessorInfo.ProcessorCount, $"detailsPerNode.UtilizedCores == {ProcessorInfo.ProcessorCount}");
+                Assert.Equal(ProcessorInfo.ProcessorCount, detailsPerNode.UtilizedCores);
 
                 var notChangedServers = servers.Select(x => x.ServerStore).Where(x => seenNodeTags.Contains(x.NodeTag) == false);
                 foreach (var notChangedServer in notChangedServers)
@@ -92,12 +97,12 @@ namespace FastTests.Server
                     licenseLimits = notChangedServer.LoadLicenseLimits();
                     Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(notChangedServer.NodeTag, out detailsPerNode),
                         "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
-                    Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
+                    Assert.Equal(1, detailsPerNode.UtilizedCores);
                 }
             }
         }
 
-        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
+        [Fact]
         public async Task UtilizedCoresShouldNotChangeAfterRestart()
         {
             var server = GetNewServer(new ServerCreationOptions
@@ -132,7 +137,7 @@ namespace FastTests.Server
             }
         }
 
-        [Fact(Skip = "Test changes number of utilized cores and cannot be run in whole test suite")]
+        [Fact]
         public async Task DemotePromoteShouldNotChangeTheUtilizedCores()
         {
             DoNotReuseServer();
@@ -161,7 +166,7 @@ namespace FastTests.Server
                     var re = store.GetRequestExecutor(store.Database);
                     using (re.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     {
-                        re.Execute(new DemoteClusterNodeCommand(tag), context);
+                        await re.ExecuteAsync(new DemoteClusterNodeCommand(tag), context);
                         await Task.Delay(reasonableTime);
 
                         using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -175,7 +180,7 @@ namespace FastTests.Server
                         Assert.True(license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode), "license.NodeLicenseDetails.TryGetValue(tag, out var detailsPerNode)");
                         Assert.True(detailsPerNode.UtilizedCores == 1, "detailsPerNode.UtilizedCores == 1");
 
-                        re.Execute(new PromoteClusterNodeCommand(tag), context);
+                        await re.ExecuteAsync(new PromoteClusterNodeCommand(tag), context);
                         await Task.Delay(reasonableTime);
 
                         using (leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
