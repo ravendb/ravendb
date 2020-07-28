@@ -817,17 +817,22 @@ namespace Raven.Server.Documents.Queries.Results
             DateTime from, to;
             if (timeSeriesFunction.Last != null)
             {
-                var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
-
                 to = DateTime.MaxValue;
-                from = _stats.End.Add(-timeFromLast);
+                var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
+                
+                from = timeFromLast.Months != default 
+                    ? _stats.End.Add(-timeFromLast.Months) 
+                    : _stats.End.Add(-timeFromLast.TimePeriod);
+
             }
             else if (timeSeriesFunction.First != null)
             {
-                var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
-
                 from = DateTime.MinValue;
-                to = _stats.Start.Add(timeFromFirst);
+                var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
+                
+                to = timeFromFirst.Months != default
+                    ? _stats.Start.Add(timeFromFirst.Months)
+                    : _stats.Start.Add(timeFromFirst.TimePeriod);
             }
             else
             {
@@ -850,7 +855,7 @@ namespace Raven.Server.Documents.Queries.Results
             return (from, to);
         }
 
-        private TimeValue GetTimePeriodFromValueExpression(ValueExpression valueExpression, string methodName, string functionName, string documentId)
+        private (TimeSpan TimePeriod, TimeValue Months) GetTimePeriodFromValueExpression(ValueExpression valueExpression, string methodName, string functionName, string documentId)
         {
             var timePeriod = valueExpression.GetValue(_queryParameters)?.ToString();
             if (timePeriod == null)
@@ -859,7 +864,7 @@ namespace Raven.Server.Documents.Queries.Results
                                                 $"was unable to read '{methodName}' expression '{valueExpression}'");
             }
 
-            return RangeGroup.ParseLastFromString(timePeriod);
+            return RangeGroup.ParseTimePeriodFromString(timePeriod);
         }
 
         private TimeSpan? GetOffset(ValueExpression offsetExpression, string name)
