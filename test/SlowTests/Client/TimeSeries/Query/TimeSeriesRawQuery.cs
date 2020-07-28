@@ -6115,12 +6115,12 @@ select out()");
             }
         }
 
-        [Fact (Skip = "RavenDB-14988")]
+        [Fact]
         public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = RavenTestHelper.UtcToday.EnsureUtc().AddDays(-7);
+                var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
                 var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
 
@@ -6138,8 +6138,7 @@ select out()");
                         tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
                     }
 
-                    tsf.Append(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), ++totalMinutes, "watches/fitbit");
-
+                    tsf.Append(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), 100, "last");
                     session.SaveChanges();
                 }
 
@@ -6161,6 +6160,7 @@ select out(doc)
                     Assert.Equal(2, result.Count);
                     Assert.Equal(baseline.AddMinutes(totalMinutes), result.Results[0].Timestamp);
                     Assert.Equal(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), result.Results[1].Timestamp);
+                    Assert.Equal("last", result.Results[1].Tag);
 
                 }
             }
@@ -6636,12 +6636,12 @@ select out(p)
             }
         }
 
-        [Fact(Skip = "RavenDB-14988")]
+        [Fact]
         public void CanQueryTimeSeriesRaw_UsingFirst_Milliseconds()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = RavenTestHelper.UtcToday.EnsureUtc().AddDays(-7);
+                var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
                 var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
 
@@ -6681,7 +6681,7 @@ select out(doc)
 
                     Assert.Equal(2, result.Count);
                     Assert.Equal(baseline, result.Results[0].Timestamp);
-                    Assert.Equal(baseline.AddMilliseconds(100), result.Results[1].Timestamp);
+                    Assert.Equal(baseline.AddMilliseconds(10), result.Results[1].Timestamp);
                 }
             }
         }
