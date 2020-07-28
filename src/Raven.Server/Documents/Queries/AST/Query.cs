@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "milliseconds") ||
                         TryConsumeMatch(source, ref offset, "milli"))
                     {
-                        range.Ticks += duration;
+                        range.Ticks += duration * TicksInMillisecond;
                         range.TicksAlignment = Alignment.Millisecond;
                         return;
                     }
