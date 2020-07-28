@@ -165,10 +165,10 @@
     .btn-tabs {
         .doc-related {
             color: @color-related;
+        }
 
-            .badge {
-                background-color: @color-related;
-            }
+        .doc-recent {
+            color: @color-recent;
         }
 
         .doc-attachments {
@@ -176,14 +176,6 @@
 
             .badge {
                 background-color: @color-attachments;
-            }
-        }
-
-        .doc-recent {
-            color: @color-recent;
-
-            .badge {
-                background-color: @color-recent;
             }
         }
 
@@ -208,6 +200,46 @@
 
             .badge {
                 background-color: @color-time-series;
+            }
+        }
+
+        &.btn-group-justified {
+            
+            .badge {
+                
+                &.kilo {
+                    &::after {
+                        content: 'K';
+                        margin-left: 2px;
+                        font-size: 11px;
+                    }
+                }
+
+                &.mega {
+                    &::after {
+                        content: 'M';
+                        margin-left: 2px;
+                        font-size: 11px;
+                    }
+                }
+                
+                top: 0;
+                
+                &.left-xs {
+                    left: 0;
+                }
+                
+                &.left-sm {
+                    left: 5%;
+                }
+                
+                &.left-md {
+                    left: 15%;
+                }
+                
+                &.left-lg {
+                    left: 20%;
+                }
             }
         }
     }

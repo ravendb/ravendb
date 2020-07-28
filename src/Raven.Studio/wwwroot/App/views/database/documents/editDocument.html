@@ -110,7 +110,7 @@
                             Compare with: <span class="caret margin-left margin-left-sm"></span>
                         </button>
                         <ul class="dropdown-menu max-height" data-bind="foreach: revisionsToCompare">
-                            <li data-bind="css: { active:  $data === $root.comparingWith() }">
+                            <li data-bind="css: { active: $data === $root.comparingWith() }">
                                 <a href="#" data-bind="text: $data.__metadata.lastModified(), click: _.partial($root.compareRevisions, $data)"></a>
                             </li>
                         </ul>
@@ -154,11 +154,11 @@
         </small>
         <div class="differences_summary" data-bind="visible: currentDiff, with: currentDiff">
             <div class="padding padding-sm" data-bind="visible: identicalContent">
-                <small class="text-success">Contents are identical</small>    
+                <small class="text-success">Contents are identical</small>
             </div>
             <div class="padding padding-sm" data-bind="visible: !identicalContent()">
                 <small class="text-warning">
-                    Revisions are different:  
+                    Revisions are different:
                     <strong class="text-success" data-bind="text: additions"></strong>
                     <span data-bind="text: $root.pluralize(additions(), 'addition', 'additions', true)"></span>, 
                     <strong class="text-danger" data-bind="text: deletions"></strong>
@@ -180,7 +180,7 @@
                                 <div data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true" data-bind="tooltipText: $root.changeVectorHtml()">
                                     <div class="change-vector" data-bind="foreach: $root.changeVector">
                                         <span class="badge badge-default" data-bind="text: shortFormat"></span>
-                                    </div>                                
+                                    </div>
                                 </div>
                                 <div>
                                     <a href="#" id="copy-change-vector" title="Copy change vector" data-bind="click: $root.copyChangeVectorToClipboard"><i class="icon-copy"></i></a>
@@ -236,28 +236,40 @@
                         <button type="button" class="btn btn-xs btn-default doc-attachments" data-bind="css: { active: isAttachmentsActive() }, click: activateAttachments, disable: !$root.canViewAttachments()">
                             <div class="icon-attachment"></div>
                             Attachments
-                            <div class="badge" data-bind="text: $root.formatBadge($root.crudActionsProvider().attachmentsCount)"></div>
+                            <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().attachmentsCount),
+                                            attr: { class: $root.getBadgeClasses($root.crudActionsProvider().attachmentsCount),
+                                                    title: $root.getBadgeTitle($root.crudActionsProvider().attachmentsCount) }">
+                            </div>
                         </button>
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-counters" data-bind="css: { active: isCountersActive() }, click: activateCounters, disable: !$root.canViewCounters()">
                             <div class="icon-new-counter"></div>
                             Counters
-                            <div class="badge" data-bind="text: $root.formatBadge($root.crudActionsProvider().countersCount)"></div>
+                            <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().countersCount),
+                                            attr: { class: $root.getBadgeClasses($root.crudActionsProvider().countersCount),
+                                                    title: $root.getBadgeTitle($root.crudActionsProvider().countersCount) }">
+                            </div>
                         </button>
                     </div>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-time-series" data-bind="css: { active: isTimeSeriesActive() }, click: activateTimeSeries, disable: !$root.canViewTimeSeries()">
                             <div class="icon-new-time-series"></div>
                             Time Series
-                            <div class="badge" data-bind="text: $root.formatBadge($root.crudActionsProvider().timeSeriesCount)"></div>
+                            <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().timeSeriesCount),
+                                            attr: { class: $root.getBadgeClasses($root.crudActionsProvider().timeSeriesCount),
+                                                    title: $root.getBadgeTitle($root.crudActionsProvider().timeSeriesCount) }">
+                            </div>
                         </button>
                     </div>
                     <div class="btn-group" id="revisions_pane" role="group">
                         <button type="button" class="btn btn-xs btn-default doc-revisions" data-bind="css: { active: isRevisionsActive() }, click: _.partial(activateRevisions, false), disable: !$root.canViewRevisions()">
                             <div class="icon-revisions"></div>
                             Revisions
-                            <div class="badge" data-bind="text: $root.formatBadge($root.crudActionsProvider().revisionsCount)"></div>
+                            <div data-bind="text: $root.getBadgeText($root.crudActionsProvider().revisionsCount),
+                                            attr: { class: $root.getBadgeClasses($root.crudActionsProvider().revisionsCount),
+                                                    title: $root.getBadgeTitle($root.crudActionsProvider().revisionsCount) }">
+                            </div>
                         </button>
                     </div>
                     <div class="btn-group" role="group">
