@@ -477,36 +477,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (runningTask != null)
                     return runningTask.Id;
 
-                if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
-                {
-                    throw new BackupDelayException(
-                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
-                        $"The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.")
-                    {
-                        DelayPeriod = _serverStore.Configuration.Server.CpuCreditsExhaustionBackupDelay.AsTimeSpan
-                    };
-                }
-
-                if (LowMemoryNotification.Instance.LowMemoryState)
-                {
-                    throw new BackupDelayException(
-                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
-                        $"The task cannot run because the server is in low memory state.")
-                    {
-                        DelayPeriod = _serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
-                    };
-                }
-
-                if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty)
-                {
-                    throw new BackupDelayException(
-                        $"Failed to start Backup Task: '{periodicBackup.Configuration.Name}'. " +
-                        $"The task cannot run because the server is in high dirty memory state.")
-                    {
-                        DelayPeriod = _serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
-                    };
-                }
-
+                CheckServerHealthBeforeBackup(_serverStore, periodicBackup.Configuration.Name);
                 _serverStore.ConcurrentBackupsCounter.StartBackup(periodicBackup.Configuration.Name, _logger);
 
                 var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -514,7 +485,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 try
                 {
                     var backupStatus = periodicBackup.BackupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId, periodicBackup.BackupStatus);
-                    var backupToLocalFolder = PeriodicBackupConfiguration.CanBackupUsing(periodicBackup.Configuration.LocalSettings);
+                    var backupToLocalFolder = BackupConfiguration.CanBackupUsing(periodicBackup.Configuration.LocalSettings);
 
                     // check if we need to do a new full backup
                     if (backupStatus.LastFullBackup == null || // no full backup was previously performed
@@ -532,15 +503,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     periodicBackup.StartTimeInUtc = startTimeInUtc;
                     var backupTask = new BackupTask(
-                        _serverStore,
                         _database,
                         periodicBackup,
+                        periodicBackup.Configuration,
                         isFullBackup,
                         backupToLocalFolder,
                         operationId,
                         _tempBackupPath,
                         _logger,
-                        _cancellationToken.Token,
                         _forTestingPurposes);
 
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
@@ -598,6 +568,33 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     throw;
                 }
+            }
+        }
+
+        internal static void CheckServerHealthBeforeBackup(ServerStore serverStore, string name)
+        {
+            if (serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
+            {
+                throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the CPU credits allocated to this machine are nearing exhaustion.")
+                {
+                    DelayPeriod = serverStore.Configuration.Server.CpuCreditsExhaustionBackupDelay.AsTimeSpan
+                };
+            }
+
+            if (LowMemoryNotification.Instance.LowMemoryState)
+            {
+                throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in low memory state.")
+                {
+                    DelayPeriod = serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
+                };
+            }
+
+            if (LowMemoryNotification.Instance.DirtyMemoryState.IsHighDirty)
+            {
+                throw new BackupDelayException($"Failed to start Backup Task: '{name}'. The task cannot run because the server is in high dirty memory state.")
+                {
+                    DelayPeriod = serverStore.Configuration.Backup.LowMemoryBackupDelay.AsTimeSpan
+                };
             }
         }
 
