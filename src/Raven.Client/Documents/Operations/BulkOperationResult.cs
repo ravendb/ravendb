@@ -3,7 +3,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class BulkOperationResult : IOperationResult, IOperationProcessedDetails
+    public class BulkOperationResult : IOperationResult
     {
         public BulkOperationResult()
         {
