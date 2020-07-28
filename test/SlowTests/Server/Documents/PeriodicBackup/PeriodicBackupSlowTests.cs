@@ -1027,8 +1027,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                 var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                
+                var op = await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 long? statusLastEtag = null;
                 await WaitForValueAsync(async () =>
@@ -1053,15 +1054,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(timeSeriesConfiguration));
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                op = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.Patch<User, string>(entity.Id, u => u.Name, "Patched");
                     await session.SaveChangesAsync();
                 }
-                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
-                
+                op = await store.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
+                await op.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+
                 await WaitForValueAsync(async () =>
                 {
                     var status =  (await store.Maintenance.SendAsync(operation)).Status;
