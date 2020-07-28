@@ -453,7 +453,10 @@ namespace Raven.Server.ServerWide.Maintenance
                     || lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false)
                     continue;
 
-                if (lastIncrementalBackupDate == null || lastRaftIndex == null)
+                if (localBackup.TryGet(nameof(PeriodicBackupStatus.LastFullBackup), out DateTime? lastfullBackupDate) == false)
+                    continue;
+
+                if ((lastIncrementalBackupDate == null) && (lastfullBackupDate == null) || lastRaftIndex == null)
                     continue;
 
                 if (lastRaftIndex < maxEtag)
