@@ -1944,6 +1944,75 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Theory]
+        [InlineData(BackupType.Snapshot)]
+        [InlineData(BackupType.Backup)]
+        public async Task CanCreateOneTimeBackupAndRestore(BackupType backupType)
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var name = "EGR";
+
+            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = name }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new BackupConfiguration
+                {
+                    BackupType = backupType,
+                    DatabaseName = store.Database,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                };
+
+                var operation = await store.Maintenance.Server.SendAsync(new OneTimeBackupOperation(config));
+                var backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                Assert.True(backupResult.Documents.Processed);
+                Assert.True(backupResult.CompareExchange.Processed);
+                Assert.True(backupResult.CompareExchangeTombstones.Processed);
+                Assert.True(backupResult.Conflicts.Processed);
+                Assert.True(backupResult.Counters.Processed);
+                Assert.True(backupResult.DatabaseRecord.Processed);
+                Assert.True(backupResult.Identities.Processed);
+                Assert.True(backupResult.Indexes.Processed);
+                Assert.Null(backupResult.LegacyLastAttachmentEtag);
+                Assert.Null(backupResult.LegacyLastDocumentEtag);
+                Assert.True(backupResult.RevisionDocuments.Processed);
+                Assert.True(backupResult.TimeSeries.Processed);
+                Assert.True(backupResult.Tombstones.Processed);
+                Assert.True(backupResult.Subscriptions.Processed);
+                Assert.Equal(1, backupResult.Documents.ReadCount);
+                Assert.NotEmpty(backupResult.Messages);
+                if (backupType == BackupType.Backup)
+                {
+                    Assert.False(backupResult.SnapshotBackup.Processed);
+                    Assert.True(backupResult.Documents.LastEtag > 0, "backupResult.Documents.LastEtag > 0");
+                }
+                else
+                {
+                    Assert.True(backupResult.SnapshotBackup.Processed);
+                }
+
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+                var backupLocation = Directory.GetDirectories(backupPath).First();
+
+                using (ReadOnly(backupLocation))
+                using (RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupLocation, DatabaseName = databaseName }))
+                {
+                    using (var session = store.OpenAsyncSession(databaseName))
+                    {
+                        var usr = await session.LoadAsync<User>("users/1");
+                        Assert.Equal(name, usr.Name);
+                    }
+                }
+            }
+        }
+
         private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;

@@ -52,7 +52,9 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Utils;
 using Voron.Util.Settings;
+using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -693,6 +695,72 @@ namespace Raven.Server.Web.System
                     $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
+                    id: operationId, token: cancelToken);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                }
+            }
+        }
+
+        [RavenAction("/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task BackupDatabaseOnce()
+        {
+            PeriodicBackupRunner.CheckServerHealthBeforeBackup(ServerStore, "BackupDatabaseOnce");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
+                var backupConfiguration = JsonDeserializationServer.OneTimeBackupConfiguration(json);
+                var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(backupConfiguration.DatabaseName);
+                var operationId = ServerStore.Operations.GetNextOperationId();
+                var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+                var backupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings);
+                var tempBackupPath = (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp");
+                var backupTask = new BackupTask(database, periodicBackup: null, backupConfiguration, isFullBackup: true, backupToLocalFolder, operationId, tempBackupPath, Logger);
+
+                var t = ServerStore.Operations.AddOperation(
+                    null,
+                    $"One time database backup: {backupConfiguration.DatabaseName}",
+                    Documents.Operations.Operations.OperationType.DatabaseBackup,
+                    onProgress =>
+                    {
+                        var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
+                            {
+                                ServerStore.ConcurrentBackupsCounter.StartBackup(backupConfiguration.Name, Logger);
+                                var sw = Stopwatch.StartNew();
+                                try
+                                {
+                                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                                    NativeMemory.EnsureRegistered();
+
+                                    using (database.PreventFromUnloading())
+                                    {
+                                        var backupResult = backupTask.RunPeriodicBackup(onProgress);
+                                        tcs.SetResult(backupResult);
+                                    }
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    tcs.SetCanceled();
+                                }
+                                catch (Exception e)
+                                {
+                                    if (Logger.IsOperationsEnabled)
+                                        Logger.Operations($"Failed to run the backup thread: '{backupConfiguration.Name}'", e);
+
+                                    tcs.SetException(e);
+                                }
+                                finally
+                                {
+                                    ServerStore.ConcurrentBackupsCounter.FinishBackup(backupConfiguration.Name, backupStatus: null, sw.Elapsed, Logger);
+                                }
+                            }, null,
+                            $"Backup thread {backupConfiguration.Name} for database '{database.Name}'");
+                        return tcs.Task;
+                    },
                     id: operationId, token: cancelToken);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
