@@ -17,50 +17,43 @@ using Raven.Client.Documents.Operations.Backups;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class RavenFtpClient : RavenStorageClient
+    public class RavenFtpClient
     {
-        private readonly string _url;
-        private readonly int? _port;
-        private readonly string _userName;
-        private readonly string _password;
-        private readonly string _certificateAsBase64;
-        private readonly string _certificateFileName;
+        private readonly FtpSettings _ftpSettings;
+        private readonly Progress _progress;
+        private readonly CancellationToken _cancellationToken;
         private readonly bool _useSsl;
         private const int DefaultBufferSize = 81920;
         private const int DefaultFtpPort = 21;
 
         public RavenFtpClient(FtpSettings ftpSettings, Progress progress = null, CancellationToken? cancellationToken = null)
-            : base(progress, cancellationToken)
         {
-            _url = ftpSettings.Url;
-            _port = ftpSettings.Port;
-            _userName = ftpSettings.UserName;
-            _password = ftpSettings.Password;
-            _certificateAsBase64 = ftpSettings.CertificateAsBase64;
-            _certificateFileName = ftpSettings.CertificateFileName;
+            _ftpSettings = ftpSettings;
+            _progress = progress;
+            _cancellationToken = cancellationToken ?? CancellationToken.None;
 
-            if (_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase) == false &&
-                _url.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase) == false)
-                _url = "ftp://" + _url;
+            if (_ftpSettings.Url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase) == false &&
+                _ftpSettings.Url.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase) == false)
+                _ftpSettings.Url = "ftp://" + _ftpSettings.Url;
 
-            if (_url.StartsWith("ftps", StringComparison.OrdinalIgnoreCase))
+            if (_ftpSettings.Url.StartsWith("ftps", StringComparison.OrdinalIgnoreCase))
             {
                 _useSsl = true;
-                _url = _url.Replace("ftps://", "ftp://", StringComparison.OrdinalIgnoreCase);
+                _ftpSettings.Url = _ftpSettings.Url.Replace("ftps://", "ftp://", StringComparison.OrdinalIgnoreCase);
             }
 
-            if (_url.EndsWith("/") == false)
-                _url += "/";
+            if (_ftpSettings.Url.EndsWith("/") == false)
+                _ftpSettings.Url += "/";
 
-            Debug.Assert(_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase));
+            Debug.Assert(_ftpSettings.Url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase));
         }
 
         public void UploadFile(string folderName, string fileName, Stream stream)
         {
             TestConnection();
 
-            Progress?.UploadProgress.SetTotal(stream.Length);
-            Progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
+            _progress?.UploadProgress.SetTotal(stream.Length);
+            _progress?.UploadProgress.ChangeState(UploadState.PendingUpload);
 
             var url = CreateNestedFoldersIfNeeded(folderName);
             url += $"/{fileName}";
@@ -72,20 +65,22 @@ namespace Raven.Server.Documents.PeriodicBackup
             var requestStream = request.GetRequestStream();
             while ((count = stream.Read(readBuffer, 0, readBuffer.Length)) != 0)
             {
+                _cancellationToken.ThrowIfCancellationRequested();
+
                 requestStream.Write(readBuffer, 0, count);
 
-                Progress?.UploadProgress.ChangeState(UploadState.Uploading);
-                Progress?.UploadProgress.UpdateUploaded(count);
-                Progress?.OnUploadProgress();
+                _progress?.UploadProgress.ChangeState(UploadState.Uploading);
+                _progress?.UploadProgress.UpdateUploaded(count);
+                _progress?.OnUploadProgress();
             }
 
             requestStream.Flush();
             requestStream.Close();
 
-            Progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
+            _progress?.UploadProgress.ChangeState(UploadState.PendingResponse);
             using (request.GetResponse())
             {
-                Progress?.UploadProgress.ChangeState(UploadState.Done);
+                _progress?.UploadProgress.ChangeState(UploadState.Done);
             }
         }
 
@@ -127,10 +122,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void ExtractUrlAndDirectories(out string url, out List<string> dirs)
         {
-            var uri = new Uri(_url);
+            var uri = new Uri(_ftpSettings.Url);
 
             dirs = uri.AbsolutePath.TrimStart('/').TrimEnd('/').Split("/").ToList();
-            var port = _port ?? (uri.Port > 0 ? uri.Port : DefaultFtpPort);
+            var port = _ftpSettings.Port ?? (uri.Port > 0 ? uri.Port : DefaultFtpPort);
             if (port < 1 || port > 65535)
                 throw new ArgumentException("Port number range: 1-65535");
 
@@ -142,11 +137,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             var request = (FtpWebRequest)WebRequest.Create(new Uri(url));
             request.Method = method;
 
-            request.Credentials = new NetworkCredential(_userName, _password);
+            request.Credentials = new NetworkCredential(_ftpSettings.UserName, _ftpSettings.Password);
             request.EnableSsl = _useSsl;
             if (_useSsl)
             {
-                var byteArray = Convert.FromBase64String(_certificateAsBase64);
+                var byteArray = Convert.FromBase64String(_ftpSettings.CertificateAsBase64);
 
                 try
                 {
@@ -155,7 +150,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException($"This is not a valid certificate, file name: {_certificateFileName}", e);
+                    throw new ArgumentException($"This is not a valid certificate, file name: {_ftpSettings.CertificateFileName}", e);
                 }
             }
                 
@@ -168,7 +163,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public void TestConnection()
         {
-            if (_useSsl && string.IsNullOrWhiteSpace(_certificateAsBase64))
+            if (_useSsl && string.IsNullOrWhiteSpace(_ftpSettings.CertificateAsBase64))
                 throw new ArgumentException("Certificate must be provided when using ftp with SSL!");
 
             ExtractUrlAndDirectories(out var url, out _);

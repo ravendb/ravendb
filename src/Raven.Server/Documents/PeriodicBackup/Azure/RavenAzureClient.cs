@@ -44,7 +44,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public static bool TestMode;
 
-
         public string RemoteFolderName { get; }
 
         public RavenAzureClient(AzureSettings azureSettings, Progress progress = null, Logger logger = null, CancellationToken? cancellationToken = null)
@@ -175,14 +174,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             Progress?.UploadProgress.SetTotal(stream.Length);
 
-            var now = SystemTime.UtcNow;
-            // stream is disposed by the HttpClient
             var content = new ProgressableStreamContent(stream, Progress)
             {
                 Headers =
                 {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion},
                     {"x-ms-blob-type", "BlockBlob"},
                     {"Content-Length", stream.Length.ToString(CultureInfo.InvariantCulture)}
                 }
@@ -191,10 +186,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            var client = GetClient(TimeSpan.FromHours(3));
-            SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Put,
+                Url = url,
+                HttpContent = content
+            }).Result;
 
-            var response = client.PutAsync(url, content, CancellationToken).Result;
             Progress?.UploadProgress.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode)
                 return;
@@ -212,7 +210,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var blockNumber = 0;
             var blockIds = new List<string>();
             var baseUrl = _serverUrlForContainer + "/" + key;
-            var client = GetClient(TimeSpan.FromDays(7));
 
             Progress?.UploadProgress.SetTotal(streamLength);
             Progress?.UploadProgress.ChangeType(UploadType.Chunked);
@@ -229,11 +226,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     var parameters = $"comp=block&blockid={WebUtility.UrlEncode(blockIdString)}";
                     var url = GetUrl(baseUrl, parameters);
 
-                    PutBlock(stream, client, url, length, retryCount: 0);
+                    PutBlock(stream, url, length, retryCount: 0);
                 }
 
                 // put block list
-                PutBlockList(baseUrl, client, blockIds, metadata);
+                PutBlockList(baseUrl, blockIds, metadata);
             }
             finally
             {
@@ -241,29 +238,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        private void PutBlock(Stream baseStream, HttpClient client, string url, long length, int retryCount)
+        private void PutBlock(Stream baseStream, string url, long length, int retryCount)
         {
             // saving the position if we need to retry
             var position = baseStream.Position;
             using (var subStream = new SubStream(baseStream, offset: 0, length: length))
             {
-                var now = SystemTime.UtcNow;
-                // stream is disposed by the HttpClient
                 var content = new ProgressableStreamContent(subStream, Progress)
                 {
                     Headers =
                     {
-                        {"x-ms-date", now.ToString("R")},
-                        {"x-ms-version", AzureStorageVersion},
                         {"Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
                     }
                 };
 
-                SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
-
                 try
                 {
-                    var response = client.PutAsync(url, content, CancellationToken).Result;
+                    var response = SendAsync(new SendParameters
+                    {
+                        HttpMethod = HttpMethod.Put,
+                        Url = url,
+                        HttpContent = content
+                    }).Result;
+
                     if (response.IsSuccessStatusCode)
                         return;
 
@@ -297,13 +294,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             // restore the stream position before retrying
             baseStream.Position = position;
-            PutBlock(baseStream, client, url, length, retryCount);
+            PutBlock(baseStream, url, length, retryCount);
         }
 
-        private void PutBlockList(string baseUrl, HttpClient client, List<string> blockIds, Dictionary<string, string> metadata)
+        private void PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
         {
             var url = GetUrl(baseUrl, "comp=blocklist");
-            var now = SystemTime.UtcNow;
             var doc = CreateXmlDocument(blockIds);
             var xmlString = doc.OuterXml;
 
@@ -311,8 +307,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             {
                 Headers =
                 {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion},
                     {"Content-Length", Encoding.UTF8.GetBytes(xmlString).Length.ToString(CultureInfo.InvariantCulture)}
                 }
             };
@@ -320,9 +314,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Put,
+                Url = url,
+                HttpContent = content
+            }).Result;
 
-            var response = client.PutAsync(url, content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -345,20 +343,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private bool ContainerExists()
         {
             var url = GetUrl(_serverUrlForContainer, "restype=container");
-            var now = SystemTime.UtcNow;
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            var response = SendAsync(new SendParameters
             {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
+                HttpMethod = HttpMethod.Get,
+                Url = url,
+            }).Result;
 
-            var client = GetClient();
-            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return true;
 
@@ -395,21 +385,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public void PutContainer()
         {
             var url = GetUrl(_serverUrlForContainer, "restype=container");
-
-            var now = SystemTime.UtcNow;
-            var content = new EmptyContent
+            var response = SendAsync(new SendParameters
             {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
-
-            var client = GetClient();
-            SetAuthorizationHeader(client, HttpMethods.Put, url, content.Headers);
-
-            var response = client.PutAsync(url, content, CancellationToken).Result;
+                HttpMethod = HttpMethod.Put,
+                Url = url,
+            }).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -421,54 +401,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public Blob GetBlob(string key)
         {
-            var url = GetUrl($"{_serverUrlForContainer}/{key}");
-
-            var now = SystemTime.UtcNow;
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
-            {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
-
-            var client = GetClient();
-            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
-
-            var response = client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken).Result;
-            if (response.StatusCode == HttpStatusCode.NotFound)
-                return null;
-
-            if (response.IsSuccessStatusCode == false)
-                throw StorageException.FromResponseMessage(response);
-
-            var data = response.Content.ReadAsStreamAsync().Result;
-            var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
-
-            return new Blob(data, headers);
+            return GetBlobAsync(key).Result;
         }
 
         public async Task<Blob> GetBlobAsync(string key)
         {
             var url = GetUrl($"{_serverUrlForContainer}/{key}");
-
-            var now = SystemTime.UtcNow;
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            var response = await SendAsync(new SendParameters
             {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
+                HttpMethod = HttpMethod.Get,
+                Url = url,
+                HttpCompletionOption = HttpCompletionOption.ResponseHeadersRead
+            });
 
-            var client = GetClient();
-            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
-
-            var response = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
 
@@ -476,29 +421,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 throw StorageException.FromResponseMessage(response);
 
             var data = await response.Content.ReadAsStreamAsync();
-            var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
+            var responseHeaders = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
-            return new Blob(data, headers);
+            return new Blob(data, responseHeaders);
         }
 
         public void DeleteContainer()
         {
             var url = GetUrl(_serverUrlForContainer, "restype=container");
-
-            var now = SystemTime.UtcNow;
-            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
+            var response = SendAsync(new SendParameters
             {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
+                HttpMethod = HttpMethod.Delete,
+                Url = url
+            }).Result;
 
-            var client = GetClient();
-            SetAuthorizationHeader(client, HttpMethods.Delete, url, requestMessage.Headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -528,23 +464,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (marker != null)
                 url += $"&marker={marker}";
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            var response = await SendAsync(new SendParameters
             {
-                Headers =
-                {
-                    {"x-ms-date", SystemTime.UtcNow.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
-            var client = GetClient();
-            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
+                HttpMethod = HttpMethod.Get,
+                Url = url
+            });
 
-            var response = await client.SendAsync(requestMessage, CancellationToken).ConfigureAwait(false);
             if (response.StatusCode == HttpStatusCode.NotFound)
+            {
                 return new ListBlobResult
                 {
                     List = new List<BlobProperties>()
                 };
+            }
 
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
@@ -603,14 +535,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             const string xMsClientRequestId = "x-ms-client-request-id";
             const string xMsReturnClientRequestId = "x-ms-return-client-request-id";
 
-            var now = SystemTime.UtcNow.ToString("R");
+            var now = SystemTime.UtcNow;
+            var nowAsString = SystemTime.UtcNow.ToString("R");
             var url = GetUrl(_serverUrlForAccountName, "comp=batch");
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Headers =
                 {
-                    { xMsDate, now }, { "x-ms-version", AzureStorageVersion }
+                    { xMsDate, nowAsString }, { "x-ms-version", AzureStorageVersion }
                 }
             };
 
@@ -625,8 +558,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 var clientRequestId = Guid.NewGuid().ToString();
                 blobsWithIds[clientRequestId] = blobs[i];
 
-                writer.WriteLine($"{HttpMethods.Delete} /{_containerName}/{blobs[i]} HTTP/1.1");
-                writer.WriteLine($"{xMsDate}: {now}");
+                writer.WriteLine($"{HttpMethod.Delete} /{_containerName}/{blobs[i]} HTTP/1.1");
+                writer.WriteLine($"{xMsDate}: {nowAsString}");
                 writer.WriteLine($"{xMsClientRequestId}: {clientRequestId}");
                 writer.WriteLine($"{xMsReturnClientRequestId}: true");
 
@@ -634,7 +567,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 {
                     var uri = new Uri($"{_serverUrlForContainer}/{blobs[i]}", UriKind.Absolute);
                     var hashStr =
-                        $"{HttpMethods.Delete}\n\n\n\n\n\n\n\n\n\n\n\n{xMsClientRequestId}:{clientRequestId}\n{xMsDate}:{now}\n{xMsReturnClientRequestId}:true\n/{_accountName}{uri.AbsolutePath}";
+                        $"{HttpMethod.Delete}\n\n\n\n\n\n\n\n\n\n\n\n{xMsClientRequestId}:{clientRequestId}\n{xMsDate}:{nowAsString}\n{xMsReturnClientRequestId}:true\n/{_accountName}{uri.AbsolutePath}";
                     writer.WriteLine($"Authorization: SharedKey {_accountName}:{Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(hashStr)))}");
                 }
 
@@ -652,8 +585,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 });
             }
 
-            var client = GetClient();
-
             if (batchContent.Headers.ContentLength.HasValue == false)
             {
                 // we need the ContentLength to CalculateAuthorizationHeaderValue
@@ -661,9 +592,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 throw new ArgumentException($"{nameof(MultipartContent)} should have content length");
             }
 
-            SetAuthorizationHeader(client, HttpMethods.Post, url, requestMessage.Headers, batchContent.Headers);
+            requestMessage.Headers.Authorization = GetAuthenticationHeaderValue(HttpMethod.Post, url, requestMessage.Headers, now, batchContent.Headers);
 
-            var response = client.SendAsync(requestMessage).Result;
+            var response = HttpClient.SendAsync(requestMessage).Result;
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
@@ -768,20 +699,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             foreach (var blob in blobs)
             {
                 var url = GetUrl($"{_serverUrlForContainer}/{blob}");
-
-                var now = SystemTime.UtcNow;
-
-                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
+                var response = SendAsync(new SendParameters
                 {
-                    Headers =
-                    {
-                        {"x-ms-date", now.ToString("R")},
-                        {"x-ms-version", AzureStorageVersion}
-                    }
-                };
+                    HttpMethod = HttpMethod.Delete,
+                    Url = url
+                }).Result;
 
-                var client = GetClient();
-                var response = client.SendAsync(requestMessage, CancellationToken).Result;
                 if (response.IsSuccessStatusCode)
                     continue;
 
@@ -795,22 +718,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public List<string> GetContainerNames(int maxResults)
         {
             var url = GetUrl(_serverUrlForAccountName, $"comp=list&maxresults={maxResults}");
-
-            var now = SystemTime.UtcNow;
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            var response = SendAsync(new SendParameters
             {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion}
-                }
-            };
+                HttpMethod = HttpMethod.Get,
+                Url = url
+            }).Result;
 
-            var client = GetClient();
-            SetAuthorizationHeader(client, HttpMethods.Get, url, requestMessage.Headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
@@ -834,12 +747,26 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return containersList;
         }
 
-        private void SetAuthorizationHeader(HttpClient httpClient, HttpMethod httpMethod, string url, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
+        protected override Dictionary<string, string> GetBaseHeaders(string payloadHash, out DateTime now)
+        {
+            now = SystemTime.UtcNow;
+
+            var headers = new Dictionary<string, string>
+            {
+                {"x-ms-date", now.ToString("R")},
+                {"x-ms-version", AzureStorageVersion}
+            };
+
+            return headers;
+        }
+
+        public override AuthenticationHeaderValue GetAuthenticationHeaderValue(HttpMethod httpMethod, string url,
+            HttpHeaders httpHeaders, DateTime now, HttpContentHeaders httpContentHeaders = null)
         {
             if (_hasSasToken)
             {
                 // we pass the sas token in the url
-                return;
+                return null;
             }
 
             var stringToHash = ComputeCanonicalizedHeaders(httpMethod, httpHeaders, httpContentHeaders);
@@ -853,12 +780,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
                 var base64String = Convert.ToBase64String(hashedString);
 
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("SharedKey", $"{_accountName}:{base64String}");
+                return new AuthenticationHeaderValue("SharedKey", $"{_accountName}:{base64String}");
             }
         }
 
-        private static string ComputeCanonicalizedHeaders(HttpMethod httpMethod, HttpHeaders httpHeaders, HttpHeaders httpContentHeaders = null)
+        private static string ComputeCanonicalizedHeaders(HttpMethod httpMethod, HttpHeaders httpHeaders, HttpContentHeaders httpContentHeaders = null)
         {
             var contentLength = string.Empty;
             var contentType = string.Empty;

@@ -29,7 +29,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         [Fact, Trait("Category", "Smuggler")]
         public void restore_azure_cloud_settings_tests()
         {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options
             {
                 ModifyDatabaseName = s => $"{s}_2"
@@ -245,13 +244,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
         }
 
-        private void InitContainer(AzureSettings azureSettings)
+        private static void InitContainer(AzureSettings azureSettings)
         {
-            using (var client = new RavenAzureClient(azureSettings))
-            {
-                client.DeleteContainer();
-                client.PutContainer();
-            }
+            var client = new RavenAzureClient(azureSettings);
+            client.DeleteContainer();
+            client.PutContainer();
         }
 
         private AzureSettings GenerateAzureSettings(string containerName = "mycontainer")

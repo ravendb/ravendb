@@ -367,11 +367,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                                                $" S3 Error: {backupStatus?.UploadToS3?.Exception}, LocalBackup Exception: {backupStatus?.LocalBackup?.Exception}");
 
                 string lastFileToRestore;
-                using (var client = new RavenAwsS3Client(defaultS3Settings))
-                {
-                    var fullBackupPath = $"{defaultS3Settings.RemoteFolderName}/{backupStatus.FolderName}";
-                    lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
-                }
+                var client = new RavenAwsS3Client(defaultS3Settings);
+                var fullBackupPath = $"{defaultS3Settings.RemoteFolderName}/{backupStatus.FolderName}";
+                lastFileToRestore = (await client.ListObjectsAsync(fullBackupPath, string.Empty, false)).FileInfoDetails.Last().FullPath;
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -586,13 +584,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
             try
             {
-                using (var s3Client = new RavenAwsS3Client(s3Settings))
-                {
-                    var cloudObjects = s3Client.ListObjectsAsync(s3Settings.RemoteFolderName, string.Empty, false).GetAwaiter().GetResult();
-                    var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+                var s3Client = new RavenAwsS3Client(s3Settings);
+                var cloudObjects = s3Client.ListObjectsAsync(s3Settings.RemoteFolderName, string.Empty, false).GetAwaiter().GetResult();
+                var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
 
-                    s3Client.DeleteMultipleObjects(pathsToDelete);
-                }
+                s3Client.DeleteMultipleObjects(pathsToDelete);
             }
             catch (Exception)
             {

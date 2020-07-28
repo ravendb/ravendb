@@ -83,66 +83,58 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void UploadToS3(S3Settings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token))
+            var client = new RavenAwsS3Client(settings, progress, _logger, TaskCancelToken.Token);
+            var key = CombinePathAndKey(settings.RemoteFolderName);
+            client.PutObject(key, stream, new Dictionary<string, string>
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
-                client.PutObject(key, stream, new Dictionary<string, string>
-                {
-                    { "Description", GetArchiveDescription() }
-                });
+                {"Description", GetArchiveDescription()}
+            });
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(S3Name)} bucket named: {settings.BucketName}, with key: {key}");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"{ReportSuccess(S3Name)} bucket named: {settings.BucketName}, with key: {key}");
 
-                var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
-                runner.Execute();
-            }
+            var runner = new S3RetentionPolicyRunner(_retentionPolicyParameters, client);
+            runner.Execute();
         }
 
         private void UploadToGlacier(GlacierSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token))
-            {
-                var key = CombinePathAndKey(settings.RemoteFolderName ?? _backupUploaderSettings.DatabaseName);
-                var archiveId = client.UploadArchive(stream, key);
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
+            var client = new RavenAwsGlacierClient(settings, progress, _logger, TaskCancelToken.Token);
+            var key = CombinePathAndKey(settings.RemoteFolderName ?? _backupUploaderSettings.DatabaseName);
+            var archiveId = client.UploadArchive(stream, key);
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"{ReportSuccess(GlacierName)}, archive ID: {archiveId}");
 
-                var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
-                runner.Execute();
-            }
+            var runner = new GlacierRetentionPolicyRunner(_retentionPolicyParameters, client);
+            runner.Execute();
         }
 
         private void UploadToFtp(FtpSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenFtpClient(settings, progress, TaskCancelToken.Token))
-            {
-                client.UploadFile(_backupUploaderSettings.FolderName, _backupUploaderSettings.FileName, stream);
+            var client = new RavenFtpClient(settings, progress, TaskCancelToken.Token);
+            client.UploadFile(_backupUploaderSettings.FolderName, _backupUploaderSettings.FileName, stream);
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(FtpName)} server");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"{ReportSuccess(FtpName)} server");
 
-                var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
-                runner.Execute();
-            }
+            var runner = new FtpRetentionPolicyRunner(_retentionPolicyParameters, client);
+            runner.Execute();
         }
 
         private void UploadToAzure(AzureSettings settings, Stream stream, Progress progress)
         {
-            using (var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token))
+            var client = new RavenAzureClient(settings, progress, _logger, TaskCancelToken.Token);
+            var key = CombinePathAndKey(settings.RemoteFolderName);
+            client.PutBlob(key, stream, new Dictionary<string, string>
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName);
-                client.PutBlob(key, stream, new Dictionary<string, string>
-                {
-                    { "Description", GetArchiveDescription() }
-                });
+                {"Description", GetArchiveDescription()}
+            });
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{ReportSuccess(AzureName)} container: {settings.StorageContainer}, with key: {key}");
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"{ReportSuccess(AzureName)} container: {settings.StorageContainer}, with key: {key}");
 
-                var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
-                runner.Execute();
-            }
+            var runner = new AzureRetentionPolicyRunner(_retentionPolicyParameters, client);
+            runner.Execute();
         }
 
         private void UploadToGoogleCloud(GoogleCloudSettings settings, Stream stream, Progress progress)

@@ -9,16 +9,34 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public abstract class RavenStorageClient : IDisposable
+    public abstract class RavenStorageClient
     {
-        private readonly List<HttpClient> _clients = new List<HttpClient>();
+        protected static readonly HttpClient HttpClient;
+
         protected readonly CancellationToken CancellationToken;
         protected readonly Progress Progress;
         protected const int MaxRetriesForMultiPartUpload = 5;
+
+        static RavenStorageClient()
+        {
+            var handler = new HttpClientHandler
+            {
+                AutomaticDecompression = System.Net.DecompressionMethods.None
+            };
+
+            var client = new HttpClient(handler)
+            {
+                Timeout = TimeSpan.FromHours(24)
+            };
+
+            HttpClient = client;
+        }
 
         protected RavenStorageClient(Progress progress, CancellationToken? cancellationToken)
         {
@@ -28,42 +46,62 @@ namespace Raven.Server.Documents.PeriodicBackup
             CancellationToken = cancellationToken ?? CancellationToken.None;
         }
 
-        protected HttpClient GetClient(TimeSpan? timeout = null)
+        protected class SendParameters
         {
-            var handler = new HttpClientHandler
-            {
-                AutomaticDecompression = System.Net.DecompressionMethods.None
-            };
+            public HttpMethod HttpMethod { get; set; }
 
-            var client = new HttpClient(handler)
-            {
-                Timeout = timeout ?? TimeSpan.FromSeconds(120)
-            };
+            public string Url { get; set; }
 
-            _clients.Add(client);
+            public Dictionary<string, string> RequestHeaders { get; set; }
 
-            return client;
+            public HttpContent HttpContent { get; set; }
+
+            public string PayloadHash { get; set; }
+
+            public HttpCompletionOption HttpCompletionOption { get; set; } = HttpCompletionOption.ResponseContentRead;
         }
 
-        public virtual void Dispose()
+        protected async Task<HttpResponseMessage> SendAsync(SendParameters sendParameters)
         {
-            var exceptions = new List<Exception>();
-
-            foreach (var client in _clients)
+            var httpRequestMessage = new HttpRequestMessage
             {
-                try
-                {
-                    client.Dispose();
-                }
-                catch (Exception e)
-                {
-                    exceptions.Add(e);
-                }
+                RequestUri = new Uri(sendParameters.Url),
+                Method = sendParameters.HttpMethod,
+                Content = sendParameters.HttpContent
+            };
+
+            if (sendParameters.RequestHeaders != null)
+            {
+                foreach (var headerKey in sendParameters.RequestHeaders.Keys)
+                    httpRequestMessage.Headers.Add(headerKey.ToLower(), sendParameters.RequestHeaders[headerKey]);
             }
 
-            if (exceptions.Count > 0)
-                throw new AggregateException(exceptions);
+            HttpHeaders headersForAuthenticationHeaderValue = httpRequestMessage.Headers;
+            var baseHeaders = GetBaseHeaders(sendParameters.PayloadHash, out var now);
+            if (sendParameters.HttpContent != null)
+            {
+                httpRequestMessage.Content = sendParameters.HttpContent;
+                headersForAuthenticationHeaderValue = httpRequestMessage.Content.Headers;
+
+                foreach (var header in baseHeaders)
+                    httpRequestMessage.Content.Headers.Add(header.Key, header.Value);
+            }
+            else
+            {
+                foreach (var header in baseHeaders)
+                    httpRequestMessage.Headers.Add(header.Key, header.Value);
+            }
+
+            var authenticationHeaderValue = GetAuthenticationHeaderValue(sendParameters.HttpMethod, sendParameters.Url, headersForAuthenticationHeaderValue, now);
+            if (authenticationHeaderValue != null)
+                httpRequestMessage.Headers.Authorization = authenticationHeaderValue;
+
+            return await HttpClient.SendAsync(httpRequestMessage, sendParameters.HttpCompletionOption, CancellationToken);
         }
+
+        protected abstract Dictionary<string, string> GetBaseHeaders(string payloadHash, out DateTime now);
+
+        public abstract AuthenticationHeaderValue GetAuthenticationHeaderValue(HttpMethod httpMethod, string url, HttpHeaders httpHeaders, DateTime now, HttpContentHeaders httpContentHeaders = null);
 
         public class Blob
         {

@@ -27,9 +27,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
-
-            using var client = new RavenAzureClient(GetAzureSettings(containerName));
+            var client = new RavenAzureClient(GetAzureSettings(containerName));
             var blobs = new List<string>();
+
             try
             {
                 client.DeleteContainer();
@@ -61,9 +61,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
-
-            using var client = new RavenAzureClient(GetAzureSettings(containerName));
+            var client = new RavenAzureClient(GetAzureSettings(containerName));
             var blobs = new List<string>();
+
             try
             {
                 client.DeleteContainer();
@@ -106,35 +106,33 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid().ToString();
+            var client = new RavenAzureClient(GetAzureSettings(containerName));
 
-            using (var client = new RavenAzureClient(GetAzureSettings(containerName)))
+            try
             {
-                try
+                client.DeleteContainer();
+                client.PutContainer();
+
+                client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
                 {
-                    client.DeleteContainer();
-                    client.PutContainer();
+                    {"property1", "value1"},
+                    {"property2", "value2"}
+                });
+                var blob = client.GetBlob(blobKey);
+                Assert.NotNull(blob);
 
-                    client.PutBlob(blobKey, new MemoryStream(Encoding.UTF8.GetBytes("123")), new Dictionary<string, string>
-                    {
-                        {"property1", "value1"},
-                        {"property2", "value2"}
-                    });
-                    var blob = client.GetBlob(blobKey);
-                    Assert.NotNull(blob);
+                using (var reader = new StreamReader(blob.Data))
+                    Assert.Equal("123", reader.ReadToEnd());
 
-                    using (var reader = new StreamReader(blob.Data))
-                        Assert.Equal("123", reader.ReadToEnd());
+                var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
+                var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
 
-                    var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
-                    var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
-
-                    Assert.Equal("value1", blob.Metadata[property1]);
-                    Assert.Equal("value2", blob.Metadata[property2]);
-                }
-                finally
-                {
-                    client.DeleteContainer();
-                }
+                Assert.Equal("value1", blob.Metadata[property1]);
+                Assert.Equal("value2", blob.Metadata[property2]);
+            }
+            finally
+            {
+                client.DeleteContainer();
             }
         }
 
@@ -143,8 +141,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var containerName = Guid.NewGuid().ToString();
             var blobKey = Guid.NewGuid() + "/" + Guid.NewGuid();
+            var client = new RavenAzureClient(GetAzureSettings(containerName));
 
-            using (var client = new RavenAzureClient(GetAzureSettings(containerName)))
             {
                 try
                 {
@@ -195,58 +193,57 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
 
             var sasToken = useSasToken ? GetSasTokenAndCreateTheContainer(containerName) : null;
-            using (var client = new RavenAzureClient(GetAzureSettings(containerName, sasToken)))
+            var client = new RavenAzureClient(GetAzureSettings(containerName, sasToken));
+
+            try
             {
-                try
-                {
-                    if (useSasToken == false)
-                    {
-                        client.DeleteContainer();
-                        client.PutContainer();
-                    }
-
-                    for (var i = 0; i < blobsCount; i++)
-                    {
-                        client.PutBlob(blobNamesToPut[i], new MemoryStream(Encoding.UTF8.GetBytes("123")),
-                            new Dictionary<string, string> { { "property1", "value1" }, { "property2", "value2" } });
-                    }
-
-                    for (var i = 0; i < blobsCount; i++)
-                    {
-                        var blob = client.GetBlob(blobNamesToPut[i]);
-                        Assert.NotNull(blob);
-
-                        using (var reader = new StreamReader(blob.Data))
-                            Assert.Equal("123", reader.ReadToEnd());
-
-                        var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
-                        var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
-
-                        Assert.Equal("value1", blob.Metadata[property1]);
-                        Assert.Equal("value2", blob.Metadata[property2]);
-                    }
-
-                    var listBlobs = client.ListBlobs("azure", null, listFolders: false);
-                    var blobNames = listBlobs.List.Select(b => b.Name).ToList();
-                    Assert.Equal(blobsCount, blobNames.Count);
-
-                    // delete all blobs
-                    client.DeleteMultipleBlobs(blobNames);
-
-                    listBlobs = client.ListBlobs("azure", null, listFolders: false);
-                    blobNames = listBlobs.List.Select(b => b.Name).ToList();
-                    Assert.Equal(0, blobNames.Count);
-
-                    for (var i = 0; i < blobsCount; i++)
-                    {
-                        var blob = client.GetBlob(blobNamesToPut[i]);
-                        Assert.Null(blob);
-                    }
-                }
-                finally
+                if (useSasToken == false)
                 {
                     client.DeleteContainer();
+                    client.PutContainer();
                 }
+
+                for (var i = 0; i < blobsCount; i++)
+                {
+                    client.PutBlob(blobNamesToPut[i], new MemoryStream(Encoding.UTF8.GetBytes("123")),
+                        new Dictionary<string, string> {{"property1", "value1"}, {"property2", "value2"}});
+                }
+
+                for (var i = 0; i < blobsCount; i++)
+                {
+                    var blob = client.GetBlob(blobNamesToPut[i]);
+                    Assert.NotNull(blob);
+
+                    using (var reader = new StreamReader(blob.Data))
+                        Assert.Equal("123", reader.ReadToEnd());
+
+                    var property1 = blob.Metadata.Keys.Single(x => x.Contains("property1"));
+                    var property2 = blob.Metadata.Keys.Single(x => x.Contains("property2"));
+
+                    Assert.Equal("value1", blob.Metadata[property1]);
+                    Assert.Equal("value2", blob.Metadata[property2]);
+                }
+
+                var listBlobs = client.ListBlobs("azure", null, listFolders: false);
+                var blobNames = listBlobs.List.Select(b => b.Name).ToList();
+                Assert.Equal(blobsCount, blobNames.Count);
+
+                // delete all blobs
+                client.DeleteMultipleBlobs(blobNames);
+
+                listBlobs = client.ListBlobs("azure", null, listFolders: false);
+                blobNames = listBlobs.List.Select(b => b.Name).ToList();
+                Assert.Equal(0, blobNames.Count);
+
+                for (var i = 0; i < blobsCount; i++)
+                {
+                    var blob = client.GetBlob(blobNamesToPut[i]);
+                    Assert.Null(blob);
+                }
+            }
+            finally
+            {
+                client.DeleteContainer();
             }
         }
 

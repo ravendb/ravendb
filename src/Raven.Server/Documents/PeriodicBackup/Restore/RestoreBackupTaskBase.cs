@@ -378,12 +378,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var filesToRestore = new List<string>();
 
+            var foundFileNameToRestore = false;
             foreach (var file in orderedFiles)
             {
                 filesToRestore.Add(file);
+
                 if (file.Equals(RestoreFromConfiguration.LastFileNameToRestore, StringComparison.OrdinalIgnoreCase))
+                {
+                    foundFileNameToRestore = true;
                     break;
+                }
             }
+
+            if (foundFileNameToRestore == false)
+                throw new InvalidOperationException($"Couldn't find the last backup file to restore at: {RestoreFromConfiguration.LastFileNameToRestore}");
 
             return filesToRestore;
         }

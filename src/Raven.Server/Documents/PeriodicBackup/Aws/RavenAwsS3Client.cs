@@ -75,24 +75,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return;
             }
 
-            var url = $"{GetUrl()}/{key}";
-            var now = SystemTime.UtcNow;
             Progress?.UploadProgress.SetTotal(stream.Length);
 
-            // stream is disposed by the HttpClient
+            var url = $"{GetUrl()}/{key}";
             var content = new ProgressableStreamContent(stream, Progress);
-            UpdateHeaders(content.Headers, now, stream);
-
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-amz-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            var headers = ConvertToHeaders(content.Headers);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Put,
+                Url = url,
+                HttpContent = content,
+                PayloadHash = GetPayloadHash(stream)
+            }).Result;
 
-            var client = GetClient(TimeSpan.FromHours(24));
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.PutAsync(url, content, CancellationToken).Result;
             Progress?.UploadProgress.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode)
                 return;
@@ -112,7 +109,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var baseUrl = $"{GetUrl()}/{key}";
             var uploadId = GetUploadId(baseUrl, metadata);
-            var client = GetClient(TimeSpan.FromDays(7));
             var partNumbersWithEtag = new List<Tuple<int, string>>();
             var partNumber = 0;
             var completeUploadUrl = $"{baseUrl}?uploadId={uploadId}";
@@ -127,15 +123,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     var length = Math.Min(maxLengthPerPart, streamLength - stream.Position);
                     var url = $"{baseUrl}?partNumber={++partNumber}&uploadId={uploadId}";
 
-                    var etag = UploadPart(stream, client, url, length, retryCount: 0);
+                    var etag = UploadPart(stream, url, length, retryCount: 0);
                     partNumbersWithEtag.Add(new Tuple<int, string>(partNumber, etag));
                 }
 
-                CompleteMultiUpload(completeUploadUrl, client, partNumbersWithEtag);
+                CompleteMultiUpload(completeUploadUrl, partNumbersWithEtag);
             }
             catch (Exception)
             {
-                AbortMultiUpload(client, completeUploadUrl);
+                AbortMultiUpload(completeUploadUrl);
                 throw;
             }
             finally
@@ -144,17 +140,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        private void AbortMultiUpload(HttpClient client, string url)
+        private void AbortMultiUpload(string url)
         {
-            var now = SystemTime.UtcNow;
-            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Delete,
+                Url = url
+            }).Result;
 
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -167,25 +160,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             throw StorageException.FromResponseMessage(response);
         }
 
-        private void CompleteMultiUpload(string url, HttpClient client,
-            List<Tuple<int, string>> partNumbersWithEtag)
+        private void CompleteMultiUpload(string url, List<Tuple<int, string>> partNumbersWithEtag)
         {
-            var now = SystemTime.UtcNow;
             var doc = CreateCompleteMultiUploadDocument(partNumbersWithEtag);
             var xmlString = doc.OuterXml;
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
+            var content = new StringContent(xmlString, Encoding.UTF8, "text/plain");
+
+            var response = SendAsync(new SendParameters
             {
-                Content = new StringContent(xmlString, Encoding.UTF8, "text/plain")
-            };
-
-            UpdateHeaders(requestMessage.Headers, now, stream: null, RavenAwsHelper.CalculatePayloadHashFromString(xmlString));
-
-            var headers = ConvertToHeaders(requestMessage.Headers);
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
+                HttpMethod = HttpMethod.Post,
+                Url = url,
+                HttpContent = content,
+                PayloadHash = GetPayloadHash(xmlString: xmlString)
+            }).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -223,31 +211,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return doc;
         }
 
-        private string UploadPart(Stream baseStream, HttpClient client, string url, long length, int retryCount)
+        private string UploadPart(Stream baseStream, string url, long length, int retryCount)
         {
             // saving the position if we need to retry
             var position = baseStream.Position;
             using (var subStream = new SubStream(baseStream, offset: 0, length: length))
             {
-                var now = SystemTime.UtcNow;
-
-                // stream is disposed by the HttpClient
                 var content = new ProgressableStreamContent(subStream, Progress)
                 {
                     Headers =
                     {
-                        {"Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
+                        { "Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
                     }
                 };
 
-                UpdateHeaders(content.Headers, now, subStream);
-
-                var headers = ConvertToHeaders(content.Headers);
-                client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
-
                 try
                 {
-                    var response = client.PutAsync(url, content, CancellationToken).Result;
+                    var response = SendAsync(new SendParameters
+                    {
+                        HttpMethod = HttpMethod.Put,
+                        Url = url,
+                        HttpContent = content,
+                        PayloadHash = GetPayloadHash(subStream)
+                    }).Result;
+
                     if (response.IsSuccessStatusCode)
                     {
                         var etagHeader = response.Headers.GetValues("ETag");
@@ -279,26 +266,24 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             // restore the stream position before retrying
             baseStream.Position = position;
-            return UploadPart(baseStream, client, url, length, retryCount);
+            return UploadPart(baseStream, url, length, retryCount);
         }
 
         private string GetUploadId(string baseUrl, Dictionary<string, string> metadata)
         {
             var url = $"{baseUrl}?uploads";
-            var now = SystemTime.UtcNow;
-
-            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
-
+            var headers = new Dictionary<string, string>();
             foreach (var metadataKey in metadata.Keys)
-                requestMessage.Headers.Add("x-amz-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
+                headers.Add("x-amz-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            var headers = ConvertToHeaders(requestMessage.Headers);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Post,
+                Url = url,
+                RequestHeaders = headers,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
@@ -352,17 +337,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (UseRegionInvariantRequest())
             {
                 var url = $"{GetUrl()}?location";
-                var now = SystemTime.UtcNow;
+                var response = SendAsync(new SendParameters
+                {
+                    HttpMethod = HttpMethod.Get,
+                    Url = url,
+                    PayloadHash = GetPayloadHash()
+                }).Result;
 
-                var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
-                UpdateHeaders(requestMessage.Headers, now, null);
-
-                var headers = ConvertToHeaders(requestMessage.Headers);
-
-                var client = GetClient();
-                client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
-
-                var response = client.SendAsync(requestMessage, CancellationToken).Result;
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
                     if (returnWhenNotFound)
@@ -408,20 +389,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private string GetBucketPermission()
         {
             var url = $"{GetUrl()}?acl";
-            var now = SystemTime.UtcNow;
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Get,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
-
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.StatusCode == HttpStatusCode.NotFound)
                 throw new BucketNotFoundException($"Bucket name '{_bucketName}' doesn't exist!");
-
 
             if (response.IsSuccessStatusCode == false)
             {
@@ -452,28 +428,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 var doc = CreatePutBucketXmlDocument(awsRegion ?? AwsRegion);
                 var xmlString = doc.OuterXml;
                 var url = GetUrl();
-                var now = SystemTime.UtcNow;
 
                 var hasLocationConstraint = AwsRegion != DefaultRegion;
                 var payloadHash = hasLocationConstraint ?
                     RavenAwsHelper.CalculatePayloadHashFromString(xmlString) :
                     RavenAwsHelper.CalculatePayloadHash(null);
 
-                var requestMessage = new HttpRequestMessage(HttpMethods.Put, url)
+                var content = hasLocationConstraint ? new StringContent(xmlString, Encoding.UTF8, "text/plain") : null;
+                var response = SendAsync(new SendParameters
                 {
-                    Content = hasLocationConstraint == false ?
-                        null : new StringContent(xmlString, Encoding.UTF8, "text/plain")
-                };
+                    HttpMethod = HttpMethod.Put,
+                    Url = url,
+                    HttpContent = content,
+                    PayloadHash = payloadHash
+                }).Result;
 
-                UpdateHeaders(requestMessage.Headers, now, stream: null, payloadHash: payloadHash);
-
-                var headers = ConvertToHeaders(requestMessage.Headers);
-
-                var client = GetClient(TimeSpan.FromHours(1));
-                var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
-                client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-                var response = client.SendAsync(requestMessage, CancellationToken).Result;
                 if (response.IsSuccessStatusCode)
                     return;
 
@@ -512,17 +481,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (UseSpecificRegion(region))
             {
                 var url = GetUrl();
-                var now = SystemTime.UtcNow;
+                var response = SendAsync(new SendParameters
+                {
+                    HttpMethod = HttpMethod.Delete,
+                    Url = url,
+                    PayloadHash = GetPayloadHash()
+                }).Result;
 
-                var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
-                UpdateHeaders(requestMessage.Headers, now, null);
-
-                var headers = ConvertToHeaders(requestMessage.Headers);
-
-                var client = GetClient();
-                client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
-
-                var response = client.SendAsync(requestMessage, CancellationToken).Result;
                 if (response.IsSuccessStatusCode)
                     return;
 
@@ -551,17 +516,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (startAfter != null)
                 url += $"&start-after={Uri.EscapeDataString(startAfter)}";
 
-            var now = SystemTime.UtcNow;
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Get,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
-
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return new ListObjectsResult();
 
@@ -658,17 +619,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (startAfter != null)
                 url += $"&start-after={Uri.EscapeDataString(startAfter)}";
 
-            var now = SystemTime.UtcNow;
+            var response = await SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Get,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            });
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
-
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
-
-            var response = await client.SendAsync(requestMessage, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return new ListObjectsResult();
 
@@ -788,17 +745,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public async Task<Blob> GetObjectAsync(string key)
         {
             var url = $"{GetUrl()}/{key}";
-            var now = SystemTime.UtcNow;
+            var response = await SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Get,
+                Url = url,
+                PayloadHash = GetPayloadHash(),
+                HttpCompletionOption = HttpCompletionOption.ResponseHeadersRead
+            });
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
-
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
-
-            var response = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
 
@@ -814,18 +768,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public void DeleteObject(string key)
         {
             var url = $"{GetUrl()}/{key}";
-            var now = SystemTime.UtcNow;
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Delete,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
-
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            var client = GetClient(TimeSpan.FromHours(1));
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -841,7 +790,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 return;
             
             var url = $"{GetUrl()}/?delete";
-            var now = SystemTime.UtcNow;
 
             var xml = new XElement("Delete");
             foreach (var objectPath in objects)
@@ -854,28 +802,29 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var xmlString = xml.ToString();
             var md5Hash = CalculateMD5Hash(xmlString);
-            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
+            var content = new StringContent(xmlString, Encoding.UTF8, "text/plain")
             {
-                Content = new StringContent(xmlString, Encoding.UTF8, "text/plain")
+                Headers =
                 {
-                    Headers =
-                    {
-                        {"Content-Length", xmlString.Length.ToString(CultureInfo.InvariantCulture)},
-                        {"Content-MD5", md5Hash}
-                    }
+                    {"Content-Length", xmlString.Length.ToString(CultureInfo.InvariantCulture)},
+                    {"Content-MD5", md5Hash}
                 }
             };
 
-            UpdateHeaders(requestMessage.Headers, now, null, RavenAwsHelper.CalculatePayloadHashFromString(xmlString));
+            //var headers = new Dictionary<string, string>
+            //{
+            //    {"Content-MD5", md5Hash}
+            //};
 
-            var headers = ConvertToHeaders(requestMessage.Headers);
-            headers.Add("Content-MD5", md5Hash);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Post,
+                Url = url,
+                HttpContent = content,
+                //RequestHeaders = headers,
+                PayloadHash = RavenAwsHelper.CalculatePayloadHashFromString(xmlString)
+            }).Result;
 
-            var client = GetClient(TimeSpan.FromHours(1));
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(requestMessage).Result;
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 

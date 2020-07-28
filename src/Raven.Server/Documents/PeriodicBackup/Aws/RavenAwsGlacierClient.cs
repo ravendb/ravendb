@@ -5,14 +5,13 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicBackup;
@@ -55,11 +54,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
 
             var url = $"{GetUrl()}/archives";
-            var now = SystemTime.UtcNow;
 
             Progress?.UploadProgress.SetTotal(stream.Length);
 
-            // stream is disposed by the HttpClient
             var content = new ProgressableStreamContent(stream, Progress)
             {
                 Headers =
@@ -70,14 +67,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 }
             };
 
-            UpdateHeaders(content.Headers, now, stream);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Post,
+                Url = url,
+                HttpContent = content,
+                PayloadHash = GetPayloadHash(stream)
+            }).Result;
 
-            var headers = ConvertToHeaders(content.Headers);
-            var client = GetClient(TimeSpan.FromHours(24));
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.PostAsync(url, content, CancellationToken).Result;
             Progress?.UploadProgress.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
@@ -107,7 +104,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var baseUrl = $"{GetUrl()}/multipart-uploads";
             var uploadId = GetUploadId(baseUrl, archiveDescription, lengthPerPartPowerOf2);
-            var client = GetClient(TimeSpan.FromDays(7));
 
             var uploadUrl = $"{baseUrl}/{uploadId}";
             var fullStreamPayloadTreeHash = RavenAwsHelper.CalculatePayloadTreeHash(stream);
@@ -117,14 +113,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 while (stream.Position < streamLength)
                 {
                     var length = Math.Min(lengthPerPartPowerOf2, streamLength - stream.Position);
-                    UploadPart(stream, client, uploadUrl, length, retryCount: 0);
+                    UploadPart(stream, uploadUrl, length, retryCount: 0);
                 }
 
-                return CompleteMultiUpload(uploadUrl, client, streamLength, fullStreamPayloadTreeHash);
+                return CompleteMultiUpload(uploadUrl, streamLength, fullStreamPayloadTreeHash);
             }
             catch (Exception)
             {
-                AbortMultiUpload(uploadUrl, client);
+                AbortMultiUpload(uploadUrl);
                 throw;
             }
             finally
@@ -133,15 +129,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        private void UploadPart(Stream baseStream, HttpClient client, string url, long length, int retryCount)
+        private void UploadPart(Stream baseStream, string url, long length, int retryCount)
         {
             // saving the position if we need to retry
             var position = baseStream.Position;
             using (var subStream = new SubStream(baseStream, offset: 0, length: length))
             {
-                var now = SystemTime.UtcNow;
-
-                // stream is disposed by the HttpClient
                 var content = new ProgressableStreamContent(subStream, Progress)
                 {
                     Headers =
@@ -152,14 +145,16 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     }
                 };
 
-                UpdateHeaders(content.Headers, now, subStream);
-
-                var headers = ConvertToHeaders(content.Headers);
-                client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
-
                 try
                 {
-                    var response = client.PutAsync(url, content, CancellationToken).Result;
+                    var response = SendAsync(new SendParameters
+                    {
+                        HttpMethod = HttpMethod.Put,
+                        Url = url,
+                        HttpContent = content,
+                        PayloadHash = GetPayloadHash(subStream)
+                    }).Result;
+
                     if (response.IsSuccessStatusCode)
                         return;
 
@@ -188,29 +183,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             // restore the stream position before retrying
             baseStream.Position = position;
-            UploadPart(baseStream, client, url, length, retryCount);
+            UploadPart(baseStream, url, length, retryCount);
         }
 
         private string GetUploadId(string url, string archiveDescription, long lengthPerPartPowerOf2)
         {
-            var now = SystemTime.UtcNow;
-            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
+            var headers = new Dictionary<string, string>
             {
-                Headers =
-                {
-                    {"x-amz-archive-description", archiveDescription},
-                    {"x-amz-part-size", lengthPerPartPowerOf2.ToString()}
-                }
+                {"x-amz-archive-description", archiveDescription},
+                {"x-amz-part-size", lengthPerPartPowerOf2.ToString()}
             };
 
-            UpdateHeaders(requestMessage.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Post,
+                Url = url,
+                RequestHeaders = headers,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var headers = ConvertToHeaders(requestMessage.Headers);
-
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
@@ -230,41 +221,37 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return Bits.PowerOf2(number);
         }
 
-        private string CompleteMultiUpload(string url, HttpClient client, long archiveSize, string payloadTreeHash)
+        private string CompleteMultiUpload(string url, long archiveSize, string payloadTreeHash)
         {
-            var now = SystemTime.UtcNow;
-            var requestMessage = new HttpRequestMessage(HttpMethods.Post, url)
+            var headers = new Dictionary<string, string>
             {
-                Headers =
-                {
-                    {"x-amz-archive-size", archiveSize.ToString()},
-                    {"x-amz-sha256-tree-hash", payloadTreeHash}
-                }
+                {"x-amz-archive-size", archiveSize.ToString()},
+                {"x-amz-sha256-tree-hash", payloadTreeHash}
             };
 
-            UpdateHeaders(requestMessage.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Post,
+                Url = url,
+                RequestHeaders = headers,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var headers = ConvertToHeaders(requestMessage.Headers);
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
 
             return ReadArchiveId(response);
         }
 
-        private void AbortMultiUpload(string url, HttpClient client)
+        private void AbortMultiUpload(string url)
         {
-            var now = SystemTime.UtcNow;
-            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url);
-            UpdateHeaders(requestMessage.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Delete,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var headers = ConvertToHeaders(requestMessage.Headers);
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
-
-            var response = client.SendAsync(requestMessage, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -288,16 +275,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public void PutVault()
         {
             var url = GetUrl();
-            var now = SystemTime.UtcNow;
-            var content = new HttpRequestMessage(HttpMethods.Put, url);
-            UpdateHeaders(content.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Put,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var headers = ConvertToHeaders(content.Headers);
-            var client = GetClient();
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -307,17 +291,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public void DeleteVault()
         {
             var url = GetUrl();
-            var now = SystemTime.UtcNow;
-            var content = new HttpRequestMessage(HttpMethods.Delete, url);
-            UpdateHeaders(content.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Delete,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var headers = ConvertToHeaders(content.Headers);
-
-            var client = GetClient();
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -330,17 +310,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private bool VaultExists()
         {
             var url = GetUrl();
-            var now = SystemTime.UtcNow;
-            var content = new HttpRequestMessage(HttpMethods.Get, url);
-            UpdateHeaders(content.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Get,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var headers = ConvertToHeaders(content.Headers);
-
-            var client = GetClient();
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return true;
 
@@ -353,17 +329,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public void DeleteArchive(string archiveId)
         {
             var url = $"{GetUrl()}/archives/{archiveId}";
-            var now = SystemTime.UtcNow;
-            var content = new HttpRequestMessage(HttpMethods.Delete, url);
-            UpdateHeaders(content.Headers, now, null);
+            var response = SendAsync(new SendParameters
+            {
+                HttpMethod = HttpMethod.Delete,
+                Url = url,
+                PayloadHash = GetPayloadHash()
+            }).Result;
 
-            var headers = ConvertToHeaders(content.Headers);
-
-            var client = GetClient();
-            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, now, headers);
-            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
-
-            var response = client.SendAsync(content, CancellationToken).Result;
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -377,11 +349,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 .First();
         }
 
-        protected override void UpdateHeaders(HttpHeaders headers, DateTime now, Stream stream, string payloadHash = null)
+        protected override Dictionary<string, string> GetBaseHeaders(string payloadHash, out DateTime now)
         {
-            base.UpdateHeaders(headers, now, stream, payloadHash);
-
+            var headers = base.GetBaseHeaders(payloadHash, out now);
             headers.Add("x-amz-glacier-version", "2012-06-01");
+            return headers;
         }
 
         public override string ServiceName => "glacier";

@@ -17,6 +17,7 @@ using System.Threading;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
+using Raven.Server.Smuggler.Migration.ApiKey;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
@@ -28,6 +29,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             "cn-northwest-1"
         };
 
+        private const string _hashedPayloadKey = "x-amz-content-sha256";
         protected const string DefaultRegion = "us-east-1";
         protected readonly string Domain;
         protected bool IsRegionInvariantRequest;
@@ -74,7 +76,33 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
+        protected override Dictionary<string, string> GetBaseHeaders(string payloadHash, out DateTime now)
+        {
+            now = SystemTime.UtcNow;
+
+            var headers = new Dictionary<string, string>
+            {
+                {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
+                {_hashedPayloadKey, payloadHash},
+                {"Host", GetHost()}
+            };
+
+            if (_sessionToken != null)
+                headers.Add("x-amz-security-token", _sessionToken);
+
+            return headers;
+        }
+
+        protected string GetPayloadHash(Stream stream = null, string xmlString = null)
+        {
+            if (xmlString != null)
+                return RavenAwsHelper.CalculatePayloadHashFromString(xmlString);
+
+            return RavenAwsHelper.CalculatePayloadHash(stream);
+        }
+
+        public override AuthenticationHeaderValue GetAuthenticationHeaderValue(HttpMethod httpMethod, string url,
+            HttpHeaders httpHeaders, DateTime date, HttpContentHeaders httpContentHeaders = null)
         {
             var canonicalRequestHash = CalculateCanonicalRequestHash(httpMethod, url, httpHeaders, out string signedHeaders);
             var signingKey = CalculateSigningKey(date, ServiceName);
@@ -94,13 +122,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        protected Dictionary<string, string> ConvertToHeaders(HttpHeaders headers)
-        {
-            var result = headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
-            result.Add("Host", GetHost());
-            return result;
-        }
-
         public virtual string GetUrl()
         {
             return "https://" + GetHost();
@@ -108,16 +129,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public abstract string GetHost();
 
-        protected virtual void UpdateHeaders(HttpHeaders headers, DateTime now, Stream stream, string payloadHash = null)
-        {
-            headers.Add("x-amz-date", RavenAwsHelper.ConvertToString(now));
-            headers.Add("x-amz-content-sha256", payloadHash ?? RavenAwsHelper.CalculatePayloadHash(stream));
-
-            if (_sessionToken != null)
-                headers.Add("x-amz-security-token", _sessionToken);
-        }
-
-        private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
+        private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, HttpHeaders httpHeaders, out string signedHeaders)
         {
             var isGet = httpMethod == HttpMethods.Get;
 
@@ -136,10 +148,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var headers = httpHeaders
                 .Where(x => isGet == false || x.Key.StartsWith("Date", StringComparison.OrdinalIgnoreCase) == false)
-                .OrderBy(x => x.Key);
+                .OrderBy(x => x.Key)
+                .ToList();
 
             var canonicalHeaders = headers
-                .Aggregate(string.Empty, (current, parameter) => current + $"{parameter.Key.ToLower()}:{parameter.Value.Trim()}\n");
+                .Aggregate(string.Empty, (current, parameter) => current + $"{parameter.Key.ToLower()}:{parameter.Value.First().Trim()}\n");
 
             signedHeaders = headers
                 .Aggregate(string.Empty, (current, parameter) => current + parameter.Key.ToLower() + ";");
@@ -149,9 +162,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             using (var hash = SHA256.Create())
             {
-                var hashedPayload = httpHeaders["x-amz-content-sha256"];
-                var canonicalRequest = $"{httpMethod}\n{canonicalUri}\n{canonicalQueryString}\n{canonicalHeaders}\n{signedHeaders}\n{hashedPayload}";
+                var hashedPayload = httpHeaders.GetFirstValue(_hashedPayloadKey);
+                if (hashedPayload == null)
+                    throw new InvalidOperationException($"Missing hashed payload with key: {_hashedPayloadKey}");
 
+                var canonicalRequest = $"{httpMethod}\n{canonicalUri}\n{canonicalQueryString}\n{canonicalHeaders}\n{signedHeaders}\n{hashedPayload}";
                 return RavenAwsHelper.ConvertToHex(hash.ComputeHash(Encoding.UTF8.GetBytes(canonicalRequest)));
             }
         }

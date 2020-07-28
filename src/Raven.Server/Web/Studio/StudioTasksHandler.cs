@@ -119,22 +119,21 @@ namespace Raven.Server.Web.Studio
                             string.IsNullOrWhiteSpace(s3Settings.AwsRegionName))
                             break;
 
-                        using (var client = new RavenAwsS3Client(s3Settings))
+                        var s3Client = new RavenAwsS3Client(s3Settings);
+                        // fetching only the first 64 results for the auto complete
+                        var s3Folders = await s3Client.ListObjectsAsync(s3Settings.RemoteFolderName, "/", true, 64);
+                        if (s3Folders != null)
                         {
-                            // fetching only the first 64 results for the auto complete
-                            var folders = await client.ListObjectsAsync(s3Settings.RemoteFolderName, "/", true, 64);
-                            if (folders != null)
+                            foreach (var folder in s3Folders.FileInfoDetails)
                             {
-                                foreach (var folder in folders.FileInfoDetails)
-                                {
-                                    var fullPath = folder.FullPath;
-                                    if (string.IsNullOrWhiteSpace(fullPath))
-                                        continue;
+                                var fullPath = folder.FullPath;
+                                if (string.IsNullOrWhiteSpace(fullPath))
+                                    continue;
 
-                                    folderPathOptions.List.Add(fullPath);
-                                }
+                                folderPathOptions.List.Add(fullPath);
                             }
                         }
+
                         break;
                     case PeriodicBackupConnectionType.Azure:
                         var azureJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
@@ -151,19 +150,18 @@ namespace Raven.Server.Web.Studio
                             string.IsNullOrWhiteSpace(azureSettings.StorageContainer))
                             break;
 
-                        using (var client = new RavenAzureClient(azureSettings))
+                        var azureClient = new RavenAzureClient(azureSettings);
+                        var azureFolders = (await azureClient.ListBlobsAsync(azureSettings.RemoteFolderName, "/", true));
+
+                        foreach (var folder in azureFolders.List)
                         {
-                            var folders = (await client.ListBlobsAsync(azureSettings.RemoteFolderName, "/", true));
+                            var fullPath = folder.Name;
+                            if (string.IsNullOrWhiteSpace(fullPath))
+                                continue;
 
-                            foreach (var folder in folders.List)
-                            {
-                                var fullPath = folder.Name;
-                                if (string.IsNullOrWhiteSpace(fullPath))
-                                    continue;
-
-                                folderPathOptions.List.Add(fullPath);
-                            }
+                            folderPathOptions.List.Add(fullPath);
                         }
+
                         break;
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudJson = context.ReadForMemory(RequestBodyStream(), "studio-tasks/format");
@@ -179,23 +177,22 @@ namespace Raven.Server.Web.Studio
                             string.IsNullOrWhiteSpace(googleCloudSettings.GoogleCredentialsJson))
                             break;
 
-                        using (var client = new RavenGoogleCloudClient(googleCloudSettings))
+                        var googleClient = new RavenGoogleCloudClient(googleCloudSettings);
+                        var googleFolders = (await googleClient.ListObjectsAsync(googleCloudSettings.RemoteFolderName));
+                        var requestedPathLength = googleCloudSettings.RemoteFolderName.Split('/').Length;
+
+                        foreach (var folder in googleFolders)
                         {
-                            var folders = (await client.ListObjectsAsync(googleCloudSettings.RemoteFolderName));
-                            var requestedPathLength = googleCloudSettings.RemoteFolderName.Split('/').Length;
+                            const char separator = '/';
+                            var splitted = folder.Name.Split(separator);
+                            var result = string.Join(separator, splitted.Take(requestedPathLength)) + separator;
 
-                            foreach (var folder in folders)
-                            {
-                                const char separator = '/';
-                                var splitted = folder.Name.Split(separator);
-                                var result = string.Join(separator, splitted.Take(requestedPathLength)) + separator;
-                                
-                                if (string.IsNullOrWhiteSpace(result))
-                                    continue;
+                            if (string.IsNullOrWhiteSpace(result))
+                                continue;
 
-                                folderPathOptions.List.Add(result);
-                            }
+                            folderPathOptions.List.Add(result);
                         }
+
                         break;
                     case PeriodicBackupConnectionType.FTP:
                     case PeriodicBackupConnectionType.Glacier:

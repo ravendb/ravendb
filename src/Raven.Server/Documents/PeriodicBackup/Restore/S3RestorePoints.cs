@@ -79,7 +79,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         public override void Dispose()
         {
-            _client.Dispose();
         }
     }
 }

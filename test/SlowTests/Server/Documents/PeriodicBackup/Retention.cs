@@ -88,11 +88,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     },
                     async databaseName =>
                     {
-                        using (var client = new RavenAwsS3Client(GetS3Settings(databaseName)))
-                        {
-                            var folders = await client.ListObjectsAsync($"{client.RemoteFolderName}/", "/", listFolders: true);
-                            return folders.FileInfoDetails.Count;
-                        }
+                        var client = new RavenAwsS3Client(GetS3Settings(databaseName));
+                        var folders = await client.ListObjectsAsync($"{client.RemoteFolderName}/", "/", listFolders: true);
+                        return folders.FileInfoDetails.Count;
                     }, timeout: 120000, checkIncremental);
             }
             finally
@@ -110,7 +108,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             await Locker.WaitAsync();
 
             var containerName = Guid.NewGuid().ToString();
-            using var client = new RavenAzureClient(new AzureSettings { AccountName = Azure.AzureAccountName, AccountKey = Azure.AzureAccountKey, StorageContainer = containerName });
+            var client = new RavenAzureClient(new AzureSettings
+            {
+                AccountName = Azure.AzureAccountName,
+                AccountKey = Azure.AzureAccountKey,
+                StorageContainer = containerName
+            });
 
             try
             {
@@ -126,8 +129,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     },
                     async databaseName =>
                     {
-                        using var c = new RavenAzureClient(GetAzureSettings(containerName, databaseName));
-                        var folders = await c.ListBlobsAsync($"{c.RemoteFolderName}/", delimiter: "/", listFolders: true);
+                        var ravenAzureClient = new RavenAzureClient(GetAzureSettings(containerName, databaseName));
+                        var folders = await ravenAzureClient.ListBlobsAsync($"{ravenAzureClient.RemoteFolderName}/", delimiter: "/", listFolders: true);
                         return folders.List.Count();
                     }, timeout: 120000, checkIncremental);
             }

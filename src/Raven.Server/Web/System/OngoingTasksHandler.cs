@@ -307,24 +307,18 @@ namespace Raven.Server.Web.System
                     {
                         case PeriodicBackupConnectionType.S3:
                             var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                            using (var awsClient = new RavenAwsS3Client(s3Settings, logger: Logger, cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                awsClient.TestConnection();
-                            }
+                            var awsClient = new RavenAwsS3Client(s3Settings, logger: Logger, cancellationToken: ServerStore.ServerShutdown);
+                            awsClient.TestConnection();
                             break;
                         case PeriodicBackupConnectionType.Glacier:
                             var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                            using (var glacierClient = new RavenAwsGlacierClient(glacierSettings, logger: Logger, cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                glacierClient.TestConnection();
-                            }
+                            var glacierClient = new RavenAwsGlacierClient(glacierSettings, logger: Logger, cancellationToken: ServerStore.ServerShutdown);
+                            glacierClient.TestConnection();
                             break;
                         case PeriodicBackupConnectionType.Azure:
                             var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                            using (var azureClient = new RavenAzureClient(azureSettings, logger: Logger, cancellationToken: ServerStore.ServerShutdown))
-                            {
-                                azureClient.TestConnection();
-                            }
+                            var azureClient = new RavenAzureClient(azureSettings, logger: Logger, cancellationToken: ServerStore.ServerShutdown);
+                            azureClient.TestConnection();
                             break;
                         case PeriodicBackupConnectionType.GoogleCloud:
                             var googleCloudSettings = JsonDeserializationClient.GoogleCloudSettings(connectionInfo);
@@ -335,10 +329,8 @@ namespace Raven.Server.Web.System
                             break;
                         case PeriodicBackupConnectionType.FTP:
                             var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                            using (var ftpClient = new RavenFtpClient(ftpSettings))
-                            {
-                                ftpClient.TestConnection();
-                            }
+                            var ftpClient = new RavenFtpClient(ftpSettings);
+                            ftpClient.TestConnection();
                             break;
                         case PeriodicBackupConnectionType.Local:
                         case PeriodicBackupConnectionType.None:

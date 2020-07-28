@@ -58,13 +58,5 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         {
             return _remoteFolderName;
         }
-
-        protected override void Dispose()
-        {
-            using (_client)
-            {
-                base.Dispose();
-            }
-        }
     }
 }
