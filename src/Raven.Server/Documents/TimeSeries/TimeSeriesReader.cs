@@ -41,6 +41,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
+
     }
 
     internal class SeriesSummary
@@ -158,6 +159,37 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return last;
             }
+        }
+
+        internal IEnumerable<TimeSeriesStorage.SegmentSummary> GetSegmentsSummary()
+        {
+            if (Init() == false)
+                yield return null;
+
+            InitializeSegment(out var baselineMilliseconds, out _currentSegment);
+
+            do
+            {
+                var baseline = new DateTime(baselineMilliseconds * 10_000, DateTimeKind.Utc);
+
+                if (baseline > _to)
+                    yield break;
+
+                if (_offset.HasValue)
+                {
+                    baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
+                }
+
+                yield return new TimeSeriesStorage.SegmentSummary()
+                {
+                    DocumentId = _documentId,
+                    Name = _name,
+                    StartTime = baseline,
+                    NumberOfEntries = _currentSegment.NumberOfEntries,
+                    NumberOfLiveEntries = _currentSegment.NumberOfLiveEntries,
+                    ChangeVector = GetCurrentSegmentChangeVector()
+                };
+            } while (NextSegment(out baselineMilliseconds));
         }
 
         internal SeriesSummary GetSummary()

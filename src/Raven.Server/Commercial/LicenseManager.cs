@@ -326,7 +326,7 @@ namespace Raven.Server.Commercial
                 detailsPerNode.MaxUtilizedCores = maxUtilizedCores;
             }
 
-            await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, LicenseStatus.MaxCores);
+            await _serverStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, LicenseStatus.MaxCores, raftRequestId);
         }
 
         private async Task<NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)

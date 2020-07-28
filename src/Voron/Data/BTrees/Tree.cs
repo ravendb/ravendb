@@ -1114,28 +1114,34 @@ namespace Voron.Data.BTrees
 
             using (page.IsLeaf ? page.GetNodeKey(_llt, 0, out key) : page.GetNodeKey(_llt, 1, out key))
             {
-                TreeCursorConstructor cursorConstructor;
-                TreeNodeHeader* node;
-                p = FindPageFor(key, node: out node, cursor: out cursorConstructor, allowCompressed: true);
+                p = FindPageFor(key, node: out TreeNodeHeader* _, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
 
-                if (page.IsLeaf && p.LastMatch != 0)
+                if (page.IsLeaf)
                 {
-                    if (p.IsCompressed == false)
+                    if (page.PageNumber != p.PageNumber)
                     {
-                        // if a found page is compressed then we could not find the exact match because 
-                        // the key we were looking for might belong to an compressed entry
-                        // if the page isn't compressed then it's a corruption
-                        
                         VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction,
-                            $"Could not find a page containing {key} when looking for a parent of {page}. Page {p} was found, last match: {p.LastMatch}.");
+                            $"Got different leaf page when looking for a parent of {page} using the key '{key}' from that page. Page {p} was found, last match: {p.LastMatch}.");
                     }
-#if DEBUG
-                    using (var decompressed = DecompressPage(p, skipCache: true))
+                    else if (p.LastMatch != 0)
                     {
-                        decompressed.Search(_llt, key);
-                        Debug.Assert(decompressed.LastMatch == 0);
-                    }
+                        if (p.IsCompressed == false)
+                        {
+                            // if a found page is compressed then we could not find the exact match because 
+                            // the key we were looking for might belong to an compressed entry
+                            // if the page isn't compressed then it's a corruption
+
+                            VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction,
+                                $"Could not find a page containing '{key}' when looking for a parent of {page}. Page {p} was found, last match: {p.LastMatch}.");
+                        }
+#if DEBUG
+                        using (var decompressed = DecompressPage(p, skipCache: true))
+                        {
+                            decompressed.Search(_llt, key);
+                            Debug.Assert(decompressed.LastMatch == 0);
+                        }
 #endif
+                    }
                 }
 
                 using (var cursor = cursorConstructor.Build(key))

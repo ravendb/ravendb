@@ -1399,7 +1399,9 @@ namespace Raven.Server.ServerWide
             {
                 LogCommand(nameof(AddDatabaseCommand), index, exception, addDatabaseCommand.AdditionalDebugInformation(exception));
                 NotifyDatabaseAboutChanged(context, addDatabaseCommand.Name, index, nameof(AddDatabaseCommand),
-                    DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
+                    addDatabaseCommand.IsRestore
+                        ? DatabasesLandlord.ClusterDatabaseChangeType.RecordRestored
+                        : DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
         }
 
@@ -3256,7 +3258,7 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override async Task OnSnapshotInstalledAsync(long lastIncludedIndex, ServerStore serverStore, CancellationToken token)
+        public override Task OnSnapshotInstalledAsync(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
         {
             using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
@@ -3291,6 +3293,8 @@ namespace Raven.Server.ServerWide
                         var t2 = Task.Run(async () =>
                         {
                             await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                            if (fullSnapshot)
+                                await Changes.OnValueChanges(lastIncludedIndex, nameof(PutLicenseCommand));
                         }, token);
                     }
                 };
@@ -3299,11 +3303,8 @@ namespace Raven.Server.ServerWide
             }
             token.ThrowIfCancellationRequested();
 
-            // reload license can send a notification which will open a write tx
-            serverStore.LicenseManager.ReloadLicense();
-            await serverStore.LicenseManager.PutMyNodeInfoAsync();
-
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
+            return Task.CompletedTask;
         }
 
         protected override RachisVersionValidation InitializeValidator()

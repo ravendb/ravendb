@@ -38,6 +38,9 @@ namespace Raven.Client.Documents.Session
             from = from?.EnsureUtc();
             to = to?.EnsureUtc();
 
+            if (pageSize == 0)
+                return Array.Empty<TTValues>();
+
             if (Session.TimeSeriesByDocId.TryGetValue(DocId, out var cache) &&
                 cache.TryGetValue(Name, out var ranges) &&
                 ranges.Count > 0)
@@ -79,7 +82,7 @@ namespace Raven.Client.Documents.Session
                     InMemoryDocumentSessionOperations.AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
                 }
 
-                return resultToUser?.Cast<TTValues>().ToArray();
+                return resultToUser?.Take(pageSize).Cast<TTValues>().ToArray();
             }
 
             if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
@@ -173,11 +176,13 @@ namespace Raven.Client.Documents.Session
             {
                 if (ranges[toRangeIndex].From <= from)
                 {
-                    if (ranges[toRangeIndex].To >= to)
+                    if ((ranges[toRangeIndex].To >= to) || (ranges[toRangeIndex].Entries.Length - start >= pageSize))
                     {
-                        // we have the entire range in cache
+                        // we have the entire range in cache 
+                        // we have all the range we need
+                        // or that we have all the results we need in smaller range
 
-                        resultToUser = ChopRelevantRange(ranges[toRangeIndex], from, to);
+                        resultToUser = ChopRelevantRange(ranges[toRangeIndex], from, to, start, pageSize);
                         return (true, resultToUser, null, -1, -1);
                     }
 
@@ -220,6 +225,7 @@ namespace Raven.Client.Documents.Session
                     From = ranges[ranges.Count - 1].To,
                     To = to
                 });
+
             }
 
             // get all the missing parts from server
@@ -239,7 +245,11 @@ namespace Raven.Client.Documents.Session
             return (false, resultToUser, mergedValues, fromRangeIndex, toRangeIndex);
         }
 
-        private static TimeSeriesEntry[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges, int fromRangeIndex, int toRangeIndex, List<TimeSeriesRangeResult> resultFromServer, out IEnumerable<TimeSeriesEntry> resultToUser)
+        private static TimeSeriesEntry[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges,
+            int fromRangeIndex,
+            int toRangeIndex,
+            List<TimeSeriesRangeResult> resultFromServer,
+            out IEnumerable<TimeSeriesEntry> resultToUser)
         {
             var skip = 0;
             var trim = 0;
@@ -332,7 +342,7 @@ namespace Raven.Client.Documents.Session
             return mergedValues.ToArray();
         }
 
-        private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to)
+        private static IEnumerable<TimeSeriesEntry> ChopRelevantRange(TimeSeriesRangeResult range, DateTime from, DateTime to, int start, int pageSize)
         {
             if (range.Entries == null)
                 yield break;
@@ -344,6 +354,12 @@ namespace Raven.Client.Documents.Session
 
                 if (value.Timestamp < from)
                     continue;
+
+                if (start-- > 0)
+                    continue;
+
+                if (pageSize-- <= 0)
+                    yield break;
 
                 yield return value;
             }

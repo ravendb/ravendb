@@ -79,17 +79,20 @@ namespace Raven.Server.Documents.Replication
         private OutgoingReplicationStatsAggregator _lastStats;
         private readonly TcpConnectionInfo _connectionInfo;
 
+        private readonly TcpConnectionOptions _tcpConnectionOptions;
         // In case this is an outgoing pull replication from the hub
         // we need to associate this instance to the replication definition. 
         public string PullReplicationDefinitionName;
 
-        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
+        public OutgoingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
         {
             _parent = parent;
             _database = database;
             Destination = node;
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
+            _tcpConnectionOptions = tcpConnectionOptions ??
+                                    new TcpConnectionOptions() {DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,};
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
@@ -217,10 +220,13 @@ namespace Raven.Server.Documents.Replication
                     if (_log.IsInfoEnabled)
                         _log.Info($"Will replicate to {Destination.FromString()} via {url}");
 
+                    _tcpConnectionOptions.TcpClient = tcpClient;
+
                     using (_stream) // note that _stream is being disposed by the interruptible read
                     using (_interruptibleRead)
                     {
                         InitialHandshake();
+                        _tcpConnectionOptions.DocumentDatabase.RunningTcpConnections.Add(_tcpConnectionOptions);
                         Replicate();
                     }
                 }
@@ -385,7 +391,7 @@ namespace Raven.Server.Documents.Replication
                                     _parent.EnsureNotDeleted(dest.NodeTag);
                                 }
 
-                                var didWork = documentSender.ExecuteReplicationOnce(scope, ref NextReplicateTicks);
+                                var didWork = documentSender.ExecuteReplicationOnce(_tcpConnectionOptions, scope, ref NextReplicateTicks);
                                 if (documentSender.MissingAttachmentsInLastBatch)
                                     continue;
 
@@ -1076,6 +1082,7 @@ namespace Raven.Server.Documents.Replication
 
             _cts.Cancel();
 
+            _tcpConnectionOptions.Dispose();
             DisposeTcpClient();
 
             _connectionDisposed.Set();
