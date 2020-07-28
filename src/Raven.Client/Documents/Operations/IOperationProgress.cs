@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
 {
@@ -41,12 +42,14 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class BulkInsertProgress : IOperationProgress, IOperationProcessedDetails
+    public class BulkInsertProgress : IOperationProgress
     {
         public long Total { get; set; }
         public long BatchCount { get; set; }
         public string LastProcessedId { get; set; }
         
+        [Obsolete("Use field DocumentsProcessed instead")]
+        public long Processed { get; set; }
         public long DocumentsProcessed { get; set; }
         public long AttachmentsProcessed { get; set; }
         public long CountersProcessed { get; set; }
@@ -69,6 +72,7 @@ namespace Raven.Client.Documents.Operations
                 [nameof(Total)] = Total,
                 [nameof(BatchCount)] = BatchCount,
                 [nameof(LastProcessedId)] = LastProcessedId,
+                [nameof(Processed)] = DocumentsProcessed,
                 [nameof(DocumentsProcessed)] = DocumentsProcessed,
                 [nameof(AttachmentsProcessed)] = AttachmentsProcessed,
                 [nameof(CountersProcessed)] = CountersProcessed,
