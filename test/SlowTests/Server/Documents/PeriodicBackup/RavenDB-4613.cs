@@ -79,13 +79,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             PutBlob(100, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public void put_blob_256MB()
         {
             PutBlob(256, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorFact]
+        [NightlyBuildAzureStorageEmulatorFact]
         public void put_blob_500MB()
         {
             PutBlob(500, false, UploadType.Chunked);
