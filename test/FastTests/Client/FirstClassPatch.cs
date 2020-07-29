@@ -51,7 +51,20 @@ namespace FastTests.Client
         private class Customer
         {
             public string Name { get; set; }
+
             public List<AttachmentDetails> Attachments { get; set; }
+        }
+
+        private class Class
+        {
+            public Customer Customer { get; set; }
+
+            public List<Detail> Details { get; set; }
+        }
+
+        private class Detail
+        {
+            public long? Size { get; set; }
         }
 
         [Fact]
@@ -988,9 +1001,43 @@ namespace FastTests.Client
             }
         }
 
-        private class Class
+        [Fact]
+        public void CanUseNullableType()
         {
-            public Customer Customer { get; set; }
+            using (var store = GetDocumentStore())
+            {
+                const string id = "doc";
+                const int newSize = 2;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Class
+                    {
+                        Details = new List<Detail>
+                        {
+                            new Detail
+                            {
+                                Size = 0
+                            }
+                        }
+                    }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Class, long?>(id, x => x.Details.Where(q => q.Size.HasValue).FirstOrDefault().Size, newSize);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<Class>(id);
+                    var details = doc.Details.FirstOrDefault();
+                    Assert.NotNull(details);
+                    Assert.Equal(newSize, details.Size);
+                }
+            }
         }
     }
 }
