@@ -1135,22 +1135,8 @@ class editDocument extends viewModelBase {
     
     getBadgeClasses(number: KnockoutObservable<number>): KnockoutComputed<string> {
         return ko.pureComputed(() => {
-            
             const sizeClass = genUtils.getSizeClass(number());
-            let positionClass = "left-xs";
-            
-            if (!sizeClass) {
-                switch (number().toString().length) {
-                    case 1: positionClass = "left-lg";
-                        break;
-                    case 2: positionClass = "left-md";
-                        break;
-                    case 3: positionClass = "left-sm";
-                        break;
-                }
-            }
-            
-            return `badge ${positionClass} ${sizeClass}`;
+            return `badge ${sizeClass}`;
         });
     }
 }
