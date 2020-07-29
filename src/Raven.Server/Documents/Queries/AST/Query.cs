@@ -536,15 +536,15 @@ namespace Raven.Server.Documents.Queries.AST
         public bool Any => _values.Count > 0;
 
         private readonly List<double> _values;
-        private readonly List<long> _count;
+        private readonly List<double> _count;
 
-        public IEnumerable<object> Count => _count.Cast<object>();
+        public IEnumerable<double> Count => _count;
         public long TotalCount;
 
         public TimeSeriesAggregation(AggregationType type)
         {
             Aggregation = type;
-            _count = new List<long>();
+            _count = new List<double>();
             _values = new List<double>();
         }
 
@@ -607,7 +607,7 @@ namespace Raven.Server.Documents.Queries.AST
 
                 _count[i] += values[i].Count;
             }
-            TotalCount += _count[0];
+            TotalCount += (long)_count[0];
         }
 
 
@@ -722,7 +722,7 @@ namespace Raven.Server.Documents.Queries.AST
                 val = values[index + (int)AggregationType.Count];
                 _count[i] += (long)val.Sum;
             }
-            TotalCount += _count[0];
+            TotalCount += (long)_count[0];
         }
 
         private void StepOnRollup(Span<double> values)
@@ -784,7 +784,7 @@ namespace Raven.Server.Documents.Queries.AST
             TotalCount += (long)values[(int)AggregationType.Count];
         }
 
-        public IEnumerable<object> GetFinalValues(double? scale = null)
+        public IEnumerable<double> GetFinalValues()
         {
             switch (Aggregation)
             {
@@ -795,7 +795,7 @@ namespace Raven.Server.Documents.Queries.AST
                 case AggregationType.Sum:
                     break;
                 case AggregationType.Count:
-                    return Count;
+                    return _count;
                 case AggregationType.Average:
                     for (int i = 0; i < _values.Count; i++)
                     {
@@ -812,9 +812,7 @@ namespace Raven.Server.Documents.Queries.AST
                     throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
             }
 
-            return scale.HasValue 
-                ? _values.Select(v => (object)(v * scale.Value)) 
-                : _values.Cast<object>();
+            return _values;
         }
     }
 
