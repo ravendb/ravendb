@@ -377,10 +377,9 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public static (TimeSpan TimePeriod, TimeValue Months) ParseTimePeriodFromString(string source)
+        public static TimeValue ParseTimePeriodFromString(string source)
         {
-            TimeSpan timeSpan = default;
-            TimeValue months = default;
+            TimeValue result;
             var offset = 0;
 
             var duration = ParseNumber(source, ref offset);
@@ -401,14 +400,14 @@ namespace Raven.Server.Documents.Queries.AST
                     if (TryConsumeMatch(source, ref offset, "seconds") == false)
                         TryConsumeMatch(source, ref offset, "second");
 
-                    timeSpan = TimeSpan.FromSeconds(duration);
+                    result = TimeValue.FromSeconds((int)duration);
                     break;
                 case 'm':
                     if (TryConsumeMatch(source, ref offset, "minutes") ||
                         TryConsumeMatch(source, ref offset, "minute") ||
                         TryConsumeMatch(source, ref offset, "min"))
                     {
-                        timeSpan = TimeSpan.FromMinutes(duration);
+                        result = TimeValue.FromMinutes((int)duration);
                         break;
                     }
 
@@ -416,8 +415,8 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "milliseconds") ||
                         TryConsumeMatch(source, ref offset, "milli"))
                     {
-                        timeSpan = TimeSpan.FromMilliseconds(duration);
-                        break;
+                        // TODO use TimeValue.FromMilliseconds when RavenDB-14988 is fixed
+                        throw new NotSupportedException("Unsupported time period. Using milliseconds in Last/First is not supported : " + source);
                     }
 
                     if (TryConsumeMatch(source, ref offset, "months") ||
@@ -425,7 +424,7 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "mon") ||
                         TryConsumeMatch(source, ref offset, "mo"))
                     {
-                        months = TimeValue.FromMonths((int)duration);
+                        result = TimeValue.FromMonths((int)duration);
                         break;
                     }
                     goto default;
@@ -433,13 +432,13 @@ namespace Raven.Server.Documents.Queries.AST
                     if (TryConsumeMatch(source, ref offset, "hours") == false)
                         TryConsumeMatch(source, ref offset, "hour");
 
-                    timeSpan = TimeSpan.FromHours(duration);
+                    result = TimeValue.FromHours((int)duration);
                     break;
 
                 case 'd':
                     if (TryConsumeMatch(source, ref offset, "days") == false)
                         TryConsumeMatch(source, ref offset, "day");
-                    timeSpan = TimeSpan.FromDays(duration);
+                    result = TimeValue.FromDays((int)duration);
                     break;
 
                 case 'q':
@@ -448,7 +447,7 @@ namespace Raven.Server.Documents.Queries.AST
                     
                     duration *= 3;
                     AssertValidDurationInMonths(duration);
-                    months = TimeValue.FromMonths((int)duration);
+                    result = TimeValue.FromMonths((int)duration);
                     break;
 
                 case 'y':
@@ -456,7 +455,7 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "year");
                     duration *= 12;
                     AssertValidDurationInMonths(duration);
-                    months = TimeValue.FromMonths((int)duration);
+                    result = TimeValue.FromMonths((int)duration);
                     break;
                 default:
                     throw new ArgumentException($"Unable to understand time range: '{source}'");
@@ -470,9 +469,7 @@ namespace Raven.Server.Documents.Queries.AST
             if (offset != source.Length)
                 throw new ArgumentException("After range specification, found additional unknown data: " + source);
 
-            Debug.Assert(timeSpan != default ^ months != default, "Invalid time period " + source);
-
-            return (timeSpan, months);
+            return result;
         }
 
         private static void AssertValidDurationInMonths(long duration)
