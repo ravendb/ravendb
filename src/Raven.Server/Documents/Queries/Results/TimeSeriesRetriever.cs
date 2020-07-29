@@ -1024,11 +1024,12 @@ namespace Raven.Server.Documents.Queries.Results
         {
             for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
             {
-                if (timeSeriesFunction.Select[i].QueryExpression is MethodExpression me)
+                var select = timeSeriesFunction.Select[i];
+                if (select.QueryExpression is MethodExpression me)
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                     {
-                        aggStates[i] = new TimeSeriesAggregation(type);
+                        aggStates[i] = new TimeSeriesAggregation(type, select.StringSegment?.ToString());
                         continue;
                     }
 
@@ -1041,7 +1042,7 @@ namespace Raven.Server.Documents.Queries.Results
                     throw new ArgumentException("Unknown method in timeseries query: " + me);
                 }
 
-                throw new ArgumentException("Unknown method in timeseries query: " + timeSeriesFunction.Select[i].QueryExpression);
+                throw new ArgumentException("Unknown method in timeseries query: " + select.QueryExpression);
             }
         }
 
@@ -1058,7 +1059,6 @@ namespace Raven.Server.Documents.Queries.Results
                 [nameof(TimeSeriesRangeAggregation.From)] = from, 
                 [nameof(TimeSeriesRangeAggregation.To)] = to
             };
-
             var shouldAddCount = true;
 
             for (int i = 0; i < aggStates.Length; i++)
@@ -1071,7 +1071,6 @@ namespace Raven.Server.Documents.Queries.Results
                     continue;
                 }
 
-                var name = func.Select?[i].StringSegment?.ToString() ?? aggStates[i].Aggregation.ToString();
                 var dja = new DynamicJsonArray();
                 foreach (var val in finalValues)
                 {
@@ -1084,11 +1083,13 @@ namespace Raven.Server.Documents.Queries.Results
                     dja.Add(val);
                 }
 
-                result[name] = dja;
+                result[aggStates[i].Name] = dja;
             }
 
             if (shouldAddCount)
+            {
                 AddCount(aggStates[0].Count, result);
+            }
 
             return result;
         }

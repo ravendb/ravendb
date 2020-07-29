@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -541,9 +540,13 @@ namespace Raven.Server.Documents.Queries.AST
         public IEnumerable<double> Count => _count;
         public long TotalCount;
 
-        public TimeSeriesAggregation(AggregationType type)
+        public string Name;
+
+        public TimeSeriesAggregation(AggregationType type, string name = null)
         {
             Aggregation = type;
+            Name = name ?? Aggregation.ToString();
+
             _count = new List<double>();
             _values = new List<double>();
         }
