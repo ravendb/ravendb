@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
         /// the specified date
         /// </summary>
         Task<T> GetAsync<T>(string id, DateTime date, CancellationToken token = default);
-        
+
         /// <summary>
         /// Make the session create a revision for the specified entity.
         /// Can be used with tracked entities only.
@@ -50,8 +50,8 @@ namespace Raven.Client.Documents.Session
         ///    1. Revisions configuration is Not set for the collection
         ///    2. Document was Not modified
         /// </summary>
-        void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before); 
-        
+        void ForceRevisionCreationFor<T>(T entity, ForceRevisionStrategy strategy = ForceRevisionStrategy.Before);
+
         /// <summary>
         /// Make the session create a revision for the specified document id.
         /// Revision will be created Even If:
