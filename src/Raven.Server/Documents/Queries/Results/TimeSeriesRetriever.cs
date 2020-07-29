@@ -1055,18 +1055,52 @@ namespace Raven.Server.Documents.Queries.Results
 
             var result = new DynamicJsonValue
             {
-                [nameof(TimeSeriesRangeAggregation.From)] = from,
-                [nameof(TimeSeriesRangeAggregation.To)] = to,
-                [nameof(TimeSeriesRangeAggregation.Count)] = new DynamicJsonArray(aggStates[0].Count)
+                [nameof(TimeSeriesRangeAggregation.From)] = from, 
+                [nameof(TimeSeriesRangeAggregation.To)] = to
             };
+
+            var shouldAddCount = true;
 
             for (int i = 0; i < aggStates.Length; i++)
             {
+                var finalValues = aggStates[i].GetFinalValues();
+                if (aggStates[i].Aggregation == AggregationType.Count)
+                {
+                    AddCount(finalValues, result);
+                    shouldAddCount = false;
+                    continue;
+                }
+
                 var name = func.Select?[i].StringSegment?.ToString() ?? aggStates[i].Aggregation.ToString();
-                result[name] = new DynamicJsonArray(aggStates[i].GetFinalValues(_scale));
+                var dja = new DynamicJsonArray();
+                foreach (var val in finalValues)
+                {
+                    if (_scale.HasValue)
+                    {
+                        dja.Add(val * _scale.Value);
+                        continue;
+                    }
+
+                    dja.Add(val);
+                }
+
+                result[name] = dja;
             }
 
+            if (shouldAddCount)
+                AddCount(aggStates[0].Count, result);
+
             return result;
+        }
+
+        private static void AddCount(IEnumerable<double> items, DynamicJsonValue result)
+        {
+            var dja = new DynamicJsonArray();
+            foreach (var val in items)
+            {
+                dja.Add((long)val);
+            }
+            result[nameof(TimeSeriesRangeAggregation.Count)] = dja;
         }
 
         private DateTime? GetDateValue(QueryExpression qe, DeclaredFunction func, object[] args)
