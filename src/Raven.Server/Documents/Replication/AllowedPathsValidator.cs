@@ -34,9 +34,9 @@ namespace Raven.Server.Documents.Replication
                 AttachmentTombstoneReplicationItem at => "Attachment tombstone for: " + GetDocumentId(at.Key),
                 CounterReplicationItem c => "Counter for " + c.Id,
                 DocumentReplicationItem d => "Document " + d.Id,
-                RevisionTombstoneReplicationItem r => "Revision for " + r.Id,
+                RevisionTombstoneReplicationItem r => "Revision for: " + r.Id,
                 TimeSeriesDeletedRangeItem td => "Time Series deletion range for: " +  GetDocumentId(td.Key),
-                TimeSeriesReplicationItem t => "Time Series For: " + GetDocumentId(t.Key),
+                TimeSeriesReplicationItem t => "Time Series for: " + GetDocumentId(t.Key),
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
             };
         }
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var prefix in _allowedPathsPrefixes)
             {
-                if (id.StartsWithOrdinalNoCase(prefix))
+                if (id.StartsWithOrdinalIgnoreCase(prefix))
                     return true;
             }
 

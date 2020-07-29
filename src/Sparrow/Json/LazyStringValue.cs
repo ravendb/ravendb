@@ -1189,7 +1189,7 @@ namespace Sparrow.Json
             return ((IConvertible)MaterializeStringValue).ToUInt64(provider);
         }
 
-        public bool StartsWithOrdinalNoCase(LazyStringValue prefix)
+        public bool StartsWithOrdinalIgnoreCase(LazyStringValue prefix)
         {
             if (prefix.Size > Size)
                 return false;
