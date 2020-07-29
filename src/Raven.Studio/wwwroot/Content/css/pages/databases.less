@@ -1,4 +1,85 @@
+#databaseItem {
+    .name {
+        display: flex;
+        width: 270px;
+
+        i {
+            margin-right: @gutter/4;
+        }
+
+        a, span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .member {
+        a {
+            color: @text-color;
+            margin: 0 @gutter/4;
+
+            &:hover {
+                color: @text-emphasis;
+            }
+        }
+        div {
+            margin: 0 @gutter/4;
+        }
+    }
+
+    .panel-addon {
+        .encryption {
+            min-width: @gutter + @gutter/2;
+        }
+
+        .storage {
+            min-width: @gutter*4;
+        }
+
+        .documents {
+            min-width: @gutter*3;
+        }
+
+        .indexes {
+            min-width: @gutter*2 + 5px;
+        }
+
+        .uptime {
+            min-width: @gutter*5;
+        }
+
+        .backup {
+            min-width: @gutter*4;
+        }
+
+        .encryption, .storage, .documents, .indexes, .uptime, .backup, .indexing-errors, .indexing-paused, .indexing-disabled, .alerts, .performance-hints, .clients-rejection {
+            line-height: 18px;
+            white-space: nowrap;
+            padding: @gutter/4;
+            margin: 0 !important;
+
+            a {
+                color: @text-color;
+
+                &:hover {
+                    color: @text-emphasis;
+                }
+            }
+        }
+
+        .database-properties {
+            display: flex;
+            flex-wrap: wrap;
+        }
+    }
+}
+
 .databases {
+
+    .panel.active .panel-addon {
+        border-bottom: solid 1px @brand-success-dark;
+        border-right: solid 1px @brand-success-dark;
+    }
 
     .link-disabled {
         pointer-events: none;
@@ -24,30 +105,10 @@
     }
 
     .align-checkboxes {
-        margin-left: 38px;
+        margin-left: @gutter+@gutter/2;
         margin-right: 0;
         position: relative;
         top: -2px;
-    }
-
-    .vertical-divider {
-        position: relative;
-
-        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
-            margin-left: 27px;
-        }
-
-        @media (min-width:@screen-xl) {
-            &:before {
-                content: '';
-                display: block;
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                left: 0;
-                border-left: 1px solid @gray-dark;
-            }
-        }
     }
 
     .database-item {
@@ -56,45 +117,6 @@
 
         .state-remote {
             background-color: #43495e;
-        }
-
-        .info-grow {
-            .info-resize {
-                display: none;
-            }
-        }
-        
-        @media (min-width: @screen-lg) {
-            .info-grow {
-                width: 350px;
-                position: relative;
-                
-                .info-resize {
-                    display: block;
-                    position: absolute;
-                    right: -3px;
-                    width: 6px;
-                    cursor: ew-resize;
-                    height: 100%;
-                    z-index: @zindex-tooltip;
-                }
-            }
-        }
-
-        @media (min-width:@screen-sm) and (max-width:@screen-lg-max) {
-            .info-grow {
-                order: 1;
-                flex-grow: 1;
-            }
-
-            .properties-container {
-                order: 3;
-                width: 100%;
-            }
-
-            .actions-container {
-                order: 2;
-            }
         }
 
         &:not(.relevant) {
@@ -120,23 +142,6 @@
             align-self: flex-start;
         }
 
-        .dbgroup-node-type {
-            display: flex;
-            flex-wrap: wrap;
-
-            a {
-                color: @text-color;
-
-                &:hover {
-                    color: @text-emphasis;
-                }
-            }
-        }
-
-        .dbgroup-node-type > div {
-            padding-right: 10px;
-        }
-
         .database-info {
             display: flex;
             flex-wrap: wrap;
@@ -146,43 +151,13 @@
             }
         }
 
-        .database-name {
-            font-size: 118%;
-            margin-bottom: 0;
-            font-weight: normal;
-            white-space: nowrap;
-            overflow: hidden;
-            flex-grow: 1;
-        }
-
         .info-container {
             font-size: 19px;
             display: flex;
-            align-items: center;
-            flex-shrink: 0;
 
             .checkbox {
                 top: -3px;
                 flex-shrink: 0;
-            }
-
-            .database-name {
-                top: -3px;
-                position: relative;
-                display: flex;
-
-                a, span {
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-
-                i {
-                    flex-shrink: 0;
-                }
-            }
-
-            h3 {
-                margin-top: 0px;
             }
 
             .label {
@@ -196,6 +171,13 @@
             flex-shrink: 0;
         }
 
+        .addons-container {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
         .checkbox {
             position: relative;
             margin: 0;
@@ -206,44 +188,6 @@
 
         .state.state-warning {
             cursor: auto;
-        }
-    }
-
-    .properties-container {
-        flex-grow: 1;
-        align-self: center;
-        min-height: 52px;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        justify-items: stretch;
-        grid-auto-flow: dense;
-
-        @media (min-width: @screen-lg) {
-            grid-template-columns: 1fr 1fr 1fr;
-            grid-template-rows: auto auto auto;
-            grid-auto-flow: column;
-        }
-
-
-        .properties-item {
-            &.item-last-backup {
-                grid-column-start: 2;
-            }
-
-            .set-size {
-                padding: 0px 10px;
-            }
-
-            height: 22px;
-        }
-
-        a {
-            color: @text-color;
-
-            &:hover {
-                color: @text-emphasis;
-                transition: color .15s ease;
-            }
         }
     }
 }
