@@ -818,21 +818,16 @@ namespace Raven.Server.Documents.Queries.Results
             if (timeSeriesFunction.Last != null)
             {
                 to = DateTime.MaxValue;
-                var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
-                
-                from = timeFromLast.Months != default 
-                    ? _stats.End.Add(-timeFromLast.Months) 
-                    : _stats.End.Add(-timeFromLast.TimePeriod);
 
+                var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
+                from = _stats.End.Add(-timeFromLast);
             }
             else if (timeSeriesFunction.First != null)
             {
                 from = DateTime.MinValue;
-                var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
                 
-                to = timeFromFirst.Months != default
-                    ? _stats.Start.Add(timeFromFirst.Months)
-                    : _stats.Start.Add(timeFromFirst.TimePeriod);
+                var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
+                to = _stats.Start.Add(timeFromFirst);
             }
             else
             {
@@ -855,7 +850,7 @@ namespace Raven.Server.Documents.Queries.Results
             return (from, to);
         }
 
-        private (TimeSpan TimePeriod, TimeValue Months) GetTimePeriodFromValueExpression(ValueExpression valueExpression, string methodName, string functionName, string documentId)
+        private TimeValue GetTimePeriodFromValueExpression(ValueExpression valueExpression, string methodName, string functionName, string documentId)
         {
             var timePeriod = valueExpression.GetValue(_queryParameters)?.ToString();
             if (timePeriod == null)
