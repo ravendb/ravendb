@@ -325,13 +325,7 @@ namespace Raven.Server.Documents.Replication
 
                 var exceptionSchema = JsonDeserializationClient.ExceptionSchema(readerObject);
                 if (exceptionSchema.Type.Equals("Error"))
-                {
-                    if (_log.IsInfoEnabled)
-                    {
-                        _log.Info("Hub database is disabled", new DatabaseDisabledException(exceptionSchema.Message));
-                    }
                     throw new DatabaseDisabledException(exceptionSchema.Message);
-                }
 
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
                 if (_log.IsInfoEnabled)
