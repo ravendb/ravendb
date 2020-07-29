@@ -208,7 +208,7 @@ namespace Raven.Server.Documents.Replication
                    try
                    {
                        if(_log.IsInfoEnabled)
-                           _log.Info("Resetting ");
+                           _log.Info($"Resetting {repl.ConnectionInfo} for {hub} on {certThumbprint} because replication configuration changed. Will be reconnected.");
                        repl.Dispose();
                    }
                    catch 

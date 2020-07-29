@@ -210,7 +210,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 {
                     if (response.StatusCode == HttpStatusCode.NotFound)
                         throw new InvalidOperationException("The replication hub " + _hubDefinitionName +
-                                                            " was not found on the database. Did you forgot to define it first?");
+                                                            " was not found on the database. Did you forget to define it first?");
                 }
             }
 
