@@ -33,6 +33,8 @@ namespace SlowTests.Issues
                 public long AttachmentSize { get; set; }
 
                 public string AttachmentContent { get; set; }
+
+                public Stream AttachmentContentStream { get; set; }
             }
 
             public Companies_With_Attachments()
@@ -46,8 +48,11 @@ namespace SlowTests.Issues
                                        AttachmentContentType = attachment.ContentType,
                                        AttachmentHash = attachment.Hash,
                                        AttachmentSize = attachment.Size,
-                                       AttachmentContent = attachment.GetContentAsString(Encoding.UTF8)
+                                       AttachmentContent = attachment.GetContentAsString(Encoding.UTF8),
+                                       AttachmentContentStream = attachment.GetContentAsStream()
                                    };
+
+                Store(nameof(Result.AttachmentContentStream), FieldStorage.Yes);
             }
         }
 
@@ -137,6 +142,9 @@ namespace SlowTests.Issues
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContent), fromValue: null));
                 Assert.Equal(0, terms.Length);
 
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentStream), fromValue: null));
+                Assert.Equal(0, terms.Length);
+
                 store.Maintenance.Send(new StopIndexingOperation());
 
                 using (var session = store.OpenSession())
@@ -179,6 +187,9 @@ namespace SlowTests.Issues
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContent), fromValue: null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("<hello_world>", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentStream), fromValue: null));
+                Assert.Equal(0, terms.Length);
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
@@ -223,6 +234,9 @@ namespace SlowTests.Issues
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("<hello_cosmos>", terms);
 
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentStream), fromValue: null));
+                Assert.Equal(0, terms.Length);
+
                 // live update
                 using (var session = store.OpenSession())
                 {
@@ -257,6 +271,9 @@ namespace SlowTests.Issues
                 terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContent), fromValue: null));
                 Assert.Equal(1, terms.Length);
                 Assert.Contains("<hello_moon>", terms);
+
+                terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(Companies_With_Attachments.Result.AttachmentContentStream), fromValue: null));
+                Assert.Equal(0, terms.Length);
             }
         }
 
