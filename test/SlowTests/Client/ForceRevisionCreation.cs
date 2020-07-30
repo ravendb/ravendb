@@ -43,6 +43,31 @@ namespace SlowTests.Client
         }
 
         [Fact]
+        public async Task ForceRevisionCreationForSingleUnTrackedEntityByID_Async()
+        {
+            using (var store = GetDocumentStore())
+            {
+                string companyId;
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company = new Company { Name = "HR" };
+                    await session.StoreAsync(company);
+                    companyId = company.Id;
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.Revisions.ForceRevisionCreationFor(companyId);
+                    await session.SaveChangesAsync();
+
+                    var revisionsCount = (await session.Advanced.Revisions.GetForAsync<Company>(companyId)).Count;
+                    Assert.Equal(1, revisionsCount);
+                }
+            }
+        }
+
+        [Fact]
         public void ForceRevisionCreationForMultipleUnTrackedEntitiesByID()
         {
             using (var store = GetDocumentStore())
@@ -161,7 +186,7 @@ namespace SlowTests.Client
 
                 using (var session = store.OpenSession())
                 {
-                    // 2. Load & Save without making changes to the document 
+                    // 2. Load & Save without making changes to the document
                     var company = session.Load<Company>(companyId);
 
                     session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
@@ -194,7 +219,7 @@ namespace SlowTests.Client
 
                 using (var session = store.OpenSession())
                 {
-                    // 2. Load, Make changes & Save 
+                    // 2. Load, Make changes & Save
                     var company = session.Load<Company>(companyId);
                     company.Name = "HR V2";
 
@@ -233,7 +258,7 @@ namespace SlowTests.Client
 
                 using (var session = store.OpenSession())
                 {
-                    // 2. Load, Make changes & Save 
+                    // 2. Load, Make changes & Save
                     var company = session.Load<Company>(companyId);
                     company.Name = "HR V2";
 
@@ -319,7 +344,7 @@ namespace SlowTests.Client
                     revisionsCount = session.Advanced.Revisions.GetFor<Company>(company.Id).Count;
                     Assert.Equal(1, revisionsCount);
 
-                    // Verify that another 'force' request will not create another revision 
+                    // Verify that another 'force' request will not create another revision
                     session.Advanced.Revisions.ForceRevisionCreationFor<Company>(company);
                     session.SaveChanges();
 
