@@ -168,26 +168,23 @@ namespace SlowTests.Server.Documents.ETL
         {
             try
             {
-                if (_src != null)
-                {
-                    var b = Context.TestException;
-                    var notifications = GetEtlErrorNotifications(_src).Result;
+                if (_src == null) 
+                    return;
 
-                    var a = Context.TestOutput?.ToString();
-                    
-                    if (notifications.Any() && Context.TestException != null && Context.TestOutput != null)
-                    {
-                        string message = string.Join(",\n", notifications);
-                        Context.TestOutput.WriteLine(message);
-                    }
-                }
+                if (Context.TestException == null || Context.TestOutput == null)
+                    return;
+                
+                var notifications = GetEtlErrorNotifications(_src).Result;
+                if (notifications.Any() == false) 
+                    return;
+                
+                string message = string.Join(",\n", notifications);
+                Context.TestOutput.WriteLine(message);
             }
-            catch
+            finally
             {
-                // ignored
+                base.Dispose();
             }
-
-            base.Dispose();
         }
     }
 }

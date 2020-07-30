@@ -484,7 +484,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 }
             }
             var timeSeriesEntries = segmentEntry.Segment.YieldAllValues(Context, segmentEntry.Start, false);
-            if (loadBehaviorFunction != null && FilterSingleTimeSeriesSegmentByLoadBehaviourScript(ref timeSeriesEntries, docId, segmentEntry, loadBehaviorFunction))
+            if (loadBehaviorFunction != null && FilterSingleTimeSeriesSegmentByLoadBehaviorScript(ref timeSeriesEntries, docId, segmentEntry, loadBehaviorFunction))
                 return;
 
             var timeSeriesName = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesNameOriginalCasing(Context, docId, segmentEntry.Name);
@@ -495,13 +495,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             }
         }
         
-        private void HandleSingleTimeSeriesDeletedRangeItem(TimeSeriesDeletedRangeItem item, string loadBehaviourFunction)
+        private void HandleSingleTimeSeriesDeletedRangeItem(TimeSeriesDeletedRangeItem item, string loadBehaviorFunction)
         {
             TimeSeriesValuesSegment.ParseTimeSeriesKey(item.Key, Context, out var docId, out var name);
 
-            if (loadBehaviourFunction != null)
+            if (loadBehaviorFunction != null)
             {
-                if (ShouldFilterByScriptAndGetParams(docId, name, loadBehaviourFunction, out (DateTime begin, DateTime end)? toLoad)) 
+                if (ShouldFilterByScriptAndGetParams(docId, name, loadBehaviorFunction, out (DateTime begin, DateTime end)? toLoad)) 
                     return;
             
                 if(toLoad.HasValue && (toLoad.Value.begin > item.To || toLoad.Value.end < item.From))
@@ -511,13 +511,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _currentRun.RemoveTimeSeries(docId, name, item.From, item.To);
         }
 
-        private bool FilterSingleTimeSeriesSegmentByLoadBehaviourScript(
+        private bool FilterSingleTimeSeriesSegmentByLoadBehaviorScript(
             ref IEnumerable<SingleResult> timeSeriesEntries, 
             LazyStringValue docId,
             TimeSeriesSegmentEntry segmentEntry, 
-            string loadBehaviourFunction)
+            string loadBehaviorFunction)
         {
-            if (ShouldFilterByScriptAndGetParams(docId, segmentEntry.Name, loadBehaviourFunction, out (DateTime begin, DateTime end)? toLoad)) 
+            if (ShouldFilterByScriptAndGetParams(docId, segmentEntry.Name, loadBehaviorFunction, out (DateTime begin, DateTime end)? toLoad)) 
                 return true;
 
             if (toLoad == null)
