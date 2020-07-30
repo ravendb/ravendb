@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -176,6 +177,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 case ValueType.LazyCompressedString:
                 case ValueType.String:
                 case ValueType.Enum:
+                case ValueType.Stream:
                     defaultIndexing = Field.Index.ANALYZED;
                     break;
                 case ValueType.DateTime:
@@ -208,7 +210,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.Null)
             {
-                instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
+                instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
                 newFields++;
 
                 return newFields;
@@ -219,7 +221,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var dynamicNull = (DynamicNullObject)value;
                 if (dynamicNull.IsExplicitNull || _indexImplicitNull)
                 {
-                    instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
+                    instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.NullValue, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
                     newFields++;
                 }
 
@@ -229,7 +231,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             if (valueType == ValueType.EmptyString)
             {
-                instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.EmptyString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
+                instance.Add(GetOrCreateField(path, Constants.Documents.Indexing.Fields.EmptyString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
                 newFields++;
                 return newFields;
             }
@@ -238,7 +240,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 string stringValue = value as string ?? value.ToString();
 
-                instance.Add(GetOrCreateField(path, stringValue, null, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, stringValue, null, null, null, storage, indexing, termVector));
                 newFields++;
                 return newFields;
             }
@@ -251,21 +253,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 else
                     lazyStringValue = (LazyStringValue)value;
 
-                instance.Add(GetOrCreateField(path, null, lazyStringValue, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, null, lazyStringValue, null, null, storage, indexing, termVector));
                 newFields++;
                 return newFields;
             }
 
             if (valueType == ValueType.Enum)
             {
-                instance.Add(GetOrCreateField(path, value.ToString(), null, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, value.ToString(), null, null, null, storage, indexing, termVector));
+                newFields++;
+                return newFields;
+            }
+
+            if (valueType == ValueType.Stream)
+            {
+                var stream = (Stream)value;
+                instance.Add(GetOrCreateField(path, null, null, stream, null, storage, indexing, termVector));
                 newFields++;
                 return newFields;
             }
 
             if (valueType == ValueType.Boolean)
             {
-                instance.Add(GetOrCreateField(path, (bool)value ? TrueString : FalseString, null, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, (bool)value ? TrueString : FalseString, null, null, null, storage, indexing, termVector));
                 newFields++;
                 return newFields;
             }
@@ -275,7 +285,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var dateTime = (DateTime)value;
                 var dateAsString = dateTime.GetDefaultRavenFormat();
 
-                instance.Add(GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, dateAsString, null, null, null, storage, indexing, termVector));
                 newFields++;
 
                 instance.Add(GerOrCreateNumericLongField(path + Constants.Documents.Indexing.Fields.TimeFieldSuffix, dateTime.Ticks, Field.Store.NO));
@@ -303,7 +313,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     _index.IndexFieldsPersistence.MarkHasTimeValue(path);
                 }
 
-                instance.Add(GetOrCreateField(path, dateAsString, null, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, dateAsString, null, null, null, storage, indexing, termVector));
                 newFields++;
 
                 return newFields;
@@ -312,7 +322,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueType == ValueType.TimeSpan)
             {
                 var timeSpan = (TimeSpan)value;
-                instance.Add(GetOrCreateField(path, timeSpan.ToString("c", CultureInfo.InvariantCulture), null, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, timeSpan.ToString("c", CultureInfo.InvariantCulture), null, null, null, storage, indexing, termVector));
 
                 foreach (var numericField in GetOrCreateNumericField(field, timeSpan.Ticks, storage, termVector))
                 {
@@ -347,7 +357,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 if (nestedArray == false)
                 {
-                    instance.Add(GetOrCreateField(path + IsArrayFieldSuffix, TrueString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
+                    instance.Add(GetOrCreateField(path + IsArrayFieldSuffix, TrueString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO));
                     newFields++;
                 }
 
@@ -432,7 +442,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     if (TryToTrimTrailingZeros(ldv, indexContext, out var doubleAsString) == false)
                         doubleAsString = ldv.Inner;
 
-                    instance.Add(GetOrCreateField(path, null, doubleAsString, null, storage, indexing, termVector));
+                    instance.Add(GetOrCreateField(path, null, doubleAsString, null, null, storage, indexing, termVector));
                     newFields++;
                 }
                 else
@@ -445,13 +455,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     else if (value is float)
                         dbl = (float)value;
 
-                    instance.Add(GetOrCreateField(path, dbl.ToString("G"), null, null, storage, indexing, termVector));
+                    instance.Add(GetOrCreateField(path, dbl.ToString("G"), null, null, null, storage, indexing, termVector));
                     newFields++;
                 }
             }
             else if (valueType == ValueType.Convertible) // we need this to store numbers in invariant format, so JSON could read them
             {
-                instance.Add(GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, null, storage, indexing, termVector));
+                instance.Add(GetOrCreateField(path, ((IConvertible)value).ToString(CultureInfo.InvariantCulture), null, null, null, storage, indexing, termVector));
                 newFields++;
             }
 
@@ -480,9 +490,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         private IEnumerable<AbstractField> GetComplexObjectFields(string path, BlittableJsonReaderObject val, Field.Store storage, Field.Index indexing, Field.TermVector termVector)
         {
             if (_multipleItemsSameFieldCount.Count == 0 || _multipleItemsSameFieldCount[0] == 1)
-                yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+                yield return GetOrCreateField(path + ConvertToJsonSuffix, TrueString, null, null, null, storage, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
 
-            yield return GetOrCreateField(path, null, null, val, storage, indexing, termVector);
+            yield return GetOrCreateField(path, null, null, null, val, storage, indexing, termVector);
         }
 
         private static ValueType GetValueType(object value)
@@ -550,20 +560,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (IsNumber(value))
                 return ValueType.Numeric;
 
+            if (value is Stream)
+                return ValueType.Stream;
+
             return ValueType.ConvertToJson;
         }
 
         protected Field GetOrCreateKeyField(LazyStringValue key)
         {
-            return GetOrCreateField(_keyFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            return GetOrCreateField(_keyFieldName, null, key, null, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
         protected Field GetOrCreateSourceDocumentIdField(LazyStringValue key)
         {
-            return GetOrCreateField(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, null, key, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
+            return GetOrCreateField(Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName, null, key, null, null, Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS, Field.TermVector.NO);
         }
 
-        protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
+        protected Field GetOrCreateField(string name, string value, LazyStringValue lazyValue, Stream streamValue, BlittableJsonReaderObject blittableValue, Field.Store store, Field.Index index, Field.TermVector termVector)
         {
             int cacheKey = FieldCacheKey.GetHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
 
@@ -574,30 +587,39 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 LazyStringReader stringReader = null;
                 BlittableObjectReader blittableReader = null;
 
-                if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
+                if (streamValue == null)
                 {
-                    TextReader reader;
-                    if (lazyValue != null)
+                    if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
                     {
-                        stringReader = new LazyStringReader();
-                        reader = stringReader.GetTextReaderFor(lazyValue);
+                        TextReader reader;
+                        if (lazyValue != null)
+                        {
+                            stringReader = new LazyStringReader();
+                            reader = stringReader.GetTextReaderFor(lazyValue);
+                        }
+                        else
+                        {
+                            blittableReader = Scope.GetBlittableReader();
+                            reader = blittableReader.GetTextReaderFor(blittableValue);
+                        }
+
+                        field = new Field(name, reader, termVector);
                     }
                     else
                     {
-                        blittableReader = Scope.GetBlittableReader();
-                        reader = blittableReader.GetTextReaderFor(blittableValue);
-                    }
+                        if (value == null && lazyValue == null)
+                            blittableReader = Scope.GetBlittableReader();
 
-                    field = new Field(name, reader, termVector);
+                        field = new Field(name,
+                            value ?? LazyStringReader.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue),
+                            store, index, termVector);
+                    }
                 }
                 else
                 {
-                    if (value == null && lazyValue == null)
-                        blittableReader = Scope.GetBlittableReader();
+                    var streamBuffer = ToArray(Scope, streamValue, out var streamLength);
 
-                    field = new Field(name,
-                        value ?? LazyStringReader.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue),
-                        store, index, termVector);
+                    field = new Field(name, streamBuffer, 0, streamLength, store);
                 }
 
                 field.Boost = 1;
@@ -615,24 +637,48 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 BlittableObjectReader blittableReader = null;
 
                 field = cached.Field;
-                if (lazyValue != null && cached.LazyStringReader == null)
-                    cached.LazyStringReader = new LazyStringReader();
-                if (blittableValue != null)
-                    blittableReader = Scope.GetBlittableReader();
 
-                if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
+                if (streamValue == null)
                 {
-                    field.SetValue(lazyValue != null
-                        ? cached.LazyStringReader.GetTextReaderFor(lazyValue)
-                        : blittableReader.GetTextReaderFor(blittableValue));
+                    if (lazyValue != null && cached.LazyStringReader == null)
+                        cached.LazyStringReader = new LazyStringReader();
+                    if (blittableValue != null)
+                        blittableReader = Scope.GetBlittableReader();
+
+                    if ((lazyValue != null || blittableValue != null) && store.IsStored() == false && index.IsIndexed() && index.IsAnalyzed())
+                    {
+                        field.SetValue(lazyValue != null
+                            ? cached.LazyStringReader.GetTextReaderFor(lazyValue)
+                            : blittableReader.GetTextReaderFor(blittableValue));
+                    }
+                    else
+                    {
+                        field.SetValue(value ?? LazyStringReader.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue));
+                    }
                 }
                 else
                 {
-                    field.SetValue(value ?? LazyStringReader.GetStringFor(lazyValue) ?? blittableReader.GetStringFor(blittableValue));
+                    var streamBuffer = ToArray(Scope, streamValue, out var streamLength);
+
+                    field.SetValue(streamBuffer, 0, streamLength);
                 }
             }
 
             return field;
+
+            static byte[] ToArray(ConversionScope scope, Stream stream, out int length)
+            {
+                length = (int)(stream.Length - stream.Position);
+
+                var buffer = scope.RentArray(length);
+
+                using (var ms = new MemoryStream(buffer))
+                {
+                    stream.CopyTo(ms);
+
+                    return buffer;
+                }
+            }
         }
 
         private IEnumerable<AbstractField> GetOrCreateNumericField(IndexField field, object value, Field.Store storage, Field.TermVector termVector = Field.TermVector.NO)
@@ -817,13 +863,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             Lucene,
 
-            ConvertToJson
+            ConvertToJson,
+
+            Stream
         }
 
         protected class ConversionScope : IDisposable
         {
             private readonly LinkedList<BlittableJsonReaderObject> _jsons = new LinkedList<BlittableJsonReaderObject>();
             private readonly LinkedList<BlittableObjectReader> _readers = new LinkedList<BlittableObjectReader>();
+            private readonly LinkedList<byte[]> _arrays = new LinkedList<byte[]>();
+
             private readonly LuceneDocumentConverterBase _parent;
 
             private static readonly byte[] EmptyBuffer = Array.Empty<byte>();
@@ -862,6 +912,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                     _readers.Clear();
                 }
+
+                if (_arrays.Count > 0)
+                {
+                    foreach (var array in _arrays)
+                        ArrayPool<byte>.Shared.Return(array);
+
+                    _arrays.Clear();
+                }
             }
 
             public BlittableObjectReader GetBlittableReader()
@@ -870,6 +928,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 _readers.AddFirst(reader);
 
                 return reader;
+            }
+
+            public byte[] RentArray(int length)
+            {
+                var array = ArrayPool<byte>.Shared.Rent(length);
+                _arrays.AddFirst(array);
+
+                return array;
             }
         }
     }

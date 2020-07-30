@@ -72,11 +72,20 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             if (_contentAsString == null)
             {
+                _attachment.Stream.Position = 0;
+
                 using (var sr = new StreamReader(_attachment.Stream, encoding))
                     _contentAsString = sr.ReadToEnd();
             }
 
             return _contentAsString;
+        }
+
+        public Stream GetContentAsStream()
+        {
+            _attachment.Stream.Position = 0;
+
+            return _attachment.Stream;
         }
 
         protected override bool TryGetByName(string name, out object result)

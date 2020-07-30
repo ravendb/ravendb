@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.IO;
+using System.Text;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -15,5 +16,7 @@ namespace Raven.Client.Documents.Indexes
         public string GetContentAsString();
 
         public string GetContentAsString(Encoding encoding);
+
+        public Stream GetContentAsStream();
     }
 }
