@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -180,6 +180,10 @@ namespace SlowTests.Server.Documents.ETL
                 
                 string message = string.Join(",\n", notifications);
                 Context.TestOutput.WriteLine(message);
+            }
+            catch
+            {
+                // ignored
             }
             finally
             {
