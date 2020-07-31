@@ -109,24 +109,29 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public unsafe dynamic LoadAttachment(DynamicBlittableJson document, string attachmentName)
+        public unsafe dynamic LoadAttachment(string documentId, string attachmentName)
         {
             using (_loadAttachmentStats?.Start() ?? (_loadAttachmentStats = _stats?.For(IndexingOperation.LoadAttachment)))
             {
-                if (document == null)
-                    return DynamicNullObject.Null;
-
-                var id = GetSourceId(document);
-
                 if (attachmentName == null)
                     return DynamicNullObject.Null;
 
-                var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, id, attachmentName, AttachmentType.Document, null);
+                var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
                 if (attachment == null)
                     return DynamicNullObject.Null;
 
                 return new DynamicAttachment(attachment);
             }
+        }
+
+        public unsafe dynamic LoadAttachment(DynamicBlittableJson document, string attachmentName)
+        {
+            if (document == null)
+                return DynamicNullObject.Null;
+
+            var id = GetSourceId(document);
+
+            return LoadAttachment(id, attachmentName);
         }
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)

@@ -230,6 +230,7 @@ namespace Raven.Server.Documents.Patch
 
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, "load", LoadDocument));
                 ScriptEngine.SetValue("LoadDocument", new ClrFunctionInstance(ScriptEngine, "LoadDocument", ThrowOnLoadDocument));
+
                 ScriptEngine.SetValue("loadPath", new ClrFunctionInstance(ScriptEngine, "loadPath", LoadDocumentByPath));
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, "del", DeleteDocument));
                 ScriptEngine.SetValue("DeleteDocument", new ClrFunctionInstance(ScriptEngine, "DeleteDocument", ThrowOnDeleteDocument));
@@ -455,8 +456,8 @@ namespace Raven.Server.Documents.Patch
                         CollectionName.GetCollectionName(doc),
                         timeSeries,
                         new[] { toAppend });
-                    
-                    if (DebugMode) 
+
+                    if (DebugMode)
                     {
                         DebugActions.AppendTimeSeries.Add(new DynamicJsonValue
                         {
@@ -513,7 +514,7 @@ namespace Raven.Server.Documents.Patch
                 };
                 _database.DocumentsStorage.TimeSeriesStorage.DeleteTimestampRange(_docsCtx, deletionRangeRequest);
 
-                if (DebugMode) 
+                if (DebugMode)
                 {
                     DebugActions.DeleteTimeSeries.Add(new DynamicJsonValue
                     {
@@ -572,8 +573,8 @@ namespace Raven.Server.Documents.Patch
                     entry.Set(nameof(TimeSeriesEntry.Values), jsValues);
                     entry.Set(nameof(TimeSeriesEntry.IsRollup), singleResult.Type == SingleResultType.RolledUp);
                     entries.Add(entry);
-                    
-                    if (DebugMode) 
+
+                    if (DebugMode)
                     {
                         DebugActions.GetTimeSeries.Add(new DynamicJsonValue
                         {
@@ -586,8 +587,8 @@ namespace Raven.Server.Documents.Patch
                         });
                     }
                 }
-               
-                if (DebugMode && entries.Count == 0) 
+
+                if (DebugMode && entries.Count == 0)
                 {
                     DebugActions.GetTimeSeries.Add(new DynamicJsonValue
                     {
@@ -595,7 +596,7 @@ namespace Raven.Server.Documents.Patch
                         ["Exists"] = false
                     });
                 }
-                
+
                 return ScriptEngine.Array.Construct(entries.ToArray());
             }
 
@@ -1095,7 +1096,7 @@ namespace Raven.Server.Documents.Patch
                 if (raw == false)
                 {
                     var counterValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value ?? JsValue.Null;
-                  
+
                     if (DebugMode)
                     {
                         DebugActions.GetCounter.Add(new DynamicJsonValue
@@ -1105,7 +1106,7 @@ namespace Raven.Server.Documents.Patch
                             ["Exists"] = counterValue != JsValue.Null
                         });
                     }
-                    
+
                     return counterValue;
                 }
 
@@ -1191,11 +1192,11 @@ namespace Raven.Server.Documents.Patch
 
                     DocumentCountersToUpdate[id] = tuple;
                 }
-                
+
                 if (DebugMode)
                 {
                     var newValue = _database.DocumentsStorage.CountersStorage.GetCounterValue(_docsCtx, id, name)?.Value;
-                    
+
                     DebugActions.IncrementCounter.Add(new DynamicJsonValue
                     {
                         ["Name"] = name,
@@ -1267,7 +1268,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     DebugActions.DeleteCounter.Add(name);
                 }
-                
+
                 return JsBoolean.True;
             }
 
@@ -1702,7 +1703,7 @@ namespace Raven.Server.Documents.Patch
                         ["Exists"] = document != null
                     });
                 }
-                
+
                 return JavaScriptUtils.TranslateToJs(ScriptEngine, _jsonCtx, document);
             }
 
