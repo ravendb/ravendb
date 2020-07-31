@@ -76,36 +76,46 @@ namespace Raven.Server.Documents.Indexes.Static
             _loadCompareExchangeValueStats = null;
         }
 
-        public unsafe dynamic LoadAttachments(DynamicBlittableJson document)
+        public unsafe List<DynamicAttachment> LoadAttachments(string documentId, IEnumerable<string> attachmentNames)
         {
             using (_loadAttachmentStats?.Start() ?? (_loadAttachmentStats = _stats?.For(IndexingOperation.LoadAttachment)))
             {
-                if (document == null)
-                    return DynamicNullObject.Null;
-
-                var id = GetSourceId(document);
-
-                var metadata = document[Constants.Documents.Metadata.Key] as DynamicBlittableJson;
-
-                if (metadata == null)
-                    return DynamicNullObject.Null;
-
-                var attachments = metadata[Constants.Documents.Metadata.Attachments] as DynamicArray;
-                if (attachments == null)
-                    return DynamicNullObject.Null;
-
                 var results = new List<DynamicAttachment>();
-                foreach (dynamic attachmentMetadata in attachments)
+                foreach (var attachmentName in attachmentNames)
                 {
-                    var attachmentName = attachmentMetadata.Name;
-                    var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, id, attachmentName, AttachmentType.Document, null);
+                    var attachment = _documentsStorage.AttachmentsStorage.GetAttachment(QueryContext.Documents, documentId, attachmentName, AttachmentType.Document, null);
                     if (attachment == null)
                         continue;
 
                     results.Add(new DynamicAttachment(attachment));
                 }
 
-                return new DynamicArray(results);
+                return results;
+            }
+        }
+
+        public unsafe dynamic LoadAttachments(DynamicBlittableJson document)
+        {
+            if (document == null)
+                return DynamicNullObject.Null;
+
+            var id = GetSourceId(document);
+
+            return LoadAttachments(id, GetAttachmentNames());
+
+            IEnumerable<string> GetAttachmentNames()
+            {
+                var metadata = document[Constants.Documents.Metadata.Key] as DynamicBlittableJson;
+
+                if (metadata == null)
+                    yield break;
+
+                var attachments = metadata[Constants.Documents.Metadata.Attachments] as DynamicArray;
+                if (attachments == null)
+                    yield break;
+
+                foreach (dynamic attachmentMetadata in attachments)
+                    yield return attachmentMetadata.Name;
             }
         }
 
