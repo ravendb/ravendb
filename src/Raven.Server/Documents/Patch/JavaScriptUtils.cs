@@ -6,8 +6,10 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
@@ -106,7 +108,61 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue LoadAttachments(JsValue self, JsValue[] args)
         {
-            return DynamicJsNull.ImplicitNull;
+            if (args.Length != 1)
+                throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with one argument, but '{args.Length}' were passed.");
+
+            if (args[0].IsNull())
+                return DynamicJsNull.ImplicitNull;
+
+            if (args[0].IsObject() == false)
+                ThrowInvalidParameter();
+
+            var doc = args[0].AsObject() as BlittableObjectInstance;
+            if (doc == null)
+                ThrowInvalidParameter();
+
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException($"Indexing scope was not initialized.");
+
+            var attachments = CurrentIndexingScope.Current.LoadAttachments(doc.DocumentId, GetAttachmentNames());
+            if (attachments.Count == 0)
+                return EmptyArray(_scriptEngine);
+
+            var values = new JsValue[attachments.Count];
+            for (var i = 0; i < values.Length; i++)
+                values[i] = new AttachmentObjectInstance(_scriptEngine, attachments[i]);
+
+            var array = _scriptEngine.Array.Construct(Arguments.Empty);
+            _scriptEngine.Array.PrototypeObject.Push(array, values);
+
+            return array;
+
+            void ThrowInvalidParameter()
+            {
+                throw new InvalidOperationException($"{nameof(LoadAttachments)} may only be called with a non-null entity as a parameter, but was called with a parameter of type {args[0].GetType().FullName}.");
+            }
+
+            IEnumerable<string> GetAttachmentNames()
+            {
+                var metadata = doc.Get(Constants.Documents.Metadata.Key) as BlittableObjectInstance;
+                if (metadata == null)
+                    yield break;
+
+                var attachments = metadata.Get(Constants.Documents.Metadata.Attachments);
+                if (attachments == null || attachments.IsArray() == false)
+                    yield break;
+
+                foreach (var attachment in attachments.AsArray())
+                {
+                    var attachmentObject = attachment.AsObject();
+                    yield return attachment.Get(nameof(AttachmentName.Name)).AsString();
+                }
+            }
+
+            static ArrayInstance EmptyArray(Engine engine)
+            {
+                return engine.Array.Construct(0);
+            }
         }
 
         internal JsValue GetTimeSeriesNamesFor(JsValue self, JsValue[] args)
