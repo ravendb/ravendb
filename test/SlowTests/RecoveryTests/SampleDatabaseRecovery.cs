@@ -57,56 +57,60 @@ namespace SlowTests.RecoveryTests
             var badPath = Path.Combine(rootPath, badName);
             var recoveredPath = Path.Combine(rootPath, "recovery");
 
-            using (var store = GetDocumentStore(
-                new Options
-                {
-                    Path = badPath,
-                    RunInMemory = false,
-                    DeleteDatabaseOnDispose = false,
-                    ModifyDatabaseName = _ => badName
-                }))
+            using (var serverStore = GetDocumentStore(new Options { CreateDatabase = false }))
+            using (EnsureDatabaseDeletion(badName, serverStore))
             {
-                using (var session = store.OpenAsyncSession())
-                {
-                    var user = new User { Name = "karmel" };
-                    await session.StoreAsync(user, "Users/karmel");
-                    var ts = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>(user);
-                    for (int i = 0; i < 1000; i++)
+                using (var store = GetDocumentStore(
+                    new Options
                     {
-                        ts.Append(DateTime.UtcNow.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure
+                        Path = badPath,
+                        RunInMemory = false,
+                        DeleteDatabaseOnDispose = false,
+                        ModifyDatabaseName = _ => badName
+                    }))
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var user = new User { Name = "karmel" };
+                        await session.StoreAsync(user, "Users/karmel");
+                        var ts = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>(user);
+                        for (int i = 0; i < 1000; i++)
                         {
-                            HeartRate = i
-                        }, "some-tag");
+                            ts.Append(DateTime.UtcNow.AddMinutes(i), new TimeSeriesTypedSessionTests.HeartRateMeasure
+                            {
+                                HeartRate = i
+                            }, "some-tag");
+                        }
+
+                        await session.SaveChangesAsync();
                     }
-
-                    await session.SaveChangesAsync();
                 }
-            }
 
-            Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(badName));
+                Assert.True(Server.ServerStore.DatabasesLandlord.UnloadDirectly(badName));
 
-            var recoveryOptions = new RecoveryOptions
-            {
-                PathToDataFile = badPath,
-                RecoveryDirectory = recoveredPath,
-                RecoveryTypes = RecoveryTypes.Documents | RecoveryTypes.TimeSeries
-            };
-
-            using (var store = await RecoverDatabase(recoveryOptions))
-            {
-                WaitForUserToContinueTheTest(store);
-                using (var session = store.OpenAsyncSession())
+                var recoveryOptions = new RecoveryOptions
                 {
-                    var u = await session.LoadAsync<User>("Users/karmel");
-                    Assert.NotNull(u);
-                    var ts = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>(u);
-                    var entries = (await ts.GetAsync()).ToArray();
-                    Assert.Equal(1000, entries.Length);
-                    for (var index = 0; index < entries.Length; index++)
+                    PathToDataFile = badPath,
+                    RecoveryDirectory = recoveredPath,
+                    RecoveryTypes = RecoveryTypes.Documents | RecoveryTypes.TimeSeries
+                };
+
+                using (var store = await RecoverDatabase(recoveryOptions))
+                {
+                    WaitForUserToContinueTheTest(store);
+                    using (var session = store.OpenAsyncSession())
                     {
-                        var entry = entries[index];
-                        Assert.Equal(index, entry.Value.HeartRate);
-                        Assert.Equal("some-tag", entry.Tag);
+                        var u = await session.LoadAsync<User>("Users/karmel");
+                        Assert.NotNull(u);
+                        var ts = session.TimeSeriesFor<TimeSeriesTypedSessionTests.HeartRateMeasure>(u);
+                        var entries = (await ts.GetAsync()).ToArray();
+                        Assert.Equal(1000, entries.Length);
+                        for (var index = 0; index < entries.Length; index++)
+                        {
+                            var entry = entries[index];
+                            Assert.Equal(index, entry.Value.HeartRate);
+                            Assert.Equal("some-tag", entry.Tag);
+                        }
                     }
                 }
             }
