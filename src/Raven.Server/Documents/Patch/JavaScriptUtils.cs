@@ -9,6 +9,7 @@ using Jint.Native.Object;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -61,6 +62,51 @@ namespace Raven.Server.Documents.Patch
 
             metadata = Context.ReadObject(metadata, boi.DocumentId);
             return TranslateToJs(_scriptEngine, Context, metadata);
+        }
+
+        internal JsValue LoadAttachment(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 2)
+                throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with two arguments, but '{args.Length}' were passed.");
+
+            if (args[0].IsNull())
+                return DynamicJsNull.ImplicitNull;
+
+            if (args[0].IsObject() == false)
+                ThrowInvalidFirstParameter();
+
+            var doc = args[0].AsObject() as BlittableObjectInstance;
+            if (doc == null)
+                ThrowInvalidFirstParameter();
+
+            if (args[1].IsString() == false)
+                ThrowInvalidSecondParameter();
+
+            var attachmentName = args[1].AsString();
+
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException($"Indexing scope was not initialized. Attachment Name: {attachmentName}");
+
+            var attachment = CurrentIndexingScope.Current.LoadAttachment(doc.DocumentId, attachmentName);
+            if (attachment is DynamicNullObject)
+                return DynamicJsNull.ImplicitNull;
+
+            return new AttachmentObjectInstance(_scriptEngine, (DynamicAttachment)attachment);
+
+            void ThrowInvalidFirstParameter()
+            {
+                throw new InvalidOperationException($"{nameof(LoadAttachments)} may only be called with a non-null entity as a first parameter, but was called with a parameter of type {args[0].GetType().FullName}.");
+            }
+
+            void ThrowInvalidSecondParameter()
+            {
+                throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with a string, but was called with a parameter of type {args[1].GetType().FullName}.");
+            }
+        }
+
+        internal JsValue LoadAttachments(JsValue self, JsValue[] args)
+        {
+            return DynamicJsNull.ImplicitNull;
         }
 
         internal JsValue GetTimeSeriesNamesFor(JsValue self, JsValue[] args)

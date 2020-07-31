@@ -48,7 +48,9 @@ function map(name, lambda) {
             engine.SetValue("getMetadata", new ClrFunctionInstance(_engine, "getMetadata", MetadataFor));
             engine.SetValue("metadataFor", new ClrFunctionInstance(_engine, "metadataFor", MetadataFor));
             engine.SetValue("timeSeriesNamesFor", new ClrFunctionInstance(_engine, "timeSeriesNamesFor", TimeSeriesNamesFor));
-            engine.SetValue("counterNamesFor", new ClrFunctionInstance(_engine, "counterNamesFor", TimeSeriesNamesFor));
+            engine.SetValue("counterNamesFor", new ClrFunctionInstance(_engine, "counterNamesFor", CounterNamesFor));
+            engine.SetValue("loadAttachment", new ClrFunctionInstance(engine, "loadAttachment", LoadAttachment));
+            engine.SetValue("loadAttachments", new ClrFunctionInstance(engine, "loadAttachment", LoadAttachments));
             engine.SetValue("id", new ClrFunctionInstance(_engine, "id", GetDocumentId));
         }
 
@@ -153,6 +155,22 @@ function map(name, lambda) {
 
             return _javaScriptUtils.GetCounterNamesFor(self, args);
         }
+
+        private JsValue LoadAttachment(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+
+            return _javaScriptUtils.LoadAttachment(self, args);
+        }
+
+        private JsValue LoadAttachments(JsValue self, JsValue[] args)
+        {
+            var scope = CurrentIndexingScope.Current;
+            scope.RegisterJavaScriptUtils(_javaScriptUtils);
+
+            return _javaScriptUtils.LoadAttachments(self, args);
+        }
     }
 
     public abstract class AbstractJavaScriptIndex : AbstractStaticIndexBase
@@ -214,7 +232,8 @@ function map(name, lambda) {
             if (Definition.Maps == null || Definition.Maps.Count == 0)
                 ThrowIndexCreationException("does not contain any mapping functions to process.");
 
-            var mappingFunctions = Definition.Maps.ToList();;
+            var mappingFunctions = Definition.Maps.ToList();
+            ;
             modifyMappingFunctions?.Invoke(mappingFunctions);
 
             return mappingFunctions;
