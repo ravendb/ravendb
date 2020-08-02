@@ -1088,7 +1088,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public void AssertCanAddPeriodicBackup(PeriodicBackupConfiguration configuration)
+        public void AssertCanAddPeriodicBackup(BackupConfiguration configuration)
         {
             if (IsValid(out var licenseLimit) == false)
                 throw licenseLimit;
@@ -1113,7 +1113,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public static bool HasEncryptedBackup(PeriodicBackupConfiguration configuration)
+        public static bool HasEncryptedBackup(BackupConfiguration configuration)
         {
             if (configuration.BackupEncryptionSettings == null)
                 return false;

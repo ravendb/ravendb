@@ -38,10 +38,10 @@ namespace Raven.Server.Documents.PeriodicBackup
         private const string InProgressExtension = ".in-progress";
 
         private readonly DocumentDatabase _database;
-        private readonly PeriodicBackup _periodicBackup;
         private readonly BackupConfiguration _configuration;
         private readonly PeriodicBackupStatus _previousBackupStatus;
         private readonly bool _isFullBackup;
+        private readonly bool _isOneTimeBackup;
         private readonly bool _backupToLocalFolder;
         private readonly long _operationId;
         private readonly PathSetting _tempBackupPath;
@@ -54,51 +54,29 @@ namespace Raven.Server.Documents.PeriodicBackup
         private Action<IOperationProgress> _onProgress;
         private readonly long _taskId;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
-
-        public BackupTask(
-            DocumentDatabase database,
-            PeriodicBackup periodicBackup,
-            BackupConfiguration configuration,
-            bool isFullBackup,
-            bool backupToLocalFolder,
-            long operationId,
-            PathSetting tempBackupPath,
-            Logger logger,
-            PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        private readonly DateTime _startTimeUtc;
+        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _database = database;
-            _periodicBackup = periodicBackup;
+            _taskId = backupParameters.TaskId;
+            _operationId = backupParameters.OperationId;
+            _previousBackupStatus = backupParameters.BackupStatus;
+            _startTimeUtc = backupParameters.StartTimeUtc;
+            _isOneTimeBackup = backupParameters.IsOneTimeBackup;
+            _isFullBackup = backupParameters.IsFullBackup;
+            _backupToLocalFolder = backupParameters.BackupToLocalFolder;
+            _tempBackupPath = backupParameters.TempBackupPath;
             _configuration = configuration;
+            _logger = logger;
             _isServerWide = _configuration.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
             _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
-            _isFullBackup = isFullBackup;
-            _backupToLocalFolder = backupToLocalFolder;
-            _operationId = operationId;
-            _tempBackupPath = tempBackupPath;
-            _logger = logger;
             _forTestingPurposes = forTestingPurposes;
-
-            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown);
             _backupResult = GenerateBackupResult();
+            TaskCancelToken = new OperationCancelToken(_database.DatabaseShutdown);
 
-            RetentionPolicy retentionPolicy = null;
-            if (_configuration is PeriodicBackupConfiguration pbc)
-            {
-                _taskId = pbc.TaskId;
-                retentionPolicy = pbc.RetentionPolicy;
-                _previousBackupStatus = periodicBackup.BackupStatus;
-            }
-            else
-            {
-                _taskId = -1;
-                _previousBackupStatus = new PeriodicBackupStatus()
-                {
-                    TaskId = _taskId
-                };
-            }
             _retentionPolicyParameters = new RetentionPolicyBaseParameters
             {
-                RetentionPolicy = retentionPolicy,
+                RetentionPolicy = backupParameters.RetentionPolicy,
                 DatabaseName = _database.Name,
                 IsFullBackup = _isFullBackup,
                 OnProgress = AddInfo,
@@ -106,41 +84,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        public IOperationResult RunPeriodicBackup(Action<IOperationProgress> onProgress)
+        public IOperationResult RunPeriodicBackup(Action<IOperationProgress> onProgress, ref PeriodicBackupStatus runningBackupStatus)
         {
             _onProgress = onProgress;
             AddInfo($"Started task: '{_configuration.Name}'");
 
             var totalSw = Stopwatch.StartNew();
             var operationCanceled = false;
-            DateTime startTimeUtc;
-            var runningBackupStatus = new PeriodicBackupStatus
-            {
-                TaskId = _taskId,
-                BackupType = _configuration.BackupType,
-                LastEtag = _previousBackupStatus.LastEtag,
-                LastRaftIndex = _previousBackupStatus.LastRaftIndex,
-                LastFullBackup = _previousBackupStatus.LastFullBackup,
-                LastIncrementalBackup = _previousBackupStatus.LastIncrementalBackup,
-                LastFullBackupInternal = _previousBackupStatus.LastFullBackupInternal,
-                LastIncrementalBackupInternal = _previousBackupStatus.LastIncrementalBackupInternal,
-                IsFull = _isFullBackup,
-                LocalBackup = _previousBackupStatus.LocalBackup,
-                LastOperationId = _previousBackupStatus.LastOperationId,
-                FolderName = _previousBackupStatus.FolderName,
-                LastDatabaseChangeVector = _previousBackupStatus.LastDatabaseChangeVector
-            };
-
-            if (_periodicBackup != null)
-            {
-                // one time backup
-                _periodicBackup.RunningBackupStatus = runningBackupStatus;
-                startTimeUtc = _periodicBackup.StartTimeInUtc;
-            }
-            else
-            {
-                startTimeUtc = SystemTime.UtcNow;
-            }
 
             try
             {
@@ -178,7 +128,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                             _logger.Info(message);
 
                         UpdateOperationId(runningBackupStatus);
-                        runningBackupStatus.LastIncrementalBackup = startTimeUtc;
+                        runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
                         DatabaseSmuggler.EnsureProcessed(_backupResult);
                         AddInfo(message);
@@ -191,7 +141,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var localSettings = GetBackupConfigurationFromScript(_configuration.LocalSettings, x => JsonDeserializationServer.LocalSettings(x),
                     settings => PutServerWideBackupConfigurationCommand.UpdateSettingsForLocal(settings, _database.Name));
 
-                GenerateFolderNameAndBackupDirectory(localSettings, startTimeUtc, out var nowAsString, out var folderName, out var backupDirectory);
+                GenerateFolderNameAndBackupDirectory(localSettings, _startTimeUtc, out var nowAsString, out var folderName, out var backupDirectory);
                 var startDocumentEtag = _isFullBackup == false ? _previousBackupStatus.LastEtag : null;
                 var startRaftIndex = _isFullBackup == false ? _previousBackupStatus.LastRaftIndex.LastEtag : null;
 
@@ -214,6 +164,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     runningBackupStatus.UploadToGlacier = _backupResult.GlacierBackup;
                     runningBackupStatus.UploadToFtp = _backupResult.FtpBackup;
 
+                    _backupResult.FileName = fileName;
+                    _backupResult.FolderName = folderName;
+
                     // if user did not specify local folder we delete the temporary file
                     if (_backupToLocalFolder == false)
                     {
@@ -228,9 +181,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 runningBackupStatus.FolderName = folderName;
 
                 if (_isFullBackup)
-                    runningBackupStatus.LastFullBackup = startTimeUtc;
+                    runningBackupStatus.LastFullBackup = _startTimeUtc;
                 else
-                    runningBackupStatus.LastIncrementalBackup = startTimeUtc;
+                    runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
 
                 totalSw.Stop();
 
@@ -279,21 +232,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             finally
             {
-                if (operationCanceled == false && _periodicBackup != null)
+                if (operationCanceled == false && _isOneTimeBackup == false)
                 {
                     // whether we succeeded or not,
                     // in periodic backup we need to update the last backup time to avoid
                     // starting a new backup right after this one
                     if (_isFullBackup)
-                        runningBackupStatus.LastFullBackupInternal = startTimeUtc;
+                        runningBackupStatus.LastFullBackupInternal = _startTimeUtc;
                     else
-                        runningBackupStatus.LastIncrementalBackupInternal = startTimeUtc;
+                        runningBackupStatus.LastIncrementalBackupInternal = _startTimeUtc;
 
                     runningBackupStatus.NodeTag = _database.ServerStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
                     runningBackupStatus.Version = ++_previousBackupStatus.Version;
-
-                    _periodicBackup.BackupStatus = runningBackupStatus;
 
                     // save the backup status
                     AddInfo("Saving backup status");

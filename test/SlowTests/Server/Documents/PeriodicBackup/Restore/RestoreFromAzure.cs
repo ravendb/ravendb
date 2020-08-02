@@ -71,14 +71,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         }
 
         [AzureStorageEmulatorFact]
-        public void can_backup_and_restore()
+        public void can_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: false);
+        [AzureStorageEmulatorFact]
+        public void can_onetime_backup_and_restore() => can_backup_and_restore_internal(oneTimeBackup: true);
+
+        private void can_backup_and_restore_internal(bool oneTimeBackup)
         {
             var azureSettings = GenerateAzureSettings();
             InitContainer(azureSettings);
 
             using (var store = GetDocumentStore())
             {
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "oren" }, "users/1");
@@ -86,30 +89,30 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     session.SaveChanges();
                 }
 
-                var config = new PeriodicBackupConfiguration
-                {
-                    BackupType = BackupType.Backup,
-                    AzureSettings = azureSettings,
-                    IncrementalBackupFrequency = "0 0 1 1 *"
-                };
-
-                var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
-                store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
-                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
                 PeriodicBackupStatus status = null;
-                var value = WaitForValue(() =>
+                long backupTaskId = 0;
+                GetPeriodicBackupStatusOperation operation = null;
+                BackupResult backupResult = null;
+                if (oneTimeBackup == false)
                 {
-                    status = store.Maintenance.Send(operation).Status;
-                    return status?.LastEtag;
-                }, 4);
-                Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
-                Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                    var config = new PeriodicBackupConfiguration { BackupType = BackupType.Backup, AzureSettings = azureSettings, IncrementalBackupFrequency = "0 0 1 1 *" };
+                   backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
+                    operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                    store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
+                    var value = WaitForValue(() =>
+                    {
+                        status = store.Maintenance.Send(operation).Status;
+                        return status?.LastEtag;
+                    }, 4);
+                    Assert.True(4 == value, $"4 == value, Got status: {status != null}, exception: {status?.Error?.Exception}");
+                    Assert.True(status.LastOperationId != null, $"status.LastOperationId != null, Got status: {status != null}, exception: {status?.Error?.Exception}");
 
-                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
+                    var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(status.LastOperationId.Value));
 
-                var backupResult = backupOperation.Result as BackupResult;
-                Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
-                Assert.True(1 == backupResult.Counters.ReadCount, "1 == backupResult.Counters.ReadCount");
+                    backupResult = backupOperation.Result as BackupResult;
+                    Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
+                    Assert.True(1 == backupResult.Counters.ReadCount, "1 == backupResult.Counters.ReadCount");
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -119,15 +122,34 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     session.SaveChanges();
                 }
 
-                var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                store.Maintenance.Send(new StartBackupOperation(false, backupTaskId));
-                value = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
-                Assert.Equal(lastEtag, value);
+                if (oneTimeBackup == false)
+                {
+                    var lastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
+                    store.Maintenance.Send(new StartBackupOperation(false, backupTaskId));
+                    var value2 = WaitForValue(() => store.Maintenance.Send(operation).Status.LastEtag, lastEtag);
+                    Assert.Equal(lastEtag, value2);
+                }
+
+                if (oneTimeBackup)
+                {
+                    var backupConfiguration = new BackupConfiguration
+                    {
+                        BackupType = BackupType.Backup,
+                        DatabaseName = store.Database,
+                        AzureSettings = azureSettings,
+                        
+                    };
+
+                    backupResult = (BackupResult)store.Maintenance.Server.Send(new OneTimeBackupOperation(backupConfiguration)).WaitForCompletion(TimeSpan.FromSeconds(15));
+                    Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
+                    Assert.Equal(2, backupResult.Counters.ReadCount);
+
+                }
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                azureSettings.RemoteFolderName = status.FolderName;
+                azureSettings.RemoteFolderName = oneTimeBackup ? backupResult.FolderName : status.FolderName;
                 var restoreFromGoogleCloudConfiguration = new RestoreFromAzureConfiguration()
                 {
                     DatabaseName = databaseName,

@@ -713,12 +713,28 @@ namespace Raven.Server.Web.System
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
                 var backupConfiguration = JsonDeserializationServer.OneTimeBackupConfiguration(json);
+                ServerStore.ConcurrentBackupsCounter.StartBackup(backupConfiguration.Name, Logger);
+                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
+
                 var database = await ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(backupConfiguration.DatabaseName);
                 var operationId = ServerStore.Operations.GetNextOperationId();
                 var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                 var backupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings);
                 var tempBackupPath = (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp");
-                var backupTask = new BackupTask(database, periodicBackup: null, backupConfiguration, isFullBackup: true, backupToLocalFolder, operationId, tempBackupPath, Logger);
+                var backupParameters = new BackupParameters
+                {
+                    TaskId = -1,
+                    RetentionPolicy = null,
+                    StartTimeUtc = SystemTime.UtcNow,
+                    IsOneTimeBackup = true,
+                    BackupStatus = new PeriodicBackupStatus {TaskId = -1},
+                    OperationId = ServerStore.Operations.GetNextOperationId(),
+                    BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
+                    IsFullBackup = true,
+                    TempBackupPath = (database.Configuration.Storage.TempPath ?? database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp")
+                };
+
+                var backupTask = new BackupTask(database, backupParameters, backupConfiguration, Logger);
 
                 var t = ServerStore.Operations.AddOperation(
                     null,
@@ -729,7 +745,6 @@ namespace Raven.Server.Web.System
                         var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
                         PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
                             {
-                                ServerStore.ConcurrentBackupsCounter.StartBackup(backupConfiguration.Name, Logger);
                                 var sw = Stopwatch.StartNew();
                                 try
                                 {
@@ -738,7 +753,8 @@ namespace Raven.Server.Web.System
 
                                     using (database.PreventFromUnloading())
                                     {
-                                        var backupResult = backupTask.RunPeriodicBackup(onProgress);
+                                        var runningBackupStatus = new PeriodicBackupStatus { TaskId = -1 };
+                                        var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
                                         tcs.SetResult(backupResult);
                                     }
                                 }
