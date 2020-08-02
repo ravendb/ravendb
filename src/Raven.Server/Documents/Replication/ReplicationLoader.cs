@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Replication
 
                 var exceptionSchema = JsonDeserializationClient.ExceptionSchema(readerObject);
                 if (exceptionSchema.Type.Equals("Error"))
-                    throw new DatabaseDisabledException(exceptionSchema.Message);
+                    throw new Exception(exceptionSchema.Message);
 
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
                 if (_log.IsInfoEnabled)
