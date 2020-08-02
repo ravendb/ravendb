@@ -48,6 +48,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                 using (var session = store.OpenSession())
                 {
                     var user2 = session.Load<User>("users/2-A");
+                    var user = session.Load<User>("users/1-A");
 
                     session.SaveChanges();
 
@@ -58,12 +59,15 @@ namespace SlowTests.Client.TimeSeries.Issues
                     res = ts.Get();
                     Assert.Null(res);
 
-                    session.Advanced.Defer(new CopyTimeSeriesCommandData(id,
-                        id2,
-                        null));
-                    session.SaveChanges();
+                    foreach (var singleResult in session.Advanced.GetTimeSeriesFor(user))
+                    {
+                        session.Advanced.Defer(new CopyTimeSeriesCommandData(id,
+                            singleResult,
+                            id2,
+                            singleResult,
+                            null));
+                    }
 
-                    user2 = session.Load<User>(id2);
                     session.SaveChanges();
 
                     ts = session.TimeSeriesFor(user2, tag);
@@ -107,9 +111,17 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Defer(new CopyTimeSeriesCommandData(id,
-                        id2,
-                        null));
+                    var user = session.Load<User>("users/1-A");
+
+                    foreach (var singleResult in session.Advanced.GetTimeSeriesFor(user))
+                    {
+                        session.Advanced.Defer(new CopyTimeSeriesCommandData(id,
+                            singleResult,
+                            id2,
+                            singleResult,
+                            null));
+                    }
+
                     Assert.Throws<DocumentDoesNotExistException>(() =>session.SaveChanges());
                 }
             }
