@@ -17,6 +17,9 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public UploadToFtp FtpBackup { get; set; }
 
+        public string FolderName { get; set; }
+        public string FileName { get; set; }
+
         public BackupResult()
         {
             _progress = new BackupProgress(this);
@@ -37,6 +40,8 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(GoogleCloudBackup)] = GoogleCloudBackup.ToJson();
             json[nameof(GlacierBackup)] = GlacierBackup.ToJson();
             json[nameof(FtpBackup)] = FtpBackup.ToJson();
+            json[nameof(FolderName)] = FolderName;
+            json[nameof(FileName)] = FileName;
             return json;
         }
     }

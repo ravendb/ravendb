@@ -502,17 +502,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var backupTypeText = GetBackupTypeText(isFullBackup, periodicBackup.Configuration.BackupType);
 
                     periodicBackup.StartTimeInUtc = startTimeInUtc;
-                    var backupTask = new BackupTask(
-                        _database,
-                        periodicBackup,
-                        periodicBackup.Configuration,
-                        isFullBackup,
-                        backupToLocalFolder,
-                        operationId,
-                        _tempBackupPath,
-                        _logger,
-                        _forTestingPurposes);
 
+                    var backupParameters = new BackupParameters
+                    {
+                        TaskId = periodicBackup.Configuration.TaskId,
+                        RetentionPolicy = periodicBackup.Configuration.RetentionPolicy,
+                        StartTimeUtc = periodicBackup.StartTimeInUtc,
+                        BackupStatus = periodicBackup.BackupStatus,
+                        IsOneTimeBackup = false,
+                        IsFullBackup = isFullBackup,
+                        BackupToLocalFolder = backupToLocalFolder,
+                        TempBackupPath = _tempBackupPath,
+                        OperationId = operationId
+                    };
+
+                    var backupTask = new BackupTask(_database, backupParameters, periodicBackup.Configuration, _logger, _forTestingPurposes);
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
 
                     periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask
@@ -607,6 +611,24 @@ namespace Raven.Server.Documents.PeriodicBackup
         private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
             BackupResult backupResult = null;
+            var runningBackupStatus = new PeriodicBackupStatus
+            {
+                TaskId = periodicBackup.Configuration.TaskId,
+                BackupType = periodicBackup.Configuration.BackupType,
+                LastEtag = periodicBackup.BackupStatus.LastEtag,
+                LastRaftIndex = periodicBackup.BackupStatus.LastRaftIndex,
+                LastFullBackup = periodicBackup.BackupStatus.LastFullBackup,
+                LastIncrementalBackup = periodicBackup.BackupStatus.LastIncrementalBackup,
+                LastFullBackupInternal = periodicBackup.BackupStatus.LastFullBackupInternal,
+                LastIncrementalBackupInternal = periodicBackup.BackupStatus.LastIncrementalBackupInternal,
+                IsFull = periodicBackup.BackupStatus.IsFull,
+                LocalBackup = periodicBackup.BackupStatus.LocalBackup,
+                LastOperationId = periodicBackup.BackupStatus.LastOperationId,
+                FolderName = periodicBackup.BackupStatus.FolderName,
+                LastDatabaseChangeVector = periodicBackup.BackupStatus.LastDatabaseChangeVector
+            };
+
+            periodicBackup.RunningBackupStatus = runningBackupStatus;
 
             try
             {
@@ -615,13 +637,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 using (_database.PreventFromUnloading())
                 {
-                    backupResult = (BackupResult)backupTask.RunPeriodicBackup(onProgress);
+                    backupResult = (BackupResult)backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
                     tcs.SetResult(backupResult);
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                tcs.SetCanceled();
             }
             catch (Exception e)
             {
@@ -632,6 +650,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             finally
             {
+                periodicBackup.BackupStatus = runningBackupStatus;
                 ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
             }
         }
