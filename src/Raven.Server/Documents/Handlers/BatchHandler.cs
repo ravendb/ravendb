@@ -1004,38 +1004,21 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case CommandType.TimeSeriesCopy:
 
-                            var names = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesNamesForDocument(context, cmd.Id);
-                            foreach (var name in names)
-                            {
-                                var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, name.ToString(), DateTime.MinValue, DateTime.MaxValue);
+                            var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, cmd.Name, DateTime.MinValue, DateTime.MaxValue);
 
-                                var tso = new TimeSeriesOperation()
-                                {
-                                    Name = name.ToString()
-                                };
+                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.DestinationId, fromEtl: false);
 
-                                foreach (var singleResult in reader.AllValues())
-                                {
-                                    var temp = new TimeSeriesOperation.AppendOperation()
-                                    {
-                                        Tag = singleResult.Tag,
-                                        Timestamp = singleResult.Timestamp,
-                                        Values = singleResult.Values.ToArray()
-                                    };
-                                    tso.Append(temp);
-                                }
-
-                                var ts = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Name, tso, false);
-
-                                ts.ExecuteDirectly(context);
-
-                                LastChangeVector = ts.LastChangeVector;
-                            }
+                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                                    cmd.DestinationId,
+                                    docCollection,
+                                    cmd.DestinationName,
+                                    reader.AllValues()
+                                );
 
                             Reply.Add(new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.DestinationId,
-                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = LastChangeVector,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = reader.GetCurrentSegmentChangeVector(),
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
                             });
                             break;
