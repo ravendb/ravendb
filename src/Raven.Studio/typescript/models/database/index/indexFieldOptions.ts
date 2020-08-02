@@ -25,12 +25,12 @@ class indexFieldOptions {
         { shortName: "Simple Analyzer", fullName: "SimpleAnalyzer" },
         { shortName: "Standard Analyzer", fullName: null }, // default option
         { shortName: "Stop Analyzer", fullName: "StopAnalyzer" },
-        { shortName: "Whitespace Analyzer", fullName:"WhitespaceAnalyzer" }       
+        { shortName: "Whitespace Analyzer", fullName:"WhitespaceAnalyzer" }
     ];
 
-    static readonly analyzersNames =  indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName);
+    static readonly analyzersNames = indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName);
 
-    static readonly DefaultFieldOptions = "__all_fields";   
+    static readonly DefaultFieldOptions = "__all_fields";
     
     static readonly TermVectors: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldTermVector, string>> = [{
             label: "No",
@@ -73,7 +73,7 @@ class indexFieldOptions {
 
     name = ko.observable<string>();
     
-    isDefaultFieldOptions = ko.pureComputed(() => this.name() === indexFieldOptions.DefaultFieldOptions);    
+    isDefaultFieldOptions = ko.pureComputed(() => this.name() === indexFieldOptions.DefaultFieldOptions);
     isStandardAnalyzer = ko.pureComputed(() => !this.analyzer() || this.analyzer() === 'StandardAnalyzer' || this.analyzer() === 'Lucene.Net.Analysis.Standard.StandardAnalyzer');
 
     parent = ko.observable<indexFieldOptions>();
@@ -122,6 +122,7 @@ class indexFieldOptions {
         this.suggestions(dto.Suggestions);
         this.termVector(dto.TermVector);
         this.hasSpatialOptions(!!dto.Spatial);
+        
         if (this.hasSpatialOptions()) {
             this.spatial(new spatialOptions(dto.Spatial));
         } else {
@@ -136,10 +137,19 @@ class indexFieldOptions {
             }
         }
         
+        if ((this.termVector() && this.termVector() !== "No") ||
+            (this.indexing() && this.indexing() !== "Default") ||
+            (this.analyzer() && this.analyzer() !== "StandardAnalyzer")) {
+            this.showAdvancedOptions(true);
+        }
+        
         _.bindAll(this, "toggleAdvancedOptions");
 
         this.initValidation();
-
+        this.initObservables();
+    }
+    
+    private initObservables() {
         // used to avoid circular updates
         let changeInProgess = false;
 
@@ -179,7 +189,7 @@ class indexFieldOptions {
                     this.indexing("Search");
                     this.termVector("WithPositionsAndOffsets");
                 } else if (newValue === null) {
-                    this.analyzer(null); 
+                    this.analyzer(null);
                     this.storage(null);
                     this.indexing(null);
                     this.termVector(null);
@@ -243,7 +253,7 @@ class indexFieldOptions {
             this.termVector,
             this.hasSpatialOptions,
             this.spatial().dirtyFlag().isDirty
-        ], false, jsonUtil.newLineNormalizingHashFunction);       
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     private computeFullTextSearch() {
@@ -267,7 +277,7 @@ class indexFieldOptions {
         }
     }
     
-    private computeAnalyzer() {      
+    private computeAnalyzer() {
         if (this.indexing() === null) {
             // take analyzer from default if indexing is set to 'inherit'
             this.analyzer(this.parent().analyzer());
