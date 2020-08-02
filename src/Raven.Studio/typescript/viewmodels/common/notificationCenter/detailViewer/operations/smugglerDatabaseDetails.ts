@@ -109,7 +109,6 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 
                 if (this.op.taskType() === "DatabaseImport") {
                     result.push(this.mapToExportListItem("Tombstones", status.Tombstones, true));
-                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones));
                 }
                 
                 result.push(this.mapToExportListItem("Revisions", status.RevisionDocuments));
@@ -120,6 +119,11 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 result.push(this.mapToExportListItem("Indexes", status.Indexes));
                 result.push(this.mapToExportListItem("Identities", status.Identities));
                 result.push(this.mapToExportListItem("Compare Exchange", status.CompareExchange));
+
+                if (this.op.taskType() === "DatabaseImport") {
+                    result.push(this.mapToExportListItem("Compare Exchange Tombstones", status.CompareExchangeTombstones, true));
+                }
+                
                 result.push(this.mapToExportListItem("Subscriptions", status.Subscriptions));
             }
 
