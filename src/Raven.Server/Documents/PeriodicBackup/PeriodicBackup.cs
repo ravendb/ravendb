@@ -17,9 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public Timer BackupTimer { get; private set; }
 
-        public Task RunningTask { get; set; }
-
-        public long? RunningBackupTaskId { get; set; }
+        public RunningBackupTask RunningTask { get; set; }
 
         public OperationCancelToken CancelToken { get; set; }
 
@@ -41,9 +39,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     CancelFutureTasks();
 
-                    if (RunningTask?.IsCompleted == false)
+                    var runningTask = RunningTask;
+                    if (runningTask != null && runningTask.Task.IsCompleted == false)
                     {
-                        inactiveRunningPeriodicBackupsTasks.Add(RunningTask);
+                        inactiveRunningPeriodicBackupsTasks.Add(runningTask.Task);
                     }
                 }
             });
@@ -107,6 +106,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         public void Dispose()
         {
             _disposeOnce.Dispose();
+        }
+
+        public class RunningBackupTask
+        {
+            public Task Task { get; set; }
+
+            public long Id { get; set; }
         }
     }
 }
