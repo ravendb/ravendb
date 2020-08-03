@@ -43,6 +43,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         private double? _scale;
 
+        private bool _fillGaps;
+
         private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
         {
             new TimeSeriesAggregation(AggregationType.First),
@@ -103,6 +105,8 @@ namespace Raven.Server.Documents.Queries.Results
             if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
 
+            _fillGaps = true; // todo aviv
+
             TimeSeriesAggregation[] aggStates;
             if (timeSeriesFunction.Select != null)
             {
@@ -142,12 +146,17 @@ namespace Raven.Server.Documents.Queries.Results
                     array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, rangeSpec.Start, rangeSpec.End));
                 }
 
-                rangeSpec.MoveToNextRange(ts);
-
                 for (int i = 0; i < aggStates.Length; i++)
                 {
                     aggStates[i].Init();
                 }
+
+                if (_fillGaps)
+                {
+                    FillMissingGaps(rangeSpec, ts, array, timeSeriesFunction, aggStates);
+                }
+
+                rangeSpec.MoveToNextRange(ts);
             }
 
             BlittableJsonReaderObject GetRawValues()
@@ -760,6 +769,23 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
+        private static void FillMissingGaps(RangeGroup rangeSpec, DateTime ts, DynamicJsonArray array, TimeSeriesFunction timeSeriesFunction, TimeSeriesAggregation[] aggStates)
+        {
+            var start = rangeSpec.Start;
+            var end = rangeSpec.End;
+            var groupTimeSpan = end - start;
+            var diff = ts - end;
+            if (diff <= groupTimeSpan) 
+                return;
+
+            while (diff > groupTimeSpan)
+            {
+                start = end;
+                end = end.Add(groupTimeSpan);
+                array.Add(AddTimeSeriesResult(timeSeriesFunction, aggStates, start, end));
+                diff = ts - end;
+            }
+        }
         private static object GetValueFromRolledUpEntry(int index, SingleResult singleResult)
         {
             // we are working with a rolled-up series
