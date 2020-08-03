@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "PUT", AuthorizationStatus.Operator)]
         public async Task RegisterHubAccess()
         {
-            var hub = GetStringQueryString("hub", true);
+            var hub = GetStringQueryString("name", true);
             
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
                                                         ". Create a new replication hub and try again");
                 }
 
-                using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBas64));
+                using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
                 var publicKeyPinningHash = cert.GetPublicKeyPinningHash();
 
                 var command = new RegisterReplicationHubAccessCommand(Database.Name, hub, access, publicKeyPinningHash, cert.Thumbprint, GetRaftRequestIdFromQuery(),
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "DELETE", AuthorizationStatus.Operator)]
         public async Task UnregisterHubAccess()
         {
-            var hub = GetStringQueryString("hub", true);
+            var hub = GetStringQueryString("name", true);
             var thumbprint = GetStringQueryString("thumbprint", true);
 
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/tasks/pull-replication/hub/access", "GET", AuthorizationStatus.Operator)]
         public Task ListHubAccess()
         {
-            var hub = GetStringQueryString("hub", true);
+            var hub = GetStringQueryString("name", true);
             int pageSize = GetPageSize();
             var start = GetStart();
 
@@ -122,12 +122,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WriteArray(nameof(ReplicationHubAccessList.Results), results);
-                    
-                    writer.WriteComma();
-                    writer.WritePropertyName(nameof(ReplicationHubAccessList.Skip));
-                    writer.WriteInteger(start);
-
+                    writer.WriteArray(nameof(ReplicationHubAccessResult.Results), results);
+              
                     writer.WriteEndObject();
                 }
                 

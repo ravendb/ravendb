@@ -180,6 +180,12 @@ namespace Raven.Server.Documents.Replication
 
            switch (changeState)
            {
+               case BulkRegisterReplicationHubAccessCommand bulk:
+                   foreach (var cmd in bulk.Commands)
+                   {
+                       DisposeRelatedPullReplication(cmd.HubDefinitionName, cmd.CertThumbprint);
+                   }
+                   break;
                case UpdatePullReplicationAsHubCommand put:
                    DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
                    break;
@@ -365,7 +371,7 @@ namespace Raven.Server.Documents.Replication
 
         public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationAsSink destination)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.Incoming, destination.HubDefinitionName);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.AllowedWritePaths, destination._hubName);
             newIncoming.Failed += RetryPullReplication;
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
@@ -904,17 +910,17 @@ namespace Raven.Server.Documents.Replication
                     {
                         Database = sink.Database,
                         Disabled = sink.Disabled,
-                        Incoming = sink.Incoming,
+                        AllowedWritePaths = sink.AllowedWritePaths,
                         Mode = PullReplicationMode.Outgoing,
                         Name = sink.Name,
                         Url = sink.Url,
                         ConnectionString = sink.ConnectionString,
                         CertificatePassword = sink.CertificatePassword,
-                        Outgoing = sink.Outgoing,
+                        AllowedReadPaths = sink.AllowedReadPaths,
                         MentorNode = sink.MentorNode,
                         TaskId = sink.TaskId,
                         ConnectionStringName = sink.ConnectionStringName,
-                        HubDefinitionName = sink.HubDefinitionName,
+                        _hubName = sink._hubName,
                         CertificateWithPrivateKey = sink.CertificateWithPrivateKey
                     };
 
@@ -1154,7 +1160,7 @@ namespace Raven.Server.Documents.Replication
                 var outgoingReplication = new OutgoingReplicationHandler(null, this, Database, node, external, info);
                 if (node is PullReplicationAsSink sink)
                 {
-                    outgoingReplication.MyOutgoingPaths = sink.Outgoing ?? sink.Incoming ?? Array.Empty<string>();
+                    outgoingReplication.MyOutgoingPaths = sink.AllowedReadPaths ?? sink.AllowedWritePaths ?? Array.Empty<string>();
                 }
                 outgoingReplication.Failed += OnOutgoingSendingFailed;
                 outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
@@ -1276,7 +1282,7 @@ namespace Raven.Server.Documents.Replication
 
         private TcpConnectionInfo GetPullReplicationTcpInfo(PullReplicationAsSink pullReplicationAsSink, X509Certificate2 certificate, string database)
         {
-            var remoteTask = pullReplicationAsSink.HubDefinitionName;
+            var remoteTask = pullReplicationAsSink._hubName;
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 string[] remoteDatabaseUrls;
@@ -1371,7 +1377,7 @@ namespace Raven.Server.Documents.Replication
                             PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node),"Replication mode should be set to pull or push"),
                             _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)   
                         },
-                        AuthorizationFor = sink.HubDefinitionName
+                        AuthorizationFor = sink._hubName
                     };
 
                     if (sink.CertificateWithPrivateKey == null)

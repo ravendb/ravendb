@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Replication
                 request[nameof(ReplicationInitialRequest.DatabaseGroupId)] = _parent.Database.DatabaseGroupId; // my database id
                 request[nameof(ReplicationInitialRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl();
                 request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
-                request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination.HubDefinitionName;
+                request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination._hubName;
                 request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = destination.GetTaskName();
             }
 

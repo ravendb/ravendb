@@ -2486,7 +2486,7 @@ namespace Raven.Server
                             Incoming = replicationHubAccess.Incoming,
                             Outgoing = replicationHubAccess.Outgoing,
                             Name = replicationHubAccess.Name,
-                            CertificateBas64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                            CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                             
                         }, certificate.GetPublicKeyPinningHash(),certificate.Thumbprint, RaftIdGenerator.NewId(), certificate.Issuer, certificate.Subject, certificate.NotBefore, certificate.NotAfter)
                         {
