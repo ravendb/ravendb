@@ -473,8 +473,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (periodicBackup.Disposed)
                     throw new InvalidOperationException("Backup task was already disposed");
 
-                if (periodicBackup.RunningTask != null)
-                    return periodicBackup.RunningBackupTaskId ?? -1;
+                var runningTask = periodicBackup.RunningTask;
+                if (runningTask != null)
+                    return runningTask.Id;
 
                 if (_serverStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
                 {
@@ -539,7 +540,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger,
                         _cancellationToken.Token);
 
-                    periodicBackup.RunningBackupTaskId = operationId;
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
                     var backupTaskName = $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'" ;
 
@@ -547,11 +547,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                         null,
                         backupTaskName,
                         Operations.Operations.OperationType.DatabaseBackup,
-                        taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, onProgress),
+                        taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, operationId, onProgress),
                         id: operationId,
                         token: backupTask.TaskCancelToken);
 
-                    periodicBackup.RunningTask = task;
                     task.ContinueWith(_ => backupTask.TaskCancelToken.Dispose());
 
                     return operationId;
@@ -593,15 +592,21 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, Action<IOperationProgress> onProgress)
+        private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, long operationId, Action<IOperationProgress> onProgress)
         {
             var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, onProgress, tcs), null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
+            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, operationId, onProgress, tcs), null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
             return tcs.Task;
         }
 
-        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, Action<IOperationProgress> onProgress, TaskCompletionSource<IOperationResult> tcs)
+        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, long operationId, Action<IOperationProgress> onProgress, TaskCompletionSource<IOperationResult> tcs)
         {
+            periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask
+            {
+                Id = operationId,
+                Task = tcs.Task
+            };
+
             BackupResult backupResult = null;
 
             try
@@ -639,7 +644,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 _serverStore.ConcurrentBackupsCounter.FinishBackup(periodicBackup.Configuration.Name, periodicBackup.RunningBackupStatus, elapsed, _logger);
 
                 periodicBackup.RunningTask = null;
-                periodicBackup.RunningBackupTaskId = null;
                 periodicBackup.CancelToken = null;
                 periodicBackup.RunningBackupStatus = null;
 
@@ -1001,8 +1005,9 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             foreach (var periodicBackup in _periodicBackups)
             {
-                if (periodicBackup.Value.RunningTask != null &&
-                    periodicBackup.Value.RunningTask.IsCompleted == false)
+                var runningTask = periodicBackup.Value.RunningTask;
+                if (runningTask != null &&
+                    runningTask.Task.IsCompleted == false)
                     return true;
             }
 
@@ -1048,14 +1053,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (_periodicBackups.TryGetValue(taskId, out var periodicBackup) == false)
                 return null;
 
-            if (periodicBackup.RunningTask == null)
+            var runningTask = periodicBackup.RunningTask;
+            if (runningTask == null)
                 return null;
 
             return new RunningBackup
             {
                 StartTime = periodicBackup.StartTimeInUtc,
                 IsFull = periodicBackup.RunningBackupStatus?.IsFull ?? false,
-                RunningBackupTaskId = periodicBackup.RunningBackupTaskId
+                RunningBackupTaskId = runningTask.Id
             };
         }
 
