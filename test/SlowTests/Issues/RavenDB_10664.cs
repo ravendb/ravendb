@@ -77,7 +77,7 @@ namespace SlowTests.Issues
 
                 var sink = new PullReplicationAsSink
                 {
-                    HubDefinitionName = "aa",
+                    _hubName = "aa",
                     ConnectionString = connectionString,
                     ConnectionStringName = connectionString.Name
                 };

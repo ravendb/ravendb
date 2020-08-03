@@ -1495,7 +1495,7 @@ namespace Raven.Server.Documents
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var record = ServerStore.Cluster.ReadRawDatabaseRecord(context, Name);
+                using var record = ServerStore.Cluster.ReadRawDatabaseRecord(context, Name);
                 return record?.GetHubPullReplicationByName(name);
             }
         }

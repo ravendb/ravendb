@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Operations.Replication
             };
         }
 
-        public void Validate(bool useSsl)
+        internal void Validate(bool useSsl)
         {
             if (string.IsNullOrEmpty(Name))
                 throw new ArgumentNullException(nameof(Name));

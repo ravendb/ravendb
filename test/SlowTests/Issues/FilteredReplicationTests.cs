@@ -103,7 +103,7 @@ namespace SlowTests.Issues
                 new ReplicationHubAccess
                 {
                     Name = "Arava",
-                    CertificateBas64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
                     Incoming = new[] {"users/ayende", "users/ayende/*"}
                 }));
         }
@@ -140,7 +140,7 @@ namespace SlowTests.Issues
                 new ReplicationHubAccess
                 {
                     Name = "Arava",
-                    CertificateBas64 = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert)),
+                    CertificateBase64 = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert)),
                     Incoming = new[] {"users/ayende", "users/ayende/*"}
                 })));
         }
@@ -231,7 +231,7 @@ namespace SlowTests.Issues
                     "users/ayende",
                     "users/ayende/*"
                 },
-                CertificateBas64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
             
             await storeB.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
@@ -244,7 +244,7 @@ namespace SlowTests.Issues
             {
                 ConnectionStringName = dbNameA + "ConStr",
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
-                HubDefinitionName = "pull"
+                _hubName = "pull"
             }));
 
             WaitForDocument(storeB, "users/ayende");
@@ -374,7 +374,7 @@ namespace SlowTests.Issues
                     "users/ayende",
                     "users/ayende/*"
                 },
-                CertificateBas64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
             
             await storeA.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
@@ -388,7 +388,7 @@ namespace SlowTests.Issues
                 ConnectionStringName = dbNameB + "ConStr",
                 Mode = PullReplicationMode.Incoming,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
-                HubDefinitionName = "push"
+                _hubName = "push"
             }));
 
             WaitForUserToContinueTheTest(storeA);
@@ -498,7 +498,7 @@ namespace SlowTests.Issues
                 {
                     "users/ayende/config"
                 },
-                CertificateBas64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
             
             await storeB.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
@@ -512,13 +512,13 @@ namespace SlowTests.Issues
                 ConnectionStringName = dbNameA + "ConStr",
                 Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
-                HubDefinitionName = "both",
-                Incoming = new[]
+                _hubName = "both",
+                AllowedWritePaths = new[]
                 {
                     "users/ayende",
                     "users/ayende/dogs/*"
                 },
-                Outgoing = new[]
+                AllowedReadPaths = new[]
                 {
                     "users/ayende/config",
                     "users/ayende/chair"
@@ -601,21 +601,21 @@ namespace SlowTests.Issues
                 {
                     "users/ayende/config"
                 },
-                CertificateBas64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
 
             var file = GetTempFileName();
             await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
             
-            ReplicationHubAccessList accessList = await storeB.Maintenance.SendAsync(new ListReplicationHubAccessOperation("both"));
-            Assert.Empty(accessList.Results);
+            ReplicationHubAccessResult accessResult = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
+            Assert.Empty(accessResult.Results);
 
             var op = await storeB.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
             await op.WaitForCompletionAsync();
             
-            accessList = await storeB.Maintenance.SendAsync(new ListReplicationHubAccessOperation("both"));
-            Assert.NotEmpty(accessList.Results);
-            Assert.Equal("Arava", accessList.Results[0].Name);
+            accessResult = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
+            Assert.NotEmpty(accessResult.Results);
+            Assert.Equal("Arava", accessResult.Results[0].Name);
         }
     }
 }

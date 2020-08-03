@@ -3520,7 +3520,7 @@ namespace Raven.Server.ServerWide
                     Incoming = details.Incoming,
                     Outgoing = details.Outgoing,
                     Name = details.Name,
-                    CertificateBas64 = certBase64,
+                    CertificateBase64 = certBase64,
                 });
             }
 

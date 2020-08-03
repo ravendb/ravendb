@@ -123,7 +123,7 @@ namespace Raven.Server.Web.System
             {
                 foreach (var incoming in handlers)
                 {
-                    if (incoming.PullReplicationName == sinkReplication.HubDefinitionName)
+                    if (incoming.PullReplicationName == sinkReplication._hubName)
                     {
                         handler = incoming;
                         res = (incoming.ConnectionInfo.SourceUrl, OngoingTaskConnectionStatus.Active);
@@ -146,7 +146,7 @@ namespace Raven.Server.Web.System
                 ConnectionStringName = sinkReplication.ConnectionStringName,
                 TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationDatabase = connection?.Database,
-                HubDefinitionName = sinkReplication.HubDefinitionName,
+                HubDefinitionName = sinkReplication._hubName,
                 DestinationUrl = res.Url,
                 TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
                 MentorNode = sinkReplication.MentorNode,

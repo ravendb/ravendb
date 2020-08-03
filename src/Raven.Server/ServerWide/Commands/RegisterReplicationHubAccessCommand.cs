@@ -64,7 +64,7 @@ namespace Raven.Server.ServerWide.Commands
             HubDefinitionName= hub;
             CertPublicKeyHash = certPublicKeyHash;
             CertThumbprint = certThumbprint;
-            CertificateBase64 = access.CertificateBas64;
+            CertificateBase64 = access.CertificateBase64;
             Name = access.Name;
             Incoming = access.Incoming;
             Outgoing = access.Outgoing;

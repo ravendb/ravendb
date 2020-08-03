@@ -116,9 +116,9 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteExpiredCompareExchangeCommand)] = 50_000,
             [nameof(EditDocumentsCompressionCommand)] = 50_000,
 
-            [nameof(RegisterReplicationHubAccessCommand)] = 50_001,
-            [nameof(BulkRegisterReplicationHubAccessCommand)] = 50_001,
-            [nameof(UnregisterReplicationHubAccessCommand)] = 50_001
+            [nameof(RegisterReplicationHubAccessCommand)] = 51_001,
+            [nameof(BulkRegisterReplicationHubAccessCommand)] = 51_001,
+            [nameof(UnregisterReplicationHubAccessCommand)] = 51_001
         };
 
         public static bool CanPutCommand(string command)
