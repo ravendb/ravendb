@@ -1537,16 +1537,22 @@ namespace Raven.Server.Documents
 
                 EnsureLastEtagIsPersisted(context, etag);
 
+                var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
+
                 if (collectionName.IsHiLo == false &&
                     (flags & DocumentFlags.Artificial) != DocumentFlags.Artificial)
                 {
-                    var revisionsStorage = DocumentDatabase.DocumentsStorage.RevisionsStorage;
                     if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) == false &&
                         (revisionsStorage.Configuration != null || flags.Contain(DocumentFlags.Resolved)))
                     {
                         revisionsStorage.Delete(context, id, lowerId, collectionName, changeVector, modifiedTicks, nonPersistentFlags, documentFlags);
                     }
                 }
+
+                if (((flags & DocumentFlags.HasRevisions) == DocumentFlags.HasRevisions) &&
+                    (revisionsStorage.Configuration == null) &&
+                    ((flags & DocumentFlags.Resolved) != DocumentFlags.Resolved))
+                    revisionsStorage.DeleteRevisionsFor(context, id);
 
                 table.Delete(doc.StorageId);
 
