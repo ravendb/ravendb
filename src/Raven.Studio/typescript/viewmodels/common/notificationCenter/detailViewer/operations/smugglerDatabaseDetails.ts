@@ -6,7 +6,7 @@ import abstractOperationDetails = require("viewmodels/common/notificationCenter/
 import generalUtils = require("common/generalUtils");
 import genericProgress = require("common/helpers/database/genericProgress");
 
-type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending";
+type smugglerListItemStatus = "processed" | "skipped" | "processing" | "pending" | "processedWithErrors";
 
 type smugglerListItem = {
     name: string;
@@ -288,10 +288,14 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
     private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, isNested: boolean = false): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
+        
         if (item.Skipped) {
             stage = "skipped";
         } else if (item.Processed) {
             stage = "processed";
+            if (item.ErroredCount) {
+                stage = "processedWithErrors";
+            }
         }
 
         let processingSpeedText = smugglerDatabaseDetails.ProcessingText;

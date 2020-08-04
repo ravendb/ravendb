@@ -43,6 +43,9 @@
                         <div class="status status-processed" data-bind="visible: stage === 'processed'">
                             <i class="icon-check"></i> <span>Processed</span>
                         </div>
+                        <div class="status status-processed-with-errors" data-bind="visible: stage === 'processedWithErrors'">
+                            <i class="icon-warning"></i> <span>Processed with errors</span>
+                        </div>
                         <div class="status status-errored" data-bind="visible: stage === 'error'">
                             <i class="icon-exclamation"></i> <span>Error</span>
                         </div>
@@ -74,7 +77,7 @@
                         <div class="progress-overall" style="width: 600px">
                             <div class="flex-horizontal" data-bind="with: uploadProgress">
                                 <h3 class="flex-grow"><span data-bind="text: formattedTimeLeftToProcess"></span></h3>
-                                <div class="percentage" data-bind="text: percentageFormatted,  css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
+                                <div class="percentage" data-bind="text: percentageFormatted, css: { 'text-success': completed }, attr: { title: textualProgress }"></div>
                             </div>
                             <div class="progress" data-bind="with: uploadProgress">
                                 <div data-bind="css: { 'progress-bar-striped': !completed, 'progress-bar-primary': !completed, 'active': !completed, 'progress-bar-success': completed }, style: { width: percentageFormatted }, attr: { 'aria-valuenow': percentage, title: textualProgress } "
