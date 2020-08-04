@@ -122,8 +122,8 @@ namespace Raven.Server.Documents
 
         public static unsafe string ComputeHashForTimeSeriesResult(DateTime from, DateTime to, UIntPtr size, byte* state)
         {
-            HashNumber(state, from.GetHashCode());
-            HashNumber(state, to.GetHashCode());
+            HashNumber(state, from.Ticks);
+            HashNumber(state, to.Ticks);
             return FinalizeHash(size, state);
         }
 
