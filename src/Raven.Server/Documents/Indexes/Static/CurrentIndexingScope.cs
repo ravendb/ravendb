@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 ReferencesByCollection = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
 
             if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
-                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());
+                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>(SliceComparer.Instance));
 
             if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
                 referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));
