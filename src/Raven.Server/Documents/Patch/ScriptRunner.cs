@@ -372,8 +372,8 @@ namespace Raven.Server.Documents.Patch
                 var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
 
                 var tsStats = new ObjectInstance(ScriptEngine);
-                tsStats.Set(nameof(stats.Start), stats.Start.GetDefaultRavenFormat(isUtc: true));
-                tsStats.Set(nameof(stats.End), stats.End.GetDefaultRavenFormat(isUtc: true));
+                tsStats.Set(nameof(stats.Start), ScriptEngine.Date.Construct(stats.Start));
+                tsStats.Set(nameof(stats.End), ScriptEngine.Date.Construct(stats.End));
                 tsStats.Set(nameof(stats.Count), stats.Count);
 
                 return tsStats;
