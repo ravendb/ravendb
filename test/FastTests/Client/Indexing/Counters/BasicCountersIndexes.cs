@@ -377,7 +377,7 @@ namespace FastTests.Client.Indexing.Counters
                     var counts = index._indexStorage.ReferencesForDocuments.GetReferenceTablesCount("Companies", tx);
 
                     Assert.Equal(1, counts.ReferenceTableCount);
-                    Assert.Equal(1, counts.CollectionTableCount);
+                    Assert.Equal(2, counts.CollectionTableCount); // companies/11, employees/1
                 }
 
                 using (var session = store.OpenSession())
