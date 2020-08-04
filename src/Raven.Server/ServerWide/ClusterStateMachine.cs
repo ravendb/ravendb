@@ -3517,8 +3517,8 @@ namespace Raven.Server.ServerWide
 
                 yield return (hub, new ReplicationHubAccess
                 {
-                    Incoming = details.Incoming,
-                    Outgoing = details.Outgoing,
+                    Incoming = details.AllowedWritePaths,
+                    Outgoing = details.AllowedReadPaths,
                     Name = details.Name,
                     CertificateBase64 = certBase64,
                 });

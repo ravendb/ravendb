@@ -2483,8 +2483,8 @@ namespace Raven.Server
                 {
                     await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub,new ReplicationHubAccess
                         {
-                            Incoming = replicationHubAccess.Incoming,
-                            Outgoing = replicationHubAccess.Outgoing,
+                            Incoming = replicationHubAccess.AllowedWritePaths,
+                            Outgoing = replicationHubAccess.AllowedReadPaths,
                             Name = replicationHubAccess.Name,
                             CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                             
