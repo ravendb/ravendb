@@ -49,7 +49,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT: Whether RavenDB will consider memory lock error to be catastrophic. This is used with encrypted databases to ensure that temporary buffers are never written to disk and are locked to memory. Setting this to true is not recommended and should be done only after proper security analysis has been performed.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Security.DoNotConsiderMemoryLockFailureAsCatastrophicError", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Security.DoNotConsiderMemoryLockFailureAsCatastrophicError", ConfigurationEntryScope.ServerWideOnly)]
         public bool DoNotConsiderMemoryLockFailureAsCatastrophicError { get; set; }
 
         [Description("The (optional) password of the .pfx certificate file.")]
