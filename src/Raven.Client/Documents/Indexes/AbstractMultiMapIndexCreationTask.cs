@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Indexes
                     child.GetTypeInfo().IsAbstract ||
                     child.GetTypeInfo().IsInterface)
                     continue;
-                
+
                 var genericEnumerable = typeof(IEnumerable<>).MakeGenericType(child);
                 var delegateType = typeof(Func<,>).MakeGenericType(genericEnumerable, typeof(IEnumerable));
                 var lambdaExpression = Expression.Lambda(delegateType, expr.Body, Expression.Parameter(genericEnumerable, expr.Parameters[0].Name));
@@ -81,7 +81,9 @@ namespace Raven.Client.Documents.Indexes
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 PatternReferencesCollectionName = PatternReferencesCollectionName,
                 AdditionalSources = AdditionalSources,
-                Configuration = Configuration
+                Configuration = Configuration,
+                LockMode = LockMode,
+                Priority = Priority
             }.ToIndexDefinition(Conventions, validateMap: false);
             foreach (var map in _maps.Select(generateMap => generateMap()))
             {

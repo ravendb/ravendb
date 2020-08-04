@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
@@ -48,6 +49,58 @@ namespace SlowTests.Issues
             }
         }
 
+        private class Companies_Counts_ByName_MultiMap : AbstractMultiMapIndexCreationTask<Companies_Counts_ByName.Result>
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+
+                public long Count { get; set; }
+            }
+
+            public Companies_Counts_ByName_MultiMap()
+            {
+                AddMap<Company>(companies => from company in companies
+                                             select new
+                                             {
+                                                 company.Name,
+                                                 Count = 1
+                                             });
+
+                Reduce = results => from result in results
+                                    group result by result.Name into g
+                                    select new
+                                    {
+                                        Name = g.Key,
+                                        Count = g.Sum(x => x.Count)
+                                    };
+
+                Priority = IndexPriority.High;
+            }
+        }
+
+        private class Companies_Counts_ByName_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public class Result
+            {
+                public string Name { get; set; }
+
+                public long Count { get; set; }
+            }
+
+            public override string IndexName => "Companies/Counts/ByName/JavaScript";
+
+            public Companies_Counts_ByName_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    "map('Companies', function(company) { return { Name: company.Name, Count: 1 } });"
+                };
+
+                Priority = IndexPriority.High;
+            }
+        }
+
         private static IEnumerable<TType> GetAllInstancesOfType<TType>(Assembly assembly, Type t)
         {
             foreach (var type in assembly.GetTypes()
@@ -66,53 +119,60 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var type = typeof(Companies_Counts_ByName);
-                var index = GetAllInstancesOfType<AbstractIndexCreationTask>(type.Assembly, type).Single();
-                await IndexCreation.CreateIndexesAsync(new List<AbstractIndexCreationTask> { index }, store);
-
-                var indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
-                var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
-
-                Assert.Equal(IndexPriority.High, indexDefinition.Priority);
-                Assert.Equal(IndexPriority.High, indexStats.Priority);
-
-                index.Priority = IndexPriority.Low;
-
-                await IndexCreation.CreateIndexesAsync(new List<AbstractIndexCreationTask> { index }, store);
-
-                indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
-                indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
-
-                Assert.Equal(IndexPriority.Low, indexDefinition.Priority);
-                Assert.Equal(IndexPriority.Low, indexStats.Priority);
-
-                index.Priority = IndexPriority.High;
-                index.Execute(store);
-
-                indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
-                indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
-
-                Assert.Equal(IndexPriority.High, indexDefinition.Priority);
-                Assert.Equal(IndexPriority.High, indexStats.Priority);
-
-                index.Priority = IndexPriority.Low;
-                store.ExecuteIndex(index);
-
-                indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
-                indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
-
-                Assert.Equal(IndexPriority.Low, indexDefinition.Priority);
-                Assert.Equal(IndexPriority.Low, indexStats.Priority);
-
-                indexDefinition = index.CreateIndexDefinition();
-                await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
-
-                indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
-                indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
-
-                Assert.Equal(IndexPriority.High, indexDefinition.Priority);
-                Assert.Equal(IndexPriority.High, indexStats.Priority);
+                await ValidatePriority(store, typeof(Companies_Counts_ByName));
+                await ValidatePriority(store, typeof(Companies_Counts_ByName_MultiMap));
+                await ValidatePriority(store, typeof(Companies_Counts_ByName_JavaScript));
             }
+        }
+
+        private async Task ValidatePriority(DocumentStore store, Type type)
+        {
+            var index = GetAllInstancesOfType<AbstractIndexCreationTask>(type.Assembly, type).Single();
+            await IndexCreation.CreateIndexesAsync(new List<AbstractIndexCreationTask> { index }, store);
+
+            var indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
+            var indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
+
+            Assert.Equal(IndexPriority.High, indexDefinition.Priority);
+            Assert.Equal(IndexPriority.High, indexStats.Priority);
+
+            index.Priority = IndexPriority.Low;
+
+            await IndexCreation.CreateIndexesAsync(new List<AbstractIndexCreationTask> { index }, store);
+
+            indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
+            indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
+
+            Assert.Equal(IndexPriority.Low, indexDefinition.Priority);
+            Assert.Equal(IndexPriority.Low, indexStats.Priority);
+
+            index.Priority = IndexPriority.High;
+            index.Execute(store);
+
+            indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
+            indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
+
+            Assert.Equal(IndexPriority.High, indexDefinition.Priority);
+            Assert.Equal(IndexPriority.High, indexStats.Priority);
+
+            index.Priority = IndexPriority.Low;
+            store.ExecuteIndex(index);
+
+            indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
+            indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
+
+            Assert.Equal(IndexPriority.Low, indexDefinition.Priority);
+            Assert.Equal(IndexPriority.Low, indexStats.Priority);
+
+            index = GetAllInstancesOfType<AbstractIndexCreationTask>(type.Assembly, type).Single();
+            indexDefinition = index.CreateIndexDefinition();
+            await store.Maintenance.SendAsync(new PutIndexesOperation(indexDefinition));
+
+            indexDefinition = await store.Maintenance.SendAsync(new GetIndexOperation(index.IndexName));
+            indexStats = await store.Maintenance.SendAsync(new GetIndexStatisticsOperation(index.IndexName));
+
+            Assert.Equal(IndexPriority.High, indexDefinition.Priority);
+            Assert.Equal(IndexPriority.High, indexStats.Priority);
         }
     }
 }
