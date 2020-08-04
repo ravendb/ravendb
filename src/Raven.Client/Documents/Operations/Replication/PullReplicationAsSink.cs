@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public string CertificateWithPrivateKey; // base64
         public string CertificatePassword;
 
-        public string _hubName;
+        private string _hubName;
         public PullReplicationAsSink() { }
 
         public PullReplicationMode Mode = PullReplicationMode.Outgoing;
