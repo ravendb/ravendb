@@ -509,6 +509,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 _serverStore.ConcurrentBackupsCounter.StartBackup(periodicBackup.Configuration.Name, _logger);
 
+                var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+
                 try
                 {
                     var backupStatus = periodicBackup.BackupStatus = GetBackupStatus(periodicBackup.Configuration.TaskId, periodicBackup.BackupStatus);
@@ -541,13 +543,18 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _cancellationToken.Token);
 
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
-                    var backupTaskName = $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'" ;
+
+                    periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask
+                    {
+                        Id = operationId,
+                        Task = tcs.Task
+                    };
 
                     var task = _database.Operations.AddOperation(
                         null,
-                        backupTaskName,
+                        $"{backupTypeText} backup task: '{periodicBackup.Configuration.Name}'. Database: '{_database.Name}'",
                         Operations.Operations.OperationType.DatabaseBackup,
-                        taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, operationId, onProgress),
+                        taskFactory: onProgress => StartBackupThread(periodicBackup, backupTask, tcs, onProgress),
                         id: operationId,
                         token: backupTask.TaskCancelToken);
 
@@ -559,6 +566,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     // we failed to START the backup, need to update the status anyway
                     // in order to reschedule the next full/incremental backup
+                    tcs.TrySetException(e);
                     periodicBackup.BackupStatus.Version++;
                     periodicBackup.BackupStatus.Error = new Error
                     {
@@ -592,21 +600,14 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, long operationId, Action<IOperationProgress> onProgress)
+        private Task<IOperationResult> StartBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
-            var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, operationId, onProgress, tcs), null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
+            PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => RunBackupThread(periodicBackup, backupTask, tcs, onProgress), null, $"Backup task {periodicBackup.Configuration.Name} for database '{_database.Name}'");
             return tcs.Task;
         }
 
-        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, long operationId, Action<IOperationProgress> onProgress, TaskCompletionSource<IOperationResult> tcs)
+        private void RunBackupThread(PeriodicBackup periodicBackup, BackupTask backupTask, TaskCompletionSource<IOperationResult> tcs, Action<IOperationProgress> onProgress)
         {
-            periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask
-            {
-                Id = operationId,
-                Task = tcs.Task
-            };
-
             BackupResult backupResult = null;
 
             try
