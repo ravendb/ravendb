@@ -14,6 +14,7 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
@@ -176,6 +177,26 @@ namespace SlowTests.Server.Documents.Expiration
                 {
                     var company2 = await session.LoadAsync<Company>(company.Id);
                     Assert.Null(company2);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ThrowsIfUsingExpiresAndRefresh()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // Insert document with expiration before activating the expiration
+                var company = new Company { Name = "Company Name" };
+                var expires = SystemTime.UtcNow.AddMinutes(5);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Metadata.Expires] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Refresh] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                    Assert.Contains("cannot be defined with both", error.Message);
                 }
             }
         }
