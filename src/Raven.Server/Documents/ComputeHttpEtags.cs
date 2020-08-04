@@ -120,6 +120,13 @@ namespace Raven.Server.Documents
             return FinalizeHash(size, state);
         }
 
+        public static unsafe string ComputeHashForTimeSeriesResult(DateTime from, DateTime to, UIntPtr size, byte* state)
+        {
+            HashNumber(state, from.GetHashCode());
+            HashNumber(state, to.GetHashCode());
+            return FinalizeHash(size, state);
+        }
+
         internal static unsafe void HashChangeVector(byte* state, string? changeVector)
         {
             if (changeVector == null)

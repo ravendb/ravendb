@@ -317,7 +317,7 @@ namespace Raven.Server.Documents.Handlers
                 From = (oldStart > 0) ? values[0].Timestamp : from,
                 To = lastResult ? to : values.Last().Timestamp,
                 Entries = values.ToArray(),
-                Hash = ComputeHttpEtags.FinalizeHash(size, state)
+                Hash = ComputeHttpEtags.ComputeHashForTimeSeriesResult(from, to, size, state)
             };
         }
 
