@@ -987,14 +987,14 @@ namespace FastTests.Client
 
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.Patch<Class, long>(id, x => x.Customer.Attachments.Where(q => q.ChangeVector != null).FirstOrDefault().Size, newSize);
+                    session.Advanced.Patch<Class, long>(id, x => x.Customer.Attachments.Where(q => q.ChangeVector == changeVector).FirstOrDefault().Size, newSize);
                     session.SaveChanges();
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var doc = session.Load<Class>(id);
-                    var attachmentDetails = doc.Customer.Attachments.FirstOrDefault(q => q.ChangeVector != null);
+                    var attachmentDetails = doc.Customer.Attachments.FirstOrDefault(q => q.ChangeVector == changeVector);
                     Assert.NotNull(attachmentDetails);
                     Assert.Equal(newSize, attachmentDetails.Size);
                 }

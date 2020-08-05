@@ -167,9 +167,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 throw new NotSupportedException();
                         }
 
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Executing handle references for '{_index.Name}'. LastReferenceEtag: {lastReferenceEtag}. Collection: {referencedCollection.Name}. Type: {actionType}.");
-
                         var lastEtag = lastReferenceEtag;
                         var resultsCount = 0;
 
@@ -209,8 +206,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 foreach (var referencedDocument in references)
                                 {
-                                    if (_logger.IsInfoEnabled)
-                                        _logger.Info($"Executing handle references for '{_index.Name}'. Processing reference: {referencedDocument.Key}.");
 
                                     lastEtag = referencedDocument.Etag;
                                     hasChanges = true;
@@ -232,9 +227,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             if (indexWriter == null)
                                                 indexWriter = writeOperation.Value;
-
-                                            if (_logger.IsInfoEnabled)
-                                                _logger.Info($"Executing handle references for '{_index.Name}'. Processing document: {current.Id}.");
 
                                             try
                                             {

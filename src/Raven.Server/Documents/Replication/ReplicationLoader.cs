@@ -16,6 +16,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
@@ -318,6 +319,7 @@ namespace Raven.Server.Documents.Replication
         private ReplicationLatestEtagRequest IncomingInitialHandshake(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
+
             using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var readerObject = context.ParseToMemory(
                 tcpConnectionOptions.Stream,
@@ -325,6 +327,11 @@ namespace Raven.Server.Documents.Replication
                 BlittableJsonDocumentBuilder.UsageMode.None,
                 buffer))
             {
+
+                var exceptionSchema = JsonDeserializationClient.ExceptionSchema(readerObject);
+                if (exceptionSchema.Type.Equals("Error"))
+                    throw new Exception(exceptionSchema.Message);
+
                 getLatestEtagMessage = JsonDeserializationServer.ReplicationLatestEtagRequest(readerObject);
                 if (_log.IsInfoEnabled)
                 {
