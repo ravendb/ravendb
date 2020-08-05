@@ -45,19 +45,11 @@ namespace Raven.Server.Documents.Expiration
             if (hasExpirationDate == false && hasRefreshDate == false)
                 return;
 
-            if (hasExpirationDate && hasRefreshDate)
-                ThrowInvalidRefreshAndExpires(lowerId, expirationDate, refreshDate);
-
             if (hasExpirationDate)
                 PutInternal(context, lowerId, expirationDate, DocumentsByExpiration);
-            else
-                PutInternal(context, lowerId, refreshDate, DocumentsByRefresh);
-        }
 
-        private static void ThrowInvalidRefreshAndExpires(Slice lowerId, string expirationDate, string refreshDate)
-        {
-            throw new InvalidOperationException($"Document {lowerId} cannot be defined with both {Constants.Documents.Metadata.Expires} ({expirationDate}) " +
-                                                $"and {Constants.Documents.Metadata.Refresh} ({refreshDate}) metadata properties");
+            if (hasRefreshDate)
+                PutInternal(context, lowerId, refreshDate, DocumentsByRefresh);
         }
 
         private void PutInternal(DocumentsOperationContext context, Slice lowerId, string expirationDate, string treeName)
