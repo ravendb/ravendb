@@ -73,7 +73,9 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
                 OutputReduceToCollection = OutputReduceToCollection,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 AdditionalSources = AdditionalSources,
-                Configuration = Configuration
+                Configuration = Configuration,
+                LockMode = LockMode,
+                Priority = Priority
             };
 
             if (_map != default)

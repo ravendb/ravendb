@@ -322,7 +322,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
         public bool IsFull { get; set; }
 
-        public long? RunningBackupTaskId { get; set; }
+        public long RunningBackupTaskId { get; set; }
 
         public DynamicJsonValue ToJson()
         {

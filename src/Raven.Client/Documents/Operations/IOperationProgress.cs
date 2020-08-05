@@ -47,9 +47,10 @@ namespace Raven.Client.Documents.Operations
         public long Total { get; set; }
         public long BatchCount { get; set; }
         public string LastProcessedId { get; set; }
-        
+
         [Obsolete("Use field DocumentsProcessed instead")]
         public long Processed { get; set; }
+
         public long DocumentsProcessed { get; set; }
         public long AttachmentsProcessed { get; set; }
         public long CountersProcessed { get; set; }
@@ -72,7 +73,9 @@ namespace Raven.Client.Documents.Operations
                 [nameof(Total)] = Total,
                 [nameof(BatchCount)] = BatchCount,
                 [nameof(LastProcessedId)] = LastProcessedId,
+#pragma warning disable CS0618 // Type or member is obsolete
                 [nameof(Processed)] = DocumentsProcessed,
+#pragma warning restore CS0618 // Type or member is obsolete
                 [nameof(DocumentsProcessed)] = DocumentsProcessed,
                 [nameof(AttachmentsProcessed)] = AttachmentsProcessed,
                 [nameof(CountersProcessed)] = CountersProcessed,

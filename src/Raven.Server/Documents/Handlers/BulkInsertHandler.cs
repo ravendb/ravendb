@@ -152,7 +152,9 @@ namespace Raven.Server.Documents.Handlers
                                 progress.BatchCount++;
                                 progress.Total += numberOfCommands;
                                 progress.LastProcessedId = array[numberOfCommands - 1].Id;
+#pragma warning disable CS0618 // Type or member is obsolete
                                 progress.Processed = progress.DocumentsProcessed;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                                 onProgress(progress);
                             }
