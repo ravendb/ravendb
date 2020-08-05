@@ -132,6 +132,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected bool DisableCaching;
 
+        protected ProjectionBehavior? ProjectionBehavior;
+
         public bool IsDistinct => SelectTokens.First?.Value is DistinctToken;
 
         /// <summary>
@@ -298,6 +300,11 @@ namespace Raven.Client.Documents.Session
             OrderBy(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
         }
 #endif
+
+        private void Projection(ProjectionBehavior projectionBehavior)
+        {
+            ProjectionBehavior = projectionBehavior;
+        }
 
         internal void AddGroupByAlias(string fieldName, string projectedName)
         {
@@ -1098,7 +1105,8 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
-                DisableCaching = DisableCaching
+                DisableCaching = DisableCaching,
+                ProjectionBehavior = ProjectionBehavior
             };
 
 #pragma warning disable 618

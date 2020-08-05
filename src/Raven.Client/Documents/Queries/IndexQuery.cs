@@ -123,6 +123,8 @@ namespace Raven.Client.Documents.Queries
 
         public T QueryParameters { get; set; }
 
+        public ProjectionBehavior? ProjectionBehavior { get; set; }
+
         /// <summary>
         /// Number of records that should be skipped.
         /// </summary>
@@ -169,7 +171,8 @@ namespace Raven.Client.Documents.Queries
 #pragma warning restore 618
                    string.Equals(Query, other.Query) &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
-                   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults);
+                   WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
+                   ProjectionBehavior == other.ProjectionBehavior;
         }
 
         public override bool Equals(object obj)
@@ -192,6 +195,7 @@ namespace Raven.Client.Documents.Queries
 #pragma warning restore 618
                 hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
+                hashCode = (hashCode * 397) ^ (ProjectionBehavior != null ? ProjectionBehavior.GetHashCode() : 0);
                 return hashCode;
             }
         }

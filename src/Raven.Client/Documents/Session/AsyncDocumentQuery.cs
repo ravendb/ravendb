@@ -1105,6 +1105,7 @@ namespace Raven.Client.Documents.Session
                 QueryHighlightings = QueryHighlightings,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
+                ProjectionBehavior = ProjectionBehavior,
                 QueryTimings = QueryTimings,
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,

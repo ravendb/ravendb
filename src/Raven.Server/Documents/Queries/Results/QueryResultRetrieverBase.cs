@@ -106,7 +106,16 @@ namespace Raven.Server.Documents.Queries.Results
                         doc = DirectGet(input, lowerId, DocumentFields.All, state);
 
                     if (doc == null)
+                    {
+                        if (FieldsToFetch.MustExtractFromDocument)
+                        {
+                            if (FieldsToFetch.MustExtractOrThrow)
+                                throw new InvalidQueryException($"Could not execute projection on document '{lowerId}', because document does not exist.");
+                        }
+
                         return null;
+                    }
+
                     return GetProjectionFromDocumentInternal(doc, input, scoreDoc, FieldsToFetch, _context, state);
                 }
 
@@ -146,6 +155,14 @@ namespace Raven.Server.Documents.Queries.Results
                     if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
                         continue;
 
+                    if (FieldsToFetch.MustExtractFromIndex)
+                    {
+                        if (FieldsToFetch.MustExtractOrThrow)
+                            throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from index, because index does not contain such a field or field value is not stored within index.");
+
+                        continue;
+                    }
+
                     if (documentLoaded == false)
                     {
                         using (_projectionStorageScope = _projectionStorageScope?.Start() ?? _projectionScope?.For(nameof(QueryTimingsScope.Names.Storage)))
@@ -155,7 +172,17 @@ namespace Raven.Server.Documents.Queries.Results
                     }
 
                     if (doc == null)
+                    {
+                        if (FieldsToFetch.MustExtractFromDocument)
+                        {
+                            if (FieldsToFetch.MustExtractOrThrow)
+                                throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document '{lowerId}', because document does not exist.");
+
+                            break;
+                        }
+
                         continue;
+                    }
 
                     if (TryGetValue(fieldToFetch, doc, input, state, FieldsToFetch.IndexFields, FieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal))
                     {
@@ -178,6 +205,14 @@ namespace Raven.Server.Documents.Queries.Results
                             fieldVal = d2.Data;
 
                         result[key] = fieldVal;
+                    }
+                    else
+                    {
+                        if (FieldsToFetch.MustExtractFromDocument)
+                        {
+                            if (FieldsToFetch.MustExtractOrThrow)
+                                throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document, because document does not contain such a field.");
+                        }
                     }
                 }
 
@@ -208,9 +243,17 @@ namespace Raven.Server.Documents.Queries.Results
 
             foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
             {
-                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false &&
-                    fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
-                    continue;
+                if (TryGetValue(fieldToFetch, doc, luceneDoc, state, fieldsToFetch.IndexFields, fieldsToFetch.AnyDynamicIndexFields, out var key, out var fieldVal) == false)
+                {
+                    if (FieldsToFetch.MustExtractFromDocument)
+                    {
+                        if (FieldsToFetch.MustExtractOrThrow)
+                            throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document, because document does not contain such a field.");
+                    }
+
+                    if (fieldToFetch.QueryField != null && fieldToFetch.QueryField.HasSourceAlias)
+                        continue;
+                }
 
                 var immediateResult = AddProjectionToResult(doc, scoreDoc, fieldsToFetch, result, key, fieldVal);
 
