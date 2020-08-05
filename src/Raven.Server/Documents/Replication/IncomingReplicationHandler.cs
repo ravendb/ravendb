@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Replication
             HandleReplicationPulse = null;
         }
 
-        public long LastDocumentEtag;
+        public long LastDocumentEtag => _lastDocumentEtag;
         public long LastHeartbeatTicks;
 
         private readonly ConcurrentQueue<IncomingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<IncomingReplicationStatsAggregator>();
@@ -964,6 +964,7 @@ namespace Raven.Server.Documents.Replication
                     var database = _replicationInfo.DocumentDatabase;
                     var lastTransactionMarker = 0;
                     HashSet<LazyStringValue> docCountersToRecreate = null;
+                    var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector ??= DocumentsStorage.GetDatabaseChangeVector(context);
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
@@ -993,9 +994,12 @@ namespace Raven.Server.Documents.Replication
                                 if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachment.Base64Hash, out var attachmentWithStream))
                                 {
                                     Debug.Assert(SliceComparer.Compare(attachmentWithStream.Base64Hash, attachment.Base64Hash) == 0);
-                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentWithStream.Base64Hash,
-                                        attachmentWithStream.Stream);
-                                    _replicationInfo.ReplicatedAttachmentStreams.Remove(attachment.Base64Hash);
+                                    if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
+                                    {
+                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentWithStream.Base64Hash, attachmentWithStream.Stream);
+                                    }
+
+                                    handledAttachmentStreams.Add(attachment.Base64Hash);
                                 }
 
                                 break;
@@ -1225,7 +1229,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||
-                                 _replicationInfo.ReplicatedAttachmentStreams.Count == 0,
+                                 _replicationInfo.ReplicatedAttachmentStreams.Count == handledAttachmentStreams.Count,
                         "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
 
