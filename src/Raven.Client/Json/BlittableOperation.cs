@@ -56,6 +56,11 @@ namespace Raven.Client.Json
             {
                 if (changes == null)
                     return true;
+                if (field.Equals(LastModified) ||
+                    field.Equals(Collection) ||
+                    field.Equals(ChangeVector) ||
+                    field.Equals(Id))
+                    continue;
                 NewChange(fieldPath, field, null, null, docChanges, DocumentsChanges.ChangeType.RemovedField);
             }
 
