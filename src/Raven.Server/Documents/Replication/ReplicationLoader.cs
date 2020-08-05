@@ -16,7 +16,7 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
@@ -40,6 +40,7 @@ namespace Raven.Server.Documents.Replication
     public class ReplicationLoader : IDisposable, ITombstoneAware
     {
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
 
         public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
@@ -327,7 +328,6 @@ namespace Raven.Server.Documents.Replication
                 BlittableJsonDocumentBuilder.UsageMode.None,
                 buffer))
             {
-
                 var exceptionSchema = JsonDeserializationClient.ExceptionSchema(readerObject);
                 if (exceptionSchema.Type.Equals("Error"))
                     throw new Exception(exceptionSchema.Message);
