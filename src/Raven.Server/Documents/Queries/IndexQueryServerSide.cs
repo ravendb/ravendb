@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.Queries
     {
         [JsonDeserializationIgnore]
         public int? Offset;
+
         [JsonDeserializationIgnore]
         public int? Limit;
 
@@ -205,6 +206,9 @@ namespace Raven.Server.Documents.Queries
                                 break;
                             case "skipDuplicateChecking":
                                 result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
+                                break;
+                            case "projectionBehavior":
+                                result.ProjectionBehavior = Enum.Parse<ProjectionBehavior>(item.Value[0], ignoreCase: true);
                                 break;
                         }
                     }

@@ -66,6 +66,13 @@ namespace Raven.Client.Extensions
             else
                 writer.WriteNull();
 
+            if (query.ProjectionBehavior.HasValue && query.ProjectionBehavior.Value != ProjectionBehavior.Default)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(query.ProjectionBehavior));
+                writer.WriteString(query.ProjectionBehavior.ToString());
+            }
+
             writer.WriteEndObject();
         }
     }

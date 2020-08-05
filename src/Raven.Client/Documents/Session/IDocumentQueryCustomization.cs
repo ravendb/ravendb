@@ -83,5 +83,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown. Default: 15 seconds.</param>
         IDocumentQueryCustomization WaitForNonStaleResults(TimeSpan? waitTimeout = null);
+
+        IDocumentQueryCustomization Projection(ProjectionBehavior projectionBehavior);
     }
 }

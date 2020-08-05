@@ -97,5 +97,12 @@ namespace Raven.Client.Documents.Session
             WaitForNonStaleResults(waitTimeout);
             return this;
         }
+
+        /// <inheritdoc />
+        IDocumentQueryCustomization IDocumentQueryCustomization.Projection(ProjectionBehavior projectionBehavior)
+        {
+            Projection(projectionBehavior);
+            return this;
+        }
     }
 }
