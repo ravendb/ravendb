@@ -350,14 +350,33 @@ namespace Raven.Server.Documents.Patch
                 var get = new ClrFunctionInstance(ScriptEngine, "get", (thisObj, values) =>
                     GetRangeTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
 
+                var getStats = new ClrFunctionInstance(ScriptEngine, "getStats", (thisObj, values) =>
+                    GetStatsTimeSeries(thisObj.Get("doc"), thisObj.Get("name"), values));
+
                 var obj = new ObjectInstance(ScriptEngine);
                 obj.Set("append", append);
                 obj.Set("delete", delete);
                 obj.Set("get", get);
                 obj.Set("doc", args[0]);
                 obj.Set("name", args[1]);
+                obj.Set("getStats", getStats);
 
                 return obj;
+            }
+
+            private JsValue GetStatsTimeSeries(JsValue document, JsValue name, JsValue[] args)
+            {
+                var (id, doc) = GetIdAndDocFromArg(document, _timeSeriesSignature);
+
+                string timeSeries = GetStringArg(name, _timeSeriesSignature, "name");
+                var stats = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries);
+
+                var tsStats = new ObjectInstance(ScriptEngine);
+                tsStats.Set(nameof(stats.Start), ScriptEngine.Date.Construct(stats.Start));
+                tsStats.Set(nameof(stats.End), ScriptEngine.Date.Construct(stats.End));
+                tsStats.Set(nameof(stats.Count), stats.Count);
+
+                return tsStats;
             }
 
             private JsValue AppendTimeSeries(JsValue document, JsValue name, JsValue[] args)

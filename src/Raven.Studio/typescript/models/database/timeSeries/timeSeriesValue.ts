@@ -4,7 +4,7 @@ class timeSeriesValue {
     value = ko.observable<number>();
     validationGroup: KnockoutValidationGroup;
     
-    constructor(value: number) {
+    constructor(value: number = 0) {
         this.value(value);
         
         this.initValidation();

@@ -231,7 +231,11 @@ namespace Raven.Client.Documents.Session
 
             _javascriptCompilationOptions = new JavascriptCompilationOptions(
                 flags: JsCompilationFlags.BodyOnly | JsCompilationFlags.ScopeParameter,
-                extensions: JavascriptConversionExtensions.LinqMethodsSupport.Instance)
+                extensions: new JavascriptConversionExtension[]
+                {
+                    JavascriptConversionExtensions.LinqMethodsSupport.Instance,
+                    JavascriptConversionExtensions.NullableSupport.Instance
+                })
             {
                 CustomMetadataProvider = new PropertyNameConventionJSMetadataProvider(RequestExecutor.Conventions)
             };

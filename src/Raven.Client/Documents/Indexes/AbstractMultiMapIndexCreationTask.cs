@@ -90,7 +90,9 @@ namespace Raven.Client.Documents.Indexes
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 PatternReferencesCollectionName = PatternReferencesCollectionName,
                 AdditionalSources = AdditionalSources,
-                Configuration = Configuration
+                Configuration = Configuration,
+                LockMode = LockMode,
+                Priority = Priority
             }.ToIndexDefinition(Conventions, validateMap: false);
 
             foreach (var map in _maps.Select(generateMap => generateMap()))

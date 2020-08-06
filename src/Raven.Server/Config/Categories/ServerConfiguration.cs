@@ -79,5 +79,15 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Server.CpuCredits.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CpuCreditsExecTimeout { get; set; }
+        
+        [Description("EXPERT: Disable rvn admin-channel access.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Server.AdminChannel.Disable", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableAdminChannel { get; set; }
+
+        [Description("EXPERT: Disable rvn logstream access.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Server.LogsStream.Disable", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableLogsStream { get; set; }
     }
 }

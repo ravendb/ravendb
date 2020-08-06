@@ -321,10 +321,10 @@ namespace Raven.Server.Documents.Queries.AST
                     }
 
                     if (TryConsumeMatch(source, ref offset, "ms") ||
-                        TryConsumeMatch(source, ref offset, "milli") ||
-                        TryConsumeMatch(source, ref offset, "milliseconds"))
+                        TryConsumeMatch(source, ref offset, "milliseconds") ||
+                        TryConsumeMatch(source, ref offset, "milli"))
                     {
-                        range.Ticks += duration;
+                        range.Ticks += duration * TicksInMillisecond;
                         range.TicksAlignment = Alignment.Millisecond;
                         return;
                     }
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public static TimeValue ParseLastFromString(string source)
+        public static TimeValue ParseTimePeriodFromString(string source)
         {
             TimeValue result;
             var offset = 0;
@@ -414,9 +414,8 @@ namespace Raven.Server.Documents.Queries.AST
                         TryConsumeMatch(source, ref offset, "milliseconds") ||
                         TryConsumeMatch(source, ref offset, "milli"))
                     {
-                        // TODO change to TimeValue.FromMilliseconds when RavenDB-14988 is fixed
-                        result = TimeSpan.FromMilliseconds(duration);
-                        break;
+                        // TODO use TimeValue.FromMilliseconds when RavenDB-14988 is fixed
+                        throw new NotSupportedException("Unsupported time period. Using milliseconds in Last/First is not supported : " + source);
                     }
 
                     if (TryConsumeMatch(source, ref offset, "months") ||

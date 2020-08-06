@@ -668,5 +668,62 @@ for (var i = 0; i < args.todelete.length; i++)
             public TimeSeriesEntry[] Result { set; get; }
             public string Id { get; set; }
         }
+
+        [Fact]
+        public async Task GetStatsTestAsync()
+        {
+            var id = "users/1-A";
+            var baseline = DateTime.Today.EnsureMilliseconds();
+            var name = "Heartrate";
+
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), id);
+                    var tsf = session.TimeSeriesFor(id, name);
+                    for (int i = 0; i <= 20; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(i), new[] { (double)i }, "watches/apple");
+                    }
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+
+                    session.Advanced.Defer(new PatchCommandData(id, null,
+                            new PatchRequest
+                            {
+                                Script = @"this.Result = timeseries(this, args.timeseries).getStats();",
+                                Values =
+                                {
+                                    { "timeseries", name },
+                                    { "id", id }
+                                }
+                            }, null));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var stats = (await session.LoadAsync<StatsResultHolder>(id)).Result;
+                    Assert.Equal(baseline, stats.Start, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(20), stats.End, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(21, stats.Count);
+                }
+            }
+
+        }
+        public class StatsResultHolder
+        {
+            public Stats Result { set; get; }
+            public string Id { get; set; }
+        }
+        public class Stats
+        {
+            public long Count;
+            public DateTime Start;
+            public DateTime End;
+        }
     }
 }

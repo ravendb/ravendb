@@ -2817,12 +2817,12 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact (Skip = "RavenDB-14988")]
+        [Fact(Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
                 var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
 
@@ -2840,8 +2840,7 @@ namespace SlowTests.Client.TimeSeries.Query
                         tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
                     }
 
-                    tsf.Append(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), totalMinutes + 1, "watches/fitbit");
-
+                    tsf.Append(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), 100, "last");
 
                     session.SaveChanges();
                 }
@@ -2859,7 +2858,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     Assert.Equal(2, result.Count);
                     Assert.Equal(baseline.AddMinutes(totalMinutes), result.Results[0].Timestamp);
                     Assert.Equal(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), result.Results[1].Timestamp);
-
+                    Assert.Equal("last", result.Results[1].Tag);
                 }
             }
         }
@@ -3251,7 +3250,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today.EnsureUtc().AddDays(-7);
+                var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
                 var totalMinutes = TimeSpan.FromDays(3).TotalMinutes;
 
@@ -3269,7 +3268,7 @@ namespace SlowTests.Client.TimeSeries.Query
                         tsf.Append(baseline.AddMinutes(i), i, "watches/fitbit");
                     }
 
-                    tsf.Append(baseline.AddMinutes(totalMinutes).AddMilliseconds(10), totalMinutes + 1, "watches/fitbit");
+                    tsf.Append(baseline.AddMilliseconds(30), totalMinutes + 1, "2nd");
 
                     session.SaveChanges();
                 }
@@ -3286,7 +3285,9 @@ namespace SlowTests.Client.TimeSeries.Query
 
                     Assert.Equal(2, result.Count);
                     Assert.Equal(baseline, result.Results[0].Timestamp);
-                    Assert.Equal(baseline.AddMilliseconds(100), result.Results[1].Timestamp);
+                    Assert.Equal(baseline.AddMilliseconds(30), result.Results[1].Timestamp);
+                    Assert.Equal("2nd", result.Results[1].Tag);
+
                 }
             }
         }

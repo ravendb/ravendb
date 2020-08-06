@@ -17,7 +17,7 @@ class queryUtil {
 
     static formatRawTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string) {
         const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
-        const escapedDocumentId = queryUtil.escapeDocumentId(documentId);
+        const escapedDocumentId = queryUtil.escapeName(documentId);
         const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
         
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName})`;
@@ -25,7 +25,7 @@ class queryUtil {
 
     static formatGroupedTimeSeriesQuery(collectionName: string, documentId: string, timeSeriesName: string, group: string) {
         const escapedCollectionName = queryUtil.escapeCollectionOrFieldName(collectionName || "@all_docs");
-        const escapedDocumentId = queryUtil.escapeDocumentId(documentId);
+        const escapedDocumentId = queryUtil.escapeName(documentId);
         const escapedTimeSeriesName = queryUtil.escapeTimeSeriesName(timeSeriesName);
 
         return `from ${escapedCollectionName}\r\nwhere id() == ${escapedDocumentId}\r\nselect timeseries(from ${escapedTimeSeriesName} group by ${group} select avg())`;
@@ -33,7 +33,8 @@ class queryUtil {
     
     static formatIndexQuery(indexName: string, fieldName: string, value: string) {
         const escapedFieldName = queryUtil.escapeCollectionOrFieldName(fieldName);
-        return `from index ${indexName} where ${escapedFieldName} = '${value}' `;
+        const escapedIndexName = queryUtil.escapeName(indexName);
+        return `from index ${escapedIndexName} where ${escapedFieldName} = '${value}' `;
     }
     
     private static wrapWithSingleQuotes(input: string) {
@@ -43,7 +44,7 @@ class queryUtil {
         return "'" + input + "'";
     }
 
-    static escapeDocumentId(name: string) {
+    static escapeName(name: string) {
         return queryUtil.wrapWithSingleQuotes(name);
     }
     

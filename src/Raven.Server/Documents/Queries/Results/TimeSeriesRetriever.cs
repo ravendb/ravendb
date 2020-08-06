@@ -846,16 +846,16 @@ namespace Raven.Server.Documents.Queries.Results
             DateTime from, to;
             if (timeSeriesFunction.Last != null)
             {
-                var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
-
                 to = DateTime.MaxValue;
+
+                var timeFromLast = GetTimePeriodFromValueExpression(timeSeriesFunction.Last, nameof(TimeSeriesFunction.Last), declaredFunction.Name, documentId);
                 from = _stats.End.Add(-timeFromLast);
             }
             else if (timeSeriesFunction.First != null)
             {
-                var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
-
                 from = DateTime.MinValue;
+                
+                var timeFromFirst = GetTimePeriodFromValueExpression(timeSeriesFunction.First, nameof(TimeSeriesFunction.First), declaredFunction.Name, documentId);
                 to = _stats.Start.Add(timeFromFirst);
             }
             else
@@ -888,7 +888,7 @@ namespace Raven.Server.Documents.Queries.Results
                                                 $"was unable to read '{methodName}' expression '{valueExpression}'");
             }
 
-            return RangeGroup.ParseLastFromString(timePeriod);
+            return RangeGroup.ParseTimePeriodFromString(timePeriod);
         }
 
         private TimeSpan? GetOffset(ValueExpression offsetExpression, string name)

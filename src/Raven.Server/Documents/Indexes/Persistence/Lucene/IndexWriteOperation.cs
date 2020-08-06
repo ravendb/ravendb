@@ -167,9 +167,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 stats.RecordIndexingOutput();
-
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Indexed document for '{_indexName}'. Key: {key}.");
             }
         }
 
