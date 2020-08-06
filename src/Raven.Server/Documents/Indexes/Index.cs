@@ -1048,8 +1048,6 @@ namespace Raven.Server.Documents.Indexes
 
                                         TimeSpentIndexing.Start();
 
-                                        _initialManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
-
                                         didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
 
                                         if (_lowMemoryPressure > 0)
@@ -1057,8 +1055,7 @@ namespace Raven.Server.Documents.Indexes
 
                                         batchCompleted = true;
 
-                                        var current = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
-                                        scope.AddAllocatedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
+                                        
                                     }
                                     catch
                                     {
@@ -1669,6 +1666,7 @@ namespace Raven.Server.Documents.Indexes
         public bool DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
         {
             _threadAllocations = NativeMemory.CurrentThreadStats;
+            _initialManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
 
             bool mightBeMore = false;
 
@@ -1752,6 +1750,9 @@ namespace Raven.Server.Documents.Indexes
                         DisposeIndexWriterOnError(writeOperation);
                         throw;
                     }
+
+                    var current = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
+                    stats.AddAllocatedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
 
                     return mightBeMore;
                 }

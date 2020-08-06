@@ -80,7 +80,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var batchStats = new IndexingRunStats();
                 var scope = new IndexingStatsScope(batchStats);
 
-                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+                var cts = new CancellationTokenSource(TimeSpan.FromSeconds(600));
                 while (index.DoIndexingWork(scope, cts.Token));
 
                 Assert.Equal(numberOfUsers, batchStats.MapAttempts);
