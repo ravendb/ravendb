@@ -75,11 +75,11 @@ namespace Raven.Server.Documents.Replication
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
-            string[] incomingPaths,
+            string[] allowedPaths,
             string pullReplicationName)
         {
-            if(incomingPaths != null && incomingPaths.Length > 0)
-                _allowedPathsValidator = new AllowedPathsValidator(incomingPaths);
+            if(allowedPaths != null && allowedPaths.Length > 0)
+                _allowedPathsValidator = new AllowedPathsValidator(allowedPaths);
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             _connectionOptions = options;

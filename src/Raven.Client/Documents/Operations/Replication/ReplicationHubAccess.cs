@@ -8,16 +8,16 @@ namespace Raven.Client.Documents.Operations.Replication
         public string Name;
         public string CertificateBase64;
         
-        public string[] Incoming;
-        public string[] Outgoing;
+        public string[] AllowedHubToSinkPaths;
+        public string[] AllowedSinkToHubPaths;
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(Incoming)] = Incoming,
-                [nameof(Outgoing)] = Outgoing,
+                [nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths,
+                [nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths,
                 [nameof(CertificateBase64)] = CertificateBase64,
                 
             };
@@ -28,11 +28,11 @@ namespace Raven.Client.Documents.Operations.Replication
             if (string.IsNullOrEmpty(Name))
                 throw new ArgumentNullException(nameof(Name));
 
-            if((Incoming?.Length ?? 0) == 0 && (Outgoing?.Length == 0))
-                throw new InvalidOperationException($"Either {nameof(Outgoing)} or {nameof(Incoming)} must have a value, but both were null or empty");
+            if((AllowedHubToSinkPaths?.Length ?? 0) == 0 && (AllowedSinkToHubPaths?.Length == 0))
+                throw new InvalidOperationException($"Either {nameof(AllowedSinkToHubPaths)} or {nameof(AllowedHubToSinkPaths)} must have a value, but both were null or empty");
 
-            ValidateAllowedPaths(Incoming);
-            ValidateAllowedPaths(Outgoing);
+            ValidateAllowedPaths(AllowedHubToSinkPaths);
+            ValidateAllowedPaths(AllowedSinkToHubPaths);
         }
         
         

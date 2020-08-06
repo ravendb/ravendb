@@ -34,8 +34,8 @@ namespace Raven.Server.ServerWide.Commands
         public string CertPublicKeyHash;
         public string CertThumbprint;
         public string CertificateBase64;
-        public string[] Incoming;
-        public string[] Outgoing;
+        public string[] AllowedHubToSinkPaths;
+        public string[] AllowedSinkToHubPaths;
         public string Name;
         public DateTime NotBefore, NotAfter;
         public string Issuer;
@@ -66,8 +66,8 @@ namespace Raven.Server.ServerWide.Commands
             CertThumbprint = certThumbprint;
             CertificateBase64 = access.CertificateBase64;
             Name = access.Name;
-            Incoming = access.Incoming;
-            Outgoing = access.Outgoing;
+            AllowedHubToSinkPaths = access.AllowedHubToSinkPaths;
+            AllowedSinkToHubPaths = access.AllowedSinkToHubPaths;
             NotBefore = notBefore;
             NotAfter = notAfter;
             Issuer = issuer;
@@ -83,8 +83,8 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(CertPublicKeyHash)] = CertPublicKeyHash;
             djv[nameof(CertThumbprint)] = CertThumbprint;
             djv[nameof(CertificateBase64)] = CertificateBase64;
-            djv[nameof(Incoming)] = Incoming;
-            djv[nameof(Outgoing)] = Outgoing;
+            djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
+            djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
             djv[nameof(NotBefore)] = NotBefore;
             djv[nameof(NotAfter)] = NotAfter;
             djv[nameof(Issuer)] = Issuer;

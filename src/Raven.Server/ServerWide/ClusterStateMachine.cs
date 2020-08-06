@@ -1785,8 +1785,8 @@ namespace Raven.Server.ServerWide
                 out var publicKeySlice))
             using (var obj = context.ReadObject(new DynamicJsonValue
             {
-                [nameof(command.Incoming)] = command.Incoming,
-                [nameof(command.Outgoing)] = command.Outgoing,
+                [nameof(command.AllowedHubToSinkPaths)] = command.AllowedHubToSinkPaths,
+                [nameof(command.AllowedSinkToHubPaths)] = command.AllowedSinkToHubPaths,
                 [nameof(command.HubDefinitionName)] = command.HubDefinitionName,
                 [nameof(command.Issuer)] = command.Issuer,
                 [nameof(command.NotBefore)] = command.NotBefore,
@@ -1798,7 +1798,7 @@ namespace Raven.Server.ServerWide
                 if (_clusterAuditLog.IsInfoEnabled)
                     _clusterAuditLog.Info(
                         $"Registering new replication certificate {command.Name} = '{command.CertThumbprint}' for replication in {command.Database} using {command.HubDefinitionName} " +
-                        $"Allowed read paths: {string.Join(", ", command.Incoming)}, Allowed write paths: {string.Join(", ", command.Outgoing)}.");
+                        $"Allowed read paths: {string.Join(", ", command.AllowedHubToSinkPaths)}, Allowed write paths: {string.Join(", ", command.AllowedSinkToHubPaths)}.");
 
 
                 var certificate = Convert.FromBase64String(command.CertificateBase64);
@@ -3517,8 +3517,8 @@ namespace Raven.Server.ServerWide
 
                 yield return (hub, new ReplicationHubAccess
                 {
-                    Incoming = details.AllowedWritePaths,
-                    Outgoing = details.AllowedReadPaths,
+                    AllowedHubToSinkPaths = details.AllowedHubToSinkPaths,
+                    AllowedSinkToHubPaths = details.AllowedSinkToHubPaths,
                     Name = details.Name,
                     CertificateBase64 = certBase64,
                 });

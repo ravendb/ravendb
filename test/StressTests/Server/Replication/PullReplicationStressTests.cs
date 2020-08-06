@@ -80,7 +80,7 @@ namespace StressTests.Server.Replication
                 {
                     TaskId = sinkTaskId,
                     Name = pullReplicationName,
-                    _hubName = pullReplicationName,
+                    HubName = pullReplicationName,
                     ConnectionStringName = "ConnectionString-" + hubStore.Database
                 }));
 

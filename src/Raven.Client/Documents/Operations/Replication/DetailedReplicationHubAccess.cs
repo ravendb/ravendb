@@ -10,8 +10,8 @@ namespace Raven.Client.Documents.Operations.Replication
         public string Subject;
         public string Issuer;
         
-        public string[] AllowedWritePaths;
-        public string[] AllowedReadPaths;
+        public string[] AllowedHubToSinkPaths;
+        public string[] AllowedSinkToHubPaths;
 
         internal static string[] Preferred(string[] a, string[] b)
         {

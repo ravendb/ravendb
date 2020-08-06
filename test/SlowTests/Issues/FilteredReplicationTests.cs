@@ -104,7 +104,7 @@ namespace SlowTests.Issues
                 {
                     Name = "Arava",
                     CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
-                    Incoming = new[] {"users/ayende", "users/ayende/*"}
+                    AllowedHubToSinkPaths = new[] {"users/ayende", "users/ayende/*"}
                 }));
         }
         
@@ -141,7 +141,7 @@ namespace SlowTests.Issues
                 {
                     Name = "Arava",
                     CertificateBase64 = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert)),
-                    Incoming = new[] {"users/ayende", "users/ayende/*"}
+                    AllowedHubToSinkPaths = new[] {"users/ayende", "users/ayende/*"}
                 })));
         }
 
@@ -220,13 +220,13 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
-                Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
             
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
             {
                 Name = "Arava",
-                Incoming =  new[]
+                AllowedHubToSinkPaths =  new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
@@ -244,7 +244,7 @@ namespace SlowTests.Issues
             {
                 ConnectionStringName = dbNameA + "ConStr",
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
-                _hubName = "pull"
+                HubName = "pull"
             }));
 
             WaitForDocument(storeB, "users/ayende");
@@ -363,13 +363,13 @@ namespace SlowTests.Issues
             await storeB.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "push",
-                Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
             
             await storeB.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("push", new ReplicationHubAccess
             {
                 Name = "Arava",
-                Outgoing =  new[]
+                AllowedSinkToHubPaths =  new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
@@ -386,9 +386,9 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
                 ConnectionStringName = dbNameB + "ConStr",
-                Mode = PullReplicationMode.Incoming,
+                Mode = PullReplicationMode.SinkToHub,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
-                _hubName = "push"
+                HubName = "push"
             }));
 
             WaitForUserToContinueTheTest(storeA);
@@ -483,18 +483,18 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "both",
-                Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
             
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
             {
                 Name = "Arava",
-                Outgoing =  new[]
+                AllowedSinkToHubPaths =  new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
                 },
-                Incoming = new[]
+                AllowedHubToSinkPaths = new[]
                 {
                     "users/ayende/config"
                 },
@@ -510,15 +510,15 @@ namespace SlowTests.Issues
             await storeB.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
                 ConnectionStringName = dbNameA + "ConStr",
-                Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
                 CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
-                _hubName = "both",
-                AllowedWritePaths = new[]
+                HubName = "both",
+                AllowedHubToSinkPaths = new[]
                 {
                     "users/ayende",
                     "users/ayende/dogs/*"
                 },
-                AllowedReadPaths = new[]
+                AllowedSinkToHubPaths = new[]
                 {
                     "users/ayende/config",
                     "users/ayende/chair"
@@ -586,18 +586,18 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "both",
-                Mode = PullReplicationMode.Incoming | PullReplicationMode.Outgoing,
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
             
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
             {
                 Name = "Arava",
-                Outgoing =  new[]
+                AllowedSinkToHubPaths =  new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
                 },
-                Incoming = new[]
+                AllowedHubToSinkPaths = new[]
                 {
                     "users/ayende/config"
                 },

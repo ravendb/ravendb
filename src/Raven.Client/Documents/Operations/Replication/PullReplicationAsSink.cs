@@ -9,17 +9,17 @@ namespace Raven.Client.Documents.Operations.Replication
         public string CertificateWithPrivateKey; // base64
         public string CertificatePassword;
 
-        private string _hubName;
+        public string HubName;
         public PullReplicationAsSink() { }
 
-        public PullReplicationMode Mode = PullReplicationMode.Outgoing;
+        public PullReplicationMode Mode = PullReplicationMode.HubToSink;
 
-        public string[] AllowedWritePaths;
-        public string[] AllowedReadPaths;
+        public string[] AllowedHubToSinkPaths;
+        public string[] AllowedSinkToHubPaths;
 
         public PullReplicationAsSink(string database, string connectionStringName, string hubName) : base(database, connectionStringName)
         {
-            _hubName = hubName;
+            HubName = hubName;
         }
 
         public override bool IsEqualTo(ReplicationNode other)
@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Operations.Replication
             if (other is PullReplicationAsSink sink)
             {
                 return base.IsEqualTo(other) &&
-                       string.Equals(_hubName, sink._hubName) &&
+                       string.Equals(HubName, sink.HubName) &&
                        string.Equals(CertificatePassword, sink.CertificatePassword) &&
                        string.Equals(CertificateWithPrivateKey, sink.CertificateWithPrivateKey);
             }
@@ -40,29 +40,29 @@ namespace Raven.Client.Documents.Operations.Replication
             var hashCode = base.GetTaskKey();
             hashCode = (hashCode * 397) ^ CalculateStringHash(CertificateWithPrivateKey);
             hashCode = (hashCode * 397) ^ CalculateStringHash(CertificatePassword);
-            return (hashCode * 397) ^ CalculateStringHash(_hubName);
+            return (hashCode * 397) ^ CalculateStringHash(HubName);
         }
 
         public override DynamicJsonValue ToJson()
         {
-            if (string.IsNullOrEmpty(_hubName))
-                throw new ArgumentException("Must be not empty", nameof(_hubName));
+            if (string.IsNullOrEmpty(HubName))
+                throw new ArgumentException("Must be not empty", nameof(HubName));
 
             var djv = base.ToJson();
 
             djv[nameof(Mode)] = Mode;
-            djv[nameof(_hubName)] = _hubName;
+            djv[nameof(HubName)] = HubName;
             djv[nameof(CertificateWithPrivateKey)] = CertificateWithPrivateKey;
             djv[nameof(CertificatePassword)] = CertificatePassword;
-            djv[nameof(AllowedWritePaths)] = AllowedWritePaths;
-            djv[nameof(AllowedReadPaths)] = AllowedReadPaths;
+            djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
+            djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
 
             return djv;
         }
 
         public override string GetDefaultTaskName()
         {
-            return $"Pull Replication Sink from {_hubName}";
+            return $"Pull Replication Sink from {HubName}";
         }
     }
 }

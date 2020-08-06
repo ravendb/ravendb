@@ -17,7 +17,7 @@
         public string MessageType { get; set; }
         public string DatabaseChangeVector { get; set; }
         
-        public string[] IncomingPaths { get; set; }
+        public string[] AcceptablePaths { get; set; }
         public string DatabaseId { get; set; }
         public string NodeTag { get; set; }
         public long CurrentEtag { get; set; }

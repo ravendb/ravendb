@@ -12,10 +12,7 @@ namespace Raven.Server.Documents.Replication
         private readonly JsonOperationContext _allowedPathsContext;
         private readonly List<LazyStringValue> _allowedPaths;
         private readonly List<LazyStringValue> _allowedPathsPrefixes;
-
-        
-        private unsafe LazyStringValue _tmpLazyStringInstance;
-        private readonly AllowedPathsValidator _allowedPathsValidator;
+        private LazyStringValue _tmpLazyStringInstance;
 
         private unsafe LazyStringValue GetDocumentId(Slice key)
         {

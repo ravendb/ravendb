@@ -37,13 +37,13 @@ namespace Raven.Server.Documents.Replication
         private readonly ReplicationStats _stats = new ReplicationStats();
         public bool MissingAttachmentsInLastBatch { get; private set; }
 
-        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log, string[] myPaths, string[] theirPaths)
+        public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log, string[] pathsToSend, string[] destinationAcceptablePaths)
         {
             _log = log;
-            if (myPaths != null && myPaths.Length > 0)
-                _myPaths  = new AllowedPathsValidator(myPaths);
-            if (theirPaths != null && theirPaths.Length > 0)
-                _theirPaths  = new AllowedPathsValidator(theirPaths);
+            if (pathsToSend != null && pathsToSend.Length > 0)
+                _pathsToSend  = new AllowedPathsValidator(pathsToSend);
+            if (destinationAcceptablePaths != null && destinationAcceptablePaths.Length > 0)
+                _destinationAcceptablePaths  = new AllowedPathsValidator(destinationAcceptablePaths);
             _stream = stream;
             _parent = parent;
         }
@@ -543,7 +543,7 @@ namespace Raven.Server.Documents.Replication
 
         private bool ShouldSkip(ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
-            if (ValidatorSaysToSkip(_myPaths) || ValidatorSaysToSkip(_theirPaths))
+            if (ValidatorSaysToSkip(_pathsToSend) || ValidatorSaysToSkip(_destinationAcceptablePaths))
                 return true;
             
             switch (item)
@@ -607,7 +607,7 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private readonly AllowedPathsValidator _myPaths, _theirPaths;
+        private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
@@ -693,8 +693,8 @@ namespace Raven.Server.Documents.Replication
 
         public void Dispose()
         {
-            _myPaths?.Dispose();
-            _theirPaths?.Dispose();
+            _pathsToSend?.Dispose();
+            _destinationAcceptablePaths?.Dispose();
         }
     }
 }

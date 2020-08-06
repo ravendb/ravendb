@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public string MentorNode;
 
-        public PullReplicationMode Mode = PullReplicationMode.Outgoing;
+        public PullReplicationMode Mode = PullReplicationMode.HubToSink;
 
         public string Name;
         public long TaskId;
