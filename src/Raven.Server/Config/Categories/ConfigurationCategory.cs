@@ -42,21 +42,50 @@ namespace Raven.Server.Config.Categories
 
         protected internal bool Initialized { get; set; }
 
-        public virtual void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
+        protected internal static string GetValue(IConfiguration cfg, string name)
         {
-            string GetValue(IConfiguration cfg, string name)
+            var section = cfg.GetSection(name);
+            if (section.Value != null)
+                return section.Value;
+
+            var children = section.GetChildren().ToList();
+
+            return children.Count != 0
+                ? string.Join(";", children.Where(x => x.Value != null).Select(x => x.Value))
+                : null;
+        }
+
+        protected internal static string GetValueForKey(string keyName, IConfiguration cfg)
+        {
+            var val = GetValue(cfg, keyName);
+            if (val != null)
+                return val;
+
+            // When setting.json has nested objects, i.e. if 'Path' is nested under 'Security.Certificate'
+            // then the key in the IConfiguration object is in the following format: "Security.Certificate:Path"
+            // as opposed to: "Security.Certificate.Path" when it is Not nested.
+            // Need to look for these variations.
+            
+            var sb = new StringBuilder(keyName);
+
+            var lastPeriod = keyName.LastIndexOf('.');
+            while (lastPeriod != -1)
             {
-                var section = cfg.GetSection(name);
-                if (section.Value != null)
-                    return section.Value;
-
-                var children = section.GetChildren().ToList();
-
-                return children.Count != 0
-                    ? string.Join(";", children.Where(x => x.Value != null).Select(x => x.Value))
-                    : null;
+                sb[lastPeriod] = ':';
+                var tmpName = sb.ToString();
+                val = GetValue(cfg, tmpName);
+                if (val != null)
+                {
+                    return val;
+                }
+                lastPeriod = keyName.LastIndexOf('.', lastPeriod - 1);
             }
 
+            return null;
+        }
+        
+        public virtual void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
+        {
             string GetConfigurationValue(IConfigurationRoot cfg, HashSet<string> cfgNames, string keyName, out bool keyExistsInConfiguration)
             {
                 keyExistsInConfiguration = false;
@@ -64,31 +93,11 @@ namespace Raven.Server.Config.Categories
                 if (cfg == null || keyName == null)
                     return null;
 
-                // This check is needed because cfg.GetSection(keyName) returns null even if key does Not exist in configuration!
+                var val = GetValueForKey(keyName, cfg);
 
-                keyExistsInConfiguration = cfgNames.Contains(keyName);
+                keyExistsInConfiguration = cfgNames.Contains(keyName) || val != null;
 
-                var val = GetValue(cfg, keyName);
-                if (val != null)
-                    return val;
-
-                var sb = new StringBuilder(keyName);
-
-                var lastPeriod = keyName.LastIndexOf('.');
-                while (lastPeriod != -1)
-                {
-                    sb[lastPeriod] = ':';
-                    var tmpName = sb.ToString();
-                    val = GetValue(cfg, tmpName);
-                    if (val != null)
-                    {
-                        keyExistsInConfiguration = true;
-                        return val;
-                    }
-                    lastPeriod = keyName.LastIndexOf('.', lastPeriod - 1);
-                }
-
-                return null;
+                return val;
             }
 
             bool keyExistsInDatabaseRecord, keyExistsInServerSettings;

@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.ServerWide;
 using Raven.Server.Config.Attributes;
+using Raven.Server.Config.Categories;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Config
@@ -52,7 +53,8 @@ namespace Raven.Server.Config
             ServerValues = new Dictionary<string, ConfigurationEntrySingleValue>();
             foreach (var key in Metadata.Keys)
             {
-                var value = configuration[key];
+                var value = ConfigurationCategory.GetValueForKey(key, configuration);
+                
                 if (value == null)
                     continue;
 
