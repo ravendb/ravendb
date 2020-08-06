@@ -28,6 +28,8 @@ namespace Raven.Client.Documents.Queries
 
         internal bool IsProjectInto { get; set; }
 
+        public ProjectionBehavior? ProjectionBehavior { get; set; }
+
         public QueryData(string[] fields, IEnumerable<string> projections, string fromAlias = null, IEnumerable<DeclareToken> declareTokens = null, List<LoadToken> loadTokens = null, bool isCustomFunction = false)
         {
             Fields = fields;
@@ -40,7 +42,7 @@ namespace Raven.Client.Documents.Queries
 
         public static QueryData CustomFunction(string alias, string func)
         {
-            return new QueryData(new[] {func}, Array.Empty<string>(), alias, isCustomFunction: true);
+            return new QueryData(new[] { func }, Array.Empty<string>(), alias, isCustomFunction: true);
         }
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
@@ -92,7 +94,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Can_Use_Projection_Behavior()
+        public void Can_Use_Projection_Behavior_Query()
         {
             using (var store = GetDocumentStore())
             {
@@ -334,7 +336,180 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Using_Invalid_Projection_Behavior_Should_Throw()
+        public void Can_Use_Projection_Behavior_DocumentQuery()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Companies_ByName().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Company { Name = "HR", Fax = "123" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var name = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>("Name")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name);
+
+                    name = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.Default, "Name")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name);
+
+                    name = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromIndex, "Name")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name);
+
+                    name = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromIndexOrThrow, "Name")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR_Stored", name);
+
+                    name = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromDocument, "Name")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR", name);
+
+                    name = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromDocumentOrThrow, "Name")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(name);
+                    Assert.Equal("HR", name);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var fax = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>("Fax")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(fax);
+                    Assert.Equal("123", fax);
+
+                    fax = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.Default, "Fax")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(fax);
+                    Assert.Equal("123", fax);
+
+                    fax = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromIndex, "Fax")
+                        .FirstOrDefault();
+
+                    Assert.Null(fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromIndexOrThrow, "Fax")
+                        .FirstOrDefault();
+                    });
+
+                    fax = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromDocument, "Fax")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(fax);
+                    Assert.Equal("123", fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        session.Advanced.DocumentQuery<Company_WithExtraField, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<string>(ProjectionBehavior.FromDocumentOrThrow, "ExtraField")
+                        .FirstOrDefault();
+                    });
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var values = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<ClassWithNameAndFax>("Name", "Fax")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR_Stored", values.Name);
+                    Assert.Equal("123", values.Fax);
+
+                    values = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<ClassWithNameAndFax>(ProjectionBehavior.Default, "Name", "Fax")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR_Stored", values.Name);
+                    Assert.Equal("123", values.Fax);
+
+                    values = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<ClassWithNameAndFax>(ProjectionBehavior.FromIndex, "Name", "Fax")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR_Stored", values.Name);
+                    Assert.Equal(null, values.Fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<ClassWithNameAndFax>(ProjectionBehavior.FromIndexOrThrow, "Name", "Fax")
+                            .FirstOrDefault();
+                    });
+
+                    values = session.Advanced.DocumentQuery<Company, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<ClassWithNameAndFax>(ProjectionBehavior.FromDocument, "Name", "Fax")
+                        .FirstOrDefault();
+
+                    Assert.NotNull(values);
+                    Assert.Equal("HR", values.Name);
+                    Assert.Equal("123", values.Fax);
+
+                    Assert.Throws<InvalidQueryException>(() =>
+                    {
+                        session.Advanced.DocumentQuery<Company_WithExtraField, Companies_ByName>()
+                        .NoCaching()
+                        .SelectFields<ClassWithNameAndExtraField>(ProjectionBehavior.FromDocumentOrThrow, "Name", "ExtraField")
+                        .FirstOrDefault();
+                    });
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Using_Invalid_Projection_Behavior_Should_Throw()
         {
             using (var store = GetDocumentStore())
             {
@@ -345,16 +520,29 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     TestQuery<Companies_ByName_Reduce>(session);
-                }
-
-                using (var session = store.OpenSession())
-                {
                     TestQuery<Companies_ByName_Counters>(session);
+                    TestQuery<Companies_ByName_TimeSeries>(session);
                 }
 
                 using (var session = store.OpenSession())
                 {
-                    TestQuery<Companies_ByName_TimeSeries>(session);
+                    TestDocumentQuery<Companies_ByName_Reduce>(session);
+                    TestDocumentQuery<Companies_ByName_Counters>(session);
+                    TestDocumentQuery<Companies_ByName_TimeSeries>(session);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await TestQueryAsync<Companies_ByName_Reduce>(session);
+                    await TestQueryAsync<Companies_ByName_Counters>(session);
+                    await TestQueryAsync<Companies_ByName_TimeSeries>(session);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await TestDocumentQueryAsync<Companies_ByName_Reduce>(session);
+                    await TestDocumentQueryAsync<Companies_ByName_Counters>(session);
+                    await TestDocumentQueryAsync<Companies_ByName_TimeSeries>(session);
                 }
             }
 
@@ -420,6 +608,149 @@ namespace SlowTests.Issues
                         .FirstOrDefault();
                 });
             }
+
+            static void TestDocumentQuery<TIndex>(IDocumentSession session)
+                where TIndex : AbstractCommonApiForIndexes, new()
+            {
+                session.Advanced.DocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>("Name")
+                    .FirstOrDefault();
+
+                session.Advanced.DocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>(ProjectionBehavior.Default, "Name")
+                    .FirstOrDefault();
+
+                session.Advanced.DocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>(ProjectionBehavior.FromIndex, "Name")
+                    .FirstOrDefault();
+
+                session.Advanced.DocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>(ProjectionBehavior.FromIndexOrThrow, "Name")
+                    .FirstOrDefault();
+
+                Assert.Throws<InvalidQueryException>(() =>
+                {
+                    session.Advanced.DocumentQuery<ClassWithName, TIndex>()
+                        .NoCaching()
+                        .SelectFields<ClassWithName>(ProjectionBehavior.FromDocument, "Name")
+                        .FirstOrDefault();
+                });
+
+                Assert.Throws<InvalidQueryException>(() =>
+                {
+                    session.Advanced.DocumentQuery<ClassWithName, TIndex>()
+                        .NoCaching()
+                        .SelectFields<ClassWithName>(ProjectionBehavior.FromDocumentOrThrow, "Name")
+                        .FirstOrDefault();
+                });
+            }
+
+            static async Task TestQueryAsync<TIndex>(IAsyncDocumentSession session)
+                where TIndex : AbstractCommonApiForIndexes, new()
+            {
+                await session.Query<ClassWithName, TIndex>()
+                    .Customize(x =>
+                    {
+                        x.NoCaching();
+                    })
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync();
+
+                await session.Query<ClassWithName, TIndex>()
+                    .Customize(x =>
+                    {
+                        x.NoCaching();
+                        x.Projection(ProjectionBehavior.Default);
+                    })
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync();
+
+                await session.Query<ClassWithName, TIndex>()
+                    .Customize(x =>
+                    {
+                        x.NoCaching();
+                        x.Projection(ProjectionBehavior.FromIndex);
+                    })
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync();
+
+                await session.Query<ClassWithName, TIndex>()
+                    .Customize(x =>
+                    {
+                        x.NoCaching();
+                        x.Projection(ProjectionBehavior.FromIndexOrThrow);
+                    })
+                    .Select(x => x.Name)
+                    .FirstOrDefaultAsync();
+
+                await Assert.ThrowsAsync<InvalidQueryException>(async () =>
+                {
+                    await session.Query<ClassWithName, TIndex>()
+                        .Customize(x =>
+                        {
+                            x.NoCaching();
+                            x.Projection(ProjectionBehavior.FromDocument);
+                        })
+                        .Select(x => x.Name)
+                        .FirstOrDefaultAsync();
+                });
+
+                await Assert.ThrowsAsync<InvalidQueryException>(async () =>
+                {
+                    await session.Query<ClassWithName, TIndex>()
+                        .Customize(x =>
+                        {
+                            x.NoCaching();
+                            x.Projection(ProjectionBehavior.FromDocumentOrThrow);
+                        })
+                        .Select(x => x.Name)
+                        .FirstOrDefaultAsync();
+                });
+            }
+
+            static async Task TestDocumentQueryAsync<TIndex>(IAsyncDocumentSession session)
+                where TIndex : AbstractCommonApiForIndexes, new()
+            {
+                await session.Advanced.AsyncDocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>("Name")
+                    .FirstOrDefaultAsync();
+
+                await session.Advanced.AsyncDocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>(ProjectionBehavior.Default, "Name")
+                    .FirstOrDefaultAsync();
+
+                await session.Advanced.AsyncDocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>(ProjectionBehavior.FromIndex, "Name")
+                    .FirstOrDefaultAsync();
+
+                await session.Advanced.AsyncDocumentQuery<ClassWithName, TIndex>()
+                    .NoCaching()
+                    .SelectFields<ClassWithName>(ProjectionBehavior.FromIndexOrThrow, "Name")
+                    .FirstOrDefaultAsync();
+
+                await Assert.ThrowsAsync<InvalidQueryException>(async () =>
+                {
+                    await session.Advanced.AsyncDocumentQuery<ClassWithName, TIndex>()
+                        .NoCaching()
+                        .SelectFields<ClassWithName>(ProjectionBehavior.FromDocument, "Name")
+                        .FirstOrDefaultAsync();
+                });
+
+                await Assert.ThrowsAsync<InvalidQueryException>(async () =>
+                {
+                    await session.Advanced.AsyncDocumentQuery<ClassWithName, TIndex>()
+                        .NoCaching()
+                        .SelectFields<ClassWithName>(ProjectionBehavior.FromDocumentOrThrow, "Name")
+                        .FirstOrDefaultAsync();
+                });
+            }
         }
 
         private class Company_WithExtraField : Company
@@ -430,6 +761,16 @@ namespace SlowTests.Issues
         private class ClassWithName
         {
             public string Name { get; set; }
+        }
+
+        private class ClassWithNameAndFax : ClassWithName
+        {
+            public string Fax { get; set; }
+        }
+
+        private class ClassWithNameAndExtraField : ClassWithName
+        {
+            public string ExtraField { get; set; }
         }
     }
 }

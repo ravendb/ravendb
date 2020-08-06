@@ -34,12 +34,19 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>()
         {
+            return SelectFields<TProjection>(Queries.ProjectionBehavior.Default);
+        }
+
+        /// <inheritdoc />
+        public IDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior)
+        {
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var fields = propertyInfos.Select(p => p.Name).ToArray();
             return SelectFields<TProjection>(new QueryData(fields, projections)
             {
-                IsProjectInto = true
+                IsProjectInto = true,
+                ProjectionBehavior = projectionBehavior
             });
         }
 
@@ -88,9 +95,16 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
         {
+            return SelectFields<TProjection>(Queries.ProjectionBehavior.Default, fields);
+        }
+
+        /// <inheritdoc />
+        public IDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior, params string[] fields)
+        {
             return SelectFields<TProjection>(new QueryData(fields, fields)
             {
-                IsProjectInto = true
+                IsProjectInto = true,
+                ProjectionBehavior = projectionBehavior
             });
         }
 
@@ -949,13 +963,13 @@ namespace Raven.Client.Documents.Session
                 return query;
             }
         }
+
         private IGraphQuery<T> WithInternal<TOther>(string alias, DocumentQuery<TOther> docQuery)
         {
             if (docQuery.SelectTokens?.Count > 0)
             {
                 throw new NotSupportedException($"Select is not permitted in a 'With' clause in query:{docQuery}");
             }
-
 
             foreach (var keyValue in docQuery.QueryParameters)
             {
@@ -1168,7 +1182,7 @@ namespace Raven.Client.Documents.Session
                 QueryHighlightings = QueryHighlightings,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
-                ProjectionBehavior = ProjectionBehavior,
+                ProjectionBehavior = queryData?.ProjectionBehavior ?? ProjectionBehavior,
                 QueryTimings = QueryTimings,
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
