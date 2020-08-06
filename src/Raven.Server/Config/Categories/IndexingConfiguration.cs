@@ -143,6 +143,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Analyzers.NGram.MaxGram", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxGram { get; set; }
 
+        [Description("Managed allocations limit, which an index will stop and complete the current batch")]
+        [DefaultValue(512)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MangedAllocationsBatchLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? MangedAllocationsBatchLimit { get; protected set; }
+
         [Description("Transaction size limit after which an index will stop and complete the current batch")]
         [DefaultValue(null)]
         [SizeUnit(SizeUnit.Megabytes)]
