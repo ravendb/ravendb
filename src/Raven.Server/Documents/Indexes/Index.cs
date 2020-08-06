@@ -3507,13 +3507,13 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (Configuration.MangedAllocationsBatchLimit != null)
+            if (Configuration.ManagedAllocationsBatchLimit != null)
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
                 var diff = currentManagedAllocations - _initialManagedAllocations;
-                if (diff > Configuration.MangedAllocationsBatchLimit.Value)
+                if (diff > Configuration.ManagedAllocationsBatchLimit.Value)
                 {
-                    stats.RecordMapCompletedReason($"Reached managed allocations limit ({Configuration.MangedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
+                    stats.RecordMapCompletedReason($"Reached managed allocations limit ({Configuration.ManagedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
                     return false;
                 }
             }
