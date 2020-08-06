@@ -167,7 +167,7 @@ namespace Raven.Server.Rachis
         public void Start()
         {
             _current = new RachisTimings();
-            _queue.LimitedSizeEnqueue(_current, 5);
+            _queue.LimitedSizeEnqueue(_current, 10);
             Timings.Add(new RachisLogEntry
             {
                 Message = "Start",
@@ -191,26 +191,48 @@ namespace Raven.Server.Rachis
 
     public class RachisDebug
     {
-        public readonly ConcurrentDictionary<string, ConcurrentQueue<RachisTimings>> TimingTracking = new ConcurrentDictionary<string, ConcurrentQueue<RachisTimings>>();
+        public readonly ConcurrentDictionary<string, RachisTimingsHolder> TimingTracking = new ConcurrentDictionary<string, RachisTimingsHolder>();
         public readonly ConcurrentQueue<string> StateChangeTracking = new ConcurrentQueue<string>();
+
+        public class RachisTimingsHolder
+        {
+            public ConcurrentQueue<RachisTimings> TimingTracking;
+            public DateTime Since = DateTime.UtcNow;
+        }
 
         public bool IsInterVersionTest;
 
         public RachisLogRecorder GetNewRecorder(string name)
         {
-            var queue = new ConcurrentQueue<RachisTimings>();
-            if (TimingTracking.TryAdd(name, queue) == false)
+            var holder = new RachisTimingsHolder
+            {
+                TimingTracking = new ConcurrentQueue<RachisTimings>()
+            };
+
+            if (TimingTracking.TryAdd(name, holder) == false)
             {
                 throw new ArgumentException($"Recorder with the name '{name}' already exists");
             }
-            return new RachisLogRecorder(queue);
+            return new RachisLogRecorder(holder.TimingTracking);
+        }
+
+        public void RemoveRecorderOlderThan(DateTime after)
+        {
+            var toRemove = TimingTracking.Where(x => x.Value.Since <= after).Select(x => x.Key);
+            foreach (var item in toRemove)
+            {
+                if (TimingTracking.TryRemove(item, out var q))
+                {
+                    q.TimingTracking.Clear();
+                }
+            }
         }
 
         public void RemoveRecorder(string name)
         {
             if (TimingTracking.Remove(name, out var q))
             {
-                q.Clear();
+                q.TimingTracking.Clear();
             }
         }
 
@@ -222,7 +244,7 @@ namespace Raven.Server.Rachis
                 var key = tuple.Key;
                 DynamicJsonArray inner;
                 timingTracking[key] = inner = new DynamicJsonArray();
-                foreach (var queue in tuple.Value)
+                foreach (var queue in tuple.Value.TimingTracking)
                 {
                     inner.Add(new DynamicJsonArray(queue.Timings.OrderBy(x => x.At)));
                 }
