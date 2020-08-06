@@ -218,13 +218,11 @@ namespace Raven.Server.Rachis
 
         public void RemoveRecorderOlderThan(DateTime after)
         {
-            var toRemove = TimingTracking.Where(x => x.Value.Since <= after).Select(x => x.Key);
-            foreach (var item in toRemove)
+            foreach (var item in TimingTracking)
             {
-                if (TimingTracking.TryRemove(item, out var q))
-                {
-                    q.TimingTracking.Clear();
-                }
+                if (item.Value.Since > after)
+                    continue;
+                TimingTracking.TryRemove(item.Key, out _);
             }
         }
 

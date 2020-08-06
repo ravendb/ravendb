@@ -180,7 +180,6 @@ namespace Raven.Server.Documents.Indexes
         public bool _firstQuery = true;
         internal TimeSpan? _firstBatchTimeout;
         private Lazy<Size?> _transactionSizeLimit;
-        private Lazy<Size?> _managedAllocationLimit;
         private bool _scratchSpaceLimitExceeded;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
@@ -3391,21 +3390,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private Size? ManagedAllocationLimit
-        {
-            get
-            {
-                if (_managedAllocationLimit != null)
-                    return _managedAllocationLimit.Value;
-
-                var limit = Configuration.MangedAllocationsBatchLimit;
-                
-                _managedAllocationLimit = new Lazy<Size?>(() => limit);
-
-                return _managedAllocationLimit.Value;
-            }
-        }
-
         private DateTime _lastCheckedFlushLock;
 
         public bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
@@ -3522,13 +3506,13 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (ManagedAllocationLimit != null)
+            if (Configuration.MangedAllocationsBatchLimit != null)
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
                 var diff = currentManagedAllocations - _initialManagedAllocations;
-                if (diff > ManagedAllocationLimit.Value)
+                if (diff > Configuration.MangedAllocationsBatchLimit.Value)
                 {
-                    stats.RecordMapCompletedReason($"Reached managed allocations limit ({ManagedAllocationLimit.Value}). Allocated {diff} in current batch");
+                    stats.RecordMapCompletedReason($"Reached managed allocations limit ({Configuration.MangedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
                     return false;
                 }
             }
