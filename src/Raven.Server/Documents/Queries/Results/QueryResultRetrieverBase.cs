@@ -62,13 +62,22 @@ namespace Raven.Server.Documents.Queries.Results
             _includeDocumentsCommand = includeDocumentsCommand;
             _includeCompareExchangeValuesCommand = includeCompareExchangeValuesCommand;
 
-            DocumentsStorage = documentsStorage;
-            RetrieverScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Retriever), start: false);
+            ValidateFieldsToFetch(fieldsToFetch);
             FieldsToFetch = fieldsToFetch;
+
+            DocumentsStorage = documentsStorage;
+
+            RetrieverScope = queryTimings?.For(nameof(QueryTimingsScope.Names.Retriever), start: false);
 
             DocumentFields = query?.DocumentFields ?? DocumentFields.All;
 
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
+        }
+
+        protected virtual void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
+        {
+            if (fieldsToFetch == null)
+                throw new ArgumentNullException(nameof(fieldsToFetch));
         }
 
         protected void FinishDocumentSetup(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc)

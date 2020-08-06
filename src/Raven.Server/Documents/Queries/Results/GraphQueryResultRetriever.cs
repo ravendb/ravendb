@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Timings;
@@ -30,6 +32,16 @@ namespace Raven.Server.Documents.Queries.Results
         {
             _graphQuery = graphQuery;
             _context = context;
+        }
+
+        protected override void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
+        {
+            base.ValidateFieldsToFetch(fieldsToFetch);
+
+            if (_query.ProjectionBehavior == null || _query.ProjectionBehavior == ProjectionBehavior.Default)
+                return;
+
+            throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'.Only default projection behavior can be used for graph queries.", _query.Query, _query.QueryParameters);
         }
 
         public override Document Get(Lucene.Net.Documents.Document input, Lucene.Net.Search.ScoreDoc scoreDoc, IState state)
@@ -174,7 +186,6 @@ namespace Raven.Server.Documents.Queries.Results
                             continue;
                     }
                 }
-
             }
 
             return new Document
