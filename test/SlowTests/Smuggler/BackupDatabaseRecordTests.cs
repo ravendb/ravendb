@@ -107,7 +107,7 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        _hubName = "hub",
+                        HubName = "hub",
                         ConnectionStringName = "ConnectionName"
                     }));
                     store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
@@ -199,7 +199,7 @@ namespace SlowTests.Smuggler
 
                     Assert.Equal(1, record.SinkPullReplications.Count);
                     Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
-                    Assert.Equal("hub", record.SinkPullReplications[0]._hubName);
+                    Assert.Equal("hub", record.SinkPullReplications[0].HubName);
                     Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
                     Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
                     Assert.Equal(true, record.SinkPullReplications[0].Disabled);
@@ -289,7 +289,7 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        _hubName = "hub",
+                        HubName = "hub",
                         ConnectionStringName = "ConnectionName"
                     }));
                     store1.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
@@ -410,7 +410,7 @@ namespace SlowTests.Smuggler
 
                     Assert.Equal(1, record.SinkPullReplications.Count);
                     Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
-                    Assert.Equal("hub", record.SinkPullReplications[0]._hubName);
+                    Assert.Equal("hub", record.SinkPullReplications[0].HubName);
                     Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
                     Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
                     Assert.Equal(true, record.SinkPullReplications[0].Disabled);
@@ -640,7 +640,7 @@ namespace SlowTests.Smuggler
                         ConnectionString = con1,
                         ConnectionStringName = "con1",
                         Database = "db1",
-                        _hubName = "hub1"
+                        HubName = "hub1"
                     };
                     var sink2 = new PullReplicationAsSink()
                     {
@@ -648,7 +648,7 @@ namespace SlowTests.Smuggler
                         ConnectionString = con2,
                         ConnectionStringName = "con2",
                         Database = "db2",
-                        _hubName = "hub2"
+                        HubName = "hub2"
                     };
                     var sink3 = new PullReplicationAsSink()
                     {
@@ -656,7 +656,7 @@ namespace SlowTests.Smuggler
                         ConnectionString = con3,
                         ConnectionStringName = "con3",
                         Database = "db3",
-                        _hubName = "hub3"
+                        HubName = "hub3"
                     };
                     var sink4 = new PullReplicationAsSink()
                     {
@@ -664,7 +664,7 @@ namespace SlowTests.Smuggler
                         ConnectionString = con4,
                         ConnectionStringName = "con4",
                         Database = "db4",
-                        _hubName = "hub4"
+                        HubName = "hub4"
                     };
                     await store1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink1));
                     await store1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink2));
@@ -952,7 +952,7 @@ namespace SlowTests.Smuggler
                             disabled++;
                         if (!x.Name.Equals("sink1"))
                             return;
-                        Assert.Equal("hub1", x._hubName);
+                        Assert.Equal("hub1", x.HubName);
                         Assert.Equal("con1", x.ConnectionStringName);
                     });
                     Assert.Equal(2, disabled);
@@ -1061,7 +1061,7 @@ namespace SlowTests.Smuggler
                         CertificateWithPrivateKey = "CertificateWithPrivateKey",
                         TaskId = 2,
                         Name = "Sink",
-                        _hubName = "hub",
+                        HubName = "hub",
                         ConnectionStringName = "ConnectionName"
                     }));
                     store.Maintenance.Send(new PutPullReplicationAsHubOperation(new PullReplicationDefinition()
@@ -1200,7 +1200,7 @@ namespace SlowTests.Smuggler
 
                         Assert.Equal(1, record.SinkPullReplications.Count);
                         Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
-                        Assert.Equal("hub", record.SinkPullReplications[0]._hubName);
+                        Assert.Equal("hub", record.SinkPullReplications[0].HubName);
                         Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
                         Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
                         Assert.Equal(false, record.SinkPullReplications[0].Disabled);
@@ -1360,7 +1360,7 @@ namespace SlowTests.Smuggler
                 await store.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication(store.Database, store.Database)));
 
                 // pull replication sink
-                var sink = new PullReplicationAsSink {_hubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name};
+                var sink = new PullReplicationAsSink {HubName = "aa", ConnectionString = connectionString, ConnectionStringName = connectionString.Name};
                 await store.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sink));
 
                 // pull replication hub

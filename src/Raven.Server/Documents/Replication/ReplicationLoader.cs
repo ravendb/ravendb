@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Replication
         {
             var supportedVersions =
                 TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
-            string[] incomingPaths =default;
+            string[] allowedPaths =default;
             string pullDefinitionName = null;
             switch (header.AuthorizeInfo?.AuthorizeAs)
             {
@@ -297,12 +297,12 @@ namespace Raven.Server.Documents.Replication
                     switch (header.AuthorizeInfo.AuthorizeAs)
                     {
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Outgoing) != PullReplicationMode.Outgoing)
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.HubToSink) != PullReplicationMode.HubToSink)
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
                             CreatePullReplicationAsHub(tcpConnectionOptions, buffer, supportedVersions, pullReplicationDefinition, header);
                             return;
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                            if ((pullReplicationDefinition.Mode & PullReplicationMode.Incoming) != PullReplicationMode.Incoming)
+                            if ((pullReplicationDefinition.Mode & PullReplicationMode.SinkToHub) != PullReplicationMode.SinkToHub)
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
                             if (certificate == null)
                                 throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Replication
                                     "Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " +
                                     pullReplicationDefinition.Name);
 
-                            incomingPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedWritePaths, header.ReplicationHubAccess.AllowedReadPaths);
+                            allowedPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedHubToSinkPaths, header.ReplicationHubAccess.AllowedSinkToHubPaths);
 
                             // same as normal incoming replication, just using the filtering
                             break;
@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Replication
                     throw new InvalidOperationException("Unknown AuthroizeAs value" + header.AuthorizeInfo?.AuthorizeAs);
             }
 
-            CreateIncomingInstance(tcpConnectionOptions, incomingPaths, pullDefinitionName, buffer);
+            CreateIncomingInstance(tcpConnectionOptions, allowedPaths, pullDefinitionName, buffer);
         }
 
         private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Replication
             {
                 // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do 
                 // any filtering. That means that the certificate has global access to the database, so there is not point
-                outgoingReplication.MyOutgoingPaths = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedReadPaths, header.ReplicationHubAccess.AllowedWritePaths);
+                outgoingReplication.PathsToSend = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedSinkToHubPaths, header.ReplicationHubAccess.AllowedHubToSinkPaths);
             }
 
             outgoingReplication.Failed += OnOutgoingSendingFailed;
@@ -371,7 +371,8 @@ namespace Raven.Server.Documents.Replication
 
         public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationAsSink destination)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, destination.AllowedWritePaths, destination._hubName);
+            string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer,allowedPaths, destination.HubName);
             newIncoming.Failed += RetryPullReplication;
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
@@ -399,10 +400,10 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] incomingPaths, string pullReplicationName,
+        private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] allowedPaths, string pullReplicationName,
                         JsonOperationContext.MemoryBuffer buffer)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, incomingPaths, pullReplicationName);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, allowedPaths, pullReplicationName);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
@@ -428,17 +429,17 @@ namespace Raven.Server.Documents.Replication
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.MemoryBuffer buffer,
-            string[] incomingPaths,
+            string[] allowedPaths,
             string pullReplicationName)
         {
-            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, incomingPaths, buffer);
+            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, allowedPaths, buffer);
 
             var newIncoming = new IncomingReplicationHandler(
                 tcpConnectionOptions,
                 getLatestEtagMessage,
                 this,
                 buffer,
-                incomingPaths,
+                allowedPaths,
                 pullReplicationName);
 
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
@@ -506,7 +507,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
                         [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
                         [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector,
-                        [nameof(ReplicationMessageReply.IncomingPaths)] = incomingPaths,
+                        [nameof(ReplicationMessageReply.AcceptablePaths)] = incomingPaths,
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -901,26 +902,26 @@ namespace Raven.Server.Documents.Replication
                 externalReplication.ConnectionString = connectionString;
                 
                 if (externalReplication is PullReplicationAsSink sink && 
-                    sink.Mode == (PullReplicationMode.Incoming | PullReplicationMode.Outgoing))
+                    sink.Mode == (PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink))
                 {
                     // we have dual mode here, need to split it
-                    sink.Mode = PullReplicationMode.Incoming;
+                    sink.Mode = PullReplicationMode.SinkToHub;
                     
                     var other = new PullReplicationAsSink
                     {
                         Database = sink.Database,
                         Disabled = sink.Disabled,
-                        AllowedWritePaths = sink.AllowedWritePaths,
-                        Mode = PullReplicationMode.Outgoing,
+                        AllowedHubToSinkPaths = sink.AllowedHubToSinkPaths,
+                        Mode = PullReplicationMode.HubToSink,
                         Name = sink.Name,
                         Url = sink.Url,
                         ConnectionString = sink.ConnectionString,
                         CertificatePassword = sink.CertificatePassword,
-                        AllowedReadPaths = sink.AllowedReadPaths,
+                        AllowedSinkToHubPaths = sink.AllowedSinkToHubPaths,
                         MentorNode = sink.MentorNode,
                         TaskId = sink.TaskId,
                         ConnectionStringName = sink.ConnectionStringName,
-                        _hubName = sink._hubName,
+                        HubName = sink.HubName,
                         CertificateWithPrivateKey = sink.CertificateWithPrivateKey
                     };
 
@@ -1160,7 +1161,7 @@ namespace Raven.Server.Documents.Replication
                 var outgoingReplication = new OutgoingReplicationHandler(null, this, Database, node, external, info);
                 if (node is PullReplicationAsSink sink)
                 {
-                    outgoingReplication.MyOutgoingPaths = sink.AllowedReadPaths ?? sink.AllowedWritePaths ?? Array.Empty<string>();
+                    outgoingReplication.PathsToSend = DetailedReplicationHubAccess.Preferred(sink.AllowedSinkToHubPaths, sink.AllowedHubToSinkPaths);
                 }
                 outgoingReplication.Failed += OnOutgoingSendingFailed;
                 outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
@@ -1282,7 +1283,7 @@ namespace Raven.Server.Documents.Replication
 
         private TcpConnectionInfo GetPullReplicationTcpInfo(PullReplicationAsSink pullReplicationAsSink, X509Certificate2 certificate, string database)
         {
-            var remoteTask = pullReplicationAsSink._hubName;
+            var remoteTask = pullReplicationAsSink.HubName;
             using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 string[] remoteDatabaseUrls;
@@ -1372,12 +1373,12 @@ namespace Raven.Server.Documents.Replication
                     {
                         AuthorizeAs = sink.Mode switch
                         {
-                            PullReplicationMode.Outgoing => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
-                            PullReplicationMode.Incoming => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
+                            PullReplicationMode.HubToSink => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
+                            PullReplicationMode.SinkToHub => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
                             PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node),"Replication mode should be set to pull or push"),
                             _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)   
                         },
-                        AuthorizationFor = sink._hubName
+                        AuthorizationFor = sink.HubName
                     };
 
                     if (sink.CertificateWithPrivateKey == null)

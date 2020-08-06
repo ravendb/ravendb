@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.Operations.Replication
     public enum PullReplicationMode
     {
         None = 0,
-        Outgoing = 1,
-        Incoming = 2,
+        HubToSink = 1,
+        SinkToHub = 2,
     }
 }

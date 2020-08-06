@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.Replication
                 using (context.GetMemoryBuffer(out _buffer))
                 {
                     var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                    if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.Outgoing) == PullReplicationMode.Outgoing)
+                    if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.HubToSink) == PullReplicationMode.HubToSink)
                     {
                         if( supportedFeatures.Replication.PullReplication == false)
                             throw new InvalidOperationException("Other side does not support pull replication " + Destination);
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Replication
                 request[nameof(ReplicationInitialRequest.DatabaseGroupId)] = _parent.Database.DatabaseGroupId; // my database id
                 request[nameof(ReplicationInitialRequest.SourceUrl)] = _parent._server.GetNodeHttpServerUrl();
                 request[nameof(ReplicationInitialRequest.Info)] = _parent._server.GetTcpInfoAndCertificates(null); // my connection info
-                request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination._hubName;
+                request[nameof(ReplicationInitialRequest.PullReplicationDefinitionName)] = destination.HubName;
                 request[nameof(ReplicationInitialRequest.PullReplicationSinkTaskName)] = destination.GetTaskName();
             }
 
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Replication
 
         private void Replicate()
         {
-            using var documentSender = new ReplicationDocumentSender(_stream, this, _log, MyOutgoingPaths, TheirsIncomingPaths);
+            using var documentSender = new ReplicationDocumentSender(_stream, this, _log, PathsToSend, _destinationAcceptablePaths);
 
             while (_cts.IsCancellationRequested == false)
             {
@@ -527,7 +527,7 @@ namespace Raven.Server.Documents.Replication
                         LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
                         // this is used when the other side lets us know what paths it is going to accept from us
                         // it supplements (but does not extend) what we are willing to send out 
-                        TheirsIncomingPaths = response.Reply.IncomingPaths;
+                        _destinationAcceptablePaths = response.Reply.AcceptablePaths;
                         break;
                     case ReplicationMessageReply.ReplyType.Error:
                         var exception = new InvalidOperationException(response.Reply.Exception);
@@ -1068,7 +1068,8 @@ namespace Raven.Server.Documents.Replication
 
         private readonly SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
-        public string[] MyOutgoingPaths, TheirsIncomingPaths;
+        public string[] PathsToSend;
+        private string[] _destinationAcceptablePaths;
         public string CertificateThumbprint;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures { get; private set; }
 

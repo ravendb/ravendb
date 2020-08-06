@@ -2427,15 +2427,15 @@ namespace Raven.Server
                                 {
                                     var expectedMode = info.AuthorizeAs switch
                                     {
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => PullReplicationMode.Outgoing,
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.Incoming,
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => PullReplicationMode.HubToSink,
+                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.SinkToHub,
                                         _ => PullReplicationMode.None
                                     };
                                     
                                     if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)// legacy
                                     { 
                                         return pullReplication.Certificates.ContainsKey(certificate.Thumbprint) && 
-                                            expectedMode == PullReplicationMode.Outgoing;
+                                            expectedMode == PullReplicationMode.HubToSink;
                                     }
 
                                     if ((pullReplication.Mode & expectedMode) != expectedMode || expectedMode == PullReplicationMode.None)
@@ -2483,8 +2483,8 @@ namespace Raven.Server
                 {
                     await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub,new ReplicationHubAccess
                         {
-                            Incoming = replicationHubAccess.AllowedWritePaths,
-                            Outgoing = replicationHubAccess.AllowedReadPaths,
+                            AllowedHubToSinkPaths = replicationHubAccess.AllowedHubToSinkPaths,
+                            AllowedSinkToHubPaths = replicationHubAccess.AllowedSinkToHubPaths,
                             Name = replicationHubAccess.Name,
                             CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                             
