@@ -180,12 +180,14 @@ namespace Raven.Server.Documents.Indexes
         public bool _firstQuery = true;
         internal TimeSpan? _firstBatchTimeout;
         private Lazy<Size?> _transactionSizeLimit;
+        private Lazy<Size?> _managedAllocationLimit;
         private bool _scratchSpaceLimitExceeded;
 
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
+        private Size _initialManagedAllocations;
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
@@ -1046,7 +1048,8 @@ namespace Raven.Server.Documents.Indexes
                                         _indexingInProgress.Wait(_indexingProcessCancellationTokenSource.Token);
 
                                         TimeSpentIndexing.Start();
-                                        var lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
+
+                                        _initialManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
 
                                         didWork = DoIndexingWork(scope, _indexingProcessCancellationTokenSource.Token);
 
@@ -1055,8 +1058,8 @@ namespace Raven.Server.Documents.Indexes
 
                                         batchCompleted = true;
 
-                                        lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - lastAllocatedBytes;
-                                        scope.AddAllocatedBytes(lastAllocatedBytes);
+                                        var current = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
+                                        scope.AddAllocatedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
                                     }
                                     catch
                                     {
@@ -3388,6 +3391,21 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        private Size? ManagedAllocationLimit
+        {
+            get
+            {
+                if (_managedAllocationLimit != null)
+                    return _managedAllocationLimit.Value;
+
+                var limit = Configuration.MangedAllocationsBatchLimit;
+                
+                _managedAllocationLimit = new Lazy<Size?>(() => limit);
+
+                return _managedAllocationLimit.Value;
+            }
+        }
+
         private DateTime _lastCheckedFlushLock;
 
         public bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
@@ -3500,6 +3518,17 @@ namespace Raven.Server.Documents.Indexes
                 if (txAllocations > TransactionSizeLimit.Value)
                 {
                     stats.RecordMapCompletedReason($"Reached transaction size limit ({TransactionSizeLimit.Value}). Allocated {new Size(txAllocationsInBytes, SizeUnit.Bytes)} in current transaction");
+                    return false;
+                }
+            }
+
+            if (ManagedAllocationLimit != null)
+            {
+                var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
+                var diff = currentManagedAllocations - _initialManagedAllocations;
+                if (diff > ManagedAllocationLimit.Value)
+                {
+                    stats.RecordMapCompletedReason($"Reached managed allocations limit ({ManagedAllocationLimit.Value}). Allocated {diff} in current batch");
                     return false;
                 }
             }
