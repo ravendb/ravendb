@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Replication
             HandleReplicationPulse = null;
         }
 
-        public long LastDocumentEtag;
+        public long LastDocumentEtag => _lastDocumentEtag;
         public long LastHeartbeatTicks;
 
         private readonly ConcurrentQueue<IncomingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<IncomingReplicationStatsAggregator>();
@@ -1265,7 +1265,7 @@ namespace Raven.Server.Documents.Replication
 
                     var database = _replicationInfo.DocumentDatabase;
                     var lastTransactionMarker = 0;
-
+                    var handledAttachmentStreams = new HashSet<Slice>(SliceComparer.Instance);
                     context.LastDatabaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                     foreach (var item in _replicationInfo.ReplicatedItems)
                     {
@@ -1290,9 +1290,12 @@ namespace Raven.Server.Documents.Replication
 
                                 if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out var attachmentStream))
                                 {
-                                    database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash,
-                                        attachmentStream.Stream);
-                                    _replicationInfo.ReplicatedAttachmentStreams.Remove(item.Base64Hash);
+                                    if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, item.Base64Hash) == false)
+                                    {
+                                        database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, item.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
+                                    }
+
+                                    handledAttachmentStreams.Add(item.Base64Hash);
                                 }
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
@@ -1456,7 +1459,7 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     Debug.Assert(_replicationInfo.ReplicatedAttachmentStreams == null ||
-                                 _replicationInfo.ReplicatedAttachmentStreams.Count == 0,
+                                 _replicationInfo.ReplicatedAttachmentStreams.Count == handledAttachmentStreams.Count,
                         "We should handle all attachment streams during WriteAttachment.");
                     Debug.Assert(context.LastDatabaseChangeVector != null);
 
