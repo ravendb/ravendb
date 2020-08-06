@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Handlers
                             var numberOfCommands = 0;
                             long totalSize = 0;
                             int operationsCount = 0;
+                            
                             while (true)
                             {
                                 using (var modifier = new BlittableMetadataModifier(docsCtx))
@@ -89,7 +90,7 @@ namespace Raven.Server.Documents.Handlers
                                         ClearStreamsTempFiles();
 
                                         progress.BatchCount++;
-                                        progress.Processed += numberOfCommands;
+                                        progress.Total += numberOfCommands;
                                         progress.LastProcessedId = array[numberOfCommands - 1].Id;
 
                                         onProgress(progress);
@@ -118,6 +119,22 @@ namespace Raven.Server.Documents.Handlers
                                     if (numberOfCommands >= array.Length)
                                         Array.Resize(ref array, array.Length + Math.Min(1024, array.Length));
                                     array[numberOfCommands++] = commandData;
+                                    
+                                    switch (commandData.Type)
+                                    {
+                                        case CommandType.PUT:
+                                            progress.DocumentsProcessed++;
+                                            break;
+                                        case CommandType.AttachmentPUT:
+                                            progress.AttachmentsProcessed++;
+                                            break;
+                                        case CommandType.Counters:
+                                            progress.CountersProcessed++;
+                                            break;
+                                        case CommandType.TimeSeriesBulkInsert:
+                                            progress.TimeSeriesProcessed++;
+                                            break;
+                                    }
                                 }
                             }
 
@@ -133,8 +150,11 @@ namespace Raven.Server.Documents.Handlers
                                 });
 
                                 progress.BatchCount++;
-                                progress.Processed += numberOfCommands;
+                                progress.Total += numberOfCommands;
                                 progress.LastProcessedId = array[numberOfCommands - 1].Id;
+#pragma warning disable CS0618 // Type or member is obsolete
+                                progress.Processed = progress.DocumentsProcessed;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                                 onProgress(progress);
                             }
@@ -152,7 +172,11 @@ namespace Raven.Server.Documents.Handlers
 
                 return new BulkOperationResult
                 {
-                    Total = progress.Processed
+                    Total = progress.Total,
+                    DocumentsProcessed = progress.DocumentsProcessed,
+                    AttachmentsProcessed = progress.AttachmentsProcessed,
+                    CountersProcessed = progress.CountersProcessed,
+                    TimeSeriesProcessed = progress.TimeSeriesProcessed
                 };
             }
             catch (Exception e)

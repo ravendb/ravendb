@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using Raven.Server.Routing;
 using Sparrow.Server.Platform.Posix;
 
@@ -10,7 +11,6 @@ namespace Raven.Server.ServerWide
     public static class DebugInfoPackageUtils
     {
         public static readonly IReadOnlyList<RouteInformation> Routes = RouteScanner.DebugRoutes;
-
 
         public static string GetOutputPathFromRouteInformation(RouteInformation route, string prefix)
         {
@@ -47,5 +47,36 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public static IEnumerable<RouteInformation> GetAuthorizedRoutes(RavenServer.AuthenticateConnection authenticateConnection, string db = null)
+        {
+            return Routes.Where(route =>
+            {
+                bool authorized = false;
+                switch (authenticateConnection.Status)
+                {
+                    case RavenServer.AuthenticationStatus.ClusterAdmin:
+                        authorized = true;
+                        break;
+                    case RavenServer.AuthenticationStatus.Operator:
+                        if (route.AuthorizationStatus != AuthorizationStatus.ClusterAdmin)
+                            authorized = true;
+                        break;
+                    case RavenServer.AuthenticationStatus.Allowed:
+                        if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin || route.AuthorizationStatus == AuthorizationStatus.Operator)
+                            break;
+                        if (route.TypeOfRoute == RouteInformation.RouteType.Databases
+                            && (db == null || authenticateConnection.CanAccess(db, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin) == false))
+                            break;
+                        authorized = true;
+                        break;
+                    default:
+                        if (route.AuthorizationStatus == AuthorizationStatus.UnauthenticatedClients)
+                            authorized = true;
+                        break;
+                }
+
+                return authorized;
+            });
+        }
     }
 }

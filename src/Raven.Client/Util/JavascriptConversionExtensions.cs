@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Net;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Lambda2Js;
@@ -1106,19 +1105,24 @@ namespace Raven.Client.Util
                 if (context.Node is MethodCallExpression mce &&
                     mce.Object is MemberExpression)
                 {
+                    // check if we can get constant value from method call mce
+
                     foreach (var arg in mce.Arguments)
                     {
-                        if (arg.NodeType == ExpressionType.Parameter)
-                            return;
+                        if (arg.NodeType == ExpressionType.Parameter ||
+                            arg is MemberExpression argMemberExpression &&
+                            GetParameter(argMemberExpression) != null)
+                            return; // can't get constant value from mce
                     }
 
-                    node = mce.Object;
+                    node = mce.Object; // check if mce.Object is a wrapped constant
                 }
 
                 if (!(node is MemberExpression memberExpression) ||
                     IsWrappedConstantExpression(memberExpression) == false)
                     return;
 
+                // get constant value from context.Node
                 LinqPathProvider.GetValueFromExpressionWithoutConversion(context.Node, out var value);
                 var parameter = _documentQuery.ProjectionParameter(value);
                 _projectionParameters?.Add(parameter);

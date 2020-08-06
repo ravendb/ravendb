@@ -5,9 +5,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Config;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,13 +32,13 @@ namespace SlowTests.Issues
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
             }))
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
                 WaitForIndexing(store);
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Query<Employee>().ToList(); // this will generate performance hint
+                    await session.Query<Employee>().ToListAsync(); // this will generate performance hint
                 }
 
                 var database = await GetDatabase(store.Database);
@@ -63,18 +65,22 @@ namespace SlowTests.Issues
                 var backupTaskId = (store.Maintenance.Send(new UpdatePeriodicBackupOperation(config))).TaskId;
                 store.Maintenance.Send(new StartBackupOperation(true, backupTaskId));
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
-                SpinWait.SpinUntil(() =>
+                await WaitForValueAsync(() =>
                 {
                     var getPeriodicBackupResult = store.Maintenance.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(15));
+                }, true);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
 
+                string backupLocation = Directory.GetDirectories(backupPath).First();
+                var filesInBackupFolder = Directory.GetFiles(backupLocation);
+                Assert.True(filesInBackupFolder.Where(RestorePointsBase.IsBackupOrSnapshot).Any(), 
+                    $"The backup folder \"{backupLocation}\" contains no backup or snapshot files.\n{string.Join(", ","filesInBackupFolder")}");
                 using (RestoreDatabase(store, new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(backupPath).First(),
+                    BackupLocation = backupLocation,
                     DatabaseName = restoredDatabaseName
                 }))
                 {

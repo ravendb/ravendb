@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.TimeSeries;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
-using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.TimeSeries;
 
 namespace SlowTests.Client.TimeSeries.Issues
 {
@@ -63,7 +63,6 @@ namespace SlowTests.Client.TimeSeries.Issues
                 }
             }
         }
-
 
         [Fact]
         public void TestRanges()
@@ -126,7 +125,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, res.Values.Count);
                     Assert.Equal(1, res.Values["raven"].Count);
-
                 }
                 rangesList = new List<TimeSeriesRange>
                 {
@@ -145,7 +143,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, res.Values.Count);
                     Assert.Equal(1, res.Values["raven"].Count);
-
                 }
                 rangesList = new List<TimeSeriesRange>
                 {
@@ -164,7 +161,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, res.Values.Count);
                     Assert.Equal(1, res.Values["raven"].Count);
-
                 }
                 rangesList = new List<TimeSeriesRange>
                 {
@@ -183,7 +179,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, res.Values.Count);
                     Assert.Equal(1, res.Values["raven"].Count);
-
                 }
                 rangesList = new List<TimeSeriesRange>
                 {
@@ -202,7 +197,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     Assert.Equal(1, res.Values.Count);
                     Assert.Equal(1, res.Values["raven"].Count);
-
                 }
             }
         }
@@ -252,13 +246,12 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                     res = ts.Get(start: 20);
                     Assert.Empty(res);
-
                 }
             }
         }
 
         [Fact]
-        public async Task GetResultsWithRange()
+        public void GetResultsWithRange()
         {
             using (var store = GetDocumentStore())
             {
@@ -307,13 +300,13 @@ namespace SlowTests.Client.TimeSeries.Issues
                         Assert.Equal(4, res.Values["raven"][1].Entries.Length);
                         Assert.Equal(0, res.Values["raven"][2].Entries.Length);
                     }
-          
+
                     tsf = session.TimeSeriesFor(id, "raven");
                     for (int i = 8; i < 11; i++)
                     {
                         tsf.Append(baseline.AddMinutes(i), new[] { 1000d }, "watches/apple");
                     }
-        
+
                     session.SaveChanges();
 
                     using (re.ContextPool.AllocateOperationContext(out var context))
@@ -335,7 +328,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
-        public async Task ResultsWithRangeAndPageSize()
+        public void ResultsWithRangeAndPageSize()
         {
             using (var store = GetDocumentStore())
             {
@@ -408,9 +401,9 @@ namespace SlowTests.Client.TimeSeries.Issues
                 }
             }
         }
-        
+
         [Fact]
-        public async Task ResultsWithRangeAndStart()
+        public void ResultsWithRangeAndStart()
         {
             using (var store = GetDocumentStore())
             {

@@ -51,7 +51,20 @@ namespace FastTests.Client
         private class Customer
         {
             public string Name { get; set; }
+
             public List<AttachmentDetails> Attachments { get; set; }
+        }
+
+        private class Class
+        {
+            public Customer Customer { get; set; }
+
+            public List<Detail> Details { get; set; }
+        }
+
+        private class Detail
+        {
+            public long? Size { get; set; }
         }
 
         [Fact]
@@ -940,6 +953,89 @@ namespace FastTests.Client
                 {
                     var order = session.Query<Order>().First();
                     Assert.Null(order.ShipTo);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseLinq()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string changeVector = "ravendb-logo.png";
+                const string id = "doc";
+                const int newSize = 2;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Class
+                    {
+                        Customer = new Customer
+                        {
+                            Attachments = new List<AttachmentDetails>
+                            {
+                                new AttachmentDetails
+                                {
+                                    ChangeVector = changeVector,
+                                    Size = 1
+                                }
+                            }
+                        }
+                    }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Class, long>(id, x => x.Customer.Attachments.Where(q => q.ChangeVector == changeVector).FirstOrDefault().Size, newSize);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<Class>(id);
+                    var attachmentDetails = doc.Customer.Attachments.FirstOrDefault(q => q.ChangeVector == changeVector);
+                    Assert.NotNull(attachmentDetails);
+                    Assert.Equal(newSize, attachmentDetails.Size);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUseNullableType()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string id = "doc";
+                const int newSize = 2;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Class
+                    {
+                        Details = new List<Detail>
+                        {
+                            new Detail
+                            {
+                                Size = 0
+                            }
+                        }
+                    }, id);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Patch<Class, long?>(id, x => x.Details.Where(q => q.Size.HasValue).FirstOrDefault().Size, newSize);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<Class>(id);
+                    var details = doc.Details.FirstOrDefault();
+                    Assert.NotNull(details);
+                    Assert.Equal(newSize, details.Size);
                 }
             }
         }

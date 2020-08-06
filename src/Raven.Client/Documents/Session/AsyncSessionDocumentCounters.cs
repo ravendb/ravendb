@@ -110,6 +110,8 @@ namespace Raven.Client.Documents.Session
 
                     foreach (var counterDetail in details.Counters)
                     {
+                        if (counterDetail == null)
+                            continue;
                         cache.Values[counterDetail.CounterName] = counterDetail.TotalValue;
                         result[counterDetail.CounterName] = counterDetail.TotalValue;
                     }

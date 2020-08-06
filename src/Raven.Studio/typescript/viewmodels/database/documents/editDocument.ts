@@ -77,7 +77,7 @@ class editDocument extends viewModelBase {
     changeVectorHtml: KnockoutComputed<string>;
     changeVectorFormatted: KnockoutComputed<string>;
     
-    lastModifiedAsAgo: KnockoutComputed<string>;    
+    lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     rawJsonUrl: KnockoutComputed<string>;
     isDeleteRevision: KnockoutComputed<boolean>;
@@ -88,7 +88,7 @@ class editDocument extends viewModelBase {
     isClone = ko.observable(false);
     collectionForNewDocument = ko.observable<string>();
     provideCustomNameForNewDocument = ko.observable(false);
-    userIdHasFocus = ko.observable<boolean>(false);   
+    userIdHasFocus = ko.observable<boolean>(false);
     userSpecifiedId = ko.observable<string>("");
 
     propertiesPanelVisible = ko.observable(true);
@@ -149,7 +149,7 @@ class editDocument extends viewModelBase {
     canViewAttachments: KnockoutComputed<boolean>;
     canViewCounters: KnockoutComputed<boolean>;
     canViewTimeSeries: KnockoutComputed<boolean>;
-    canViewRevisions:  KnockoutComputed<boolean>;
+    canViewRevisions: KnockoutComputed<boolean>;
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
     
@@ -587,7 +587,7 @@ class editDocument extends viewModelBase {
         // We get here upon clicking 'Clone' or 'New doc in current collection'
         // Just append / to collection name if exists
         
-        if (!collectionForNewDocument ||  collectionForNewDocument === "@empty") {
+        if (!collectionForNewDocument || collectionForNewDocument === "@empty") {
             return "";
         }
         
@@ -797,7 +797,7 @@ class editDocument extends viewModelBase {
     
     private onDocumentSaved(saveResult: saveDocumentResponseDto, localDoc: any, forceRevisionCreation: boolean) {
         
-        if (forceRevisionCreation && !saveResult.Results[0].RevisionCreated) {            
+        if (forceRevisionCreation && !saveResult.Results[0].RevisionCreated) {
             // No new revision was created since the server detected that a revision with latest document content already exists... so do nothing.
             this.isSaving(false);
             return;
@@ -918,7 +918,7 @@ class editDocument extends viewModelBase {
                 this.revisionsToCompare(revisions.items.filter(x => !x.__metadata.hasFlag("DeleteRevision")));
                 
                 if (itemToCompare) {
-                    return this.compareRevisions(itemToCompare);    
+                    return this.compareRevisions(itemToCompare);
                 }
             });
     }
@@ -1038,7 +1038,7 @@ class editDocument extends viewModelBase {
             const viewModel = new deleteDocuments([doc.getId()], this.activeDatabase());
             viewModel.deletionTask.done(() => {
                 this.dirtyFlag().reset();
-                this.connectedDocuments.onDocumentDeleted();                
+                this.connectedDocuments.onDocumentDeleted();
             });
             app.showBootstrapDialog(viewModel, editDocument.editDocSelector);
         } 
@@ -1131,8 +1131,19 @@ class editDocument extends viewModelBase {
         }
     }
 
-    formatBadge(number: KnockoutObservable<number>): KnockoutComputed<string> {
+    getBadgeText(number: KnockoutObservable<number>): KnockoutComputed<string> {
+        return ko.pureComputed(() => number() ? genUtils.getCountPrefix(number()) : "");
+    }
+
+    getBadgeTitle(number: KnockoutObservable<number>): KnockoutComputed<string> {
         return ko.pureComputed(() => number() ? number().toLocaleString() : "");
+    }
+    
+    getBadgeClasses(number: KnockoutObservable<number>): KnockoutComputed<string> {
+        return ko.pureComputed(() => {
+            const sizeClass = genUtils.getSizeClass(number());
+            return `badge ${sizeClass}`;
+        });
     }
 }
 

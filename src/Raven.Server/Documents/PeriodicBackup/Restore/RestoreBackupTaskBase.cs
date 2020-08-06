@@ -405,14 +405,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
             var orderedFiles = files
                 .Where(RestorePointsBase.IsBackupOrSnapshot)
-                .OrderBackups();
+                .OrderBackups()
+                .ToList();
 
-            if (orderedFiles == null)
-                throw new ArgumentException("No files to restore from the backup location, " +
-                                            $"path: {GetBackupLocation()}");
+            if (orderedFiles.Any() == false)
+                throw new ArgumentException($"No files to restore from the backup location, path: {GetBackupLocation()}");
 
             if (string.IsNullOrWhiteSpace(RestoreFromConfiguration.LastFileNameToRestore))
-                return orderedFiles.ToList();
+                return orderedFiles;
 
             var filesToRestore = new List<string>();
 

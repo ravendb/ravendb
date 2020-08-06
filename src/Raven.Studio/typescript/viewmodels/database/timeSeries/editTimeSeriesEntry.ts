@@ -1,12 +1,12 @@
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 import database = require("models/resources/database");
-import timeSeriesModel = require("models/database/timeSeries/timeSeriesModel");
+import timeSeriesEntryModel = require("models/database/timeSeries/timeSeriesEntryModel");
 import saveTimeSeriesCommand = require("commands/database/documents/timeSeries/saveTimeSeriesCommand");
 
 class editTimeSeriesEntry extends dialogViewModelBase {
 
-    static aggregationColumns = timeSeriesModel.aggregationColumns;
+    static aggregationColumns = timeSeriesEntryModel.aggregationColumns;
     
     static utcTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
     static localTimeFormat = "YYYY-MM-DD HH:mm:ss.SSS";
@@ -20,11 +20,10 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         sideBySide: true
     };
     
-    model = ko.observable<timeSeriesModel>();
+    model = ko.observable<timeSeriesEntryModel>();
     
     dateFormattedAsUtc: KnockoutComputed<string>;
     dateFormattedAsLocal: KnockoutComputed<string>;
-    isAggregation: KnockoutComputed<boolean>;
     
     lockSeriesName: boolean;
     lockTimeStamp: boolean;
@@ -32,7 +31,7 @@ class editTimeSeriesEntry extends dialogViewModelBase {
     constructor(private documentId: string, 
                 private db: database, 
                 private timeSeriesName: string,
-                private columnNames: string[],
+                private valuesNames: string[],
                 private editDto?: Raven.Client.Documents.Session.TimeSeries.TimeSeriesEntry) {
         super();
         
@@ -40,8 +39,8 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         this.lockSeriesName = !!this.timeSeriesName;
         
         const model = editDto 
-            ? new timeSeriesModel(timeSeriesName, editDto) 
-            : timeSeriesModel.empty(timeSeriesName || undefined);
+            ? new timeSeriesEntryModel(timeSeriesName, editDto) 
+            : timeSeriesEntryModel.empty(timeSeriesName || undefined);
         
         this.model(model);
         
@@ -61,11 +60,6 @@ class editTimeSeriesEntry extends dialogViewModelBase {
             const date = moment(model.timestamp());
             return date.local().format(editTimeSeriesEntry.localTimeFormat) + " (local)"
         });
-        
-        this.isAggregation = ko.pureComputed(() => {
-            const name = this.model().name();
-            return name && name.includes("@");
-        });
     }
 
     compositionComplete() {
@@ -73,24 +67,24 @@ class editTimeSeriesEntry extends dialogViewModelBase {
         this.setupDisableReasons(".edit-time-series-entry");
     }
     
-    getColumnName(idx: number) {
-        if (this.columnNames.length && idx < this.columnNames.length) {
-            return this.columnNames[idx];
-        } 
-        
-        const aggregationsCount = editTimeSeriesEntry.aggregationColumns.length;
-        
-        if (this.isAggregation()) {
-            return editTimeSeriesEntry.aggregationColumns[idx % aggregationsCount] + " (Value #" + Math.floor(idx / aggregationsCount) + ")"
+    getValueName(idx: number) {
+        if (this.valuesNames.length) {
+            // for an existing timeseries
+            return this.valuesNames[idx];
+        } else {
+            // for a new timeseries
+            const possibleValuesCount = timeSeriesEntryModel.numberOfPossibleValues;
+            const possibleValuesNames = _.range(0, possibleValuesCount).map(idx => "Value #" + idx);
+            return possibleValuesNames[idx];
         }
-        
-        // don't display any name!
-        return null;
     }
     
     save() {
-        if (!this.isValid(this.model().validationGroup) ||
-            this.model().values().filter(x => !this.isValid(x.validationGroup)).length) {
+        const valid = this.model().isRollupEntry() ?
+            !this.model().rollupValues().filter(x => !this.isValid(x.validationGroup)).length :
+            !this.model().values().filter(x => !this.isValid(x.validationGroup)).length;
+        
+        if (!this.isValid(this.model().validationGroup) || !valid) {
             return false;
         }
         

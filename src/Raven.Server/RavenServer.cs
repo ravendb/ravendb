@@ -2515,8 +2515,10 @@ namespace Raven.Server
         public void OpenPipes()
         {
             Pipes.CleanupOldPipeFiles();
-            LogStreamPipe = Pipes.OpenLogStreamPipe();
-            AdminConsolePipe = Pipes.OpenAdminConsolePipe();
+            if(Configuration.Server.DisableLogsStream == false)
+                LogStreamPipe = Pipes.OpenLogStreamPipe();
+            if(Configuration.Server.DisableAdminChannel == false)
+                AdminConsolePipe = Pipes.OpenAdminConsolePipe();
         }
 
         public enum AuthenticationStatus
