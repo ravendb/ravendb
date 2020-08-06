@@ -81,7 +81,10 @@ namespace Raven.Server.Config.Categories
                     var tmpName = sb.ToString();
                     val = GetValue(cfg, tmpName);
                     if (val != null)
+                    {
+                        keyExistsInConfiguration = true;
                         return val;
+                    }
                     lastPeriod = keyName.LastIndexOf('.', lastPeriod - 1);
                 }
 
