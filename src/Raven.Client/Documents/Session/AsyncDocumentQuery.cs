@@ -611,21 +611,35 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>()
         {
+            return SelectFields<TProjection>(Queries.ProjectionBehavior.Default);
+        }
+
+        /// <inheritdoc />
+        public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior)
+        {
             var propertyInfos = ReflectionUtil.GetPropertiesAndFieldsFor<TProjection>(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             var projections = propertyInfos.Select(x => x.Name).ToArray();
             var fields = propertyInfos.Select(p => p.Name).ToArray();
             return SelectFields<TProjection>(new QueryData(fields, projections)
             {
-                IsProjectInto = true
+                IsProjectInto = true,
+                ProjectionBehavior = projectionBehavior
             });
         }
 
         /// <inheritdoc />
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
         {
+            return SelectFields<TProjection>(Queries.ProjectionBehavior.Default, fields);
+        }
+
+        /// <inheritdoc />
+        public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior, params string[] fields)
+        {
             return SelectFields<TProjection>(new QueryData(fields, fields)
             {
-                IsProjectInto = true
+                IsProjectInto = true,
+                ProjectionBehavior = projectionBehavior
             });
         }
 
@@ -635,7 +649,6 @@ namespace Raven.Client.Documents.Session
             queryData.IsProjectInto = true;
             return CreateDocumentQueryInternal<TProjection>(queryData);
         }
-
 
         /// <inheritdoc />
         IAsyncDocumentQuery<TTimeSeries> IAsyncDocumentQuery<T>.SelectTimeSeries<TTimeSeries>(Func<ITimeSeriesQueryBuilder, TTimeSeries> timeSeriesQuery)
@@ -700,7 +713,6 @@ namespace Raven.Client.Documents.Session
             AfterQueryExecuted(action);
             return this;
         }
-
 
         IAsyncRawDocumentQuery<T> IQueryBase<T, IAsyncRawDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
         {
@@ -1105,7 +1117,7 @@ namespace Raven.Client.Documents.Session
                 QueryHighlightings = QueryHighlightings,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
-                ProjectionBehavior = ProjectionBehavior,
+                ProjectionBehavior = queryData?.ProjectionBehavior ?? ProjectionBehavior,
                 QueryTimings = QueryTimings,
                 Explanations = Explanations,
                 ExplanationToken = ExplanationToken,
@@ -1201,6 +1213,7 @@ namespace Raven.Client.Documents.Session
                 _session = session;
                 _parameterPrefix = parameterPrefix;
             }
+
             public IAsyncDocumentQuery<T1> AsyncDocumentQuery<T1, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
             {
                 var query = (AsyncDocumentQuery<T1>)_session.Advanced.AsyncDocumentQuery<T1, TIndexCreator>();
@@ -1215,13 +1228,13 @@ namespace Raven.Client.Documents.Session
                 return query;
             }
         }
+
         private IAsyncGraphQuery<T> WithInternal<TOther>(string alias, AsyncDocumentQuery<TOther> docQuery)
         {
             if (docQuery.SelectTokens?.Count > 0)
             {
                 throw new NotSupportedException($"Select is not permitted in a 'With' clause in query:{docQuery}");
             }
-
 
             foreach (var keyValue in docQuery.QueryParameters)
             {

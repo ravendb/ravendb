@@ -11,7 +11,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Documents.Conventions;
@@ -338,7 +337,7 @@ namespace Raven.Client.Documents.Session
             name = name.TrimStart('$');
             if (QueryParameters.ContainsKey(name))
                 throw new InvalidOperationException("The parameter " + name + " was already added");
-            
+
             QueryParameters[name] = value;
         }
 
