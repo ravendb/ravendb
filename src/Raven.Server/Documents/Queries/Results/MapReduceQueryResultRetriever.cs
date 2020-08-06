@@ -2,6 +2,7 @@
 using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
@@ -12,7 +13,7 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public class MapReduceQueryResultRetriever : StoredValueQueryResultRetriever
     {
-        public MapReduceQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand) 
+        public MapReduceQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, QueryTimingsScope queryTimings, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand, IncludeCompareExchangeValuesCommand includeCompareExchangeValuesCommand)
             : base(Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName, database, query, queryTimings, documentsStorage, context, fieldsToFetch, includeDocumentsCommand, includeCompareExchangeValuesCommand)
         {
         }
@@ -32,6 +33,14 @@ namespace Raven.Server.Documents.Queries.Results
 
             _storedValueFieldName = storedValueFieldName;
             _context = context;
+        }
+
+        protected override void ValidateFieldsToFetch(FieldsToFetch fieldsToFetch)
+        {
+            base.ValidateFieldsToFetch(fieldsToFetch);
+
+            if (fieldsToFetch.MustExtractFromDocument)
+                throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'. You can only extract values from index.", _query.Query, _query.QueryParameters);
         }
 
         protected override Document LoadDocument(string id)

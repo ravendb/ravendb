@@ -118,8 +118,8 @@ namespace Raven.Client.Documents.Queries
                 case ProjectionBehavior.FromDocumentOrThrow:
                 case ProjectionBehavior.FromIndexOrThrow:
                     return true;
-                case ProjectionBehavior.FromDocument:
                 case ProjectionBehavior.Default:
+                case ProjectionBehavior.FromDocument:
                 case ProjectionBehavior.FromIndex:
                     return false;
                 default:
