@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -1210,8 +1209,6 @@ return ({
         [Fact]
         public void CounterNamesFor()
         {
-            var now = DateTime.UtcNow.Date;
-
             using (var store = GetDocumentStore())
             {
                 var index = new Companies_ByCounterNames();
@@ -1239,8 +1236,8 @@ return ({
                 {
                     var company = session.Load<Company>("companies/1");
 
-                    session.TimeSeriesFor(company, "HeartRate").Append(now, new[] { 2.5d }, "tag1");
-                    session.TimeSeriesFor(company, "HeartRate2").Append(now, new[] { 3.5d }, "tag2");
+                    session.CountersFor(company).Increment("HeartRate", 3);
+                    session.CountersFor(company).Increment("HeartRate2", 7);
 
                     session.SaveChanges();
                 }
