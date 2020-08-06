@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Queries.Results
                         if (FieldsToFetch.MustExtractFromDocument)
                         {
                             if (FieldsToFetch.MustExtractOrThrow)
-                                throw new InvalidQueryException($"Could not execute projection on document '{lowerId}', because document does not exist.");
+                                ThrowCouldNotExtractProjectionOnDocumentBecauseDocumentDoesNotExistException(lowerId, _query);
                         }
 
                         return null;
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Queries.Results
                     if (FieldsToFetch.MustExtractFromIndex)
                     {
                         if (FieldsToFetch.MustExtractOrThrow)
-                            throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from index, because index does not contain such a field or field value is not stored within index.");
+                            ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(fieldToFetch.Name.Value, _query);
 
                         continue;
                     }
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Queries.Results
                         if (FieldsToFetch.MustExtractFromDocument)
                         {
                             if (FieldsToFetch.MustExtractOrThrow)
-                                throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document '{lowerId}', because document does not exist.");
+                                ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(lowerId, fieldToFetch.Name.Value, _query);
 
                             break;
                         }
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Queries.Results
                         if (FieldsToFetch.MustExtractFromDocument)
                         {
                             if (FieldsToFetch.MustExtractOrThrow)
-                                throw new InvalidQueryException($"Could not extract field '{fieldToFetch.Name.Value}' from document, because document does not contain such a field.");
+                                ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(lowerId, fieldToFetch.Name.Value, _query);
                         }
                     }
                 }
@@ -852,6 +852,26 @@ namespace Raven.Server.Documents.Queries.Results
         {
             throw new NotSupportedException(
                 $"Attempted to read multiple values in field {fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value}, but it isn't an array and should have only a single value, did you forget '[]' ?");
+        }
+
+        private static void ThrowCouldNotExtractProjectionOnDocumentBecauseDocumentDoesNotExistException(string documentId, IndexQueryServerSide query)
+        {
+            throw new InvalidQueryException($"Could not execute projection on document '{documentId}', because document does not exist.", query.Query, query.QueryParameters);
+        }
+
+        private static void ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotExistException(string documentId, string fieldName, IndexQueryServerSide query)
+        {
+            throw new InvalidQueryException($"Could not extract field '{fieldName}' from document '{documentId}', because document does not exist.", query.Query, query.QueryParameters);
+        }
+
+        private static void ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(string documentId, string fieldName, IndexQueryServerSide query)
+        {
+            throw new InvalidQueryException($"Could not extract field '{fieldName}' from document '{documentId}', because document does not contain such a field.");
+        }
+
+        private static void ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(string fieldName, IndexQueryServerSide query)
+        {
+            throw new InvalidQueryException($"Could not extract field '{fieldName}' from index '{query.Metadata.IndexName}', because index does not contain such a field or field value is not stored within index.", query.Query, query.QueryParameters);
         }
 
         private class UniqueFieldNames : IEqualityComparer<IFieldable>
