@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide;
@@ -20,10 +21,9 @@ namespace Raven.Server.Documents.Queries.Graph
         private readonly List<string> _stepAliases = new List<string>();
         private readonly List<Match> _results = new List<Match>();
         private List<Match> _temp = new List<Match>();
-        private readonly HashSet<Match> _traversedPaths = new HashSet<Match>();
         private readonly HashSet<string> _allLliases = new HashSet<string>();
 
-        private readonly HashSet<PathSegment> _visited = new HashSet<PathSegment>();
+        private readonly HashSet<long> _visited = new HashSet<long>();
         private readonly Stack<RecursionState> _path = new Stack<RecursionState>();
         public int _index = -1;
         private bool _skipMaterialization;
@@ -230,13 +230,46 @@ namespace Raven.Server.Documents.Queries.Graph
                 _token.ThrowIfCancellationRequested();
                 matches.Clear();
                 ProcessSingleResultRecursive(match, matches);
-                if (matches.Count > 0)
+
+                if (matches.Count == 0) continue;
+                if (_options.Type == RecursiveMatchType.Shortest)
                 {
-                    foreach (var item in matches)
+                    Match min = matches[0];
+                    int minLen = ((MatchCollection)min.GetResult(_recursive.Alias.Value)).Count;
+                    for (int i = 1; i < matches.Count; i++)
                     {
-                        item.Remove(_outputAlias);
-                        _results.Add(item);
+                        int curLen = ((MatchCollection)matches[i].GetResult(_recursive.Alias.Value)).Count;
+                        if (curLen < minLen)
+                        {
+                            min = matches[i];
+                            minLen = curLen;
+                        }
                     }
+
+                    matches.Clear();
+                    matches.Add(min);
+                }
+                if (_options.Type == RecursiveMatchType.Longest)
+                {
+                    Match max = matches[0];
+                    int maxLen = ((MatchCollection)max.GetResult(_recursive.Alias.Value)).Count;
+                    for (int i = 1; i < matches.Count; i++)
+                    {
+                        int curLen = ((MatchCollection)matches[i].GetResult(_recursive.Alias.Value)).Count;
+                        if (curLen > maxLen)
+                        {
+                            max = matches[i];
+                            maxLen = curLen;
+                        }
+                    }
+
+                    matches.Clear();
+                    matches.Add(max);
+                }
+                foreach (var item in matches)
+                {
+                    item.Remove(_outputAlias);
+                    _results.Add(item);
                 }
             }
         }
@@ -327,7 +360,7 @@ namespace Raven.Server.Documents.Queries.Graph
             if (startingPoint == null)
                 return;
 
-            _visited.Add(new PathSegment(0, startingPoint.Data.Location));
+            _visited.Add(startingPoint.Data.Location);
             _path.Push(new RecursionState { Src = startingPoint.Data, Match = currentMatch });
 
             int aliasBaseIndex = 0;
@@ -341,7 +374,8 @@ namespace Raven.Server.Documents.Queries.Graph
                 if (AddMatchToResults(current))
                     return true;
 
-                _path.Pop();
+                var r = _path.Pop();
+                _visited.Remove(r.Src.Location);
                 return false;
             }
 
@@ -349,7 +383,8 @@ namespace Raven.Server.Documents.Queries.Graph
             {
                 _token.ThrowIfCancellationRequested();
                 // the first item is always the root
-                if (_path.Count - 1 == _options.Max)
+                if (_path.Count - 1 >= _options.Max ||
+                    _options.Type == RecursiveMatchType.Shortest && _path.Count - 1 >=  bestPathLength)
                 {
                     if (AddMatchToResultsAndCheckIfNeedToStop(cur))
                         return;
@@ -383,10 +418,16 @@ namespace Raven.Server.Documents.Queries.Graph
                     if (_path.Count == 0)
                         return;
 
-                    if (_options.Type == RecursiveMatchType.Lazy &&
-                        AddMatchToResults(cur))
+                    if (_options.Type == RecursiveMatchType.Lazy)
                     {
-                        return;
+                        if (AddMatchToResults(cur))
+                            return;
+                    }
+
+                    if (_options.Type == RecursiveMatchType.Shortest)
+                    {
+                        if (AddMatchToResults(cur))
+                            break;
                     }
 
                     var top = _path.Peek();
@@ -408,7 +449,7 @@ namespace Raven.Server.Documents.Queries.Graph
                         _path.Pop();
 
                         //since we are backtracking, remove the node from the top of the path stack
-                        _visited.Remove(new PathSegment(top.Src.Location, cur.Data.Location));
+                        _visited.Remove(top.Src.Location);
 
                         continue;
                     }
@@ -420,7 +461,7 @@ namespace Raven.Server.Documents.Queries.Graph
                     cur = currentMatch.GetSingleDocumentResult(_outputAlias);
                     top.Matches.RemoveAt(top.Matches.Count - 1);
 
-                    if (_visited.Add(new PathSegment(top.Src.Location, cur.Data.Location)) == false)
+                    if (_visited.Add(cur.Data.Location) == false)
                     {
                         continue;
                     }

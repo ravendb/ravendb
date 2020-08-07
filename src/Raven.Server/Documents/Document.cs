@@ -101,6 +101,11 @@ namespace Raven.Server.Documents
 
             _disposed = true;
         }
+
+        public override string ToString()
+        {
+            return Id;
+        }
     }
 
     [Flags]
