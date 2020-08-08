@@ -89,11 +89,17 @@ namespace SlowTests.Issues
         [Fact]
         public async Task CanOpenIndexesWithOlderVersion()
         {
-            var path = NewDataPath();
+            var serverPath = NewDataPath();
+            var databasePath = NewDataPath();
+            string indexStoragePath1, indexStoragePath2;
+            string databaseName;
 
-            using (var store = GetDocumentStore(new Options { Path = path }))
+            var index = new Orders_ByOrderBy();
+
+            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = serverPath, RunInMemory = false }))
+            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = databasePath }))
             {
-                var index = new Orders_ByOrderBy();
+                databaseName = store.Database;
                 index.Execute(store);
 
                 using (var session = store.OpenSession())
@@ -105,29 +111,30 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var database = await GetDocumentDatabaseInstanceFor(store);
-                var indexStoragePath1 = database.IndexStore.GetIndex(index.IndexName)._environment.Options.BasePath.FullPath;
-                var indexStoragePath2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt")._environment.Options.BasePath.FullPath;
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                indexStoragePath1 = database.IndexStore.GetIndex(index.IndexName)._environment.Options.BasePath.FullPath;
+                indexStoragePath2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt")._environment.Options.BasePath.FullPath;
 
                 Assert.NotNull(indexStoragePath1);
                 Assert.NotNull(indexStoragePath2);
+            }
 
-                using (await Server.ServerStore.DatabasesLandlord.UnloadAndLockDatabase(store.Database, nameof(RavenDB_13759)))
-                {
-                    using (var stream1 = GetFile("Orders_ByOrderBy.zip"))
-                    using (var stream2 = GetFile("Auto_Orders_ByOrderedAt.zip"))
-                    using (var archive1 = new ZipArchive(stream1))
-                    using (var archive2 = new ZipArchive(stream2))
-                    {
-                        IOExtensions.DeleteDirectory(indexStoragePath1);
-                        IOExtensions.DeleteDirectory(indexStoragePath2);
+            using (var stream1 = GetFile("Orders_ByOrderBy.zip"))
+            using (var stream2 = GetFile("Auto_Orders_ByOrderedAt.zip"))
+            using (var archive1 = new ZipArchive(stream1))
+            using (var archive2 = new ZipArchive(stream2))
+            {
+                IOExtensions.DeleteDirectory(indexStoragePath1);
+                IOExtensions.DeleteDirectory(indexStoragePath2);
 
-                        archive1.ExtractToDirectory(indexStoragePath1);
-                        archive2.ExtractToDirectory(indexStoragePath2);
-                    }
-                }
+                archive1.ExtractToDirectory(indexStoragePath1);
+                archive2.ExtractToDirectory(indexStoragePath2);
+            }
 
-                database = await GetDocumentDatabaseInstanceFor(store);
+            using (var server = GetNewServer(new ServerCreationOptions { DataDirectory = serverPath, RunInMemory = false }))
+            using (var store = GetDocumentStore(new Options { Server = server, RunInMemory = false, Path = databasePath, ModifyDatabaseName = _ => databaseName }))
+            {
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 WaitForIndexing(store);
 
@@ -143,8 +150,8 @@ namespace SlowTests.Issues
                 indexTimeFields = indexInstance2._indexStorage.ReadIndexTimeFields();
                 Assert.Equal(0, indexTimeFields.Count);
 
-                Server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
-                database = await GetDocumentDatabaseInstanceFor(store);
+                server.ServerStore.DatabasesLandlord.UnloadDirectly(store.Database);
+                database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 indexInstance1 = database.IndexStore.GetIndex(index.IndexName);
                 indexInstance2 = database.IndexStore.GetIndex("Auto/Orders/ByOrderedAt");
