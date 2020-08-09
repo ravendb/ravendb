@@ -144,7 +144,7 @@ namespace Raven.Server.Config.Categories
         public int MaxGram { get; set; }
 
         [Description("Managed allocations limit in an indexing batch after which the batch will complete and an index will continue by starting a new one")]
-        [DefaultValue(512)]
+        [DefaultValue(2048)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.ManagedAllocationsBatchLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
