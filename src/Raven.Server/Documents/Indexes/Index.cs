@@ -1700,6 +1700,9 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
 
+                            var current = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
+                            stats.AddAllocatedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
+
                             if (writeOperation.IsValueCreated)
                             {
                                 using (var indexWriteOperation = writeOperation.Value)
@@ -1750,9 +1753,6 @@ namespace Raven.Server.Documents.Indexes
                         DisposeIndexWriterOnError(writeOperation);
                         throw;
                     }
-
-                    var current = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
-                    stats.AddAllocatedBytes((current - _initialManagedAllocations).GetValue(SizeUnit.Bytes));
 
                     return mightBeMore;
                 }
