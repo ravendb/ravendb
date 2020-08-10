@@ -7,9 +7,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public class CopyTimeSeriesCommandData : ICommandData
+    internal class CopyTimeSeriesCommandData : ICommandData
     {
-        public CopyTimeSeriesCommandData(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, string changeVector)
+        public CopyTimeSeriesCommandData(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName)
         {
             if (string.IsNullOrWhiteSpace(sourceDocumentId))
                 throw new ArgumentNullException(nameof(sourceDocumentId));
@@ -25,13 +25,12 @@ namespace Raven.Client.Documents.Commands.Batches
             Name = sourceName;
             DestinationId = destinationDocumentId;
             DestinationName = destinationName;
-            ChangeVector = changeVector;
         }
         public string Id { get; }
         public string Name { get; }
+        public string ChangeVector { get; }
         public string DestinationId { get; }
         public string DestinationName { get; }
-        public string ChangeVector { get; }
         public CommandType Type { get; } = CommandType.TimeSeriesCopy;
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
@@ -42,7 +41,6 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Name)] = Name,
                 [nameof(DestinationId)] = DestinationId,
                 [nameof(DestinationName)] = DestinationName,
-                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString()
             };
         }

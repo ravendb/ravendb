@@ -64,8 +64,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         session.Advanced.Defer(new CopyTimeSeriesCommandData(id,
                             singleResult,
                             id2,
-                            singleResult,
-                            null));
+                            singleResult));
                     }
 
                     session.SaveChanges();
@@ -118,8 +117,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                         session.Advanced.Defer(new CopyTimeSeriesCommandData(id,
                             singleResult,
                             id2,
-                            singleResult,
-                            null));
+                            singleResult));
                     }
 
                     Assert.Throws<DocumentDoesNotExistException>(() =>session.SaveChanges());
