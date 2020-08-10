@@ -360,7 +360,6 @@ namespace Raven.Server.Documents.Queries.Graph
             if (startingPoint == null)
                 return;
 
-            _visited.Add(startingPoint.Data.Location);
             _path.Push(new RecursionState { Src = startingPoint.Data, Match = currentMatch });
 
             int aliasBaseIndex = 0;

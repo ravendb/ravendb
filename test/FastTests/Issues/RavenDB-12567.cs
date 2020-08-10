@@ -76,7 +76,7 @@ namespace FastTests.Issues
                         }
                     ").ToList();
 
-                    Assert.Equal(queryResults.Count, 7);
+                    Assert.Equal(queryResults.Count, 6);
 
                     var stronglyTypedQueryResults = queryResults.Select(x => new
                     {
@@ -87,13 +87,12 @@ namespace FastTests.Issues
                     var dog1StartResults = stronglyTypedQueryResults.Where(x => x.Start == "dogs/1").ToArray();
                     var dog2StartResults = stronglyTypedQueryResults.Where(x => x.Start == "dogs/2").ToArray();
 
-                    Assert.Contains(dog1StartResults, x => x.Path == "dogs/2->dogs/1->dogs/1");
                     Assert.Contains(dog1StartResults, x => x.Path == "dogs/2->dogs/1");
+                    Assert.Contains(dog1StartResults, x => x.Path == "dogs/1->dogs/2");
                     Assert.Contains(dog1StartResults, x => x.Path == "dogs/2");
                     Assert.Contains(dog1StartResults, x => x.Path == "dogs/1");
 
                     Assert.Contains(dog2StartResults, x => x.Path == "dogs/1");
-                    Assert.Contains(dog2StartResults, x => x.Path == "dogs/1->dogs/1");
                     Assert.Contains(dog2StartResults, x => x.Path == "dogs/1->dogs/2");
 
                 }

@@ -13,7 +13,7 @@ namespace SlowTests.Graph
         {
         }
 
-        public class Item
+        private class Item
         {
             public string[] Links;
         }
@@ -66,7 +66,7 @@ match (Items as Src where id() == 'items/1')
  }-[Links]->(Items as Dst where id() == 'items/2')")
                     .ToList();
                 Assert.Equal(1, r.Count);
-                Assert.Equal(3, r[0].Path.Count);
+                Assert.Equal(4, r[0].Path.Count);
             }
         }
     }
