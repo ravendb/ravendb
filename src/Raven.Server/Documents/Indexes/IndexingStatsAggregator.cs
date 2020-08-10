@@ -85,7 +85,8 @@ namespace Raven.Server.Documents.Indexes
                 SuccessCount = Stats.MapSuccesses + Stats.MapReferenceSuccesses,
                 FailedCount = Stats.MapErrors + Stats.MapReferenceErrors,
                 OutputCount = Stats.IndexingOutputs,
-                DocumentsSize = new Size(Stats.DocumentsSize)
+                DocumentsSize = new Size(Stats.DocumentsSize),
+                AllocatedBytes = Stats.AllocatedBytes
             };
         }
     }

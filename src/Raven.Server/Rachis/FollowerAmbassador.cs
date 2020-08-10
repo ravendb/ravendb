@@ -947,7 +947,7 @@ namespace Raven.Server.Rachis
                     Volatile.Read(ref _connection)?.Dispose();
                 }
             }
-            _engine.InMemoryDebug.RemoveRecorder(_debugName);
+            _engine.InMemoryDebug.RemoveRecorderOlderThan(DateTime.UtcNow.AddMinutes(-5));
         }
     }
 }

@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -152,5 +156,78 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        // RavenDB-15081
+        [Fact]
+        public async Task CanReplicateExpiredRevisionsWithAttachment()
+        {
+            var rnd = new Random();
+            var b = new byte[16 * 1024];
+            rnd.NextBytes(b);
+            using (var stream = new MemoryStream(b))
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    // Define revisions settings
+                    var configuration = new RevisionsConfiguration
+                    {
+                        Collections = new Dictionary<string, RevisionsCollectionConfiguration>
+                        {
+                            {
+                                "Users", new RevisionsCollectionConfiguration
+                                {
+                                    PurgeOnDelete = false,
+                                    MinimumRevisionsToKeep = 100
+                                }
+                            }
+                        }
+                    };
+
+                    var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                    db1.Time.UtcDateTime = () => DateTime.UtcNow.Add(TimeSpan.FromDays(-60));
+                    const string id = "users/1";
+                    const string attachmentName = "Typical attachment name";
+                    using (var session = store1.OpenSession())
+                    {
+                        var user = new User { Name = "su" };
+                        session.Store(user, id);
+                        session.SaveChanges();
+                    }
+
+                    store1.Operations.Send(new PutAttachmentOperation(id, $"{attachmentName}_1", stream, "application/zip"));
+                    stream.Position = 0;
+                    await store1.Maintenance.SendAsync(new ConfigureRevisionsOperation(configuration));
+
+                    for (int i = 0; i < 5; i++)
+                    {
+                        using (var session = store1.OpenSession())
+                        {
+                            var u = session.Load<User>(id);
+                            u.Age = i;
+                            session.SaveChanges();
+                        }
+                    }
+                    using (var session = store1.OpenSession())
+                    {
+                        session.Delete(id);
+                        session.SaveChanges();
+                    }
+                    await SetupReplicationAsync(store1, store2);
+
+                    var db2 = await GetDocumentDatabaseInstanceFor(store2);
+                    Assert.Equal(1, WaitForValue(() => db1.ReplicationLoader.OutgoingHandlers.Count(), 1));
+                    Assert.Equal(1, WaitForValue(() => db2.ReplicationLoader.IncomingHandlers.Count(), 1));
+                    var outgoingReplicationConnection = db1.ReplicationLoader.OutgoingHandlers.First();
+                    var incomingReplicationConnection = db2.ReplicationLoader.IncomingHandlers.First();
+                    Assert.Equal(20, WaitForValue(() => outgoingReplicationConnection._lastSentDocumentEtag, 20));
+                    Assert.Equal(20, WaitForValue(() => incomingReplicationConnection.LastDocumentEtag, 20));
+
+                    var stats1 = store1.Maintenance.Send(new GetStatisticsOperation());
+                    var stats2 = store2.Maintenance.Send(new GetStatisticsOperation());
+                    Assert.Equal(stats1.DatabaseChangeVector, stats2.DatabaseChangeVector);
+                    Assert.Equal(13, stats2.CountOfTombstones);
+                }
+            }
+        }
     }
 }
