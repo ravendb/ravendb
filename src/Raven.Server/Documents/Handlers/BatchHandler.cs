@@ -1006,7 +1006,7 @@ namespace Raven.Server.Documents.Handlers
 
                             var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.DestinationId, fromEtl: false);
 
-                            Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                            var cv = Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
                                     cmd.DestinationId,
                                     docCollection,
                                     cmd.DestinationName,
@@ -1016,7 +1016,7 @@ namespace Raven.Server.Documents.Handlers
                             Reply.Add(new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.DestinationId,
-                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = reader.GetCurrentSegmentChangeVector(),
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = cv,
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
                             });
                             break;
