@@ -39,8 +39,8 @@ class appUrl {
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
-        editPullReplicationHub: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPullReplicationHub(appUrl.currentDatabase(), taskId)),
-        editPullReplicationSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPullReplicationSink(appUrl.currentDatabase(), taskId)),
+        editReplicationHub: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase(), taskId)),
+        editReplicationSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase(), taskId)),
         editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId)),
@@ -56,8 +56,8 @@ class appUrl {
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
-        editPullReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditPullReplicationHub(appUrl.currentDatabase())),
-        editPullReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditPullReplicationSink(appUrl.currentDatabase())),
+        editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
+        editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),
         editSubscriptionTaskUrl: ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase())),
         editRavenEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase())),
         editSqlEtlTaskUrl: ko.pureComputed(() => appUrl.forEditSqlEtl(appUrl.currentDatabase())),
@@ -225,7 +225,7 @@ class appUrl {
 
     static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database | databaseInfo): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        const revisionPart = "&revision=" + encodeURIComponent(revisionChangeVector);        
+        const revisionPart = "&revision=" + encodeURIComponent(revisionChangeVector);
         const docIdUrlPart = "&id=" + encodeURIComponent(id);
         return "#databases/edit?" + databaseUrlPart + revisionPart + docIdUrlPart;
     }
@@ -235,7 +235,7 @@ class appUrl {
         const itemIdUrlPart = itemId ? "&id=" + encodeURIComponent(itemId) : "";
 
         const pagedListInfo = collectionName && itemIndex != null ? "&list=" + encodeURIComponent(collectionName) + "&item=" + itemIndex : "";
-        const databaseTag = "#databases";       
+        const databaseTag = "#databases";
         return databaseTag + "/edit?" + itemIdUrlPart + urlPart + pagedListInfo;
     }
 
@@ -294,7 +294,7 @@ class appUrl {
 
     static forDatabaseSettings(db: database | databaseInfo): string {
         const databasePart = appUrl.getEncodedDbPart(db); 
-        return "#databases/settings/databaseSettings?"  + databasePart;
+        return "#databases/settings/databaseSettings?" + databasePart;
     }
     
     static forDatabaseRecord(db: database | databaseInfo): string {
@@ -336,7 +336,7 @@ class appUrl {
         return "#databases/settings/editCustomSorter?" + databasePart + namePart;
     }
 
-    static forConnectionStrings(db: database | databaseInfo, type?: string,  name?: string): string {
+    static forConnectionStrings(db: database | databaseInfo, type?: string, name?: string): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
         const typeUrlPart = type ? "&type=" + encodeURIComponent(type) : "";
         const nameUrlPart = name ? "&name=" + encodeURIComponent(name) : "";
@@ -397,7 +397,7 @@ class appUrl {
             const patchPath = "recentpatch-" + hashOfRecentPatch;
             return "#databases/patch/" + encodeURIComponent(patchPath) + "?" + databasePart;
         } else {
-            return "#databases/patch?" + databasePart;    
+            return "#databases/patch?" + databasePart;
         }
     }
 
@@ -482,16 +482,16 @@ class appUrl {
         return "#databases/tasks/editExternalReplicationTask?" + databasePart + taskPart;
     }
     
-    static forEditPullReplicationHub(db: database | databaseInfo, taskId?: number): string {
+    static forEditReplicationHub(db: database | databaseInfo, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editPullReplicationHubTask?" + databasePart + taskPart;
+        return "#databases/tasks/editReplicationHubTask?" + databasePart + taskPart;
     }
     
-    static forEditPullReplicationSink(db: database | databaseInfo, taskId?: number): string {
+    static forEditReplicationSink(db: database | databaseInfo, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
-        return "#databases/tasks/editPullReplicationSinkTask?" + databasePart + taskPart;
+        return "#databases/tasks/editReplicationSinkTask?" + databasePart + taskPart;
     }
 
     static forEditPeriodicBackupTask(db: database | databaseInfo, taskId?: number): string {
@@ -509,7 +509,7 @@ class appUrl {
 
     static forEditRavenEtl(db: database | databaseInfo, taskId?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        const taskPart = taskId ? "&taskId=" + taskId : "";       
+        const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editRavenEtlTask?" + databasePart + taskPart;
     }
 
@@ -635,7 +635,7 @@ class appUrl {
     static urlEncodeArgs(args: any): string {
         const propNameAndValues: Array<string> = [];
         
-        for (let prop of Object.keys(args)) {                                
+        for (let prop of Object.keys(args)) {
             const value = args[prop];
 
             if (value instanceof Array) {

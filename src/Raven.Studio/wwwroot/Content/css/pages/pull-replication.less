@@ -1,5 +1,13 @@
 ﻿.edit-pull-replication-hub-task {
     
+    #replicationAccessList {
+        max-height: 800px;
+    }
+    
+    .replication-access-buttons {
+        top: -25px;
+    }
+    
     .certificates-actions {
         align-items: flex-start;
         
@@ -22,6 +30,9 @@
 
         .panel-addon {
             font-size: 13px;
+            // need to override the 'active' parent panel border color for this inner panel
+            border-bottom: 1px solid darken(@panel-bg, 4%);
+            border-right: 1px solid darken(@panel-bg, 4%);
         }
 
         .notBefore, .expiration {

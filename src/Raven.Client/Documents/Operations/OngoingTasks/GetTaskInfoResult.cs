@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
@@ -150,6 +151,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string HubDefinitionName { get => HubName; set => HubName = value; }
 
         public string HubName { get; set; }
+        public PullReplicationMode Mode { get; set; }
 
         public string DestinationUrl { get; set; }
         public string[] TopologyDiscoveryUrls { get; set; }
@@ -157,6 +159,10 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string ConnectionStringName { get; set; }
 
         public string CertificatePublicKey { get; set; }
+        
+        public string AccessName;
+        public string[] AllowedHubToSinkPaths;
+        public string[] AllowedSinkToHubPaths;
 
         public override DynamicJsonValue ToJson()
         {
@@ -165,11 +171,15 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
             json[nameof(HubName)] = HubName;
+            json[nameof(Mode)] = Mode;
 #pragma warning disable CS0618 // Type or member is obsolete
             json[nameof(HubDefinitionName)] = HubDefinitionName;
 #pragma warning restore CS0618 // Type or member is obsolete
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(CertificatePublicKey)] = CertificatePublicKey;
+            json[nameof(AccessName)] = AccessName;
+            json[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
+            json[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
             return json;
         }
     }

@@ -2,7 +2,7 @@
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
 
 // this class represents connection between current node (hub) and remote node (sink)
-class ongoingTaskPullReplicationHubListModel extends ongoingTaskListModel {
+class ongoingTaskReplicationHubListModel extends ongoingTaskListModel {
     
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
@@ -22,7 +22,7 @@ class ongoingTaskPullReplicationHubListModel extends ongoingTaskListModel {
         this.destinationDB(dto.DestinationDatabase);
         this.destinationURL(dto.DestinationUrl || 'N/A');
         
-        this.uniqueName = ongoingTaskPullReplicationHubListModel.generateUniqueName(dto);
+        this.uniqueName = ongoingTaskReplicationHubListModel.generateUniqueName(dto);
     }
     
     toggleDetails(): void {
@@ -34,4 +34,4 @@ class ongoingTaskPullReplicationHubListModel extends ongoingTaskListModel {
     }
 }
 
-export = ongoingTaskPullReplicationHubListModel;
+export = ongoingTaskReplicationHubListModel;

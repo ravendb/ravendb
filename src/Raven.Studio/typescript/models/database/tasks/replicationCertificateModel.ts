@@ -1,22 +1,28 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
-
 import certificateUtils = require("common/certificateUtils");
 
-class pullReplicationCertificate {
+class replicationCertificateModel {
+
+    certificate = ko.observable<string>(); // public & private key
+    certificatePassphrase = ko.observable<string>();
     
-    publicKey = ko.observable<string>();
+    publicKey = ko.observable<string>(); // public key only
     thumbprint = ko.observable<string>();
+    
     expirationText = ko.observable<string>();
     expirationIcon = ko.observable<string>();
     expirationClass = ko.observable<string>();
+    
     validFromText = ko.observable<string>();
-
-    certificate = ko.observable<string>();
-    certificatePassphrase = ko.observable<string>();
     
     constructor(publicKey: string, base64EncodedCertificate: string = undefined, password: string = undefined) {
-        this.publicKey(publicKey);
-        this.certificate(base64EncodedCertificate);
+        
+        this.publicKey(certificateUtils.extractBase64(publicKey));
+       
+        if (base64EncodedCertificate) {
+            this.certificate(base64EncodedCertificate);
+        }
+        
         this.certificatePassphrase(password);
         
         const certInfo = certificateUtils.extractCertificateInfo(publicKey);
@@ -29,7 +35,7 @@ class pullReplicationCertificate {
             this.expirationText("Expired " + dateFormatted);
             this.expirationIcon("icon-danger");
             this.expirationClass("text-danger");
-        } else  {
+        } else {
             this.expirationText(dateFormatted);
             this.expirationIcon("icon-clock");
             this.expirationClass("");
@@ -41,14 +47,13 @@ class pullReplicationCertificate {
     }
     
     static fromPublicKey(certificate: string) {
-        return new pullReplicationCertificate(certificate, null);
+        return new replicationCertificateModel(certificate, null);
     }
     
     static fromPkcs12(base64EncodedCertificate: string, password: string = undefined) {
         const publicKey = certificateUtils.extractCertificateFromPkcs12(base64EncodedCertificate, password);
-        return new pullReplicationCertificate(publicKey, base64EncodedCertificate, password);
+        return new replicationCertificateModel(publicKey, base64EncodedCertificate, password);
     }
-    
 }
 
-export = pullReplicationCertificate;
+export = replicationCertificateModel;

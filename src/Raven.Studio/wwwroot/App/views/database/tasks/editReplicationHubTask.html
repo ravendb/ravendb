@@ -1,0 +1,402 @@
+<div class="content-margin edit-pull-replication-hub-task">
+    <form class="flex-form" autocomplete="off">
+        <div class="row flex-row absolute-fill" data-bind="with: editedHubTask">
+            <div class="col-xs-12 col-lg-6">
+                <div class="panel">
+                    <div class="panel-body">
+                        <div class="bg-info text-info padding padding-xs pull-right">
+                            <small><i class="icon-info"></i><span>Connection to the Hub is always initiated by the Replication Sink</span></small>
+                        </div>
+                        <h3 data-bind="text: $parent.isNewTask() ? `New Replication Hub` : `Edit Replication Hub`"></h3>
+                        <div data-bind="css: { 'disabled-area': $root.editedReplicationAccessItem }">
+                            <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
+                                <label for="taskName" class="control-label">Task Name</label>
+                                <div class="flex-grow">
+                                    <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" placeholder="Enter a descriptive name for the Replication Hub task" />
+                                </div>
+                            </div>
+                            <div class="form-group margin-bottom margin-bottom-xs">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle" 
+                                     data-placement="right" 
+                                     data-toggle="tooltip" 
+                                     title="Set a delay time for the task"
+                                     data-animation="true">
+                                    <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayReplication" />
+                                    <label for="setDelayTime">Set Replication Delay Time</label>
+                                </div>
+                            </div>
+                            <div data-bind="validationElement: delayReplicationTime, collapse: showDelayReplication">
+                                <div class="form-group">
+                                    <div>
+                                        <label class="control-label">Delay Time</label>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <input type="text" class="form-control" data-bind="durationPicker: delayReplicationTime, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: humaneDelayDescription">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="bg-info padding padding-sm small flex-horizontal">
+                                    <div><i class="icon-info"></i></div>
+                                    <div data-bind="html: humaneDelayDescription"></div>
+                                </div>
+                            </div>
+                            <div class="form-group margin-bottom margin-bottom-xs">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle" data-placement="right" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
+                                    <input id="manualMentorNode" type="checkbox" data-bind="checked: manualChooseMentor" />
+                                    <label for="manualMentorNode">Choose preferred mentor node manually</label>
+                                </div>
+                            </div>
+                            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
+                                <div class="form-group">
+                                    <div>
+                                        <label class="control-label">Preferred Mentor</label>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                            <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred mentor'"></span>
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                            <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
+                                        </ul>
+                                        <span class="help-block" data-bind="validationMessage: mentorNode"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group margin-bottom margin-bottom-xs" data-bind="validationElement: replicationMode">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="flex-vertical">
+                                    <div class="toggle">
+                                        <input id="allowHubToSink" type="checkbox" data-bind="checked: allowReplicationFromHubToSink" />
+                                        <label for="allowHubToSink">Allow replication from Hub to Sink</label>
+                                    </div>
+                                    <div class="toggle">
+                                        <input id="allowSinkToHub" type="checkbox" data-bind="checked: allowReplicationFromSinkToHub" />
+                                        <label for="allowSinkToHub">Allow replication from Sink to Hub</label>
+                                    </div>
+                                    <div class="help-block" data-bind="validationMessage: replicationMode"></div>
+                                </div>
+                            </div>
+                            <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: $root.canDefineCertificates">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="toggleFiltering" type="checkbox" data-bind="checked: filteringRequiredForHub, enable: $root.isNewTask" />
+                                    <label for="toggleFiltering">Allow Replication Filtering
+                                        <small class="margin-left margin-left-sm" data-bind="visible: $root.isNewTask">
+                                            <i id="replication-filtering-info" class="icon-info text-info"></i>
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-horizontal pull-right" data-bind="css: { 'disabled-area': $root.editedReplicationAccessItem }">
+                            <div>
+                                <button class="btn btn-default" data-bind="click: $root.cancelHubTaskOperation" 
+                                        title="Return to Ongoing Tasks View">
+                                    <i class="icon-cancel"></i><span>Cancel</span>
+                                </button>
+                            </div>
+                            <div data-bind="visible: !$root.canDefineCertificates">
+                                <button class="btn btn-default" data-bind="click: $root.exportHubConfiguration" title="Export this Hub Configuration to be used by a Sink task">
+                                    <i class="icon-export"></i><span>Export configuration</span>
+                                </button>
+                            </div>
+                            <div>
+                                <button class="btn btn-primary"
+                                        data-bind="click: $root.saveReplicationHubTask, css: { 'btn-spinner': $root.spinners.saveHubTask },
+                                                   disable: $root.spinners.saveHubTask() || !$root.dirtyFlag().isDirty()"
+                                        title="Save Hub Replication task settings">
+                                    <i class="icon-save"></i><span>Save</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-bind="if: $root.canDefineCertificates">
+                    <div class="flex-horizontal">
+                        <h3 class="margin-top margin-top-lg" 
+                            data-bind="text: filteringRequiredForHub() ? 'Filtered Replication Access' : 'Replication Access'">
+                        </h3>
+                        <div class="flex-separator"></div>
+                        <div class="toggle margin-top" data-bind="if: replicationAccessItems().length">
+                            <input id="details" type="checkbox" data-bind="checked: $root.showAccessDetails" />
+                            <label for="details">View Details</label>
+                        </div>
+                        <div class="margin-top">
+                            <button class="btn btn-info" data-bind="click: $root.addNewReplicationAccess, disable: $root.isNewTask">
+                                <i class="icon-plus"></i><span>Add Replication Access</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div data-bind="if: !replicationAccessItems().length && !$root.editedReplicationAccessItem()">
+                        <h3 class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !$root.isNewTask()">
+                            No Replication Access has been yet defined.
+                        </h3>
+                        <h3 class="text-center text-muted margin-top margin-top-lg" data-bind="visible: $root.isNewTask">
+                            Please save above Hub definition before adding Replication Access.
+                        </h3>
+                    </div>
+                </div>
+                <div class="scroll" id="replicationAccessList">
+                    <div data-bind="foreach: replicationAccessItems">
+                        <div class="panel panel-hover padding"
+                             data-bind="css: { active: $root.editedReplicationAccessItem() && $data.certificate() === $root.editedReplicationAccessItem().certificate() }">
+                            <div class="form-group margin-bottom margin-bottom-xs">
+                                <label class="control-label">Access Name</label>
+                                <div class="form-control-static" data-bind="text: replicationAccessName"></div>
+                            </div>
+                            <div class="form-group margin-bottom margin-bottom-xs">
+                                <label class="control-label">Certificate</label>
+                                <div class="panel certificate-item">
+                                    <div class="padding padding-sm flex-horizontal" data-bind="visible: $root.showAccessDetails">
+                                        <div title="Certificate thumbprint">
+                                            <i class="icon-certificate"></i><span data-bind="text: certificate().thumbprint()"></span>
+                                        </div>
+                                    </div>
+                                    <div class="panel-addon padding padding-sm"> 
+                                        <div class="flex-horizontal">
+                                            <span class="notBefore" data-bind="visible: $root.showAccessDetails">
+                                                <span class="margin-right margin-right-sm"><i class="icon-clock"></i><span>Valid From</span></span>
+                                                <strong data-bind="text: certificate().validFromText()"></strong>
+                                            </span>
+                                            <span class="expiration" data-bind="css: { 'margin-left': $root.showAccessDetails }">
+                                                <span class="margin-right margin-right-sm"><i data-bind="attr: { class: certificate().expirationIcon }"></i><span>Expiration</span></span>
+                                                <strong data-bind="attr: { class: certificate().expirationClass }, text: certificate().expirationText()"></strong>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div data-bind="if: $parent.filteringRequiredForHub" class="margin-bottom">
+                                <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: !$root.showAccessDetails()">
+                                    <label class="control-label">Filtering Replication</label>
+                                    <div class="margin-top margin-top-xs">
+                                        <div><small data-bind="text: filteringReplicationText"></small></div>
+                                    </div>
+                                </div>
+                                <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: $root.showAccessDetails">
+                                    <label class="control-label">Hub to Sink Filtering</label>
+                                    <div data-bind="foreach: hubToSinkPrefixes" class="margin-top margin-top-xs">
+                                        <div><small data-bind="text: $data.path"></small></div>
+                                    </div>
+                                </div>
+                                <div class="form-group" data-bind="visible: $root.showAccessDetails">
+                                    <label class="control-label">Sink to Hub Filtering</label>
+                                    <div data-bind="visible: samePrefixesForBothDirections" class="margin-top margin-top-xs">
+                                        <small>Same as <i>Hub to Sink</i></small>
+                                    </div>
+                                    <div data-bind="visible: !samePrefixesForBothDirections(), foreach: sinkToHubPrefixes" class="margin-top margin-top-xs">
+                                        <div><small data-bind="text: $data.path"></small></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="pull-right btn-group btn-group-sm replication-access-buttons">
+                                <button class="btn btn-sm btn-default" title="Edit this replication access" 
+                                        data-bind="click: _.partial($root.editReplicationAccessItem, $data)">
+                                    <i class="icon-edit"></i><span>Edit</span>
+                                </button>
+                                <button class="btn btn-sm btn-primary" title="Delete this replication access" 
+                                        data-bind="click: _.partial($root.deleteReplicationAccessItem, $data), disable: $root.editedReplicationAccessItem()">
+                                    <i class="icon-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-12 col-lg-6" data-bind="with: $root.editedReplicationAccessItem">
+                <div class="panel margin-top margin-top-lg">
+                    <div class="panel-body">
+                        <button class="close" data-bind="click: $root.cancelReplicationAccessOperation" aria-hidden="true">
+                            <i class="icon-cancel"></i>
+                        </button>
+                        <h3 data-bind="if: isNewAccessItem">New Replication Access</h3>
+                        <h3 data-bind="if: !isNewAccessItem()">Edit Replication Access</h3>
+                        <div class="form-group margin-top margin-top-lg" data-bind="validationElement: replicationAccessName">
+                            <label for="replicationAccessName" class="control-label">Access Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="textInput: replicationAccessName" id="replicationAccessName" placeholder="Enter a name for the Replication Access" />
+                            </div>
+                        </div>
+                        <div class="form-group" data-bind="validationElement: certificate">
+                            <label class="control-label">Certificate</label>
+                            <div class="flex-grow">
+                                <div data-bind="if: certificate">
+                                    <div class="panel certificate-item margin-top margin-top-xs">
+                                        <div class="padding padding-sm flex-horizontal">
+                                            <div title="Certificate thumbprint">
+                                                <i class="icon-certificate"></i>
+                                                <span data-bind="text: certificate().thumbprint()"></span>
+                                            </div>
+                                            <div class="flex-separator"></div>
+                                            <button class="btn btn-sm btn-primary pull-right" title="Remove this certificate"
+                                                    data-bind="click: _.partial($root.removeCertificate, $data), visible: isNewAccessItem">
+                                                <i class="icon-trash"></i>
+                                            </button>
+                                        </div>
+                                        <div class="panel-addon padding padding-sm">
+                                            <div class="flex-horizontal">
+                                                <span class="notBefore">
+                                                    <span class="margin-right margin-right-sm"><i class="icon-clock"></i><span>Valid From</span></span>
+                                                    <strong data-bind="text: certificate().validFromText()"></strong>
+                                                </span>
+                                                <span class="expiration margin-left">
+                                                    <span class="margin-right margin-right-sm"><i data-bind="attr: { class: certificate().expirationIcon }"></i><span>Expiration</span></span>
+                                                    <strong data-bind="attr: { class: certificate().expirationClass }, text: certificate().expirationText"></strong>
+                                                 </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="input-group file-input">
+                                    <input type="file" id="certificateFilePicker" data-bind="event: { change: _.partial($root.importCertificate, $element) }" tabindex="-1" />
+                                </div>
+                                <div class="flex-horizontal certificates-actions margin-bottom" title="Import your own certificate" data-bind="if: isNewAccessItem() && !certificate() ">
+                                    <label for="certificateFilePicker" class="btn btn-default">
+                                        <i class="icon-import"></i><span>Import existing certificate</span>
+                                    </label>
+                                    <button type="button" class="btn btn-default" title="RavenDb will generate a certificate for you"
+                                            data-bind="click: $root.generateCertificate, disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate(),
+                                                       css: { 'btn-spinner' : $root.spinners.generateCertificate }">
+                                        <i class="icon-magic-wand"></i><span>Generate new certificate</span>
+                                    </button>
+                                </div>
+                                <span class="help-block" data-bind="validationMessage: certificate"></span>
+                            </div>
+                        </div>
+                        <div data-bind="visible: $parent.filteringRequiredForHub" class="margin-bottom margin-bottom-lg">
+                            <hr>
+                            <div class="margin-bottom margin-bottom-lg">
+                                <h3>Filter Replicated Documents by Id Prefixes</h3>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: inputPrefixHubToSink().path">
+                                <label for="hubToSink" class="control-label">From Hub to Sink
+                                    <small id="hub-to-sink-info" class="margin-left margin-left-sm" data-toggle="tooltip" data-placement="bottom"><i class="icon-info text-info"></i></small>
+                                </label>
+                                <div class="flex-grow" id="hubToSink" data-bind="validationElement: hubToSinkPrefixes">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">
+                                            <input type="text" class="form-control" placeholder="Enter documents prefix" data-bind="textInput: inputPrefixHubToSink().path" />
+                                        </div>
+                                        <button class="btn btn-info"
+                                                data-bind="click: addHubToSinkInputPrefixWithBlink, enable: inputPrefixHubToSink && inputPrefixHubToSink().path() && inputPrefixHubToSink().path.isValid()">
+                                            <i class="icon-plus"></i><span>Add Prefix</span>
+                                        </button>
+                                    </div>
+                                    <div data-bind="visible: hubToSinkPrefixes().length" class="margin-top">
+                                        <ul class="well collection-list" data-bind="foreach: hubToSinkPrefixes">
+                                            <li>
+                                                <div class="name" data-bind="text: $data.path()"></div>
+                                                <a title="Remove prefix path" href="#" data-bind="click: $parent.removePrefixPathHubToSink.bind($parent, $data.path())"><i class="icon-trash"></i></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <span class="help-block" data-bind="validationMessage: hubToSinkPrefixes"></span>
+                                </div>
+                            </div>
+                            <div class="form-group margin-top margin-top-lg">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle">
+                                    <input id="useStuff" type="checkbox" data-bind="checked: samePrefixesForBothDirections" />
+                                    <label for="useStuff">Use above prefixes (<i>Hub to Sink</i>) for both directions</label>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: inputPrefixSinkToHub().path">
+                                <label for="sinkToHub" class="control-label">From Sink to Hub
+                                    <small id="sink-to-hub-info" class="margin-left margin-left-sm" data-toggle="tooltip" data-placement="bottom"><i class="icon-info text-info"></i></small>
+                                </label>
+                                <div class="flex-grow" id="sinkToHub" data-bind="collapse: !samePrefixesForBothDirections(), validationElement: sinkToHubPrefixes">
+                                    <div class="flex-horizontal">
+                                        <div class="flex-grow">
+                                            <input type="text" class="form-control" placeholder="Enter documents prefix" data-bind="textInput: inputPrefixSinkToHub().path" />
+                                        </div>
+                                        <button class="btn btn-info" 
+                                                data-bind="click: addSinkToHubInputPrefixWithBlink, enable: inputPrefixSinkToHub && inputPrefixSinkToHub().path() && inputPrefixSinkToHub().path.isValid()">
+                                                <i class="icon-plus"></i><span>Add Prefix</span>
+                                        </button>
+                                    </div>
+                                    <div data-bind="visible: sinkToHubPrefixes().length" class="margin-top">
+                                        <ul class="well collection-list" data-bind="foreach: sinkToHubPrefixes">
+                                            <li>
+                                                <div class="name" data-bind="text: $data.path()"></div>
+                                                <a title="Remove prefix path" href="#" data-bind="click: $parent.removePrefixPathSinkToHub.bind($parent, $data.path())"><i class="icon-trash"></i></a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <span class="help-block" data-bind="validationMessage: sinkToHubPrefixes"></span>
+                                </div>
+                                <div data-bind="visible: samePrefixesForBothDirections">
+                                    <div class="form-control-static">Same as <i>Hub to Sink</i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="margin-bottom margin-bottom-lg">
+                            <div class="margin-bottom margin-bottom-xs">
+                                <h3>Information for Sink</h3>
+                            </div>
+                            <div class="form-group" data-bind="validationElement: certificateInfoWasSavedForSinkTask">
+                                <label class="control-label">&nbsp;</label>
+                                <div>
+                                    <div class="flex-horizontal">
+                                        <div class="has-disable-reason" data-placement="bottom"
+                                             data-bind="attr: { 'data-original-title': $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableExport() ?
+                                                                'Please provide required configuration data before exporting.' : '',
+                                                                'title': !$root.spinners.generateCertificate() && !$root.spinners.importCertificate() && !disableExport() ?
+                                                                'Export this access configuration to a .json file' : '' }">
+                                            <button class="btn btn-default"
+                                                    data-bind="click: $root.exportAccessConfiguration,
+                                                               disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableExport()">
+                                                <i class="icon-export"></i><span>Export access configuration</span>
+                                            </button>
+                                        </div>
+                                        <div class="has-disable-reason" data-placement="bottom"
+                                             data-bind="if: isNewAccessItem,
+                                                        attr: { 'data-original-title': $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableDownload() ?
+                                                                 usingExistingCertificate() ? 'Download is available only for a RavenDb generated certificate.' :
+                                                                'Please add a certificate before downloading.' : '',
+                                                                'title': !$root.spinners.generateCertificate() && !$root.spinners.importCertificate() && !disableDownload() ?
+                                                                'Download the generated certificate to a .pfx file' : '' }">
+                                            <button class="btn btn-default" title="Download the generated certificate"
+                                                    data-bind="click: $root.downloadCertificate, 
+                                                               disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableDownload()">
+                                                <i class="icon-export"></i><span>Download generated certificate</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <span class="help-block" data-bind="validationMessage: certificateInfoWasSavedForSinkTask"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="flex-horizontal pull-right margin-top">
+                            <div>
+                                <button class="btn btn-default" title="Cancel editing this Replication Access"
+                                        data-bind="click: $root.cancelReplicationAccessOperation">
+                                    <i class="icon-cancel"></i><span>Cancel</span>
+                                </button>
+                            </div>
+                            <div data-bind="visible: $parent.filteringRequiredForHub">
+                                <button class="btn btn-default" title="Clone this Replication Access"
+                                        data-bind="click: $root.cloneReplicationAccessItem, , disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate()">
+                                    <i class="icon-clone"></i><span>Clone</span>
+                                </button>
+                            </div>
+                            <div>
+                                <button class="btn btn-primary" title="Save this Replication Access"
+                                        data-bind="disable: $root.spinners.saveReplicationAccess() || $root.spinners.generateCertificate() || $root.spinners.importCertificate() || !dirtyFlag().isDirty(), 
+                                                   css: { 'btn-spinner': $root.spinners.saveReplicationAccess }, click: $root.saveReplicationAccessItem">
+                                    <i class="icon-save"></i><span>Save</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

@@ -1,8 +1,8 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import savePullReplicationSinkTaskCommand = require("commands/database/tasks/savePullReplicationSinkTaskCommand");
-import ongoingTaskPullReplicationSinkEditModel = require("models/database/tasks/ongoingTaskPullReplicationSinkEditModel");
+import saveReplicationSinkTaskCommand = require("commands/database/tasks/saveReplicationSinkTaskCommand");
+import ongoingTaskReplicationSinkEditModel = require("models/database/tasks/ongoingTaskReplicationSinkEditModel");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
@@ -12,22 +12,22 @@ import jsonUtil = require("common/jsonUtil");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import messagePublisher = require("common/messagePublisher");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
-import pullReplicationCertificate = require("models/database/tasks/pullReplicationCertificate");
+import replicationCertificateModel = require("models/database/tasks/replicationCertificateModel");
 import forge = require("forge/forge");
 import fileImporter = require("common/fileImporter");
+import popoverUtils = require("common/popoverUtils");
+import prefixPathModel = require("models/database/tasks/prefixPathModel");
 
-class editPullReplicationSinkTask extends viewModelBase {
+class editReplicationSinkTask extends viewModelBase {
 
-    editedReplication = ko.observable<ongoingTaskPullReplicationSinkEditModel>();
+    editedSinkTask = ko.observable<ongoingTaskReplicationSinkEditModel>();
     isAddingNewTask = ko.observable<boolean>(true);
     private taskId: number = null;
     
     possibleMentors = ko.observableArray<string>([]);
     
     ravenEtlConnectionStringsDetails = ko.observableArray<Raven.Client.Documents.Operations.ETL.RavenConnectionString>([]);
-
     connectionStringsUrl = appUrl.forCurrentDatabase().connectionStrings();
-
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
     spinners = { 
@@ -42,16 +42,11 @@ class editPullReplicationSinkTask extends viewModelBase {
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
 
     canDefineCertificates = location.protocol === "https:";
-    
-    importedFileName = ko.observable<string>();
-    
-    validationGroup = ko.validatedObservable({
-        importedFileName: this.importedFileName
-    });
 
     constructor() {
         super();
-        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", "onConfigurationFileSelected", "deleteCertificate", "certFileSelected");
+        this.bindToCurrentInstance("useConnectionString", "onTestConnectionRaven", 
+                                   "onConfigurationFileSelected", "certFileSelected", "removeCertificate");
     }
 
     activate(args: any) { 
@@ -65,19 +60,19 @@ class editPullReplicationSinkTask extends viewModelBase {
 
             getOngoingTaskInfoCommand.forPullReplicationSink(this.activeDatabase(), this.taskId)
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => { 
-                    this.editedReplication(new ongoingTaskPullReplicationSinkEditModel(result));
+                .done((result: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => {
+                    this.editedSinkTask(new ongoingTaskReplicationSinkEditModel(result));
+                    this.editedSinkTask().replicationAccess().certificateExtracted(true);
                     deferred.resolve();
                 })
                 .fail(() => {
                     deferred.reject();
-                    
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
         } else {
             // 2. Creating a new task
             this.isAddingNewTask(true);
-            this.editedReplication(ongoingTaskPullReplicationSinkEditModel.empty());
+            this.editedSinkTask(ongoingTaskReplicationSinkEditModel.empty());
             deferred.resolve();
         }
 
@@ -96,21 +91,18 @@ class editPullReplicationSinkTask extends viewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
-                this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));                
+                this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));
             });
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        $('.edit-pull-replication-sink-task [data-toggle="tooltip"]').tooltip();
+        this.initTooltips();
+    }
+
     private initObservables() {
-        if (this.canDefineCertificates) {
-            this.importedFileName.extend({
-                validation: [
-                    {
-                        validator: () => !!this.editedReplication().certificate(),
-                        message: "Certificate is required"
-                    }
-                ]
-            });
-        }
         
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
@@ -120,23 +112,28 @@ class editPullReplicationSinkTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
         
-        const model = this.editedReplication();
+        const model = this.editedSinkTask();
         
         this.dirtyFlag = new ko.DirtyFlag([
                 model.taskName,
                 model.manualChooseMentor,
                 model.mentorNode,
                 model.connectionStringName,
-                model.hubDefinitionName,
-                model.certificate,
-                this.createNewConnectionString
+                this.createNewConnectionString,
+                model.hubName,
+                model.allowReplicationFromHubToSink,
+                model.allowReplicationFromSinkToHub,
+                model.replicationAccess().certificate,
+                model.replicationAccess().replicationAccessName,
+                model.replicationAccess().samePrefixesForBothDirections,
+                model.replicationAccess().hubToSinkPrefixes,
+                model.replicationAccess().sinkToHubPrefixes
             ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
 
-
-        const connectionStringName = this.editedReplication().connectionStringName();
+        const connectionStringName = this.editedSinkTask().connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.ravenEtlConnectionStringsDetails()
             .find(x => x.Name.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
         
@@ -147,23 +144,45 @@ class editPullReplicationSinkTask extends viewModelBase {
         if (connectionStringIsMissing) {
             // looks like user imported data w/o connection strings, prefill form with desired name
             this.newConnectionString().connectionStringName(connectionStringName);
-            this.editedReplication().connectionStringName(null);
+            this.editedSinkTask().connectionStringName(null);
         }
         
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
+      
+        const readDebounced = _.debounce(() => this.editedSinkTask().replicationAccess().tryReadCertificate(), 1500);
         
-        const readDebounced = _.debounce(() => this.tryReadCertificate(), 1500);
-        
-        model.certificatePassphrase.subscribe(() => readDebounced());
+        model.replicationAccess().selectedFilePassphrase.subscribe(() => readDebounced());
     }
 
-    compositionComplete() {
-        super.compositionComplete();
-        document.getElementById('taskName').focus();
-        
-        $('.edit-pull-replication-sink-task [data-toggle="tooltip"]').tooltip();
+    private initTooltips() {
+        popoverUtils.longWithHover($("#hub-to-sink-info"),
+            {
+                content:
+                    "<ul class='margin-bottom margin-bottom-xs padding'>" +
+                        "<li><small>These prefixes define what <strong>documents the Sink allows the Hub to send</strong>.</small></li>" +
+                        "<li><small>The documents will be sent from the Hub only if these paths are also allowed on the Hub task definition.</li>" +
+                    "</ul>"
+            });
+
+        popoverUtils.longWithHover($("#sink-to-hub-info"),
+            {
+                content:
+                    "<ul class='margin-bottom margin-bottom-xs padding'>" +
+                        "<li><small>These prefixes define what documents are <strong>allowed to be sent from this Sink to the Hub</strong>.</small></li>" +
+                        "<li><small>The documents will be sent to the Hub only if these paths are also allowed on the Hub task definition.</li>" +
+                    "</ul>"
+            });
+
+        popoverUtils.longWithHover($("#upload-certificate-info"),
+            {
+                content:
+                    "<ul class='margin-bottom margin-bottom-xs padding padding-xs'>" +
+                        "<li><small>Upload your own .pfx file</small></li>" +
+                        "<li><small>Or - import the configuration file created on the Hub Task.</li>" +
+                    "</ul>"
+            });
     }
 
     saveTask() {
@@ -182,17 +201,17 @@ class editPullReplicationSinkTask extends viewModelBase {
                 hasAnyErrors = true;
             } else {
                 // Use the new connection string
-                this.editedReplication().connectionStringName(this.newConnectionString().connectionStringName());
+                this.editedSinkTask().connectionStringName(this.newConnectionString().connectionStringName());
             }
         }
 
         // Validate *general form*
-        if (!this.isValid(this.editedReplication().validationGroup)) {
+        if (!this.isValid(this.editedSinkTask().validationGroup)) {
             hasAnyErrors = true;
         }
         
-        // Validate *local* form
-        if (!this.isValid(this.validationGroup)) {
+        // Validate *replication access*
+        if (this.canDefineCertificates && !this.isValid(this.editedSinkTask().replicationAccess().validationGroup)) {
             hasAnyErrors = true;
         }
        
@@ -216,22 +235,28 @@ class editPullReplicationSinkTask extends viewModelBase {
         } else {
             savingNewStringAction.resolve();
         }
+
+        // if samePrefixes then use h2s prefixes for both
+        const editedItem = this.editedSinkTask().replicationAccess();
+        if (editedItem.samePrefixesForBothDirections()) {
+            editedItem.sinkToHubPrefixes(editedItem.hubToSinkPrefixes());
+        }
         
         // All is well, Save Replication task
         savingNewStringAction.done(() => {
-            const dto = this.editedReplication().toDto(this.taskId);
+            const dto = this.editedSinkTask().toDto(this.taskId);
             this.taskId = this.isAddingNewTask() ? 0 : this.taskId;
 
             eventsCollector.default.reportEvent("pull-replication-sink", "save");
             
-            new savePullReplicationSinkTaskCommand(this.activeDatabase(), dto)
+            new saveReplicationSinkTaskCommand(this.activeDatabase(), dto)
                 .execute()
                 .done(() => {
                     this.dirtyFlag().reset();
                     this.goToOngoingTasksView();
                 })
                 .always(() => this.spinners.save(false));
-        });  
+        });
     }
    
     cancelOperation() {
@@ -243,7 +268,7 @@ class editPullReplicationSinkTask extends viewModelBase {
     }
 
     useConnectionString(connectionStringToUse: string) {
-        this.editedReplication().connectionStringName(connectionStringToUse);
+        this.editedSinkTask().connectionStringName(connectionStringToUse);
     }
     
     onTestConnectionRaven(urlToTest: string) {
@@ -262,64 +287,110 @@ class editPullReplicationSinkTask extends viewModelBase {
     }
 
     onConfigurationFileSelected(fileInput: HTMLInputElement) {
-        fileImporter.readAsText(fileInput, data => this.importUsingFile(data));
+        fileImporter.readAsText(fileInput, data => this.importConfigurationFile(data));
     }
     
-    private importUsingFile(contents: string) {
-        
+    private importConfigurationFile(contents: string) {
         try {
+            let hubName: string;
+            let accessName: string;
+            let certificate: replicationCertificateModel;
+            let h2sPrefixes: Array<prefixPathModel>;
+            let s2hPrefixes: Array<prefixPathModel>;
+            let useSamePrefixes: boolean;
+            let h2sMode: boolean;
+            let s2hMode: boolean;
+            
             const config = JSON.parse(contents) as pullReplicationExportFileFormat;
             
-            if (!config.Database || !config.HubDefinitionName || !config.TopologyUrls) {
+            if (!config.Database || !config.HubTaskName || !config.TopologyUrls) {
                 messagePublisher.reportError("Invalid configuration format");
                 return;
             }
+
+            hubName = config.HubTaskName;
+            h2sMode = config.AllowHubToSinkMode;
+            s2hMode = config.AllowSinkToHubMode;
             
-            const model = this.editedReplication();
-            model.hubDefinitionName(config.HubDefinitionName);
-            
-            if (config.Certificate) {
-                model.certificate(pullReplicationCertificate.fromPkcs12(config.Certificate));
+            if (this.canDefineCertificates) {
+                if (!config.AccessName || !config.HubToSinkPrefixes) {
+                    messagePublisher.reportError("Invalid configuration format");
+                    return;
+                }
+
+                accessName = config.AccessName;
+                h2sPrefixes = config.HubToSinkPrefixes.map(x => new prefixPathModel(x));
+                
+                useSamePrefixes = false;
+                if (config.UseSamePrefixes) {
+                    s2hPrefixes = h2sPrefixes;
+                    useSamePrefixes = true;
+                } else if (config.SinkToHubPrefixes) {
+                    s2hPrefixes = config.SinkToHubPrefixes.map(x => new prefixPathModel(x));
+                }
+
+                if (config.Certificate) {
+                    certificate = replicationCertificateModel.fromPkcs12(config.Certificate);
+                }
             }
             
+            // update model only here (if no exception was thrown), otherwise we end up showing partial data...
+
             this.createNewConnectionString(true);
             const connectionString = this.newConnectionString();
             connectionString.database(config.Database);
-            connectionString.connectionStringName("Pull replication from " + config.Database);
+            connectionString.connectionStringName("Replication from " + config.Database);
             connectionString.topologyDiscoveryUrls(config.TopologyUrls.map(x => new discoveryUrl(x)));
             
-        } catch (e) {
-            messagePublisher.reportError("Can't parse configuration");
+            const model = this.editedSinkTask();
+            
+            model.hubName(hubName);
+            model.allowReplicationFromHubToSink(h2sMode);
+            model.allowReplicationFromSinkToHub(s2hMode);
+
+            if (this.canDefineCertificates) {
+                const accessInfo = model.replicationAccess();
+
+                accessInfo.replicationAccessName(accessName);
+                accessInfo.hubToSinkPrefixes(h2sPrefixes);
+                accessInfo.sinkToHubPrefixes(s2hPrefixes);
+                accessInfo.samePrefixesForBothDirections(useSamePrefixes);
+
+                if (certificate) {
+                    accessInfo.certificate(certificate);
+                    accessInfo.certificateExtracted(true);
+                    accessInfo.selectedFileName(null);
+                    accessInfo.selectedFilePassphrase(null);
+                }
+            }
+            
+        } catch ($e) {
+            messagePublisher.reportError("Can't parse configuration", $e);
+            this.editedSinkTask().replicationAccess().certificateExtracted(false);
         }
-    }
-    
-    deleteCertificate() {
-        this.editedReplication().certificate(null);
     }
 
     certFileSelected(fileInput: HTMLInputElement) {
         fileImporter.readAsBinaryString(fileInput, (data, fileName) => {
             const isFileSelected = fileName ? !!fileName.trim() : false;
-            this.importedFileName(isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null);
 
-            const asBase64 = forge.util.encode64(data);
-            this.onCertificateLoaded(asBase64);
+            const shortFileName = isFileSelected ? fileName.split(/(\\|\/)/g).pop() : null;
+            this.editedSinkTask().replicationAccess().selectedFileName(shortFileName);
+
+            const certAsBase64 = forge.util.encode64(data);
+            this.editedSinkTask().replicationAccess().onCertificateSelected(certAsBase64, shortFileName);
         });
     }
-    
-    onCertificateLoaded(certAsBase64: string) {
-        this.editedReplication().certificateAsBase64(certAsBase64);
-     
-        this.tryReadCertificate();
+
+    removeCertificate() {
+        const model = this.editedSinkTask();
+        
+        model.replicationAccess().certificate(null);
+        model.replicationAccess().certificateExtracted(false);
+        
+        model.replicationAccess().selectedFileName(null);
+        model.replicationAccess().selectedFilePassphrase(null);
     }
-    
-    tryReadCertificate() {
-        if (this.editedReplication().tryReadCertificate()) {
-            this.importedFileName(undefined);
-        }
-    }
-    
-   
 }
 
-export = editPullReplicationSinkTask;
+export = editReplicationSinkTask;

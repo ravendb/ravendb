@@ -7,6 +7,6 @@ namespace Raven.Client.Documents.Operations.Replication
     {
         None = 0,
         HubToSink = 1,
-        SinkToHub = 2,
+        SinkToHub = 2
     }
 }
