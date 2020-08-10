@@ -531,12 +531,13 @@ namespace Raven.Server.Documents.Queries.AST
     public class TimeSeriesAggregation
     {
         public AggregationType Aggregation;
+
         public bool Any => _values.Count > 0;
 
-        private readonly List<double> _values;
-        private readonly List<double> _count;
+        private List<double> _values;
 
-        public IEnumerable<double> Count => _count;
+        public List<double> Count { get; private set; }
+
         public long TotalCount;
 
         public string Name;
@@ -546,13 +547,13 @@ namespace Raven.Server.Documents.Queries.AST
             Aggregation = type;
             Name = name ?? Aggregation.ToString();
 
-            _count = new List<double>();
+            Count = new List<double>();
             _values = new List<double>();
         }
 
         public void Init()
         {
-            _count.Clear();
+            Count.Clear();
             _values.Clear();
         }
 
@@ -564,11 +565,11 @@ namespace Raven.Server.Documents.Queries.AST
                 return;
             }
 
-            if (_count.Count < values.Length)
+            if (Count.Count < values.Length)
             {
-                for (int i = _count.Count; i < values.Length; i++)
+                for (int i = Count.Count; i < values.Length; i++)
                 {
-                    _count.Add(0);
+                    Count.Add(0);
                     _values.Add(0);
                 }
             }
@@ -579,13 +580,13 @@ namespace Raven.Server.Documents.Queries.AST
                 switch (Aggregation)
                 {
                     case AggregationType.Min:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val.Min;
                         else
                             _values[i] = Math.Min(_values[i], val.Min);
                         break;
                     case AggregationType.Max:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val.Max;
                         else
                             _values[i] = Math.Max(_values[i], val.Max);
@@ -595,7 +596,7 @@ namespace Raven.Server.Documents.Queries.AST
                         _values[i] = _values[i] + val.Sum;
                         break;
                     case AggregationType.First:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val.First;
                         break;
                     case AggregationType.Last:
@@ -607,12 +608,10 @@ namespace Raven.Server.Documents.Queries.AST
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
 
-                _count[i] += values[i].Count;
+                Count[i] += values[i].Count;
             }
-            TotalCount += (long)_count[0];
+            TotalCount += (long)Count[0];
         }
-
-
 
         public void Step(Span<double> values, bool isRaw)
         {
@@ -622,11 +621,11 @@ namespace Raven.Server.Documents.Queries.AST
                 return;
             }
 
-            if (_count.Count < values.Length)
+            if (Count.Count < values.Length)
             {
-                for (int i = _count.Count; i < values.Length; i++)
+                for (int i = Count.Count; i < values.Length; i++)
                 {
-                    _count.Add(0);
+                    Count.Add(0);
                     _values.Add(0);
                 }
             }
@@ -637,13 +636,13 @@ namespace Raven.Server.Documents.Queries.AST
                 switch (Aggregation)
                 {
                     case AggregationType.Min:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val;
                         else
                             _values[i] = Math.Min(_values[i], val);
                         break;
                     case AggregationType.Max:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val;
                         else
                             _values[i] = Math.Max(_values[i], val);
@@ -653,7 +652,7 @@ namespace Raven.Server.Documents.Queries.AST
                         _values[i] = _values[i] + val;
                         break;
                     case AggregationType.First:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val;
                         break;
                     case AggregationType.Last:
@@ -664,7 +663,7 @@ namespace Raven.Server.Documents.Queries.AST
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
-                _count[i]++;
+                Count[i]++;
             }
 
             TotalCount++;
@@ -674,11 +673,11 @@ namespace Raven.Server.Documents.Queries.AST
         {
             Debug.Assert(values.Length % 6 == 0);
             var originalNumOfValues = values.Length / 6;
-            if (_count.Count < originalNumOfValues)
+            if (Count.Count < originalNumOfValues)
             {
-                for (int i = _count.Count; i < originalNumOfValues; i++)
+                for (int i = Count.Count; i < originalNumOfValues; i++)
                 {
-                    _count.Add(0L);
+                    Count.Add(0L);
                     _values.Add(0d);
                 }
             }
@@ -693,13 +692,13 @@ namespace Raven.Server.Documents.Queries.AST
                 switch (Aggregation)
                 {
                     case AggregationType.Min:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val.Min;
                         else
                             _values[i] = Math.Min(_values[i], val.Min);
                         break;
                     case AggregationType.Max:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val.Max;
                         else
                             _values[i] = Math.Max(_values[i], val.Max);
@@ -709,7 +708,7 @@ namespace Raven.Server.Documents.Queries.AST
                         _values[i] = _values[i] + val.Sum;
                         break;
                     case AggregationType.First:
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val.First;
                         break;
                     case AggregationType.Last:
@@ -722,20 +721,20 @@ namespace Raven.Server.Documents.Queries.AST
                 }
 
                 val = values[index + (int)AggregationType.Count];
-                _count[i] += (long)val.Sum;
+                Count[i] += (long)val.Sum;
             }
-            TotalCount += (long)_count[0];
+            TotalCount += (long)Count[0];
         }
 
         private void StepOnRollup(Span<double> values)
         {
             Debug.Assert(values.Length % 6 == 0);
             var originalNumOfValues = values.Length / 6;
-            if (_count.Count < originalNumOfValues)
+            if (Count.Count < originalNumOfValues)
             {
-                for (int i = _count.Count; i < originalNumOfValues; i++)
+                for (int i = Count.Count; i < originalNumOfValues; i++)
                 {
-                    _count.Add(0L);
+                    Count.Add(0L);
                     _values.Add(0d);
                 }
             }
@@ -748,14 +747,14 @@ namespace Raven.Server.Documents.Queries.AST
                 {
                     case AggregationType.Min:
                         val = values[index + (int)AggregationType.Min];
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val;
                         else
                             _values[i] = Math.Min(_values[i], val);
                         break;
                     case AggregationType.Max:
                         val = values[index + (int)AggregationType.Max];
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val;
                         else
                             _values[i] = Math.Max(_values[i], val);
@@ -767,7 +766,7 @@ namespace Raven.Server.Documents.Queries.AST
                         break;
                     case AggregationType.First:
                         val = values[index + (int)AggregationType.First];
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                             _values[i] = val;
                         break;
                     case AggregationType.Last:
@@ -780,13 +779,13 @@ namespace Raven.Server.Documents.Queries.AST
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
 
-                _count[i] += (long)values[index + (int)AggregationType.Count];
+                Count[i] += (long)values[index + (int)AggregationType.Count];
             }
 
             TotalCount += (long)values[(int)AggregationType.Count];
         }
 
-        public IEnumerable<double> GetFinalValues()
+        public List<double> GetFinalValues()
         {
             switch (Aggregation)
             {
@@ -797,17 +796,17 @@ namespace Raven.Server.Documents.Queries.AST
                 case AggregationType.Sum:
                     break;
                 case AggregationType.Count:
-                    return _count;
+                    return Count;
                 case AggregationType.Average:
                     for (int i = 0; i < _values.Count; i++)
                     {
-                        if (_count[i] == 0)
+                        if (Count[i] == 0)
                         {
                             _values[i] = double.NaN;
                             continue;
                         }
 
-                        _values[i] = _values[i] / _count[i];
+                        _values[i] = _values[i] / Count[i];
                     }
                     break;
                 default:
@@ -815,6 +814,31 @@ namespace Raven.Server.Documents.Queries.AST
             }
 
             return _values;
+        }
+
+        public List<double> GetValues()
+        {
+            if (Aggregation == AggregationType.Count)
+            {
+                return Count;
+            }
+
+            return _values;
+        }
+
+        public void SetValues(List<double> values)
+        {
+            if (Aggregation == AggregationType.Count)
+            {
+                Count = new List<double>(values);
+                return;
+            }
+            _values = new List<double>(values);
+        }
+
+        public void SetCount(List<double> count)
+        {
+            Count = new List<double>(count);
         }
     }
 
