@@ -3447,25 +3447,19 @@ namespace Raven.Server.Documents.Indexes
 
                 using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 {
-                    bool shouldClose =false;
-                    if (context.AreTransactionsOpened() == false)
-                    {
-                        context.OpenReadTransaction();
-                        shouldClose = true;
-                    }
-
                     using (indexContext.OpenReadTransaction())
+                    using (OpenReadTransaction(context))
                     {
-                        try
-                        {
-                            return CalculateIndexEtag(context, indexContext, q, IsStale(context, indexContext));
-                        }
-                        finally
-                        {
-                            if(shouldClose)
-                                context.CloseTransaction();
-                        }
+                        return CalculateIndexEtag(context, indexContext, q, IsStale(context, indexContext));
                     }
+                }
+
+                static IDisposable OpenReadTransaction(QueryOperationContext context)
+                {
+                    if (context.AreTransactionsOpened())
+                        return null;
+
+                    return context.OpenReadTransaction();
                 }
             }
         }
