@@ -3507,10 +3507,13 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (Configuration.ManagedAllocationsBatchLimit != null)
+            if (Configuration.ManagedAllocationsBatchLimit != null && 
+                count % 128 == 0)
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
                 var diff = currentManagedAllocations - _initialManagedAllocations;
+                stats.AddAllocatedBytes(diff.GetValue(SizeUnit.Bytes));
+
                 if (diff > Configuration.ManagedAllocationsBatchLimit.Value)
                 {
                     stats.RecordMapCompletedReason($"Reached managed allocations limit ({Configuration.ManagedAllocationsBatchLimit.Value}). Allocated {diff} in current batch");
