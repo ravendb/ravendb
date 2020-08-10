@@ -147,7 +147,7 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(2048)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.ManagedAllocationsBatchLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Indexing.ManagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
 
         [Description("Transaction size limit after which an index will stop and complete the current batch")]
