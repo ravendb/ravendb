@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Session
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-
+        
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         public event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
@@ -987,8 +987,7 @@ more responsive application.
 
                         if (deletedEntity.ExecuteOnBeforeDelete)
                         {
-                            var beforeDeleteEventArgs = new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity);
-                            OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
+                            OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
                         }
 
                         result.SessionCommands.Add(new DeleteCommandData(documentInfo.Id, changeVector));
@@ -2288,6 +2287,11 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type) ?? Constants.Documents.Collections.AllDocumentsCollection;
 
             return (indexName, collectionName);
+        }
+
+        internal void OnBeforeDeleteInvoke(BeforeDeleteEventArgs beforeDeleteEventArgs)
+        {
+            OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
         }
     }
 

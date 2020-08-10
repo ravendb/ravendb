@@ -207,7 +207,7 @@ namespace Raven.Client.Documents
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
-
+        
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         public event EventHandler<SessionCreatedEventArgs> OnSessionCreated;
