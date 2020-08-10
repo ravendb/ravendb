@@ -79,6 +79,7 @@ namespace Raven.Server.Documents
                 }
             }
         }
+        
         protected async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
         {
             DatabaseTopology dbTopology;

@@ -45,16 +45,16 @@ class createOngoingTask extends dialogViewModelBase {
         this.close();
     }
 
-    newPullReplicationHubTask() {
-        eventsCollector.default.reportEvent("PullReplicationHub", "new");
-        const url = appUrl.forEditPullReplicationHub(this.activeDatabase());
+    newReplicationHubTask() {
+        eventsCollector.default.reportEvent("ReplicationHub", "new");
+        const url = appUrl.forEditReplicationHub(this.activeDatabase());
         router.navigate(url);
         this.close();
     }
-    
-    newPullReplicationSinkTask() {
-        eventsCollector.default.reportEvent("PullReplicationSink", "new");
-        const url = appUrl.forEditPullReplicationSink(this.activeDatabase());
+
+    newReplicationSinkTask() {
+        eventsCollector.default.reportEvent("ReplicationSink", "new");
+        const url = appUrl.forEditReplicationSink(this.activeDatabase());
         router.navigate(url);
         this.close();
     }

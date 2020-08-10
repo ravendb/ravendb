@@ -10,7 +10,7 @@ import discoveryUrl = require("models/database/settings/discoveryUrl");
 class connectionStringRavenEtlModel extends connectionStringModel { 
 
     database = ko.observable<string>();
-    topologyDiscoveryUrls = ko.observableArray<discoveryUrl>([]);    
+    topologyDiscoveryUrls = ko.observableArray<discoveryUrl>([]);
     inputUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
     selectedUrlToTest = ko.observable<string>();
 
@@ -37,13 +37,13 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             return anyDirty;
         });
         
-        this.dirtyFlag = new ko.DirtyFlag([           
+        this.dirtyFlag = new ko.DirtyFlag([
             this.database,
             this.connectionStringName,
             urlsCount,
             urlsAreDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
-    }    
+    }
 
     update(dto: Raven.Client.Documents.Operations.ETL.RavenConnectionString) {
         super.update(dto);
@@ -110,7 +110,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         }
     }
 
-    testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {       
+    testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         return new testClusterNodeConnectionCommand(urlToTest, this.database(), false)
             .execute();
     }

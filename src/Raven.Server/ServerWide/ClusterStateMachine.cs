@@ -3475,6 +3475,7 @@ namespace Raven.Server.ServerWide
             {
                 var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
                 string thumbprint = key.ToString().Substring(prefixString.Length);
+                
                 if (filter != null)
                 {
                     blittable.TryGet(nameof(RegisterReplicationHubAccessCommand.Name), out string name);
@@ -3488,13 +3489,17 @@ namespace Raven.Server.ServerWide
 
                 if (pageSize-- < 0)
                     break;
+                
                 blittable.Modifications = new DynamicJsonValue(blittable)
                 {
-                    ["CertificateThumbprint"] = thumbprint,
+                    ["Certificate"] = GetCertificateAsBase64(val),
+                    ["Thumbprint"] = thumbprint,
                     ["HubDefinitionName"] = hub,
                     ["Database"] = database
                 };
-                yield return blittable;
+
+                var newBlittable = context.ReadObject(blittable, "create replication access blittable");
+                yield return newBlittable;
             }
         }
 
@@ -3522,13 +3527,13 @@ namespace Raven.Server.ServerWide
                     CertificateBase64 = certBase64,
                 });
             }
-
-            unsafe string GetCertificateAsBase64(Table.TableValueHolder val)
-            {
-                var buffer = val.Reader.Read((int)ReplicationCertificatesTable.Certificate, out var size);
-                string certBase64 = Convert.ToBase64String(new ReadOnlySpan<byte>(buffer, size));
-                return certBase64;
-            }
+        }
+        
+        unsafe string GetCertificateAsBase64(Table.TableValueHolder val)
+        {
+            var buffer = val.Reader.Read((int)ReplicationCertificatesTable.Certificate, out var size);
+            string certBase64 = Convert.ToBase64String(new ReadOnlySpan<byte>(buffer, size));
+            return certBase64;
         }
 
         private unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(TransactionOperationContext context, ref TableValueReader reader)

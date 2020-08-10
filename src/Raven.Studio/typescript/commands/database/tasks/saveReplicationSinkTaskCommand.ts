@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class savePullReplicationSinkTaskCommand extends commandBase {
+class saveReplicationSinkTaskCommand extends commandBase {
 
     constructor(private db: database, private replicationSettings: Raven.Client.Documents.Operations.Replication.PullReplicationAsSink) {
         super();
@@ -16,13 +16,13 @@ class savePullReplicationSinkTaskCommand extends commandBase {
 
         return this.post<Raven.Client.Documents.Operations.Replication.PullReplicationAsSink>(url, JSON.stringify(payload), this.db)
             .fail((response: JQueryXHR) => {
-                this.reportError("Failed to save pull replication sink task", response.responseText, response.statusText);
+                this.reportError("Failed to save the Replication Sink task", response.responseText, response.statusText);
             })
             .done(() => {
-                this.reportSuccess(`Saved pull replication sink task`);
+                this.reportSuccess(`Replication Sink task was saved successfully`);
             });
     }
 }
 
-export = savePullReplicationSinkTaskCommand; 
+export = saveReplicationSinkTaskCommand; 
 

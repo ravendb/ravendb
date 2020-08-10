@@ -134,7 +134,7 @@ interface timeSeriesPlotItem {
     value: timeSeriesQueryResultDto;
 }
 
-type timeSeriesDeleteMode =  "all" | "range" | "selection";
+type timeSeriesDeleteMode = "all" | "range" | "selection";
 
 interface timeSeriesDeleteCriteria {
     mode: timeSeriesDeleteMode;
@@ -157,7 +157,7 @@ interface connectedDocument {
 
 interface canActivateResultDto {
     redirect?: string;
-    can?: boolean;   
+    can?: boolean;
 }
 
 interface canDeactivateResultDto {
@@ -211,7 +211,7 @@ interface operationIdDto {
     OperationId: number;
 }
 
-type availableConfigurationSectionId =  "restore" | "legacyMigration" | "encryption" | "replication" | "path";
+type availableConfigurationSectionId = "restore" | "legacyMigration" | "encryption" | "replication" | "path";
 
 type restoreSource = "local" | "cloud" | "amazonS3" | "azure" | "googleCloud";
 
@@ -514,7 +514,7 @@ interface sqlMigrationAdvancedSettingsDto {
 type virtualNotificationType = "CumulativeBulkInsert" | "AttachmentUpload" | "CumulativeUpdateByQuery" | "CumulativeDeleteByQuery";
 
 declare module Raven.Server.NotificationCenter.Notifications {
-    interface Notification  {
+    interface Notification {
         // extend server side type to contain local virtual notifications 
         Type: Raven.Server.NotificationCenter.Notifications.NotificationType | virtualNotificationType;
     }
@@ -653,9 +653,15 @@ type timeMagnitude = "minutes" | "hours" | "days";
 
 interface pullReplicationExportFileFormat {
     Database: string;
-    Certificate?: string;
-    HubDefinitionName: string;
+    HubTaskName: string;
     TopologyUrls: Array<string>;
+    AccessName: string,
+    Certificate: string,
+    AllowHubToSinkMode: boolean,
+    AllowSinkToHubMode: boolean,
+    HubToSinkPrefixes: Array<string>,
+    SinkToHubPrefixes: Array<string>,
+    UseSamePrefixes: boolean
 }
 
 interface certificateInfo {

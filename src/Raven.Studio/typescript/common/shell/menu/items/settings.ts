@@ -142,19 +142,19 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
-            route: 'databases/tasks/editPullReplicationHubTask',
-            moduleId: 'viewmodels/database/tasks/editPullReplicationHubTask',
-            title: 'Pull Replication Hub Task',
+            route: 'databases/tasks/editReplicationHubTask',
+            moduleId: 'viewmodels/database/tasks/editReplicationHubTask',
+            title: 'Replication Hub Task',
             nav: false,
-            dynamicHash: appUrls.editPullReplicationHubTaskUrl,
+            dynamicHash: appUrls.editReplicationHubTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
-            route: 'databases/tasks/editPullReplicationSinkTask',
-            moduleId: 'viewmodels/database/tasks/editPullReplicationSinkTask',
-            title: 'Pull Replication Sink Task',
+            route: 'databases/tasks/editReplicationSinkTask',
+            moduleId: 'viewmodels/database/tasks/editReplicationSinkTask',
+            title: 'Replication Sink Task',
             nav: false,
-            dynamicHash: appUrls.editPullReplicationSinkTaskUrl,
+            dynamicHash: appUrls.editReplicationSinkTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({

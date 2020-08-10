@@ -6,6 +6,7 @@ namespace Raven.Client.Documents.Operations.Replication
     {
         public string Name;
         public string Thumbprint;
+        public string Certificate;
         public DateTime NotBefore, NotAfter;
         public string Subject;
         public string Issuer;
@@ -19,6 +20,5 @@ namespace Raven.Client.Documents.Operations.Replication
                 return a;
             return b ?? Array.Empty<string>();
         }
-
     }
 }

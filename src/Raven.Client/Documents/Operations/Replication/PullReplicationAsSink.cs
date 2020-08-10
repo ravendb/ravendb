@@ -6,25 +6,28 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public class PullReplicationAsSink : ExternalReplicationBase
     {
-        public string CertificateWithPrivateKey; // base64
-        public string CertificatePassword;
-
-        [Obsolete("PullReplicationAsSink.HubDefinitionName is not supported anymore. Will be removed in next major version of the product. Use HubName instead.")]
-        public string HubDefinitionName { get; set; }
-
-        private string _hubName;
-#pragma warning disable 618 // disable use obselete property
-        public string HubName { get => _hubName ?? HubDefinitionName; set => _hubName = value; }
-#pragma warning restore 618
-
-        public PullReplicationAsSink()
-        {
-        }
-
         public PullReplicationMode Mode = PullReplicationMode.HubToSink;
 
         public string[] AllowedHubToSinkPaths;
         public string[] AllowedSinkToHubPaths;
+        
+        public string CertificateWithPrivateKey; // base64
+        public string CertificatePassword;
+        
+        public string AccessName;
+        
+        [Obsolete("PullReplicationAsSink.HubDefinitionName is not supported anymore. Will be removed in next major version of the product. Use HubName instead.")]
+        public string HubDefinitionName { get; set; }
+
+        private string _hubName;
+ #pragma warning disable 618 // disable use obsolete property
+        public string HubName { get => _hubName ?? HubDefinitionName; set => _hubName = value; }
+ #pragma warning restore 618
+        
+
+        public PullReplicationAsSink()
+        {
+        }
 
         public PullReplicationAsSink(string database, string connectionStringName, string hubName) : base(database, connectionStringName)
         {
@@ -68,13 +71,14 @@ namespace Raven.Client.Documents.Operations.Replication
             djv[nameof(CertificatePassword)] = CertificatePassword;
             djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
+            djv[nameof(AccessName)] = AccessName;
 
             return djv;
         }
 
         public override string GetDefaultTaskName()
         {
-            return $"Pull Replication Sink from {HubName}";
+            return $"Replication Sink from {HubName}";
         }
     }
 }

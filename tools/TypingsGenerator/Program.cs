@@ -356,6 +356,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskPullReplicationAsSink));
             scripter.AddType(typeof(OngoingTaskPullReplicationAsHub));
             scripter.AddType(typeof(PullReplicationHandler.PullReplicationCertificate));
+            scripter.AddType(typeof(ReplicationHubAccess));
+            scripter.AddType(typeof(DetailedReplicationHubAccess));
+            scripter.AddType(typeof(ReplicationHubAccessResult));
 
             // ongoing tasks - backup
             scripter.AddType(typeof(OngoingTaskBackup));

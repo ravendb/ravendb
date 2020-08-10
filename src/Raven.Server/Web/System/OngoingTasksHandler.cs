@@ -147,10 +147,14 @@ namespace Raven.Server.Web.System
                 TaskState = sinkReplication.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 DestinationDatabase = connection?.Database,
                 HubName = sinkReplication.HubName,
+                Mode = sinkReplication.Mode,
                 DestinationUrl = res.Url,
                 TopologyDiscoveryUrls = connection?.TopologyDiscoveryUrls,
                 MentorNode = sinkReplication.MentorNode,
                 TaskConnectionStatus = res.Status,
+                AccessName = sinkReplication.AccessName,
+                AllowedHubToSinkPaths = sinkReplication.AllowedHubToSinkPaths,
+                AllowedSinkToHubPaths = sinkReplication.AllowedSinkToHubPaths
             };
 
             if (sinkReplication.CertificateWithPrivateKey != null)

@@ -848,6 +848,10 @@ input[type=file] + .form-control {
         margin-top: @grid-gutter-width / 4;
     }
 
+    &.margin-top-xs, &.margin-xs {
+        margin-top: @grid-gutter-width / 6;
+    }
+
     &.margin-top-lg, &.margin-lg {
         margin-top: @grid-gutter-width;
     }
@@ -1722,6 +1726,11 @@ input[type=file] + .form-control {
     }
 
     cursor: not-allowed;
+}
+
+.disabled-area {
+    pointer-events: none;
+    opacity: 0.5;
 }
 
 .ace_editor {

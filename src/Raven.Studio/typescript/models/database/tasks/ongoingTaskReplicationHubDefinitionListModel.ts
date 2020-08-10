@@ -2,9 +2,9 @@
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import generalUtils = require("common/generalUtils");
-import ongoingTaskPullReplicationHubListModel = require("models/database/tasks/ongoingTaskPullReplicationHubListModel");
+import ongoingTaskReplicationHubListModel = require("models/database/tasks/ongoingTaskReplicationHubListModel");
 
-class ongoingTaskPullReplicationHubDefinitionListModel {
+class ongoingTaskReplicationHubDefinitionListModel {
     
     taskId: number;
     taskName = ko.observable<string>();
@@ -14,7 +14,7 @@ class ongoingTaskPullReplicationHubDefinitionListModel {
     delayReplicationTime = ko.observable<number>();
     delayHumane: KnockoutComputed<string>;
     
-    ongoingHubs = ko.observableArray<ongoingTaskPullReplicationHubListModel>([]);
+    ongoingHubs = ko.observableArray<ongoingTaskReplicationHubListModel>([]);
 
     editUrl: KnockoutComputed<string>;
     stateText: KnockoutComputed<string>;
@@ -39,7 +39,7 @@ class ongoingTaskPullReplicationHubDefinitionListModel {
         this.stateText = ko.pureComputed(() => this.taskState());
 
         const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editPullReplicationHub(this.taskId);
+        this.editUrl = urls.editReplicationHub(this.taskId);
 
         this.delayHumane = ko.pureComputed(() => generalUtils.formatTimeSpan(this.delayReplicationTime() * 1000, true));
     }
@@ -59,13 +59,13 @@ class ongoingTaskPullReplicationHubDefinitionListModel {
         const existingNames = this.ongoingHubs().map(x => x.uniqueName);
         
         ongoingTasks.forEach(incomingTask => {
-           const uniqueName = ongoingTaskPullReplicationHubListModel.generateUniqueName(incomingTask); 
+           const uniqueName = ongoingTaskReplicationHubListModel.generateUniqueName(incomingTask); 
            const existingItem = this.ongoingHubs().find(x => x.uniqueName === uniqueName);
            if (existingItem) {
                existingItem.update(incomingTask);
                _.pull(existingNames, uniqueName);
            } else {
-               this.ongoingHubs.push(new ongoingTaskPullReplicationHubListModel(incomingTask));
+               this.ongoingHubs.push(new ongoingTaskReplicationHubListModel(incomingTask));
            }
         });
         
@@ -83,4 +83,4 @@ class ongoingTaskPullReplicationHubDefinitionListModel {
 
 }
 
-export = ongoingTaskPullReplicationHubDefinitionListModel;
+export = ongoingTaskReplicationHubDefinitionListModel;

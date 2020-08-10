@@ -18,24 +18,33 @@ namespace Raven.Client.Documents.Operations.Replication
                 [nameof(Name)] = Name,
                 [nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths,
                 [nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths,
-                [nameof(CertificateBase64)] = CertificateBase64,
-                
+                [nameof(CertificateBase64)] = CertificateBase64
             };
         }
 
-        internal void Validate()
+        internal void Validate(bool filteringIsRequired)
         {
             if (string.IsNullOrEmpty(Name))
                 throw new ArgumentNullException(nameof(Name));
 
-            if((AllowedHubToSinkPaths?.Length ?? 0) == 0 && (AllowedSinkToHubPaths?.Length == 0))
-                throw new InvalidOperationException($"Either {nameof(AllowedSinkToHubPaths)} or {nameof(AllowedHubToSinkPaths)} must have a value, but both were null or empty");
+            if (filteringIsRequired)
+            {
+                if ((AllowedHubToSinkPaths?.Length ?? 0) == 0 && (AllowedSinkToHubPaths?.Length == 0))
+                    throw new InvalidOperationException(
+                        $"Either {nameof(AllowedSinkToHubPaths)} or {nameof(AllowedHubToSinkPaths)} must have a value, but both were null or empty");
+            }
+            else
+            {
+                if (AllowedHubToSinkPaths?.Length > 0 || AllowedSinkToHubPaths?.Length > 0)
+                    throw new InvalidOperationException(
+                        $"Filtering replication is not set for this Replication Hub task." +
+                        $" {nameof(AllowedSinkToHubPaths)} and {nameof(AllowedHubToSinkPaths)} cannot have a value.");  
+            }
 
             ValidateAllowedPaths(AllowedHubToSinkPaths);
             ValidateAllowedPaths(AllowedSinkToHubPaths);
         }
-        
-        
+
         private void ValidateAllowedPaths(string[] allowedPaths)
         {
             if ((allowedPaths?.Length ?? 0) == 0)

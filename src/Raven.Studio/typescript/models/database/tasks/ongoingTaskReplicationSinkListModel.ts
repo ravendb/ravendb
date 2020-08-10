@@ -4,7 +4,7 @@ import router = require("plugins/router");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
-class ongoingTaskPullReplicationSinkListModel extends ongoingTaskListModel {
+class ongoingTaskReplicationSinkListModel extends ongoingTaskListModel {
     editUrl: KnockoutComputed<string>;
 
     destinationDB = ko.observable<string>();
@@ -32,7 +32,7 @@ class ongoingTaskPullReplicationSinkListModel extends ongoingTaskListModel {
         super.initializeObservables();
 
         const urls = appUrl.forCurrentDatabase();
-        this.editUrl = urls.editPullReplicationSink(this.taskId);
+        this.editUrl = urls.editReplicationSink(this.taskId);
         this.connectionStringDefined = ko.pureComputed(() => !!this.destinationDB());
     }
 
@@ -56,4 +56,4 @@ class ongoingTaskPullReplicationSinkListModel extends ongoingTaskListModel {
 
 }
 
-export = ongoingTaskPullReplicationSinkListModel;
+export = ongoingTaskReplicationSinkListModel;
