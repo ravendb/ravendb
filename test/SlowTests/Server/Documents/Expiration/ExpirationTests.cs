@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -14,7 +15,9 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Exceptions;
 using Raven.Client.Util;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
@@ -176,6 +179,69 @@ namespace SlowTests.Server.Documents.Expiration
                 {
                     var company2 = await session.LoadAsync<Company>(company.Id);
                     Assert.Null(company2);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanSetupExpirationAndRefresh()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var expires = SystemTime.UtcNow.AddMinutes(5);
+                    var company = new Company { Name = "Company Name" };
+                    await session.StoreAsync(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Metadata.Expires] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Refresh] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    await session.SaveChangesAsync();
+                }
+
+                var database = await GetDatabase(store.Database);
+
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var expired = database.DocumentsStorage.ExpirationStorage.GetExpiredDocuments(context, SystemTime.UtcNow.AddMinutes(10), true, 10, out _, CancellationToken.None);
+                    Assert.Equal(1, expired.Count);
+
+                    var toRefresh = database.DocumentsStorage.ExpirationStorage.GetDocumentsToRefresh(context, SystemTime.UtcNow.AddMinutes(10), true, 10, out _, CancellationToken.None);
+                    Assert.Equal(1, toRefresh.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ThrowsIfUsingWrongExpiresOrRefresh()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var expires = SystemTime.UtcNow.AddMinutes(5);
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company = new Company { Name = "Company Name" };
+                    await session.StoreAsync(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Metadata.Expires] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    metadata[Constants.Documents.Metadata.Refresh] = "test";
+                    
+                    var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                    Assert.Contains($"The expiration date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var company = new Company { Name = "Company Name" };
+                    await session.StoreAsync(company);
+                    var metadata = session.Advanced.GetMetadataFor(company);
+                    metadata[Constants.Documents.Metadata.Expires] = "test";
+                    metadata[Constants.Documents.Metadata.Refresh] = expires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+
+                    var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                    Assert.Contains($"The expiration date format for document '{company.Id.ToLowerInvariant()}' is not valid", error.Message);
                 }
             }
         }

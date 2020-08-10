@@ -36,24 +36,20 @@ namespace Raven.Server.Documents.Expiration
 
         public void Put(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
         {
-            string refreshDate = null, expirationDate = null;
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                (metadata.TryGet(Constants.Documents.Metadata.Expires, out expirationDate) == false &&
-                metadata.TryGet(Constants.Documents.Metadata.Refresh, out refreshDate) == false))
+            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
                 return;
 
-            if (refreshDate != null && expirationDate != null)
-                ThrowInvalidRefreshAndExpires(lowerId);
+            var hasExpirationDate = metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
+            var hasRefreshDate = metadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
 
-            if (refreshDate != null)
-                PutInternal(context, lowerId, refreshDate, DocumentsByRefresh);
-            else
+            if (hasExpirationDate == false && hasRefreshDate == false)
+                return;
+
+            if (hasExpirationDate)
                 PutInternal(context, lowerId, expirationDate, DocumentsByExpiration);
-        }
 
-        private static void ThrowInvalidRefreshAndExpires(Slice lowerId)
-        {
-            throw new InvalidOperationException($"Document {lowerId} cannot be defined with both {Constants.Documents.Metadata.Expires} and {Constants.Documents.Metadata.Refresh} metadata properties");
+            if (hasRefreshDate)
+                PutInternal(context, lowerId, refreshDate, DocumentsByRefresh);
         }
 
         private void PutInternal(DocumentsOperationContext context, Slice lowerId, string expirationDate, string treeName)
