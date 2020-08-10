@@ -31,6 +31,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public void OnBeforeSaveChanges(InMemoryDocumentSessionOperations session)
         {
+            session.OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(session, Id, null));
         }
     }
 }
