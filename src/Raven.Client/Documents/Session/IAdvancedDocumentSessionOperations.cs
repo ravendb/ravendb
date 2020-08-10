@@ -39,6 +39,7 @@ namespace Raven.Client.Documents.Session
         event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
         event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
         event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+        event EventHandler<BeforeDeleteEventArgs> OnBeforeDeleteByKey;
         event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
         /// <summary>

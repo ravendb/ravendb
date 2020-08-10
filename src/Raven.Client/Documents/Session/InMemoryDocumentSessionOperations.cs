@@ -70,6 +70,8 @@ namespace Raven.Client.Documents.Session
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+        
+        public event EventHandler<BeforeDeleteEventArgs> OnBeforeDeleteByKey;
 
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
@@ -2288,6 +2290,11 @@ more responsive application.
                 collectionName = Conventions.GetCollectionName(type) ?? Constants.Documents.Collections.AllDocumentsCollection;
 
             return (indexName, collectionName);
+        }
+
+        internal void OnBeforeDeleteByKeyInvoke(BeforeDeleteEventArgs beforeDeleteEventArgs)
+        {
+            OnBeforeDeleteByKey?.Invoke(this, beforeDeleteEventArgs);
         }
     }
 

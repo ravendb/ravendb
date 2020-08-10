@@ -207,6 +207,8 @@ namespace Raven.Client.Documents
         public event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
 
         public event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+        
+        public event EventHandler<BeforeDeleteEventArgs> OnBeforeDeleteByKey;
 
         public event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
@@ -299,6 +301,7 @@ namespace Raven.Client.Documents
             session.OnBeforeStore += OnBeforeStore;
             session.OnAfterSaveChanges += OnAfterSaveChanges;
             session.OnBeforeDelete += OnBeforeDelete;
+            session.OnBeforeDeleteByKey += OnBeforeDeleteByKey;
             session.OnBeforeQuery += OnBeforeQuery;
 
             session.OnBeforeConversionToDocument += OnBeforeConversionToDocument;
