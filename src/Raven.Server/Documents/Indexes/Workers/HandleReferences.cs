@@ -89,6 +89,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public string Name => "References";
 
+        protected virtual bool ItemsAndReferencesAreUsingSameEtagPool => true;
+
         public bool Execute(QueryOperationContext queryContext, TransactionOperationContext indexContext,
             Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, CancellationToken token)
         {
@@ -206,7 +208,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 foreach (var referencedDocument in references)
                                 {
-
                                     lastEtag = referencedDocument.Etag;
                                     hasChanges = true;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombstone);
@@ -319,9 +320,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                     continue;
                 }
 
-                if (item.Etag > referencedDocument.Etag)
+                if (ItemsAndReferencesAreUsingSameEtagPool && item.Etag > referencedDocument.Etag)
                 {
-                    //If the map worker already mapped this "doc" version it must be with this version of "referencedDocument" and if the map worker didn't mapped the "doc" so it will process it later 
+                    //If the map worker already mapped this "doc" version it must be with this version of "referencedDocument" and if the map worker didn't mapped the "doc" so it will process it later
                     item.Dispose();
                     continue;
                 }

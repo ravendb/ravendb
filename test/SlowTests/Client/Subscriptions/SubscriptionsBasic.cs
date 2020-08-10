@@ -10,13 +10,16 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Extensions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -585,6 +588,47 @@ namespace SlowTests.Client.Subscriptions
                 }
 
                 Assert.True(docs.Wait(_reasonableWaitTime));
+            }
+        }
+
+        [Fact]
+        public async Task AcknowledgeSubscriptionBatchWhenDBisBeingDeletedShouldThrow()
+        {
+            using var store = GetDocumentStore();
+
+            var id = await store.Subscriptions.CreateAsync<User>();
+            using (var subscription = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(id)))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "EGR",
+                        Age = 39
+                    });
+                    session.SaveChanges();
+                }
+                var t = Task.Run(async () => await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, hardDelete: true)));
+                Exception ex = null;
+                try
+                {
+                    await subscription.Run(x => { }).WaitAsync(_reasonableWaitTime);
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+                finally
+                {
+                    Assert.NotNull(ex);
+                    Assert.True(ex is DatabaseDoesNotExistException || ex is SubscriptionDoesNotExistException);
+                    Assert.Contains(
+                        ex is SubscriptionDoesNotExistException
+                            ? $"Stopping subscription {subscription.SubscriptionName} on node A, because database '{store.Database}' is being deleted."
+                            : $"Database '{store.Database}' does not exist.", ex.Message);
+                }
+
+                await t;
             }
         }
     }

@@ -620,6 +620,12 @@ namespace Raven.Server.Documents
                 return tree.StreamExist(slice);
         }
 
+        public bool AttachmentExists(DocumentsOperationContext context, Slice base64Hash)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return tree.StreamExist(base64Hash);
+        }
+
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))

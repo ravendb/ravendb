@@ -27,7 +27,7 @@ class hitTest {
     private rTree = rbush<rTreeLeaf>();
     private container: d3.Selection<any>;
     private onToggleIndex: (indexName: string) => void;
-    private handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;   
+    private handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void;
     private handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void;
     private removeTooltip: () => void;
    
@@ -37,9 +37,9 @@ class hitTest {
 
     init(container: d3.Selection<any>,
         onToggleIndex: (indeName: string) => void,
-        handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,       
+        handleTrackTooltip: (item: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) => void,
         handleGapTooltip: (item: timeGapInfo, x: number, y: number) => void,
-        removeTooltip: () => void) {       
+        removeTooltip: () => void) {
         this.container = container;
         this.onToggleIndex = onToggleIndex;
         this.handleTrackTooltip = handleTrackTooltip;
@@ -627,7 +627,7 @@ class indexPerformance extends viewModelBase {
         context.strokeStyle = this.colors.axis;
         context.strokeRect(0.5, 0.5, this.totalWidth, indexPerformance.brushSectionHeight - 1);
 
-        context.fillStyle = this.colors.brushChartColor;  
+        context.fillStyle = this.colors.brushChartColor;
         context.strokeStyle = this.colors.brushChartStrokeColor; 
         context.lineWidth = indexPerformance.brushSectionLineWidth;
 
@@ -788,7 +788,7 @@ class indexPerformance extends viewModelBase {
            
             ticks.forEach((x, i) => {
                 context.fillText(this.xTickFormat(x), indexPerformance.initialOffset + (i * indexPerformance.step) + timePaddingLeft, timePaddingTop);
-            });            
+            });
         }
         finally {
             context.restore();
@@ -862,7 +862,7 @@ class indexPerformance extends viewModelBase {
 
             this.drawTracksBackground(context, xScale);
 
-            if (xScale.domain().length) {               
+            if (xScale.domain().length) {
                 const ticks = this.getTicks(xScale);
 
                 context.save();
@@ -1108,14 +1108,14 @@ class indexPerformance extends viewModelBase {
         });
     }
 
-    private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {      
+    private drawGaps(context: CanvasRenderingContext2D, xScale: d3.time.Scale<number, number>) {
         // xScale.range has screen pixels locations of Activity periods
         // xScale.domain has Start & End times of Activity periods
 
         const range = xScale.range();
 
         context.beginPath();
-        context.strokeStyle = this.colors.gaps;       
+        context.strokeStyle = this.colors.gaps;
 
         for (let i = 1; i < range.length - 1; i += 2) { 
             const gapX = Math.floor(range[i]) + 0.5;
@@ -1162,7 +1162,7 @@ class indexPerformance extends viewModelBase {
 
         if (currentDatum !== element) {
             const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
-                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);       
+                "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);
             this.handleTooltip(element, tooltipHtml, { x, y }, false);
         }
     } 
@@ -1180,14 +1180,14 @@ class indexPerformance extends viewModelBase {
         }
         
         if (currentDatum !== element || reuseTooltip) {
-            let tooltipHtml = `${generalUtils.escapeHtml(element.Name)}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;
+            let tooltipHtml = `<span class="tooltip-title">${generalUtils.escapeHtml(element.Name)}</span><br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;
 
             const opWithParent = element as IndexingPerformanceOperationWithParent;
 
             if (opWithParent.Parent) {
                 const parentStats = opWithParent.Parent;
                 let countsDetails: string;
-                countsDetails = `<br/>*** Entries details ***<br/>`;
+                countsDetails = `<br/>*** <span class="tooltip-title">Entries details</span> ***<br/>`;
                 countsDetails += `Input Count: ${parentStats.InputCount.toLocaleString()}<br/>`;
                 countsDetails += `Output Count: ${parentStats.OutputCount.toLocaleString()}<br/>`;
                 countsDetails += `Failed Count: ${parentStats.FailedCount.toLocaleString()}<br/>`;
@@ -1197,6 +1197,8 @@ class indexPerformance extends viewModelBase {
                 if (parentStats.InputCount > 0) {
                     countsDetails += `Average Document Size: ${generalUtils.formatBytesToSize(parentStats.DocumentsSize.SizeInBytes / parentStats.InputCount)}<br/>`;
                 }
+
+                countsDetails += `Managed Allocation Size: ${parentStats.AllocatedBytes.HumaneSize}<br/>`;
 
                 if (element.DurationInMs > 0) {
                     const durationInSec = element.DurationInMs / 1000;
@@ -1209,14 +1211,14 @@ class indexPerformance extends viewModelBase {
 
             if (element.CommitDetails) {
                 let commitDetails: string;
-                commitDetails = `<br/>*** Commit details ***<br/>`;
+                commitDetails = `<br/>*** <span class="tooltip-title">Commit details</span> ***<br/>`;
                 commitDetails += `Modified pages: ${element.CommitDetails.NumberOfModifiedPages.toLocaleString()}<br/>`;
                 commitDetails += `Pages written to disk: ${element.CommitDetails.NumberOf4KbsWrittenToDisk.toLocaleString()}`;
                 tooltipHtml += commitDetails;
             }
             if (element.MapDetails) {
                 let mapDetails: string;
-                mapDetails = `<br/>*** Map details ***<br/>`;
+                mapDetails = `<br/>*** <span class="tooltip-title">Map details</span> ***<br/>`;
                 mapDetails += `Allocation budget: ${generalUtils.formatBytesToSize(element.MapDetails.AllocationBudget)}<br/>`;
                 mapDetails += `Batch status: ${element.MapDetails.BatchCompleteReason || 'In progress'}<br/>`;
                 mapDetails += `Currently allocated: ${generalUtils.formatBytesToSize(element.MapDetails.CurrentlyAllocated)} <br/>`;
@@ -1228,12 +1230,12 @@ class indexPerformance extends viewModelBase {
                 let reduceDetails: string;
 
                 if (element.ReduceDetails.TreesReduceDetails) {
-                    reduceDetails = `<br/>*** Trees details ***<br/>`;
+                    reduceDetails = `<br/>*** <span class="tooltip-title">Trees details</span> ***<br/>`;
                     reduceDetails += `Modified leafs: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedLeafs.toLocaleString()} (compressed: ${element.ReduceDetails.TreesReduceDetails.NumberOfCompressedLeafs.toLocaleString()})<br/>`;
                     reduceDetails += `Modified branches: ${element.ReduceDetails.TreesReduceDetails.NumberOfModifiedBranches.toLocaleString()}`;
                 }
                 else {
-                    reduceDetails = `<br/>*** Reduce details ***<br/>`;
+                    reduceDetails = `<br/>*** <span class="tooltip-title">Reduce details</span> ***<br/>`;
                     reduceDetails += `Reduce attempts: ${element.ReduceDetails.ReduceAttempts.toLocaleString()} <br/>`;
                     reduceDetails += `Reduce successes: ${element.ReduceDetails.ReduceSuccesses.toLocaleString()} <br/>`;
                     reduceDetails += `Reduce errors: ${element.ReduceDetails.ReduceErrors.toLocaleString()} <br/>`;
@@ -1292,7 +1294,7 @@ class indexPerformance extends viewModelBase {
             .duration(250)
             .style("opacity", 0);
          
-        this.tooltip.datum(null);      
+        this.tooltip.datum(null);
     }
 
     fileSelected(fileInput: HTMLInputElement) {
@@ -1306,24 +1308,24 @@ class indexPerformance extends viewModelBase {
         this.cancelLiveView();
         this.bufferIsFull(false);
 
-        try {            
+        try {
             const importedData: Raven.Client.Documents.Indexes.IndexPerformanceStats[] = JSON.parse(result);
 
             // Data validation
             if (!_.isArray(importedData)) {
                 messagePublisher.reportError("Invalid indexing performance file format", undefined, undefined);
-            } else {                                
+            } else {
                 this.data = importedData;
                 this.fillCache();
                 this.resetGraphData();
                 const [workData, maxConcurrentItems] = this.prepareTimeData();
                 this.draw(workData, maxConcurrentItems, true);
                 this.isImport(true);
-            }         
+            }
         }
         catch (e) {
             messagePublisher.reportError("Failed to import indexing performance data", undefined, undefined);
-        }              
+        }
     }
 
     private fillCache() {
@@ -1355,7 +1357,7 @@ class indexPerformance extends viewModelBase {
     }
     
     private setCutOffDate() {
-        this.dateCutoff = d3.max(this.data, d => d3.max(d.Performance, (p: IndexingPerformanceStatsWithCache)  => p.StartedAsDate));
+        this.dateCutoff = d3.max(this.data, d => d3.max(d.Performance, (p: IndexingPerformanceStatsWithCache) => p.StartedAsDate));
     }
     
     closeImport() {
@@ -1381,14 +1383,14 @@ class indexPerformance extends viewModelBase {
         brushAction(this.brush);
         
         if (this.brushContainer) {
-            this.brushContainer.call(this.brush);    
+            this.brushContainer.call(this.brush);
         }
         
         this.clearSelectionVisible(!this.brush.empty());
         this.brushAndZoomCallbacksDisabled = false;
     }
 
-    exportAsJson() {  
+    exportAsJson() {
         let exportFileName: string;
 
         if (this.isImport()) {
@@ -1413,7 +1415,6 @@ class indexPerformance extends viewModelBase {
 
         this.onBrush();
     }
-
 }
 
 export = indexPerformance; 

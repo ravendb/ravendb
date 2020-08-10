@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
@@ -17,7 +18,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
-using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -156,11 +156,14 @@ namespace Raven.Server.Documents.Subscriptions
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
+            using (var record = _serverStore.Cluster.ReadRawDatabaseRecord(serverStoreContext, _db.Name))
             {
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
-                var topology = _serverStore.Cluster.ReadDatabaseTopology(serverStoreContext, _db.Name);
+                var topology = record.Topology;
 
                 var whoseTaskIsIt = _db.WhoseTaskIsIt(topology, subscription, subscription);
+                if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(_serverStore.NodeTag))
+                    throw new DatabaseDoesNotExistException($"Stopping subscription {name} on node {_serverStore.NodeTag}, because database '{_db.Name}' is being deleted.");
 
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
