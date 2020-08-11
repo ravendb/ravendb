@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
@@ -19,6 +20,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
 
@@ -540,7 +542,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                     var output = _enumerator.Current;
 
+                    _parent._indexContext.CachedProperties.NewDocument();
+
                     using (_createBlittableResult.Start())
+                    using (var writer = new BlittableJsonWriter(_parent._indexContext))
                     {
                         IPropertyAccessor accessor;
 
@@ -550,15 +555,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         else
                             accessor = TypeConverter.GetPropertyAccessorForMapReduceOutput(output, _groupByFields);
 
-                        var mapResult = new DynamicJsonValue();
-
                         _reduceKeyProcessor.Reset();
 
+                        writer.WriteStartObject();
                         foreach (var property in accessor.GetPropertiesInOrder(output))
                         {
                             var value = property.Value;
                             var blittableValue = TypeConverter.ToBlittableSupportedType(value, context: _parent._indexContext);
-                            mapResult[property.Key] = blittableValue;
+
+                            writer.WritePropertyName(property.Key);
+                            WriteValue(writer, blittableValue);
 
                             if (property.IsGroupByField)
                             {
@@ -567,16 +573,112 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                             }
                         }
 
+                        writer.WriteEndObject();
+
                         if (_reduceKeyProcessor.ProcessedFields != _groupByFields.Count)
                             ThrowMissingGroupByFieldsInMapOutput(output, _groupByFields, _parent._compiledIndex);
 
                         var reduceHashKey = _reduceKeyProcessor.Hash;
 
-                        Current.Data = _parent._indexContext.ReadObject(mapResult, "map-result");
+                        writer.FinalizeDocument();
+
+                        Current.Data = writer.CreateReader();
                         Current.ReduceKeyHash = reduceHashKey;
                     }
 
                     return true;
+
+                    static void WriteValue(BlittableJsonWriter writer, object value)
+                    {
+                        switch (value)
+                        {
+                            case bool val:
+                                writer.WriteValue(val);
+                                break;
+                            case decimal val:
+                                writer.WriteValue(val);
+                                break;
+                            case double val:
+                                writer.WriteValue(val);
+                                break;
+                            case float val:
+                                writer.WriteValue(val);
+                                break;
+                            case LazyCompressedStringValue val:
+                                writer.WriteValue(val);
+                                break;
+                            case LazyNumberValue val:
+                                writer.WriteValue(val);
+                                break;
+                            case LazyStringValue val:
+                                writer.WriteValue(val);
+                                break;
+                            case long val:
+                                writer.WriteValue(val);
+                                break;
+                            case int val:
+                                writer.WriteValue(val);
+                                break;
+                            case string val:
+                                writer.WriteValue(val);
+                                break;
+                            case ulong val:
+                                writer.WriteValue(val);
+                                break;
+                            case uint val:
+                                writer.WriteValue(val);
+                                break;
+                            case short val:
+                                writer.WriteValue(val);
+                                break;
+                            case byte val:
+                                writer.WriteValue(val);
+                                break;
+                            case DateTime val:
+                                writer.WriteValue(val);
+                                break;
+                            case DateTimeOffset val:
+                                writer.WriteValue(val);
+                                break;
+                            case TimeSpan val:
+                                writer.WriteValue(val);
+                                break;
+                            case BlittableJsonReaderObject val:
+                                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+
+                                writer.WriteStartObject();
+                                for (int i = 0; i < val.Count; i++)
+                                {
+                                    val.GetPropertyByIndex(i, ref propertyDetails);
+                                    writer.WritePropertyName(propertyDetails.Name);
+                                    WriteValue(writer, propertyDetails.Value);
+                                }
+
+                                writer.WriteEndObject();
+
+                                break;
+                            case null:
+                                writer.WriteNull();
+                                break;
+                            case DynamicJsonValue val:
+                                writer.WriteStartObject();
+                                foreach (var property in val.Properties)
+                                {
+                                    writer.WritePropertyName(property.Name);
+                                    WriteValue(writer, property.Value);
+                                }
+                                writer.WriteEndObject();
+                                break;
+                            case DynamicJsonArray val:
+                                writer.WriteStartArray();
+                                foreach (var item in val)
+                                    WriteValue(writer, item);
+                                writer.WriteEndArray();
+                                break;
+                            default:
+                                throw new NotSupportedException($"Not supported value type '{value?.GetType().Name}'.");
+                        }
+                    }
                 }
 
                 public void Reset()
