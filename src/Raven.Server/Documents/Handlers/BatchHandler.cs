@@ -362,8 +362,11 @@ namespace Raven.Server.Documents.Handlers
 
                             await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
 
-                            if (waitForIndexItem.WaitForIndexing.TimeoutExceeded && throwOnTimeout)
+                            if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
                             {
+                                if (throwOnTimeout == false)
+                                    return;
+
                                 throw new TimeoutException(
                                     $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
                                     $"indexes has caught up with the changes as of etag: {cutoffEtag}");
