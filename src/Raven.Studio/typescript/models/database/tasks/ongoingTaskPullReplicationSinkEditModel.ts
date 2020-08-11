@@ -39,9 +39,12 @@ class ongoingTaskPullReplicationSinkEditModel extends ongoingTaskEditModel {
             MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             ConnectionStringName: this.connectionStringName(),
             TaskId: taskId,
-            HubDefinitionName: this.hubDefinitionName(),
+            HubName: this.hubDefinitionName(),
             CertificatePassword: certificatePassphrase,
-            CertificateWithPrivateKey: certificate
+            CertificateWithPrivateKey: certificate,
+            AllowedHubToSinkPaths: [],
+            AllowedSinkToHubPaths:[],
+            Mode: "HubToSink"
         } as Raven.Client.Documents.Operations.Replication.PullReplicationAsSink;
     }
 
