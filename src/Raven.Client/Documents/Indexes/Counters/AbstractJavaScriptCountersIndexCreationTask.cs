@@ -6,10 +6,8 @@ namespace Raven.Client.Documents.Indexes.Counters
     {
         private readonly CountersIndexDefinition _definition = new CountersIndexDefinition();
 
-        public AbstractJavaScriptCountersIndexCreationTask()
+        protected AbstractJavaScriptCountersIndexCreationTask()
         {
-            _definition.LockMode = IndexLockMode.Unlock;
-            _definition.Priority = IndexPriority.Normal;
         }
 
         /// <summary>
@@ -66,9 +64,12 @@ namespace Raven.Client.Documents.Indexes.Counters
         /// <inheritdoc />
         public override CountersIndexDefinition CreateIndexDefinition()
         {
+            _definition.Name = IndexName;
             _definition.Type = IsMapReduce ? IndexType.JavaScriptMapReduce : IndexType.JavaScriptMap;
             _definition.AdditionalSources = AdditionalSources ?? (_definition.AdditionalSources = new Dictionary<string, string>());
             _definition.Configuration = Configuration;
+            _definition.LockMode = LockMode;
+            _definition.Priority = Priority;
 
             var definition = new CountersIndexDefinition();
             _definition.CopyTo(definition);

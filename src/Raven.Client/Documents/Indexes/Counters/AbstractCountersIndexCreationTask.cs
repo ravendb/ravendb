@@ -10,11 +10,11 @@ namespace Raven.Client.Documents.Indexes.Counters
     {
     }
 
-    public class AbstractCountersIndexCreationTask<TDocument> : AbstractCountersIndexCreationTask<TDocument, TDocument>
+    public abstract class AbstractCountersIndexCreationTask<TDocument> : AbstractCountersIndexCreationTask<TDocument, TDocument>
     {
     }
 
-    public class AbstractCountersIndexCreationTask<TDocument, TReduceResult> : AbstractGenericCountersIndexCreationTask<TReduceResult>
+    public abstract class AbstractCountersIndexCreationTask<TDocument, TReduceResult> : AbstractGenericCountersIndexCreationTask<TReduceResult>
     {
         private (string Counter, Expression<Func<IEnumerable<CounterEntry>, IEnumerable>> Map) _map;
 

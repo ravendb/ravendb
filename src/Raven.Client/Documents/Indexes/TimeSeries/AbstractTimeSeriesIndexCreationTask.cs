@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
     {
     }
 
-    public class AbstractTimeSeriesIndexCreationTask<TDocument> : AbstractTimeSeriesIndexCreationTask<TDocument, TDocument>
+    public abstract class AbstractTimeSeriesIndexCreationTask<TDocument> : AbstractTimeSeriesIndexCreationTask<TDocument, TDocument>
     {
     }
 

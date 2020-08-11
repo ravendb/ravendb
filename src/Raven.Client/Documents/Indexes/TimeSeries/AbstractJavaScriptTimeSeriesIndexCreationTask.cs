@@ -2,14 +2,12 @@
 
 namespace Raven.Client.Documents.Indexes.TimeSeries
 {
-    public class AbstractJavaScriptTimeSeriesIndexCreationTask : AbstractTimeSeriesIndexCreationTask
+    public abstract class AbstractJavaScriptTimeSeriesIndexCreationTask : AbstractTimeSeriesIndexCreationTask
     {
         private readonly TimeSeriesIndexDefinition _definition = new TimeSeriesIndexDefinition();
 
-        public AbstractJavaScriptTimeSeriesIndexCreationTask()
+        protected AbstractJavaScriptTimeSeriesIndexCreationTask()
         {
-            _definition.LockMode = IndexLockMode.Unlock;
-            _definition.Priority = IndexPriority.Normal;
         }
 
         /// <summary>
@@ -66,9 +64,12 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
         /// <inheritdoc />
         public override TimeSeriesIndexDefinition CreateIndexDefinition()
         {
+            _definition.Name = IndexName;
             _definition.Type = IsMapReduce ? IndexType.JavaScriptMapReduce : IndexType.JavaScriptMap;
             _definition.AdditionalSources = AdditionalSources ?? (_definition.AdditionalSources = new Dictionary<string, string>());
             _definition.Configuration = Configuration;
+            _definition.LockMode = LockMode;
+            _definition.Priority = Priority;
 
             var definition = new TimeSeriesIndexDefinition();
             _definition.CopyTo(definition);
