@@ -474,7 +474,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 using (reader)
                 {
-                    if (reader.TryGet(nameof(RegisterReplicationHubAccessCommand.HubDefinitionName), out string hub) == false)
+                    if (reader.TryGet(nameof(RegisterReplicationHubAccessCommand.HubName), out string hub) == false)
                     {
                         _result.ReplicationHubCertificates.ErroredCount++;
                         _result.AddWarning("Could not read replication hub certificate entry.");

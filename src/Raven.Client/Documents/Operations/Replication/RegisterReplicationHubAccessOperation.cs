@@ -13,19 +13,20 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public class RegisterReplicationHubAccessOperation : IMaintenanceOperation
     {
-        private readonly string _hubDefinitionName;
+        private readonly string _hubName;
         private readonly ReplicationHubAccess _access;
 
-        public RegisterReplicationHubAccessOperation(string hubDefinitionName, ReplicationHubAccess access)
+        public RegisterReplicationHubAccessOperation(string hubName, ReplicationHubAccess access)
         {
-            if (string.IsNullOrWhiteSpace(hubDefinitionName)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubDefinitionName));
-            _hubDefinitionName = hubDefinitionName;
+            if (string.IsNullOrWhiteSpace(hubName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubName));
+            _hubName = hubName;
             _access = access ?? throw new ArgumentNullException(nameof(access));
         }
-        
+
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new RegisterReplicationHubAccessCommand(_hubDefinitionName, _access); 
+            return new RegisterReplicationHubAccessCommand(_hubName, _access);
         }
 
         private class RegisterReplicationHubAccessCommand : RavenCommand, IRaftCommand
@@ -35,7 +36,8 @@ namespace Raven.Client.Documents.Operations.Replication
 
             public RegisterReplicationHubAccessCommand(string hubName, ReplicationHubAccess access)
             {
-                if (string.IsNullOrWhiteSpace(hubName)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubName));
+                if (string.IsNullOrWhiteSpace(hubName))
+                    throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubName));
                 _hubName = hubName;
                 _access = access ?? throw new ArgumentNullException(nameof(access));
                 ResponseType = RavenCommandResponseType.Raw;
@@ -69,7 +71,7 @@ namespace Raven.Client.Documents.Operations.Replication
                 }
             }
 
-            public string RaftUniqueRequestId { get; } =  RaftIdGenerator.NewId();
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
     }
 }

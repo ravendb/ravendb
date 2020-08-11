@@ -827,7 +827,7 @@ namespace Raven.Server.Smuggler.Documents
                 First = false;
 
                 var djv = access.ToJson();
-                djv[nameof(RegisterReplicationHubAccessCommand.HubDefinitionName)] = hub;
+                djv[nameof(RegisterReplicationHubAccessCommand.HubName)] = hub;
                 _context.Write(_writer, djv);
             }
         }

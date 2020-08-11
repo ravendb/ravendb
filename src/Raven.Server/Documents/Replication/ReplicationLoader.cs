@@ -183,17 +183,17 @@ namespace Raven.Server.Documents.Replication
                case BulkRegisterReplicationHubAccessCommand bulk:
                    foreach (var cmd in bulk.Commands)
                    {
-                       DisposeRelatedPullReplication(cmd.HubDefinitionName, cmd.CertThumbprint);
+                       DisposeRelatedPullReplication(cmd.HubName, cmd.CertificateThumbprint);
                    }
                    break;
                case UpdatePullReplicationAsHubCommand put:
                    DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
                    break;
                case UnregisterReplicationHubAccessCommand del:
-                   DisposeRelatedPullReplication(del.HubDefinitionName, del.CertThumbprint);
+                   DisposeRelatedPullReplication(del.HubName, del.CertificateThumbprint);
                    break;
                case RegisterReplicationHubAccessCommand reg:
-                   DisposeRelatedPullReplication(reg.HubDefinitionName, reg.CertThumbprint);
+                   DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
                    break;
            }
            return Task.CompletedTask;

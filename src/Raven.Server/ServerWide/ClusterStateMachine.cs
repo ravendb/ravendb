@@ -1780,14 +1780,14 @@ namespace Raven.Server.ServerWide
 
         private unsafe void PutRegisterReplicationHubAccessInternal(ClusterOperationContext context, RegisterReplicationHubAccessCommand command, Table certs)
         {
-            using (Slice.From(context.Allocator, (command.Database + "/" + command.HubDefinitionName + "/" + command.CertThumbprint).ToLowerInvariant(), out var keySlice))
-            using (Slice.From(context.Allocator, (command.Database + "/" + command.HubDefinitionName + "/" + command.CertPublicKeyHash).ToLowerInvariant(),
+            using (Slice.From(context.Allocator, (command.Database + "/" + command.HubName + "/" + command.CertificateThumbprint).ToLowerInvariant(), out var keySlice))
+            using (Slice.From(context.Allocator, (command.Database + "/" + command.HubName + "/" + command.CertificatePublicKeyHash).ToLowerInvariant(),
                 out var publicKeySlice))
             using (var obj = context.ReadObject(new DynamicJsonValue
             {
                 [nameof(command.AllowedHubToSinkPaths)] = command.AllowedHubToSinkPaths,
                 [nameof(command.AllowedSinkToHubPaths)] = command.AllowedSinkToHubPaths,
-                [nameof(command.HubDefinitionName)] = command.HubDefinitionName,
+                [nameof(command.HubName)] = command.HubName,
                 [nameof(command.Issuer)] = command.Issuer,
                 [nameof(command.NotBefore)] = command.NotBefore,
                 [nameof(command.NotAfter)] = command.NotAfter,
@@ -1797,7 +1797,7 @@ namespace Raven.Server.ServerWide
             {
                 if (_clusterAuditLog.IsInfoEnabled)
                     _clusterAuditLog.Info(
-                        $"Registering new replication certificate {command.Name} = '{command.CertThumbprint}' for replication in {command.Database} using {command.HubDefinitionName} " +
+                        $"Registering new replication certificate {command.Name} = '{command.CertificateThumbprint}' for replication in {command.Database} using {command.HubName} " +
                         $"Allowed read paths: {string.Join(", ", command.AllowedHubToSinkPaths)}, Allowed write paths: {string.Join(", ", command.AllowedSinkToHubPaths)}.");
 
 
@@ -1844,14 +1844,14 @@ namespace Raven.Server.ServerWide
             {
                 var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
-                using (Slice.From(context.Allocator, (command.Database + "/" + command.HubDefinitionName + "/" + command.CertThumbprint).ToLowerInvariant(), out var keySlice))
+                using (Slice.From(context.Allocator, (command.Database + "/" + command.HubName + "/" + command.CertificateThumbprint).ToLowerInvariant(), out var keySlice))
                 {
 
                     if (certs.DeleteByKey(keySlice) == false)
                         return;
 
                     if (_clusterAuditLog.IsInfoEnabled)
-                        _clusterAuditLog.Info($"Removed replication certificate '{command.CertThumbprint}' for replication in {command.Database} using {command.HubDefinitionName}.");
+                        _clusterAuditLog.Info($"Removed replication certificate '{command.CertificateThumbprint}' for replication in {command.Database} using {command.HubName}.");
                 }
             }
             finally
@@ -3510,7 +3510,7 @@ namespace Raven.Server.ServerWide
             {
                 var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
 
-                blittable.TryGet(nameof(RegisterReplicationHubAccessCommand.HubDefinitionName), out string hub);
+                blittable.TryGet(nameof(RegisterReplicationHubAccessCommand.HubName), out string hub);
                 var details = JsonDeserializationCluster.DetailedReplicationHubAccess(blittable);
 
                 string certBase64 = GetCertificateAsBase64(val);
