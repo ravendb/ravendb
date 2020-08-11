@@ -341,42 +341,39 @@ namespace Raven.Server.Documents.Handlers
                 indexesToWait.Add(indexToWait);
             }
 
-            using (contextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
+            var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
+
+            while (true)
             {
-                while (true)
+                var hadStaleIndexes = false;
+
+                using (contextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (context.OpenReadTransaction())
                 {
-                    var hadStaleIndexes = false;
-
-                    using (context.OpenReadTransaction())
+                    foreach (var waitForIndexItem in indexesToWait)
                     {
-                        foreach (var waitForIndexItem in indexesToWait)
+                        if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
+                            continue;
+
+                        hadStaleIndexes = true;
+
+                        await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
+
+                        if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
                         {
-                            var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
+                            if (throwOnTimeout == false)
+                                return;
 
-                            var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
-
-                            if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
-                                continue;
-
-                            hadStaleIndexes = true;
-
-                            await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
-
-                            if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
-                            {
-                                if (throwOnTimeout == false)
-                                    return;
-
-                                throw new TimeoutException(
-                                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                                    $"indexes has caught up with the changes as of etag: {cutoffEtag}");
-                            }
+                            throw new TimeoutException(
+                                $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
+                                $"indexes has caught up with the changes as of etag: {cutoffEtag}");
                         }
                     }
-
-                    if (hadStaleIndexes == false)
-                        return;
                 }
+
+                if (hadStaleIndexes == false)
+                    return;
             }
         }
 
