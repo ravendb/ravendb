@@ -181,7 +181,7 @@ namespace Raven.Client.Json.Serialization
         
         internal static readonly Func<BlittableJsonReaderObject, AddEtlOperationResult> AddEtlOperationResult = GenerateJsonDeserializationRoutine<AddEtlOperationResult>();
         
-        internal static readonly Func<BlittableJsonReaderObject, ReplicationHubAccessResult> ReplicationHubAccessList = GenerateJsonDeserializationRoutine<ReplicationHubAccessResult>();
+        internal static readonly Func<BlittableJsonReaderObject, ReplicationHubAccessResult> ReplicationHubAccessResult = GenerateJsonDeserializationRoutine<ReplicationHubAccessResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, UpdateEtlOperationResult> UpdateEtlOperationResult = GenerateJsonDeserializationRoutine<UpdateEtlOperationResult>();
 

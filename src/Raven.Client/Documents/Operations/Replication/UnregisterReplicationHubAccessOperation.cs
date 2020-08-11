@@ -9,36 +9,38 @@ namespace Raven.Client.Documents.Operations.Replication
 {
     public class UnregisterReplicationHubAccessOperation : IMaintenanceOperation
     {
-        private readonly string _hubDefinitionName;
+        private readonly string _hubName;
         private readonly string _thumbprint;
 
-        public UnregisterReplicationHubAccessOperation(string hubDefinitionName, string thumbprint)
+        public UnregisterReplicationHubAccessOperation(string hubName, string thumbprint)
         {
-            if (string.IsNullOrWhiteSpace(hubDefinitionName)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubDefinitionName));
-            if (string.IsNullOrWhiteSpace(thumbprint)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(thumbprint));
-            _hubDefinitionName = hubDefinitionName;
+            if (string.IsNullOrWhiteSpace(hubName))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubName));
+            if (string.IsNullOrWhiteSpace(thumbprint))
+                throw new ArgumentException("Value cannot be null or whitespace.", nameof(thumbprint));
+            _hubName = hubName;
             _thumbprint = thumbprint;
         }
-        
+
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new UnregisterReplicationHubAccessCommand(_hubDefinitionName, _thumbprint); 
+            return new UnregisterReplicationHubAccessCommand(_hubName, _thumbprint);
         }
 
         private class UnregisterReplicationHubAccessCommand : RavenCommand, IRaftCommand
         {
-            private readonly string _hubDefinitionName;
+            private readonly string _hubName;
             private readonly string _thumbprint;
 
-            public UnregisterReplicationHubAccessCommand(string hubDefinitionName, string thumbprint)
+            public UnregisterReplicationHubAccessCommand(string hubName, string thumbprint)
             {
-                _hubDefinitionName = hubDefinitionName;
+                _hubName = hubName;
                 _thumbprint = thumbprint;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication/hub/access?name={Uri.EscapeUriString(_hubDefinitionName)}&thumbprint={Uri.EscapeUriString(_thumbprint)}";
+                url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication/hub/access?name={Uri.EscapeUriString(_hubName)}&thumbprint={Uri.EscapeUriString(_thumbprint)}";
 
                 var request = new HttpRequestMessage
                 {

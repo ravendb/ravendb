@@ -7,34 +7,35 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public class GetReplicationHubAccessOperation : IMaintenanceOperation<ReplicationHubAccessResult>
+    public class GetReplicationHubAccessOperation : IMaintenanceOperation<DetailedReplicationHubAccess[]>
     {
-        private readonly string _hubDefinitionName;
+        private readonly string _hubName;
         private readonly int _start;
         private readonly int _pageSize;
 
-        public GetReplicationHubAccessOperation(string hubDefinitionName, int start = 0, int pageSize = 25)
+        public GetReplicationHubAccessOperation(string hubName, int start = 0, int pageSize = 25)
         {
-            _hubDefinitionName = hubDefinitionName;
+            _hubName = hubName;
             _start = start;
             _pageSize = pageSize;
         }
-        
-        public RavenCommand<ReplicationHubAccessResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+
+        public RavenCommand<DetailedReplicationHubAccess[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetReplicationHubAccessCommand(_hubDefinitionName, _start, _pageSize); 
+            return new GetReplicationHubAccessCommand(_hubName, _start, _pageSize);
         }
 
-        private class GetReplicationHubAccessCommand : RavenCommand<ReplicationHubAccessResult>
+        private class GetReplicationHubAccessCommand : RavenCommand<DetailedReplicationHubAccess[]>
         {
-            private readonly string _hubDefinitionName;
+            private readonly string _hubName;
             private readonly int _start;
             private readonly int _pageSize;
 
-            public GetReplicationHubAccessCommand(string hubDefinitionName, int start, int pageSize)
+            public GetReplicationHubAccessCommand(string hubName, int start, int pageSize)
             {
-                if (string.IsNullOrWhiteSpace(hubDefinitionName)) throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubDefinitionName));
-                _hubDefinitionName = hubDefinitionName;
+                if (string.IsNullOrWhiteSpace(hubName))
+                    throw new ArgumentException("Value cannot be null or whitespace.", nameof(hubName));
+                _hubName = hubName;
                 _start = start;
                 _pageSize = pageSize;
             }
@@ -43,7 +44,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication/hub/access?name={Uri.EscapeUriString(_hubDefinitionName)}&start={_start}&pageSize={_pageSize}";
+                url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication/hub/access?name={Uri.EscapeUriString(_hubName)}&start={_start}&pageSize={_pageSize}";
 
                 var request = new HttpRequestMessage
                 {
@@ -52,13 +53,13 @@ namespace Raven.Client.Documents.Operations.Replication
 
                 return request;
             }
-            
+
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.ReplicationHubAccessList(response);
+                Result = JsonDeserializationClient.ReplicationHubAccessResult(response).Results;
             }
         }
     }

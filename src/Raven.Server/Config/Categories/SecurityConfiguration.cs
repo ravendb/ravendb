@@ -49,7 +49,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("EXPERT: Whether RavenDB will consider memory lock error to be catastrophic. This is used with encrypted databases to ensure that temporary buffers are never written to disk and are locked to memory. Setting this to true is not recommended and should be done only after proper security analysis has been performed.")]
         [DefaultValue(false)]
-        [ConfigurationEntry("Security.DoNotConsiderMemoryLockFailureAsCatastrophicError", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("Security.DoNotConsiderMemoryLockFailureAsCatastrophicError", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public bool DoNotConsiderMemoryLockFailureAsCatastrophicError { get; set; }
 
         [Description("The (optional) password of the .pfx certificate file.")]
@@ -136,7 +136,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("Well known certificate thumbprints that will be trusted by the server as cluster admins.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Security.WellKnownCertificates.Admin", ConfigurationEntryScope.ServerWideOnly)]
         public string[] WellKnownAdminCertificates { get; set; }
 
         [Description("Well known issuer 'Public Key Pinning Hashes' that will be used to validate a new client certificate when the issuer's certificate has changed.")]

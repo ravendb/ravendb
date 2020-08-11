@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
         public string TaskName { get; set; }
         public string Error { get; set; }
-        
+
         public string MentorNode { get; set; }
 
         public virtual DynamicJsonValue ToJson()
@@ -104,8 +104,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string[] TopologyDiscoveryUrls { get; set; }
         public string DestinationDatabase { get; set; }
         public string ConnectionStringName { get; set; }
-        public TimeSpan DelayReplicationFor { get; set; } 
-        
+        public TimeSpan DelayReplicationFor { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
@@ -146,21 +146,28 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             TaskType = OngoingTaskType.PullReplicationAsSink;
         }
 
-        public string HubDefinitionName { get; set; }
-        
+        [Obsolete("Use HubName instead.")]
+        public string HubDefinitionName { get => HubName; set => HubName = value; }
+
+        public string HubName { get; set; }
+
         public string DestinationUrl { get; set; }
         public string[] TopologyDiscoveryUrls { get; set; }
         public string DestinationDatabase { get; set; }
         public string ConnectionStringName { get; set; }
-        
+
         public string CertificatePublicKey { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(TopologyDiscoveryUrls)] = TopologyDiscoveryUrls;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(HubName)] = HubName;
+#pragma warning disable CS0618 // Type or member is obsolete
             json[nameof(HubDefinitionName)] = HubDefinitionName;
+#pragma warning restore CS0618 // Type or member is obsolete
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(CertificatePublicKey)] = CertificatePublicKey;
             return json;
@@ -194,12 +201,12 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
     public class OngoingTaskRavenEtlDetails : OngoingTask
     {
         public string DestinationUrl { get; set; }
-        
+
         public OngoingTaskRavenEtlDetails()
         {
             TaskType = OngoingTaskType.RavenEtl;
         }
-        
+
         public RavenEtlConfiguration Configuration { get; set; }
 
         public override DynamicJsonValue ToJson()
@@ -210,7 +217,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             return json;
         }
     }
-    
+
     public class OngoingTaskSqlEtlListView : OngoingTask
     {
         public OngoingTaskSqlEtlListView()
@@ -221,10 +228,10 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public string DestinationServer { get; set; }
 
         public string DestinationDatabase { get; set; }
-        
+
         public string ConnectionStringName { get; set; }
-        
-        public bool ConnectionStringDefined { get; set; } 
+
+        public bool ConnectionStringDefined { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -289,7 +296,8 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
     }
 
-    public class ModifyOngoingTaskResult { 
+    public class ModifyOngoingTaskResult
+    {
         public long TaskId { get; set; }
         public long RaftCommandIndex;
         public string ResponsibleNode;

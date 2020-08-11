@@ -29,54 +29,53 @@ namespace SlowTests.Issues
         {
             using var storeA = GetDocumentStore();
             using var storeB = GetDocumentStore();
-            
+
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Breed = "German Shepherd"}, "users/ayende/dogs/arava");
-                await s.StoreAsync(new {Color = "Gray/White"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren"}, "users/ayende");
+                await s.StoreAsync(new { Breed = "German Shepherd" }, "users/ayende/dogs/arava");
+                await s.StoreAsync(new { Color = "Gray/White" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
                 s.CountersFor("users/ayende").Increment("test");
                 s.CountersFor("users/pheobe").Increment("test");
                 s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
                 {
                     HeartRate = 34
-                },"test/things/out");
-                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today,  new HeartRateMeasure
+                }, "test/things/out");
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today, new HeartRateMeasure
                 {
                     HeartRate = 55
-                },"test/things/out");
+                }, "test/things/out");
                 s.Advanced.Attachments.Store("users/ayende", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
                 s.Advanced.Attachments.Store("users/pheobe", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
-                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende",ForceRevisionStrategy.None);
-                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe",ForceRevisionStrategy.None);
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende", ForceRevisionStrategy.None);
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe", ForceRevisionStrategy.None);
                 await s.SaveChangesAsync();
             }
-      
+
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Color = "Gray/White 2"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren 2"}, "users/ayende");
-              
+                await s.StoreAsync(new { Color = "Gray/White 2" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren 2" }, "users/ayende");
+
                 s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende");
                 s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe");
                 await s.SaveChangesAsync();
             }
-            
+
             await storeA.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Database = storeB.Database,
                 Name = storeB.Database + "ConStr",
-                TopologyDiscoveryUrls =  storeA.Urls
+                TopologyDiscoveryUrls = storeA.Urls
             }));
             await storeA.Maintenance.SendAsync(new UpdateExternalReplicationOperation(new ExternalReplication
             {
-                ConnectionStringName =  storeB.Database + "ConStr",
+                ConnectionStringName = storeB.Database + "ConStr",
                 Name = "erpl"
             }));
-            
+
             Assert.True(WaitForDocument(storeB, "users/ayende"));
             Assert.True(WaitForDocument(storeB, "users/pheobe"));
-            
         }
 
         [Fact]
@@ -93,7 +92,7 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
                 ModifyDatabaseName = s => dbNameA
             });
-            
+
             var pullCert = certificates.ClientCertificate2.Value;
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
@@ -104,10 +103,10 @@ namespace SlowTests.Issues
                 {
                     Name = "Arava",
                     CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
-                    AllowedHubToSinkPaths = new[] {"users/ayende", "users/ayende/*"}
+                    AllowedHubToSinkPaths = new[] { "users/ayende", "users/ayende/*" }
                 }));
         }
-        
+
         [Fact]
         public async Task Cannot_setup_partial_filtered_replication()
         {
@@ -122,7 +121,7 @@ namespace SlowTests.Issues
                 ClientCertificate = adminCert,
                 ModifyDatabaseName = s => dbNameA
             });
-            
+
             var pullCertA = certificates.ClientCertificate2.Value;
             var pullCertB = certificates.ClientCertificate3.Value;
 
@@ -135,13 +134,13 @@ namespace SlowTests.Issues
                     [pullCertB.Thumbprint] = Convert.ToBase64String(pullCertB.Export(X509ContentType.Cert)),
                 },
             }));
-            
+
             await Assert.ThrowsAsync<RavenException>(async () => await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
                 new ReplicationHubAccess
                 {
                     Name = "Arava",
                     CertificateBase64 = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert)),
-                    AllowedHubToSinkPaths = new[] {"users/ayende", "users/ayende/*"}
+                    AllowedHubToSinkPaths = new[] { "users/ayende", "users/ayende/*" }
                 })));
         }
 
@@ -149,6 +148,7 @@ namespace SlowTests.Issues
         {
             [TimeSeriesValue(0)] public double HeartRate;
         }
+
         [Fact]
         public async Task Can_pull_via_filtered_replication()
         {
@@ -173,23 +173,23 @@ namespace SlowTests.Issues
 
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Breed = "German Shepherd"}, "users/ayende/dogs/arava");
-                await s.StoreAsync(new {Color = "Gray/White"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren"}, "users/ayende");
+                await s.StoreAsync(new { Breed = "German Shepherd" }, "users/ayende/dogs/arava");
+                await s.StoreAsync(new { Color = "Gray/White" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
                 s.CountersFor("users/ayende").Increment("test");
                 s.CountersFor("users/pheobe").Increment("test");
                 s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
                 {
                     HeartRate = 34
-                },"test/things/out");
-                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today,  new HeartRateMeasure
+                }, "test/things/out");
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today, new HeartRateMeasure
                 {
                     HeartRate = 55
-                },"test/things/out");
+                }, "test/things/out");
                 s.Advanced.Attachments.Store("users/ayende", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
                 s.Advanced.Attachments.Store("users/pheobe", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
-                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende",ForceRevisionStrategy.None);
-                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe",ForceRevisionStrategy.None);
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende", ForceRevisionStrategy.None);
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe", ForceRevisionStrategy.None);
                 await s.SaveChangesAsync();
             }
 
@@ -198,23 +198,23 @@ namespace SlowTests.Issues
                 await s.LoadAsync<object>("users/pheobe");
                 await s.LoadAsync<object>("users/ayende");
             }
-            
+
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Color = "Gray/White 2"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren 2"}, "users/ayende");
-              
+                await s.StoreAsync(new { Color = "Gray/White 2" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren 2" }, "users/ayende");
+
                 s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende");
                 s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe");
                 await s.SaveChangesAsync();
             }
-            
+
             using (var s = storeA.OpenAsyncSession())
             {
                 await s.LoadAsync<object>("users/pheobe");
                 await s.LoadAsync<object>("users/ayende");
             }
-            
+
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
@@ -222,23 +222,23 @@ namespace SlowTests.Issues
                 Name = "pull",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
-            
+
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
             {
                 Name = "Arava",
-                AllowedHubToSinkPaths =  new[]
+                AllowedHubToSinkPaths = new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
                 },
-                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
-            
+
             await storeB.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Database = dbNameA,
                 Name = dbNameA + "ConStr",
-                TopologyDiscoveryUrls =  storeA.Urls
+                TopologyDiscoveryUrls = storeA.Urls
             }));
             await storeB.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
@@ -251,19 +251,19 @@ namespace SlowTests.Issues
 
             using (var s = storeB.OpenAsyncSession())
             {
-                Assert.Null(await s.LoadAsync<object>("users/pheobe")); 
-                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe",DateTime.Today.AddDays(1)));
+                Assert.Null(await s.LoadAsync<object>("users/pheobe"));
+                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", DateTime.Today.AddDays(1)));
                 Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
                 Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
                 Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
-                
+
                 WaitForUserToContinueTheTest(storeA);
-                
+
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
-                
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
@@ -276,21 +276,21 @@ namespace SlowTests.Issues
             }
 
             WaitForDocumentDeletion(storeB, "users/ayende/dogs/arava");
-            
+
             using (var s = storeB.OpenAsyncSession())
             {
-                Assert.Null(await s.LoadAsync<object>("users/pheobe")); 
+                Assert.Null(await s.LoadAsync<object>("users/pheobe"));
                 Assert.Null(await s.LoadAsync<object>("users/ayende/dogs/arava"));
-                
+
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
+
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
             }
         }
-        
+
         [Fact]
         public async Task Can_push_via_filtered_replication()
         {
@@ -315,23 +315,23 @@ namespace SlowTests.Issues
 
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Breed = "German Shepherd"}, "users/ayende/dogs/arava");
-                await s.StoreAsync(new {Color = "Gray/White"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren"}, "users/ayende");
+                await s.StoreAsync(new { Breed = "German Shepherd" }, "users/ayende/dogs/arava");
+                await s.StoreAsync(new { Color = "Gray/White" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
                 s.CountersFor("users/ayende").Increment("test");
                 s.CountersFor("users/pheobe").Increment("test");
                 s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").Append(DateTime.Today, new HeartRateMeasure
                 {
                     HeartRate = 34
-                },"test/things/out");
-                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today,  new HeartRateMeasure
+                }, "test/things/out");
+                s.TimeSeriesFor<HeartRateMeasure>("users/ayende").Append(DateTime.Today, new HeartRateMeasure
                 {
                     HeartRate = 55
-                },"test/things/out");
+                }, "test/things/out");
                 s.Advanced.Attachments.Store("users/ayende", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
                 s.Advanced.Attachments.Store("users/pheobe", "test.bin", new MemoryStream(Encoding.UTF8.GetBytes("hello")));
-                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende",ForceRevisionStrategy.None);
-                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe",ForceRevisionStrategy.None);
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende", ForceRevisionStrategy.None);
+                s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe", ForceRevisionStrategy.None);
                 await s.SaveChangesAsync();
             }
 
@@ -340,48 +340,48 @@ namespace SlowTests.Issues
                 await s.LoadAsync<object>("users/pheobe");
                 await s.LoadAsync<object>("users/ayende");
             }
-            
+
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Color = "Gray/White 2"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren 2"}, "users/ayende");
-              
+                await s.StoreAsync(new { Color = "Gray/White 2" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren 2" }, "users/ayende");
+
                 s.Advanced.Revisions.ForceRevisionCreationFor("users/ayende");
                 s.Advanced.Revisions.ForceRevisionCreationFor("users/pheobe");
                 await s.SaveChangesAsync();
             }
-            
+
             using (var s = storeA.OpenAsyncSession())
             {
                 await s.LoadAsync<object>("users/pheobe");
                 await s.LoadAsync<object>("users/ayende");
             }
-            
+
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
-            
+
             await storeB.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "push",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
-            
+
             await storeB.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("push", new ReplicationHubAccess
             {
                 Name = "Arava",
-                AllowedSinkToHubPaths =  new[]
+                AllowedSinkToHubPaths = new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
                 },
-                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
-            
+
             await storeA.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Database = dbNameB,
                 Name = dbNameB + "ConStr",
-                TopologyDiscoveryUrls =  storeA.Urls
+                TopologyDiscoveryUrls = storeA.Urls
             }));
             await storeA.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
@@ -392,23 +392,21 @@ namespace SlowTests.Issues
             }));
 
             WaitForUserToContinueTheTest(storeA);
-            
+
             WaitForDocument(storeB, "users/ayende");
             using (var s = storeB.OpenAsyncSession())
             {
-                Assert.Null(await s.LoadAsync<object>("users/pheobe")); 
-                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe",DateTime.Today.AddDays(1)));
+                Assert.Null(await s.LoadAsync<object>("users/pheobe"));
+                Assert.Null(await s.Advanced.Revisions.GetAsync<object>("users/pheobe", DateTime.Today.AddDays(1)));
                 Assert.Null(await s.CountersFor("users/pheobe").GetAsync("test"));
                 Assert.Null(await s.TimeSeriesFor<HeartRateMeasure>("users/pheobe").GetAsync());
                 Assert.Null(await s.Advanced.Attachments.GetAsync("users/pheobe", "test.bin"));
-                
-       
-                
+
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
-                
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
+
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
@@ -421,21 +419,22 @@ namespace SlowTests.Issues
             }
 
             WaitForDocumentDeletion(storeB, "users/ayende/dogs/arava");
-            
+
             using (var s = storeB.OpenAsyncSession())
             {
-                Assert.Null(await s.LoadAsync<object>("users/pheobe")); 
+                Assert.Null(await s.LoadAsync<object>("users/pheobe"));
                 Assert.Null(await s.LoadAsync<object>("users/ayende/dogs/arava"));
-                
+
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
-                
-                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende",DateTime.Today.AddDays(1)));
+
+                Assert.NotNull(await s.Advanced.Revisions.GetAsync<object>("users/ayende", DateTime.Today.AddDays(1)));
                 Assert.NotNull(await s.CountersFor("users/ayende").GetAsync("test"));
                 Assert.NotEmpty(await s.TimeSeriesFor<HeartRateMeasure>("users/ayende").GetAsync());
                 Assert.NotNull(await s.Advanced.Attachments.GetAsync("users/ayende", "test.bin"));
             }
         }
-         [Fact]
+
+        [Fact]
         public async Task Can_pull_and_push_and_filter_at_dest_and_source()
         {
             var certificates = SetupServerAuthentication();
@@ -459,37 +458,36 @@ namespace SlowTests.Issues
 
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Location = "Hadera"}, "users/ayende/office");
-                await s.StoreAsync(new {Breed = "German Shepherd"}, "users/ayende/dogs/arava");
-                await s.StoreAsync(new {Color = "Gray/White"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren"}, "users/ayende");
-                
+                await s.StoreAsync(new { Location = "Hadera" }, "users/ayende/office");
+                await s.StoreAsync(new { Breed = "German Shepherd" }, "users/ayende/dogs/arava");
+                await s.StoreAsync(new { Color = "Gray/White" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
+
                 await s.SaveChangesAsync();
             }
-            
+
             using (var s = storeB.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Rolling = true}, "users/ayende/chair");
-                await s.StoreAsync(new {Color = "Black"}, "users/oscar");
-                await s.StoreAsync(new {Secret = "P@$$w0rD"}, "users/ayende/config");
+                await s.StoreAsync(new { Rolling = true }, "users/ayende/chair");
+                await s.StoreAsync(new { Color = "Black" }, "users/oscar");
+                await s.StoreAsync(new { Secret = "P@$$w0rD" }, "users/ayende/config");
 
                 await s.SaveChangesAsync();
             }
-
 
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
-            
+
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "both",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
-            
+
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
             {
                 Name = "Arava",
-                AllowedSinkToHubPaths =  new[]
+                AllowedSinkToHubPaths = new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
@@ -498,14 +496,14 @@ namespace SlowTests.Issues
                 {
                     "users/ayende/config"
                 },
-                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
-            
+
             await storeB.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
             {
                 Database = dbNameA,
                 Name = dbNameA + "ConStr",
-                TopologyDiscoveryUrls =  storeA.Urls
+                TopologyDiscoveryUrls = storeA.Urls
             }));
             await storeB.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
             {
@@ -531,24 +529,24 @@ namespace SlowTests.Issues
             WaitForUserToContinueTheTest(storeA);
             using (var s = storeB.OpenAsyncSession())
             {
-                Assert.Null(await s.LoadAsync<object>("users/ayende/office")); 
-                Assert.Null(await s.LoadAsync<object>("users/pheobe")); 
-                
+                Assert.Null(await s.LoadAsync<object>("users/ayende/office"));
+                Assert.Null(await s.LoadAsync<object>("users/pheobe"));
+
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/dogs/arava"));
                 Assert.Null(await s.LoadAsync<object>("users/ayende/office"));
-                
+
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende"));
             }
-            
+
             using (var s = storeA.OpenAsyncSession())
             {
-                Assert.Null(await s.LoadAsync<object>("users/ayende/chair")); 
-                Assert.Null(await s.LoadAsync<object>("users/oscar")); 
+                Assert.Null(await s.LoadAsync<object>("users/ayende/chair"));
+                Assert.Null(await s.LoadAsync<object>("users/oscar"));
                 Assert.NotNull(await s.LoadAsync<object>("users/ayende/config"));
             }
         }
-        
-         [Fact]
+
+        [Fact]
         public async Task Can_import_export_replication_certs()
         {
             var certificates = SetupServerAuthentication();
@@ -572,27 +570,27 @@ namespace SlowTests.Issues
 
             using (var s = storeA.OpenAsyncSession())
             {
-                await s.StoreAsync(new {Location = "Hadera"}, "users/ayende/office");
-                await s.StoreAsync(new {Breed = "German Shepherd"}, "users/ayende/dogs/arava");
-                await s.StoreAsync(new {Color = "Gray/White"}, "users/pheobe");
-                await s.StoreAsync(new {Name = "Oren"}, "users/ayende");
-                
+                await s.StoreAsync(new { Location = "Hadera" }, "users/ayende/office");
+                await s.StoreAsync(new { Breed = "German Shepherd" }, "users/ayende/dogs/arava");
+                await s.StoreAsync(new { Color = "Gray/White" }, "users/pheobe");
+                await s.StoreAsync(new { Name = "Oren" }, "users/ayende");
+
                 await s.SaveChangesAsync();
             }
 
             var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
                 X509KeyStorageFlags.Exportable);
-            
+
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "both",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
             }));
-            
+
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
             {
                 Name = "Arava",
-                AllowedSinkToHubPaths =  new[]
+                AllowedSinkToHubPaths = new[]
                 {
                     "users/ayende",
                     "users/ayende/*"
@@ -601,21 +599,21 @@ namespace SlowTests.Issues
                 {
                     "users/ayende/config"
                 },
-                CertificateBase64 =  Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
             }));
 
             var file = GetTempFileName();
             await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
-            
-            ReplicationHubAccessResult accessResult = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
-            Assert.Empty(accessResult.Results);
+
+            var accessResults = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
+            Assert.Empty(accessResults);
 
             var op = await storeB.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
             await op.WaitForCompletionAsync();
-            
-            accessResult = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
-            Assert.NotEmpty(accessResult.Results);
-            Assert.Equal("Arava", accessResult.Results[0].Name);
+
+            accessResults = await storeB.Maintenance.SendAsync(new GetReplicationHubAccessOperation("both"));
+            Assert.NotEmpty(accessResults);
+            Assert.Equal("Arava", accessResults[0].Name);
         }
     }
 }

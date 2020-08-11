@@ -15,24 +15,23 @@ namespace Raven.Server.ServerWide.Commands
 
         public BulkRegisterReplicationHubAccessCommand() : base(RaftIdGenerator.DontCareId)
         {
-            
         }
-        
+
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var djv = base.ToJson(context);
             djv[nameof(Database)] = Database;
-            djv[nameof(Commands)] = new DynamicJsonArray(Commands.Select(x=>x.ToJson(context)));
+            djv[nameof(Commands)] = new DynamicJsonArray(Commands.Select(x => x.ToJson(context)));
             return djv;
         }
     }
-    
+
     public class RegisterReplicationHubAccessCommand : CommandBase
     {
         public string Database;
-        public string HubDefinitionName;
-        public string CertPublicKeyHash;
-        public string CertThumbprint;
+        public string HubName;
+        public string CertificatePublicKeyHash;
+        public string CertificateThumbprint;
         public string CertificateBase64;
         public string[] AllowedHubToSinkPaths;
         public string[] AllowedSinkToHubPaths;
@@ -48,10 +47,10 @@ namespace Raven.Server.ServerWide.Commands
         }
 
         public RegisterReplicationHubAccessCommand(
-            string databaseName, 
-            string hub, 
-            ReplicationHubAccess access, 
-            string certPublicKeyHash, 
+            string databaseName,
+            string hubName,
+            ReplicationHubAccess access,
+            string certPublicKeyHash,
             string certThumbprint,
             string uniqueRequestId,
             string issuer,
@@ -61,9 +60,9 @@ namespace Raven.Server.ServerWide.Commands
         {
             UniqueRequestId = uniqueRequestId;
             Database = databaseName;
-            HubDefinitionName= hub;
-            CertPublicKeyHash = certPublicKeyHash;
-            CertThumbprint = certThumbprint;
+            HubName = hubName;
+            CertificatePublicKeyHash = certPublicKeyHash;
+            CertificateThumbprint = certThumbprint;
             CertificateBase64 = access.CertificateBase64;
             Name = access.Name;
             AllowedHubToSinkPaths = access.AllowedHubToSinkPaths;
@@ -78,10 +77,10 @@ namespace Raven.Server.ServerWide.Commands
         {
             var djv = base.ToJson(context);
             djv[nameof(Name)] = Name;
-            djv[nameof(HubDefinitionName)] = HubDefinitionName;
+            djv[nameof(HubName)] = HubName;
             djv[nameof(Database)] = Database;
-            djv[nameof(CertPublicKeyHash)] = CertPublicKeyHash;
-            djv[nameof(CertThumbprint)] = CertThumbprint;
+            djv[nameof(CertificatePublicKeyHash)] = CertificatePublicKeyHash;
+            djv[nameof(CertificateThumbprint)] = CertificateThumbprint;
             djv[nameof(CertificateBase64)] = CertificateBase64;
             djv[nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths;
             djv[nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths;
@@ -93,32 +92,32 @@ namespace Raven.Server.ServerWide.Commands
             return djv;
         }
     }
-    
+
     public class UnregisterReplicationHubAccessCommand : CommandBase
     {
         public string Database;
-        public string HubDefinitionName;
-        public string CertThumbprint;
+        public string HubName;
+        public string CertificateThumbprint;
 
         public UnregisterReplicationHubAccessCommand()
         {
             // for deserialization
         }
 
-        public UnregisterReplicationHubAccessCommand(string databaseName, string hub, string certThumbprint, string uniqueRequestId)
+        public UnregisterReplicationHubAccessCommand(string databaseName, string hubName, string certThumbprint, string uniqueRequestId)
         {
             UniqueRequestId = uniqueRequestId;
             Database = databaseName;
-            HubDefinitionName= hub;
-            CertThumbprint = certThumbprint;
+            HubName = hubName;
+            CertificateThumbprint = certThumbprint;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
             var djv = base.ToJson(context);
-            djv[nameof(HubDefinitionName)] = HubDefinitionName;
+            djv[nameof(HubName)] = HubName;
             djv[nameof(Database)] = Database;
-            djv[nameof(CertThumbprint)] = CertThumbprint;
+            djv[nameof(CertificateThumbprint)] = CertificateThumbprint;
             return djv;
         }
     }
