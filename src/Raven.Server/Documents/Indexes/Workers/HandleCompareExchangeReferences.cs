@@ -19,6 +19,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             _collectionsWithCompareExchangeReferences = collectionsWithCompareExchangeReferences;
         }
 
+        protected override bool ItemsAndReferencesAreUsingSameEtagPool => false;
+
         protected override IEnumerable<Reference> GetItemReferences(QueryOperationContext queryContext, CollectionName referencedCollection, long lastEtag, long pageSize)
         {
             return _documentsStorage.DocumentDatabase.ServerStore.Cluster.GetCompareExchangeFromPrefix(queryContext.Server, _documentsStorage.DocumentDatabase.Name, lastEtag + 1, pageSize)

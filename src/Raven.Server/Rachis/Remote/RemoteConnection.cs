@@ -354,15 +354,9 @@ namespace Raven.Server.Rachis.Remote
         {
             if (_log.IsInfoEnabled)
             {
-                if (aer.Message != null)
-                {
-                    _log.Info($"Replying with success {aer.Success}: {aer.Message}");
-                }
-                else if (aer.Pending)
-                {
-                    _log.Info($"Replying with pending for {aer.CurrentTerm} / {aer.LastLogIndex}");
-                }
+                _log.Info(aer.ToString());
             }
+
             var msg = new DynamicJsonValue
             {
                 ["Type"] = nameof(AppendEntriesResponse),

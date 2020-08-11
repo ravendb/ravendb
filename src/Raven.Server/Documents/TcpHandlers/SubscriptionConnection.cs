@@ -11,6 +11,7 @@ using Esprima;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -322,7 +323,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 return;
             try
             {
-                if (ex is SubscriptionDoesNotExistException)
+                if (ex is SubscriptionDoesNotExistException || ex is DatabaseDoesNotExistException)
                 {
                     await connection.WriteJsonAsync(new DynamicJsonValue
                     {
