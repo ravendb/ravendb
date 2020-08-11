@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using FastTests;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -18,9 +17,9 @@ namespace SlowTests.DataBaseSettings
         public void CanParseNestedJsonObjectsFromSettingsJsonFile()
         {
             DoNotReuseServer();
-            
+
             string settingsJsonFile = default;
-            
+
             try
             {
                 const string jsonWithNestedContent = @"{
@@ -31,7 +30,7 @@ namespace SlowTests.DataBaseSettings
                                                             ""MaxNumberOfExtractedDocuments"":333
                                                          },
                                                          ""ETL"":
-                                                         { 
+                                                         {
                                                             ""SQL"":
                                                             {
                                                                ""CommandTimeoutInSec"":444
@@ -39,9 +38,9 @@ namespace SlowTests.DataBaseSettings
                                                          }
                                                       }";
 
-                settingsJsonFile = $"{Path.GetDirectoryName(GetTempFileName())}\\settings.json";
+                settingsJsonFile = Path.Combine($"{Path.GetDirectoryName(GetTempFileName())}", "settings.json");
                 File.WriteAllText(settingsJsonFile, jsonWithNestedContent);
-                
+
                 var serverConfig = RavenConfiguration.CreateForServer(null, settingsJsonFile);
                 serverConfig.Initialize();
 
@@ -52,7 +51,7 @@ namespace SlowTests.DataBaseSettings
                 Assert.Equal(222, serverConfig.Etl.MaxNumberOfExtractedItems);
                 Assert.Equal(333, serverConfig.Etl.MaxNumberOfExtractedDocuments);
                 Assert.Equal(444, serverConfig.Etl.SqlCommandTimeout.Value.GetValue(TimeUnit.Seconds));
-               
+
                 Assert.Equal("77 MBytes", databaseConfig.Etl.MaxBatchSize.ToString());
                 Assert.Equal(222, databaseConfig.Etl.MaxNumberOfExtractedItems);
                 Assert.Equal(333, databaseConfig.Etl.MaxNumberOfExtractedDocuments);
@@ -60,7 +59,7 @@ namespace SlowTests.DataBaseSettings
             }
             finally
             {
-                File.Delete(settingsJsonFile); 
+                File.Delete(settingsJsonFile);
             }
         }
     }
