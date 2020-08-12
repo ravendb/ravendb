@@ -1433,7 +1433,21 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
             {
-                tsf.GroupBy = GetTimePeriodValueExpression(name, "GROUP BY");
+                tsf.GroupBy.Value = GetTimePeriodValueExpression(name, "GROUP BY");
+
+                if (Scanner.TryScan("WITH"))
+                {
+                    if (Field(out var withField) && Scanner.TryScan('('))
+                    {
+                        if (Method(withField, out MethodExpression withExpr) == false)
+                            ThrowParseException($"Expected method call after WITH in time series function '{name}'");
+                        tsf.GroupBy.With = withExpr;
+                    }
+                    else
+                    {
+                        ThrowParseException($"Unable to parse WITH clause in time series function '{name}'");
+                    }
+                }
             }
 
             if (Scanner.TryScan("SELECT"))

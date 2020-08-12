@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Lucene.Net.Store;
@@ -83,7 +84,7 @@ namespace Raven.Server.Documents.Queries.Results
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
             var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, offset);
 
-            var groupBy = timeSeriesFunction.GroupBy?.GetValue(_queryParameters)?.ToString();
+            var groupBy = timeSeriesFunction.GroupBy.Value?.GetValue(_queryParameters)?.ToString();
             RangeGroup rangeSpec;
             if (groupBy != null)
             {
@@ -101,10 +102,10 @@ namespace Raven.Server.Documents.Queries.Results
             _scale = GetScale(declaredFunction, timeSeriesFunction.Scale);
             var array = new DynamicJsonArray();
 
-            if (timeSeriesFunction.GroupBy == null && timeSeriesFunction.Select == null)
+            if (timeSeriesFunction.GroupBy.Value == null && timeSeriesFunction.Select == null)
                 return GetRawValues();
 
-            var interpolate = false; // todo aviv 
+            var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
 
             TimeSeriesAggregation[] aggStates;
             GapData gapData = default;
@@ -142,41 +143,9 @@ namespace Raven.Server.Documents.Queries.Results
                 if (rangeSpec.WithinRange(ts))
                     return;
 
-                if (interpolate)
+                if (interpolationType != InterpolationType.None)
                 {
-                    var rangeTimeSpan = rangeSpec.End - rangeSpec.Start;
-
-                    if (gapData.HaveGaps)
-                    {
-                        gapData.To = rangeSpec.Start;
-                        // use 'previousStats' and the current 'aggStats' to fill the gaps
-                        FillMissingGaps(gapData, aggStates, array);
-                    }
-
-                    // check if there is a gap between current range and the next range
-                    var delta = ts - rangeSpec.End;
-
-                    gapData.HaveGaps = delta > rangeTimeSpan;
-                    
-                    if (gapData.HaveGaps)
-                    {
-                        gapData.RangeGroup = new RangeGroup
-                        {
-                            Months = rangeSpec.Months,
-                            Ticks = rangeSpec.Ticks,
-                            TicksAlignment = rangeSpec.TicksAlignment
-                        };
-                        gapData.RangeGroup.InitializeRange(rangeSpec.End);
-
-                        gapData.PreviousStats ??= new TimeSeriesAggregation[aggStates.Length];
-
-                        for (int i = 0; i < aggStates.Length; i++)
-                        {
-                            gapData.PreviousStats[i] ??= new TimeSeriesAggregation(aggStates[i].Aggregation, aggStates[i].Name);
-                            gapData.PreviousStats[i].SetValues(aggStates[i].GetValues());
-                            gapData.PreviousStats[i].SetCount(aggStates[i].Count);
-                        }
-                    }
+                    HandleGapsIfNeeded(ts);
                 }
 
                 if (aggStates[0].Any)
@@ -191,6 +160,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 rangeSpec.MoveToNextRange(ts);
             }
+
 
             BlittableJsonReaderObject GetRawValues()
             {
@@ -256,10 +226,10 @@ namespace Raven.Server.Documents.Queries.Results
                     }
                 }
 
-                if (gapData.HaveGaps)
+                if (gapData.HaveGap)
                 {
-                    gapData.To = rangeSpec.Start;
-                    FillMissingGaps(gapData, aggStates, array);
+                    gapData.UpTo = rangeSpec.Start;
+                    FillMissingGaps(gapData, aggStates, array, interpolationType);
                 }
 
                 if (aggStates[0].Any)
@@ -784,6 +754,73 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return field.FieldValueWithoutAlias;
             }
+
+            void HandleGapsIfNeeded(DateTime ts)
+            {
+                if (gapData.HaveGap)
+                {
+                    // fill the gaps between previous range and current range
+                    gapData.UpTo = rangeSpec.Start;
+                    FillMissingGaps(gapData, aggStates, array, interpolationType);
+                }
+
+                if (gapData.PreviousStats == null)
+                {
+                    // initialize gap data
+                    gapData.PreviousStats = new TimeSeriesAggregation[aggStates.Length];
+                    gapData.StartRange = new RangeGroup
+                    {
+                        Months = rangeSpec.Months, 
+                        Ticks = rangeSpec.Ticks, 
+                        TicksAlignment = rangeSpec.TicksAlignment
+                    };
+
+                    gapData.StartRange.InitializeRange(rangeSpec.End);
+                }
+                else
+                {
+                    // update gap data
+                    gapData.StartRange.MoveToNextRange(rangeSpec.End);
+                }
+
+                // check if there's a gap between current and next range
+                if (gapData.StartRange.WithinRange(ts))
+                {
+                    gapData.HaveGap = false;
+                    return;
+                }
+
+                gapData.HaveGap = true;
+
+                // update PreviousStats.
+                // we will fill the gaps when we finish with the next range
+
+                for (int i = 0; i < aggStates.Length; i++)
+                {
+                    gapData.PreviousStats[i] ??= new TimeSeriesAggregation(aggStates[i].Aggregation, aggStates[i].Name);
+                    gapData.PreviousStats[i].Init();
+                    gapData.PreviousStats[i].SetValues(aggStates[i].GetValues());
+                    gapData.PreviousStats[i].SetCount(aggStates[i].Count);
+                }
+            }
+        }
+
+        private static InterpolationType GetInterpolationType(MethodExpression groupByWith)
+        {
+            InterpolationType interpolationType = default;
+            if (groupByWith == null) 
+                return interpolationType;
+
+            if (string.Equals(groupByWith.Name.Value, "interpolation", StringComparison.OrdinalIgnoreCase) == false)
+                throw new ArgumentException("Unknown method in WITH clause of time series query: " + groupByWith.Name);
+
+            if (groupByWith.Arguments.Count != 1 || !(groupByWith.Arguments[0] is FieldExpression arg))
+                throw new ArgumentException($"Invalid arguments in method call '{groupByWith.Name}' in WITH clause of time series query: " + groupByWith);
+
+            if (Enum.TryParse(arg.FieldValue, ignoreCase: true, out interpolationType) == false)
+                throw new ArgumentException($"Unknown interpolation method '{arg.FieldValue}' in WITH clause of time series query: " + groupByWith);
+
+            return interpolationType;
         }
 
         private double? GetScale(DeclaredFunction declaredFunction, ValueExpression scaleExpression)
@@ -808,36 +845,55 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private void FillMissingGaps(GapData gapData, TimeSeriesAggregation[] currentStats, DynamicJsonArray array)
+        private void FillMissingGaps(GapData gapData, TimeSeriesAggregation[] currentStats, DynamicJsonArray array, InterpolationType interpolationType)
         {   
-            var start = gapData.RangeGroup.Start;
-            var end = gapData.RangeGroup.End;
-            var to = gapData.To;
+            var start = gapData.StartRange.Start;
+            var end = gapData.StartRange.End;
+            var to = gapData.UpTo;
 
-            DateTime prev = gapData.RangeGroup.Months != 0 
-                ? start.AddMonths(-gapData.RangeGroup.Months) 
+            Debug.Assert(start < to, "Invalid gap data");
+
+            DateTime prev = gapData.StartRange.Months != 0 
+                ? start.AddMonths(-gapData.StartRange.Months) 
                 : start.Add(-(end - start));
 
             while (to > start)
             {
-                FillGapsLinear(start, prev, to, gapData.PreviousStats, currentStats);
-                array.Add(AddTimeSeriesResult(gapData.PreviousStats, start, end));
-                
-                prev = start;
-                gapData.RangeGroup.MoveToNextRange(end);
-                start = gapData.RangeGroup.Start;
-                end = gapData.RangeGroup.End;
+                TimeSeriesAggregation[] statsToAdd;
+                switch (interpolationType)
+                {
+                    case InterpolationType.None:
+                        return;
+                    case InterpolationType.Linear:
+                        FillGapsLinear(start, prev, to, gapData.PreviousStats, currentStats);
+                        statsToAdd = gapData.PreviousStats;
+                        prev = start;
+                        break;
+                    case InterpolationType.Nearest:
+                        statsToAdd = start - prev <= to - start 
+                            ? gapData.PreviousStats
+                            : currentStats;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                array.Add(AddTimeSeriesResult(statsToAdd, start, end));
+
+                gapData.StartRange.MoveToNextRange(end);
+                start = gapData.StartRange.Start;
+                end = gapData.StartRange.End;
             }
         }
 
-        private static double LinerInterpolation(DateTime x, DateTime xA, DateTime xB, double ya, double yb)
+        private static double LinerInterpolation(DateTime x, DateTime xA, DateTime xB, double yA, double yB)
         {
-            // compute the approximated values (y) at the given time x
+            // compute the approximated value (y) at the given time x,
             // by using two known data points : (xA, yA) and (xB, yB) 
             // y = yA + (yB - yA) * ((x - xa) / (xb - xa)) 
 
             var quotient = (double)(x.Ticks - xA.Ticks) / (xB.Ticks - xA.Ticks);
-            var y = ya + (yb - ya) * quotient;
+            var y = yA + (yB - yA) * quotient;
 
             return y;
         }
@@ -853,7 +909,13 @@ namespace Raven.Server.Documents.Queries.Results
 
                 hasCount |= yA[i].Aggregation == AggregationType.Count;
 
-                for (var index = 0; index < valuesB.Count; index++)
+                var minLength = Math.Min(valuesA.Count, valuesB.Count);
+                if (minLength < valuesA.Count)
+                {
+                    valuesA.RemoveRange(minLength - 1, valuesA.Count - minLength);
+                }
+
+                for (var index = 0; index < minLength; index++)
                 {
                     var yb = valuesB[index];
                     var ya = valuesA[index];
@@ -883,7 +945,14 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var countA = yA.Count;
             var countB = yB.Count;
-            for (var index = 0; index < countB.Count; index++)
+
+            var minLength = Math.Min(countA.Count, countB.Count);
+            if (minLength < countA.Count)
+            {
+                countA.RemoveRange(minLength - 1, countA.Count - minLength);
+            }
+
+            for (var index = 0; index < minLength; index++)
             {
                 var yb = countB[index];
                 var ya = countA[index];
@@ -1290,11 +1359,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         internal struct GapData
         {
-            public bool HaveGaps;
+            public bool HaveGap;
 
-            public DateTime To;
+            public DateTime UpTo;
 
-            public RangeGroup RangeGroup;
+            public RangeGroup StartRange;
 
             public TimeSeriesAggregation[] PreviousStats;
         }
