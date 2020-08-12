@@ -66,6 +66,29 @@ namespace Raven.Server.Documents.Patch
             return TranslateToJs(_scriptEngine, Context, metadata);
         }
 
+        internal JsValue AttachmentsFor(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1 || !(args[0].AsObject() is BlittableObjectInstance boi))
+                throw new InvalidOperationException($"{nameof(AttachmentsFor)} must be called with a single entity argument");
+
+            if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
+                return EmptyArray(_scriptEngine);
+
+            if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return EmptyArray(_scriptEngine);
+
+            JsValue[] attachmentsArray = new JsValue[attachments.Length];
+            for (var i = 0; i < attachments.Length; i++)
+                attachmentsArray[i] = new AttachmentNameObjectInstance(_scriptEngine, (BlittableJsonReaderObject)attachments[i]);
+
+            return _scriptEngine.Array.Construct(attachmentsArray);
+
+            static ArrayInstance EmptyArray(Engine engine)
+            {
+                return engine.Array.Construct(0);
+            }
+        }
+
         internal JsValue LoadAttachment(JsValue self, JsValue[] args)
         {
             if (args.Length != 2)

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using Jint;
 using Jint.Native;
-using Jint.Native.Object;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
@@ -12,11 +11,9 @@ using Raven.Server.Documents.Indexes.Static;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class AttachmentObjectInstance : ObjectInstance
+    public class AttachmentObjectInstance : ObjectInstanceBase
     {
         private const string GetContentAsStringMethodName = "getContentAsString";
-
-        private static PropertyDescriptor ImplicitNull = new PropertyDescriptor(DynamicJsNull.ImplicitNull, writable: false, enumerable: false, configurable: false);
 
         private readonly Dictionary<JsValue, PropertyDescriptor> _properties = new Dictionary<JsValue, PropertyDescriptor>();
 
@@ -25,8 +22,6 @@ namespace Raven.Server.Documents.Patch
         public AttachmentObjectInstance(Engine engine, DynamicAttachment attachment) : base(engine)
         {
             _attachment = attachment ?? throw new ArgumentNullException(nameof(attachment));
-
-            SetPrototypeOf(engine.Object.PrototypeObject);
         }
 
         private JsValue GetContentAsString(JsValue self, JsValue[] args)
