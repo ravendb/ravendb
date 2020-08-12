@@ -1047,6 +1047,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (methodCall.Method.Name != nameof(string.Compare))
                 return expression;
 
+            if(methodCall.Method.GetParameters().Length != 2)
+                throw new NotSupportedException("string.Compare(string, string) is the only supported overload.");
+
             MemberExpression memberExpression;
             ConstantExpression constantExpression;
 
