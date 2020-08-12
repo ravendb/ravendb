@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
                         [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
-                            [nameof(SubscriptionClosedException.TryToReconnect)] = sce.TryToReconnect
+                            [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect
                         }
                     });
                 }

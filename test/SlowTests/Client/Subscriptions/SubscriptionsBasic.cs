@@ -418,7 +418,7 @@ namespace SlowTests.Client.Subscriptions
                         var sce = x as SubscriptionClosedException;
                         Assert.NotNull(sce);
                         Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
-                        Assert.True(sce.TryToReconnect);
+                        Assert.True(sce.CanReconnect);
                         Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
                     };
 
@@ -502,7 +502,7 @@ namespace SlowTests.Client.Subscriptions
                     var sce = x as SubscriptionClosedException;
                     Assert.NotNull(sce);
                     Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
-                    Assert.True(sce.TryToReconnect);
+                    Assert.True(sce.CanReconnect);
                     Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
                 };
                 using var docs = new CountdownEvent(count / 2);
@@ -600,7 +600,7 @@ namespace SlowTests.Client.Subscriptions
                     var sce = x as SubscriptionClosedException;
                     Assert.NotNull(sce);
                     Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
-                    Assert.True(sce.TryToReconnect);
+                    Assert.True(sce.CanReconnect);
                     Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
                 };
                 using var docs = new CountdownEvent(count);
