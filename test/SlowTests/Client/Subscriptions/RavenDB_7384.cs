@@ -77,7 +77,7 @@ namespace SlowTests.Client.Subscriptions
         }
 
         [Fact]
-        public async Task UpdatingSubscriptionScriptShouldNotChangeVectorButShouldDropConnection()
+        public async Task UpdatingSubscriptionScriptShouldNotChangeVector()
         {
             using (var store = GetDocumentStore())
             {
@@ -120,34 +120,46 @@ namespace SlowTests.Client.Subscriptions
                 string changeVectorBeforeScriptUpdate = GetSubscriptionChangeVector(currentDatabase);
 
                 var subscriptionState = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
+                subscription.OnSubscriptionConnectionRetry += x =>
+                {
+                    var sce = x as SubscriptionClosedException;
+                    Assert.NotNull(sce);
+                    Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
+                    Assert.True(sce.CanReconnect);
+                    Assert.Equal($"Subscription With Id '{subscriptionState.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {subscriptionState.SubscriptionName} query has been modified, connection must be restarted", x.Message);
+                };
 
+                const string newQuery = "from Users as u select {Name:'Jorgen'}";
 
-                // updating only subscription script and making sure connection drops
+                // updating only subscription script 
                 await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
                     ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
-                    Query = "from Users as u select {Name:'Jorgen'}"
+                    Query = newQuery
 
                 }, Guid.NewGuid().ToString(), subscriptionState.SubscriptionId);
 
-                Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
+                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var query = WaitForValue(() =>
+                    {
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, subscriptionState.SubscriptionName);
+                        return connectionState?.Connection?.SubscriptionState.Query;
+                    }, newQuery);
 
-                await Assert.ThrowsAsync(typeof(SubscriptionClosedException), () => subscriptionTask);
-
+                    Assert.Equal(newQuery, query);
+                }
+                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                var newState = newSubscriptions.First();
+                Assert.Equal(1, newSubscriptions.Count);
+                Assert.Equal(subscriptionState.SubscriptionName, newState.SubscriptionName);
+                Assert.Equal(newQuery, newState.Query);
+                Assert.Equal(subscriptionState.SubscriptionId, newState.SubscriptionId);
                 var changeVectorAfterUpdatingScript = GetSubscriptionChangeVector(currentDatabase);
                 Assert.Equal(changeVectorBeforeScriptUpdate, changeVectorAfterUpdatingScript);
-
-
-                // reconnecting and making sure that the new script is in power
-                subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions("Subs1") {
-                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
-                });
-
-                subscriptionTask = subscription.Run(batch =>
-                {
-                    results.AddRange(batch.Items.Select(i => i.Result).ToArray());
-                });
 
                 subscription.AfterAcknowledgment += x =>
                 {
