@@ -15,7 +15,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
-using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
@@ -60,7 +59,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 else
                     ThrowNotSupportedType(contentType);
-                
+
                 if (TrafficWatchManager.HasRegisteredClients)
                 {
                     BatchTrafficWatch(command.ParsedCommands);
@@ -331,9 +330,9 @@ namespace Raven.Server.Documents.Handlers
 
             bool needsServerContext = false;
 
-            // we take the awaiter _before_ the indexing transaction happens, 
-            // so if there are any changes, it will already happen to it, and we'll 
-            // query the index again. This is important because of: 
+            // we take the awaiter _before_ the indexing transaction happens,
+            // so if there are any changes, it will already happen to it, and we'll
+            // query the index again. This is important because of:
             // https://issues.hibernatingrhinos.com/issue/RavenDB-5576
             foreach (var index in indexesToCheck)
             {
@@ -352,38 +351,38 @@ namespace Raven.Server.Documents.Handlers
             var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
             var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
 
-                while (true)
+            while (true)
+            {
+                var hadStaleIndexes = false;
+
+                using (var context = QueryOperationContext.Allocate(database, needsServerContext))
+                using (context.OpenReadTransaction())
                 {
-                    var hadStaleIndexes = false;
-
-                    using (var context = QueryOperationContext.Allocate(database, needsServerContext))
-                    using (context.OpenReadTransaction())
+                    foreach (var waitForIndexItem in indexesToWait)
                     {
-                        foreach (var waitForIndexItem in indexesToWait)
-                        {
-                            if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
-                                continue;
+                        if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
+                            continue;
 
-                            hadStaleIndexes = true;
+                        hadStaleIndexes = true;
 
-                            await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
+                        await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
 
                         if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
-                            {
+                        {
                             if (throwOnTimeout == false)
                                 return;
 
-                                throw new TimeoutException(
-                                    $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                                    $"indexes has caught up with the changes as of etag: {cutoffEtag}");
-                            }
+                            throw new TimeoutException(
+                                $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
+                                $"indexes has caught up with the changes as of etag: {cutoffEtag}");
                         }
                     }
-
-                    if (hadStaleIndexes == false)
-                        return;
                 }
+
+                if (hadStaleIndexes == false)
+                    return;
             }
+        }
 
         private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
         {
@@ -411,7 +410,6 @@ namespace Raven.Server.Documents.Handlers
                     {
                         indexesToCheck.Add(index);
                     }
-
                 }
             }
             return indexesToCheck;
@@ -545,7 +543,7 @@ namespace Raven.Server.Documents.Handlers
                                     if (current < count)
                                     {
                                         // delete the document to avoid exception if we put new document in a different collection.
-                                        // TODO: document this behavior 
+                                        // TODO: document this behavior
                                         using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
                                         {
                                             Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
@@ -692,7 +690,7 @@ namespace Raven.Server.Documents.Handlers
             public ExceptionDispatchInfo ExceptionDispatchInfo;
 
             public bool IsClusterTransaction;
-            
+
             public MergedBatchCommand(DocumentDatabase database) : base(database)
             {
             }
@@ -753,7 +751,7 @@ namespace Raven.Server.Documents.Handlers
                 DocumentsStorage.PutOperationResults? lastPutResult = null;
 
                 using IEnumerator<AttachmentStream> attachmentIterator = AttachmentStreams?.GetEnumerator();
-                
+
                 for (int i = ParsedCommands.Offset; i < ParsedCommands.Count; i++)
                 {
                     var cmd = ParsedCommands.Array[i];
@@ -766,9 +764,9 @@ namespace Raven.Server.Documents.Handlers
                             try
                             {
                                 var flags = DocumentFlags.None;
-                                
+
                                 if (cmd.ForceRevisionCreationStrategy == ForceRevisionStrategy.Before)
-                                // Note: we currently only handle 'Before'. 
+                                // Note: we currently only handle 'Before'.
                                 // Creating the revision 'After' will be done only upon customer demand.
                                 {
                                     var existingDocument = Database.DocumentsStorage.Get(context, cmd.Id);
@@ -780,7 +778,7 @@ namespace Raven.Server.Documents.Handlers
                                     // Force a revision (before applying new document changes..)
                                     Database.DocumentsStorage.RevisionsStorage.Put(context, existingDocument.Id,
                                                                                    existingDocument.Data.Clone(context),
-                                                                                   existingDocument.Flags |= DocumentFlags.HasRevisions, 
+                                                                                   existingDocument.Flags |= DocumentFlags.HasRevisions,
                                                                                    nonPersistentFlags: NonPersistentDocumentFlags.None,
                                                                                    existingDocument.ChangeVector,
                                                                                    existingDocument.LastModified.Ticks);
@@ -791,11 +789,11 @@ namespace Raven.Server.Documents.Handlers
                             }
                             catch (Voron.Exceptions.VoronConcurrencyErrorException)
                             {
-                                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                                // RavenDB-10581 - If we have a concurrency error on "doc-id/"
                                 // this means that we have existing values under the current etag
-                                // we'll generate a new (random) id for them. 
+                                // we'll generate a new (random) id for them.
 
-                                // The TransactionMerger will re-run us when we ask it to as a 
+                                // The TransactionMerger will re-run us when we ask it to as a
                                 // separate transaction
                                 for (; i < ParsedCommands.Count; i++)
                                 {
@@ -812,12 +810,12 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 return 0;
                             }
-                            
+
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
                             AddPutResult(putResult);
                             lastPutResult = putResult;
                             break;
-                        
+
                         case CommandType.PATCH:
                         case CommandType.BatchPATCH:
                             try
@@ -835,7 +833,7 @@ namespace Raven.Server.Documents.Handlers
                                 LastChangeVector = lastChangeVector;
 
                             break;
-                        
+
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
                             {
@@ -855,7 +853,7 @@ namespace Raven.Server.Documents.Handlers
                                 DeleteWithPrefix(context, cmd.Id);
                             }
                             break;
-                        
+
                         case CommandType.AttachmentPUT:
                             attachmentIterator.MoveNext();
                             var attachmentStream = attachmentIterator.Current;
@@ -900,7 +898,7 @@ namespace Raven.Server.Documents.Handlers
                             apReplies.Add((apReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
                             Reply.Add(apReply);
                             break;
-                        
+
                         case CommandType.AttachmentDELETE:
                             Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, updateDocument: false);
 
@@ -920,7 +918,7 @@ namespace Raven.Server.Documents.Handlers
                             adReplies.Add((adReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
                             Reply.Add(adReply);
                             break;
-                        
+
                         case CommandType.AttachmentMOVE:
                             var attachmentMoveResult = Database.DocumentsStorage.AttachmentsStorage.MoveAttachment(context, cmd.Id, cmd.Name, cmd.DestinationId, cmd.DestinationName, cmd.ChangeVector);
 
@@ -954,7 +952,7 @@ namespace Raven.Server.Documents.Handlers
 
                             Reply.Add(amReply);
                             break;
-                        
+
                         case CommandType.AttachmentCOPY:
                             if (cmd.AttachmentType == 0)
                             {
@@ -1043,11 +1041,11 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(Constants.Fields.CommandData.DocumentChangeVector)] = counterBatchCmd.LastDocumentChangeVector
                             });
                             break;
-                        
+
                         case CommandType.ForceRevisionCreation:
                             // Create a revision for an existing document (specified by the id) even if revisions settings are Not configured for the collection.
                             // Only one such revision will be created.
-                            // i.e. If there is already an existing 'forced' revision to this document then we don't create another forced revision. 
+                            // i.e. If there is already an existing 'forced' revision to this document then we don't create another forced revision.
 
                             var existingDoc = Database.DocumentsStorage.Get(context, cmd.Id);
                             if (existingDoc == null)
@@ -1056,32 +1054,32 @@ namespace Raven.Server.Documents.Handlers
                             }
 
                             DynamicJsonValue forceRevisionReply;
-                            
+
                             // Note: here there is no point checking 'Before' or 'After' because if there were any changes then the forced revision is done from the PUT command....
-                            
+
                             bool revisionCreated = false;
                             var clonedDocData = existingDoc.Data.Clone(context);
-                            
+
                             if (existingDoc.Flags.Contain(DocumentFlags.HasRevisions) == false)
                             {
-                                // When forcing a revision for a document that doesn't have revisions yet, 
-                                // we must add HasRevisions flag to the document and save (put)  
+                                // When forcing a revision for a document that doesn't have revisions yet,
+                                // we must add HasRevisions flag to the document and save (put)
                                 existingDoc.Flags = existingDoc.Flags |= DocumentFlags.HasRevisions;
-                                
+
                                 putResult = Database.DocumentsStorage.Put(context, existingDoc.Id,
-                                                                         existingDoc.ChangeVector, 
-                                                                          clonedDocData, 
+                                                                         existingDoc.ChangeVector,
+                                                                          clonedDocData,
                                                                           flags: existingDoc.Flags,
                                                                           nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
 
                                 existingDoc.ChangeVector = putResult.ChangeVector;
                                 existingDoc.LastModified = putResult.LastModified;
                             }
-                            
-                            // Create the revision. Revision will be created only if there isn't a revision with identical content for this document  
-                            revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id, 
-                                                                                         clonedDocData, 
-                                                                                         existingDoc.Flags, 
+
+                            // Create the revision. Revision will be created only if there isn't a revision with identical content for this document
+                            revisionCreated = Database.DocumentsStorage.RevisionsStorage.Put(context, existingDoc.Id,
+                                                                                         clonedDocData,
+                                                                                         existingDoc.Flags,
                                                                                          nonPersistentFlags: NonPersistentDocumentFlags.None,
                                                                                          existingDoc.ChangeVector,
                                                                                          existingDoc.LastModified.Ticks);
@@ -1091,7 +1089,7 @@ namespace Raven.Server.Documents.Handlers
                                 forceRevisionReply = new DynamicJsonValue
                                 {
                                     ["RevisionCreated"] = true,
-                                    ["Type"] = nameof(CommandType.ForceRevisionCreation), 
+                                    ["Type"] = nameof(CommandType.ForceRevisionCreation),
                                     [Constants.Documents.Metadata.Id] = existingDoc.Id.ToString(), //We must not return to handlers memory allocated by merger.
                                     [Constants.Documents.Metadata.ChangeVector] = existingDoc.ChangeVector,
                                     [Constants.Documents.Metadata.LastModified] = existingDoc.LastModified,
@@ -1100,7 +1098,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 LastChangeVector = existingDoc.ChangeVector;
                             }
-                            else 
+                            else
                             {
                                 // No revision was created
                                 forceRevisionReply = new DynamicJsonValue
@@ -1109,7 +1107,7 @@ namespace Raven.Server.Documents.Handlers
                                     ["Type"] = nameof(CommandType.ForceRevisionCreation)
                                 };
                             }
-                            
+
                             Reply.Add(forceRevisionReply);
                             break;
                     }

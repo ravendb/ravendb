@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Microsoft.Azure.Documents.SystemFunctions;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
@@ -35,21 +34,20 @@ namespace SlowTests.Issues
         [Fact64Bit(Skip = "RavenDB-13765")]
         public async Task CanRecoverEncryptedDatabase_Compressed()
         {
-            await CanRecoverEncryptedDatabaseInternal(compressDocuments:true);
+            await CanRecoverEncryptedDatabaseInternal(compressDocuments: true);
         }
 
-        [Fact64Bit]
+        [Fact64Bit(Skip = "RavenDB-13765")]
         public async Task RecoveryOfEncryptedDatabaseWithoutMasterKeyShouldThrow()
         {
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await CanRecoverEncryptedDatabaseInternal(true));
         }
 
-        }
-        public async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false, bool compressDocuments=false)
+        private async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false, bool compressDocuments = false)
         {
             string dbName = SetupEncryptedDatabase(out var certificates, out var masterKey);
-            
+
             if (nullifyMasterKey)
             {
                 masterKey = null;
@@ -72,7 +70,7 @@ namespace SlowTests.Issues
                     {
                         record.DocumentsCompression = new DocumentsCompressionConfiguration
                         {
-                            Collections = new[] {"Orders", "Employees", "Companies", "Products"}, 
+                            Collections = new[] { "Orders", "Employees", "Companies", "Products" },
                             CompressRevisions = true
                         };
                     }
@@ -121,7 +119,7 @@ namespace SlowTests.Issues
                     {
                         var list1 = session.Query<Employee>().ToList();
                         var list2 = session.Query<Category>().ToList();
-                        
+
                         foreach (Employee l1 in list1)
                         {
                             var opGetAttach = session.Advanced.Attachments.Get(l1, "photo.jpg");
@@ -134,7 +132,7 @@ namespace SlowTests.Issues
                             var revCnt = session.Advanced.Revisions.GetFor<Employee>(l2.Id).Count;
                             msg.AppendLine($"Category {l2.Id} Attachment = {opGetAttach?.Details?.DocumentId}, RevCount=" + revCnt);
                         }
-                        
+
                         var documentDatabase = await GetDatabase(store.Database);
                         using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
@@ -161,7 +159,7 @@ namespace SlowTests.Issues
                     msg.AppendLine("Get again currentStats.CountOfAttachments=" + currentStats2.CountOfAttachments);
                     throw new Exception(msg.ToString());
                 }
-                
+
                 // + 1 as recovery adds some artificial items
                 Assert.Equal(databaseStatistics.CountOfAttachments + 1, currentStats.CountOfAttachments);
                 Assert.Equal(databaseStatistics.CountOfDocuments + 1, currentStats.CountOfDocuments);
