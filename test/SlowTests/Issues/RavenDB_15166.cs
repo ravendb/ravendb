@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -51,12 +52,12 @@ namespace SlowTests.Issues
                     Assert.Equal(1, queryResultGT.Count);
                     Assert.Contains("Rachel", queryResultGT.Select(r => r.Name));
 
-                    Assert.Equal(queryResultLE.Count, 3);
+                    Assert.Equal(3, queryResultLE.Count);
                     Assert.Contains("Adam", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Ariel", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Dan", queryResultLE.Select(r => r.Name));
 
-                    Assert.Equal(queryResultGE.Count, 2);
+                    Assert.Equal(2, queryResultGE.Count);
                     Assert.Contains("Dan", queryResultGE.Select(r => r.Name));
                     Assert.Contains("Rachel", queryResultGE.Select(r => r.Name));
                 }
@@ -99,12 +100,12 @@ namespace SlowTests.Issues
                     Assert.Equal(1, queryResultGT.Count);
                     Assert.Contains("Rachel", queryResultGT.Select(r => r.Name));
 
-                    Assert.Equal(queryResultLE.Count, 3);
+                    Assert.Equal(3, queryResultLE.Count);
                     Assert.Contains("Adam", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Ariel", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Dan", queryResultLE.Select(r => r.Name));
 
-                    Assert.Equal(queryResultGE.Count, 2);
+                    Assert.Equal(2, queryResultGE.Count);
                     Assert.Contains("Dan", queryResultGE.Select(r => r.Name));
                     Assert.Contains("Rachel", queryResultGE.Select(r => r.Name));
                 }
@@ -147,12 +148,12 @@ namespace SlowTests.Issues
                     Assert.Equal(1, queryResultGT.Count);
                     Assert.Contains("Rachel", queryResultGT.Select(r => r.Name));
 
-                    Assert.Equal(queryResultLE.Count, 3);
+                    Assert.Equal(3, queryResultLE.Count);
                     Assert.Contains("Adam", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Ariel", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Dan", queryResultLE.Select(r => r.Name));
 
-                    Assert.Equal(queryResultGE.Count, 2);
+                    Assert.Equal(2, queryResultGE.Count);
                     Assert.Contains("Dan", queryResultGE.Select(r => r.Name));
                     Assert.Contains("Rachel", queryResultGE.Select(r => r.Name));
                 }
@@ -195,12 +196,12 @@ namespace SlowTests.Issues
                     Assert.Equal(1, queryResultGT.Count);
                     Assert.Contains("Rachel", queryResultGT.Select(r => r.Name));
 
-                    Assert.Equal(queryResultLE.Count, 3);
+                    Assert.Equal(3, queryResultLE.Count);
                     Assert.Contains("Adam", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Ariel", queryResultLE.Select(r => r.Name));
                     Assert.Contains("Dan", queryResultLE.Select(r => r.Name));
 
-                    Assert.Equal(queryResultGE.Count, 2);
+                    Assert.Equal(2, queryResultGE.Count);
                     Assert.Contains("Dan", queryResultGE.Select(r => r.Name));
                     Assert.Contains("Rachel", queryResultGE.Select(r => r.Name));
                 }
@@ -224,7 +225,7 @@ namespace SlowTests.Issues
                         .Where(x => 0 > x.Name.CompareTo("Dan"))
                         .ToListAsync();
 
-                    Assert.Equal(queryResultLT.Count, 2);
+                    Assert.Equal(2, queryResultLT.Count);
                     Assert.Contains("Adam", queryResultLT.Select(r => r.Name));
                     Assert.Contains("Ariel", queryResultLT.Select(r => r.Name));
                 }
@@ -379,6 +380,85 @@ namespace SlowTests.Issues
                     {
                         await asyncSession.Query<User>()
                             .Where(x => x.Name.CompareTo(dave()) > 0)
+                            .ToListAsync();
+                    });
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Can_Translate_String_Compare_Throws_When_Using_Unsupported_Overload()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var asyncSession = store.OpenAsyncSession())
+                {
+                    await asyncSession.StoreAsync(new User { Name = "Adam" }, "users/1");
+                    await asyncSession.StoreAsync(new User { Name = "Ariel" }, "users/2");
+                    await asyncSession.StoreAsync(new User { Name = "Dan" }, "users/3");
+                    await asyncSession.StoreAsync(new User { Name = "Rachel" }, "users/4");
+                    await asyncSession.SaveChangesAsync();
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, 0, "Dan", 0, Int32.MaxValue) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, 0, "Dan", 0, Int32.MaxValue, StringComparison.InvariantCulture) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, 0, "Dan", 0, Int32.MaxValue, CultureInfo.InvariantCulture, CompareOptions.IgnoreCase) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, 0, "Dan", 0, Int32.MaxValue, true) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, 0, "Dan", 0, Int32.MaxValue, true, CultureInfo.InvariantCulture) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, "Dan", StringComparison.InvariantCulture) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, "Dan", CultureInfo.InvariantCulture, CompareOptions.IgnoreCase) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, "Dan", true) > 0)
+                            .ToListAsync();
+                    });
+
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await asyncSession.Query<User>()
+                            .Where(x => string.Compare(x.Name, "Dan", true, CultureInfo.InvariantCulture) > 0)
                             .ToListAsync();
                     });
                 }
