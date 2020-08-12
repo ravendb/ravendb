@@ -146,7 +146,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             TaskType = OngoingTaskType.PullReplicationAsSink;
         }
 
-        [Obsolete("Use HubName instead.")]
+        [Obsolete("OngoingTaskPullReplicationAsSink.HubDefinitionName is not supported anymore. Will be removed in next major version of the product. Use HubName instead.")]
         public string HubDefinitionName { get => HubName; set => HubName = value; }
 
         public string HubName { get; set; }
