@@ -326,14 +326,18 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
                     });
                 }
-                else if (ex is SubscriptionClosedException)
+                else if (ex is SubscriptionClosedException sce)
                 {
                     await connection.WriteJsonAsync(new DynamicJsonValue
                     {
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Closed),
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
+                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionClosedException.CanReconnect)] = sce.CanReconnect
+                        }
                     });
                 }
                 else if (ex is SubscriptionInvalidStateException)
