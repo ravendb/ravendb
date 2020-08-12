@@ -347,9 +347,9 @@ namespace Raven.Client.Documents.Subscriptions
                     throw new SubscriptionInUseException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
-                    bool tryReconnect = false;
-                    connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.TryToReconnect), out tryReconnect);
-                    throw new SubscriptionClosedException($"Subscription With Id '{_options.SubscriptionName}' was closed.  " + connectionStatus.Exception, tryReconnect);
+                    bool canReconnect = false;
+                    connectionStatus.Data?.TryGet(nameof(SubscriptionClosedException.CanReconnect), out canReconnect);
+                    throw new SubscriptionClosedException($"Subscription With Id '{_options.SubscriptionName}' was closed.  " + connectionStatus.Exception, canReconnect);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Invalid:
                     throw new SubscriptionInvalidStateException(
                         $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it is in invalid state. " + connectionStatus.Exception);
@@ -732,7 +732,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionChangeVectorUpdateConcurrencyException _:
                     return true;
                 case SubscriptionClosedException sce:
-                    if (sce.TryToReconnect)
+                    if (sce.CanReconnect)
                         return true;
 
                     _processingCts.Cancel();
