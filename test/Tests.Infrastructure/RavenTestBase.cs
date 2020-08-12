@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -37,6 +36,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
@@ -85,16 +85,23 @@ namespace FastTests
 
             var base64Key = Convert.ToBase64String(buffer);
 
-            // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
-            try
+            var canUseProtect = PlatformDetails.RunningOnPosix == false;
+
+            if (canUseProtect)
             {
-                ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+                // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
+                try
+                {
+                    ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    canUseProtect = false;
+                }
             }
-            catch (PlatformNotSupportedException)
-            {
-                // so we fall back to a file
+
+            if (canUseProtect == false) // fall back to a file
                 Server.ServerStore.Configuration.Security.MasterKeyPath = GetTempFileName();
-            }
 
             Server.ServerStore.PutSecretKey(base64Key, dbName, true);
             name = dbName;
@@ -298,7 +305,7 @@ namespace FastTests
                             raftCommand = record.Etag;
                         }
 
-                        Assert.True(raftCommand > 0); //sanity check             
+                        Assert.True(raftCommand > 0); //sanity check
 
                         if (Servers.Contains(serverToUse))
                         {
