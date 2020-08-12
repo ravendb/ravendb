@@ -1,17 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.Azure.Documents.SystemFunctions;
 using Orders;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents;
@@ -30,13 +26,13 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact64Bit]
+        [Fact64Bit(Skip = "RavenDB-13765")]
         public async Task CanRecoverEncryptedDatabase()
         {
             await CanRecoverEncryptedDatabaseInternal();
         }
 
-        [Fact64Bit]
+        [Fact64Bit(Skip = "RavenDB-13765")]
         public async Task CanRecoverEncryptedDatabase_Compressed()
         {
             await CanRecoverEncryptedDatabaseInternal(compressDocuments:true);
@@ -47,6 +43,7 @@ namespace SlowTests.Issues
         {
             await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await CanRecoverEncryptedDatabaseInternal(true));
+        }
 
         }
         public async Task CanRecoverEncryptedDatabaseInternal(bool nullifyMasterKey = false, bool compressDocuments=false)
@@ -101,7 +98,6 @@ namespace SlowTests.Issues
                 recovery.Execute(TextWriter.Null, CancellationToken.None);
             }
 
-
             using (var store = GetDocumentStore(new Options()
             {
                 AdminCertificate = certificates.ServerCertificate.Value,
@@ -110,7 +106,6 @@ namespace SlowTests.Issues
             {
                 var op = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                 {
-
                 }, Path.Combine(recoveryExportPath, "recovery-2-Documents.ravendump"));
 
                 op.WaitForCompletion(TimeSpan.FromMinutes(2));

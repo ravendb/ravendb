@@ -349,20 +349,18 @@ namespace Raven.Server.Documents.Handlers
                 needsServerContext |= index.Definition.HasCompareExchange;
             }
 
-            using (var context = QueryOperationContext.Allocate(database, needsServerContext))
-            {
+            var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
+            var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
+
                 while (true)
                 {
                     var hadStaleIndexes = false;
 
+                    using (var context = QueryOperationContext.Allocate(database, needsServerContext))
                     using (context.OpenReadTransaction())
                     {
                         foreach (var waitForIndexItem in indexesToWait)
                         {
-                            var lastEtag = lastChangeVector != null ? ChangeVectorUtils.GetEtagById(lastChangeVector, database.DbBase64Id) : 0;
-
-                            var cutoffEtag = Math.Max(lastEtag, lastTombstoneEtag);
-
                             if (waitForIndexItem.Index.IsStale(context, cutoffEtag) == false)
                                 continue;
 
@@ -370,8 +368,11 @@ namespace Raven.Server.Documents.Handlers
 
                             await waitForIndexItem.WaitForIndexing.WaitForIndexingAsync(waitForIndexItem.IndexBatchAwaiter);
 
-                            if (waitForIndexItem.WaitForIndexing.TimeoutExceeded && throwOnTimeout)
+                        if (waitForIndexItem.WaitForIndexing.TimeoutExceeded)
                             {
+                            if (throwOnTimeout == false)
+                                return;
+
                                 throw new TimeoutException(
                                     $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
                                     $"indexes has caught up with the changes as of etag: {cutoffEtag}");
@@ -383,7 +384,6 @@ namespace Raven.Server.Documents.Handlers
                         return;
                 }
             }
-        }
 
         private static List<Index> GetImpactedIndexesToWaitForToBecomeNonStale(DocumentDatabase database, List<string> specifiedIndexesQueryString, HashSet<string> modifiedCollections)
         {
