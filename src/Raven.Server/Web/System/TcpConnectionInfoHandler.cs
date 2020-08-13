@@ -1,15 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions.Cluster;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Server.Extensions;
-using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -96,7 +92,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var output = Server.ServerStore.GetTcpInfoAndCertificates(HttpContext.Request.GetClientRequestedNodeUrl(), forExternalUse:true);
+                var output = Server.ServerStore.GetTcpInfoAndCertificates(HttpContext.Request.GetClientRequestedNodeUrl(), forExternalUse: true);
                 context.Write(writer, output);
             }
         }
@@ -105,7 +101,7 @@ namespace Raven.Server.Web.System
         {
             var feature = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
-            if (feature == null) // we are not using HTTPS 
+            if (feature == null) // we are not using HTTPS
                 return true;
 
             switch (feature.Status)
@@ -132,16 +128,18 @@ namespace Raven.Server.Web.System
                         if (serverStore.Cluster.TryReadPullReplicationDefinition(database, remoteTask, context, out var pullReplication))
                         {
                             var cert = httpContext.Connection.ClientCertificate;
+#pragma warning disable CS0618 // Type or member is obsolete
                             if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)
                             {
                                 if (pullReplication.Certificates.ContainsKey(cert.Thumbprint))
                                     return true;
                             }
+#pragma warning restore CS0618 // Type or member is obsolete
                             else
                             {
                                 if (serverStore.Cluster.IsReplicationCertificate(context, database, remoteTask, cert, out _))
                                     return true;
-                                
+
                                 if (serverStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(context, database, remoteTask, cert, out _))
                                     return true;
                             }

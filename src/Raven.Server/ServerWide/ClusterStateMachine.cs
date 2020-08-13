@@ -112,7 +112,7 @@ namespace Raven.Server.ServerWide
         public static readonly Slice CertificatesHashSlice;
         public static readonly Slice ReplicationCertificatesSlice;
         public static readonly Slice ReplicationCertificatesHashSlice;
-        
+
         public enum CertificatesTable
         {
             Thumbprint = 0,
@@ -222,7 +222,7 @@ namespace Raven.Server.ServerWide
                 IsGlobal = false,
                 Name = CertificatesHashSlice
             });
-            
+
             // We use the follow format for the replication certificates data
             // { thumbprint, public key hash, data}
             ReplicationCertificatesSchema = new TableSchema();
@@ -547,7 +547,7 @@ namespace Raven.Server.ServerWide
                     }
 
                     actionsByDatabase[database].Add(() =>
-                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged,null));
+                        Changes.OnDatabaseChanges(database, index, nameof(PutSubscriptionCommand), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, null));
                 }
 
                 foreach (var action in actionsByDatabase)
@@ -1256,12 +1256,12 @@ namespace Raven.Server.ServerWide
                 transactionsCommands.DeleteByPrimaryKeyPrefix(prefixSlice);
             }
         }
-        
+
         private static void CleanupDatabaseReplicationCertificate(ClusterOperationContext context, string databaseName)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
-        
-            string prefixString = (databaseName  +"/").ToLowerInvariant();
+
+            string prefixString = (databaseName + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
 
             certs.DeleteByPrimaryKeyPrefix(prefix);
@@ -1761,7 +1761,7 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, command);
             }
         }
-        
+
         private void PutReplicationCertificate(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
         {
             var command = (RegisterReplicationHubAccessCommand)CommandBase.CreateFrom(cmd);
@@ -1776,7 +1776,6 @@ namespace Raven.Server.ServerWide
                 NotifyDatabaseAboutChanged(context, command.Database, index, type, DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, command);
             }
         }
-
 
         private unsafe void PutRegisterReplicationHubAccessInternal(ClusterOperationContext context, RegisterReplicationHubAccessCommand command, Table certs)
         {
@@ -1800,7 +1799,6 @@ namespace Raven.Server.ServerWide
                         $"Registering new replication certificate {command.Name} = '{command.CertificateThumbprint}' for replication in {command.Database} using {command.HubName} " +
                         $"Allowed read paths: {string.Join(", ", command.AllowedHubToSinkPaths)}, Allowed write paths: {string.Join(", ", command.AllowedSinkToHubPaths)}.");
 
-
                 var certificate = Convert.FromBase64String(command.CertificateBase64);
                 fixed (byte* pCert = certificate)
                 {
@@ -1818,7 +1816,7 @@ namespace Raven.Server.ServerWide
                 if (!command.RegisteringSamePublicKeyPinningHash)
                     return;
 
-                // here we'll clear the old values 
+                // here we'll clear the old values
                 var samePublicKeyHash = new SortedList<DateTime, long>();
                 foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeySlice, publicKeySlice, 0))
                 {
@@ -1846,7 +1844,6 @@ namespace Raven.Server.ServerWide
 
                 using (Slice.From(context.Allocator, (command.Database + "/" + command.HubName + "/" + command.CertificateThumbprint).ToLowerInvariant(), out var keySlice))
                 {
-
                     if (certs.DeleteByKey(keySlice) == false)
                         return;
 
@@ -1911,7 +1908,7 @@ namespace Raven.Server.ServerWide
         private void NotifyDatabaseAboutChanged(ClusterOperationContext context, string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType change, object changeState)
         {
             Debug.Assert(changeState.ContainsBlittableObject() == false, "You cannot use a blittable in the command state, since this is handled outside of the transaction");
-            
+
             context.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
             {
                 // we do this under the write tx lock before we update the last applied index
@@ -3475,8 +3472,7 @@ namespace Raven.Server.ServerWide
         {
             return new ClusterValidator();
         }
-        
-        
+
         public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(TransactionOperationContext context, string database, string hub, int start, int pageSize)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
@@ -3498,12 +3494,12 @@ namespace Raven.Server.ServerWide
                 yield return blittable;
             }
         }
-        
+
         public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificateForDatabase(TransactionOperationContext context, string database)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
-            string prefixString = (database + "/" ).ToLowerInvariant();
+            string prefixString = (database + "/").ToLowerInvariant();
             using var _ = Slice.From(context.Allocator, prefixString, out var prefix);
 
             foreach (var (key, val) in certs.SeekByPrimaryKeyPrefix(prefix, Slices.Empty, 0))
@@ -3532,7 +3528,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(TransactionOperationContext context, ref TableValueReader reader)
+        private unsafe BlittableJsonReaderObject GetReplicationCertificateAccessObject(TransactionOperationContext context, ref TableValueReader reader)
         {
             return new BlittableJsonReaderObject(reader.Read((int)ReplicationCertificatesTable.Access, out var size), size, context);
         }
@@ -3558,7 +3554,6 @@ namespace Raven.Server.ServerWide
         public unsafe bool IsReplicationCertificateByPublicKeyPinningHash(TransactionOperationContext context, string database, string hub, X509Certificate2 userCert,
             out DetailedReplicationHubAccess access)
         {
-
             using var certs = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ReplicationCertificatesSchema, ClusterStateMachine.ReplicationCertificatesSlice);
             // maybe we need to check by public key hash?
             string publicKeyPinningHash = userCert.GetPublicKeyPinningHash();
@@ -3566,12 +3561,12 @@ namespace Raven.Server.ServerWide
             using var ___ = Slice.From(context.Allocator, (database + "/" + hub + "/" + publicKeyPinningHash).ToLowerInvariant(), out var publicKeyHash);
 
             access = default;
-            
+
             foreach (var result in certs.SeekForwardFromPrefix(ReplicationCertificatesSchema.Indexes[ReplicationCertificatesHashSlice], publicKeyHash, publicKeyHash, 0))
             {
                 var obj = GetReplicationCertificateAccessObject(context, ref result.Result.Reader);
 
-                // this is a cheap check, not sufficient for real 
+                // this is a cheap check, not sufficient for real
                 if (obj.TryGet(nameof(userCert.Issuer), out string issuer) == false || issuer != userCert.Issuer)
                     continue;
 
@@ -3588,7 +3583,7 @@ namespace Raven.Server.ServerWide
                 {
                     userChain.Build(userCert);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     return false;
                 }
@@ -3597,7 +3592,7 @@ namespace Raven.Server.ServerWide
                 {
                     knownCertChain.Build(knownCert);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     return false;
                 }

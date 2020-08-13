@@ -359,7 +359,7 @@ namespace Raven.Server
                 {
                     msg += $" Automatic renewal is no longer possible. Please check the logs for errors and contact support@ravendb.net.";
                 }
-                
+
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, NotificationSeverity.Error));
 
                 if (Logger.IsOperationsEnabled)
@@ -385,7 +385,7 @@ namespace Raven.Server
 
                 ServerStore.NotificationCenter.Add(AlertRaised.Create(null, CertificateReplacement.CertReplaceAlertTitle, msg, AlertType.Certificates_Expiration, severity));
 
-                if (Logger.IsOperationsEnabled) 
+                if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
             }
             else
@@ -420,7 +420,7 @@ namespace Raven.Server
             try
             {
                 UpdateCertificateExpirationAlert();
-        }
+            }
             catch (Exception exception)
             {
                 if (Logger.IsOperationsEnabled)
@@ -903,11 +903,11 @@ namespace Raven.Server
         public void RefreshClusterCertificateTimerCallback(object state)
         {
             RefreshClusterCertificate(state, RaftIdGenerator.NewId());
-            
+
             try
             {
                 UpdateCertificateExpirationAlert();
-        }
+            }
             catch (Exception exception)
             {
                 if (Logger.IsOperationsEnabled)
@@ -1367,9 +1367,9 @@ namespace Raven.Server
                 return LoadCertificate();
             }
             catch (Exception e)
-                {
+            {
                 throw new InvalidOperationException("Unable to start the server.", e);
-                }
+            }
         }
 
         private CertificateHolder LoadCertificate()
@@ -1675,7 +1675,7 @@ namespace Raven.Server
 
             if (knownCertChain.ChainElements.Count != userChain.ChainElements.Count)
                 return false;
-            
+
             for (var i = 0; i < knownCertChain.ChainElements.Count; i++)
             {
                 // We walk the chain and compare the user certificate vs one of the existing certificate with same pinning hash
@@ -2431,12 +2431,14 @@ namespace Raven.Server
                                         TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.SinkToHub,
                                         _ => PullReplicationMode.None
                                     };
-                                    
-                                    if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0)// legacy
-                                    { 
-                                        return pullReplication.Certificates.ContainsKey(certificate.Thumbprint) && 
+
+#pragma warning disable CS0618 // Type or member is obsolete
+                                    if (pullReplication.Certificates != null && pullReplication.Certificates.Count > 0) // legacy
+                                    {
+                                        return pullReplication.Certificates.ContainsKey(certificate.Thumbprint) &&
                                             expectedMode == PullReplicationMode.HubToSink;
                                     }
+#pragma warning restore CS0618 // Type or member is obsolete
 
                                     if ((pullReplication.Mode & expectedMode) != expectedMode || expectedMode == PullReplicationMode.None)
                                     {
@@ -2450,21 +2452,18 @@ namespace Raven.Server
                                     if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate,
                                         out header.ReplicationHubAccess))
                                     {
-                                        RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(tcpClient.Client.RemoteEndPoint.ToString() , header.DatabaseName, info.AuthorizationFor, header.ReplicationHubAccess, certificate);
-                                        
+                                        RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(tcpClient.Client.RemoteEndPoint.ToString(), header.DatabaseName, info.AuthorizationFor, header.ReplicationHubAccess, certificate);
+
                                         return true;
                                     }
-                                }   
+                                }
 
                                 msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor} ({info.AuthorizeAs})";
                                 return false;
                             }
-
-                            break;
                         default:
                             throw new ArgumentOutOfRangeException("AuthorizeAs", "Unknown value for AuthorizeAs: " + info?.AuthorizeAs);
                     }
-                    break;                    
                 default:
                     msg = "Cannot allow access to a certificate with status: " + auth.Status;
                     return false;
@@ -2481,17 +2480,16 @@ namespace Raven.Server
             {
                 try
                 {
-                    await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub,new ReplicationHubAccess
-                        {
-                            AllowedHubToSinkPaths = replicationHubAccess.AllowedHubToSinkPaths,
-                            AllowedSinkToHubPaths = replicationHubAccess.AllowedSinkToHubPaths,
-                            Name = replicationHubAccess.Name,
-                            CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
-                            
-                        }, certificate.GetPublicKeyPinningHash(),certificate.Thumbprint, RaftIdGenerator.NewId(), certificate.Issuer, certificate.Subject, certificate.NotBefore, certificate.NotAfter)
-                        {
-                            RegisteringSamePublicKeyPinningHash = true
-                        })
+                    await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub, new ReplicationHubAccess
+                    {
+                        AllowedHubToSinkPaths = replicationHubAccess.AllowedHubToSinkPaths,
+                        AllowedSinkToHubPaths = replicationHubAccess.AllowedSinkToHubPaths,
+                        Name = replicationHubAccess.Name,
+                        CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                    }, certificate.GetPublicKeyPinningHash(), certificate.Thumbprint, RaftIdGenerator.NewId(), certificate.Issuer, certificate.Subject, certificate.NotBefore, certificate.NotAfter)
+                    {
+                        RegisteringSamePublicKeyPinningHash = true
+                    })
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)
@@ -2505,7 +2503,6 @@ namespace Raven.Server
                 _authAuditLog.Info(
                     $"Connection from {remoteAddress} with new replication hub ({hub} on {database}) certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                     $"Allowing the connection based on the certificate's Public Key Pinning Hash which is trusted by the replication hub. Old certificate: {replicationHubAccess.Thumbprint} ");
-
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)
@@ -2593,9 +2590,9 @@ namespace Raven.Server
         public void OpenPipes()
         {
             Pipes.CleanupOldPipeFiles();
-            if(Configuration.Server.DisableLogsStream == false)
+            if (Configuration.Server.DisableLogsStream == false)
                 LogStreamPipe = Pipes.OpenLogStreamPipe();
-            if(Configuration.Server.DisableAdminChannel == false)
+            if (Configuration.Server.DisableAdminChannel == false)
                 AdminConsolePipe = Pipes.OpenAdminConsolePipe();
         }
 

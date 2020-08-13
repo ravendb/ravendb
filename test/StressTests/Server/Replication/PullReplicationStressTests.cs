@@ -57,7 +57,9 @@ namespace StressTests.Server.Replication
             {
                 await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(pullReplicationName)
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     Certificates = new Dictionary<string, string>
+#pragma warning restore CS0618 // Type or member is obsolete
                     {
                         [pullReplicationCertificate.Thumbprint] = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Cert))
                     }
@@ -91,7 +93,6 @@ namespace StressTests.Server.Replication
                 }
 
                 Assert.True(WaitForDocument(sinkStore, "foo/bar2", timeout), sinkStore.Identifier);
-
             }
         }
 

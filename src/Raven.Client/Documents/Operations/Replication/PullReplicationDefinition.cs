@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,7 +21,9 @@ namespace Raven.Client.Documents.Operations.Replication
         public string Name;
         public long TaskId;
 
-        public PullReplicationDefinition() { }
+        public PullReplicationDefinition()
+        {
+        }
 
         public PullReplicationDefinition(string name, TimeSpan delay = default, string mentor = null)
         {
@@ -36,7 +37,9 @@ namespace Raven.Client.Documents.Operations.Replication
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
+#pragma warning disable CS0618 // Type or member is obsolete
                 [nameof(Certificates)] = DynamicJsonValue.Convert(Certificates),
+#pragma warning restore CS0618 // Type or member is obsolete
                 [nameof(TaskId)] = TaskId,
                 [nameof(Disabled)] = Disabled,
                 [nameof(MentorNode)] = MentorNode,
@@ -52,13 +55,15 @@ namespace Raven.Client.Documents.Operations.Replication
 
             if (useSsl == false)
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 if (Certificates?.Count > 0)
+#pragma warning restore CS0618 // Type or member is obsolete
                 {
                     throw new InvalidOperationException("Your server is unsecured and therefore you can't define pull replication with a certificate.");
                 }
             }
         }
-        
+
         public ExternalReplication ToExternalReplication(ReplicationInitialRequest request, long taskId)
         {
             return new ExternalReplication
