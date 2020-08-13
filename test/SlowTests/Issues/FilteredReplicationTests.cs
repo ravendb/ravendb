@@ -128,7 +128,9 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
+#pragma warning disable CS0618 // Type or member is obsolete
                 Certificates = new Dictionary<string, string>
+#pragma warning restore CS0618 // Type or member is obsolete
                 {
                     [pullCertA.Thumbprint] = Convert.ToBase64String(pullCertA.Export(X509ContentType.Cert)),
                     [pullCertB.Thumbprint] = Convert.ToBase64String(pullCertB.Export(X509ContentType.Cert)),

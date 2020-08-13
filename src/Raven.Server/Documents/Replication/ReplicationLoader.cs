@@ -165,82 +165,80 @@ namespace Raven.Server.Documents.Replication
                 null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
             database.TombstoneCleaner.Subscribe(this);
-            server.Cluster.Changes.DatabaseChanged+=DatabaseValueChanged;
+            server.Cluster.Changes.DatabaseChanged += DatabaseValueChanged;
         }
 
-        
-       private Task DatabaseValueChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState)
-       {
-           var documentDatabase = Database;
-           if (documentDatabase == null)
-               return Task.CompletedTask;
-           
-           if (string.Equals(documentDatabase.Name, databaseName, StringComparison.OrdinalIgnoreCase) == false)
-               return Task.CompletedTask;
+        private Task DatabaseValueChanged(string databaseName, long index, string type, DatabasesLandlord.ClusterDatabaseChangeType changeType, object changeState)
+        {
+            var documentDatabase = Database;
+            if (documentDatabase == null)
+                return Task.CompletedTask;
 
-           switch (changeState)
-           {
-               case BulkRegisterReplicationHubAccessCommand bulk:
-                   foreach (var cmd in bulk.Commands)
-                   {
-                       DisposeRelatedPullReplication(cmd.HubName, cmd.CertificateThumbprint);
-                   }
-                   break;
-               case UpdatePullReplicationAsHubCommand put:
-                   DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
-                   break;
-               case UnregisterReplicationHubAccessCommand del:
-                   DisposeRelatedPullReplication(del.HubName, del.CertificateThumbprint);
-                   break;
-               case RegisterReplicationHubAccessCommand reg:
-                   DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
-                   break;
-           }
-           return Task.CompletedTask;
+            if (string.Equals(documentDatabase.Name, databaseName, StringComparison.OrdinalIgnoreCase) == false)
+                return Task.CompletedTask;
 
-           void DisposeRelatedPullReplication(string hub, string certThumbprint)
-           {
-               if (hub == null)
-                   return;
-               
-               foreach (var  (_, repl) in _incoming)
-               {
-                   if (string.Equals(repl.PullReplicationName, hub, StringComparison.OrdinalIgnoreCase) == false) 
-                       continue;
-                   
-                   if(certThumbprint!= null && repl.CertificateThumbprint != certThumbprint)
-                       continue;
-                   
-                   try
-                   {
-                       if(_log.IsInfoEnabled)
-                           _log.Info($"Resetting {repl.ConnectionInfo} for {hub} on {certThumbprint} because replication configuration changed. Will be reconnected.");
-                       repl.Dispose();
-                   }
-                   catch 
-                   {
-                   }
-               }
+            switch (changeState)
+            {
+                case BulkRegisterReplicationHubAccessCommand bulk:
+                    foreach (var cmd in bulk.Commands)
+                    {
+                        DisposeRelatedPullReplication(cmd.HubName, cmd.CertificateThumbprint);
+                    }
+                    break;
+                case UpdatePullReplicationAsHubCommand put:
+                    DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
+                    break;
+                case UnregisterReplicationHubAccessCommand del:
+                    DisposeRelatedPullReplication(del.HubName, del.CertificateThumbprint);
+                    break;
+                case RegisterReplicationHubAccessCommand reg:
+                    DisposeRelatedPullReplication(reg.HubName, reg.CertificateThumbprint);
+                    break;
+            }
+            return Task.CompletedTask;
 
-               foreach (var repl in _outgoing)
-               {
-                   if (string.Equals(repl.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false) 
-                       continue;
-                   
-                   if(certThumbprint!= null && repl.CertificateThumbprint != certThumbprint)
-                       continue;
+            void DisposeRelatedPullReplication(string hub, string certThumbprint)
+            {
+                if (hub == null)
+                    return;
 
-                   try
-                   {
-                       repl.Dispose();
-                   }
-                   catch 
-                   {
-                   }
+                foreach (var (_, repl) in _incoming)
+                {
+                    if (string.Equals(repl.PullReplicationName, hub, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
 
-               }
-           }
-       }
+                    if (certThumbprint != null && repl.CertificateThumbprint != certThumbprint)
+                        continue;
+
+                    try
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"Resetting {repl.ConnectionInfo} for {hub} on {certThumbprint} because replication configuration changed. Will be reconnected.");
+                        repl.Dispose();
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                foreach (var repl in _outgoing)
+                {
+                    if (string.Equals(repl.PullReplicationDefinitionName, hub, StringComparison.OrdinalIgnoreCase) == false)
+                        continue;
+
+                    if (certThumbprint != null && repl.CertificateThumbprint != certThumbprint)
+                        continue;
+
+                    try
+                    {
+                        repl.Dispose();
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
 
         public IReadOnlyDictionary<ReplicationNode, ConnectionShutdownInfo> OutgoingFailureInfo
             => _outgoingFailureInfo;
@@ -270,7 +268,7 @@ namespace Raven.Server.Documents.Replication
         {
             var supportedVersions =
                 TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
-            string[] allowedPaths =default;
+            string[] allowedPaths = default;
             string pullDefinitionName = null;
             switch (header.AuthorizeInfo?.AuthorizeAs)
             {
@@ -306,7 +304,9 @@ namespace Raven.Server.Documents.Replication
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
                             if (certificate == null)
                                 throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
+#pragma warning disable CS0618 // Type or member is obsolete
                             if (pullReplicationDefinition.Certificates != null && pullReplicationDefinition.Certificates.Count > 0)
+#pragma warning restore CS0618 // Type or member is obsolete
                                 throw new InvalidOperationException(
                                     "Incoming filtered replication is not supported on legacy replication hub. Make sure that there are no inline certificates on the replication hub: " +
                                     pullReplicationDefinition.Name);
@@ -317,7 +317,7 @@ namespace Raven.Server.Documents.Replication
                             break;
                         default:
                             throw new InvalidOperationException("Unknown AuthroizeAs value: " + header.AuthorizeInfo.AuthorizeAs);
-                    } 
+                    }
                     break;
                 case null:
                     break;
@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
-                        TcpConnectionHeaderMessage.SupportedFeatures supportedVersions, 
+                        TcpConnectionHeaderMessage.SupportedFeatures supportedVersions,
                         PullReplicationDefinition pullReplicationDefinition, TcpConnectionHeaderMessage header)
         {
             ReplicationInitialRequest initialRequest;
@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Replication
             if (string.Equals(initialRequest.PullReplicationDefinitionName, pullReplicationDefinition.Name, StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException(
                     $"PullReplicationDefinitionName '{initialRequest.PullReplicationDefinitionName}' does not match the pull replication definition name: {pullReplicationDefinition.Name}");
-            
+
             var taskId = pullReplicationDefinition.TaskId; // every connection to this pull replication on the hub will have the same task id.
             var externalReplication = pullReplicationDefinition.ToExternalReplication(initialRequest, taskId);
 
@@ -352,10 +352,10 @@ namespace Raven.Server.Documents.Replication
                 PullReplicationDefinitionName = initialRequest.PullReplicationDefinitionName,
                 CertificateThumbprint = tcpConnectionOptions.Certificate?.Thumbprint
             };
-            
+
             if (header.ReplicationHubAccess != null)
             {
-                // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do 
+                // Note that if the certificate isn't registered *specifically* in the pull replication, we don't do
                 // any filtering. That means that the certificate has global access to the database, so there is not point
                 outgoingReplication.PathsToSend = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedSinkToHubPaths, header.ReplicationHubAccess.AllowedHubToSinkPaths);
             }
@@ -372,7 +372,7 @@ namespace Raven.Server.Documents.Replication
         public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationAsSink destination)
         {
             string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer,allowedPaths, destination.HubName);
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, allowedPaths, destination.HubName);
             newIncoming.Failed += RetryPullReplication;
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
@@ -900,13 +900,13 @@ namespace Raven.Server.Documents.Replication
 
                 externalReplication.Database = connectionString.Database;
                 externalReplication.ConnectionString = connectionString;
-                
-                if (externalReplication is PullReplicationAsSink sink && 
+
+                if (externalReplication is PullReplicationAsSink sink &&
                     sink.Mode == (PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink))
                 {
                     // we have dual mode here, need to split it
                     sink.Mode = PullReplicationMode.SinkToHub;
-                    
+
                     var other = new PullReplicationAsSink
                     {
                         Database = sink.Database,
@@ -1194,24 +1194,24 @@ namespace Raven.Server.Documents.Replication
                 switch (node)
                 {
                     case ExternalReplicationBase exNode:
-                    {
-                        var database = exNode.ConnectionString.Database;
-                        if (node is PullReplicationAsSink sink)
                         {
-                            return GetPullReplicationTcpInfo(sink, certificate, database);
-                        }
+                            var database = exNode.ConnectionString.Database;
+                            if (node is PullReplicationAsSink sink)
+                            {
+                                return GetPullReplicationTcpInfo(sink, certificate, database);
+                            }
 
-                        // normal external replication
-                        return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
-                    }
-                    case InternalReplication internalNode:
-                    {
-                        using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
-                        {
-                            return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
-                                certificate, cts.Token);
+                            // normal external replication
+                            return GetExternalReplicationTcpInfo(exNode as ExternalReplication, certificate, database);
                         }
-                    }
+                    case InternalReplication internalNode:
+                        {
+                            using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                            {
+                                return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
+                                    certificate, cts.Token);
+                            }
+                        }
                     default:
                         throw new InvalidOperationException(
                             $"Unexpected replication node type, Expected to be '{typeof(ExternalReplication)}' or '{typeof(InternalReplication)}', but got '{node.GetType()}'");
@@ -1375,8 +1375,8 @@ namespace Raven.Server.Documents.Replication
                         {
                             PullReplicationMode.HubToSink => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
                             PullReplicationMode.SinkToHub => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
-                            PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node),"Replication mode should be set to pull or push"),
-                            _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)   
+                            PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node), "Replication mode should be set to pull or push"),
+                            _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)
                         },
                         AuthorizationFor = sink.HubName
                     };
