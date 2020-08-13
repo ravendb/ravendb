@@ -357,6 +357,7 @@ function map(name, lambda) {
 
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
             _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
+            _engine.SetValue("tryConvertToNumber", new ClrFunctionInstance(_engine, "tryConvertToNumber", TryConvertToNumber));
 
             _engine.ExecuteWithReset(Code);
             _engine.ExecuteWithReset(mapCode);
@@ -392,6 +393,31 @@ function map(name, lambda) {
         protected void ThrowIndexCreationException(string message)
         {
             throw new IndexCreationException($"JavaScript index {Definition.Name} {message}");
+        }
+
+        private JsValue TryConvertToNumber(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 1)
+            {
+                throw new ArgumentException("The tryConvertToNumber(value) method expects one argument, but got: " + args.Length);
+            }
+
+            var value = args[0];
+
+            if (value.IsNull() || value.IsUndefined())
+                return DynamicJsNull.ImplicitNull;
+
+            if (value.IsNumber())
+                return value;
+
+            if (value.IsString())
+            {
+                var valueAsString = value.AsString();
+                if (double.TryParse(valueAsString, out var valueAsDbl))
+                    return valueAsDbl;
+            }
+
+            return DynamicJsNull.ImplicitNull;
         }
 
         private JsValue LoadDocument(JsValue self, JsValue[] args)
