@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                     {
                         Name = "user1"
                     });
-                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), throwOnTimeout: false);
+                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(3), throwOnTimeout: false);
                     session.SaveChanges();
                 }
 
@@ -45,11 +45,11 @@ namespace SlowTests.Issues
                     {
                         Name = "user1"
                     });
-                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(5), throwOnTimeout: true);
+                    session.Advanced.WaitForIndexesAfterSaveChanges(timeout: TimeSpan.FromSeconds(3), throwOnTimeout: true);
 
                     var error = Assert.Throws<RavenException>(() => session.SaveChanges());
                     Assert.StartsWith("System.TimeoutException", error.Message);
-                    Assert.Contains("could not verify that 1 indexes has caught up with the changes as of etag 3", error.Message);
+                    Assert.Contains("could not verify that 1 indexes has caught up with the changes as of etag", error.Message);
                 }
             }
         }
