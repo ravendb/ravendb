@@ -39,6 +39,45 @@ namespace Raven.Server.Documents.Indexes.Static
             AddMapInternal(collection, collection, map);
         }
 
+        public dynamic LoadAttachments(dynamic doc)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException($"Indexing scope was not initialized.");
+
+            if (doc is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            var document = doc as DynamicBlittableJson;
+            if (document == null)
+                throw new InvalidOperationException($"{nameof(LoadAttachments)} may only be called with a non-null entity as a parameter, but was called with a parameter of type {doc.GetType().FullName}: {doc}");
+
+            return CurrentIndexingScope.Current.LoadAttachments(document);
+        }
+
+        public dynamic LoadAttachment(dynamic doc, object attachmentName)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException($"Indexing scope was not initialized. Attachment Name: {attachmentName}");
+
+            if (doc is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            var document = doc as DynamicBlittableJson;
+            if (document == null)
+                throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with a non-null entity as a first parameter, but was called with a parameter of type {doc.GetType().FullName}: {doc}");
+
+            if (attachmentName is LazyStringValue attachmentNameLazy)
+                return CurrentIndexingScope.Current.LoadAttachment(document, attachmentNameLazy);
+
+            if (attachmentName is string attachmentNameString)
+                return CurrentIndexingScope.Current.LoadAttachment(document, attachmentNameString);
+
+            if (attachmentName is DynamicNullObject)
+                return DynamicNullObject.Null;
+
+            throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with a string, but was called with a parameter of type {attachmentName.GetType().FullName}: {attachmentName}");
+        }
+
         public dynamic Id(dynamic doc)
         {
             if (doc is DynamicBlittableJson json)
@@ -248,45 +287,6 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 return null;
             }
-        }
-
-        public dynamic LoadAttachments(dynamic doc)
-        {
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException($"Indexing scope was not initialized.");
-
-            if (doc is DynamicNullObject)
-                return DynamicNullObject.Null;
-
-            var document = doc as DynamicBlittableJson;
-            if (document == null)
-                throw new InvalidOperationException($"{nameof(LoadAttachments)} may only be called with a non-null entity as a parameter, but was called with a parameter of type {doc.GetType().FullName}: {doc}");
-
-            return CurrentIndexingScope.Current.LoadAttachments(document);
-        }
-
-        public dynamic LoadAttachment(dynamic doc, object attachmentName)
-        {
-            if (CurrentIndexingScope.Current == null)
-                throw new InvalidOperationException($"Indexing scope was not initialized. Attachment Name: {attachmentName}");
-
-            if (doc is DynamicNullObject)
-                return DynamicNullObject.Null;
-
-            var document = doc as DynamicBlittableJson;
-            if (document == null)
-                throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with a non-null entity as a first parameter, but was called with a parameter of type {doc.GetType().FullName}: {doc}");
-
-            if (attachmentName is LazyStringValue attachmentNameLazy)
-                return CurrentIndexingScope.Current.LoadAttachment(document, attachmentNameLazy);
-
-            if (attachmentName is string attachmentNameString)
-                return CurrentIndexingScope.Current.LoadAttachment(document, attachmentNameString);
-
-            if (attachmentName is DynamicNullObject)
-                return DynamicNullObject.Null;
-
-            throw new InvalidOperationException($"{nameof(LoadAttachment)} may only be called with a string, but was called with a parameter of type {attachmentName.GetType().FullName}: {attachmentName}");
         }
 
         public dynamic LoadDocument<TIgnored>(object keyOrEnumerable, string collectionName)
