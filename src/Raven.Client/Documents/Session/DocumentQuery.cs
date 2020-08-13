@@ -1047,12 +1047,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         Lazy<IEnumerable<T>> IDocumentQueryBase<T>.Lazily(Action<IEnumerable<T>> onEval)
         {
-            if (QueryOperation == null)
-            {
-                QueryOperation = InitializeQueryOperation();
-            }
-
-            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = GetLazyQueryOperation();
             return ((DocumentSession)TheSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
