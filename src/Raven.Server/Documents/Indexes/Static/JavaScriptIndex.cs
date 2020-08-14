@@ -5,6 +5,7 @@ using System.Text;
 using Esprima;
 using Jint;
 using Jint.Native;
+using Jint.Native.Array;
 using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime;
@@ -15,6 +16,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Static.Counters;
+using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.Static.TimeSeries;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Extensions;
@@ -358,6 +360,7 @@ function map(name, lambda) {
             _engine.SetValue("load", new ClrFunctionInstance(_engine, "load", LoadDocument));
             _engine.SetValue("cmpxchg", new ClrFunctionInstance(_engine, "cmpxchg", LoadCompareExchangeValue));
             _engine.SetValue("tryConvertToNumber", new ClrFunctionInstance(_engine, "tryConvertToNumber", TryConvertToNumber));
+            _engine.SetValue("recurse", new ClrFunctionInstance(_engine, "recurse", Recurse));
 
             _engine.ExecuteWithReset(Code);
             _engine.ExecuteWithReset(mapCode);
@@ -393,6 +396,22 @@ function map(name, lambda) {
         protected void ThrowIndexCreationException(string message)
         {
             throw new IndexCreationException($"JavaScript index {Definition.Name} {message}");
+        }
+
+        private JsValue Recurse(JsValue self, JsValue[] args)
+        {
+            if (args.Length != 2)
+            {
+                throw new ArgumentException("The recurse(item, func) method expects two arguments, but got: " + args.Length);
+            }
+
+            var item = args[0];
+            var func = args[1] as ArrowFunctionInstance;
+
+            if (func == null)
+                throw new ArgumentException("The second argument in recurse(item, func) must be an arrow function.");
+
+            return new RecursiveJsFunction(_engine, item, func).Execute();
         }
 
         private JsValue TryConvertToNumber(JsValue self, JsValue[] args)

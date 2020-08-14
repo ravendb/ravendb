@@ -7,7 +7,7 @@ using Jint.Runtime.Descriptors;
 using Raven.Client.Documents.Operations.Attachments;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public class AttachmentNameObjectInstance : ObjectInstanceBase
     {

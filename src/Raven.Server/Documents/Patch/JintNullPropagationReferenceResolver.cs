@@ -3,6 +3,7 @@ using Jint;
 using Jint.Native;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
+using Raven.Server.Documents.Indexes.Static.JavaScript;
 
 namespace Raven.Server.Documents.Patch
 {

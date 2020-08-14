@@ -1,9 +1,8 @@
 ﻿using Jint;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
-using Raven.Server.Documents.Patch;
 
-namespace Raven.Server.Documents
+namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public abstract class ObjectInstanceBase : ObjectInstance
     {

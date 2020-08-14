@@ -2,7 +2,7 @@
 using Jint.Native;
 using Jint.Runtime;
 
-namespace Raven.Server.Documents.Patch
+namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
     public sealed class DynamicJsNull : JsValue, IEquatable<JsNull>, IEquatable<DynamicJsNull>
     {
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Patch
             return false;
         }
 
-        bool IEquatable<JsNull>.Equals(JsNull other)
+        public bool Equals(JsNull other)
         {
             if (ReferenceEquals(null, other))
             {
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Patch
             return true;
         }
 
-        bool IEquatable<DynamicJsNull>.Equals(DynamicJsNull other)
+        public bool Equals(DynamicJsNull other)
         {
             if (ReferenceEquals(null, other))
             {
