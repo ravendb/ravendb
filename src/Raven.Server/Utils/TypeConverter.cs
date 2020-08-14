@@ -17,6 +17,7 @@ using Raven.Client;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Exceptions;
 using Raven.Server.Extensions;

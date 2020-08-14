@@ -12,6 +12,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

@@ -4,11 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using FastTests;
-using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Company = Raven.Tests.Core.Utils.Entities.Company;
+using Employee = Raven.Tests.Core.Utils.Entities.Employee;
 
 namespace SlowTests.Issues
 {
@@ -210,6 +212,34 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void CanUseRecurse_JavaScript()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new Posts_Recurse().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var post1 = new Post { Title = "Post1", Desc = "Post1 desc" };
+                    var post2 = new Post { Title = "Post2", Desc = "Post2 desc", Comments = new Post[] { post1 } };
+                    var post3 = new Post { Title = "Post3", Desc = "Post3 desc", Comments = new Post[] { post2 } };
+                    var post4 = new Post { Title = "Post4", Desc = "Post4 desc", Comments = new Post[] { post3 } };
+                    session.Store(post4);
+                    session.SaveChanges();
+                    WaitForIndexing(store);
+
+                    var posts = session.Query<Post, Posts_Recurse>()
+                        .ToArray();
+                    Assert.Equal(1, posts.Length);
+                    Assert.Equal("Post4", posts[0].Title);
+                    Assert.Equal("Post3", posts[0].Comments[0].Title);
+                    Assert.Equal("Post2", posts[0].Comments[0].Comments[0].Title);
+                    Assert.Equal("Post1", posts[0].Comments[0].Comments[0].Comments[0].Title);
+                }
+            }
+        }
+
         private class AttachmentIndex : AbstractJavaScriptIndexCreationTask
         {
             public class Result
@@ -264,6 +294,27 @@ return {
     ObjValue: tryConvertToNumber(item.ObjValue) || -1
 };
 })"
+                };
+            }
+        }
+
+        public class Posts_Recurse : AbstractJavaScriptIndexCreationTask
+        {
+            public Posts_Recurse()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('Posts', function (post) {
+
+return recurse(post, x => x.Comments).map(function (comment) {
+    return {
+        Title: post.Title,
+        Desc: post.Desc
+    };
+});
+
+});
+"
                 };
             }
         }
