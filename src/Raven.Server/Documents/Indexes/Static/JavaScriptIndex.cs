@@ -546,7 +546,11 @@ function createSpatialField(wkt) {
 }
 
 function createSpatialField(lat, lng) {
-    return { $spatial: {Lng:lng, Lat:lat} }
+    return { $spatial: { Lng: lng, Lat: lat } }
+}
+
+function createField(name, value, options) {
+    return { $name: name, $value: value, $options: options }
 }
 ";
 
