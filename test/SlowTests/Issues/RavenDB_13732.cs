@@ -240,6 +240,35 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public void SupportForCreateFieldWithOptions_JavaScript()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new CreateFieldItems_JavaScript().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new CreateFieldItem
+                    {
+                        FieldName = "F1",
+                        FieldValue = "Value1",
+                        Stored = true
+                    });
+
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                RavenTestHelper.AssertNoIndexErrors(store);
+
+                var terms = store.Maintenance.Send(new GetTermsOperation(new CreateFieldItems_JavaScript().IndexName, "F1", null));
+                Assert.Equal(1, terms.Length);
+                Assert.Equal("Value1", terms[0]);
+            }
+        }
+
         private class AttachmentIndex : AbstractJavaScriptIndexCreationTask
         {
             public class Result
@@ -305,16 +334,29 @@ return {
                 Maps = new HashSet<string>
                 {
                     @"map('Posts', function (post) {
-
 return recurse(post, x => x.Comments).map(function (comment) {
     return {
         Title: post.Title,
         Desc: post.Desc
     };
 });
-
 });
 "
+                };
+            }
+        }
+
+        private class CreateFieldItems_JavaScript : AbstractJavaScriptIndexCreationTask
+        {
+            public CreateFieldItems_JavaScript()
+            {
+                Maps = new HashSet<string>
+                {
+                    @"map('CreateFieldItems', function (i) {
+                                    return {
+                                        _: createField(i.FieldName, i.FieldValue, { indexing: 'Exact', storage: true, termVector: null })
+                                    };
+                                })",
                 };
             }
         }
@@ -340,6 +382,19 @@ return recurse(post, x => x.Comments).map(function (comment) {
             public string StgValue { get; set; }
 
             public Company ObjValue { get; set; }
+        }
+
+        private class CreateFieldItem
+        {
+            public string Id { get; set; }
+
+            public string FieldName { get; set; }
+
+            public string FieldValue { get; set; }
+
+            public bool Stored { get; set; }
+
+            public string OtherField { get; set; }
         }
     }
 }
