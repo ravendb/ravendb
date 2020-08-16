@@ -91,6 +91,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private void GroupBy(Expression expression)
         {
             string timePeriod;
+            string with = null;
 
             if (expression is ConstantExpression constantExpression)
             {
@@ -99,7 +100,24 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             else if (expression is LambdaExpression lambda)
             {
-                timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.GroupBy));
+                if (!(lambda.Body is MethodCallExpression mce))
+                {
+                    ThrowInvalidMethodArgument(lambda, nameof(ITimeSeriesQueryable.GroupBy));
+                    return;
+                }
+
+                MethodCallExpression groupByCall;
+                if (mce.Object is MethodCallExpression innerCall)
+                {
+                    groupByCall = innerCall;
+                    with = GroupByWith(mce, lambda);
+                }
+                else
+                {
+                    groupByCall = mce;
+                }
+
+                timePeriod = GetTimePeriod(groupByCall, nameof(ITimeSeriesQueryable.GroupBy));
             }
 
             else
@@ -107,7 +125,32 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 timePeriod = expression.ToString();
             }
 
-            _groupBy = $" group by '{timePeriod}'";
+            _groupBy = $" group by '{timePeriod}'{with}";
+        }
+
+        private static string GroupByWith(MethodCallExpression callExpression, Expression expression)
+        {
+            if (callExpression.Method.DeclaringType != typeof(ITimeSeriesAggregationExtensions))
+            {
+                ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.GroupBy));
+                return null;
+            }
+
+            if (callExpression.Method.Name != nameof(ITimeSeriesAggregationExtensions.WithOptions))
+                throw new NotSupportedException("Unsupported method in GroupBy clause: " + callExpression.Method.Name);
+
+            LinqPathProvider.GetValueFromExpressionWithoutConversion(callExpression.Arguments[0], out var value);
+            if (!(value is TimeSeriesAggregationOptions options))
+            {
+                ThrowInvalidMethodArgument(callExpression.Arguments[0], nameof(ITimeSeriesAggregationExtensions.WithOptions));
+                return null;
+            }
+
+            if (options.Interpolation == InterpolationType.None) 
+                return null;
+
+            return $" with interpolation({options.Interpolation})";
+
         }
 
         private void WhereMethod(MethodCallExpression call)
@@ -242,13 +285,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (_first != null)
                 throw new InvalidQueryException($"Cannot use both '{nameof(ITimeSeriesQueryable.FromFirst)}' and '{nameof(ITimeSeriesQueryable.FromLast)}' in the same Time Series query function ");
 
-            if (!(expression is LambdaExpression lambda))
+            if (!(expression is LambdaExpression lambda) || 
+                !(lambda.Body is MethodCallExpression methodCall))
             {
                 ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.FromLast));
                 return;
             }
 
-            var timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.FromLast));
+            var timePeriod = GetTimePeriod(methodCall, nameof(ITimeSeriesQueryable.FromLast));
 
             _last = $" last {timePeriod}";
         }
@@ -258,13 +302,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (_last != null)
                 throw new InvalidQueryException($"Cannot use both '{nameof(ITimeSeriesQueryable.FromFirst)}' and '{nameof(ITimeSeriesQueryable.FromLast)}' in the same Time Series query function ");
 
-            if (!(expression is LambdaExpression lambda))
+            if (!(expression is LambdaExpression lambda) ||
+                !(lambda.Body is MethodCallExpression methodCall))
             {
                 ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.FromFirst));
                 return;
             }
 
-            var timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.FromFirst));
+            var timePeriod = GetTimePeriod(methodCall, nameof(ITimeSeriesQueryable.FromFirst));
 
             _first = $" first {timePeriod}";
         }
@@ -456,17 +501,16 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return d.EnsureUtc().GetDefaultRavenFormat();
         }
 
-        private static string GetTimePeriod(LambdaExpression lambda, string method)
+        private static string GetTimePeriod(MethodCallExpression callExpression, string method)
         {
-            if (!(lambda.Body is MethodCallExpression mce) ||
-                mce.Method.DeclaringType != typeof(ITimePeriodBuilder))
+            if (callExpression.Method.DeclaringType != typeof(ITimePeriodBuilder))
             {
-                ThrowInvalidMethodArgument(lambda, method);
+                ThrowInvalidMethodArgument(callExpression, method);
                 return null;
             }
 
-            var duration = ((ConstantExpression)mce.Arguments[0]).Value;
-            return $"{duration} {mce.Method.Name}";
+            var duration = ((ConstantExpression)callExpression.Arguments[0]).Value;
+            return $"{duration} {callExpression.Method.Name}";
         }
 
         private static void ThrowInvalidMethodArgument(Expression argument, string method)
