@@ -29,7 +29,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public interface ITimeSeriesQueryable<T> where T : new()
     {
-        
         ITimeSeriesQueryable<T> Where(Expression<Func<TimeSeriesEntry<T>, bool>> predicate);
 
         ITimeSeriesQueryable<T> Offset(TimeSpan offset);
@@ -102,20 +101,25 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public interface ITimePeriodBuilder
     {
-        void Milliseconds(int duration);
+        ITimeSeriesAggregationExtensions Milliseconds(int duration);
 
-        void Seconds(int duration);
+        ITimeSeriesAggregationExtensions Seconds(int duration);
 
-        void Minutes(int duration);
+        ITimeSeriesAggregationExtensions Minutes(int duration);
 
-        void Hours(int duration);
+        ITimeSeriesAggregationExtensions Hours(int duration);
 
-        void Days(int duration);
+        ITimeSeriesAggregationExtensions Days(int duration);
 
-        void Months(int duration);
+        ITimeSeriesAggregationExtensions Months(int duration);
 
-        void Quarters(int duration);
+        ITimeSeriesAggregationExtensions Quarters(int duration);
 
-        void Years(int duration);
+        ITimeSeriesAggregationExtensions Years(int duration);
+    }
+
+    public interface ITimeSeriesAggregationExtensions
+    {
+        public void WithOptions(TimeSeriesAggregationOptions options);
     }
 }
