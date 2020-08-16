@@ -67,10 +67,7 @@ namespace SlowTests.MailingList.Apo
             store.OnBeforeQuery += (s, e) =>
             {
                 current.Add("SessionOnBeforeQuery");
-                e.QueryCustomization.AfterQueryExecuted(result =>
-                {
-                    current.Add("AfterQueryExecuted");
-                });
+                e.QueryCustomization.AfterQueryExecuted(_ => current.Add("AfterQueryExecuted"));
             };
                 
             using (var session = store.OpenAsyncSession())
@@ -94,7 +91,55 @@ namespace SlowTests.MailingList.Apo
             current = asyncLazyQuery;
             using (var session = store.OpenAsyncSession())
             {
-                _ = (await Customize(session.Query<TestClass>()).LazilyAsync().Value).ToArray();
+                _ = await Customize(session.Query<TestClass>()).LazilyAsync().Value;
+            }
+
+            Assert.Equal(regularQuery, lazyQuery);
+            Assert.Equal(regularQuery, asyncLazyQuery);
+                
+            IRavenQueryable<TestClass> Customize(IRavenQueryable<TestClass> query)
+            {
+                return query.Customize(x => x.BeforeQueryExecuted(_ => current.Add("QueryOnBeforeQuery")));
+            }
+        }
+        
+        [Fact]
+        public async Task CountLazily_WhenDefineCallBack_ShouldExecuteAsItIsInRegularQuery()
+        {
+            var regularQuery = new List<string>();
+            var lazyQuery = new List<string>();
+            var asyncLazyQuery = new List<string>();
+            List<string> current = null;
+
+            using var store = GetDocumentStore();
+            store.OnBeforeQuery += (s, e) =>
+            {
+                current.Add("SessionOnBeforeQuery");
+                e.QueryCustomization.AfterQueryExecuted(_ => current.Add("AfterQueryExecuted"));
+            };
+                
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestClass { Id = "testid", Value = "test1", Date = DateTime.UtcNow });
+                await session.SaveChangesAsync();
+            }
+
+            current = regularQuery;
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await Customize(session.Query<TestClass>()).CountAsync();
+            }
+                
+            current = lazyQuery;
+            using (var session = store.OpenSession())
+            {
+                _ = Customize(session.Query<TestClass>()).CountLazily().Value;
+            }
+            
+            current = asyncLazyQuery;
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await Customize(session.Query<TestClass>()).CountLazilyAsync().Value;
             }
 
             Assert.Equal(regularQuery, lazyQuery);
