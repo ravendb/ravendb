@@ -43,8 +43,6 @@ namespace Raven.Server.Documents.Queries.Results
 
         private double? _scale;
 
-        //private GapData _gapData;
-
         private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
         {
             new TimeSeriesAggregation(AggregationType.First),
@@ -227,6 +225,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 if (gapData.HaveGap)
                 {
+                    // fill the gaps between previous range and current range
                     gapData.UpTo = rangeSpec.Start;
                     FillMissingGaps(gapData, aggStates, array, interpolationType);
                 }
@@ -792,7 +791,7 @@ namespace Raven.Server.Documents.Queries.Results
                 gapData.HaveGap = true;
 
                 // update PreviousStats.
-                // we will fill the gaps when we finish with the next range
+                // we will fill the gaps when we're finished with the next range
 
                 for (int i = 0; i < aggStates.Length; i++)
                 {
@@ -810,7 +809,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (groupByWith == null) 
                 return interpolationType;
 
-            if (string.Equals(groupByWith.Name.Value, "interpolation", StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(groupByWith.Name.Value, nameof(TimeSeriesAggregationOptions.Interpolation), StringComparison.OrdinalIgnoreCase) == false)
                 throw new ArgumentException("Unknown method in WITH clause of time series query: " + groupByWith.Name);
 
             if (groupByWith.Arguments.Count != 1 || !(groupByWith.Arguments[0] is FieldExpression arg))
@@ -874,7 +873,7 @@ namespace Raven.Server.Documents.Queries.Results
                             : currentStats;
                         break;
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        throw new ArgumentOutOfRangeException("Unknown InterpolationType : " + interpolationType);
                 }
 
                 array.Add(AddTimeSeriesResult(statsToAdd, start, end));
@@ -1356,7 +1355,7 @@ namespace Raven.Server.Documents.Queries.Results
             "yyyy-MM-ddTHH:mm:ss.fff"
         };
 
-        internal struct GapData
+        private struct GapData
         {
             public bool HaveGap;
 
@@ -1365,13 +1364,6 @@ namespace Raven.Server.Documents.Queries.Results
             public RangeGroup StartRange;
 
             public TimeSeriesAggregation[] PreviousStats;
-        }
-
-        public enum InterpolationType
-        {
-            None,
-            Linear,
-            Nearest
         }
     }
 }
