@@ -227,9 +227,6 @@ namespace Raven.Client.Documents.Session
 
         internal LazyQueryOperation<T> GetLazyQueryOperation()
         {
-            var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
-            TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
-            
             QueryOperation ??= InitializeQueryOperation();
 
             return new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
@@ -237,6 +234,9 @@ namespace Raven.Client.Documents.Session
         
         protected internal QueryOperation InitializeQueryOperation()
         {
+            var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
+            TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
+            
             var indexQuery = GetIndexQuery();
 
             return new QueryOperation(TheSession,

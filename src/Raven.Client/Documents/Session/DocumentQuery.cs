@@ -1056,9 +1056,6 @@ namespace Raven.Client.Documents.Session
             if (QueryOperation != null)
                 return;
 
-            var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
-            TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
-
             QueryOperation = InitializeQueryOperation();
             ExecuteActualQuery();
         }
