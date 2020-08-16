@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -254,9 +256,6 @@ select timeseries(
 
                     }
 
-                    // gaps to fill : 00:02 - 00:03, 00:03 - 00:04, 00:04 - 00:05
-                    // and  00:07 - 00:08, 00:08 - 00:09, 00:09 - 00:10 
-
                     session.SaveChanges();
                 }
                 using (var session = store.OpenSession())
@@ -312,12 +311,12 @@ select timeseries(
         }
 
         [Fact]
-        public void CanFillGaps_GroupByMonth_RawQuery()
+        public void CanFillGaps_GroupByMonth_Linear_RawQuery()
         {
             using (var store = GetDocumentStore())
             {
                 var id = "people/1";
-                var baseline = RavenTestHelper.UtcToday;
+                var baseline = new DateTime(2020, 4, 1);
 
                 using (var session = store.OpenSession())
                 {
@@ -332,11 +331,12 @@ select timeseries(
                     while (dt < baseline.AddYears(2))
                     {
                         dt = dt.AddMonths(1);
+                        c++;
 
                         if (dt.Month.In(10, 11, 12))
                             continue;
 
-                        tsf.Append(dt, ++c * 10);
+                        tsf.Append(dt, c * 10);
                     }
 
                     session.SaveChanges();
@@ -359,21 +359,36 @@ select timeseries(
                     var result = query.First();
 
                     Assert.Equal(25, result.Results.Length);
-                    /*//Assert.Equal(entriesCount, result.Count);
 
                     for (var i = 0; i < result.Results.Length; i++)
                     {
                         var tsAggregation = result.Results[i];
-                        Assert.Equal(baseline.AddMinutes(i), tsAggregation.From);
-                        Assert.Equal(baseline.AddMinutes(i + 1), tsAggregation.To);
+                        Assert.Equal(baseline.AddMonths(i), tsAggregation.From);
+                        Assert.Equal(baseline.AddMonths(i + 1), tsAggregation.To);
+
+                        if (tsAggregation.From.Month.In(10, 11, 12))
+                        {
+                            // y = yA + (yB - yA) * ((x - xa) / (xb - xa)) 
+                            var x = tsAggregation.From.Ticks;
+                            var xa = result.Results[i - 1].From.Ticks;
+                            var xb = result.Results[i + 1].From.Ticks;
+                            var ya = result.Results[i - 1].Max[0];
+                            var yb = result.Results[i + 1].Max[0];
+
+                            var expected = ya + (yb - ya) * ((double)(x - xa) / (xb - xa));
+
+                            Assert.Equal(expected, tsAggregation.Max[0]);
+                            continue;
+                        }
+
                         Assert.Equal(i * 10, tsAggregation.Max[0]);
-                    }*/
+                    }
                 }
             }
         }
 
         [Fact]
-        public void CanFillGaps_GroupByMonth2_RawQuery()
+        public void CanFillGaps_GroupByMonth_Nearest_RawQuery()
         {
             using (var store = GetDocumentStore())
             {
@@ -401,7 +416,7 @@ where id() = $id
 select timeseries(
     from HeartRate between $start and $end 
     group by 1 month
-    with interpolation(linear)
+    with interpolation(nearest)
     select max())
 ")
                         .AddParameter("id", id)
@@ -420,13 +435,8 @@ select timeseries(
 
                     tsAggregation = result.Results[2];
 
-                    // y = yA + (yB - yA) * ((x - xa) / (xb - xa)) 
-                    var x = tsAggregation.From.Ticks;
-                    var xa = result.Results[1].From.Ticks;
-                    var xb = result.Results[3].From.Ticks;
-                    var expected = 200 + (400 - 200) * ((double)(x - xa) / (xb - xa));
-
-                    Assert.Equal(expected, tsAggregation.Max[0]);
+                    //should be same as next
+                    Assert.Equal(400, tsAggregation.Max[0]);
 
                     tsAggregation = result.Results[3];
                     Assert.Equal(400, tsAggregation.Max[0]);
@@ -560,5 +570,220 @@ select timeseries(
                 }
             }
         }
+
+        [Fact]
+        public void CanFillGaps_LinearInterpolation_Linq()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                string id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    tsf.Append(baseline, 50);
+                    tsf.Append(baseline.AddHours(1), 60);
+                    tsf.Append(baseline.AddHours(4), 90);
+                    tsf.Append(baseline.AddHours(5), 100);
+
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+
+                    var query = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
+                            .GroupBy(g => g
+                                .Hours(1)
+                                .WithOptions(new TimeSeriesAggregationOptions
+                                {
+                                    Interpolation = InterpolationType.Linear
+                                }))
+                            .Select(x => x.Max())
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(6, result.Results.Length);
+
+                    var aggResult = result.Results[0];
+                    Assert.Equal(baseline, aggResult.From);
+                    Assert.Equal(baseline.AddHours(1), aggResult.To);
+                    Assert.Equal(50, aggResult.Max[0]);
+
+                    aggResult = result.Results[1];
+                    Assert.Equal(baseline.AddHours(1), aggResult.From);
+                    Assert.Equal(baseline.AddHours(2), aggResult.To);
+                    Assert.Equal(60, aggResult.Max[0]);
+
+                    aggResult = result.Results[2];
+                    Assert.Equal(baseline.AddHours(2), aggResult.From);
+                    Assert.Equal(baseline.AddHours(3), aggResult.To);
+                    Assert.Equal(70, aggResult.Max[0]);
+
+                    aggResult = result.Results[3];
+                    Assert.Equal(baseline.AddHours(3), aggResult.From);
+                    Assert.Equal(baseline.AddHours(4), aggResult.To);
+                    Assert.Equal(80, aggResult.Max[0]);
+
+                    aggResult = result.Results[4];
+                    Assert.Equal(baseline.AddHours(4), aggResult.From);
+                    Assert.Equal(baseline.AddHours(5), aggResult.To);
+                    Assert.Equal(90, aggResult.Max[0]);
+
+                    aggResult = result.Results[5];
+                    Assert.Equal(baseline.AddHours(5), aggResult.From);
+                    Assert.Equal(baseline.AddHours(6), aggResult.To);
+                    Assert.Equal(100, aggResult.Max[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanFillGaps_NearestNeighbor_Linq()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                string id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+                    tsf.Append(baseline, 0);
+
+                    for (int i = 1; i <= 10; i++)
+                    {
+                        if (i.In(2, 3, 4, 7, 8, 9))
+                            continue;
+
+                        tsf.Append(baseline.AddMinutes(i), i * 2.5);
+
+                    }
+
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
+                            .GroupBy(g => g
+                                .Minutes(1)
+                                .WithOptions(new TimeSeriesAggregationOptions
+                                {
+                                    Interpolation = InterpolationType.Nearest
+                                }))
+                            .Select(x => x.Max())
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(11, result.Results.Length);
+
+                    for (var index = 0; index < result.Results.Length; index++)
+                    {
+                        var tsAggregation = result.Results[index];
+                        Assert.Equal(baseline.AddMinutes(index), tsAggregation.From);
+                        Assert.Equal(baseline.AddMinutes(index + 1), tsAggregation.To);
+
+                        if (index.In(2, 7))
+                        {
+                            // should be the same as last range
+                            Assert.Equal((index - 1) * 2.5, tsAggregation.Max[0]);
+                            continue;
+                        }
+
+                        if (index.In(3, 8))
+                        {
+                            // should be the same as last (real) range
+                            Assert.Equal((index - 2) * 2.5, tsAggregation.Max[0]);
+                            continue;
+                        }
+
+                        if (index.In(4, 9))
+                        {
+                            // should be the same as next range
+                            Assert.Equal((index + 1) * 2.5, tsAggregation.Max[0]);
+                            continue;
+                        }
+
+                        Assert.Equal(index * 2.5, tsAggregation.Max[0]);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanFillGaps_DifferentNumberOfValues_Linq()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                string id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    tsf.Append(baseline, 0);
+                    tsf.Append(baseline.AddDays(1), 1);
+                    tsf.Append(baseline.AddDays(30), new[] { 30d, 60 });
+                    tsf.Append(baseline.AddDays(60), new[] { 60d, 120, 180 });
+                    tsf.Append(baseline.AddDays(90), 90);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddYears(1))
+                            .GroupBy(g => g
+                                .Days(1)
+                                .WithOptions(new TimeSeriesAggregationOptions
+                                {
+                                    Interpolation = InterpolationType.Linear
+                                }))
+                            .Select(x => x.Max())
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(91, result.Results.Length);
+
+                    for (int i = 0; i < 30; i++)
+                    {
+                        var tsAgg = result.Results[i];
+                        Assert.Equal(1, tsAgg.Max.Length);
+                    }
+
+                    for (int i = 30; i < 60; i++)
+                    {
+                        var tsAgg = result.Results[i];
+                        Assert.Equal(2, tsAgg.Max.Length);
+                    }
+
+                    Assert.Equal(3, result.Results[60].Max.Length);
+
+                    for (int i = 61; i < result.Results.Length; i++)
+                    {
+                        var tsAgg = result.Results[i];
+                        Assert.Equal(1, tsAgg.Max.Length);
+                    }
+                }
+            }
+        }
+
     }
 }
