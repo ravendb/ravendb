@@ -437,15 +437,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 }
                 else
                 {
-                    double dbl = 0;
-                    if (value is double)
-                        dbl = (double)value;
-                    else if (value is decimal)
-                        dbl = (double)(decimal)value;
-                    else if (value is float)
-                        dbl = (float)value;
+                    double dbl;
+                    string s = null;
+                    switch (value)
+                    {
+                        case double d:
+                            dbl = d;
+                            s = dbl.ToString("G");
+                            break;
+                        case decimal dm:
+                        {
+                            dbl = (double)dm;
+                            s = dm.ToString("G");
+                            break;
+                        }
+                        case float f:
+                            dbl = f;
+                            s = f.ToString("G");
+                            break;
+                    }
 
-                    instance.Add(GetOrCreateField(path, dbl.ToString("G"), null, null, storage, indexing, termVector));
+
+                    instance.Add(GetOrCreateField(path, s, null, null, storage, indexing, termVector));
                     newFields++;
                 }
             }
