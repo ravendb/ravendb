@@ -447,8 +447,7 @@ select e.FirstName as Employee, n.m as MiddleManagement, boss.FirstName as Boss
                 Assert.Equal("Andrew", item.Boss);
                 Assert.Equal("Robert", item.Employee);
                 
-                //because of self-cycle of "employees/2-A" we see it twice in the path
-                Assert.Equal(new[] { "employees/5-A", "employees/2-A", "employees/2-A" }, item.MiddleManagement);
+                Assert.Equal(new[] { "employees/5-A", "employees/2-A" }, item.MiddleManagement);
             }
         }
 
