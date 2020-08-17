@@ -213,16 +213,18 @@ namespace Raven.Server.Documents.Queries.AST
 
         public override void VisitIn(InExpression expr)
         {
-            _sb.Append(" in(");
-            VisitExpression(expr.Source);
+            _sb.Append("[");
 
             for (var index = 0; index < expr.Values.Count; index++)
             {
-                _sb.Append(", ");
+                if(index != 0)
+                    _sb.Append(", ");
                 VisitExpression(expr.Values[index]);
             }
 
-            _sb.Append(")");
+            _sb.Append("].indexOf(");
+            VisitExpression(expr.Source);
+            _sb.Append(") >= 0");
         }
 
         public override void VisitBetween(BetweenExpression expr)
