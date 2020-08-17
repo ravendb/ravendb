@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.Patch
 
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
-
         private void MarkChanged()
         {
             Changed = true;

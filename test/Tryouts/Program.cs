@@ -23,9 +23,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new BlittableJsonEqualityTests(testOutputHelper))
+                    using (var test = new RavenDB_15151(testOutputHelper))
                     {
-                       test.Equals_when_creating_blittable_in_different_ways();
+                       test.Can_Use_Refresh_In_Patch();
                     }
                 }
                 catch (Exception e)
