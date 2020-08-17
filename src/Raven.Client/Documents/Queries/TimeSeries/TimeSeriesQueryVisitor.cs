@@ -125,7 +125,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 timePeriod = expression.ToString();
             }
 
-            _groupBy = $" group by '{timePeriod}'{with}";
+            _groupBy = $" group by '{timePeriod}' {with}";
         }
 
         private static string GroupByWith(MethodCallExpression callExpression, Expression expression)
@@ -149,7 +149,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (options.Interpolation == InterpolationType.None) 
                 return null;
 
-            return $" with interpolation({options.Interpolation})";
+            return $"with interpolation({options.Interpolation})";
 
         }
 
