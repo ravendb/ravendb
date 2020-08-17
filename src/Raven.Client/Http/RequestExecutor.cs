@@ -171,9 +171,6 @@ namespace Raven.Client.Http
             }
         }
 
-        public event EventHandler<HttpRequestMessage> OnBeforeRequest;
-        public event EventHandler<HttpResponseMessage> OnAfterRequests;
-        
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
         private class FailedRequestTranslator
@@ -245,6 +242,45 @@ namespace Raven.Client.Http
             }
         }
 
+        public event EventHandler<BeforeRequestEventArgs> _onBeforeRequest;
+        public event EventHandler<BeforeRequestEventArgs> OnBeforeRequest
+        {
+            add
+            {
+                lock (_locker)
+                {
+                    _onBeforeRequest += value;
+                }
+            }
+
+            remove
+            {
+                lock (_locker)
+                {
+                    _onBeforeRequest -= value;
+                }
+            }
+        }
+        public event EventHandler<SucceedRequestEventArgs> _onSucceedRequest;
+        public event EventHandler<SucceedRequestEventArgs> OnSucceedRequest
+        {
+            add
+            {
+                lock (_locker)
+                {
+                    _onSucceedRequest += value;
+                }
+            }
+
+            remove
+            {
+                lock (_locker)
+                {
+                    _onSucceedRequest -= value;
+                }
+            }
+        }
+        
         private void OnFailedRequestInvoke(string url, Exception e)
         {
             _onFailedRequest?.Invoke(this, new FailedRequestEventArgs(_databaseName, url, e));
@@ -892,11 +928,11 @@ namespace Raven.Client.Http
 
                 SetRequestHeaders(sessionInfo, cachedChangeVector, request);
 
-                OnBeforeRequest?.Invoke(this, request);
+                _onBeforeRequest?.Invoke(this, new BeforeRequestEventArgs(_databaseName, url, request));
                 var response = await SendRequestToServer(chosenNode, nodeIndex, context, command, shouldRetry, sessionInfo, request, url, token).ConfigureAwait(false);
                 if (response == null) // the fail-over mechanism took care of this
                     return;
-                OnAfterRequests?.Invoke(this, response);
+                _onSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request));
                 
                 var refreshTask = RefreshIfNeeded(chosenNode, response);
                 command.StatusCode = response.StatusCode;
