@@ -215,6 +215,36 @@ namespace Raven.Client.Documents
                 _onFailedRequest -= value;
             }
         }
+        private event EventHandler<BeforeRequestEventArgs> _onBeforeRequest;
+        public event EventHandler<BeforeRequestEventArgs> OnBeforeRequest
+        {
+            add
+            {
+                AssertNotInitialized(nameof(OnFailedRequest));
+                _onBeforeRequest += value;
+            }
+            remove
+            {
+                AssertNotInitialized(nameof(OnFailedRequest));
+                _onBeforeRequest -= value;
+            }
+        }
+        
+        private event EventHandler<SucceedRequestEventArgs> _onSucceedRequest;
+        public event EventHandler<SucceedRequestEventArgs> OnSucceedRequest
+        {
+            add
+            {
+                AssertNotInitialized(nameof(OnFailedRequest));
+                _onSucceedRequest += value;
+            }
+            remove
+            {
+                AssertNotInitialized(nameof(OnFailedRequest));
+                _onSucceedRequest -= value;
+            }
+        }
+        
 
         private event EventHandler<TopologyUpdatedEventArgs> _onTopologyUpdated;
         public event EventHandler<TopologyUpdatedEventArgs> OnTopologyUpdated
@@ -289,6 +319,8 @@ namespace Raven.Client.Documents
         protected internal void RegisterEvents(RequestExecutor requestExecutor)
         {
             requestExecutor.OnFailedRequest += _onFailedRequest;
+            requestExecutor.OnBeforeRequest += _onBeforeRequest;
+            requestExecutor.OnSucceedRequest += _onSucceedRequest;
             requestExecutor.OnTopologyUpdated += _onTopologyUpdated;
         }
 

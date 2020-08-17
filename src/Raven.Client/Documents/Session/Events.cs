@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -172,6 +173,41 @@ namespace Raven.Client.Documents.Session
             Database = database;
             Url = url;
             Exception = exception;
+        }
+    }
+    public class BeforeRequestEventArgs : EventArgs
+    {
+        public string Database { get; }
+
+        public string Url { get; }
+
+        public HttpRequestMessage Request { get; }
+
+        internal BeforeRequestEventArgs(string database, string url, HttpRequestMessage request)
+        {
+            Database = database;
+            Url = url;
+            Request = request;
+        }
+    }
+    
+    public class SucceedRequestEventArgs : EventArgs
+    {
+        public string Database { get; }
+
+        public string Url { get; }
+
+        public HttpResponseMessage Response { get; }
+        
+        public HttpRequestMessage Request { get; }
+
+
+        internal SucceedRequestEventArgs(string database, string url, HttpResponseMessage response, HttpRequestMessage request)
+        {
+            Database = database;
+            Url = url;
+            Response = response;
+            Request = request;
         }
     }
 
