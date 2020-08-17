@@ -171,6 +171,9 @@ namespace Raven.Client.Http
             }
         }
 
+        public event EventHandler<HttpRequestMessage> OnBeforeRequest;
+        public event EventHandler<HttpResponseMessage> OnAfterRequests;
+        
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
         private class FailedRequestTranslator
@@ -889,10 +892,12 @@ namespace Raven.Client.Http
 
                 SetRequestHeaders(sessionInfo, cachedChangeVector, request);
 
+                OnBeforeRequest?.Invoke(this, request);
                 var response = await SendRequestToServer(chosenNode, nodeIndex, context, command, shouldRetry, sessionInfo, request, url, token).ConfigureAwait(false);
                 if (response == null) // the fail-over mechanism took care of this
                     return;
-
+                OnAfterRequests?.Invoke(this, response);
+                
                 var refreshTask = RefreshIfNeeded(chosenNode, response);
                 command.StatusCode = response.StatusCode;
 
