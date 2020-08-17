@@ -1890,7 +1890,7 @@ namespace Raven.Server
                     (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
                     if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
-                        throw new Exception("Should Not Happen And Likely A Bug.");
+                        throw new Exception("Simulated TCP failure.");
 
                     using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                     using (ctx.GetManagedBuffer(out var buffer))
