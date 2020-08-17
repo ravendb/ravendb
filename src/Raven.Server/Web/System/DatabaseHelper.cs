@@ -59,8 +59,10 @@ namespace Raven.Server.Web.System
 
         public static void DeleteDatabaseFiles(RavenConfiguration configuration)
         {
-            if (configuration.Core.RunInMemory)
-                return;
+            // we always want to try to delete the directories
+            // because Voron and Periodic Backup are creating temp ones
+            //if (configuration.Core.RunInMemory)
+            //    return;
 
             IOExtensions.DeleteDirectory(configuration.Core.DataDirectory.FullPath);
 
