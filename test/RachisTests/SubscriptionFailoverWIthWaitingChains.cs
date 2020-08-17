@@ -18,6 +18,7 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -257,6 +258,52 @@ namespace RachisTests
                 }
 
                 Assert.Equal(clusterSize, redirects.Count);
+            }
+        }
+
+
+        [Fact]
+        public async Task SubscriptionShouldReconnectOnExceptionInTcpListener()
+        {
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                RunInMemory = false,
+                RegisterForDisposal = false,
+            });
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server,
+                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin,
+            }))
+            {
+                var mre = new AsyncManualResetEvent();
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                var subsId = await store.Subscriptions.CreateAsync<User>();
+                using var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subsId)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                });
+                subsWorker.OnSubscriptionConnectionRetry += ex =>
+                {
+                    Assert.NotNull(ex);
+                    Assert.Equal(typeof(System.IO.IOException), ex.GetType());
+                    mre.Set();
+                };
+                var task = subsWorker.Run(x => { });
+                server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = true;
+                try
+                {
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                }
+                finally
+                {
+                    server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = false;
+                }
             }
         }
 
