@@ -5,12 +5,12 @@ namespace Raven.Client.Documents.Queries
     public enum ProjectionBehavior
     {
         /// <summary>
-        /// Try to extract value from index field (if field value is stored in index) on a failure (or when field value is not stored in index) extract value from a document
+        /// Try to extract value from index field (if field value is stored in index), on a failure (or when field value is not stored in index) extract value from a document
         /// </summary>
         Default,
 
         /// <summary>
-        /// Try to extract value from index field (if field value is stored in index)
+        /// Try to extract value from index field (if field value is stored in index), on a failure skip field
         /// </summary>
         FromIndex,
 
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Queries
         FromIndexOrThrow,
 
         /// <summary>
-        /// Try to extract value from document field
+        /// Try to extract value from document field, on a failure skip field
         /// </summary>
         FromDocument,
 

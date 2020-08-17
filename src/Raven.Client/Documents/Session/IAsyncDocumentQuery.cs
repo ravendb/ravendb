@@ -114,8 +114,7 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields);
 
         /// <summary>
-        ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
-        ///     will come from document directly.
+        ///     Selects the specified fields according to the given projection behavior.
         /// </summary>
         /// <typeparam name="TProjection">Type of the projection.</typeparam>
         /// <param name="projectionBehavior">Projection behavior to use.</param>
@@ -123,8 +122,7 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(ProjectionBehavior projectionBehavior, params string[] fields);
 
         /// <summary>
-        ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
-        ///     will come from document directly.
+        ///     Selects the specified fields.
         /// </summary>
         /// <typeparam name="TProjection">Type of the projection.</typeparam>
         /// <param name="queryData">An object containing the fields to load, field projections and a From-Token alias name</param>
@@ -139,8 +137,7 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<TProjection> SelectFields<TProjection>();
 
         /// <summary>
-        ///     Selects the specified fields directly from the index if the are stored. If the field is not stored in index, value
-        ///     will come from document directly.
+        ///     Selects the specified fields according to the given projection behavior.
         ///     <para>Array of fields will be taken from TProjection</para>
         /// </summary>
         /// <typeparam name="TProjection">Type of the projection from which fields will be taken.</typeparam>
