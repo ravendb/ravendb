@@ -884,22 +884,14 @@ namespace Raven.Server.Documents.Queries.Results
                 end = gapData.StartRange.End;
             }
         }
-
-        private static double LinerInterpolation(DateTime x, DateTime xA, DateTime xB, double yA, double yB)
-        {
-            // compute the approximated value (y) at the given time x,
-            // by using two known data points : (xA, yA) and (xB, yB) 
-            // y = yA + (yB - yA) * ((x - xa) / (xb - xa)) 
-
-            var quotient = (double)(x.Ticks - xA.Ticks) / (xB.Ticks - xA.Ticks);
-            var y = yA + (yB - yA) * quotient;
-
-            return y;
-        }
+        
 
         private static void FillGapsLinear(DateTime x, DateTime xA, DateTime xB, TimeSeriesAggregation[] yA, TimeSeriesAggregation[] yB)
         {
+            Debug.Assert(yA.Length == yB.Length, "Invalid aggregation stats");
+
             bool hasCount = false;
+            var quotient = (double)(x.Ticks - xA.Ticks) / (xB.Ticks - xA.Ticks);
 
             for (int i = 0; i < yA.Length; i++)
             {
@@ -919,14 +911,16 @@ namespace Raven.Server.Documents.Queries.Results
                     var yb = valuesB[index];
                     var ya = valuesA[index];
 
+                    // y = yA + (yB - yA) * ((x - xa) / (xb - xa)) 
                     // override valuesA[index] by the result 
-                    valuesA[index] = LinerInterpolation(x, xA, xB, ya, yb);
+
+                    valuesA[index] = ya + (yb - ya) * quotient;
                 }
 
                 if (yA[i].Aggregation == AggregationType.Average)
                 {
                     // need to add count
-                    AddCount(x, xA, xB, yA[i], yB[i]);
+                    AddCount(quotient, yA[i], yB[i]);
                     hasCount |= i == 0;
                 }
 
@@ -936,11 +930,11 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (hasCount == false)
             {
-                AddCount(x, xA, xB, yA[0], yB[0]);
+                AddCount(quotient, yA[0], yB[0]);
             }
         }
 
-        private static void AddCount(DateTime x, DateTime xA, DateTime xB, TimeSeriesAggregation yA, TimeSeriesAggregation yB)
+        private static void AddCount(double quotient, TimeSeriesAggregation yA, TimeSeriesAggregation yB)
         {
             var countA = yA.Count;
             var countB = yB.Count;
@@ -955,7 +949,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 var yb = countB[index];
                 var ya = countA[index];
-                countA[index] = LinerInterpolation(x, xA, xB, ya, yb);
+                countA[index] = ya + (yb - ya) * quotient;
             }
 
             yA.SetCount(countA);

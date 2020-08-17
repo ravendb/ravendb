@@ -785,5 +785,75 @@ select timeseries(
             }
         }
 
+        [Fact]
+        public void CanFillGaps_SeveralValuesPerBucket_Linq()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = RavenTestHelper.UtcToday;
+                string id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person(), id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    tsf.Append(baseline, 0);
+                    tsf.Append(baseline.AddMinutes(10), 1);
+                    tsf.Append(baseline.AddMinutes(30), 3);
+                    tsf.Append(baseline.AddMinutes(50), 5);
+                    tsf.Append(baseline.AddMinutes(60), 6);
+                    tsf.Append(baseline.AddMinutes(90), 9);
+                    tsf.Append(baseline.AddMinutes(110), 11);
+                    tsf.Append(baseline.AddMinutes(190), 19);
+                    tsf.Append(baseline.AddMinutes(230), 23);
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<Person>()
+                        .Where(p => p.Id == id)
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
+                            .GroupBy(g => g
+                                .Hours(1)
+                                .WithOptions(new TimeSeriesAggregationOptions
+                                {
+                                    Interpolation = InterpolationType.Linear
+                                }))
+                            .Select(x => x.Max())
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(4, result.Results.Length);
+
+                    var tsAgg = result.Results[0];
+                    Assert.Equal(baseline, tsAgg.From);
+                    Assert.Equal(baseline.AddHours(1), tsAgg.To);
+                    Assert.Equal(5, tsAgg.Max[0]);
+
+                    tsAgg = result.Results[1];
+                    Assert.Equal(baseline.AddHours(1), tsAgg.From);
+                    Assert.Equal(baseline.AddHours(2), tsAgg.To);
+                    Assert.Equal(11, tsAgg.Max[0]);
+
+                    tsAgg = result.Results[2];
+                    Assert.Equal(baseline.AddHours(2), tsAgg.From);
+                    Assert.Equal(baseline.AddHours(3), tsAgg.To);
+
+                    var expected = (11 + 23) / 2;
+                    Assert.Equal(expected, tsAgg.Max[0]);
+
+                    tsAgg = result.Results[3];
+                    Assert.Equal(baseline.AddHours(3), tsAgg.From);
+                    Assert.Equal(baseline.AddHours(4), tsAgg.To);
+                    Assert.Equal(23, tsAgg.Max[0]);
+
+                }
+            }
+        }
     }
 }
