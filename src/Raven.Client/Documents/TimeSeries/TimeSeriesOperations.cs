@@ -16,17 +16,15 @@ namespace Raven.Client.Documents.TimeSeries
         private readonly string _database;
         private readonly MaintenanceOperationExecutor _executor;
 
-        public TimeSeriesOperations(IDocumentStore store)
+        public TimeSeriesOperations(IDocumentStore store) : this(store, store.Database)
         {
-            _store = store;
-            _database = store.Database;
-            _executor = _store.Maintenance.ForDatabase(_database);
         }
 
         private TimeSeriesOperations(IDocumentStore store, string database)
         {
             _store = store;
             _database = database;
+            _executor = _store.Maintenance.ForDatabase(_database);
         }
 
         /// <summary>
