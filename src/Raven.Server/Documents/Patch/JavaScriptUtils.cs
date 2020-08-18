@@ -10,9 +10,11 @@ using Jint.Runtime;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
+using Raven.Server.Documents.Queries.Results;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -254,7 +256,7 @@ namespace Raven.Server.Documents.Patch
 
         internal JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
         {
-            if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?> t)
+            if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
                 return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d.Id, d.LastModified, d.ChangeVector)
@@ -262,7 +264,8 @@ namespace Raven.Server.Documents.Patch
                     LuceneDocument = t.Item2,
                     LuceneState = t.Item3,
                     LuceneIndexFields = t.Item4,
-                    LuceneAnyDynamicIndexFields = t.Item5 ?? false
+                    LuceneAnyDynamicIndexFields = t.Item5 ?? false,
+                    Projection = t.Item6
                 };
             }
             if (o is Document doc)

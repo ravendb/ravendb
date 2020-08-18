@@ -93,6 +93,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IRawDocumentQuery<T> IRawDocumentQuery<T>.Projection(ProjectionBehavior projectionBehavior)
+        {
+            ProjectionBehavior = projectionBehavior;
+            return this;
+        }
+
+        /// <inheritdoc />
         public IDocumentQuery<TProjection> SelectFields<TProjection>(params string[] fields)
         {
             return SelectFields<TProjection>(Queries.ProjectionBehavior.Default, fields);

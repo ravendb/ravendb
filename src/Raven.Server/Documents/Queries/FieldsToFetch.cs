@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Results;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries
@@ -30,17 +31,11 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool IsDistinct;
 
-        public readonly bool MustExtractFromIndex;
-
-        public readonly bool MustExtractFromDocument;
-
-        public readonly bool MustExtractOrThrow;
+        public readonly ProjectionOptions Projection;
 
         public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
         {
-            MustExtractFromIndex = query.ProjectionBehavior.FromIndexOnly();
-            MustExtractFromDocument = query.ProjectionBehavior.FromDocumentOnly();
-            MustExtractOrThrow = (MustExtractFromIndex || MustExtractFromDocument) && query.ProjectionBehavior.MustThrow();
+            Projection = new ProjectionOptions(query);
 
             Fields = GetFieldsToFetch(query.Metadata, query.ProjectionBehavior, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias, out AnyTimeSeries);
             IsProjection = Fields != null && Fields.Count > 0;

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
@@ -942,7 +943,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (!(args[index] is Document doc))
             {
-                if (index == 0 && args[0] is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?> tuple)
+                if (index == 0 && args[0] is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionBehavior?> tuple)
                     doc = tuple.Item1;
                 else
                     return args[index];

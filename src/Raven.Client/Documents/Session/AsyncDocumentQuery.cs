@@ -926,6 +926,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IAsyncRawDocumentQuery<T> IAsyncRawDocumentQuery<T>.Projection(ProjectionBehavior projectionBehavior)
+        {
+            ProjectionBehavior = projectionBehavior;
+            return this;
+        }
+
+        /// <inheritdoc />
         Task<List<T>> IAsyncDocumentQueryBase<T>.ToListAsync(CancellationToken token)
         {
             return ExecuteQueryOperation(null, token);

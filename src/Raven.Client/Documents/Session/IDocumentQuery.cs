@@ -76,6 +76,7 @@ namespace Raven.Client.Documents.Session
         IQueryBase<T, IRawDocumentQuery<T>>,
         IDocumentQueryBase<T>
     {
+        IRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
     }
 
     public interface IGraphQuery<T> :
