@@ -319,6 +319,15 @@ class query extends viewModelBase {
 
         this.queryResultsContainMatchingDocuments = ko.pureComputed(() => {
             const currentIndex = this.getCurrentIndex();
+            
+            if (this.queriedIndex() && this.queriedIndex().startsWith("Auto/")) {
+                return true;
+            }
+            
+            if (this.isCollectionQuery()) {
+                return true;
+            } 
+            
             return !!currentIndex && currentIndex.SourceType !== "TimeSeries" && currentIndex.SourceType !== "Counters" && !this.isMapReduceIndex();
         });
         
@@ -756,6 +765,9 @@ class query extends viewModelBase {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
         }
+        
+        // if index was defined outside of current view then we don't know that at this point, so must fetch
+        this.fetchAllIndexes(this.activeDatabase());
         
         this.timeSeriesGraphs([]);
         
