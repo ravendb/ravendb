@@ -130,19 +130,19 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private static string GroupByWith(MethodCallExpression callExpression, Expression expression)
         {
-            if (callExpression.Method.DeclaringType != typeof(ITimeSeriesAggregationExtensions))
+            if (callExpression.Method.DeclaringType != typeof(ITimeSeriesAggregationOperations))
             {
                 ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.GroupBy));
                 return null;
             }
 
-            if (callExpression.Method.Name != nameof(ITimeSeriesAggregationExtensions.WithOptions))
+            if (callExpression.Method.Name != nameof(ITimeSeriesAggregationOperations.WithOptions))
                 throw new NotSupportedException("Unsupported method in GroupBy clause: " + callExpression.Method.Name);
 
             LinqPathProvider.GetValueFromExpressionWithoutConversion(callExpression.Arguments[0], out var value);
             if (!(value is TimeSeriesAggregationOptions options))
             {
-                ThrowInvalidMethodArgument(callExpression.Arguments[0], nameof(ITimeSeriesAggregationExtensions.WithOptions));
+                ThrowInvalidMethodArgument(callExpression.Arguments[0], nameof(ITimeSeriesAggregationOperations.WithOptions));
                 return null;
             }
 

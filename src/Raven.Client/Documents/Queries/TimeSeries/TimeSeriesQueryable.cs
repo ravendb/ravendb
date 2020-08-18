@@ -101,24 +101,24 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
     public interface ITimePeriodBuilder
     {
-        ITimeSeriesAggregationExtensions Milliseconds(int duration);
+        ITimeSeriesAggregationOperations Milliseconds(int duration);
 
-        ITimeSeriesAggregationExtensions Seconds(int duration);
+        ITimeSeriesAggregationOperations Seconds(int duration);
 
-        ITimeSeriesAggregationExtensions Minutes(int duration);
+        ITimeSeriesAggregationOperations Minutes(int duration);
 
-        ITimeSeriesAggregationExtensions Hours(int duration);
+        ITimeSeriesAggregationOperations Hours(int duration);
 
-        ITimeSeriesAggregationExtensions Days(int duration);
+        ITimeSeriesAggregationOperations Days(int duration);
 
-        ITimeSeriesAggregationExtensions Months(int duration);
+        ITimeSeriesAggregationOperations Months(int duration);
 
-        ITimeSeriesAggregationExtensions Quarters(int duration);
+        ITimeSeriesAggregationOperations Quarters(int duration);
 
-        ITimeSeriesAggregationExtensions Years(int duration);
+        ITimeSeriesAggregationOperations Years(int duration);
     }
 
-    public interface ITimeSeriesAggregationExtensions
+    public interface ITimeSeriesAggregationOperations
     {
         public void WithOptions(TimeSeriesAggregationOptions options);
     }
