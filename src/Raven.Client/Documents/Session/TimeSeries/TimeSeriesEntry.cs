@@ -18,7 +18,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.TimeSeries
 {
-    public class TimeSeriesEntry
+    public class TimeSeriesEntry : ITimeSeriesQueryStreamEntry
     {
         public DateTime Timestamp { get; set; }
         public double[] Values { get; set; }

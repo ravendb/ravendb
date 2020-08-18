@@ -21,9 +21,11 @@ using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
@@ -2293,6 +2295,49 @@ more responsive application.
         internal void OnBeforeDeleteInvoke(BeforeDeleteEventArgs beforeDeleteEventArgs)
         {
             OnBeforeDelete?.Invoke(this, beforeDeleteEventArgs);
+        }
+
+        internal StreamResult<T> CreateStreamResult<T>(
+            BlittableJsonReaderObject json,
+            FieldsToFetchToken fieldsToFetch, 
+            bool isProjectInto)
+        {
+            var metadata = json.GetMetadata();
+            var changeVector = metadata.GetChangeVector();
+            //MapReduce indexes return reduce results that don't have @id property
+            metadata.TryGetId(out string id);
+
+            return new StreamResult<T>
+            {
+                ChangeVector = changeVector,
+                Id = id,
+                Metadata = new MetadataAsDictionary(metadata),
+                Document = QueryOperation.Deserialize<T>(id, json, metadata, fieldsToFetch, true, this, isProjectInto)
+            };
+        }
+
+        internal TimeSeriesStreamResult<T> CreateTimeSeriesStreamResult<T>(StreamOperation.YieldStreamResults enumerator)
+        {
+            var json = enumerator.Current;
+            var metadata = json.GetMetadata();
+            var changeVector = metadata.GetChangeVector();
+            //MapReduce indexes return reduce results that don't have @id property
+            metadata.TryGetId(out string id);
+
+            var result = new TimeSeriesStreamResult<T>
+            {
+                ChangeVector = changeVector, 
+                Id = id, 
+                Metadata = new MetadataAsDictionary(metadata), 
+                
+                //TODO: replace this?
+                Result = Activator.CreateInstance<T>()
+            };
+            
+            var o = result.Result as ITimeSeriesQueryStreamResult;
+            enumerator.ExposeTimeSeriesStream(o);
+
+            return result;
         }
     }
 

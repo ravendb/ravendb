@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -10,6 +9,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Routing;
@@ -78,6 +78,55 @@ namespace Raven.Server.Documents.Handlers.Streaming
             return Task.CompletedTask;
         }
 
+        
+        [RavenAction("/databases/*/streams/timeseries", "GET", AuthorizationStatus.ValidUser)]
+        public async Task Stream()
+        {
+            var documentId = GetStringQueryString("docId");
+            var name = GetStringQueryString("name");
+            var fromStr = GetStringQueryString("from", required: false);
+            var toStr = GetStringQueryString("to", required: false);
+            var offset = GetTimeSpanQueryString("offset", required: false);
+
+            var from = string.IsNullOrEmpty(fromStr) 
+                ? DateTime.MinValue 
+                : TimeSeriesHandler.ParseDate(fromStr, name);
+
+            var to = string.IsNullOrEmpty(toStr)
+                ? DateTime.MaxValue
+                : TimeSeriesHandler.ParseDate(toStr, name);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                if (stats == default)
+                {
+                    // non existing time series
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return;
+                }
+
+                var reader = new TimeSeriesReader(context, documentId, name, from, to, offset);
+
+                using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+                    writer.WriteStartArray();
+                    foreach (var entry in reader.AllValues())
+                    {
+                        context.Write(writer, entry.ToTimeSeriesEntryJson());
+                        writer.WriteComma();
+                    }
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+
+                    await writer.MaybeOuterFlushAsync();
+                }
+            }
+        }
+
         [RavenAction("/databases/*/streams/queries", "HEAD", AuthorizationStatus.ValidUser)]
         public Task SteamQueryHead()
         {
@@ -111,6 +160,8 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     }
                 }
                 var query = IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), queryContext.Documents, tracker, overrideQuery);
+                query.IsStream = true;
+
                 var format = GetStringQueryString("format", false);
                 var debug = GetStringQueryString("debug", false);
                 var properties = GetStringValuesQueryString("field", false);
@@ -185,6 +236,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();
                 var queryJson = await queryContext.Documents.ReadForMemoryAsync(stream, "index/query");
                 var query = IndexQueryServerSide.Create(HttpContext, queryJson, Database.QueryMetadataCache, tracker);
+                query.IsStream = true;
 
                 if (TrafficWatchManager.HasRegisteredClients)
                 {

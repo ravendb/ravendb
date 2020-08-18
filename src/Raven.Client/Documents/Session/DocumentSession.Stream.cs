@@ -4,9 +4,6 @@ using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Documents.Session.Tokens;
-using Raven.Client.Extensions;
-using Raven.Client.Json;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
@@ -100,25 +97,6 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, FieldsToFetchToken fieldsToFetch, bool isProjectInto)
-        {
-            var metadata = json.GetMetadata();
-            var changeVector = metadata.GetChangeVector();
-            //MapReduce indexes return reduce results that don't have @id property
-            metadata.TryGetId(out string id);
-
-            var entity = QueryOperation.Deserialize<T>(id, json, metadata, fieldsToFetch, true, this, isProjectInto);
-
-            var streamResult = new StreamResult<T>
-            {
-                ChangeVector = changeVector,
-                Id = id,
-                Document = entity,
-                Metadata = new MetadataAsDictionary(metadata)
-            };
-            return streamResult;
-        }
-
         public IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue,
              string startAfter = null)
         {
@@ -126,13 +104,13 @@ namespace Raven.Client.Documents.Session
 
             var command = streamOperation.CreateRequest(startsWith, matches, start, pageSize, null, startAfter);
             RequestExecutor.Execute(command, Context, sessionInfo: _sessionInfo);
-            using (var result = streamOperation.SetResult(command.Result))
+            using (var enumerator = streamOperation.SetResult(command.Result))
             {
-                while (result.MoveNext())
+                while (enumerator.MoveNext())
                 {
-                    using (var json = result.Current)
+                    using (var json = enumerator.Current)
                     {
-                        yield return CreateStreamResult<T>(json, null, isProjectInto: false);
+                        yield return CreateStreamResult<T>(json, null, false);
                     }
                 }
             }

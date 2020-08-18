@@ -11,6 +11,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow;
 using Sparrow.Json;
@@ -383,6 +385,40 @@ namespace Raven.Client.Documents.Session
         Task<TimeSeriesRollupEntry<TValues>[]> IAsyncSessionDocumentRollupTypedTimeSeries<TValues>.GetAsync(DateTime? @from, DateTime? to, int start, int pageSize, CancellationToken token)
         {
             return GetAsyncInternal<TimeSeriesRollupEntry<TValues>>(from, to, start, pageSize, token);
+        }
+
+        internal async Task<TimeSeriesStreamEnumerator<TTValues>> GetTimeSeriesStreamResult<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) where TTValues : TimeSeriesEntry
+        {
+            var streamOperation = new TimeSeriesStreamOperation(Session, DocId, Name, from, to, offset);
+            var command = streamOperation.CreateRequest();
+            await Session.RequestExecutor.ExecuteAsync(command, Session.Context, Session.SessionInfo).ConfigureAwait(false);
+            var result = await streamOperation.SetResultAsync(command.Result).ConfigureAwait(false);
+            return new TimeSeriesStreamEnumerator<TTValues>(result);
+        }
+
+        internal async Task<IAsyncEnumerator<TTValues>> GetAsyncStream<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) where TTValues : TimeSeriesEntry
+        {
+            return await GetTimeSeriesStreamResult<TTValues>(from, to, offset).ConfigureAwait(false);
+        }
+
+        internal async Task<IEnumerator<TTValues>> GetStream<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) where TTValues : TimeSeriesEntry
+        {
+            return await GetTimeSeriesStreamResult<TTValues>(from, to, offset).ConfigureAwait(false);
+        }
+
+        Task<IAsyncEnumerator<TimeSeriesEntry>> ITimeSeriesStreamingBaseAsync<TimeSeriesEntry>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        {
+            return GetAsyncStream<TimeSeriesEntry>(from, to, offset);
+        }
+
+        Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> ITimeSeriesStreamingBaseAsync<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        {
+            return GetAsyncStream<TimeSeriesRollupEntry<TValues>>(from, to, offset);
+        }
+
+        Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> ITimeSeriesStreamingBaseAsync<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        {
+            return GetAsyncStream<TimeSeriesEntry<TValues>>(from, to, offset);
         }
     }
 }

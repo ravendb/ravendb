@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Session
@@ -49,5 +50,15 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         void Delete(DateTime at);
 
+    }
+
+    public interface ITimeSeriesStreamingBase<out T>
+    {
+        IEnumerator<T> Stream(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null);
+    }
+
+    public interface ITimeSeriesStreamingBaseAsync<T>
+    {
+        Task<IAsyncEnumerator<T>> StreamAsync(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null);
     }
 }

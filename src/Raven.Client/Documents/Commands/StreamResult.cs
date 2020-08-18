@@ -10,7 +10,23 @@ namespace Raven.Client.Documents.Commands
         public Stream Stream { get; set; }
     }
 
-    public class StreamResult<TType>
+    public class StreamResult<TType> : AbstractStreamResult
+    {
+        /// <summary>
+        /// Document deserialized to <c>TType</c>.
+        /// </summary>
+        public TType Document { get; set; }
+    }
+
+    public class TimeSeriesStreamResult<TType> : AbstractStreamResult
+    {
+        /// <summary>
+        /// Time Series deserialized to <c>TType</c>.
+        /// </summary>
+        public TType Result { get; set; }
+    }
+
+    public abstract class AbstractStreamResult
     {
         /// <summary>
         /// Document ID.
@@ -26,10 +42,5 @@ namespace Raven.Client.Documents.Commands
         /// Document metadata.
         /// </summary>
         public IMetadataDictionary Metadata { get; set; }
-
-        /// <summary>
-        /// Document deserialized to <c>TType</c>.
-        /// </summary>
-        public TType Document { get; set; }
     }
 }

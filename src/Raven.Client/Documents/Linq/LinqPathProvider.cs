@@ -544,10 +544,16 @@ namespace Raven.Client.Documents.Linq
                 mce.Method.ReturnType.GetGenericTypeDefinition() == typeof(ITimeSeriesQueryable<>)) // not a valid TimeSeries call expression
             {
                 if (mce.Method.ReturnType == typeof(TimeSeriesRawResult) ||
-                    mce.Method.ReturnType.IsSubclassOf(typeof(TimeSeriesRawResult)) ||
-                    mce.Method.ReturnType == typeof(TimeSeriesAggregationResult) ||
-                    mce.Method.ReturnType.IsSubclassOf(typeof(TimeSeriesAggregationResult)))
+                    mce.Method.ReturnType == typeof(TimeSeriesAggregationResult))
                     return true;
+
+                if (mce.Method.ReturnType.IsGenericType)
+                {
+                    var definition = mce.Method.ReturnType.GetGenericTypeDefinition();
+                    if (definition == typeof(TimeSeriesRawResult<>) || 
+                        definition == typeof(TimeSeriesAggregationResult<>))
+                        return true;
+                }
 
                 ThrowInvalidTimeSeriesReturnType(mce.Method.ReturnType);
             }

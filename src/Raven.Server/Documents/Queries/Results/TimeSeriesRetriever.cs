@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using BlittableJsonTextWriterExtensions = Raven.Server.Json.BlittableJsonTextWriterExtensions;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -32,7 +33,6 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly DocumentsOperationContext _context;
 
         private Dictionary<string, Document> _loadedDocuments;
-        private readonly bool _isFromStudio;
 
         private string _source;
         private string _collection;
@@ -55,27 +55,32 @@ namespace Raven.Server.Documents.Queries.Results
             new TimeSeriesAggregation(AggregationType.Average),
         };
 
-        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments,
-            bool isFromStudio)
+        public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
         {
             _context = context;
             _queryParameters = queryParameters;
             _loadedDocuments = loadedDocuments;
-            _isFromStudio = isFromStudio;
 
             _valuesDictionary = new Dictionary<ValueExpression, object>();
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
         }
-
-        public BlittableJsonReaderObject InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, bool addProjectionToResult = false)
+        public enum ResultType
+        {
+            None,
+            Raw,
+            Aggregated
+        }
+        
+        public IEnumerable<DynamicJsonValue> InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, out ResultType type)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
             
             _source = GetSourceAndId();
+            type = ResultType.None;
 
             _stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
             if (_stats.Count == 0)
-                return GetFinalResult(null, 0, addProjectionToResult);
+                return Enumerable.Empty<DynamicJsonValue>();
             
             _collection = GetCollection(documentId);
 
@@ -98,13 +103,15 @@ namespace Raven.Server.Documents.Queries.Results
                 : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
 
             _scale = GetScale(declaredFunction, timeSeriesFunction.Scale);
-            var array = new DynamicJsonArray();
 
             if (timeSeriesFunction.GroupBy.Value == null && timeSeriesFunction.Select == null)
+            {
+                type = ResultType.Raw;
                 return GetRawValues();
+            }
 
             var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
-
+            type = ResultType.Aggregated;
             TimeSeriesAggregation[] aggStates;
             GapData gapData = default;
 
@@ -120,11 +127,21 @@ namespace Raven.Server.Documents.Queries.Results
 
             return GetAggregatedValues();
 
-            void AggregateIndividualItems(IEnumerable<SingleResult> items)
+            IEnumerable<DynamicJsonValue> AggregateIndividualItems(IEnumerable<SingleResult> items)
             {
                 foreach (var cur in items)
                 {
-                    MaybeMoveToNextRange(cur.Timestamp);
+                    MaybeMoveToNextRange(cur.Timestamp, out var value, out var filledGaps);
+                    if (filledGaps != null)
+                    {
+                        foreach (var filledGap in filledGaps)
+                        {
+                            yield return filledGap;
+                        }
+                    }
+
+                    if (value != null)
+                        yield return value;
 
                     if (ShouldFilter(cur, timeSeriesFunction.Where))
                         continue;
@@ -136,19 +153,22 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            void MaybeMoveToNextRange(DateTime ts)
+            void MaybeMoveToNextRange(DateTime ts, out DynamicJsonValue value, out IEnumerable<DynamicJsonValue> filledGaps)
             {
+                value = default;
+                filledGaps = default;
+
                 if (rangeSpec.WithinRange(ts))
                     return;
 
                 if (interpolationType != InterpolationType.None)
                 {
-                    HandleGapsIfNeeded(ts);
+                    filledGaps = HandleGapsIfNeeded(ts);
                 }
 
                 if (aggStates[0].Any)
                 {
-                    array.Add(AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End));
+                    value = AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
                 }
 
                 for (int i = 0; i < aggStates.Length; i++)
@@ -159,51 +179,43 @@ namespace Raven.Server.Documents.Queries.Results
                 rangeSpec.MoveToNextRange(ts);
             }
 
-
-            BlittableJsonReaderObject GetRawValues()
+            IEnumerable<DynamicJsonValue> GetRawValues()
             {
-                var count = 0L;
                 foreach (var singleResult in reader.AllValues())
                 {
                     if (ShouldFilter(singleResult, timeSeriesFunction.Where))
                         continue;
 
-                    var vals = new DynamicJsonArray();
-                    for (var index = 0; index < singleResult.Values.Span.Length; index++)
-                    {
-                        var val = singleResult.Values.Span[index];
-                        if (_scale.HasValue)
-                            val *= _scale.Value;
-                        
-                        vals.Add(val);
-                    }
-
-                    array.Add(new DynamicJsonValue
-                    {
-                        [nameof(TimeSeriesEntry.Tag)] = singleResult.Tag?.ToString(),
-                        [nameof(TimeSeriesEntry.Timestamp)] = singleResult.Timestamp,
-                        [nameof(TimeSeriesEntry.Values)] = vals,
-                        [nameof(TimeSeriesEntry.IsRollup)] = singleResult.Type == SingleResultType.RolledUp,
-                    });
-                    count += reader.IsRaw ? 1 : (long)singleResult.Values.Span[(int)AggregationType.Count];
+                    yield return singleResult.ToTimeSeriesEntryJson(_scale ?? 1);
                 }
 
                 _argumentValuesDictionary.Clear();
-                return GetFinalResult(array, count, addProjectionToResult);
             }
 
-            BlittableJsonReaderObject GetAggregatedValues()
+            IEnumerable<DynamicJsonValue> GetAggregatedValues()
             {
                 foreach (var it in reader.SegmentsOrValues())
                 {
                     if (it.IndividualValues != null)
                     {
-                        AggregateIndividualItems(it.IndividualValues);
+                        foreach (var value in AggregateIndividualItems(it.IndividualValues))
+                        {
+                            yield return value;
+                        }
                     }
                     else
                     {
                         //We might need to close the old aggregation range and start a new one
-                        MaybeMoveToNextRange(it.Segment.Start);
+                        MaybeMoveToNextRange(it.Segment.Start, out var value, out var filledGaps);
+                        if (filledGaps != null)
+                        {
+                            foreach (var filledGap in filledGaps)
+                            {
+                                yield return filledGap;
+                            }
+                        }
+                        if (value != null)
+                            yield return value;
 
                         // now we need to see if we can consume the whole segment, or
                         // if the range it cover needs to be broken up to multiple ranges.
@@ -211,7 +223,10 @@ namespace Raven.Server.Documents.Queries.Results
                         // we still have to deal with the individual values
                         if (it.Segment.End > rangeSpec.End || timeSeriesFunction.Where != null)
                         {
-                            AggregateIndividualItems(it.Segment.Values);
+                            foreach (var segment in AggregateIndividualItems(it.Segment.Values))
+                            {
+                                yield return segment;
+                            }
                         }
                         else
                         {
@@ -228,17 +243,18 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     // fill the gaps between previous range and current range
                     gapData.UpTo = rangeSpec.Start;
-                    FillMissingGaps(gapData, aggStates, array, interpolationType);
+                    foreach (var filledGap in FillMissingGaps(gapData, aggStates, interpolationType))
+                    {
+                        yield return filledGap;
+                    }
                 }
 
                 if (aggStates[0].Any)
                 {
-                    array.Add(AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End));
+                    yield return AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
                 }
 
                 _argumentValuesDictionary?.Clear();
-
-                return GetFinalResult(array, aggStates[0].TotalCount, addProjectionToResult);
             }
 
             bool ShouldFilter(SingleResult singleResult, QueryExpression filter)
@@ -754,13 +770,16 @@ namespace Raven.Server.Documents.Queries.Results
                 return field.FieldValueWithoutAlias;
             }
 
-            void HandleGapsIfNeeded(DateTime ts)
+            IEnumerable<DynamicJsonValue> HandleGapsIfNeeded(DateTime ts)
             {
                 if (gapData.HaveGap)
                 {
                     // fill the gaps between previous range and current range
                     gapData.UpTo = rangeSpec.Start;
-                    FillMissingGaps(gapData, aggStates, array, interpolationType);
+                    foreach (var filledGap in FillMissingGaps(gapData, aggStates, interpolationType))
+                    {
+                        yield return filledGap;
+                    }
                 }
 
                 if (gapData.PreviousStats == null)
@@ -786,7 +805,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (gapData.StartRange.WithinRange(ts))
                 {
                     gapData.HaveGap = false;
-                    return;
+                    yield break;
                 }
 
                 gapData.HaveGap = true;
@@ -844,7 +863,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private void FillMissingGaps(GapData gapData, TimeSeriesAggregation[] currentStats, DynamicJsonArray array, InterpolationType interpolationType)
+        private IEnumerable<DynamicJsonValue> FillMissingGaps(GapData gapData, TimeSeriesAggregation[] currentStats, InterpolationType interpolationType)
         {   
             var start = gapData.StartRange.Start;
             var end = gapData.StartRange.End;
@@ -862,7 +881,7 @@ namespace Raven.Server.Documents.Queries.Results
                 switch (interpolationType)
                 {
                     case InterpolationType.None:
-                        return;
+                        yield break;
                     case InterpolationType.Linear:
                         GenerateMissingPointLinear(start, prev, to, gapData.PreviousStats, currentStats);
                         statsToAdd = gapData.PreviousStats;
@@ -878,7 +897,7 @@ namespace Raven.Server.Documents.Queries.Results
                 }
 
                 // fill gap
-                array.Add(AddTimeSeriesResult(statsToAdd, start, end));
+                yield return AddTimeSeriesResult(statsToAdd, start, end);
 
                 gapData.StartRange.MoveToNextRange(end);
                 start = gapData.StartRange.Start;
@@ -989,12 +1008,20 @@ namespace Raven.Server.Documents.Queries.Results
             return GetValueFromRolledUpEntry(index, singleResult);
         }
 
-        private BlittableJsonReaderObject GetFinalResult(DynamicJsonArray array, long count, bool addProjectionToResult)
+        public BlittableJsonReaderObject MaterializeResults(IEnumerable<DynamicJsonValue> array, ResultType type, bool addProjectionToResult, bool fromStudio)
         {
+            var results = new DynamicJsonArray();
+            var count = 0L;
+
+            foreach (var value in array)
+            {
+                results.Add(value);
+                count += GetCount(type, value);
+            }
             var result = new DynamicJsonValue
             {
                 [nameof(TimeSeriesQueryResult.Count)] = count,
-                [nameof(TimeSeriesAggregationResult.Results)] = array
+                [nameof(TimeSeriesAggregationResult.Results)] = results
             };
 
             if (addProjectionToResult)
@@ -1005,17 +1032,63 @@ namespace Raven.Server.Documents.Queries.Results
                 };
             }
 
-            AddNamesIfNeeded(result);
+            if (fromStudio)
+                AddNames(result);
 
             return _context.ReadObject(result, "timeseries/value");
         }
 
-        private void AddNamesIfNeeded(DynamicJsonValue result)
+        public class TimeSeriesRetrieverResult
         {
-            if (_isFromStudio == false) 
-                return;
+            public IEnumerable<DynamicJsonValue> Stream;
+            public DynamicJsonValue Metadata;
+        }
 
-            var metadata = (DynamicJsonValue)(result[Constants.Documents.Metadata.Key] ?? (result[Constants.Documents.Metadata.Key] = new DynamicJsonValue()));
+        public TimeSeriesRetrieverResult PrepareForStreaming(IEnumerable<DynamicJsonValue> array, bool addProjectionToResult, bool fromStudio)
+        {
+            var result = new TimeSeriesRetrieverResult
+            {
+                Stream = array,
+                Metadata = new DynamicJsonValue()
+            };
+            var metadata = BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result.Metadata);
+
+            if (addProjectionToResult)
+                metadata[Constants.Documents.Metadata.Projection] = true;
+
+            if (fromStudio)
+                AddNames(result.Metadata);
+
+            return result;
+        }
+
+        private long GetCount(ResultType type, DynamicJsonValue results)
+        {
+            return type switch
+            {
+                ResultType.None => 0,
+                ResultType.Raw => GetRawSum(results),
+                ResultType.Aggregated => GetAggregatedSum(results),
+                _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
+            };
+        }
+
+        private long GetRawSum(DynamicJsonValue value)
+        {
+            var rollup = (bool)value[nameof(TimeSeriesEntry.IsRollup)];
+            if (rollup == false)
+                return 1L;
+            return (long)((double[])value[nameof(TimeSeriesEntry.Values)])[(int)AggregationType.Count];
+        }
+
+        private long GetAggregatedSum(DynamicJsonValue value)
+        {
+            return (long)((DynamicJsonArray)value[nameof(TimeSeriesRangeAggregation.Count)]).Items[0];
+        }
+
+        private void AddNames(DynamicJsonValue result)
+        {
+            var metadata = BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result);
             if (_configurationFetched == false)
             {
                 var config = _context.DocumentDatabase.ServerStore.Cluster.ReadTimeSeriesConfiguration(_context.DocumentDatabase.Name);
