@@ -178,36 +178,34 @@ namespace Raven.Client.Documents.Session
     public class BeforeRequestEventArgs : EventArgs
     {
         public string Database { get; }
-
         public string Url { get; }
-
         public HttpRequestMessage Request { get; }
+        public int AttemptNum { get; }
 
-        internal BeforeRequestEventArgs(string database, string url, HttpRequestMessage request)
+        internal BeforeRequestEventArgs(string database, string url, HttpRequestMessage request, int attemptNum)
         {
             Database = database;
             Url = url;
             Request = request;
+            AttemptNum = attemptNum;
         }
     }
     
     public class SucceedRequestEventArgs : EventArgs
     {
         public string Database { get; }
-
         public string Url { get; }
-
         public HttpResponseMessage Response { get; }
-        
         public HttpRequestMessage Request { get; }
+        public int AttemptNum { get; }
 
-
-        internal SucceedRequestEventArgs(string database, string url, HttpResponseMessage response, HttpRequestMessage request)
+        internal SucceedRequestEventArgs(string database, string url, HttpResponseMessage response, HttpRequestMessage request, int attemptNum)
         {
             Database = database;
             Url = url;
             Response = response;
             Request = request;
+            AttemptNum = attemptNum;
         }
     }
 
