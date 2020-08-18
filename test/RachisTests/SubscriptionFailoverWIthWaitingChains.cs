@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -261,7 +262,6 @@ namespace RachisTests
             }
         }
 
-
         [Fact]
         public async Task SubscriptionShouldReconnectOnExceptionInTcpListener()
         {
@@ -291,7 +291,7 @@ namespace RachisTests
                 subsWorker.OnSubscriptionConnectionRetry += ex =>
                 {
                     Assert.NotNull(ex);
-                    Assert.Equal(typeof(System.IO.IOException), ex.GetType());
+                    Assert.True(ex.GetType() == typeof(IOException) || ex.GetType() == typeof(EndOfStreamException));
                     mre.Set();
                 };
                 var task = subsWorker.Run(x => { });
@@ -341,6 +341,7 @@ namespace RachisTests
                 await Task.Delay(1000);
             }
         }
+
         private List<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new List<(SubscriptionWorker<dynamic>, Exception)>();
         private List<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new List<(SubscriptionWorker<dynamic>, Exception)>();
 
@@ -504,7 +505,7 @@ namespace RachisTests
                         catch (Exception e)
                         {
                             errors.Add(e);
-                            rehabNodes = new List<string>{"error"};
+                            rehabNodes = new List<string> { "error" };
                         }
                     }
                     await Task.Delay(1000);
