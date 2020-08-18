@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             base.ValidateFieldsToFetch(fieldsToFetch);
 
-            if (fieldsToFetch.MustExtractFromDocument)
+            if (fieldsToFetch.Projection.MustExtractFromDocument)
                 throw new InvalidQueryException($"Invalid projection behavior '{_query.ProjectionBehavior}'. You can only extract values from index.", _query.Query, _query.QueryParameters);
         }
 

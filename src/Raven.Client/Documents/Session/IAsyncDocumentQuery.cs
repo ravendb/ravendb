@@ -71,6 +71,7 @@ namespace Raven.Client.Documents.Session
         IQueryBase<T, IAsyncRawDocumentQuery<T>>,
         IAsyncDocumentQueryBase<T>
     {
+        IAsyncRawDocumentQuery<T> Projection(ProjectionBehavior projectionBehavior);
     }
 
     public interface IAsyncGraphQuery<T> :

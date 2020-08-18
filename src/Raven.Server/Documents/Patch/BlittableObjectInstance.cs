@@ -37,6 +37,8 @@ namespace Raven.Server.Documents.Patch
         public Dictionary<string, IndexField> LuceneIndexFields;
         public bool LuceneAnyDynamicIndexFields;
 
+        public ProjectionOptions Projection;
+
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
 
@@ -96,21 +98,50 @@ namespace Raven.Server.Documents.Patch
 
                 if (TryGetValueFromLucene(_parent, _property, out _value) == false)
                 {
-                    var index = _parent.Blittable?.GetPropertyIndex(_property);
-                    if (index == null || index == -1)
+                    if (_parent.Projection.MustExtractFromIndex)
                     {
+                        if (_parent.Projection.MustExtractOrThrow)
+                            _parent.Projection.ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(property);
+
+                        _value = JsValue.Undefined;
+                        return;
+                    }
+
+                    if (TryGetValueFromDocument(_parent, _property, out _value) == false)
+                    {
+                        if (_parent.Projection.MustExtractFromDocument)
+                        {
+                            if (_parent.Projection.MustExtractOrThrow)
+                                _parent.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(_parent.DocumentId, property);
+                        }
+
                         _value = JsValue.Undefined;
                     }
-                    else
-                    {
-                        _value = GetPropertyValue(_property, index.Value);
-                    }
                 }
+            }
+
+            private bool TryGetValueFromDocument(BlittableObjectInstance parent, string property, out JsValue value)
+            {
+                value = null;
+
+                var index = parent.Blittable?.GetPropertyIndex(property);
+                if (index == null || index == -1)
+                    return false;
+
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+
+                parent.Blittable.GetPropertyByIndex(index.Value, ref propertyDetails, true);
+
+                value = TranslateToJs(parent, property, propertyDetails.Token, propertyDetails.Value);
+                return true;
             }
 
             private bool TryGetValueFromLucene(BlittableObjectInstance parent, string property, out JsValue value)
             {
                 value = null;
+
+                if (parent.Projection.MustExtractFromDocument)
+                    return false;
 
                 if (parent.LuceneDocument == null || parent.LuceneIndexFields == null)
                     return false;
@@ -213,15 +244,6 @@ namespace Raven.Server.Documents.Patch
                     _parent.MarkChanged();
                     Changed = true;
                 }
-            }
-
-            private JsValue GetPropertyValue(string key, int propertyIndex)
-            {
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-
-                _parent.Blittable.GetPropertyByIndex(propertyIndex, ref propertyDetails, true);
-
-                return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
             }
 
             private ArrayInstance GetArrayInstanceFromBlittableArray(Engine e, BlittableJsonReaderArray bjra, BlittableObjectInstance parent)
