@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Patch
 
                 if (TryGetValueFromLucene(_parent, _property, out _value) == false)
                 {
-                    if (_parent.Projection.MustExtractFromIndex)
+                    if (_parent.Projection?.MustExtractFromIndex == true)
                     {
                         if (_parent.Projection.MustExtractOrThrow)
                             _parent.Projection.ThrowCouldNotExtractFieldFromIndexBecauseIndexDoesNotContainSuchFieldOrFieldValueIsNotStored(property);
@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Patch
 
                     if (TryGetValueFromDocument(_parent, _property, out _value) == false)
                     {
-                        if (_parent.Projection.MustExtractFromDocument)
+                        if (_parent.Projection?.MustExtractFromDocument == true)
                         {
                             if (_parent.Projection.MustExtractOrThrow)
                                 _parent.Projection.ThrowCouldNotExtractFieldFromDocumentBecauseDocumentDoesNotContainSuchField(_parent.DocumentId, property);
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Patch
             {
                 value = null;
 
-                if (parent.Projection.MustExtractFromDocument)
+                if (parent.Projection?.MustExtractFromDocument == true)
                     return false;
 
                 if (parent.LuceneDocument == null || parent.LuceneIndexFields == null)
