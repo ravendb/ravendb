@@ -61,7 +61,7 @@ namespace Raven.Client.Http
         public bool CanCache { get; protected set; }
         public bool CanCacheAggressively { get; protected set; }
         public string SelectedNodeTag { get; protected set; }
-        public int AttemptToSendNum { get; private set; }
+        public int NumberOfAttempts { get; internal set; }
 
         internal long FailoverTopologyEtag = -2;
 
@@ -95,7 +95,6 @@ namespace Raven.Client.Http
 
         public virtual Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
         {
-            AttemptToSendNum += 1;
             // We must use HttpCompletionOption.ResponseHeadersRead otherwise the client will buffer the response
             // and we'll get OutOfMemoryException in huge responses (> 2GB).
             return client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);

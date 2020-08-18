@@ -180,14 +180,14 @@ namespace Raven.Client.Documents.Session
         public string Database { get; }
         public string Url { get; }
         public HttpRequestMessage Request { get; }
-        public int AttemptNum { get; }
+        public int AttemptNumber { get; }
 
-        internal BeforeRequestEventArgs(string database, string url, HttpRequestMessage request, int attemptNum)
+        internal BeforeRequestEventArgs(string database, string url, HttpRequestMessage request, int attemptNumber)
         {
             Database = database;
             Url = url;
             Request = request;
-            AttemptNum = attemptNum;
+            AttemptNumber = attemptNumber;
         }
     }
     
@@ -197,15 +197,15 @@ namespace Raven.Client.Documents.Session
         public string Url { get; }
         public HttpResponseMessage Response { get; }
         public HttpRequestMessage Request { get; }
-        public int AttemptNum { get; }
+        public int AttemptNumber { get; }
 
-        internal SucceedRequestEventArgs(string database, string url, HttpResponseMessage response, HttpRequestMessage request, int attemptNum)
+        internal SucceedRequestEventArgs(string database, string url, HttpResponseMessage response, HttpRequestMessage request, int attemptNumber)
         {
             Database = database;
             Url = url;
             Response = response;
             Request = request;
-            AttemptNum = attemptNum;
+            AttemptNumber = attemptNumber;
         }
     }
 
