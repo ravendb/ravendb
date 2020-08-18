@@ -82,6 +82,8 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsFromStudio;
 
+        public bool IsStream;
+
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = Uri.UnescapeDataString(query);

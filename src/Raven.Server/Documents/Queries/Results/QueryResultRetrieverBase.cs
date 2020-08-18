@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using BlittableJsonTextWriterExtensions = Raven.Server.Json.BlittableJsonTextWriterExtensions;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -275,12 +276,34 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected Document AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
+            if (_query.IsStream && 
+                key == Constants.TimeSeries.QueryFunction)
+            {
+                doc._timeSeriesStream ??= new TimeSeriesStream();
+                var value = (TimeSeriesRetriever.TimeSeriesRetrieverResult)fieldVal;
+                doc._timeSeriesStream.TimeSeries = value.Stream;
+                doc._timeSeriesStream.Key = key;
+                BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
+                return null;
+            }
+
             if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
             {
-                Document newDoc = null;
-                if (fieldVal is BlittableJsonReaderObject nested)
-                {
-                    newDoc = new Document
+                var newDoc = CreateNewDocument(doc, fieldVal);
+                FinishDocumentSetup(newDoc, scoreDoc);
+                return newDoc;
+            }
+
+            AddProjectionToResult(result, key, fieldVal);
+            return null;
+        }
+
+        private Document CreateNewDocument(Document doc, object fieldVal)
+        {
+            switch (fieldVal)
+            {
+                case BlittableJsonReaderObject nested:
+                    return new Document
                     {
                         Id = doc.Id,
                         ChangeVector = doc.ChangeVector,
@@ -293,19 +316,32 @@ namespace Raven.Server.Documents.Queries.Results
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker
                     };
-                }
-                else if (fieldVal is Document d)
-                {
-                    newDoc = d;
-                }
-                else
-                    ThrowInvalidQueryBodyResponse(fieldVal);
+                case Document d:
+                    return d;
+                case TimeSeriesRetriever.TimeSeriesRetrieverResult ts:
+                    return new Document
+                    {
+                        Id = doc.Id,
+                        ChangeVector = doc.ChangeVector,
+                        Data = _context.ReadObject(ts.Metadata, "time-series-metadata"),
+                        Etag = doc.Etag,
+                        Flags = doc.Flags,
+                        LastModified = doc.LastModified,
+                        LowerId = doc.LowerId,
+                        NonPersistentFlags = doc.NonPersistentFlags,
+                        StorageId = doc.StorageId,
+                        TransactionMarker = doc.TransactionMarker,
+                        _timeSeriesStream = new TimeSeriesStream
+                        {
+                            TimeSeries = ts.Stream
+                        }
+                    };
 
-                FinishDocumentSetup(newDoc, scoreDoc);
-                return newDoc;
+                default:
+                    ThrowInvalidQueryBodyResponse(fieldVal);
+                    break;
             }
 
-            AddProjectionToResult(result, key, fieldVal);
             return null;
         }
 
@@ -336,10 +372,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected Document ReturnProjection(DynamicJsonValue result, Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, JsonOperationContext context)
         {
-            result[Constants.Documents.Metadata.Key] = new DynamicJsonValue
-            {
-                [Constants.Documents.Metadata.Projection] = true
-            };
+            var metadata = BlittableJsonTextWriterExtensions.GetOrCreateMetadata(result);
+            metadata[Constants.Documents.Metadata.Projection] = true;
 
             var newData = context.ReadObject(result, "projection result");
 
@@ -353,7 +387,7 @@ namespace Raven.Server.Documents.Queries.Results
                 newData.Dispose();
                 throw;
             }
-
+            
             doc.Data = newData;
             FinishDocumentSetup(doc, scoreDoc);
 
@@ -777,12 +811,13 @@ namespace Raven.Server.Documents.Queries.Results
 
         private object InvokeFunction(string methodName, Query query, string documentId, object[] args, QueryTimingsScope timings)
         {
-            if (query.DeclaredFunctions != null &&
-                query.DeclaredFunctions.TryGetValue(methodName, out var func) &&
-                func.Type == DeclaredFunction.FunctionType.TimeSeries)
+            if (TryGetTimeSeriesFunction(methodName, query, out var func))
             {
-                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments, _query.IsFromStudio);
-                return _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, addProjectionToResult: FieldsToFetch.SingleBodyOrMethodWithNoAlias);
+                _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
+                var result = _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, out var type);
+                if (_query.IsStream)
+                    return _timeSeriesRetriever.PrepareForStreaming(result, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.IsFromStudio);
+                return _timeSeriesRetriever.MaterializeResults(result, type, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.IsFromStudio);
             }
 
             var key = new QueryKey(query.DeclaredFunctions);
@@ -797,6 +832,15 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return run.Translate(result, _context, QueryResultModifier.Instance);
             }
+        }
+
+        private static bool TryGetTimeSeriesFunction(string methodName, Query query, out DeclaredFunction func)
+        {
+            func = default;
+
+            return query.DeclaredFunctions != null &&
+                   query.DeclaredFunctions.TryGetValue(methodName, out func) &&
+                   func.Type == DeclaredFunction.FunctionType.TimeSeries;
         }
 
         private bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)

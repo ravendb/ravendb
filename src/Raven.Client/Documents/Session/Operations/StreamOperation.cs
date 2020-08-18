@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -14,11 +15,58 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Session.Operations
 {
+    internal class TimeSeriesStreamOperation : StreamOperation
+    {
+        private readonly string _docId;
+        private readonly string _name;
+        private readonly DateTime? _from;
+        private readonly DateTime? _to;
+        private readonly TimeSpan? _offset;
+
+        public TimeSeriesStreamOperation(InMemoryDocumentSessionOperations session, string docId, string name, DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) : base(session)
+        {
+            _docId = docId;
+            _name = name;
+            _from = from;
+            _to = to;
+            _offset = offset;
+        }
+
+        public TimeSeriesStreamOperation(InMemoryDocumentSessionOperations session, StreamQueryStatistics statistics, string docId, string name, DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) : base(session, statistics)
+        {
+            _docId = docId;
+            _name = name;
+            _from = from;
+            _to = to;
+            _offset = offset;
+        }
+
+        public StreamCommand CreateRequest()
+        {
+            var sb = new StringBuilder("streams/timeseries?");
+
+            sb.Append("docId=").Append(_docId).Append("&");
+            sb.Append("name=").Append(_name).Append("&");
+
+            if (_from.HasValue)
+                sb.Append("from=").Append(_from).Append("&");
+
+            if (_to.HasValue)
+                sb.Append("to=").Append(_to).Append("&");
+
+            if (_offset.HasValue)
+                sb.Append("offset=").Append(_offset).Append("&");
+
+            return new StreamCommand(sb.ToString());
+        }
+    }
+
     internal class StreamOperation
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly StreamQueryStatistics _statistics;
         private bool _isQueryStream;
+        private bool _isTimeSeriesStream;
 
         public StreamOperation(InMemoryDocumentSessionOperations session)
         {
@@ -34,6 +82,7 @@ namespace Raven.Client.Documents.Session.Operations
         public QueryStreamCommand CreateRequest(IndexQuery query)
         {
             _isQueryStream = true;
+            _isTimeSeriesStream = query.IsTimeSeriesStreamQuery;
 
             if (query.WaitForNonStaleResults)
                 throw new NotSupportedException(
@@ -74,9 +123,25 @@ namespace Raven.Client.Documents.Session.Operations
             return new StreamCommand(sb.ToString());
         }
 
+        internal YieldStreamResults SetResultForTimeSeries(StreamResult response)
+        {
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: false, _statistics);
+            enumerator.Initialize();
+
+            return enumerator;
+        }
+
+        internal async Task<YieldStreamResults> SetResultForTimeSeriesAsync(StreamResult response)
+        {
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: true, _statistics);
+            await enumerator.InitializeAsync().ConfigureAwait(false);
+
+            return enumerator;
+        }
+
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)
         {
-            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isAsync: false, _statistics);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: false, _statistics);
             enumerator.Initialize();
 
             return enumerator;
@@ -84,25 +149,127 @@ namespace Raven.Client.Documents.Session.Operations
 
         public async Task<IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
         {
-            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isAsync: true, _statistics);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: true, _statistics);
             await enumerator.InitializeAsync().ConfigureAwait(false);
 
             return enumerator;
         }
 
-        private class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
+        internal class TimeSeriesStreamEnumerator : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject> 
         {
-            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isAsync, StreamQueryStatistics streamQueryStatistics)
-            {
-                if (response == null)
-                    throw new InvalidOperationException("The index does not exists, failed to stream results");
+            private readonly InMemoryDocumentSessionOperations _session;
+            private readonly PeepingTomStream _peepingTomStream;
+            private readonly UnmanagedJsonParser _parser;
+            private readonly JsonParserState _state;
+            private readonly JsonOperationContext.MemoryBuffer _buffer;
+            private BlittableJsonReaderObject _current;
 
-                _response = response;
+            public TimeSeriesStreamEnumerator(InMemoryDocumentSessionOperations session, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
+            {
+                _session = session;
+                _peepingTomStream = peepingTomStream;
+                _parser = parser;
+                _state = state;
+                _buffer = buffer;
+            }
+
+            public void Initialize()
+            {
+                AsyncHelpers.RunSync(InitializeAsync);
+            }
+
+            public async Task InitializeAsync()
+            {
+                var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _peepingTomStream, _parser, _state, _buffer);
+
+                if (property.StartsWith("__timeSeriesQueryFunction") == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (_state.CurrentTokenType != JsonParserToken.StartArray)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+            }
+
+            public async ValueTask DisposeAsync()
+            {
+                if (_done == false)
+                {
+                    while (await MoveNextAsync().ConfigureAwait(false))
+                    {
+                    
+                    }
+                }
+
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (_state.CurrentTokenType != JsonParserToken.EndObject)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+            }
+
+            private bool _done;
+
+            public async ValueTask<bool> MoveNextAsync()
+            {
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                if (_state.CurrentTokenType == JsonParserToken.EndArray)
+                {
+                    _done = true;
+                    _current = null;
+                    return false;
+                }
+
+                using (var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", _parser, _state))
+                {
+                    await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
+
+                    _current = builder.CreateReader();
+                    return true;
+                }
+            }
+
+            public bool MoveNext()
+            {
+                return AsyncHelpers.RunSync(MoveNextAsync().AsTask);
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            BlittableJsonReaderObject IEnumerator<BlittableJsonReaderObject>.Current => _current;
+
+            BlittableJsonReaderObject IAsyncEnumerator<BlittableJsonReaderObject>.Current => _current;
+
+            object? IEnumerator.Current => _current;
+
+            public void Dispose()
+            {
+                AsyncHelpers.RunSync(DisposeAsync().AsTask);
+            }
+        }
+
+        internal static bool IsTimeSeriesStreamResult<T>()
+        {
+            return typeof(ITimeSeriesQueryStreamResult).IsAssignableFrom(typeof(T));
+        }
+
+        internal class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
+        {
+            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics)
+            {
+                _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
                 _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
                 _session = session;
                 _isQueryStream = isQueryStream;
                 _isAsync = isAsync;
                 _streamQueryStatistics = streamQueryStatistics;
+                _isTimeSeriesStream = isTimeSeriesStream;
             }
 
             private readonly StreamResult _response;
@@ -114,6 +281,7 @@ namespace Raven.Client.Documents.Session.Operations
             private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
             private readonly bool _isQueryStream;
             private readonly bool _isAsync;
+            private readonly bool _isTimeSeriesStream;
             private readonly StreamQueryStatistics _streamQueryStatistics;
             private readonly PeepingTomStream _peepingTomStream;
             private int _docsCountOnCachedRenewSession;
@@ -157,6 +325,8 @@ namespace Raven.Client.Documents.Session.Operations
 
                 CheckIfContextNeedsToBeRenewed();
 
+                _timeSeriesIt?.Dispose();
+
                 if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
@@ -176,9 +346,19 @@ namespace Raven.Client.Documents.Session.Operations
                     if (_cachedItemsRenew == false)
                         _cachedItemsRenew = builder.NeedResetPropertiesCache();
 
-                    UnmanagedJsonParserHelper.ReadObject(builder, _peepingTomStream, _parser, _buffer);
+                    if (_isTimeSeriesStream)
+                        UnmanagedJsonParserHelper.ReadProperty(builder, _peepingTomStream, _parser, _buffer);
+                    else
+                        UnmanagedJsonParserHelper.ReadObject(builder, _peepingTomStream, _parser, _buffer);
 
                     Current = builder.CreateReader();
+
+                    if (_isTimeSeriesStream)
+                    {
+                        _timeSeriesIt = new TimeSeriesStreamEnumerator(_session, _peepingTomStream, _parser, _state, _buffer);
+                        _timeSeriesIt.Initialize();
+                    }
+
                     return true;
                 }
             }
@@ -188,6 +368,9 @@ namespace Raven.Client.Documents.Session.Operations
                 AssertInitialized();
 
                 CheckIfContextNeedsToBeRenewed();
+
+                if (_timeSeriesIt != null)
+                    await _timeSeriesIt.DisposeAsync().ConfigureAwait(false);
 
                 if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
@@ -208,11 +391,26 @@ namespace Raven.Client.Documents.Session.Operations
                     if (_cachedItemsRenew == false)
                         _cachedItemsRenew = builder.NeedResetPropertiesCache();
 
-                    await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
+                    if (_isTimeSeriesStream)
+                        await UnmanagedJsonParserHelper.ReadPropertyAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
+                    else
+                        await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
 
                     Current = builder.CreateReader();
+                    if (_isTimeSeriesStream)
+                    {
+                        _timeSeriesIt = new TimeSeriesStreamEnumerator(_session, _peepingTomStream, _parser, _state, _buffer);
+                        await _timeSeriesIt.InitializeAsync().ConfigureAwait(false);
+                    }
                     return true;
                 }
+            }
+
+            private TimeSeriesStreamEnumerator _timeSeriesIt;
+
+            public void ExposeTimeSeriesStream(ITimeSeriesQueryStreamResult result)
+            {
+                result.SetStream(_timeSeriesIt);
             }
 
             public void Initialize()
@@ -289,7 +487,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
                 catch
                 {
-                    Dispose();
+                    await DisposeAsync().ConfigureAwait(false);
 
                     throw;
                 }

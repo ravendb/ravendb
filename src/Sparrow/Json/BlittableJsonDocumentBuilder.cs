@@ -159,6 +159,18 @@ namespace Sparrow.Json
             _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
         }
 
+        public void ReadProperty()
+        {
+            var state = new BuildingState(ContinuationState.ReadPropertyName)
+            {
+                State = ContinuationState.ReadPropertyName, 
+                Properties = _propertiesCache.Allocate(), 
+                FirstWrite = _writer.Position,
+                PartialRead = true
+            };
+            _continuationState.Push(state);
+        }
+
         public int SizeInBytes => _writer.SizeInBytes;
 
 
@@ -313,6 +325,16 @@ namespace Sparrow.Json
                             position: _writeToken.ValuePos,
                             type: (byte)_writeToken.WrittenToken,
                             property: currentState.CurrentProperty));
+
+                        if (currentState.PartialRead)
+                        {
+                            if (continuationState.Count == 0)
+                            {
+                                _modifier?.EndObject();
+                                _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
+                                goto ReturnTrue;
+                            }
+                        }
 
                         currentState.State = ContinuationState.ReadPropertyName;
                         continue;
@@ -487,6 +509,7 @@ namespace Sparrow.Json
             public FastList<BlittableJsonToken> Types;
             public FastList<int> Positions;
             public long FirstWrite;
+            public bool PartialRead;
 
             public BuildingState(ContinuationState state)
             {
@@ -497,6 +520,7 @@ namespace Sparrow.Json
                 Types = null;
                 Positions = null;
                 FirstWrite = 0;
+                PartialRead = false;
             }
         }
 

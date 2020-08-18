@@ -3,11 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Voron;
 using Voron.Data.Tables;
 
@@ -26,6 +28,22 @@ namespace Raven.Server.Documents.TimeSeries
         public LazyStringValue Tag;
         public ulong Status;
         public SingleResultType Type;
+        public DynamicJsonValue ToTimeSeriesEntryJson(double scale = 1)
+        {
+            var values = new DynamicJsonArray();
+            foreach (var t in Values.Span)
+            {
+                values.Add(scale * t);
+            }
+
+            return new DynamicJsonValue
+            {
+                [nameof(TimeSeriesEntry.Tag)] = Tag?.ToString(),
+                [nameof(TimeSeriesEntry.Timestamp)] = Timestamp,
+                [nameof(TimeSeriesEntry.Values)] = values,
+                [nameof(TimeSeriesEntry.IsRollup)] = Type == SingleResultType.RolledUp,
+            };
+        }
     }
 
     public class SegmentResult

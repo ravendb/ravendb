@@ -1797,7 +1797,14 @@ namespace Raven.Server.Json
 
             if (first == false)
                 writer.WriteComma();
+
             WriteMetadata(writer, document, metadata, filterMetadataProperty);
+
+            if (document._timeSeriesStream != null)
+            {
+                writer.WriteComma();
+                writer.WriteArray(document._timeSeriesStream.Key, document._timeSeriesStream.TimeSeries, context);
+            }
         }
 
         public static void WriteDocumentPropertiesWithoutMetadata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
@@ -1980,6 +1987,22 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
                 first = false;
+            }
+        }
+
+        public static DynamicJsonValue GetOrCreateMetadata(DynamicJsonValue result)
+        {
+            return (DynamicJsonValue)(result[Constants.Documents.Metadata.Key] ?? (result[Constants.Documents.Metadata.Key] = new DynamicJsonValue()));
+        }
+
+        public static void MergeMetadata(DynamicJsonValue result ,DynamicJsonValue metadata)
+        {
+            var m1 = GetOrCreateMetadata(result);
+            var m2 = GetOrCreateMetadata(metadata);
+
+            foreach (var item in m2.Properties)
+            {
+                m1[item.Name] = item.Value;
             }
         }
     }

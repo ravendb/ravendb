@@ -105,6 +105,34 @@ namespace Sparrow.Json.Parsing
             builder.FinalizeDocument();
         }
 
+        public static void ReadProperty(BlittableJsonDocumentBuilder builder, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer)
+        {
+            builder.ReadProperty();
+            while (builder.Read() == false)
+            {
+                var read = peepingTomStream.Read(buffer.Memory.Span);
+                if (read == 0)
+                    throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(peepingTomStream));
+
+                parser.SetBuffer(buffer, 0, read);
+            }
+            builder.FinalizeDocument();
+        }
+
+        public static async Task ReadPropertyAsync(BlittableJsonDocumentBuilder builder, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer)
+        {
+            builder.ReadProperty();
+            while (builder.Read() == false)
+            {
+                var read = await peepingTomStream.ReadAsync(buffer.Memory).ConfigureAwait(false);
+                if (read == 0)
+                    throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(peepingTomStream));
+
+                parser.SetBuffer(buffer, 0, read);
+            }
+            builder.FinalizeDocument();
+        }
+
         public static long ReadLong(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
         {
             if (Read(peepingTomStream, parser, state, buffer) == false)

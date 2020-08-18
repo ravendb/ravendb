@@ -8,13 +8,24 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
+using Raven.Client.Documents.Queries.TimeSeries;
 
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
     ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IAdvancedSessionOperations
+    public partial interface IAdvancedSessionOperations : 
+        IDocumentsSessionOperations,
+        ITimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>,
+        ITimeSeriesSessionStreamOperations<TimeSeriesRawResult>,
+        ITimeSeriesSessionStreamAggregationResultOperations,
+        ITimeSeriesSessionStreamRawResultOperations
+    {
+
+    }
+
+    public interface IDocumentsSessionOperations
     {
         /// <summary>
         ///     Stream the results on the query to the client, converting them to
@@ -95,6 +106,50 @@ namespace Raven.Client.Documents.Session
         ///     Returns the results of a query directly into stream 
         /// </summary>
         void StreamInto<T>(IRawDocumentQuery<T> query, Stream output);
+    }
 
+    public interface ITimeSeriesSessionStreamOperations<T>
+    {
+        IEnumerator<TimeSeriesStreamResult<T>> Stream(IQueryable<T> query);
+
+        IEnumerator<TimeSeriesStreamResult<T>> Stream(IQueryable<T> query, out StreamQueryStatistics streamQueryStats);
+
+        IEnumerator<TimeSeriesStreamResult<T>> Stream(IDocumentQuery<T> query);
+
+        IEnumerator<TimeSeriesStreamResult<T>> Stream(IRawDocumentQuery<T> query);
+        
+        IEnumerator<TimeSeriesStreamResult<T>> Stream(IRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats);
+
+        IEnumerator<TimeSeriesStreamResult<T>> Stream(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats);
+    }
+
+    public interface ITimeSeriesSessionStreamAggregationResultOperations
+    {
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IQueryable<TimeSeriesAggregationResult<T>> query) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IQueryable<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesAggregationResult<T>> query) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesAggregationResult<T>> query) where T : new();
+        
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
+    }
+
+    public interface ITimeSeriesSessionStreamRawResultOperations
+    {
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IQueryable<TimeSeriesRawResult<T>> query) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IQueryable<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesRawResult<T>> query) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesRawResult<T>> query) where T : new();
+        
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IRawDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
+
+        IEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>> Stream<T>(IDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats) where T : new();
     }
 }

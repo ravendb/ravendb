@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client;
 using Sparrow;
 using Sparrow.Json;
@@ -6,6 +7,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
+    public class TimeSeriesStream
+    {
+        public IEnumerable<DynamicJsonValue> TimeSeries;
+        public string Key;
+    }
     public class Document : IDisposable
     {
         public static readonly Document ExplicitNull = new Document();
@@ -26,6 +32,8 @@ namespace Raven.Server.Documents
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
+
+        public TimeSeriesStream _timeSeriesStream;
 
         public unsafe ulong DataHash
         {

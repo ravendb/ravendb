@@ -12,7 +12,10 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Time series synchronous session operations
     /// </summary>
-    public interface ISessionDocumentTimeSeries : ISessionDocumentAppendTimeSeriesBase, ISessionDocumentDeleteTimeSeriesBase
+    public interface ISessionDocumentTimeSeries : 
+        ITimeSeriesStreamingBase<TimeSeriesEntry>, 
+        ISessionDocumentAppendTimeSeriesBase, 
+        ISessionDocumentDeleteTimeSeriesBase
     {
         /// <summary>
         /// Return the time series values for the provided range
@@ -23,7 +26,11 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Time series typed synchronous session operations
     /// </summary>
-    public interface ISessionDocumentTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentDeleteTimeSeriesBase where TValues : new()
+    public interface ISessionDocumentTypedTimeSeries<TValues> : 
+        ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
+        ITimeSeriesStreamingBase<TimeSeriesEntry<TValues>>, 
+        ISessionDocumentDeleteTimeSeriesBase 
+        where TValues : new()
     {
         /// <summary>
         /// Return the time series values for the provided range
@@ -34,7 +41,11 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Time series typed synchronous session operations
     /// </summary>
-    public interface ISessionDocumentRollupTypedTimeSeries<TValues> : ISessionDocumentRollupTypedAppendTimeSeriesBase<TValues>, ISessionDocumentDeleteTimeSeriesBase where TValues : new()
+    public interface ISessionDocumentRollupTypedTimeSeries<TValues> : 
+        ITimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>, 
+        ISessionDocumentRollupTypedAppendTimeSeriesBase<TValues>, 
+        ISessionDocumentDeleteTimeSeriesBase 
+        where TValues : new()
     {
         /// <summary>
         /// Return the time series values for the provided range

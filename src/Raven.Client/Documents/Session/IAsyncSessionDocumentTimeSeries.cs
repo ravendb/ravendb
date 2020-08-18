@@ -14,7 +14,10 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced async TimeSeries session operations
     /// </summary>
-    public interface IAsyncSessionDocumentTimeSeries : ISessionDocumentAppendTimeSeriesBase, ISessionDocumentDeleteTimeSeriesBase
+    public interface IAsyncSessionDocumentTimeSeries : 
+        ISessionDocumentAppendTimeSeriesBase, 
+        ISessionDocumentDeleteTimeSeriesBase,
+        ITimeSeriesStreamingBaseAsync<TimeSeriesEntry>
     {
         Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
@@ -23,7 +26,11 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced async TimeSeries typed session operations
     /// </summary>
-    public interface IAsyncSessionDocumentTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentDeleteTimeSeriesBase where TValues : new()
+    public interface IAsyncSessionDocumentTypedTimeSeries<TValues> : 
+        ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
+        ITimeSeriesStreamingBaseAsync<TimeSeriesEntry<TValues>>,
+        ISessionDocumentDeleteTimeSeriesBase 
+        where TValues : new()
     {
         Task<TimeSeriesEntry<TValues>[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
@@ -32,7 +39,11 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///     Advanced async TimeSeries typed session operations
     /// </summary>
-    public interface IAsyncSessionDocumentRollupTypedTimeSeries<TValues> : ISessionDocumentTypedAppendTimeSeriesBase<TValues>, ISessionDocumentDeleteTimeSeriesBase where TValues : new()
+    public interface IAsyncSessionDocumentRollupTypedTimeSeries<TValues> : 
+        ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
+        ITimeSeriesStreamingBaseAsync<TimeSeriesRollupEntry<TValues>>,
+        ISessionDocumentDeleteTimeSeriesBase 
+        where TValues : new()
     {
         Task<TimeSeriesRollupEntry<TValues>[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);

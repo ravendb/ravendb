@@ -1,33 +1,141 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
     public class TimeSeriesQueryResult
     {
-        public long Count { get; set; }
+        public virtual long Count { get; set; }
     }
 
-    public class TimeSeriesRawResult : TimeSeriesQueryResult
+    public interface ITimeSeriesQueryStreamEntry
     {
-        public TimeSeriesEntry[] Results { get; set; }
+
     }
 
-    public class TimeSeriesRawResult<TValues> : TimeSeriesRawResult where TValues : new()
+    internal interface ITimeSeriesQueryStreamResult
     {
-        public new TimeSeriesEntry<TValues>[] Results { get; set; }
+        void SetStream(StreamOperation.TimeSeriesStreamEnumerator stream);
     }
 
-    public class TimeSeriesAggregationResult : TimeSeriesQueryResult
+    public class TimeSeriesStreamEnumerator<T> : IAsyncEnumerator<T>, IEnumerator<T> where T : ITimeSeriesQueryStreamEntry 
     {
-        public TimeSeriesRangeAggregation[] Results { get; set; }
+        private readonly IAsyncEnumerator<BlittableJsonReaderObject> _outer;
+
+        private static readonly Func<BlittableJsonReaderObject, T> Converter = JsonDeserializationBase.GenerateJsonDeserializationRoutine<T>();
+
+        internal TimeSeriesStreamEnumerator(StreamOperation.TimeSeriesStreamEnumerator outer)
+        {
+            _outer = outer;
+        }
+
+        internal TimeSeriesStreamEnumerator(IAsyncEnumerator<BlittableJsonReaderObject> outer)
+        {
+            _outer = outer;
+        }
+
+        public bool MoveNext()
+        {
+            return AsyncHelpers.RunSync(MoveNextAsync().AsTask);
+        }
+
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
+
+        public async ValueTask<bool> MoveNextAsync()
+        {
+            if (await _outer.MoveNextAsync().ConfigureAwait(false) == false)
+            {
+                Current = default;
+                return false;
+            }
+
+            Current = Converter(_outer.Current);
+            return true;
+        }
+
+        public T Current { get; private set; } 
+
+        object? IEnumerator.Current => Current;
+
+        public void Dispose()
+        {
+            AsyncHelpers.RunSync(DisposeAsync().AsTask);
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            return _outer.DisposeAsync();
+        }
     }
 
-    public class TimeSeriesRangeAggregation : IPostJsonDeserialization
+    public abstract class TimeSeriesQueryStreamResultBase<TResult> : TimeSeriesQueryResult, ITimeSeriesQueryStreamResult where TResult : ITimeSeriesQueryStreamEntry
+    {
+        public TResult[] Results
+        {
+            get => _results ?? MaterializeStream();
+            set => _results = value;
+        }
+
+        [JsonIgnore]
+        private TResult[] _results;
+
+        private TResult[] MaterializeStream()
+        {
+            if (Stream == null)
+                return null;
+
+            var list = new List<TResult>();
+            while (Stream.MoveNext())
+            {
+                list.Add(Stream.Current);
+            }
+            _results = list.ToArray();
+            return _results;
+        }
+
+        [JsonIgnore]
+        public IEnumerator<TResult> Stream => _timeSeriesStream ?? _results?.AsEnumerable().GetEnumerator();
+
+        [JsonIgnore]
+        public IAsyncEnumerator<TResult> StreamAsync => _timeSeriesStream;
+
+        [JsonIgnore]
+        private TimeSeriesStreamEnumerator<TResult> _timeSeriesStream;
+
+        void ITimeSeriesQueryStreamResult.SetStream(StreamOperation.TimeSeriesStreamEnumerator stream)
+        {
+            _timeSeriesStream = new TimeSeriesStreamEnumerator<TResult>(stream);
+        }
+    }
+    public class TimeSeriesRawResult : TimeSeriesQueryStreamResultBase<TimeSeriesEntry>
+    {
+    }
+
+    public class TimeSeriesRawResult<T> : TimeSeriesQueryStreamResultBase<TimeSeriesEntry<T>> where T : new()
+    {
+    }
+
+    public class TimeSeriesAggregationResult : TimeSeriesQueryStreamResultBase<TimeSeriesRangeAggregation>
+    {
+    }
+
+    public class TimeSeriesAggregationResult<T> : TimeSeriesQueryStreamResultBase<TimeSeriesRangeAggregation<T>> where T : new()
+    {
+    }
+
+    public class TimeSeriesRangeAggregation : IPostJsonDeserialization, ITimeSeriesQueryStreamEntry
     {
         public long[] Count;
         public double[] Max, Min, Last, First, Average, Sum;
@@ -51,11 +159,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (To == default)
                 To = DateTime.MaxValue;
         }
-    }
-
-    public class TimeSeriesAggregationResult<T> : TimeSeriesAggregationResult where T : new()
-    {
-        public new TimeSeriesRangeAggregation<T>[] Results { get; set; }
     }
 
     public class TimeSeriesRangeAggregation<T> : TimeSeriesRangeAggregation where T : new()
