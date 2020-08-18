@@ -855,7 +855,7 @@ namespace Raven.Server.Documents.Queries.Results
                 ? start.AddMonths(-gapData.StartRange.Months) 
                 : start.Add(-(end - start));
 
-            while (to > start)
+            while (start < to)
             {
                 TimeSeriesAggregation[] statsToAdd;
                 switch (interpolationType)
@@ -863,7 +863,7 @@ namespace Raven.Server.Documents.Queries.Results
                     case InterpolationType.None:
                         return;
                     case InterpolationType.Linear:
-                        FillGapsLinear(start, prev, to, gapData.PreviousStats, currentStats);
+                        GenerateMissingPointLinear(start, prev, to, gapData.PreviousStats, currentStats);
                         statsToAdd = gapData.PreviousStats;
                         prev = start;
                         break;
@@ -876,6 +876,7 @@ namespace Raven.Server.Documents.Queries.Results
                         throw new ArgumentOutOfRangeException("Unknown InterpolationType : " + interpolationType);
                 }
 
+                // fill gap
                 array.Add(AddTimeSeriesResult(statsToAdd, start, end));
 
                 gapData.StartRange.MoveToNextRange(end);
@@ -885,7 +886,7 @@ namespace Raven.Server.Documents.Queries.Results
         }
         
 
-        private static void FillGapsLinear(DateTime x, DateTime xA, DateTime xB, TimeSeriesAggregation[] yA, TimeSeriesAggregation[] yB)
+        private static void GenerateMissingPointLinear(DateTime x, DateTime xA, DateTime xB, TimeSeriesAggregation[] yA, TimeSeriesAggregation[] yB)
         {
             Debug.Assert(yA.Length == yB.Length, "Invalid aggregation stats");
 
@@ -894,64 +895,54 @@ namespace Raven.Server.Documents.Queries.Results
 
             for (int i = 0; i < yA.Length; i++)
             {
-                var valuesA = yA[i].GetValues(); 
-                var valuesB = yB[i].GetValues();
+                InterpolateValues(yA[i], yB[i], quotient);
 
-                hasCount |= yA[i].Aggregation == AggregationType.Count;
-
-                var minLength = Math.Min(valuesA.Count, valuesB.Count);
-                if (minLength < valuesA.Count)
-                {
-                    valuesA.RemoveRange(minLength - 1, valuesA.Count - minLength);
-                }
-
-                for (var index = 0; index < minLength; index++)
-                {
-                    var yb = valuesB[index];
-                    var ya = valuesA[index];
-
-                    // y = yA + (yB - yA) * ((x - xa) / (xb - xa)) 
-                    // override valuesA[index] by the result 
-
-                    valuesA[index] = ya + (yb - ya) * quotient;
-                }
-
-                if (yA[i].Aggregation == AggregationType.Average)
-                {
-                    // need to add count
-                    AddCount(quotient, yA[i], yB[i]);
-                    hasCount |= i == 0;
-                }
-
-                // we can override yA[i] - it's no longer needed 
-                yA[i].SetValues(valuesA);
+                hasCount |= yA[i].Aggregation == AggregationType.Count ||
+                            (yA[i].Aggregation == AggregationType.Average && i == 0);
             }
 
             if (hasCount == false)
             {
-                AddCount(quotient, yA[0], yB[0]);
+                yA[0].SetCount(LinearInterpolation(yA[0].Count, yB[0].Count, quotient));
             }
         }
 
-        private static void AddCount(double quotient, TimeSeriesAggregation yA, TimeSeriesAggregation yB)
+        private static void InterpolateValues(TimeSeriesAggregation yA, TimeSeriesAggregation yB, double quotient)
         {
-            var countA = yA.Count;
-            var countB = yB.Count;
+            Debug.Assert(yA.Aggregation == yB.Aggregation, "Invalid aggregation stats");
 
-            var minLength = Math.Min(countA.Count, countB.Count);
-            if (minLength < countA.Count)
+            var valuesA = yA.GetValues();
+            var valuesB = yB.GetValues();
+
+            yA.SetValues(LinearInterpolation(valuesA, valuesB, quotient));
+
+            if (yA.Aggregation == AggregationType.Average)
             {
-                countA.RemoveRange(minLength - 1, countA.Count - minLength);
+                // need to add count
+                yA.SetCount(LinearInterpolation(yA.Count, yB.Count, quotient));
+            }
+        }
+
+        private static List<double> LinearInterpolation(List<double> valuesA, List<double> valuesB, double quotient)
+        {
+            var minLength = Math.Min(valuesA.Count, valuesB.Count);
+            if (minLength < valuesA.Count)
+            {
+                valuesA.RemoveRange(minLength - 1, valuesA.Count - minLength);
             }
 
             for (var index = 0; index < minLength; index++)
             {
-                var yb = countB[index];
-                var ya = countA[index];
-                countA[index] = ya + (yb - ya) * quotient;
+                var yb = valuesB[index];
+                var ya = valuesA[index];
+
+                // y = yA + (yB - yA) * ((x - xa) / (xb - xa))
+
+                // override valuesA[index] by the result 
+                valuesA[index] = ya + (yb - ya) * quotient;
             }
 
-            yA.SetCount(countA);
+            return valuesA;
         }
 
         private static object GetValueFromRolledUpEntry(int index, SingleResult singleResult)
