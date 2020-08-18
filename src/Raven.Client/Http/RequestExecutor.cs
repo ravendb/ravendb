@@ -928,11 +928,12 @@ namespace Raven.Client.Http
 
                 SetRequestHeaders(sessionInfo, cachedChangeVector, request);
 
-                _onBeforeRequest?.Invoke(this, new BeforeRequestEventArgs(_databaseName, url, request));
+                var attemptNum = command.AttemptToSendNum + 1;
+                _onBeforeRequest?.Invoke(this, new BeforeRequestEventArgs(_databaseName, url, request, attemptNum));
                 var response = await SendRequestToServer(chosenNode, nodeIndex, context, command, shouldRetry, sessionInfo, request, url, token).ConfigureAwait(false);
                 if (response == null) // the fail-over mechanism took care of this
                     return;
-                _onSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request));
+                _onSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
                 
                 var refreshTask = RefreshIfNeeded(chosenNode, response);
                 command.StatusCode = response.StatusCode;
