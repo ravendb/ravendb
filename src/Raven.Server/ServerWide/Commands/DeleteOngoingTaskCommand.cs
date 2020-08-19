@@ -6,7 +6,7 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Voron;
-using Voron.Data.Tables.Table;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
