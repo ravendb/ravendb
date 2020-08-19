@@ -38,10 +38,9 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
             
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.RavenConnectionStrings.Remove(ConnectionStringName);
-            return null;
         }
     }
 
@@ -57,10 +56,9 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
 
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.SqlConnectionStrings.Remove(ConnectionStringName);
-            return null;
         }
     }
 }

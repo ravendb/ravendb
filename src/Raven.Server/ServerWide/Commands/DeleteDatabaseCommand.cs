@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands
             ClusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             var deletionInProgressStatus = HardDelete ? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
@@ -79,8 +79,6 @@ namespace Raven.Server.ServerWide.Commands
             }
 
             record.Topology.Stamp.Index = etag;
-
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

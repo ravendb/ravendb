@@ -22,9 +22,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenDB_15215(testOutputHelper))
+                    using (var test = new FilteredReplicationTests(testOutputHelper))
                     {
-                       await test.CanReduceCountersMetadataWhenLoadingDocumentsPage();
+                       await test.WhenDeletingHubReplicationWillRemoveAllAccess();
                     }
                 }
                 catch (Exception e)

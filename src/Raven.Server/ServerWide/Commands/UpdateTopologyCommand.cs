@@ -16,7 +16,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Topology = Topology;
             if (record.Topology.Stamp == null)
@@ -29,7 +29,6 @@ namespace Raven.Server.ServerWide.Commands
                 };
             }
             record.Topology.Stamp.Index = etag;
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

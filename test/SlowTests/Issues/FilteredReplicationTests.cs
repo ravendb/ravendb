@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
@@ -151,6 +152,62 @@ namespace SlowTests.Issues
             [TimeSeriesValue(0)] public double HeartRate;
         }
 
+        [Fact]
+        public async Task WhenDeletingHubReplicationWillRemoveAllAccess()
+        {
+            var certificates = SetupServerAuthentication();
+            var dbNameA = GetDatabaseName();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var storeA = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbNameA
+            });
+            long[] ids = new long[3];
+            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+            for (int i = 0; i < 3; i++)
+            {
+                var op = await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+                {
+                    Name = "pull" +i,
+                    Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                }));
+
+                ids[i] = op.TaskId;
+                
+                await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull" +i, new ReplicationHubAccess
+                {
+                    Name = "Arava",
+                    AllowedHubToSinkPaths = new[]
+                    {
+                        "users/ayende",
+                        "users/ayende/*"
+                    },
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                }));
+            }
+
+            await storeA.Maintenance.SendAsync(new DeleteOngoingTaskOperation(ids[1], OngoingTaskType.PullReplicationAsHub));
+            
+            await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "pull1",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+            }));
+
+            var accesses = await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull1"));
+            Assert.Empty(accesses);
+            
+            accesses = await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull0"));
+            Assert.NotEmpty(accesses);
+            accesses = await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull2"));
+            Assert.NotEmpty(accesses);
+        }
+        
         [Fact]
         public async Task Can_pull_via_filtered_replication()
         {

@@ -30,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
         public string Source { get; set; }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             try
             {
@@ -47,7 +47,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 throw new RachisApplyException("Failed to update index", e);
             }
             
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

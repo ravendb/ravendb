@@ -18,10 +18,9 @@ namespace Raven.Server.ServerWide.Commands.Sorters
             SorterName = name;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.DeleteSorter(SorterName);
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

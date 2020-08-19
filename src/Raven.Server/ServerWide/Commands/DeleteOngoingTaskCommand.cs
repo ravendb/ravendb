@@ -1,8 +1,12 @@
 ﻿using System.Diagnostics;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using Voron;
+using Voron.Data.Tables.Table;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -22,7 +26,41 @@ namespace Raven.Server.ServerWide.Commands
             TaskType = taskType;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        private string _taskIdToDelete, _hubNameToDelete;
+
+        public override void CleanupLeftovers(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        {
+            switch (TaskType)
+            {
+                case OngoingTaskType.Backup:
+                    if (_taskIdToDelete == null)
+                        return;
+                    var itemKey = _taskIdToDelete;
+                    using (Slice.From(ctx.Allocator, itemKey, out Slice _))
+                    using (Slice.From(ctx.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
+                    {
+                        items.DeleteByKey(valueNameToDeleteLowered);
+                    }
+
+                    break;
+                case OngoingTaskType.PullReplicationAsHub:
+                    if (_hubNameToDelete == null)
+                        return;
+                    
+                    if (clusterAuditLog.IsInfoEnabled)
+                        clusterAuditLog.Info($"Removed hub replication {_hubNameToDelete} in {DatabaseName} and all its certificates.");
+                    
+                    var certs = ctx.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ReplicationCertificatesSchema, ClusterStateMachine.ReplicationCertificatesSlice);
+
+                    using (Slice.From(ctx.Allocator, (this.DatabaseName + "/" + _hubNameToDelete + "/" ).ToLowerInvariant(), out var keySlice))
+                    {
+                        certs.DeleteByPrimaryKeyPrefix(keySlice);
+                    }
+                    break;
+            }
+        }
+        
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Debug.Assert(TaskId != 0);
 
@@ -39,6 +77,7 @@ namespace Raven.Server.ServerWide.Commands
                     var hubDefinition = record.HubPullReplications.Find(x => x.TaskId == TaskId);
                     if (hubDefinition != null)
                     {
+                        _hubNameToDelete = hubDefinition.Name;
                         record.HubPullReplications.Remove(hubDefinition);
                     }
                     break;
@@ -51,7 +90,8 @@ namespace Raven.Server.ServerWide.Commands
                     break;
                 case OngoingTaskType.Backup:
                     record.DeletePeriodicBackupConfiguration(TaskId);
-                    return TaskId.ToString();
+                    _taskIdToDelete = TaskId.ToString();
+                    break;
 
                 case OngoingTaskType.SqlEtl:
                     var sqlEtl = record.SqlEtls?.Find(x => x.TaskId == TaskId);
@@ -70,8 +110,6 @@ namespace Raven.Server.ServerWide.Commands
                     break;
                 
             }
-
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

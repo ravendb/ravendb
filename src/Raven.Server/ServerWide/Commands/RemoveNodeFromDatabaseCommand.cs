@@ -19,7 +19,7 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseId = databaseId;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             DeletionInProgressStatus deletionStatus = DeletionInProgressStatus.No;
             record.DeletionInProgress?.TryGetValue(NodeTag, out deletionStatus);
@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands
             record.DeletionInProgress?.Remove(NodeTag);
 
             if (DatabaseId == null)
-                return null;
+                return ;
 
             if (deletionStatus == DeletionInProgressStatus.HardDelete)
             {
@@ -37,8 +37,6 @@ namespace Raven.Server.ServerWide.Commands
 
                 record.UnusedDatabaseIds.Add(DatabaseId);
             }
-
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

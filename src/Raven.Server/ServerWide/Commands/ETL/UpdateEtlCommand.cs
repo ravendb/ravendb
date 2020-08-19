@@ -48,12 +48,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.RavenEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddRavenEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
-            return null;
         }
     }
 
@@ -69,12 +68,11 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.SqlEtl, DatabaseName, null).UpdateDatabaseRecord(record, etag);
             new AddSqlEtlCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
 
-            return null;
         }
     }
 }
