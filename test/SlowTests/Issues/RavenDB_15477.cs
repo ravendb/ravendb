@@ -4,8 +4,8 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Json;
+using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +22,14 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                store.Maintenance.Send(new CreateSampleDataOperation());
+                new UserIndex().Execute(store);
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User() { Name = "egor" });
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
                 store.Maintenance.Server.Send(new ToggleDatabasesStateOperation(store.Database, true));
 
                 var client = store.GetRequestExecutor().HttpClient;
@@ -37,6 +44,24 @@ namespace SlowTests.Issues
                     var dbInfo = JsonDeserializationServer.DatabaseInfo(bjro);
                     Assert.Equal(IndexRunningStatus.Running, dbInfo.IndexingStatus);
                 }
+            }
+        }
+
+        private class UserIndex : AbstractIndexCreationTask<User, UserIndex.Result>
+        {
+            public UserIndex()
+            {
+                Map = users => from user in users
+                               select new
+                               {
+                                   user.Name
+                               };
+
+            }
+
+            public class Result
+            {
+                public string Name { get; set; }
             }
         }
     }
