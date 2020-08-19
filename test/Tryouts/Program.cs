@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Blittable;
 using SlowTests.Issues;
 using Tests.Infrastructure;
 
@@ -22,9 +23,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenDB_15215(testOutputHelper))
+                    using (var test = new BlittableJsonEqualityTests(testOutputHelper))
                     {
-                       await test.CanReduceCountersMetadataWhenLoadingDocumentsPage();
+                       test.Equals_when_creating_blittable_in_different_ways();
                     }
                 }
                 catch (Exception e)
