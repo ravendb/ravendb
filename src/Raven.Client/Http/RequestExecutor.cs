@@ -242,44 +242,8 @@ namespace Raven.Client.Http
             }
         }
 
-        public event EventHandler<BeforeRequestEventArgs> _onBeforeRequest;
-        public event EventHandler<BeforeRequestEventArgs> OnBeforeRequest
-        {
-            add
-            {
-                lock (_locker)
-                {
-                    _onBeforeRequest += value;
-                }
-            }
-
-            remove
-            {
-                lock (_locker)
-                {
-                    _onBeforeRequest -= value;
-                }
-            }
-        }
-        public event EventHandler<SucceedRequestEventArgs> _onSucceedRequest;
-        public event EventHandler<SucceedRequestEventArgs> OnSucceedRequest
-        {
-            add
-            {
-                lock (_locker)
-                {
-                    _onSucceedRequest += value;
-                }
-            }
-
-            remove
-            {
-                lock (_locker)
-                {
-                    _onSucceedRequest -= value;
-                }
-            }
-        }
+        public event EventHandler<BeforeRequestEventArgs> OnBeforeRequest;
+        public event EventHandler<SucceedRequestEventArgs> OnSucceedRequest;
         
         private void OnFailedRequestInvoke(string url, Exception e)
         {
@@ -930,7 +894,7 @@ namespace Raven.Client.Http
 
                 command.NumberOfAttempts += 1;
                 var attemptNum = command.NumberOfAttempts;
-                _onBeforeRequest?.Invoke(this, new BeforeRequestEventArgs(_databaseName, url, request, attemptNum));
+                OnBeforeRequest?.Invoke(this, new BeforeRequestEventArgs(_databaseName, url, request, attemptNum));
                 var response = await SendRequestToServer(chosenNode, nodeIndex, context, command, shouldRetry, sessionInfo, request, url, token).ConfigureAwait(false);
                 if (response == null) // the fail-over mechanism took care of this
                     return;
@@ -943,7 +907,7 @@ namespace Raven.Client.Http
                 {
                     if (response.StatusCode == HttpStatusCode.NotModified)
                     {
-                        _onSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
+                        OnSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
 
                         cachedItem.NotModified();
 
@@ -970,7 +934,7 @@ namespace Raven.Client.Http
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
 
-                    _onSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
+                    OnSucceedRequest?.Invoke(this, new SucceedRequestEventArgs(_databaseName, url, response, request, attemptNum));
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
                     _lastReturnedResponse = DateTime.UtcNow;
                 }
