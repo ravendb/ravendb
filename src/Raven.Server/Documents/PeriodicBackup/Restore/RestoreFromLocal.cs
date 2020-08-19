@@ -36,12 +36,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return Task.FromResult(ZipFile.Open(path, ZipArchiveMode.Read, System.Text.Encoding.UTF8));
         }
 
-        protected override Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path)
-        {
-            return Task.FromResult(ZipFile.OpenRead(path));
-
-        }
-
         protected override Task<List<string>> GetFilesForRestore()
         {
             return Task.FromResult(Directory.GetFiles(_backupLocation).ToList());

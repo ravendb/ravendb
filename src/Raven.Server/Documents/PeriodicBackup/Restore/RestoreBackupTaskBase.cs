@@ -120,7 +120,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected abstract Task<Stream> GetStream(string path);
         protected abstract Task<ZipArchive> GetZipArchiveForSnapshot(string path);
-        protected abstract Task<ZipArchive> GetZipArchiveForSnapshotCalc(string path);
 
         protected abstract Task<List<string>> GetFilesForRestore();
 
@@ -441,6 +440,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var fullBackupPath = GetBackupPath(backupPath);
             using (var zip = await GetZipArchiveForSnapshot(fullBackupPath))
             {
+                var voronDataDirectory = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
+                if (Directory.Exists(voronDataDirectory.FullPath) == false)
+                    Directory.CreateDirectory(voronDataDirectory.FullPath);
+
+                // validate free space
+                var snapshotSize = zip.Entries.Sum(entry => entry.Length);
+                BackupHelper.AssertFreeSpaceForSnapshot(voronDataDirectory.FullPath, snapshotSize, "restore a backup", Logger);
+
                 foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
                 {
                     var directory = zipEntries.Key;
@@ -480,7 +487,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         continue;
                     }
 
-                    var voronDataDirectory = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
                     var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
                         ? voronDataDirectory
                         : voronDataDirectory.Combine(directory);
@@ -808,12 +814,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
         protected virtual void Dispose()
         {
             _operationCancelToken.Dispose();
-        }
-
-        public async Task<long> CalculateBackupSizeInBytes()
-        {
-            using (var zip = await GetZipArchiveForSnapshotCalc(RestoreFromConfiguration.LastFileNameToRestore))
-                return zip.Entries.Sum(entry => entry.Length);
         }
     }
 }
