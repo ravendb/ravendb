@@ -22,7 +22,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             Configuration = configuration;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             bool newTask = false;
             if (Configuration.TaskId == 0)
@@ -50,7 +50,6 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             EnsureTaskNameIsNotUsed(record, Configuration.Name);
 
             record.PeriodicBackups.Add(Configuration);
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

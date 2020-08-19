@@ -1974,27 +1974,17 @@ namespace Raven.Server.ServerWide
                     var databaseRecord = JsonDeserializationCluster.DatabaseRecord(databaseRecordJson);
 
                     updateCommand.Initialize(serverStore, context);
-                    string relatedRecordIdToDelete;
 
                     try
                     {
-                        relatedRecordIdToDelete = updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                        updateCommand.UpdateDatabaseRecord(databaseRecord, index);
+                        updateCommand.CleanupLeftovers(context, items,_clusterAuditLog);
                     }
                     catch (Exception e)
                     {
                         // We are not using the transaction, so any exception here doesn't involve any kind of corruption
                         // and is consistent across the cluster.
                         throw new RachisApplyException("Failed to update database record.", e);
-                    }
-
-                    if (relatedRecordIdToDelete != null)
-                    {
-                        var itemKey = relatedRecordIdToDelete;
-                        using (Slice.From(context.Allocator, itemKey, out Slice _))
-                        using (Slice.From(context.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameToDeleteLowered))
-                        {
-                            items.DeleteByKey(valueNameToDeleteLowered);
-                        }
                     }
 
                     if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)

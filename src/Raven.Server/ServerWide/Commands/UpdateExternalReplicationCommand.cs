@@ -18,12 +18,12 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Watcher.AssertValidReplication();
 
             if (Watcher == null)
-                return null;
+                return ;
 
             if (Watcher.TaskId == 0)
             {
@@ -42,7 +42,6 @@ namespace Raven.Server.ServerWide.Commands
 
             EnsureTaskNameIsNotUsed(record, Watcher.Name);
             record.ExternalReplications.Add(Watcher);
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

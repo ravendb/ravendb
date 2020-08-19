@@ -17,10 +17,9 @@ namespace Raven.Server.ServerWide.Commands
             databaseRecord.DocumentsCompression = Configuration;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.DocumentsCompression = Configuration;
-            return null;
         }
         
         public EditDocumentsCompressionCommand(DocumentsCompressionConfiguration configuration, string databaseName, string uniqueRequestId) : base(databaseName, uniqueRequestId)

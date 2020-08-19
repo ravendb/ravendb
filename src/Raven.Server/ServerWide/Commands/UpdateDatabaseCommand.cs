@@ -4,6 +4,8 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands
 {
@@ -19,7 +21,9 @@ namespace Raven.Server.ServerWide.Commands
             DatabaseName = databaseName;
         }
 
-        public abstract string UpdateDatabaseRecord(DatabaseRecord record, long etag);
+        public abstract void UpdateDatabaseRecord(DatabaseRecord record, long etag);
+        
+        public virtual void CleanupLeftovers(ClusterOperationContext ctx, Table items,  Logger clusterAuditLog){}
 
         public abstract void FillJson(DynamicJsonValue json);
 

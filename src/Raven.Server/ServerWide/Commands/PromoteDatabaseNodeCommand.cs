@@ -17,17 +17,15 @@ namespace Raven.Server.ServerWide.Commands
 
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (record.Topology.Promotables.Contains(NodeTag) == false)
-                return null;
+                return ;
 
             record.Topology.PromotablesStatus.Remove(NodeTag);
             record.Topology.DemotionReasons.Remove(NodeTag);
             record.Topology.Promotables.Remove(NodeTag);
             record.Topology.Members.Add(NodeTag);
-
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

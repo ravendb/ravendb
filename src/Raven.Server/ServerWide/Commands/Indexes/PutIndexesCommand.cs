@@ -29,7 +29,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             CreatedAt = createdAt;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (Static != null)
             {
@@ -43,7 +43,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     record.AddIndex(definition);
             }
 
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

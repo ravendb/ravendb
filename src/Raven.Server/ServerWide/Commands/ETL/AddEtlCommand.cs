@@ -57,10 +57,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Add(ref record.RavenEtls, record, etag);
-            return null;
         }
     }
 
@@ -76,10 +75,9 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Add(ref record.SqlEtls, record, etag);
-            return null;
         }
     }
 }

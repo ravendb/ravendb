@@ -23,7 +23,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             LockMode = mode;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (record.Indexes.TryGetValue(IndexName, out IndexDefinition staticIndex))
             {
@@ -35,7 +35,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 throw new RachisApplyException($"'Lock Mode' can't be set for the Auto-Index '{IndexName}'.");
             }
 
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

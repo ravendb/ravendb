@@ -23,10 +23,9 @@ namespace Raven.Server.ServerWide.Commands
             Configuration = configuration;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.Refresh = Configuration;
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

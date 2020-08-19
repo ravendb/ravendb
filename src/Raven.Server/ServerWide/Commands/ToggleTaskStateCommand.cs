@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands
             Disable = disable;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             Debug.Assert(TaskId != 0);
 
@@ -94,7 +94,6 @@ namespace Raven.Server.ServerWide.Commands
                     break;
             }
 
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

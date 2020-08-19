@@ -15,7 +15,7 @@ namespace Raven.Server.ServerWide.Commands
         {
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (Definition.TaskId == 0)
             {
@@ -34,7 +34,6 @@ namespace Raven.Server.ServerWide.Commands
             
             record.EnsureTaskNameIsNotUsed(Definition.Name);
             record.HubPullReplications.Add(Definition);
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

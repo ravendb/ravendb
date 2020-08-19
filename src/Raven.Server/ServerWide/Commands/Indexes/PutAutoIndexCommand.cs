@@ -27,7 +27,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
             Definition = definition;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             try
             {
@@ -38,7 +38,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                 throw new RachisApplyException("Failed to update auto-index", e);
             }
             
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)

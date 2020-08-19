@@ -19,10 +19,9 @@ namespace Raven.Server.ServerWide.Commands
             UnusedDatabaseIds = list;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             record.UnusedDatabaseIds = UnusedDatabaseIds;
-            return null;
         }
 
         public override void FillJson(DynamicJsonValue json)
