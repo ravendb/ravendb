@@ -8,7 +8,6 @@ namespace Raven.Client.Documents.Operations.Backups
     public class BackupConfiguration : IDynamicJson
     {
         public string Name { get; set; }
-        public string DatabaseName { get; set; }
         public BackupType BackupType { get; set; }
         public SnapshotSettings SnapshotSettings { get; set; }
         public BackupEncryptionSettings BackupEncryptionSettings { get; set; }
@@ -19,15 +18,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public FtpSettings FtpSettings { get; set; }
         public GoogleCloudSettings GoogleCloudSettings { get; set; }
 
-        public string GetDefaultTaskName()
-        {
-            var destinations = GetFullBackupDestinations();
-            return destinations.Count == 0 ?
-                $"{BackupType} w/o destinations" :
-                $"{BackupType} to {string.Join(", ", destinations)}";
-        }
-
-        public bool HasBackup()
+        internal bool HasBackup()
         {
             return CanBackupUsing(LocalSettings) ||
                    CanBackupUsing(S3Settings) ||
@@ -37,7 +28,7 @@ namespace Raven.Client.Documents.Operations.Backups
                    CanBackupUsing(FtpSettings);
         }
 
-        public bool HasCloudBackup()
+        internal bool HasCloudBackup()
         {
             return CanBackupUsing(S3Settings) ||
                    CanBackupUsing(GlacierSettings) ||
@@ -46,7 +37,7 @@ namespace Raven.Client.Documents.Operations.Backups
                    CanBackupUsing(FtpSettings);
         }
 
-        public static bool CanBackupUsing(BackupSettings settings)
+        internal static bool CanBackupUsing(BackupSettings settings)
         {
             return settings != null &&
                    settings.Disabled == false &&
@@ -65,7 +56,7 @@ namespace Raven.Client.Documents.Operations.Backups
             }).ToList();
         }
 
-        public List<string> GetDestinations()
+        internal List<string> GetDestinations()
         {
             return GetBackupDestinations().Select(x => x.ToString()).ToList();
         }
@@ -111,16 +102,15 @@ namespace Raven.Client.Documents.Operations.Backups
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(DatabaseName)] = DatabaseName,
                 [nameof(BackupType)] = BackupType,
-                [nameof(SnapshotSettings)] = SnapshotSettings,
-                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings,
+                [nameof(SnapshotSettings)] = SnapshotSettings?.ToJson(),
+                [nameof(BackupEncryptionSettings)] = BackupEncryptionSettings?.ToJson(),
                 [nameof(LocalSettings)] = LocalSettings?.ToJson(),
                 [nameof(S3Settings)] = S3Settings?.ToJson(),
                 [nameof(GlacierSettings)] = GlacierSettings?.ToJson(),
                 [nameof(AzureSettings)] = AzureSettings?.ToJson(),
-                [nameof(FtpSettings)] = FtpSettings?.ToJson(),
-                [nameof(GoogleCloudSettings)] = GoogleCloudSettings?.ToJson()
+                [nameof(GoogleCloudSettings)] = GoogleCloudSettings?.ToJson(),
+                [nameof(FtpSettings)] = FtpSettings?.ToJson()
             };
         }
     }

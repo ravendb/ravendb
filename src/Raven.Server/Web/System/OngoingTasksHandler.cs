@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -16,9 +19,10 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
-using Raven.Client.Util;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
@@ -28,12 +32,14 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Raven.Client.Json.Serialization;
+using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
 {
@@ -483,6 +489,84 @@ namespace Raven.Server.Web.System
             HttpContext.Response.StatusCode = (int)HttpStatusCode.TemporaryRedirect;
             HttpContext.Response.Headers.Remove("Content-Type");
             HttpContext.Response.Headers.Add("Location", location);
+        }
+
+        [RavenAction("/databases/*/admin/backup", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
+        public async Task BackupDatabaseOnce()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
+                var backupConfiguration = JsonDeserializationServer.OneTimeBackupConfiguration(json);
+                PeriodicBackupRunner.CheckServerHealthBeforeBackup(ServerStore, backupConfiguration.Name);
+                ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
+                ServerStore.ConcurrentBackupsCounter.StartBackup(backupConfiguration.Name, Logger);
+
+                var operationId = ServerStore.Operations.GetNextOperationId();
+                var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
+                var backupParameters = new BackupParameters
+                {
+                    TaskId = -1,
+                    RetentionPolicy = null,
+                    StartTimeUtc = SystemTime.UtcNow,
+                    IsOneTimeBackup = true,
+                    BackupStatus = new PeriodicBackupStatus { TaskId = -1 },
+                    OperationId = ServerStore.Operations.GetNextOperationId(),
+                    BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
+                    IsFullBackup = true,
+                    TempBackupPath = (Database.Configuration.Storage.TempPath ?? Database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp")
+                };
+
+                var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
+
+                var t = Database.Operations.AddOperation(
+                    null,
+                    $"Database backup: {Database.Name}",
+                    Documents.Operations.Operations.OperationType.DatabaseBackup,
+                    onProgress =>
+                    {
+                        var tcs = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+                        PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
+                        {
+                            var sw = Stopwatch.StartNew();
+                            try
+                            {
+                                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
+                                NativeMemory.EnsureRegistered();
+
+                                using (Database.PreventFromUnloading())
+                                {
+                                    var runningBackupStatus = new PeriodicBackupStatus { TaskId = -1 };
+                                    var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+                                    tcs.SetResult(backupResult);
+                                }
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                tcs.SetCanceled();
+                            }
+                            catch (Exception e)
+                            {
+                                if (Logger.IsOperationsEnabled)
+                                    Logger.Operations($"Failed to run the backup thread: '{backupConfiguration.Name}'", e);
+
+                                tcs.SetException(e);
+                            }
+                            finally
+                            {
+                                ServerStore.ConcurrentBackupsCounter.FinishBackup(backupConfiguration.Name, backupStatus: null, sw.Elapsed, Logger);
+                            }
+                        }, null,
+                            $"Backup thread {backupConfiguration.Name} for database '{Database.Name}'");
+                        return tcs.Task;
+                    },
+                    id: operationId, token: cancelToken);
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+                }
+            }
         }
 
         private IEnumerable<OngoingTask> CollectBackupTasks(

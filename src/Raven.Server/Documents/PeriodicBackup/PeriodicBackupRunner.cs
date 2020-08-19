@@ -641,6 +641,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     tcs.SetResult(backupResult);
                 }
             }
+            catch (OperationCanceledException oce)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Canceled the backup thread: '{periodicBackup.Configuration.Name}'", oce);
+
+                tcs.SetCanceled();
+            }
             catch (Exception e)
             {
                 if (_logger.IsOperationsEnabled)

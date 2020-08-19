@@ -135,12 +135,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                     var backupConfiguration = new BackupConfiguration
                     {
                         BackupType = BackupType.Backup,
-                        DatabaseName = store.Database,
                         AzureSettings = azureSettings,
                         
                     };
 
-                    backupResult = (BackupResult)store.Maintenance.Server.Send(new OneTimeBackupOperation(backupConfiguration)).WaitForCompletion(TimeSpan.FromSeconds(15));
+                    backupResult = (BackupResult)store.Maintenance.Send(new BackupOperation(backupConfiguration)).WaitForCompletion(TimeSpan.FromSeconds(15));
                     Assert.True(backupResult != null && backupResult.Counters.Processed, "backupResult != null && backupResult.Counters.Processed");
                     Assert.Equal(2, backupResult.Counters.ReadCount);
 
