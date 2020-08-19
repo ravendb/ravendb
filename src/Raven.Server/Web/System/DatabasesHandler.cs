@@ -389,7 +389,7 @@ namespace Raven.Server.Web.System
                         databaseInfoJson.Modifications = new DynamicJsonValue(databaseInfoJson)
                         {
                             [nameof(DatabaseInfo.Disabled)] = disabled,
-                            [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus.ToString(),
+                            [nameof(DatabaseInfo.IndexingStatus)] = indexingStatus,
                             [nameof(DatabaseInfo.NodesTopology)] = nodesTopology.ToJson(),
                             [nameof(DatabaseInfo.DeletionInProgress)] = DynamicJsonValue.Convert(dbRecord.DeletionInProgress), 
                             [nameof(DatabaseInfo.Environment)] = studioEnvironment

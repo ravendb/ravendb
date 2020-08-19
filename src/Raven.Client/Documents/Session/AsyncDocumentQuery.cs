@@ -994,12 +994,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         Lazy<Task<IEnumerable<T>>> IAsyncDocumentQueryBase<T>.LazilyAsync(Action<IEnumerable<T>> onEval)
         {
-            if (QueryOperation == null)
-            {
-                QueryOperation = InitializeQueryOperation();
-            }
-
-            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = GetLazyQueryOperation();
             return ((AsyncDocumentSession)TheSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
@@ -1023,9 +1018,6 @@ namespace Raven.Client.Documents.Session
         {
             if (QueryOperation != null)
                 return;
-
-            var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
-            TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
 
             QueryOperation = InitializeQueryOperation();
             await ExecuteActualQueryAsync(token).ConfigureAwait(false);
