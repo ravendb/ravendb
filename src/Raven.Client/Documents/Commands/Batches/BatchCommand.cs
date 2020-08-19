@@ -138,8 +138,7 @@ namespace Raven.Client.Documents.Commands.Batches
             {
                 sb.Append("&waitForReplicasTimeout=").Append(replicationOptions.WaitForReplicasTimeout);
 
-                if (replicationOptions.ThrowOnTimeoutInWaitForReplicas)
-                    sb.Append("&throwOnTimeoutInWaitForReplicas=true");
+                sb.Append($"&throwOnTimeoutInWaitForReplicas={replicationOptions.ThrowOnTimeoutInWaitForReplicas}");
 
                 sb.Append("&numberOfReplicasToWaitFor=");
                 sb.Append(replicationOptions.Majority
