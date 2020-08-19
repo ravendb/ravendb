@@ -826,7 +826,8 @@ namespace SlowTests.Smuggler
         public async Task CanExportAndImportTimeSeriesWithRollups()
         {
             var file = GetTempFileName();
-            var baseline = DateTime.Now.AddMinutes(-5).EnsureMilliseconds();
+            var baseline = DateTime.Now.AddMinutes(-5);
+            baseline = new DateTime(baseline.Year, baseline.Month, baseline.Day, baseline.Hour, baseline.Minute, 0, baseline.Kind);
 
             try
             {
