@@ -597,11 +597,9 @@ namespace Raven.Server.Web.System
                 {
                     restoreType = RestoreType.Local;
                 }
-
                 var operationId = ServerStore.Operations.GetNextOperationId();
                 var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                 RestoreBackupTaskBase restoreBackupTask;
-                string databaseName;
                 switch (restoreType)
                 {
                     case RestoreType.Local:
@@ -611,7 +609,6 @@ namespace Raven.Server.Web.System
                             localConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = localConfiguration.DatabaseName;
                         break;
                     case RestoreType.S3:
                         var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
@@ -620,7 +617,6 @@ namespace Raven.Server.Web.System
                             s3Configuration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = s3Configuration.DatabaseName;
                         break;
                     case RestoreType.Azure:
                         var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
@@ -629,7 +625,6 @@ namespace Raven.Server.Web.System
                             azureConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = azureConfiguration.DatabaseName;
                         break;      
                     case RestoreType.GoogleCloud:
                         var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
@@ -638,7 +633,6 @@ namespace Raven.Server.Web.System
                             googlCloudConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = googlCloudConfiguration.DatabaseName;
                         break;
 
                     default:
@@ -647,7 +641,7 @@ namespace Raven.Server.Web.System
 
                 var t = ServerStore.Operations.AddOperation(
                     null,
-                    $"Database restore: {databaseName}",
+                    $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
                     id: operationId, token: cancelToken);
