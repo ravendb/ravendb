@@ -319,16 +319,7 @@ class query extends viewModelBase {
 
         this.queryResultsContainMatchingDocuments = ko.pureComputed(() => {
             const currentIndex = this.getCurrentIndex();
-            
-            if (this.queriedIndex() && this.queriedIndex().startsWith("Auto/")) {
-                return true;
-            }
-            
-            if (this.isCollectionQuery()) {
-                return true;
-            } 
-            
-            return !!currentIndex && currentIndex.SourceType !== "TimeSeries" && currentIndex.SourceType !== "Counters" && !this.isMapReduceIndex();
+            return !!currentIndex && currentIndex.SourceType === "Documents" && !this.isMapReduceIndex();
         });
         
         this.isCollectionQuery = ko.pureComputed(() => {
@@ -644,8 +635,15 @@ class query extends viewModelBase {
         if (!indexName)
             return null;
 
-        const indexes = this.indexes() || [];
-        return indexes.find(i => i.Name === indexName);
+        let currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
+        
+        if (!currentIndex) {
+            // fetch indexes since this view may not be up-to-date if index was defined outside of studio
+            this.fetchAllIndexes(this.activeDatabase());
+            currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
+        }
+        
+        return currentIndex;
     }
     
     private getTimeSeriesColumns(grid: virtualGridController<any>, tab: timeSeriesTableDetails): virtualColumn[] {
@@ -765,9 +763,6 @@ class query extends viewModelBase {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
         }
-        
-        // if index was defined outside of current view then we don't know that at this point, so must fetch
-        this.fetchAllIndexes(this.activeDatabase());
         
         this.timeSeriesGraphs([]);
         
