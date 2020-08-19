@@ -1963,14 +1963,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = new BackupConfiguration
                 {
                     BackupType = backupType,
-                    DatabaseName = store.Database,
                     LocalSettings = new LocalSettings
                     {
                         FolderPath = backupPath
                     }
                 };
 
-                var operation = await store.Maintenance.Server.SendAsync(new OneTimeBackupOperation(config));
+                var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
                 var backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
                 Assert.True(backupResult.Documents.Processed);
                 Assert.True(backupResult.CompareExchange.Processed);
@@ -2010,6 +2009,27 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(name, usr.Name);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task OneTimeBackupWithInvalidConfigurationShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new BackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = null
+                };
+
+               await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new BackupOperation(config)));
             }
         }
 

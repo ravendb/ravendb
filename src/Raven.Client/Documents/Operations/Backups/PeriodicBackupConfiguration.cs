@@ -41,6 +41,14 @@ namespace Raven.Client.Documents.Operations.Backups
             return MentorNode;
         }
 
+        public string GetDefaultTaskName()
+        {
+            var destinations = GetFullBackupDestinations();
+            return destinations.Count == 0 ?
+                $"{BackupType} w/o destinations" :
+                $"{BackupType} to {string.Join(", ", destinations)}";
+        }
+
         public string GetTaskName()
         {
             return Name;
