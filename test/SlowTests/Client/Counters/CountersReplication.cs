@@ -602,8 +602,16 @@ namespace SlowTests.Client.Counters
                     var ex = await Assert.ThrowsAsync<CounterOverflowException>(async () => await session.CountersFor("users/1").GetAsync("likes"));
                     Assert.Contains("Overflow detected in counter 'likes' from document 'users/1'", ex.Message);
 
-                    // but we will allow to change the partial counter value nevertheless
+                    // but we will allow to decrement the partial counter value nevertheless
                     session.CountersFor("users/1").Increment("likes", long.MaxValue / 4);
+                    ex = await Assert.ThrowsAsync<CounterOverflowException>(async () => await session.SaveChangesAsync());
+                    Assert.Contains("Overflow detected in counter 'likes' from document 'users/1'", ex.Message);
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    // but we will allow only to _decrement_ the partial counter value nevertheless
+                    session.CountersFor("users/1").Increment("likes", - long.MaxValue / 4);
                     await session.SaveChangesAsync();
                 }
 

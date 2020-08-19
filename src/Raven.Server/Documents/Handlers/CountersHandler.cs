@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
                         case CounterOperationType.Increment:
                             LastChangeVector =
                                 _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
-                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail, capValueOnOverflow: true);
+                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail, capValueOnOverflow: operation.Delta < 0);
 
                             if (exists == false)
                             {
