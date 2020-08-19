@@ -320,6 +320,24 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
+        public async Task CanSplitCounterWithUnicode()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    var counter = session.CountersFor("users/1");
+                    for (int i = 0; i < 3000; i++)
+                    {
+                        counter.Increment($"⭐{i}");
+                    }
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanHandleIncomingCounterReplicationWhenCounterGroupDocumentsAreSplitDifferently()
         {
             using (var storeA = GetDocumentStore())

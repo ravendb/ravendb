@@ -437,7 +437,7 @@ namespace Raven.Server.Documents
                 fstValues.GetPropertyByIndex(fstValues.Count - 1, ref lastPropertyFirst);
 
                 var firstChange = 0;
-                for (; firstChange < lastPropertyFirst.Name.Length; firstChange++)
+                for (; firstChange < lastPropertyFirst.Name.Size; firstChange++)
                 {
                     if (firstPropertySnd.Name[firstChange] != lastPropertyFirst.Name[firstChange])
                         break;
