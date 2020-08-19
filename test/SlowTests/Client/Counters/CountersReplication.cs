@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
@@ -567,6 +568,86 @@ namespace SlowTests.Client.Counters
                 {
                     Assert.NotNull(await session.LoadAsync<User>("users/2"));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CountersTotalValueCanOverflow()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 2);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 2 + 2);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+
+                Assert.True(WaitForDocument(storeB, "users/1"));
+
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var ex = await Assert.ThrowsAsync<CounterOverflowException>(async () => await session.CountersFor("users/1").GetAsync("likes"));
+                    Assert.Contains("Overflow detected in counter 'likes' from document 'users/1'", ex.Message);
+
+                    // but we will allow to change the partial counter value nevertheless
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 4);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 4);
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(storeA, storeB);
+            }
+        }
+
+        [Fact]
+        public async Task CountersTotalValueCanOverflow2()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 3);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 3);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 2);
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(storeA, storeB);
             }
         }
 

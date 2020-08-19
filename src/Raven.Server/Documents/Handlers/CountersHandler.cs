@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
                         case CounterOperationType.Increment:
                             LastChangeVector =
                                 _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
-                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail, capValueOnOverflow: true);
 
                             if (exists == false)
                             {
@@ -717,12 +717,14 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId,
-            string counterName, bool addFullValues, CountersDetail result)
+            string counterName, bool addFullValues, CountersDetail result, bool capValueOnOverflow = false)
         {
             long value = 0;
             long etag = 0;
             result.Counters ??= new List<CounterDetail>();
             Dictionary<string, long> fullValues = null;
+
+            long uncheckedValue = 0;
 
             if (addFullValues)
             {
@@ -733,11 +735,18 @@ namespace Raven.Server.Documents.Handlers
                     etag = HashCode.Combine(etag, curEtag);
                     try
                     {
+                        if (capValueOnOverflow)
+                            uncheckedValue = unchecked(value + val);
                         value = checked(value + val);
                     }
                     catch (OverflowException e)
                     {
-                        CounterOverflowException.ThrowFor(docId, counterName, e);
+                        if (capValueOnOverflow == false)
+                            CounterOverflowException.ThrowFor(docId, counterName, e);
+
+                        value = uncheckedValue > 0 ? 
+                            long.MinValue : 
+                            long.MaxValue;
                     }
 
                     fullValues[cv] = val;
@@ -751,7 +760,7 @@ namespace Raven.Server.Documents.Handlers
             }
             else
             {
-                var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName);
+                var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName, capValueOnOverflow);
                 if (v == null)
                 {
                     result.Counters.Add(null);

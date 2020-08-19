@@ -780,7 +780,7 @@ namespace Raven.Server.Documents
                                 if (changeType != CounterChangeTypes.None)
                                 {
                                     var counterName = prop.Name;
-                                    var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+                                    var value = InternalGetCounterValue(localCounterValues, documentId, counterName, capOnOverflow: true);
                                     context.Transaction.AddAfterCommitNotification(new CounterChange
                                     {
                                         ChangeVector = changeVector,
@@ -1020,22 +1020,30 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues, string docId, string counterName)
+        internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues, string docId, string counterName, bool capOnOverflow = false)
         {
             Debug.Assert(localCounterValues != null);
             var count = localCounterValues.Length / SizeOfCounterValues;
             long value = 0;
-
+            long uncheckedValue = 0;
             try
             {
                 for (int index = 0; index < count; index++)
                 {
+                    if (capOnOverflow)
+                        uncheckedValue = unchecked(value + ((CounterValues*)localCounterValues.Ptr)[index].Value);
+
                     value = checked(value + ((CounterValues*)localCounterValues.Ptr)[index].Value);
                 }
             }
             catch (OverflowException e)
             {
-                CounterOverflowException.ThrowFor(docId, counterName, e);
+                if (capOnOverflow == false)
+                    CounterOverflowException.ThrowFor(docId, counterName, e);
+
+                return uncheckedValue > 0 ? 
+                    long.MinValue : 
+                    long.MaxValue;
             }
 
 
@@ -1209,13 +1217,13 @@ namespace Raven.Server.Documents
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
         }
 
-        public (long Value, long Etag)? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
+        public (long Value, long Etag)? GetCounterValue(DocumentsOperationContext context, string docId, string counterName, bool capOnOverflow = false)
         {
             if (string.IsNullOrEmpty(counterName) ||
                 TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
                 return null;
 
-            return (InternalGetCounterValue(blob, docId, counterName), etag);
+            return (InternalGetCounterValue(blob, docId, counterName, capOnOverflow), etag);
         }
 
         private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out long etag, out BlittableJsonReaderObject.RawBlob blob)
