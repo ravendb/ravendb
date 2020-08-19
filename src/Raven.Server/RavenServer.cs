@@ -72,6 +72,7 @@ namespace Raven.Server
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Server");
         private readonly Logger _authAuditLog = LoggingSource.AuditLog.GetLogger("AuthenticateCertificate", "Audit");
+        private TestingStuff _forTestingPurposes;
 
         public readonly RavenConfiguration Configuration;
 
@@ -1888,6 +1889,9 @@ namespace Raven.Server
 
                     (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
 
+                    if (_forTestingPurposes != null && _forTestingPurposes.ThrowExceptionInListenToNewTcpConnection)
+                        throw new Exception("Simulated TCP failure.");
+
                     using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
                     using (context.GetMemoryBuffer(out JsonOperationContext.MemoryBuffer buffer))
                     {
@@ -1943,6 +1947,15 @@ namespace Raven.Server
                 }
                 catch (Exception e)
                 {
+                    try
+                    {
+                        tcpClient.Dispose();
+                    }
+                    catch
+                    {
+                        // nothing we can do
+                    }
+
                     if (_tcpLogger.IsInfoEnabled)
                     {
                         _tcpLogger.Info("Failure when processing tcp connection", e);
@@ -2181,7 +2194,7 @@ namespace Raven.Server
 
             try
             {
-                using (_tcpContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (var errorWriter = new BlittableJsonTextWriter(context, tcpStream))
                 {
                     context.Write(errorWriter, new DynamicJsonValue
@@ -2533,5 +2546,18 @@ namespace Raven.Server
             Expired,
             NotYetValid
         }
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+    }
+
+        internal class TestingStuff
+        {
+            internal bool ThrowExceptionInListenToNewTcpConnection = false;
+}
     }
 }
