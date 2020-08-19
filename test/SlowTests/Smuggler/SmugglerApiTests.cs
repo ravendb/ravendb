@@ -826,7 +826,7 @@ namespace SlowTests.Smuggler
         public async Task CanExportAndImportTimeSeriesWithRollups()
         {
             var file = GetTempFileName();
-            var baseline = DateTime.Today;
+            var baseline = DateTime.Now.AddMinutes(-5).EnsureMilliseconds();
 
             try
             {
@@ -864,7 +864,7 @@ namespace SlowTests.Smuggler
 
                     var db = await GetDocumentDatabaseInstanceFor(store1);
                     var total = await db.TimeSeriesPolicyRunner.RunRollups();
-                    Assert.Equal(1, total);
+                    Assert.True(1 == total, $"actual {total}, baseline:{baseline} ({baseline.Ticks}, {baseline.Kind}), now:{db.Time.GetUtcNow()} ({db.Time.GetUtcNow().Ticks})");
 
                     using (var session = store1.OpenAsyncSession())
                     {
