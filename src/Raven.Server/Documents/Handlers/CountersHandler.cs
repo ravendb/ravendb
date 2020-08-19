@@ -724,8 +724,6 @@ namespace Raven.Server.Documents.Handlers
             result.Counters ??= new List<CounterDetail>();
             Dictionary<string, long> fullValues = null;
 
-            long uncheckedValue = 0;
-
             if (addFullValues)
             {
                 fullValues = new Dictionary<string, long>();
@@ -735,8 +733,6 @@ namespace Raven.Server.Documents.Handlers
                     etag = HashCode.Combine(etag, curEtag);
                     try
                     {
-                        if (capValueOnOverflow)
-                            uncheckedValue = unchecked(value + val);
                         value = checked(value + val);
                     }
                     catch (OverflowException e)
@@ -744,7 +740,7 @@ namespace Raven.Server.Documents.Handlers
                         if (capValueOnOverflow == false)
                             CounterOverflowException.ThrowFor(docId, counterName, e);
 
-                        value = uncheckedValue > 0 ? 
+                        value = value + val > 0 ? 
                             long.MinValue : 
                             long.MaxValue;
                     }

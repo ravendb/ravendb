@@ -1025,15 +1025,13 @@ namespace Raven.Server.Documents
             Debug.Assert(localCounterValues != null);
             var count = localCounterValues.Length / SizeOfCounterValues;
             long value = 0;
-            long uncheckedValue = 0;
+            long localValue = 0;
             try
             {
                 for (int index = 0; index < count; index++)
                 {
-                    if (capOnOverflow)
-                        uncheckedValue = unchecked(value + ((CounterValues*)localCounterValues.Ptr)[index].Value);
-
-                    value = checked(value + ((CounterValues*)localCounterValues.Ptr)[index].Value);
+                    localValue = ((CounterValues*)localCounterValues.Ptr)[index].Value;
+                    value = checked(value + localValue);
                 }
             }
             catch (OverflowException e)
@@ -1041,7 +1039,7 @@ namespace Raven.Server.Documents
                 if (capOnOverflow == false)
                     CounterOverflowException.ThrowFor(docId, counterName, e);
 
-                return uncheckedValue > 0 ? 
+                return value + localValue > 0 ? 
                     long.MinValue : 
                     long.MaxValue;
             }
