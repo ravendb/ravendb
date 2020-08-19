@@ -110,13 +110,14 @@ namespace Raven.Server.Documents.Handlers
         public Task ListHubAccess()
         {
             var hub = GetStringQueryString("name", true);
+            var filter = GetStringQueryString("filter", false);
             int pageSize = GetPageSize();
             var start = GetStart();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var results = Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, Database.Name, hub, start, pageSize);
+                var results = Server.ServerStore.Cluster.GetReplicationHubCertificateByHub(context, Database.Name, hub, filter,start, pageSize);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

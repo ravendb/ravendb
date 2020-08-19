@@ -3463,7 +3463,7 @@ namespace Raven.Server.ServerWide
             return new ClusterValidator();
         }
 
-        public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(TransactionOperationContext context, string database, string hub, int start, int pageSize)
+        public IEnumerable<BlittableJsonReaderObject> GetReplicationHubCertificateByHub(TransactionOperationContext context, string database, string hub, string filter, int start, int pageSize)
         {
             using var certs = context.Transaction.InnerTransaction.OpenTable(ReplicationCertificatesSchema, ReplicationCertificatesSlice);
 
@@ -3472,12 +3472,24 @@ namespace Raven.Server.ServerWide
 
             foreach (var (key, val) in certs.SeekByPrimaryKeyPrefix(prefix, Slices.Empty, start))
             {
+                var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
+                string thumbprint = key.ToString().Substring(prefixString.Length);
+                if (filter != null)
+                {
+                    blittable.TryGet("Name", out string name);
+                    var match =
+                        thumbprint.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+                        name?.Contains(filter, StringComparison.OrdinalIgnoreCase) == true;
+
+                    if(!match)
+                        continue;
+                }
+
                 if (pageSize-- < 0)
                     break;
-                var blittable = GetReplicationCertificateAccessObject(context, ref val.Reader);
                 blittable.Modifications = new DynamicJsonValue(blittable)
                 {
-                    ["CertificateThumbprint"] = key.ToString().Substring(prefixString.Length),
+                    ["CertificateThumbprint"] = thumbprint,
                     ["HubDefinitionName"] = hub,
                     ["Database"] = database
                 };
