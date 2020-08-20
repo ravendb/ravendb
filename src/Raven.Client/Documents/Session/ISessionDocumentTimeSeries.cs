@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Session
@@ -21,6 +22,13 @@ namespace Raven.Client.Documents.Session
         /// Return the time series values for the provided range
         /// </summary>
         TimeSeriesEntry[] Get(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue);
+
+        /// <summary>
+        /// Return the time series values for the provided range and includes related documents 
+        /// </summary>
+
+        TimeSeriesEntry[] Get(DateTime? from , DateTime? to , Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue);
+
     }
 
     /// <summary>

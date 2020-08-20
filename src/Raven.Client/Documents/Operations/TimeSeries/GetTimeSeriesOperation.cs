@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -23,8 +24,13 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly string _docId, _name;
         private readonly int _start, _pageSize;
         private readonly DateTime? _from, _to;
+        private readonly Action<ITimeSeriesIncludeBuilder> _includes;
 
-        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue)
+        public GetTimeSeriesOperation(string docId, string timeseries, DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue) 
+            : this(docId, timeseries, from, to, start, pageSize, includes: null)
+        { }
+
+        internal GetTimeSeriesOperation(string docId, string timeseries, DateTime? from, DateTime? to, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes)
         {
             if (string.IsNullOrEmpty(docId))
                 throw new ArgumentNullException(nameof(docId));
@@ -38,12 +44,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             _name = timeseries;
             _from = from;
             _to = to;
+            _includes = includes;
+
         }
+
 
         public RavenCommand<TimeSeriesRangeResult<TValues>> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context,
             HttpCache cache)
         {
-            return new GetTimeSeriesCommand(_docId, _name, _from, _to, _start, _pageSize);
+            return new GetTimeSeriesCommand(_docId, _name, _from, _to, _start, _pageSize, _includes);
         }
 
         internal class GetTimeSeriesCommand : RavenCommand<TimeSeriesRangeResult<TValues>>
@@ -51,8 +60,10 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             private readonly string _docId, _name;
             private readonly int _start, _pageSize;
             private readonly DateTime? _from, _to;
+            private readonly Action<ITimeSeriesIncludeBuilder> _includes;
 
-            public GetTimeSeriesCommand(string docId, string name, DateTime? from, DateTime? to, int start, int pageSize)
+
+            public GetTimeSeriesCommand(string docId, string name, DateTime? @from, DateTime? to, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes)
             {
                 _docId = docId;
                 _name = name;
@@ -60,6 +71,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 _pageSize = pageSize;
                 _from = from;
                 _to = to;
+                _includes = includes;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -96,6 +108,22 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 {
                     pathBuilder.Append("&to=")
                         .Append(_to.Value.EnsureUtc().GetDefaultRavenFormat());
+                }
+
+                if (_includes != null)
+                {
+                    var includeBuilder = new IncludeBuilder<TValues>(DocumentConventions.Default);
+                    _includes.Invoke(includeBuilder);
+
+                    if (includeBuilder.IncludeTimeSeriesDocument)
+                    {
+                        pathBuilder.Append("&includeDocument=true");
+                    }
+
+                    if (includeBuilder.IncludeTimeSeriesDocument)
+                    {
+                        pathBuilder.Append("&includeTags=true");
+                    }
                 }
 
                 var request = new HttpRequestMessage {Method = HttpMethod.Get};

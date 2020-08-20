@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.TimeSeries;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.TimeSeries;
 using Sparrow;
@@ -34,7 +35,17 @@ namespace Raven.Client.Documents.Session
             return GetAsyncInternal<TimeSeriesEntry>(from, to, start, pageSize, token);
         }
 
+        public Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<TTValues[]> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
+        {
+            return await GetTimeSeriesAndIncludesAsync<TTValues>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
+        }
+
+        internal async Task<TTValues[]> GetTimeSeriesAndIncludesAsync<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token) where TTValues : TimeSeriesEntry
         {
             TimeSeriesRangeResult<TTValues> rangeResult;
             from = from?.EnsureUtc();
@@ -47,7 +58,7 @@ namespace Raven.Client.Documents.Session
                 cache.TryGetValue(Name, out var ranges) &&
                 ranges.Count > 0)
             {
-                if (ranges[0].From > to || ranges[ranges.Count - 1].To < from)
+                if (ranges[0].From > to || ranges[^1].To < from)
                 {
                     // the entire range [from, to] is out of cache bounds
 
@@ -60,7 +71,7 @@ namespace Raven.Client.Documents.Session
                     Session.IncrementRequestCount();
 
                     rangeResult = await Session.Operations.SendAsync(
-                            new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session._sessionInfo, token: token)
+                            new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize, includes), Session._sessionInfo, token: token)
                         .ConfigureAwait(false);
 
                     if (rangeResult == null)
@@ -71,6 +82,8 @@ namespace Raven.Client.Documents.Session
                         var index = ranges[0].From > to ? 0 : ranges.Count;
                         ranges.Insert(index, rangeResult);
                     }
+
+                    // todo handle includes
 
                     return rangeResult.Entries;
                 }
@@ -84,10 +97,13 @@ namespace Raven.Client.Documents.Session
                     InMemoryDocumentSessionOperations.AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
                 }
 
+                // todo handle includes
                 return resultToUser?.Take(pageSize).Cast<TTValues>().ToArray();
             }
 
-            if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
+
+            if (includes == null && 
+                Session.DocumentsById.TryGetValue(DocId, out var document) &&
                 document.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray metadataTimeSeries) &&
                 metadataTimeSeries.BinarySearch(Name, StringComparison.OrdinalIgnoreCase) < 0)
             {
@@ -97,8 +113,12 @@ namespace Raven.Client.Documents.Session
 
             Session.IncrementRequestCount();
 
+            var getOperation = new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize);
+            if (includes != null)
+                getOperation._includes = includes;
+            
             rangeResult = await Session.Operations.SendAsync(
-                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize), Session._sessionInfo, token: token)
+                    new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize, includes), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (rangeResult == null)
@@ -117,8 +137,11 @@ namespace Raven.Client.Documents.Session
                 };
             }
 
+            // todo handle includes
+
             return rangeResult.Entries;
         }
+
 
         private static IEnumerable<TimeSeriesEntry> SkipAndTrimRangeIfNeeded(
             DateTime from,
@@ -158,6 +181,7 @@ namespace Raven.Client.Documents.Session
                 List<TimeSeriesRangeResult> ranges,
                 int start,
                 int pageSize,
+                Action<ITimeSeriesIncludeBuilder> includes,
                 CancellationToken token)
         {
             // try to find a range in cache that contains [from, to]
@@ -235,7 +259,7 @@ namespace Raven.Client.Documents.Session
             Session.IncrementRequestCount();
 
             var details = await Session.Operations.SendAsync(
-                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize), Session._sessionInfo, token: token)
+                    new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize, includes), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
             // merge all the missing parts we got from server

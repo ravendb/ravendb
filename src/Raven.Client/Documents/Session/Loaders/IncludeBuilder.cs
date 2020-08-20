@@ -35,6 +35,13 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null);
     }
 
+    public interface ITimeSeriesIncludeBuilder : ITimeSeriesIncludeBuilder<object, ITimeSeriesIncludeBuilder>
+    {
+        ITimeSeriesIncludeBuilder IncludeTags();
+
+        ITimeSeriesIncludeBuilder IncludeDocument();
+    }
+
     public interface ICompareExchangeValueIncludeBuilder<T, out TBuilder>
     {
         TBuilder IncludeCompareExchangeValue(string path);
@@ -113,9 +120,12 @@ namespace Raven.Client.Documents.Session.Loaders
 
         internal Dictionary<string, HashSet<TimeSeriesRange>> TimeSeriesToIncludeBySourceAlias;
         internal HashSet<string> CompareExchangeValuesToInclude;
+
+        internal bool IncludeTimeSeriesTags;
+        internal bool IncludeTimeSeriesDocument;
     }
 
-    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>
+    internal class IncludeBuilder<T> : IncludeBuilder, IQueryIncludeBuilder<T>, IIncludeBuilder<T>, ISubscriptionIncludeBuilder<T>, ITimeSeriesIncludeBuilder
     {
         private readonly DocumentConventions _conventions;
 
@@ -341,6 +351,24 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
+        public ITimeSeriesIncludeBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null)
+        {
+            IncludeTimeSeries(string.Empty, name, from, to);
+            return this;
+        }
+
+        public ITimeSeriesIncludeBuilder IncludeTags()
+        {
+            IncludeTimeSeriesTags = true;
+            return this;
+        }
+
+        public ITimeSeriesIncludeBuilder IncludeDocument()
+        {
+            IncludeTimeSeriesDocument = true;
+            return this;
+        }
+
         private void IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
@@ -465,6 +493,8 @@ namespace Raven.Client.Documents.Session.Loaders
             });
         }
     }
+
+
 
     internal class TimeSeriesRangeComparer : IEqualityComparer<TimeSeriesRange>
     {
