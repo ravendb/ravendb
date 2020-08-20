@@ -22,8 +22,11 @@ namespace Raven.Server.ServerWide.Commands
         }
 
         public abstract void UpdateDatabaseRecord(DatabaseRecord record, long etag);
-        
-        public virtual void CleanupLeftovers(ClusterOperationContext ctx, Table items,  Logger clusterAuditLog){}
+
+        public virtual void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        {
+
+        }
 
         public abstract void FillJson(DynamicJsonValue json);
 
