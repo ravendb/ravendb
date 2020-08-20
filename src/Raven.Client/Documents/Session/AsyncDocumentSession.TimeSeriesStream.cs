@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentSession
     {
-        private async Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncDocumentQuery<T> query, StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        private async Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncDocumentQuery<T> query, StreamQueryStatistics streamQueryStats, CancellationToken token) where T : new()
         {
             using (AsyncTaskHolder())
             {
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        public class YieldTimeSeriesStream<T> : AbstractYieldStream<TimeSeriesStreamResult<T>>
+        internal class YieldTimeSeriesStream<T> : AbstractYieldStream<TimeSeriesStreamResult<T>> where T : new()
         {
             internal YieldTimeSeriesStream(AsyncDocumentSession parent, AsyncDocumentQuery<T> query, StreamOperation.YieldStreamResults enumerator, CancellationToken token) : 
                 base(enumerator, () =>
@@ -41,157 +41,157 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token)
+        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token) where T : new()
         {
             return TimeSeriesStreamInternalAsync(query, null, token);
         }
 
-        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token) where T : new()
         {
             streamQueryStats = new StreamQueryStatistics();
             return TimeSeriesStreamInternalAsync(query, streamQueryStats, token);
         }
 
-        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IQueryable<T> query, CancellationToken token)
+        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IQueryable<T> query, CancellationToken token) where T : new()
         {
             var queryInspector = (IRavenQueryProvider)query.Provider;
             var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return TimeSeriesStreamInternalAsync(indexQuery, token);
         }
 
-        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token)
+        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncRawDocumentQuery<T> query, CancellationToken token) where T : new()
         {
             return TimeSeriesStreamInternalAsync((IAsyncDocumentQuery<T>)query, token);
         }
 
-        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token) where T : new()
         {
             var queryInspector = (IRavenQueryProvider)query.Provider;
             var indexQuery = queryInspector.ToAsyncDocumentQuery<T>(query.Expression);
             return TimeSeriesStreamInternalAsync(indexQuery, out streamQueryStats, token);
         }
        
-        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        private Task<IAsyncEnumerator<TimeSeriesStreamResult<T>>> TimeSeriesStreamInternalAsync<T>(IAsyncRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats, CancellationToken token) where T : new()
         {
             return TimeSeriesStreamInternalAsync((IAsyncDocumentQuery<T>)query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> StreamAsync(IQueryable<TimeSeriesAggregationResult> query, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>.StreamAsync(IQueryable<TimeSeriesAggregationResult> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> StreamAsync(IQueryable<TimeSeriesAggregationResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>.StreamAsync(IQueryable<TimeSeriesAggregationResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> StreamAsync(IAsyncDocumentQuery<TimeSeriesAggregationResult> query, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>.StreamAsync(IAsyncDocumentQuery<TimeSeriesAggregationResult> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> StreamAsync(IAsyncRawDocumentQuery<TimeSeriesAggregationResult> query, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>.StreamAsync(IAsyncRawDocumentQuery<TimeSeriesAggregationResult> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> StreamAsync(IAsyncRawDocumentQuery<TimeSeriesAggregationResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>.StreamAsync(IAsyncRawDocumentQuery<TimeSeriesAggregationResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> StreamAsync(IAsyncDocumentQuery<TimeSeriesAggregationResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesAggregationResult>.StreamAsync(IAsyncDocumentQuery<TimeSeriesAggregationResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> StreamAsync(IQueryable<TimeSeriesRawResult> query, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesRawResult>.StreamAsync(IQueryable<TimeSeriesRawResult> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> StreamAsync(IQueryable<TimeSeriesRawResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesRawResult>.StreamAsync(IQueryable<TimeSeriesRawResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> StreamAsync(IAsyncDocumentQuery<TimeSeriesRawResult> query, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesRawResult>.StreamAsync(IAsyncDocumentQuery<TimeSeriesRawResult> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> StreamAsync(IAsyncRawDocumentQuery<TimeSeriesRawResult> query, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesRawResult>.StreamAsync(IAsyncRawDocumentQuery<TimeSeriesRawResult> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> StreamAsync(IAsyncRawDocumentQuery<TimeSeriesRawResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesRawResult>.StreamAsync(IAsyncRawDocumentQuery<TimeSeriesRawResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> StreamAsync(IAsyncDocumentQuery<TimeSeriesRawResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default)
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult>>> IAsyncTimeSeriesSessionStreamOperations<TimeSeriesRawResult>.StreamAsync(IAsyncDocumentQuery<TimeSeriesRawResult> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> StreamAsync<T>(IQueryable<TimeSeriesAggregationResult<T>> query, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> IAsyncTimeSeriesSessionStreamAggregationResultOperations.StreamAsync<T>(IQueryable<TimeSeriesAggregationResult<T>> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> StreamAsync<T>(IQueryable<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> IAsyncTimeSeriesSessionStreamAggregationResultOperations.StreamAsync<T>(IQueryable<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesAggregationResult<T>> query, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> IAsyncTimeSeriesSessionStreamAggregationResultOperations.StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesAggregationResult<T>> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesAggregationResult<T>> query, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> IAsyncTimeSeriesSessionStreamAggregationResultOperations.StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesAggregationResult<T>> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> IAsyncTimeSeriesSessionStreamAggregationResultOperations.StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesAggregationResult<T>>>> IAsyncTimeSeriesSessionStreamAggregationResultOperations.StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesAggregationResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> StreamAsync<T>(IQueryable<TimeSeriesRawResult<T>> query, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> IAsyncTimeSeriesSessionStreamRawResultOperations.StreamAsync<T>(IQueryable<TimeSeriesRawResult<T>> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> StreamAsync<T>(IQueryable<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> IAsyncTimeSeriesSessionStreamRawResultOperations.StreamAsync<T>(IQueryable<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesRawResult<T>> query, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> IAsyncTimeSeriesSessionStreamRawResultOperations.StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesRawResult<T>> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesRawResult<T>> query, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> IAsyncTimeSeriesSessionStreamRawResultOperations.StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesRawResult<T>> query, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> IAsyncTimeSeriesSessionStreamRawResultOperations.StreamAsync<T>(IAsyncRawDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }
 
-        public Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token = default) where T : new()
+        Task<IAsyncEnumerator<TimeSeriesStreamResult<TimeSeriesRawResult<T>>>> IAsyncTimeSeriesSessionStreamRawResultOperations.StreamAsync<T>(IAsyncDocumentQuery<TimeSeriesRawResult<T>> query, out StreamQueryStatistics streamQueryStats, CancellationToken token)
         {
             return TimeSeriesStreamInternalAsync(query, out streamQueryStats, token);
         }

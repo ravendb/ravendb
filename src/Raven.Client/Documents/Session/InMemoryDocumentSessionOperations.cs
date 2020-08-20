@@ -2316,7 +2316,7 @@ more responsive application.
             };
         }
 
-        internal TimeSeriesStreamResult<T> CreateTimeSeriesStreamResult<T>(StreamOperation.YieldStreamResults enumerator)
+        internal TimeSeriesStreamResult<T> CreateTimeSeriesStreamResult<T>(StreamOperation.YieldStreamResults enumerator) where T : new()
         {
             var json = enumerator.Current;
             var metadata = json.GetMetadata();
@@ -2331,7 +2331,7 @@ more responsive application.
                 Metadata = new MetadataAsDictionary(metadata), 
                 
                 //TODO: replace this?
-                Result = Activator.CreateInstance<T>()
+                Result = new T()
             };
             
             var o = result.Result as ITimeSeriesQueryStreamResult;

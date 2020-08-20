@@ -277,19 +277,19 @@ namespace Raven.Server.Documents.Queries.Results
         protected Document AddProjectionToResult(Document doc, Lucene.Net.Search.ScoreDoc scoreDoc, FieldsToFetch fieldsToFetch, DynamicJsonValue result, string key, object fieldVal)
         {
             if (_query.IsStream && 
-                key == Constants.TimeSeries.QueryFunction)
+                key.StartsWith(Constants.TimeSeries.QueryFunction))
             {
-                doc._timeSeriesStream ??= new TimeSeriesStream();
+                doc.TimeSeriesStream ??= new TimeSeriesStream();
                 var value = (TimeSeriesRetriever.TimeSeriesRetrieverResult)fieldVal;
-                doc._timeSeriesStream.TimeSeries = value.Stream;
-                doc._timeSeriesStream.Key = key;
+                doc.TimeSeriesStream.TimeSeries = value.Stream;
+                doc.TimeSeriesStream.Key = key;
                 BlittableJsonTextWriterExtensions.MergeMetadata(result, value.Metadata);
                 return null;
             }
 
             if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
             {
-                var newDoc = CreateNewDocument(doc, fieldVal);
+                var newDoc = CreateNewDocument(doc, key, fieldVal);
                 FinishDocumentSetup(newDoc, scoreDoc);
                 return newDoc;
             }
@@ -298,7 +298,7 @@ namespace Raven.Server.Documents.Queries.Results
             return null;
         }
 
-        private Document CreateNewDocument(Document doc, object fieldVal)
+        private Document CreateNewDocument(Document doc, string key, object fieldVal)
         {
             switch (fieldVal)
             {
@@ -331,9 +331,10 @@ namespace Raven.Server.Documents.Queries.Results
                         NonPersistentFlags = doc.NonPersistentFlags,
                         StorageId = doc.StorageId,
                         TransactionMarker = doc.TransactionMarker,
-                        _timeSeriesStream = new TimeSeriesStream
+                        TimeSeriesStream = new TimeSeriesStream
                         {
-                            TimeSeries = ts.Stream
+                            TimeSeries = ts.Stream,
+                            Key = key
                         }
                     };
 

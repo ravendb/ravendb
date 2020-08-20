@@ -33,7 +33,7 @@ namespace Raven.Server.Documents
         public NonPersistentDocumentFlags NonPersistentFlags;
         public short TransactionMarker;
 
-        public TimeSeriesStream _timeSeriesStream;
+        public TimeSeriesStream TimeSeriesStream;
 
         public unsafe ulong DataHash
         {

@@ -19,8 +19,6 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public bool DisableCaching { get; set; }
 
-        internal bool IsTimeSeriesStreamQuery { get; set; }
-
         public ulong GetQueryHash(JsonOperationContext ctx)
         {
             using (var hasher = new HashCalculator(ctx))

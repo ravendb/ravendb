@@ -99,14 +99,6 @@ namespace Raven.Server.Documents.Handlers.Streaming
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
-                if (stats == default)
-                {
-                    // non existing time series
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
-                }
-
                 var reader = new TimeSeriesReader(context, documentId, name, from, to, offset);
 
                 using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), Database.DatabaseShutdown))

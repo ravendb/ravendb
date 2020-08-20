@@ -406,17 +406,17 @@ namespace Raven.Client.Documents.Session
             return await GetTimeSeriesStreamResult<TTValues>(from, to, offset).ConfigureAwait(false);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesEntry>> ITimeSeriesStreamingBaseAsync<TimeSeriesEntry>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        Task<IAsyncEnumerator<TimeSeriesEntry>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
         {
             return GetAsyncStream<TimeSeriesEntry>(from, to, offset);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> ITimeSeriesStreamingBaseAsync<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
         {
             return GetAsyncStream<TimeSeriesRollupEntry<TValues>>(from, to, offset);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> ITimeSeriesStreamingBaseAsync<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
         {
             return GetAsyncStream<TimeSeriesEntry<TValues>>(from, to, offset);
         }

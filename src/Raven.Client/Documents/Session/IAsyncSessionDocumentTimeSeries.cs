@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Session
     public interface IAsyncSessionDocumentTimeSeries : 
         ISessionDocumentAppendTimeSeriesBase, 
         ISessionDocumentDeleteTimeSeriesBase,
-        ITimeSeriesStreamingBaseAsync<TimeSeriesEntry>
+        IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>
     {
         Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IAsyncSessionDocumentTypedTimeSeries<TValues> : 
         ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
-        ITimeSeriesStreamingBaseAsync<TimeSeriesEntry<TValues>>,
+        IAsyncTimeSeriesStreamingBase<TimeSeriesEntry<TValues>>,
         ISessionDocumentDeleteTimeSeriesBase 
         where TValues : new()
     {
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IAsyncSessionDocumentRollupTypedTimeSeries<TValues> : 
         ISessionDocumentTypedAppendTimeSeriesBase<TValues>, 
-        ITimeSeriesStreamingBaseAsync<TimeSeriesRollupEntry<TValues>>,
+        IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>,
         ISessionDocumentDeleteTimeSeriesBase 
         where TValues : new()
     {
