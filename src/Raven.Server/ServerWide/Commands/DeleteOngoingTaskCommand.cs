@@ -28,7 +28,7 @@ namespace Raven.Server.ServerWide.Commands
 
         private string _taskIdToDelete, _hubNameToDelete;
 
-        public override void CleanupLeftovers(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
         {
             switch (TaskType)
             {

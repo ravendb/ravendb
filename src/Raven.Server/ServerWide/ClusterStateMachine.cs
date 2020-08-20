@@ -1978,7 +1978,6 @@ namespace Raven.Server.ServerWide
                     try
                     {
                         updateCommand.UpdateDatabaseRecord(databaseRecord, index);
-                        updateCommand.CleanupLeftovers(context, items,_clusterAuditLog);
                     }
                     catch (Exception e)
                     {
@@ -1986,6 +1985,8 @@ namespace Raven.Server.ServerWide
                         // and is consistent across the cluster.
                         throw new RachisApplyException("Failed to update database record.", e);
                     }
+
+                    updateCommand.AfterDatabaseRecordUpdate(context, items, _clusterAuditLog);
 
                     if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {
@@ -3476,12 +3477,12 @@ namespace Raven.Server.ServerWide
                 string thumbprint = key.ToString().Substring(prefixString.Length);
                 if (filter != null)
                 {
-                    blittable.TryGet("Name", out string name);
+                    blittable.TryGet(nameof(RegisterReplicationHubAccessCommand.Name), out string name);
                     var match =
                         thumbprint.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
                         name?.Contains(filter, StringComparison.OrdinalIgnoreCase) == true;
 
-                    if(!match)
+                    if(match == false)
                         continue;
                 }
 

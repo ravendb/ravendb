@@ -800,9 +800,7 @@ namespace Raven.Server.Commercial
                                          $"Total utilized cores: {licenseLimits.TotalUtilizedCores}. " +
                                          $"Max licensed cores: {LicenseStatus.MaxCores}";
                     }
-
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations(basicMessage + " " + licenseMessage);
+                    Console.WriteLine(basicMessage + " " + licenseMessage);
                 }
 
                 return true;
