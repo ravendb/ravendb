@@ -130,6 +130,50 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
+        public async Task CounterConflictBetweenNewAndDeleted()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100000);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1").Delete("likes");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.CountersFor("users/1").Increment("dislikes", 100000);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                EnsureReplicating(storeA, storeB);
+                
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var counters = await session.CountersFor("users/1").GetAllAsync();
+                    var counter = counters.First();
+                    Assert.Equal("dislikes", counter.Key);
+                    Assert.Equal(100000, counter.Value);
+                }
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
+            }
+        }
+
+        [Fact]
         public async Task MergeCountersOnDocumentConflict()
         {
             using (var storeA = GetDocumentStore())

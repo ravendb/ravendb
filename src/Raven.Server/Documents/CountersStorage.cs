@@ -780,7 +780,10 @@ namespace Raven.Server.Documents
                                 if (changeType != CounterChangeTypes.None)
                                 {
                                     var counterName = prop.Name;
-                                    var value = InternalGetCounterValue(localCounterValues, documentId, counterName, capOnOverflow: true);
+                                    var value = 0L;
+                                    if (localCounterValues != null)
+                                        value = InternalGetCounterValue(localCounterValues, documentId, counterName, capOnOverflow: true);
+
                                     context.Transaction.AddAfterCommitNotification(new CounterChange
                                     {
                                         ChangeVector = changeVector,
