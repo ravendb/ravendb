@@ -12,6 +12,9 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public long? TotalResults;
         internal string Hash;
 
+        internal BlittableJsonReaderObject Includes;
+
+
         [OnDeserialized]
         internal void OnNewtonSoftJsonDeserialized(StreamingContext context)
         {
