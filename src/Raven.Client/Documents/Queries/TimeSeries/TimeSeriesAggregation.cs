@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         void SetStream(StreamOperation.TimeSeriesStreamEnumerator stream);
     }
 
-    public class TimeSeriesStreamEnumerator<T> : IAsyncEnumerator<T>, IEnumerator<T> where T : ITimeSeriesQueryStreamEntry 
+    internal class TimeSeriesStreamEnumerator<T> : IAsyncEnumerator<T>, IEnumerator<T> where T : ITimeSeriesQueryStreamEntry 
     {
         private readonly IAsyncEnumerator<BlittableJsonReaderObject> _outer;
 
@@ -50,7 +50,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         public void Reset()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Enumerator does not support resetting");
         }
 
         public async ValueTask<bool> MoveNextAsync()
@@ -67,7 +67,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         public T Current { get; private set; } 
 
-        object? IEnumerator.Current => Current;
+        object IEnumerator.Current => Current;
 
         public void Dispose()
         {

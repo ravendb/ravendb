@@ -1124,7 +1124,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (PageSize != null)
                 indexQuery.PageSize = PageSize.Value;
 #pragma warning restore 618
-            indexQuery.IsTimeSeriesStreamQuery = StreamOperation.IsTimeSeriesStreamResult<T>();
             return indexQuery;
         }
 

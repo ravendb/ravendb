@@ -25,6 +25,11 @@ namespace Raven.Client.Documents.Session.Operations
 
         public TimeSeriesStreamOperation(InMemoryDocumentSessionOperations session, string docId, string name, DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) : base(session)
         {
+            if (string.IsNullOrEmpty(docId))
+                throw new ArgumentNullException(nameof(docId));
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentNullException(nameof(name));
+
             _docId = docId;
             _name = name;
             _from = from;
@@ -34,6 +39,11 @@ namespace Raven.Client.Documents.Session.Operations
 
         public TimeSeriesStreamOperation(InMemoryDocumentSessionOperations session, StreamQueryStatistics statistics, string docId, string name, DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) : base(session, statistics)
         {
+            if (string.IsNullOrEmpty(docId))
+                throw new ArgumentNullException(nameof(docId));
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentNullException(nameof(name));
+
             _docId = docId;
             _name = name;
             _from = from;
@@ -45,8 +55,8 @@ namespace Raven.Client.Documents.Session.Operations
         {
             var sb = new StringBuilder("streams/timeseries?");
 
-            sb.Append("docId=").Append(_docId).Append("&");
-            sb.Append("name=").Append(_name).Append("&");
+            sb.Append("docId=").Append(Uri.EscapeDataString(_docId)).Append("&");
+            sb.Append("name=").Append(Uri.EscapeDataString(_name)).Append("&");
 
             if (_from.HasValue)
                 sb.Append("from=").Append(_from).Append("&");
@@ -66,7 +76,6 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly StreamQueryStatistics _statistics;
         private bool _isQueryStream;
-        private bool _isTimeSeriesStream;
 
         public StreamOperation(InMemoryDocumentSessionOperations session)
         {
@@ -82,7 +91,6 @@ namespace Raven.Client.Documents.Session.Operations
         public QueryStreamCommand CreateRequest(IndexQuery query)
         {
             _isQueryStream = true;
-            _isTimeSeriesStream = query.IsTimeSeriesStreamQuery;
 
             if (query.WaitForNonStaleResults)
                 throw new NotSupportedException(
@@ -125,7 +133,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         internal YieldStreamResults SetResultForTimeSeries(StreamResult response)
         {
-            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: false, _statistics);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isTimeSeriesStream: true, isAsync: false, _statistics);
             enumerator.Initialize();
 
             return enumerator;
@@ -133,7 +141,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         internal async Task<YieldStreamResults> SetResultForTimeSeriesAsync(StreamResult response)
         {
-            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: true, _statistics);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isTimeSeriesStream: true, isAsync: true, _statistics);
             await enumerator.InitializeAsync().ConfigureAwait(false);
 
             return enumerator;
@@ -141,7 +149,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)
         {
-            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: false, _statistics);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isTimeSeriesStream: false, isAsync: false, _statistics);
             enumerator.Initialize();
 
             return enumerator;
@@ -149,7 +157,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public async Task<IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
         {
-            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, _isTimeSeriesStream, isAsync: true, _statistics);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isTimeSeriesStream: false, isAsync: true, _statistics);
             await enumerator.InitializeAsync().ConfigureAwait(false);
 
             return enumerator;
@@ -182,7 +190,7 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 var property = UnmanagedJsonParserHelper.ReadString(_session.Context, _peepingTomStream, _parser, _state, _buffer);
 
-                if (property.StartsWith("__timeSeriesQueryFunction") == false)
+                if (property.StartsWith(Constants.TimeSeries.QueryFunction) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
@@ -239,14 +247,14 @@ namespace Raven.Client.Documents.Session.Operations
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException("Enumerator does not support resetting");
             }
 
             BlittableJsonReaderObject IEnumerator<BlittableJsonReaderObject>.Current => _current;
 
             BlittableJsonReaderObject IAsyncEnumerator<BlittableJsonReaderObject>.Current => _current;
 
-            object? IEnumerator.Current => _current;
+            object IEnumerator.Current => _current;
 
             public void Dispose()
             {

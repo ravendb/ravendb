@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Session
         IEnumerator<T> Stream(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null);
     }
 
-    public interface ITimeSeriesStreamingBaseAsync<T>
+    public interface IAsyncTimeSeriesStreamingBase<T>
     {
         Task<IAsyncEnumerator<T>> StreamAsync(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null);
     }

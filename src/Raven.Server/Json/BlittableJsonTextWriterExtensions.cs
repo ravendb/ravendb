@@ -1800,10 +1800,10 @@ namespace Raven.Server.Json
 
             WriteMetadata(writer, document, metadata, filterMetadataProperty);
 
-            if (document._timeSeriesStream != null)
+            if (document.TimeSeriesStream != null)
             {
                 writer.WriteComma();
-                writer.WriteArray(document._timeSeriesStream.Key, document._timeSeriesStream.TimeSeries, context);
+                writer.WriteArray(document.TimeSeriesStream.Key, document.TimeSeriesStream.TimeSeries, context);
             }
         }
 
