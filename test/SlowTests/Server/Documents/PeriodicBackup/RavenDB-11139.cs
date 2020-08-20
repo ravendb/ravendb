@@ -15,6 +15,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -1389,6 +1390,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
+                WaitForFirstCompareExchangeTombstonesClean();
                 var count = 1;
                 var indexesList = new List<long>();
 
@@ -1515,6 +1517,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var store = GetDocumentStore())
             {
+                WaitForFirstCompareExchangeTombstonesClean();
+
                 var count = 1;
                 var indexesList = new List<long>();
 
@@ -1601,6 +1605,256 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public async Task CompareExchangeTombstonesShouldBeClearedWhenThereIsOnlyFullBackup()
+        {
+            var list = new List<string>(new[] { "🐃", "🐂", "🐄", "🐎", "🐖",
+                                                "🐏", "🐑", "🐐", "🦌", "🐕",
+                                                "🐩", "🐈", "🐓", "🦃", "🕊",
+                                                "🐇", "🐁", "🐀", "🐿", "🦔" });
+
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                WaitForFirstCompareExchangeTombstonesClean();
+
+                var indexesList = new Dictionary<string, long>();
+                // create 3 unique values
+                for (int i = 0; i < 3; i++)
+                {
+                    var key = $"emojis/{list[i]}";
+                    var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(key, new User { Name = $"emoji_{i}" }, 0));
+                    indexesList.Add(key, res.Index);
+                }
+
+                var stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
+                Assert.Equal(3, stats.CountOfCompareExchange);
+
+                // delete 1 unique value
+                var k = $"emojis/{list[2]}";
+                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(k, indexesList[k]));
+                Assert.NotNull(del.Value);
+                indexesList.Remove(k);
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    Name = "full",
+                    FullBackupFrequency = "0 0 1 1 *",
+                    BackupType = BackupType.Backup
+                };
+
+                if (Directory.Exists(backupPath))
+                    Directory.Delete(backupPath, recursive: true);
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var documentDatabase = await GetDocumentDatabaseInstanceFor(store);
+                RunBackup(result.TaskId, documentDatabase, isFullBackup: true, store); // FULL BACKUP
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    Assert.Equal(1, numOfCompareExchangeTombstones);
+                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, context);
+                }
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    var numOfCompareExchanges = Server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                    Assert.Equal(0, numOfCompareExchangeTombstones);
+                    Assert.Equal(2, numOfCompareExchanges);
+                }
+
+                // add 1 cmpxchng
+                var uniqueValueKey = $"emojis/{list[3]}";
+                var res1 = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>(uniqueValueKey, new User { Name = $"emoji_3" }, 0));
+                indexesList.Add(uniqueValueKey, res1.Index);
+
+                // delete 1 unique value
+                k = $"emojis/{list[1]}";
+                var del1 = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(k, indexesList[k]));
+                Assert.NotNull(del1.Value);
+                indexesList.Remove(k);
+
+                config.IncrementalBackupFrequency = "0 0 1 1 *";
+                config.TaskId = result.TaskId;
+                result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    Assert.Equal(1, numOfCompareExchangeTombstones);
+                    // clean tombstones
+                    await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, context);
+                }
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    var numOfCompareExchanges = Server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                    Assert.Equal(0, numOfCompareExchangeTombstones);
+                    Assert.Equal(2, numOfCompareExchanges);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User()
+                    {
+                        Name = "egor"
+                    });
+                    session.SaveChanges();
+                }
+                RunBackup(result.TaskId, documentDatabase, false, store);   // INCREMENTAL
+
+                var backupDirectory = Directory.GetDirectories(backupPath).First();
+                AssertDumpFiles(backupDirectory, list);
+            }
+        }
+
+        private void AssertDumpFiles(string backupPath, List<string> list)
+        {
+            var files = Directory.GetFiles(backupPath)
+                .Where(BackupUtils.IsBackupFile)
+                .OrderBackups()
+                .ToArray();
+
+            for (int i = 0; i < files.Length; i++)
+            {
+                Assert.True(File.Exists(files[i]));
+                var file = new FileInfo(files[i]);
+                using (FileStream fs = file.OpenRead())
+                {
+                    using (var stream = new MemoryStream())
+                    using (var gz = new GZipStream(fs, CompressionMode.Decompress))
+                    {
+                        gz.CopyTo(stream);
+                        stream.Position = 0;
+
+                        using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                        using (var bjro = ctx.ReadForMemory(stream, "test"))
+                        {
+                            Assert.True(bjro.TryGet(nameof(DatabaseItemType.CompareExchange), out BlittableJsonReaderArray uniqueValues));
+                            Assert.True(bjro.TryGet(nameof(DatabaseItemType.CompareExchangeTombstones), out BlittableJsonReaderArray tombstones));
+
+                            switch (i)
+                            {
+                                case 0:
+                                    Assert.Equal(2, uniqueValues.Length);
+                                    Assert.Equal(1, tombstones.Length);
+
+                                    for (int j = 0; j < uniqueValues.Length; j++)
+                                    {
+                                        var obj = uniqueValues[i] as BlittableJsonReaderObject;
+                                        Assert.NotNull(obj);
+                                        Assert.True(obj.TryGet("Key", out string key));
+                                        Assert.True(key == $"emojis/{list[0]}" || key == $"emojis/{list[1]}");
+                                    }
+                                    var obj2 = tombstones[0] as BlittableJsonReaderObject;
+                                    Assert.NotNull(obj2);
+                                    Assert.True(obj2.TryGet("Key", out string key2));
+                                    Assert.Equal($"emojis/{list[2]}", key2);
+                                    break;
+                                case 1:
+                                    Assert.Equal(1, uniqueValues.Length);
+                                    Assert.Equal(1, tombstones.Length);
+
+                                    var obj4 = uniqueValues[0] as BlittableJsonReaderObject;
+                                    Assert.NotNull(obj4);
+                                    Assert.True(obj4.TryGet("Key", out string key4));
+                                    Assert.Equal(key4, $"emojis/{list[3]}");
+                                    var obj3 = tombstones[0] as BlittableJsonReaderObject;
+                                    Assert.NotNull(obj3);
+                                    Assert.True(obj3.TryGet("Key", out string key3));
+                                    Assert.Equal($"emojis/{list[1]}", key3);
+                                    break;
+                                case 2:
+                                    Assert.Equal(0, uniqueValues.Length);
+                                    Assert.Equal(0, tombstones.Length);
+                                    break;
+                                default:
+                                    Assert.True(false);
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task TombstoneCleanerShouldNotClearIfLastBackupIsErrored()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                WaitForFirstCompareExchangeTombstonesClean();
+                var indexesList = new Dictionary<string, long>();
+                // create 3 unique values
+                for (int i = 0; i < 3; i++)
+                {
+                    var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>($"{i}", i, 0));
+                    indexesList.Add($"{i}", res.Index);
+                }
+
+                // delete 1 unique value
+                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList["2"]));
+                Assert.NotNull(del.Value);
+                indexesList.Remove("2");
+
+                // full backup without incremental
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    Name = "full",
+                    IncrementalBackupFrequency = "0 0 1 1 *",
+                    BackupType = BackupType.Backup
+                };
+
+                if (Directory.Exists(backupPath))
+                    Directory.Delete(backupPath, recursive: true);
+
+                var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                var documentDatabase = await GetDocumentDatabaseInstanceFor(store);
+
+                try
+                {
+                    documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
+                    RunBackup(result.TaskId, documentDatabase, isFullBackup: true, store, OperationStatus.Faulted); // FULL BACKUP
+
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                        Assert.Equal(1, numOfCompareExchangeTombstones);
+                        // clean tombstones
+                        await Server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, context);
+                    }
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var numOfCompareExchangeTombstones = Server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                        var numOfCompareExchanges = Server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                        Assert.Equal(1, numOfCompareExchangeTombstones);
+                        Assert.Equal(2, numOfCompareExchanges);
+                    }
+                }
+                finally
+                {
+                    documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
+                }
+            }
+        }
+
         private static List<string> ConcatStringInList(List<string> list)
         {
             for (var i = 0; i < list.Count; i++)
@@ -1613,7 +1867,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             return list;
         }
 
-        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
+        private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store, OperationStatus opStatus = OperationStatus.Completed)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
             var op = periodicBackupRunner.StartBackupTask(taskId, isFullBackup);
@@ -1621,9 +1875,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             {
                 var status = store.Maintenance.Send(new GetOperationStateOperation(op)).Status;
                 return status;
-            }, OperationStatus.Completed);
+            }, opStatus);
 
-            Assert.Equal(OperationStatus.Completed, value);
+            Assert.Equal(opStatus, value);
+        }
+
+        private void WaitForFirstCompareExchangeTombstonesClean()
+        {
+            Assert.True(WaitForValue(() =>
+            {
+                // wait for compare exchange tombstone cleaner run
+                if (Server.ServerStore.Observer == null)
+                    return false;
+
+                if (Server.ServerStore.Observer._lastTombstonesCleanupTimeInTicks == 0)
+                    return false;
+
+                return true;
+            }, true));
         }
     }
 }
