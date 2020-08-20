@@ -353,7 +353,7 @@ namespace Raven.Server.Documents
                         var dbIdIndex = GetOrAddLocalDbIdIndex(dbIds);
 
                         if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
-                            ThrowMissingProperty(counterKeySlice, CounterNames);
+                            ThrowMissingProperty(counterKeySlice, Values);
 
                         if (data.TryGet(CounterNames, out BlittableJsonReaderObject originalNames) == false)
                             ThrowMissingProperty(counterKeySlice, CounterNames);
@@ -504,7 +504,7 @@ namespace Raven.Server.Documents
                 fstValues.GetPropertyByIndex(fstValues.Count - 1, ref lastPropertyFirst);
 
                 var firstChange = 0;
-                for (; firstChange < lastPropertyFirst.Name.Length; firstChange++)
+                for (; firstChange < lastPropertyFirst.Name.Size; firstChange++)
                 {
                     if (firstPropertySnd.Name[firstChange] != lastPropertyFirst.Name[firstChange])
                         break;
@@ -582,7 +582,7 @@ namespace Raven.Server.Documents
 
             if (dbIdIndex < existingCount)
             {
-                var counter = (CounterValues*)existingCounter.Ptr + dbIdIndex;
+                var counter = (CounterValues*)existingCounter.Ptr + dbIdIndex; // existingCounter.Ptr + sizeof(CounterValues) * dbIdIndex 
                 try
                 {
                     value = checked(counter->Value + delta); //inc
@@ -671,10 +671,69 @@ namespace Raven.Server.Documents
             return (fst, snd);
         }
 
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope ReWriteBlob(
+            DocumentsOperationContext context, 
+            BlittableJsonReaderObject.RawBlob blob, 
+            HashSet<int> usedDbIndexes,
+            out BlittableJsonReaderObject.RawBlob newBlob)
+        {
+            var partialValues = blob.Length / SizeOfCounterValues;
+
+            Span<CounterValues> newValues = stackalloc CounterValues[usedDbIndexes.Count];
+            var currentIndex = 0;
+            var newSize = 0;
+            
+            foreach (int oldIndex in usedDbIndexes)
+            {
+                if (oldIndex < partialValues)
+                {
+                    newValues[currentIndex] = GetPartialValue(oldIndex, blob);
+                }
+                
+                if (newValues[currentIndex].Value != 0)
+                    newSize = currentIndex + 1;
+
+                currentIndex++;
+            }
+
+            var scope = context.Allocator.Allocate(newSize * SizeOfCounterValues, out var newVal);
+            fixed (byte* ptr = MemoryMarshal.Cast<CounterValues, byte>(newValues.Slice(0,newSize)))
+            {
+                Memory.Copy(newVal.Ptr, ptr, newSize * SizeOfCounterValues);
+            }
+
+            newBlob = new BlittableJsonReaderObject.RawBlob
+            {
+                Ptr = newVal.Ptr,
+                Length = newVal.Length
+            };
+            return scope;
+        }
+
         private static BlittableJsonReaderObject CreateHalfDocument(DocumentsOperationContext context, BlittableJsonReaderObject values, int start, int end,
             BlittableJsonReaderArray dbIds, BlittableJsonReaderObject originalNames)
         {
             BlittableJsonReaderObject.PropertyDetails prop = default;
+
+            // find used indexes
+            var usedDbIdsIndexes = new HashSet<int>();
+            for (int i = start; i < end; i++)
+            {
+                values.GetPropertyByIndex(i, ref prop);
+                if (prop.Value is BlittableJsonReaderObject.RawBlob blob)
+                {
+                    var numberOfPartialValues = blob.Length / SizeOfCounterValues;
+                    Debug.Assert(numberOfPartialValues <= dbIds.Length);
+
+                    for (int index = 0; index < numberOfPartialValues; index++)
+                    {
+                        var val = GetPartialValue(index, blob);
+                        if (val.Value != 0) 
+                            usedDbIdsIndexes.Add(index);
+                    }
+                }
+            }
+            var reWriteBlob = usedDbIdsIndexes.Count < dbIds.Length;
 
             using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {
@@ -684,34 +743,59 @@ namespace Raven.Server.Documents
 
                 builder.StartWriteObject();
 
-                builder.WritePropertyName(DbIds);
-
-                builder.StartWriteArray();
-
-                foreach (LazyStringValue item in dbIds)
-                {
-                    builder.WriteValue(item);
-                }
-
-                builder.WriteArrayEnd();
-
                 builder.WritePropertyName(Values);
                 builder.StartWriteObject();
 
                 for (int i = start; i < end; i++)
                 {
                     values.GetPropertyByIndex(i, ref prop);
-
                     builder.WritePropertyName(prop.Name);
                     if (prop.Value is BlittableJsonReaderObject.RawBlob blob)
-                        builder.WriteRawBlob(blob.Ptr, blob.Length);
+                    {
+                        if (reWriteBlob)
+                        {
+                            using (ReWriteBlob(context, blob, usedDbIdsIndexes, out var newBlob))
+                            {
+                                builder.WriteRawBlob(newBlob.Ptr, newBlob.Length);
+                            }
+                        }
+                        else
+                        {
+                            builder.WriteRawBlob(blob.Ptr, blob.Length);
+                        }
+                    }
                     else if (prop.Value is LazyStringValue lsv)
-                        builder.WriteValue(lsv);
+                        builder.WriteValue(lsv); // delete counter
                     else
                         throw new InvalidDataException("Unknown type: " + prop.Token + " when trying to split counter doc");
                 }
 
                 builder.WriteObjectEnd();
+
+                builder.WritePropertyName(DbIds);
+
+                builder.StartWriteArray();
+
+                if (reWriteBlob)
+                {
+                    // it is important to keep those in the same order as the new blob
+                    foreach (var oldIndex in usedDbIdsIndexes)
+                    {
+                        var item = (LazyStringValue)dbIds[oldIndex];
+                        builder.WriteValue(item);
+                    }
+                }
+                else
+                {
+                    for (var index = 0; index < dbIds.Length; index++)
+                    {
+                        var item = (LazyStringValue)dbIds[index];
+                        builder.WriteValue(item);
+                    }
+                }
+                
+
+                builder.WriteArrayEnd();
 
                 builder.WritePropertyName(CounterNames);
                 builder.StartWriteObject();
@@ -920,7 +1004,10 @@ namespace Raven.Server.Documents
                                     documentCountersHaveChanged = true;
 
                                 var counterName = prop.Name;
-                                var value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+                                var value = 0L;
+                                if (localCounterValues != null)
+                                    value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+
                                 context.Transaction.AddAfterCommitNotification(new CounterChange
                                 {
                                     ChangeVector = changeVector,
@@ -1235,7 +1322,7 @@ namespace Raven.Server.Documents
 
         internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues, string docId, string counterName)
         {
-            Debug.Assert(localCounterValues != null);
+            Debug.Assert(localCounterValues != null, "localCounterValues == null");
             var count = localCounterValues.Length / SizeOfCounterValues;
             long value = 0;
 
@@ -1461,13 +1548,17 @@ namespace Raven.Server.Documents
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
         }
 
-        public CounterValue? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
+        internal CounterValues? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
         {
             if (string.IsNullOrEmpty(counterName) ||
                 TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
                 return null;
 
-            return new CounterValue(InternalGetCounterValue(blob, docId, counterName), etag);
+            return new CounterValues
+            {
+                Value = InternalGetCounterValue(blob, docId, counterName), 
+                Etag = etag
+            };
         }
 
         private static bool TryGetRawBlob(DocumentsOperationContext context, string docId, string counterName, out long etag, out BlittableJsonReaderObject.RawBlob blob)
@@ -1485,7 +1576,7 @@ namespace Raven.Server.Documents
                     return false;
 
                 var data = GetCounterValuesData(context, ref tvr);
-                etag = GetCounterEtag(ref tvr);
+                etag = GetCounterGroupEtag(ref tvr);
                 var lowerName = Encodings.Utf8.GetString(counterNameSlice.Content.Ptr, counterNameSlice.Content.Length);
 
                 if (data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
@@ -1522,7 +1613,7 @@ namespace Raven.Server.Documents
                     yield break;
 
                 var data = GetCounterValuesData(context, ref tvr);
-                var etag = GetCounterEtag(ref tvr);
+                var etag = GetCounterGroupEtag(ref tvr);
                 var lowerName = counterNameSlice.ToString();
                 if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
                     data.TryGet(Values, out BlittableJsonReaderObject counters) == false ||
@@ -1538,21 +1629,50 @@ namespace Raven.Server.Documents
                 for (var dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
                 {
                     var dbId = dbIds[dbIdIndex].ToString();
-                    var val = GetPartialValue(dbIdIndex, blob);
+                    var value = GetPartialValue(dbIdIndex, blob);
                     var nodeTag = ChangeVectorUtils.GetNodeTagById(dbCv, dbId);
-                    yield return new CounterPartialValue(val, etag, $"{nodeTag ?? "?"}-{dbId}");
+                    yield return new CounterPartialValue(value.Value, etag, $"{nodeTag ?? "?"}-{dbId}");
                 }
             }
         }
 
-        private static long GetCounterEtag(ref TableValueReader tvr)
+        internal IEnumerable<CounterInfo> GetCountersFromCounterGroup(CounterGroupDetail counterGroup)
+        {
+            var data = counterGroup.Values;
+
+            if (data.TryGet(DbIds, out BlittableJsonReaderArray dbIds) == false ||
+                data.TryGet(Values, out BlittableJsonReaderObject counters) == false)
+                yield break;
+
+            foreach (var name in counters.GetPropertyNames())
+            {
+                var counterValues = counters[name];
+                var blob = counterValues as BlittableJsonReaderObject.RawBlob;
+                var existingCount = blob?.Length / SizeOfCounterValues ?? 0;
+
+                for (var dbIdIndex = 0; dbIdIndex < existingCount; dbIdIndex++)
+                {
+                    var dbId = dbIds[dbIdIndex].ToString();
+                    var val = GetPartialValue(dbIdIndex, blob);
+                    yield return new CounterInfo
+                    {
+                        Name = name,
+                        Value = val.Value,
+                        DbId = dbId,
+                        Etag = val.Etag,
+                    };
+                }
+            }
+        }
+
+        private static long GetCounterGroupEtag(ref TableValueReader tvr)
         {
             return Bits.SwapBytes(*(long*)tvr.Read((int)CountersTable.Etag, out _));
         }
 
-        internal static long GetPartialValue(int index, BlittableJsonReaderObject.RawBlob counterValues)
+        internal static CounterValues GetPartialValue(int index, BlittableJsonReaderObject.RawBlob counterValues)
         {
-            return ((CounterValues*)counterValues.Ptr)[index].Value;
+            return *((CounterValues*)counterValues.Ptr + index);
         }
 
         internal IEnumerable<CounterGroupDetail> GetCounterValuesForDocument(DocumentsOperationContext context, string docId)
@@ -1677,6 +1797,9 @@ namespace Raven.Server.Documents
                 if (i != dbIdIndex)
                 {
                     var etag = ((CounterValues*)counterToDelete.Ptr + i)->Etag;
+                    if (etag <= 0)
+                        continue;
+
                     var dbId = dbIds[i].ToString();
 
                     sb.Append(dbId)
@@ -2326,18 +2449,6 @@ namespace Raven.Server.Documents
         }
     }
 
-    public struct CounterValue
-    {
-        public readonly long Value;
-        public readonly long Etag;
-
-        public CounterValue(long value, long etag)
-        {
-            Value = value;
-            Etag = etag;
-        }
-    }
-
     public struct CounterPartialValue
     {
         public readonly long PartialValue;
@@ -2350,5 +2461,13 @@ namespace Raven.Server.Documents
             Etag = etag;
             ChangeVector = changeVector;
         }
+    }
+
+    public class CounterInfo
+    {
+        public long Value;
+        public long Etag;
+        public string DbId;
+        public string Name;
     }
 }
