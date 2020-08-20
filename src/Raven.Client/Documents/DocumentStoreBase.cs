@@ -220,12 +220,12 @@ namespace Raven.Client.Documents
         {
             add
             {
-                AssertNotInitialized(nameof(OnFailedRequest));
+                AssertNotInitialized(nameof(OnBeforeRequest));
                 _onBeforeRequest += value;
             }
             remove
             {
-                AssertNotInitialized(nameof(OnFailedRequest));
+                AssertNotInitialized(nameof(OnBeforeRequest));
                 _onBeforeRequest -= value;
             }
         }
@@ -235,12 +235,12 @@ namespace Raven.Client.Documents
         {
             add
             {
-                AssertNotInitialized(nameof(OnFailedRequest));
+                AssertNotInitialized(nameof(OnSucceedRequest));
                 _onSucceedRequest += value;
             }
             remove
             {
-                AssertNotInitialized(nameof(OnFailedRequest));
+                AssertNotInitialized(nameof(OnSucceedRequest));
                 _onSucceedRequest -= value;
             }
         }
