@@ -10,9 +10,12 @@ namespace Raven.Client.Documents.Operations.Replication
         public string CertificatePassword;
 
         [Obsolete("PullReplicationAsSink.HubDefinitionName is not supported anymore. Will be removed in next major version of the product. Use HubName instead.")]
-        public string HubDefinitionName { get => HubName; set => HubName = value; }
+        public string HubDefinitionName { get; set; }
 
-        public string HubName;
+        private string _hubName;
+#pragma warning disable 618 // disable use obselete property
+        public string HubName { get => _hubName ?? HubDefinitionName; set => _hubName = value; }
+#pragma warning restore 618
 
         public PullReplicationAsSink()
         {
