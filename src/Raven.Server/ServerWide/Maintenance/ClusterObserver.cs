@@ -96,7 +96,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly long _moveToRehabTime;
         private readonly long _rotateGraceTime;
         private long _lastIndexCleanupTimeInTicks;
-        private long _lastTombstonesCleanupTimeInTicks;
+        internal long _lastTombstonesCleanupTimeInTicks;
         private bool _hasMoreTombstones = false;
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
@@ -443,18 +443,34 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(dbName, taskId));
                 if (singleBackupStatus == null)
+                {
+                    // no backup status for this task
                     continue;
+                }
 
-                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LocalBackup), out BlittableJsonReaderObject localBackup) == false
-                    || singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false)
+                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
+                {
+                    // this backup task last status is error
                     continue;
+                }
 
-                if (localBackup.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackup), out DateTime? lastIncrementalBackupDate) == false
-                    || lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false)
-                    continue;
+                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastFullBackupInternal), out DateTime? lastFullBackupInternal) == false || lastFullBackupInternal == null)
+                {
+                    // never backed up yet
+                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal) == false || lastIncrementalBackupInternal == null)
+                        continue;
+                }
 
-                if (lastIncrementalBackupDate == null || lastRaftIndex == null)
+                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false ||
+                    lastRaftIndexBlittable == null)
+                {
                     continue;
+                }
+
+                if (lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false || lastRaftIndex == null)
+                {
+                    continue;
+                }
 
                 if (lastRaftIndex < maxEtag)
                     maxEtag = lastRaftIndex.Value;

@@ -540,7 +540,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         operationId,
                         _tempBackupPath,
                         _logger,
-                        _cancellationToken.Token);
+                        _cancellationToken.Token,
+                        _forTestingPurposes);
 
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
 
@@ -1091,10 +1092,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             return _forTestingPurposes = new TestingStuff();
         }
 
-        internal class TestingStuff
+        public class TestingStuff
         {
             internal bool SimulateClusterDownStatus;
             internal bool ClusterDownStatusSimulated;
+            internal bool SimulateFailedBackup;
         }
     }
 }

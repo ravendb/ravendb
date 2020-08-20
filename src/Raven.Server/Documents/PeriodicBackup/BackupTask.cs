@@ -56,6 +56,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly bool _isBackupEncrypted;
         private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
         private Action<IOperationProgress> _onProgress;
+        internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
 
         public BackupTask(
             ServerStore serverStore,
@@ -66,7 +67,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             long operationId,
             PathSetting tempBackupPath,
             Logger logger,
-            CancellationToken databaseShutdownCancellationToken)
+            CancellationToken databaseShutdownCancellationToken,
+            PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _serverStore = serverStore;
             _database = database;
@@ -81,6 +83,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _tempBackupPath = tempBackupPath;
             _logger = logger;
             _databaseShutdownCancellationToken = databaseShutdownCancellationToken;
+            _forTestingPurposes = forTestingPurposes;
 
             TaskCancelToken = new OperationCancelToken(_databaseShutdownCancellationToken);
             _backupResult = GenerateBackupResult();
@@ -122,6 +125,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
+                if (_forTestingPurposes != null && _forTestingPurposes.SimulateFailedBackup)
+                    throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
+
                 if (runningBackupStatus.LocalBackup == null)
                     runningBackupStatus.LocalBackup = new LocalBackup();
 
