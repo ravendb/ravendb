@@ -18,6 +18,7 @@ class globalSettings extends abstractSettings {
     sendUsageStats = new simpleStudioSetting<boolean | undefined>("local", undefined, x => this.saveSetting(x));
     
     menuWidth = new simpleStudioSetting<number | undefined>("local", 280, x => this.saveSetting(x));
+    pinnedNotifications = new simpleStudioSetting<boolean | undefined>("local", false, x => this.saveSetting(x));
 
     feedback = new simpleStudioSetting<feedbackSavedSettingsDto>("local", null, x => this.saveSetting(x));
 

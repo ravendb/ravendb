@@ -22,6 +22,7 @@
         </div>
 
         <button data-bind="click: dismissAll" class="dismiss">Dismiss all</button>
+        <button data-bind="{ click: pinNotifications.toggle.bind(pinNotifications), css: { 'pinned': pinNotifications() } }" class="notifications-pin-toggle"><i class="icon-pin"></i><i class="icon-pinned"></i></button>
 
     </div>
     <div data-bind="if: includeInDom">
