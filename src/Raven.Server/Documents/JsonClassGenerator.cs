@@ -320,7 +320,7 @@ namespace Raven.Server.Documents
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
                 blittableObject.GetPropertyByIndex(i, ref prop);
 
-                if (prop.Name.ToString().Equals("@metadata", StringComparison.OrdinalIgnoreCase))
+                if (prop.Name.ToString().Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 switch (prop.Token & BlittableJsonReaderBase.TypesMask)
