@@ -1,277 +1,279 @@
-<div class="browser-alert" data-bind="visible: browserAlert">
-    <div class="browser-message">
-        <i class="icon-unsupported-browser icon-xl"></i>
-        <p class="lead margin-bottom">This browser is not supported and some features may not work correctly</p>
-        <p class="margin-bottom">To ensure best experience please use</p>
-        <div class="browser-links">
-            <a class="chrome" href="https://www.google.com/chrome/" target="_blank">
-                <i class="icon-chrome icon-lg"></i>
-                Google Chrome
-            </a>
-            <a class="firefox" href="https://www.mozilla.org/firefox/" target="_blank">
-                <i class="icon-firefox icon-lg"></i>
-                Mozilla Firefox
-            </a>
-        </div>
-        <button class="btn btn-default" data-bind="click: browserAlertContinue">Continue</button>
-        <div class="checkbox">
-            <input id="dontShowAgainBrowser" class="styled" type="checkbox" data-bind="checked: dontShowBrowserAlertAgain">
-            <label for="dontShowAgainBrowser">
-                Don't show again
-            </label>
-        </div>
-    </div>
-    <div class="backdrop show"></div>
-</div>
-<aside class="top-alert" data-bind="visible: developerLicense">
-    Developer License - Not for Production Use
- </aside>
-<nav class="navbar" data-bind="css: { 'collapse-menu': collapseMenu() }">
-    <div class="navbar-header" data-bind="style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }">
-        <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
-    </div>
-    <div id="navbar">
-        <div class="server-environment" data-bind="if: serverEnvironment, visible: serverEnvironment">
-            <small class="on-base-background">Server environment</small>
-            <div><strong data-bind="text: serverEnvironment, attr: { class: 'text-uppercase ' + serverEnvironmentClass() }"></strong></div>
-        </div>
-        <div class="inputs-container hidden-xs hidden-sm">
-            <div class="database-switcher-container" data-bind="with: databaseSwitcher">
-                <div class="form-control btn-toggle database-switcher">
-                    <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
-                    <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, text: $root.activeDatabase() ? $root.activeDatabase().environment(): '', attr: { class: 'label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
-                </div>
-                <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
-                <div class="box-container">
-                    <div class="database-filter-container">
-                        <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
-                    </div>
-                    <div class="scroller">
-                        <section>
-                            <ul class="database-list">
-                                <!-- ko foreach: filteredDatabases-->
-                                <li data-bind="visible: !disabled() && relevant()">
-                                    <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem() , database: true }">
-                                        <div class="name" data-bind="text: name"></div>
-                                        <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
-                                        <div data-bind="visible: errored" class="label label-danger">Errored</div>
-                                    </a>
-                                </li>
-                                <!-- /ko -->
-                                <!-- ko foreach: filteredDatabases-->
-                                <li data-bind="visible: !relevant()">
-                                    <a class="database non-relevant" data-bind="attr: {title: name}">
-                                        <div class="name" data-bind="text: name"></div>
-                                        <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
-                                        <div class="label label-default">Non-relevant</div>
-                                        <div data-bind="visible: errored" class="label label-danger">Errored</div>
-                                    </a>
-                                </li>
-                                <!-- /ko -->
-                                <!-- ko foreach: filteredDatabases-->
-                                <li data-bind="visible: disabled() && relevant()">
-                                    <a class="database disabled"  data-bind="attr: {title: name}">
-                                        <div class="name" data-bind="text: name"></div>
-                                        <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
-                                        <div class="label label-default">Disabled</div>
-                                        <div data-bind="visible: errored" class="label label-danger">Errored</div>
-                                    </a>
-                                </li>
-                                <!-- /ko -->
-                            </ul>
-                        </section>
-                    </div>
-                </div>
+<div class="layout-container" data-bind="css: { 'collapse-menu': collapseMenu(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications() }">
+    <div class="browser-alert" data-bind="visible: browserAlert">
+        <div class="browser-message">
+            <i class="icon-unsupported-browser icon-xl"></i>
+            <p class="lead margin-bottom">This browser is not supported and some features may not work correctly</p>
+            <p class="margin-bottom">To ensure best experience please use</p>
+            <div class="browser-links">
+                <a class="chrome" href="https://www.google.com/chrome/" target="_blank">
+                    <i class="icon-chrome icon-lg"></i>
+                    Google Chrome
+                </a>
+                <a class="firefox" href="https://www.mozilla.org/firefox/" target="_blank">
+                    <i class="icon-firefox icon-lg"></i>
+                    Mozilla Firefox
+                </a>
             </div>
-            <div class="search-container" data-bind="visible: $root.activeDatabase">
-                <input type="search" class="form-control omnisearch on-base-background" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
-                <div class="icon-search"></div>
-                <div class="autocomplete-list box-container" data-bind="with: $root.searchBox, visible: $root.searchBox.showMatchedDocumentsSection() || $root.searchBox.recentDocumentsList().length">
-                    <div class="scroller">
-                        <section data-bind="visible: showMatchedDocumentsSection">
-                            <h4>Matched documents</h4>
-                            <ul data-bind="foreach: matchedDocumentIds">
-                                <li>
-                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data), css: { 'active': $parent.matchesDocumentIdx($index) }">
-                                        <span class="icon-document"></span> 
-                                        <span data-bind="text: $data"></span>
-                                    </a>
-                                </li>
-                            </ul>
-                            <div class="text-center" data-bind="visible: spinners.startsWith">
+            <button class="btn btn-default" data-bind="click: browserAlertContinue">Continue</button>
+            <div class="checkbox">
+                <input id="dontShowAgainBrowser" class="styled" type="checkbox" data-bind="checked: dontShowBrowserAlertAgain">
+                <label for="dontShowAgainBrowser">
+                    Don't show again
+                </label>
+            </div>
+        </div>
+        <div class="backdrop show"></div>
+    </div>
+    <aside class="top-alert" data-bind="visible: developerLicense">
+        Developer License - Not for Production Use
+    </aside>
+    <nav class="navbar">
+        <div class="navbar-header">
+            <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
+        </div>
+        <div id="navbar">
+            <div class="server-environment" data-bind="if: serverEnvironment, visible: serverEnvironment">
+                <small class="on-base-background">Server environment</small>
+                <div><strong data-bind="text: serverEnvironment, attr: { class: 'text-uppercase ' + serverEnvironmentClass() }"></strong></div>
+            </div>
+            <div class="inputs-container hidden-xs hidden-sm">
+                <div class="database-switcher-container" data-bind="with: databaseSwitcher">
+                    <div class="form-control btn-toggle database-switcher">
+                        <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
+                        <span data-bind="visible: $root.activeDatabase() ? $root.activeDatabase().environment() : false, text: $root.activeDatabase() ? $root.activeDatabase().environment(): '', attr: { class: 'label text-uppercase ' + ($root.activeDatabase() ? $root.activeDatabase().environmentClass() : '') }"></span>
+                    </div>
+                    <a data-bind="attr: { href: $root.appUrls.databases }" title="View all databases" class="resources-link"><i class="icon-resources"></i></a>
+                    <div class="box-container">
+                        <div class="database-filter-container">
+                            <input type="search" class="database-filter form-control" data-bind="textInput: filter" placeholder="filter" />
+                        </div>
+                        <div class="scroller">
+                            <section>
+                                <ul class="database-list">
+                                    <!-- ko foreach: filteredDatabases-->
+                                    <li data-bind="visible: !disabled() && relevant()">
+                                        <a href="#" data-bind="click: $parent.selectDatabase.bind($parent), attr: {title: name}, css: { active: name === $parent.highlightedItem() , database: true }">
+                                            <div class="name" data-bind="text: name"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                        </a>
+                                    </li>
+                                    <!-- /ko -->
+                                    <!-- ko foreach: filteredDatabases-->
+                                    <li data-bind="visible: !relevant()">
+                                        <a class="database non-relevant" data-bind="attr: {title: name}">
+                                            <div class="name" data-bind="text: name"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div class="label label-default">Non-relevant</div>
+                                            <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                        </a>
+                                    </li>
+                                    <!-- /ko -->
+                                    <!-- ko foreach: filteredDatabases-->
+                                    <li data-bind="visible: disabled() && relevant()">
+                                        <a class="database disabled" data-bind="attr: {title: name}">
+                                            <div class="name" data-bind="text: name"></div>
+                                            <div data-bind="text: environment, visible: environment, attr: { class: 'label text-uppercase ' + environmentClass() }"></div>
+                                            <div class="label label-default">Disabled</div>
+                                            <div data-bind="visible: errored" class="label label-danger">Errored</div>
+                                        </a>
+                                    </li>
+                                    <!-- /ko -->
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+                <div class="search-container" data-bind="visible: $root.activeDatabase">
+                    <input type="search" class="form-control omnisearch on-base-background" placeholder="go to document" data-bind="textInput: $root.searchBox.searchQuery" />
+                    <div class="icon-search"></div>
+                    <div class="autocomplete-list box-container" data-bind="with: $root.searchBox, visible: $root.searchBox.showMatchedDocumentsSection() || $root.searchBox.recentDocumentsList().length">
+                        <div class="scroller">
+                            <section data-bind="visible: showMatchedDocumentsSection">
+                                <h4>Matched documents</h4>
+                                <ul data-bind="foreach: matchedDocumentIds">
+                                    <li>
+                                        <a href="#" data-bind="click: _.partial($parent.goToDocument, $data), css: { 'active': $parent.matchesDocumentIdx($index) }">
+                                            <span class="icon-document"></span>
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
+                                </ul>
+                                <div class="text-center" data-bind="visible: spinners.startsWith">
+                                    <div class="global-spinner"></div>
+                                </div>
+                            </section>
+                            <section data-bind="visible: recentDocumentsList().length">
+                                <h4>Recent documents</h4>
+                                <ul data-bind="foreach: recentDocumentsList">
+                                    <li>
+                                        <a href="#" data-bind="click: _.partial($parent.goToDocument, $data), css: { 'active': $parent.matchesRecentDocumentIdx($index)}">
+                                            <span class="icon-document"></span>
+                                            <span data-bind="text: $data"></span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </section>
+                        </div>
+                    </div>
+                    <!-- TODO
+                    <div class="autocomplete-list box-container">
+                        <div class="scroller">
+                            <section>
+                                <h4>Menu</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Documents</h4>
+                                <ul>
+                                    <li>
+                                        <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
+                                        <ul>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
+                                        </ul>
+                                    </li>
+                                    <li>
+                                        <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
+                                        <ul>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
+                                            <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
+                                        </ul>
+                                    </li>
+                                    <li><a href="#" class="more">MORE</a></li>
+                                </ul>
+                            </section>
+                            <section>
+                                <h4>Indexes</h4>
+                                <ul>
+                                    <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
+                                </ul>
+                            </section>
+                            <section class="text-center">
                                 <div class="global-spinner"></div>
-                            </div>
-                        </section>
-                        <section data-bind="visible: recentDocumentsList().length">
-                            <h4>Recent documents</h4>
-                            <ul data-bind="foreach: recentDocumentsList">
-                                <li>
-                                    <a href="#" data-bind="click: _.partial($parent.goToDocument, $data), css: { 'active': $parent.matchesRecentDocumentIdx($index)}">
-                                        <span class="icon-document"></span> 
-                                        <span data-bind="text: $data"></span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </section>
-                    </div>
+                            </section>
+                        </div>
+                    </div>-->
                 </div>
-                <!-- TODO
-                <div class="autocomplete-list box-container">
-                    <div class="scroller">
-                        <section>
-                            <h4>Menu</h4>
-                            <ul>
-                                <li><a href="#"><span class="icon-documents"></span>Compact</a></li>
-                            </ul>
-                        </section>
-                        <section>
-                            <h4>Documents</h4>
-                            <ul>
-                                <li>
-                                    <a href="#"><span class="icon-document-group" style="color:#93278f;"></span>Companies</a>
-                                    <ul>
-                                        <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/1</a></li>
-                                        <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/2</a></li>
-                                        <li><a href="#"><span class="icon-document" style="color:#93278f;"></span>Companies/3</a></li>
-                                    </ul>
-                                </li>
-                                <li>
-                                    <a href="#"><span class="icon-document-group" style="color:#ff0351;"></span>Computers</a>
-                                    <ul>
-                                        <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Computers/1</a></li>
-                                        <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/2</a></li>
-                                        <li><a href="#"><span class="icon-document" style="color:#ff0351;"></span>Companies/3</a></li>
-                                    </ul>
-                                </li>
-                                <li><a href="#" class="more">MORE</a></li>
-                            </ul>
-                        </section>
-                        <section>
-                            <h4>Indexes</h4>
-                            <ul>
-                                <li><a href="#"><span class="icon-arrow-filled-right"></span>Orders/ByCompany</a></li>
-                            </ul>
-                        </section>
-                        <section class="text-center">
-                            <div class="global-spinner"></div>
-                        </section>
-                    </div>
-                </div>-->
             </div>
-        </div>
-        <ul class="nav navbar-nav navbar-right">
-            <li>
-                <a href="#" title="Change theme" class="theme-change" data-bind="click: $data.constructor.chooseTheme">
-                    <i class="icon-theme"></i>
-                </a>
-            </li>
-            <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
-            <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help" style="display:none"></a></li>
-            <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
-            <li data-bind="with: notificationCenter">
-                <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
-                    <span class="icon-notifications"></span>
-                    <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
-                </a>
-            </li>
-            <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
-        </ul>
-    </div><!--/.nav-collapse -->
-</nav>
+            <ul class="nav navbar-nav navbar-right">
+                <li>
+                    <a href="#" title="Change theme" class="theme-change" data-bind="click: $data.constructor.chooseTheme">
+                        <i class="icon-theme"></i>
+                    </a>
+                </li>
+                <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
+                <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help" style="display:none"></a></li>
+                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                <li data-bind="with: notificationCenter">
+                    <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
+                        <span class="icon-notifications"></span>
+                        <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
+                    </a>
+                </li>
+                <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </nav>
 
-<script type="text/html" id="collectionsMenuItem">
-    <li>
-        <!-- ko with: $root.collectionsTracker.getAllDocumentsCollection() -->
-        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
-            <i class="icon-recent"></i>
-            <span>Recent</span>
-            <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce': hasBounceClass }">
-                <div class="value label label-default" data-bind="text: countPrefix"></div>
-                <div data-bind="attr: { class: sizeClass }"></div>
-            </div>
-        </a>
-        <!-- /ko -->
-    </li>
-    <li>
-        <!-- ko with: $root.collectionsTracker.getRevisionsBinCollection() -->
-        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForRevisionsBin() }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
-            <i class="icon-revisions-bin"></i>
-            <span>Revisions Bin</span>
-        </a>
-        <!-- /ko -->
-    </li>
-    <hr data-bind="visible: $root.collectionsTracker.collections().length > 1" />
-    <h3 data-bind="visible: $root.collectionsTracker.collections().length > 1, attr: { title: $root.collectionsCountText() + ' collections'}">        
-        Collections (<span data-bind="text: $root.collectionsCountText"></span>)
-    </h3>    
-    <li class="scroll collections-list">
-        <ul>
-            <!-- ko foreach: $root.collectionsTracker.collections -->
-            <li>
-                <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments">
-                    <span data-bind="text: name"></span>
-                    <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce' : hasBounceClass }">
-                        <div class="value label label-default" data-bind="text: countPrefix"></div>
-                        <div data-bind="attr: { class: sizeClass }"></div>
-                    </div>
-                </a>
-            </li>
-            <!-- /ko -->
-        </ul>
-    </li>
-    <hr />
-</script>
-
-<script type="text/html" id="leafMenuItem">
-    <li data-bind="with: item">
-        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav, attr: { href: path, title: disableWithReason && disableWithReason(), 'data-toggle': disableWithReason && disableWithReason() ? 'tooltip' : undefined }, css: { 'active': $parent.menu.activeItem() === $data, 'disabled': disableWithReason && disableWithReason() }">
-            <i data-bind="css: css"></i>
-            <span data-bind="text: title"></span>
-            <div data-bind="if: badgeData() != null">
-                <div class="collection-count" data-bind="attr: { title: badgeData().toLocaleString() }">
-                    <div class="value label" data-bind="text: countPrefix, css: { 'label-default': !badgeData() , 'label-danger': badgeData() }"></div> 
+    <script type="text/html" id="collectionsMenuItem">
+        <li>
+            <!-- ko with: $root.collectionsTracker.getAllDocumentsCollection() -->
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+                <i class="icon-recent"></i>
+                <span>Recent</span>
+                <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce': hasBounceClass }">
+                    <div class="value label label-default" data-bind="text: countPrefix"></div>
                     <div data-bind="attr: { class: sizeClass }"></div>
                 </div>
-            </div>           
-        </a>
-    </li>
-</script>
-
-<script type="text/html" id="intermediateMenuItem">
-    <li class="arrow-right">
-        <a data-bind="click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }, visible: item.nav">
-            <i data-bind="css: item.css"></i>
-            <span data-bind="text: item.title"></span>
-        </a>
-        <div data-bind="click: menu.handleLevelClick.bind(menu), attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1, class: 'level ' + (item.isOpen() ? 'level-show ' : '') + 'level-' + (item.depth() + 1) }">
-            <h2>
-                <a class="back" title="back"
-                   data-bind="click: menu.back.bind(menu)"></a>
-                <!-- ko text: item.title --><!-- /ko -->
-            </h2>
-            <ul data-bind="foreach: item.children">
-                <!-- ko template: { name: type + 'MenuItem', data: { item: $data, level: $parent.level + 1, menu: $parent.menu }} -->
+            </a>
+            <!-- /ko -->
+        </li>
+        <li>
+            <!-- ko with: $root.collectionsTracker.getRevisionsBinCollection() -->
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForRevisionsBin() }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+                <i class="icon-revisions-bin"></i>
+                <span>Revisions Bin</span>
+            </a>
+            <!-- /ko -->
+        </li>
+        <hr data-bind="visible: $root.collectionsTracker.collections().length > 1" />
+        <h3 data-bind="visible: $root.collectionsTracker.collections().length > 1, attr: { title: $root.collectionsCountText() + ' collections'}">
+            Collections (<span data-bind="text: $root.collectionsCountText"></span>)
+        </h3>
+        <li class="scroll collections-list">
+            <ul>
+                <!-- ko foreach: $root.collectionsTracker.collections -->
+                <li>
+                    <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments">
+                        <span data-bind="text: name"></span>
+                        <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce' : hasBounceClass }">
+                            <div class="value label label-default" data-bind="text: countPrefix"></div>
+                            <div data-bind="attr: { class: sizeClass }"></div>
+                        </div>
+                    </a>
+                </li>
                 <!-- /ko -->
             </ul>
-        </div>
-    </li>
-</script>
-
-<script type="text/html" id="separatorMenuItem">
-    <li class="separator">
-        <!-- ko if: !!item.title -->
-        <h3 data-bind="text: item.title"></h3>
-        <!-- /ko -->
-        <!-- ko if: !item.title -->
+        </li>
         <hr />
-        <!-- /ko -->
-    </li>
-</script>
+    </script>
 
-<div class="prime-container">
+    <script type="text/html" id="leafMenuItem">
+        <li data-bind="with: item">
+            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav, attr: { href: path, title: disableWithReason && disableWithReason(), 'data-toggle': disableWithReason && disableWithReason() ? 'tooltip' : undefined }, css: { 'active': $parent.menu.activeItem() === $data, 'disabled': disableWithReason && disableWithReason() }">
+                <i data-bind="css: css"></i>
+                <span data-bind="text: title"></span>
+                <div data-bind="if: badgeData() != null">
+                    <div class="collection-count" data-bind="attr: { title: badgeData().toLocaleString() }">
+                        <div class="value label" data-bind="text: countPrefix, css: { 'label-default': !badgeData() , 'label-danger': badgeData() }"></div>
+                        <div data-bind="attr: { class: sizeClass }"></div>
+                    </div>
+                </div>
+            </a>
+        </li>
+    </script>
+
+    <script type="text/html" id="intermediateMenuItem">
+        <li class="arrow-right">
+            <a data-bind="click: menu.handleIntermediateItemClick.bind(menu), css: { 'active': item.isOpen }, visible: item.nav">
+                <i data-bind="css: item.css"></i>
+                <span data-bind="text: item.title"></span>
+            </a>
+            <div data-bind="click: menu.handleLevelClick.bind(menu), attr: { 'data-level-name': item.title, 'data-level': item.depth() + 1, class: 'level ' + (item.isOpen() ? 'level-show ' : '') + 'level-' + (item.depth() + 1) }">
+                <h2>
+                    <a class="back" title="back"
+                       data-bind="click: menu.back.bind(menu)"></a>
+                    <!-- ko text: item.title --><!-- /ko -->
+                </h2>
+                <ul data-bind="foreach: item.children">
+                    <!-- ko template: { name: type + 'MenuItem', data: { item: $data, level: $parent.level + 1, menu: $parent.menu }} -->
+                    <!-- /ko -->
+                </ul>
+            </div>
+        </li>
+    </script>
+
+    <script type="text/html" id="separatorMenuItem">
+        <li class="separator">
+            <!-- ko if: !!item.title -->
+            <h3 data-bind="text: item.title"></h3>
+            <!-- /ko -->
+            <!-- ko if: !item.title -->
+            <hr />
+            <!-- /ko -->
+        </li>
+    </script>
+
+    <div id="resizeArea"></div>
+
     <nav id="main-menu" class="main-menu"
-         data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }, style: { 'flex-basis': mainMenu.width() + 'px', width: mainMenu.width() + 'px' }, css: { 'collapse-menu': collapseMenu() }">
-        
+         data-bind="with: mainMenu, attr: { 'data-level': mainMenu.level }">
+
         <div class="level-0"
              data-level="0"
              data-level-name="Menu"
@@ -292,113 +294,115 @@
         <div id="page-host" class="page-host" data-bind="router: { cacheViews: false }"></div>
     </div>
     <div class="notification-center-container" data-bind="compose: 'notifications/notificationCenter.html'"></div>
-</div>
 
-<footer class="status-footer" data-bind="with: $root.footer">
-    <div class="footer-left" data-bind="with: stats(), visible: stats">
-        <!-- TODO
-        <div class="footer-item">
-            <a href="#">Dashboard</a>
-        </div>-->
-        <div class="footer-item">
-            <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments().toLocaleString()"></span></a>
-        </div>
-        <div class="footer-item">
-            <a title="Indexes" class="indexes-link" data-bind="attr: { href: $parent.urlForIndexes() }">
-                <i class="icon-index"></i>
-                <span data-bind="text: countOfIndexes().toLocaleString()"></span>
-            </a>
-            <a title="Stale Indexes" class="stale-indexes-link" data-bind="attr: { href: $parent.urlForStaleIndexes() }">
-                <span class="separator">|</span><span data-bind="text: countOfStaleIndexes().toLocaleString(), css: {'text-warning': countOfStaleIndexes}"></span>
-            </a>
-        </div>
-        <div class="footer-item" data-bind="visible: countOfIndexingErrors">
-            <a title="Indexing errors" class="text-danger" data-bind="attr: { href: $parent.urlForIndexingErrors() }">
-                <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors().toLocaleString()"></span>
-            </a>
-        </div>
-    </div>
-    <div class="footer-left spinner" data-bind="visible: spinners.loading">
-        <span class="global-spinner spinner-sm"></span> <strong>Loading, please wait</strong>
-    </div>
-    <div class="footer-right">
-        <div class="footer-item">
-            <button class="btn btn-primary" title="Continue Test" data-bind="click: $root.continueTest.continue, visible: $root.continueTest.showContinueButton">
-                <i class="icon-play"></i> <span>Continue test</span>
-            </button>
-        </div>
-        <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
-            <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
-        </div>
-        <div class="footer-item" data-bind="visible: !$root.clientCertificate()">
-            <a class="btn btn-danger btn-sm js-client-cert" data-bind="attr: { href: $root.urlForCertificates() }">
-                <i class="icon-unsecure"></i>
-            </a>
-        </div>
-        <div class="footer-item" data-bind="visible: $root.clientCertificate(), with: $root.clientCertificate()">
-            <a class="btn btn-success btn-sm js-client-cert" data-bind="attr: { href: $root.urlForCertificates() }">
-                <i class="icon-lock"></i>
-            </a>
-        </div>
-        <div class="footer-item" data-bind="visible: $root.clusterManager.nodesCount() === 1, if: $root.clusterManager.nodesCount() === 1" title="Local node tag">
-            <!-- when cluster contains single node - display fake button -->
-            <a style="pointer-events: none">
-                <i class="icon-cluster"></i>
-                <span data-bind="text: 'Node ' + $root.clusterManager.localNodeTag()"></span>
-            </a>
-        </div>
-        <div class="footer-item" data-bind="visible: $root.clusterManager.nodesCount() > 1, if: $root.clusterManager.nodesCount() > 1">
-            <div class="btn-group dropup">
-                <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" title="Local node tag. Click to go to another cluster node">
-                    <i class="icon-cluster"></i>
-                    <span data-bind="text: 'Node ' + $root.clusterManager.localNodeTag()"></span>
-                    <span class="caret"></span>
-                    <span class="sr-only">Toggle Dropdown</span>
-                </button>
-                <ul class="dropdown-menu dropup" data-bind="foreach: $root.clusterManager.topology().nodes">
-                    <li>
-                        <a target="_blank" title="Go to another cluster node" data-bind="attr: { href: $root.createUrlWithHashComputed(serverUrl) }">
-                            <i data-bind="attr: { class: cssIcon() }"></i>
-                            <span data-bind="text: 'Node ' + tag()"></span>
-                        </a>
-                    </li>
-                </ul>
+
+    <footer class="status-footer" data-bind="with: $root.footer">
+        <div class="footer-left" data-bind="with: stats(), visible: stats">
+            <!-- TODO
+            <div class="footer-item">
+                <a href="#">Dashboard</a>
+            </div>-->
+            <div class="footer-item">
+                <a data-bind="attr: { href: $parent.urlForDocuments() }" title="Documents"><i class="icon-documents"></i> <span data-bind="text: countOfDocuments().toLocaleString()"></span></a>
+            </div>
+            <div class="footer-item">
+                <a title="Indexes" class="indexes-link" data-bind="attr: { href: $parent.urlForIndexes() }">
+                    <i class="icon-index"></i>
+                    <span data-bind="text: countOfIndexes().toLocaleString()"></span>
+                </a>
+                <a title="Stale Indexes" class="stale-indexes-link" data-bind="attr: { href: $parent.urlForStaleIndexes() }">
+                    <span class="separator">|</span><span data-bind="text: countOfStaleIndexes().toLocaleString(), css: {'text-warning': countOfStaleIndexes}"></span>
+                </a>
+            </div>
+            <div class="footer-item" data-bind="visible: countOfIndexingErrors">
+                <a title="Indexing errors" class="text-danger" data-bind="attr: { href: $parent.urlForIndexingErrors() }">
+                    <i class="icon-index-errors"></i> <span data-bind="text: countOfIndexingErrors().toLocaleString()"></span>
+                </a>
             </div>
         </div>
-        <div class="footer-item">
-            <a title="Studio Version" data-bind="attr: { href: urlForAbout }">
-                <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
-            </a>
+        <div class="footer-left spinner" data-bind="visible: spinners.loading">
+            <span class="global-spinner spinner-sm"></span> <strong>Loading, please wait</strong>
         </div>
-        <div class="footer-item">
-            <a title="Server Version" data-bind="attr: { href: urlForAbout }">
-                <i class="icon-server"></i> <span data-bind="text: $root.constructor.buildInfo.serverBuildVersion() ? $root.constructor.buildInfo.serverBuildVersion().FullVersion : ''"></span>
-            </a>
+        <div class="footer-right">
+            <div class="footer-item">
+                <button class="btn btn-primary" title="Continue Test" data-bind="click: $root.continueTest.continue, visible: $root.continueTest.showContinueButton">
+                    <i class="icon-play"></i> <span>Continue test</span>
+                </button>
+            </div>
+            <div class="footer-item bg-info" data-bind="visible: $root.clusterManager.votingInProgress">
+                <a data-bind="attr: { href: $root.urlForCluster() }" title="Voting in progress"><i class="icon-cluster-node"></i><span>Voting in progress</span></a>
+            </div>
+            <div class="footer-item" data-bind="visible: !$root.clientCertificate()">
+                <a class="btn btn-danger btn-sm js-client-cert" data-bind="attr: { href: $root.urlForCertificates() }">
+                    <i class="icon-unsecure"></i>
+                </a>
+            </div>
+            <div class="footer-item" data-bind="visible: $root.clientCertificate(), with: $root.clientCertificate()">
+                <a class="btn btn-success btn-sm js-client-cert" data-bind="attr: { href: $root.urlForCertificates() }">
+                    <i class="icon-lock"></i>
+                </a>
+            </div>
+            <div class="footer-item" data-bind="visible: $root.clusterManager.nodesCount() === 1, if: $root.clusterManager.nodesCount() === 1" title="Local node tag">
+                <!-- when cluster contains single node - display fake button -->
+                <a style="pointer-events: none">
+                    <i class="icon-cluster"></i>
+                    <span data-bind="text: 'Node ' + $root.clusterManager.localNodeTag()"></span>
+                </a>
+            </div>
+            <div class="footer-item" data-bind="visible: $root.clusterManager.nodesCount() > 1, if: $root.clusterManager.nodesCount() > 1">
+                <div class="btn-group dropup">
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" title="Local node tag. Click to go to another cluster node">
+                        <i class="icon-cluster"></i>
+                        <span data-bind="text: 'Node ' + $root.clusterManager.localNodeTag()"></span>
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu dropup" data-bind="foreach: $root.clusterManager.topology().nodes">
+                        <li>
+                            <a target="_blank" title="Go to another cluster node" data-bind="attr: { href: $root.createUrlWithHashComputed(serverUrl) }">
+                                <i data-bind="attr: { class: cssIcon() }"></i>
+                                <span data-bind="text: 'Node ' + tag()"></span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-item">
+                <a title="Studio Version" data-bind="attr: { href: urlForAbout }">
+                    <i class="icon-client"></i> <span data-bind="text: $root.constructor.clientVersion"></span>
+                </a>
+            </div>
+            <div class="footer-item">
+                <a title="Server Version" data-bind="attr: { href: urlForAbout }">
+                    <i class="icon-server"></i> <span data-bind="text: $root.constructor.buildInfo.serverBuildVersion() ? $root.constructor.buildInfo.serverBuildVersion().FullVersion : ''"></span>
+                </a>
+            </div>
+            <div class="footer-item">
+                <a title="License Information" data-bind="attr: { href: urlForAbout, class: licenseClass() + ' license btn btn-sm' }">
+                    <i class="icon-license-information"></i>
+                </a>
+            </div>
+            <div class="footer-item">
+                <a title="Support Information" data-bind="attr: { href: urlForAbout, class: supportClass() + ' support btn btn-sm' }">
+                    <i class="icon-support"></i>
+                </a>
+            </div>
         </div>
-        <div class="footer-item">
-            <a title="License Information" data-bind="attr: { href: urlForAbout, class: licenseClass() + ' license btn btn-sm' }">
-                <i class="icon-license-information"></i>
-            </a>
-        </div>
-        <div class="footer-item">
-            <a title="Support Information" data-bind="attr: { href: urlForAbout, class: supportClass() + ' support btn btn-sm' }">
-                <i class="icon-support"></i>
-            </a>
+    </footer>
+    <div class="connection-lost" data-bind="css: { show: $root.constructor.showConnectionLost }">
+        <div class="absolute-center">
+            <h3>Connection lost</h3>
+            <img src="Content/img/connection-lost.svg" width="260" />
+            <p class="small">Studio may not work correctly until reload</p>
+            <button class="btn" data-bind="click: ignoreWebSocketError"><i class="icon-warning"></i><span>Ignore</span></button>&nbsp;&nbsp;
+            <button class="btn btn-primary" onclick="location.reload();">
+                <i class="icon-refresh"></i>
+                <span>Reload</span>
+            </button>
         </div>
     </div>
-</footer>
-<div class="connection-lost" data-bind="css: { show: $root.constructor.showConnectionLost }">
-    <div class="absolute-center">
-        <h3>Connection lost</h3>
-        <img src="Content/img/connection-lost.svg" width="260" />
-        <p class="small">Studio may not work correctly until reload</p>
-        <button class="btn" data-bind="click: ignoreWebSocketError"><i class="icon-warning"></i><span>Ignore</span></button>&nbsp;&nbsp;
-        <button class="btn btn-primary" onclick="location.reload();"><i class="icon-refresh"></i>
-            <span>Reload</span>
-        </button>
+    <div data-bind="if: displayUsageStatsInfo()">
+        <div data-bind="compose: 'usageStats.html'"></div>
     </div>
+    <div class="graph-helper" data-bind="compose: 'common/graphHelper.html'"></div>
 </div>
-<div data-bind="if: displayUsageStatsInfo()">
-    <div data-bind="compose: 'usageStats.html'"></div>
-</div>
-<div class="graph-helper" data-bind="compose: 'common/graphHelper.html'"></div>

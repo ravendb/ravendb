@@ -48,6 +48,7 @@ import requestLatencyDetails = require("viewmodels/common/notificationCenter/det
 import transactionCommandsDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/transactionCommandsDetails");
 import dumpRawIndexDataDetails = require("viewmodels/common/notificationCenter/detailViewer/operations/dumpRawIndexDataDetails");
 
+import studioSettings = require("common/settings/studioSettings");
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -75,6 +76,7 @@ class notificationCenter {
     };
 
     showNotifications = ko.observable<boolean>(false);
+    pinNotifications = ko.observable<boolean>(false);
     includeInDom = ko.observable<boolean>(false); // to avoid RavenDB-10660
 
     globalNotifications = ko.observableArray<abstractNotification>();
@@ -224,6 +226,19 @@ class notificationCenter {
                 window.removeEventListener("click", this.hideHandler, true);
             }
         });
+
+        this.pinNotifications.subscribe((pinned: boolean) => {
+            studioSettings.default.globalSettings()
+                .done(settings => {
+                    settings.pinnedNotifications.setValue(pinned);
+                });
+        });
+
+        studioSettings.default.globalSettings()
+            .done(settings => {
+                const pinnedNotificationsFromSettings = settings.pinnedNotifications.getValue();
+                this.pinNotifications(pinnedNotificationsFromSettings);
+            });
     }
     
     setupGlobalNotifications(serverWideClient: serverNotificationCenterClient) {
@@ -476,9 +491,11 @@ class notificationCenter {
     }
 
     private shouldConsumeHideEvent(e: Event) {
+        if (!this.pinNotifications()) {
         return $(e.target).closest(".notification-center-container").length === 0
             && $(e.target).closest("#notification-toggle").length === 0
             && $(e.target).closest(".modal.in").length === 0;
+        }
     }
 
     filterBySeverity(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity) {

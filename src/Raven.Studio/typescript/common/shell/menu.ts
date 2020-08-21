@@ -23,6 +23,7 @@ class menu {
 
     private $mainMenuLevels: JQuery;
     private menuElement: HTMLElement;
+    private menuResizeElement: HTMLElement;
     width = ko.observable<number>(280);
 
     private type: string = 'menu';
@@ -178,6 +179,7 @@ class menu {
     initialize() {
         this.$mainMenuLevels = $('#main-menu [data-level]');
         this.menuElement = document.getElementById("main-menu");
+        this.menuResizeElement = document.getElementById("resizeArea");
 
         router.on('router:navigation:complete', () => {
             this.setActiveMenuItem();
@@ -186,26 +188,19 @@ class menu {
         this.setActiveMenuItem();
         this.initializeOnClickOutsideOfMenuResetLevelToActiveItem();
 
-        $(this.menuElement).on("mousedown.menuResize", e => this.handleResize(e));
+        $(this.menuResizeElement).on("mousedown.menuResize", e => this.handleResize(e));
 
         studioSettings.default.globalSettings()
             .done(settings => {
-                this.width(settings.menuWidth.getValue());
+                const widthFromSettings = settings.menuWidth.getValue();
+                this.width(widthFromSettings);
+                document.documentElement.style.setProperty('--menu-width', widthFromSettings.toString() + 'px');
             });
     }
     
     private handleResize(e: JQueryEventObject) {
-        if (e.offsetX < this.width() - 5) {
-            return;
-        }
 
         const $document = $(document);
-
-        // Stop propagation of the event so the text selection doesn't fire up
-        if (e.stopPropagation) e.stopPropagation();
-        if (e.preventDefault) e.preventDefault();
-        e.cancelBubble = true;
-        e.returnValue = false;
         
         const startX = e.pageX;
         const currentWidth = this.width();
@@ -215,13 +210,14 @@ class menu {
             const requestedWidth = currentWidth + dx;
             
             this.width(_.clamp(requestedWidth, menu.minWidth, menu.maxWidth));
+            document.documentElement.style.setProperty('--menu-width', (_.clamp(currentWidth + dx, menu.minWidth, menu.maxWidth).toString() + 'px'));
         });
 
         $document.on("mouseup.menuResize", e => {
             const dx = e.pageX - startX;
             const requestedWidth = _.clamp(currentWidth + dx, menu.minWidth, menu.maxWidth);
             this.width(_.clamp(requestedWidth, menu.minWidth, menu.maxWidth));
-
+            document.documentElement.style.setProperty('--menu-width', (_.clamp(currentWidth + dx, menu.minWidth, menu.maxWidth).toString() + 'px'));
 
             studioSettings.default.globalSettings()
                 .done(settings => {
