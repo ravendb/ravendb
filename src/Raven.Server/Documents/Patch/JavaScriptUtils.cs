@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Patch
 
             metadata = Context.ReadObject(metadata, boi.DocumentId);
             JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
-            boi.Set(new JsString("@metadata"), metadataJs);
+            boi.Set(new JsString(Constants.Documents.Metadata.Key), metadataJs);
             return metadataJs;
         }
 
