@@ -16,10 +16,12 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Rachis;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Xunit;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
 using Employee = Raven.Tests.Core.Utils.Entities.Employee;
@@ -864,9 +866,23 @@ namespace SlowTests.Smuggler
                     }
 
                     var db = await GetDocumentDatabaseInstanceFor(store1);
-                    var total = await db.TimeSeriesPolicyRunner.RunRollups();
-                    Assert.True(1 == total, $"actual {total}, baseline:{baseline} ({baseline.Ticks}, {baseline.Kind}), now:{db.Time.GetUtcNow()} ({db.Time.GetUtcNow().Ticks})");
+                    await using (var stream = new MemoryStream())
+                    {
+                        LoggingSource.Instance.AttachPipeSink(stream);
+                        try
+                        {
+                            var total = await db.TimeSeriesPolicyRunner.RunRollups();
+                            Assert.True(1 == total,
+                                $"actual {total}, baseline:{baseline} ({baseline.Ticks}, {baseline.Kind}), now:{db.Time.GetUtcNow()} ({db.Time.GetUtcNow().Ticks}){Environment.NewLine}" +
+                                $"{Encodings.Utf8.GetString(stream.ToArray())}");
 
+                        }
+                        finally
+                        {
+                            LoggingSource.Instance.DetachPipeSink();
+                        }
+                    }
+                    
                     using (var session = store1.OpenAsyncSession())
                     {
                         for (int i = 0; i < 10; i++)
