@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations
+namespace Raven.Client.Documents.Operations.Backups
 {
     public class BackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
@@ -18,10 +17,6 @@ namespace Raven.Client.Documents.Operations
         {
             _backupConfiguration = backupConfiguration ?? throw new ArgumentNullException(nameof(backupConfiguration));
 
-            if (string.IsNullOrWhiteSpace(_backupConfiguration.Name))
-            {
-                _backupConfiguration.Name = "OneTimeBackup";
-            }
             if (BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings) == false)
                 throw new InvalidOperationException($"Cannot start one time backup using the provided {nameof(backupConfiguration.LocalSettings)}.");
         }

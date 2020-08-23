@@ -86,21 +86,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                             $"incremental backup cron expression: {configuration.IncrementalBackupFrequency}");
             }
 
-            var localSettings = configuration.LocalSettings;
-            if (localSettings != null && localSettings.Disabled == false)
-            {
-                if (localSettings.HasSettings() == false)
-                {
-                    throw new ArgumentException(
-                        $"{nameof(localSettings.FolderPath)} and {nameof(localSettings.GetBackupConfigurationScript)} cannot be both null or empty");
-                }
-
-                if (string.IsNullOrEmpty(localSettings.FolderPath) == false)
-                {
-                    if (DataDirectoryInfo.CanAccessPath(localSettings.FolderPath, out var error) == false)
-                        throw new ArgumentException(error);
-                }
-            }
+            AssertBackupConfigurationInternal(configuration);
 
             var retentionPolicy = configuration.RetentionPolicy;
             if (retentionPolicy != null && retentionPolicy.Disabled == false)
@@ -121,7 +107,26 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public static void AssertDestinationAndRegionAreAllowed(PeriodicBackupConfiguration configuration, ServerStore serverStore)
+        public static void AssertBackupConfigurationInternal(BackupConfiguration configuration)
+        {
+            var localSettings = configuration.LocalSettings;
+            if (localSettings != null && localSettings.Disabled == false)
+            {
+                if (localSettings.HasSettings() == false)
+                {
+                    throw new ArgumentException(
+                        $"{nameof(localSettings.FolderPath)} and {nameof(localSettings.GetBackupConfigurationScript)} cannot be both null or empty");
+                }
+
+                if (string.IsNullOrEmpty(localSettings.FolderPath) == false)
+                {
+                    if (DataDirectoryInfo.CanAccessPath(localSettings.FolderPath, out var error) == false)
+                        throw new ArgumentException(error);
+                }
+            }
+        }
+
+        public static void AssertDestinationAndRegionAreAllowed(BackupConfiguration configuration, ServerStore serverStore)
         {
             foreach (var backupDestination in configuration.GetDestinations())
             {

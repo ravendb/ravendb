@@ -200,7 +200,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, LegacySourceReplicationInformation> LegacySourceReplicationInformation = GenerateJsonDeserializationRoutine<LegacySourceReplicationInformation>();
 
-        public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> OneTimeBackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
+        public static readonly Func<BlittableJsonReaderObject, BackupConfiguration> BackupConfiguration = GenerateJsonDeserializationRoutine<BackupConfiguration>();
 
         public class Parameters
         {

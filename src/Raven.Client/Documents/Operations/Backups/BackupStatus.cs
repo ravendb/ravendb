@@ -66,6 +66,7 @@ namespace Raven.Client.Documents.Operations.Backups
     public class LocalBackup : BackupStatus
     {
         public string BackupDirectory { get; set; }
+        public string FileName { get; set; }
 
         public bool TempFolderUsed { get; set; }
 
@@ -73,6 +74,7 @@ namespace Raven.Client.Documents.Operations.Backups
         {
             var json = base.ToJson();
             json[nameof(BackupDirectory)] = BackupDirectory;
+            json[nameof(FileName)] = FileName;
             json[nameof(TempFolderUsed)] = TempFolderUsed;
             return json;
         }

@@ -164,8 +164,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     runningBackupStatus.UploadToGlacier = _backupResult.GlacierBackup;
                     runningBackupStatus.UploadToFtp = _backupResult.FtpBackup;
 
-                    _backupResult.FileName = fileName;
-                    _backupResult.FolderName = folderName;
+                    _backupResult.LocalBackup = new LocalBackup
+                    {
+                        BackupDirectory = folderName,
+                        FileName = fileName
+                    };
 
                     // if user did not specify local folder we delete the temporary file
                     if (_backupToLocalFolder == false)
