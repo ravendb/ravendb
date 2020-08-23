@@ -148,7 +148,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
-                azureSettings.RemoteFolderName = oneTimeBackup ? backupResult.FolderName : status.FolderName;
+                azureSettings.RemoteFolderName = oneTimeBackup ? backupResult.LocalBackup.BackupDirectory : status.FolderName;
                 var restoreFromGoogleCloudConfiguration = new RestoreFromAzureConfiguration()
                 {
                     DatabaseName = databaseName,
