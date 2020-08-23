@@ -448,12 +448,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue;
                 }
 
-                if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
-                {
-                    // this backup task last status is error
-                    continue;
-                }
-
                 if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastFullBackupInternal), out DateTime? lastFullBackupInternal) == false || lastFullBackupInternal == null)
                 {
                     // never backed up yet
@@ -464,6 +458,12 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false ||
                     lastRaftIndexBlittable == null)
                 {
+                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
+                    {
+                        // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
+                        return -1;
+                    }
+
                     continue;
                 }
 
