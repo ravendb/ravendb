@@ -440,13 +440,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             var fullBackupPath = GetBackupPath(backupPath);
             using (var zip = await GetZipArchiveForSnapshot(fullBackupPath))
             {
-                var voronDataDirectory = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
-                if (Directory.Exists(voronDataDirectory.FullPath) == false)
-                    Directory.CreateDirectory(voronDataDirectory.FullPath);
+                var restorePath = new VoronPathSetting(RestoreFromConfiguration.DataDirectory);
+                if (Directory.Exists(restorePath.FullPath) == false)
+                    Directory.CreateDirectory(restorePath.FullPath);
 
                 // validate free space
                 var snapshotSize = zip.Entries.Sum(entry => entry.Length);
-                BackupHelper.AssertFreeSpaceForSnapshot(voronDataDirectory.FullPath, snapshotSize, "restore a backup", Logger);
+                BackupHelper.AssertFreeSpaceForSnapshot(restorePath.FullPath, snapshotSize, "restore a backup", Logger);
 
                 foreach (var zipEntries in zip.Entries.GroupBy(x => x.FullName.Substring(0, x.FullName.Length - x.Name.Length)))
                 {
@@ -488,8 +488,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     }
 
                     var restoreDirectory = directory.StartsWith(Constants.Documents.PeriodicBackup.Folders.Documents, StringComparison.OrdinalIgnoreCase)
-                        ? voronDataDirectory
-                        : voronDataDirectory.Combine(directory);
+                        ? restorePath
+                        : restorePath.Combine(directory);
 
                     BackupMethods.Full.Restore(
                         zipEntries,
