@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Operations.Backups
     public class BackupOperation : IMaintenanceOperation<OperationIdResult<StartBackupOperationResult>>
     {
         private readonly BackupConfiguration _backupConfiguration;
-        public readonly string NodeTag;
+        private readonly string _nodeTag;
 
         public BackupOperation(BackupConfiguration backupConfiguration)
         {
@@ -23,12 +23,12 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public BackupOperation(BackupConfiguration backupConfiguration, string nodeTag) : this(backupConfiguration)
         {
-            NodeTag = nodeTag;
+            _nodeTag = nodeTag;
         }
 
         public RavenCommand<OperationIdResult<StartBackupOperationResult>> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new BackupCommand(_backupConfiguration, NodeTag);
+            return new BackupCommand(_backupConfiguration, _nodeTag);
         }
 
         private class BackupCommand : RavenCommand<OperationIdResult<StartBackupOperationResult>>

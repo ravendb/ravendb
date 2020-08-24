@@ -417,7 +417,7 @@ namespace Raven.Server.Web.System
                     IsAdmin = true, 
                     IsEncrypted = dbRecord.Encrypted,
                     UpTime = online ? (TimeSpan?)GetUptime(db) : null,
-                    BackupInfo = GetBackupInfo(db),
+                    BackupInfo = GetBackupInfo(db, context),
 
                     Alerts = db?.NotificationCenter.GetAlertCount() ?? 0,
                     PerformanceHints = db?.NotificationCenter.GetPerformanceHintCount() ?? 0,
@@ -509,10 +509,10 @@ namespace Raven.Server.Web.System
             context.Write(writer, doc);
         }
 
-        private static BackupInfo GetBackupInfo(DocumentDatabase db)
+        private static BackupInfo GetBackupInfo(DocumentDatabase db, TransactionOperationContext context)
         {
             var periodicBackupRunner = db?.PeriodicBackupRunner;
-            return periodicBackupRunner?.GetBackupInfo();
+            return periodicBackupRunner?.GetBackupInfo(context);
         }
 
         private static TimeSpan GetUptime(DocumentDatabase db)
