@@ -32,20 +32,20 @@ namespace Raven.Client.Documents.Session
 
         public Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
-            return GetAsyncInternal<TimeSeriesEntry>(from, to, start, pageSize, token);
+            return GetTimeSeriesAndIncludes<TimeSeriesEntry>(from, to, includes : null, start, pageSize, token);
         }
 
         public Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default)
         {
-            throw new NotImplementedException();
+            return GetTimeSeriesAndIncludes<TimeSeriesEntry>(from, to, includes, start, pageSize, token);
         }
 
         public async Task<TTValues[]> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
-            return await GetTimeSeriesAndIncludesAsync<TTValues>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
+            return await GetTimeSeriesAndIncludes<TTValues>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
         }
 
-        internal async Task<TTValues[]> GetTimeSeriesAndIncludesAsync<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token) where TTValues : TimeSeriesEntry
+        private async Task<TTValues[]> GetTimeSeriesAndIncludes<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token) where TTValues : TimeSeriesEntry
         {
             TimeSeriesRangeResult<TTValues> rangeResult;
             from = from?.EnsureUtc();
@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Session
                 cache.TryGetValue(Name, out var ranges) &&
                 ranges.Count > 0)
             {
-                if (ranges[0].From > to || ranges[^1].To < from)
+                if (ranges[0].From > to || ranges[ranges.Count -1].To < from)
                 {
                     // the entire range [from, to] is out of cache bounds
 
@@ -83,13 +83,13 @@ namespace Raven.Client.Documents.Session
                         ranges.Insert(index, rangeResult);
                     }
 
-                    // todo handle includes
+                    HandleIncludes(rangeResult);
 
                     return rangeResult.Entries;
                 }
 
                 var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) =
-                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ranges, start, pageSize, token)
+                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ranges, start, pageSize, includes, token)
                         .ConfigureAwait(false);
 
                 if (servedFromCache == false && Session.NoTracking == false)
@@ -97,7 +97,6 @@ namespace Raven.Client.Documents.Session
                     InMemoryDocumentSessionOperations.AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
                 }
 
-                // todo handle includes
                 return resultToUser?.Take(pageSize).Cast<TTValues>().ToArray();
             }
 
@@ -113,16 +112,14 @@ namespace Raven.Client.Documents.Session
 
             Session.IncrementRequestCount();
 
-            var getOperation = new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize);
-            if (includes != null)
-                getOperation._includes = includes;
-            
             rangeResult = await Session.Operations.SendAsync(
                     new GetTimeSeriesOperation<TTValues>(DocId, Name, from, to, start, pageSize, includes), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
             if (rangeResult == null)
                 return null;
+
+            HandleIncludes(rangeResult);
 
             if (Session.NoTracking == false)
             {
@@ -137,9 +134,20 @@ namespace Raven.Client.Documents.Session
                 };
             }
 
-            // todo handle includes
-
             return rangeResult.Entries;
+        }
+
+        private void HandleIncludes(TimeSeriesRangeResult rangeResult)
+        {
+            if (rangeResult.Includes == null) 
+                return;
+
+            using (rangeResult.Includes)
+            {
+                Session.RegisterIncludes(rangeResult.Includes);
+            }
+
+            rangeResult.Includes = null;
         }
 
 
@@ -262,6 +270,11 @@ namespace Raven.Client.Documents.Session
                     new GetMultipleTimeSeriesOperation(DocId, rangesToGetFromServer, start, pageSize, includes), Session._sessionInfo, token: token)
                 .ConfigureAwait(false);
 
+            if (includes != null)
+            {
+                RegisterIncludes(details);
+            }
+
             // merge all the missing parts we got from server
             // with all the ranges in cache that are between 'fromRange' and 'toRange'
 
@@ -269,6 +282,16 @@ namespace Raven.Client.Documents.Session
                 resultFromServer: details.Values[Name], out resultToUser);
 
             return (false, resultToUser, mergedValues, fromRangeIndex, toRangeIndex);
+        }
+
+        private void RegisterIncludes(TimeSeriesDetails details)
+        {
+            Debug.Assert(details.Values[Name] != null, $"Invalid TimeSeriesDetails result : 'details.Values[{Name}]' is null");
+
+            foreach (var rangeResult in details.Values[Name])
+            {
+                HandleIncludes(rangeResult);
+            }
         }
 
         private static TimeSeriesEntry[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges,
