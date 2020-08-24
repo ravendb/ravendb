@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Sparrow.Json.Parsing
@@ -41,12 +42,12 @@ namespace Sparrow.Json.Parsing
             return true;
         }
 
-        public static async Task<bool> ReadAsync(PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
+        public static async Task<bool> ReadAsync(PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer, CancellationToken token = default)
         {
             if (parser.Read())
                 return true;
 
-            var read = await peepingTomStream.ReadAsync(buffer.Memory).ConfigureAwait(false);
+            var read = await peepingTomStream.ReadAsync(buffer.Memory, token).ConfigureAwait(false);
             if (read == 0)
             {
                 if (state.CurrentTokenType != JsonParserToken.EndObject)
@@ -119,12 +120,12 @@ namespace Sparrow.Json.Parsing
             builder.FinalizeDocument();
         }
 
-        public static async Task ReadPropertyAsync(BlittableJsonDocumentBuilder builder, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer)
+        public static async Task ReadPropertyAsync(BlittableJsonDocumentBuilder builder, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, CancellationToken token = default)
         {
             builder.ReadProperty();
             while (builder.Read() == false)
             {
-                var read = await peepingTomStream.ReadAsync(buffer.Memory).ConfigureAwait(false);
+                var read = await peepingTomStream.ReadAsync(buffer.Memory, token).ConfigureAwait(false);
                 if (read == 0)
                     throw new EndOfStreamException("Stream ended without reaching end of json content" + GetPeepingTomBufferAsString(peepingTomStream));
 
@@ -144,12 +145,12 @@ namespace Sparrow.Json.Parsing
             return state.Long;
         }
 
-        public static async Task ReadObjectAsync(BlittableJsonDocumentBuilder builder, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer)
+        public static async Task ReadObjectAsync(BlittableJsonDocumentBuilder builder, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, CancellationToken token = default)
         {
             builder.ReadNestedObject();
             while (builder.Read() == false)
             {
-                var read = await peepingTomStream.ReadAsync(buffer.Memory).ConfigureAwait(false);
+                var read = await peepingTomStream.ReadAsync(buffer.Memory, token).ConfigureAwait(false);
                 if (read == 0)
                     throw new EndOfStreamException("Stream ended without reaching end of json content");
 

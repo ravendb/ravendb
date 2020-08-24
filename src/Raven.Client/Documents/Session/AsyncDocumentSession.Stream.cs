@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,15 +17,13 @@ namespace Raven.Client.Documents.Session
     {
         public abstract class AbstractYieldStream<T> : IAsyncEnumerator<T>
         {
-            private readonly IAsyncEnumerator<BlittableJsonReaderObject> _enumerator;
-            private readonly Func<T> _resultCreator;
+            private readonly StreamOperation.YieldStreamResults _enumerator;
             private readonly CancellationToken _token;
             private BlittableJsonReaderObject _prev;
 
-            protected AbstractYieldStream(IAsyncEnumerator<BlittableJsonReaderObject> enumerator, Func<T> resultCreator, CancellationToken token)
+            internal AbstractYieldStream(StreamOperation.YieldStreamResults enumerator, CancellationToken token)
             {
                 _enumerator = enumerator;
-                _resultCreator = resultCreator;
                 _token = token;
             }
 
@@ -62,22 +59,38 @@ namespace Raven.Client.Documents.Session
                         return false;
 
                     _prev = _enumerator.Current;
-
-                    Current = _resultCreator.Invoke();
+                    Current = ResultCreator(_enumerator);
                     return true;
                 }
             }
+
+            internal abstract T ResultCreator(StreamOperation.YieldStreamResults asyncEnumerator);
         }
 
         public class YieldStream<T> : AbstractYieldStream<StreamResult<T>>
         {
-            internal YieldStream(AsyncDocumentSession parent, AsyncDocumentQuery<T> query, FieldsToFetchToken fieldsToFetch, IAsyncEnumerator<BlittableJsonReaderObject> enumerator, CancellationToken token) : 
-                base(enumerator, () =>
-                {
-                    query?.InvokeAfterStreamExecuted(enumerator.Current);
-                    return parent.CreateStreamResult<T>(enumerator.Current, fieldsToFetch, query?.IsProjectInto ?? false);
-                }, token)
+            private readonly AsyncDocumentSession _parent;
+            private readonly AsyncDocumentQuery<T> _query;
+            private readonly FieldsToFetchToken _fieldsToFetch;
+
+            internal YieldStream(
+                AsyncDocumentSession parent, 
+                StreamOperation.YieldStreamResults enumerator,
+                AsyncDocumentQuery<T> query, 
+                FieldsToFetchToken fieldsToFetch,
+                CancellationToken token) :
+                base(enumerator, token)
             {
+                _parent = parent;
+                _query = query;
+                _fieldsToFetch = fieldsToFetch;
+            }
+
+            internal override StreamResult<T> ResultCreator(StreamOperation.YieldStreamResults asyncEnumerator)
+            {
+                var current = asyncEnumerator.Current;
+                _query?.InvokeAfterStreamExecuted(current);
+                return _parent.CreateStreamResult<T>(current, _fieldsToFetch, _query?.IsProjectInto ?? false);
             }
         }
 
@@ -129,8 +142,8 @@ namespace Raven.Client.Documents.Session
                 var streamOperation = new StreamOperation(this);
                 var command = streamOperation.CreateRequest(startsWith, matches, start, pageSize, null, startAfter);
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
-                var result = await streamOperation.SetResultAsync(command.Result).ConfigureAwait(false);
-                return new YieldStream<T>(this, null, null, result, token);
+                var result = await streamOperation.SetResultAsync(command.Result, token).ConfigureAwait(false);
+                return new YieldStream<T>(this, result, null, null, token);
             }
         }
 
@@ -162,11 +175,11 @@ namespace Raven.Client.Documents.Session
                 var streamOperation = new StreamOperation(this, streamQueryStats);
                 var command = streamOperation.CreateRequest(indexQuery);
                 await RequestExecutor.ExecuteAsync(command, Context, _sessionInfo, token).ConfigureAwait(false);
-                var result = await streamOperation.SetResultAsync(command.Result).ConfigureAwait(false);
+                var result = await streamOperation.SetResultAsync(command.Result, token).ConfigureAwait(false);
 
                 var queryOperation = ((AsyncDocumentQuery<T>)query).InitializeQueryOperation();
                 queryOperation.NoTracking = true;
-                return new YieldStream<T>(this, documentQuery, fieldsToFetch, result, token);
+                return new YieldStream<T>(this, result, documentQuery, fieldsToFetch, token);
             }
         }
     }

@@ -2316,7 +2316,7 @@ more responsive application.
             };
         }
 
-        internal TimeSeriesStreamResult<T> CreateTimeSeriesStreamResult<T>(StreamOperation.YieldStreamResults enumerator) where T : new()
+        internal TimeSeriesStreamResult<T> CreateTimeSeriesStreamResult<T>(StreamOperation.YieldStreamResults enumerator) where T : ITimeSeriesQueryStreamResult, new()
         {
             var json = enumerator.Current;
             var metadata = json.GetMetadata();
@@ -2329,13 +2329,9 @@ more responsive application.
                 ChangeVector = changeVector, 
                 Id = id, 
                 Metadata = new MetadataAsDictionary(metadata), 
-                
-                //TODO: replace this?
                 Result = new T()
             };
-            
-            var o = result.Result as ITimeSeriesQueryStreamResult;
-            enumerator.ExposeTimeSeriesStream(o);
+            enumerator.ExposeTimeSeriesStream(result.Result);
 
             return result;
         }

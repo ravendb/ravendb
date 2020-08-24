@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Session
 {
     public partial class DocumentSession
     {
-        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IDocumentQuery<T> query) where T : new()
+        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IDocumentQuery<T> query) where T : ITimeSeriesQueryStreamResult, new()
         {
             var streamOperation = new StreamOperation(this);
             var command = streamOperation.CreateRequest(query.GetIndexQuery());
@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session
             return YieldTimeSeriesResults(query, result);
         }
         
-        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats) where T : new()
+        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats) where T : ITimeSeriesQueryStreamResult, new()
         {
             var stats = new StreamQueryStatistics();
             var streamOperation = new StreamOperation(this, stats);
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Session
             return YieldTimeSeriesResults(query, result);
         }
 
-        private IEnumerator<TimeSeriesStreamResult<T>> YieldTimeSeriesResults<T>(IDocumentQuery<T> query, StreamOperation.YieldStreamResults enumerator) where T : new()
+        private IEnumerator<TimeSeriesStreamResult<T>> YieldTimeSeriesResults<T>(IDocumentQuery<T> query, StreamOperation.YieldStreamResults enumerator) where T : ITimeSeriesQueryStreamResult, new()
         {
             using (enumerator)
             {
@@ -49,26 +49,26 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IRawDocumentQuery<T> query) where T : new()
+        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IRawDocumentQuery<T> query) where T : ITimeSeriesQueryStreamResult, new()
         {
             return StreamTimeSeriesInternal((IDocumentQuery<T>)query);
         }
 
-        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IQueryable<T> query) where T : new()
+        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IQueryable<T> query) where T : ITimeSeriesQueryStreamResult, new()
         {
             var queryProvider = (IRavenQueryProvider)query.Provider;
             var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
             return StreamTimeSeriesInternal(docQuery);
         }
 
-        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats) where T : new()
+        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IQueryable<T> query, out StreamQueryStatistics streamQueryStats) where T : ITimeSeriesQueryStreamResult, new()
         {
             var queryProvider = (IRavenQueryProvider)query.Provider;
             var docQuery = queryProvider.ToDocumentQuery<T>(query.Expression);
             return StreamTimeSeriesInternal(docQuery, out streamQueryStats);
         }
 
-        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats) where T : new()
+        private IEnumerator<TimeSeriesStreamResult<T>> StreamTimeSeriesInternal<T>(IRawDocumentQuery<T> query, out StreamQueryStatistics streamQueryStats) where T : ITimeSeriesQueryStreamResult, new()
         {
             return StreamTimeSeriesInternal((IDocumentQuery<T>)query, out streamQueryStats);
         }

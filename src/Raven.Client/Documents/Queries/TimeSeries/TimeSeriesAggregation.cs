@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Session.Operations;
@@ -14,7 +15,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 {
     public class TimeSeriesQueryResult
     {
-        public virtual long Count { get; set; }
+        public long Count { get; set; }
     }
 
     public interface ITimeSeriesQueryStreamEntry
@@ -30,6 +31,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     internal class TimeSeriesStreamEnumerator<T> : IAsyncEnumerator<T>, IEnumerator<T> where T : ITimeSeriesQueryStreamEntry 
     {
         private readonly IAsyncEnumerator<BlittableJsonReaderObject> _outer;
+        private readonly CancellationToken _token;
 
         private static readonly Func<BlittableJsonReaderObject, T> Converter = JsonDeserializationBase.GenerateJsonDeserializationRoutine<T>();
 
@@ -38,9 +40,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _outer = outer;
         }
 
-        internal TimeSeriesStreamEnumerator(IAsyncEnumerator<BlittableJsonReaderObject> outer)
+        internal TimeSeriesStreamEnumerator(IAsyncEnumerator<BlittableJsonReaderObject> outer, CancellationToken token)
         {
             _outer = outer;
+            _token = token;
         }
 
         public bool MoveNext()
@@ -60,6 +63,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 Current = default;
                 return false;
             }
+            
+            _token.ThrowIfCancellationRequested();
 
             Current = Converter(_outer.Current);
             return true;

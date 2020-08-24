@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session.TimeSeries;
 
@@ -59,6 +60,6 @@ namespace Raven.Client.Documents.Session
 
     public interface IAsyncTimeSeriesStreamingBase<T>
     {
-        Task<IAsyncEnumerator<T>> StreamAsync(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null);
+        Task<IAsyncEnumerator<T>> StreamAsync(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null, CancellationToken token = default);
     }
 }
