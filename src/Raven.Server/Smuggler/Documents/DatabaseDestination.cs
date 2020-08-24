@@ -193,7 +193,7 @@ namespace Raven.Server.Smuggler.Documents
                 _log = log;
                 _enqueueThreshold = new Sparrow.Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
 
-                _missingDocumentsForRevisions = isRevision ? new ConcurrentDictionary<string, CollectionName>() : null;
+                _missingDocumentsForRevisions = isRevision || buildType == BuildVersionType.V3 ? new ConcurrentDictionary<string, CollectionName>() : null;
                 _documentIdsOfMissingAttachments = isRevision ? null : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 _command = new MergedBatchPutCommand(database, buildType, log, _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
@@ -329,7 +329,8 @@ namespace Raven.Server.Smuggler.Documents
 
             private void DeleteRevisionsForNonExistingDocuments()
             {
-                if (_missingDocumentsForRevisions == null)
+                if (_missingDocumentsForRevisions == null ||
+                    _missingDocumentsForRevisions.Count == 0)
                     return;
 
                 _revisionDeleteCommand = new MergedBatchDeleteRevisionCommand(_database, _log);
@@ -858,6 +859,7 @@ namespace Raven.Server.Smuggler.Documents
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _missingDocumentsForRevisions = missingDocumentsForRevisions;
                 _documentIdsOfMissingAttachments = documentIdsOfMissingAttachments;
+
                 if (_database.Is32Bits)
                 {
                     using (var ctx = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -987,6 +989,16 @@ namespace Raven.Server.Smuggler.Documents
 
                         var endIndex = id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                         var newId = id.Substring(0, endIndex);
+
+                        if (_database.DocumentsStorage.Get(context, newId, DocumentFields.Id) == null)
+                        {
+                            var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
+                            _missingDocumentsForRevisions.TryAdd(newId, collection);
+                        }
+                        else
+                        {
+                            _missingDocumentsForRevisions.TryRemove(newId, out _);
+                        }
 
                         _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags,
                             document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
