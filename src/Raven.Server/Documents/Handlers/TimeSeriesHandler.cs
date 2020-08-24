@@ -129,10 +129,13 @@ namespace Raven.Server.Documents.Handlers
             var start = GetStart();
             var pageSize = GetPageSize();
 
+            var includeDoc = GetBoolValueQueryString("includeDocument", required: false) ?? false;
+            var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize);
+                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includeDoc, includeTags);
 
                 var actualEtag = CombineHashesFromMultipleRanges(ranges);
 
@@ -160,6 +163,9 @@ namespace Raven.Server.Documents.Handlers
             var start = GetStart();
             var pageSize = GetPageSize();
 
+            var includeDoc = GetBoolValueQueryString("includeDocument", required: false) ?? false;
+            var includeTags = GetBoolValueQueryString("includeTags", required: false) ?? false;
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -179,7 +185,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize) ;
+                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includeDoc, includeTags);
 
                 var etag = GetStringFromHeaders("If-None-Match");
                 if (etag == rangeResult.Hash)
@@ -205,7 +211,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize)
+        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize, bool includeDocument, bool includeTags)
         {
             if (fromList.Count != toList.Count)
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
@@ -221,6 +227,10 @@ namespace Raven.Server.Documents.Handlers
             if (pageSize == 0)
                 return rangeResultDictionary;
 
+            Dictionary<string, BlittableJsonReaderObject> includes = null;
+            if (includeDocument || includeTags)
+                includes = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+
             for (int i = 0; i < fromList.Count; i++)
             {
                 var name = names[i];
@@ -232,7 +242,7 @@ namespace Raven.Server.Documents.Handlers
                 var from = string.IsNullOrEmpty(fromList[i]) ? DateTime.MinValue : ParseDate(fromList[i], name);
                 var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : ParseDate(toList[i], name);
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize);
+                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includeDocument, includeTags, includes);
                 if (rangeResult.Hash != null)
                 {
                     if (rangeResultDictionary.TryGetValue(name, out var list) == false)
@@ -252,7 +262,8 @@ namespace Raven.Server.Documents.Handlers
             return rangeResultDictionary;
         }
 
-        internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize)
+        internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize, 
+            bool includeDocument = false, bool includeTags = false, Dictionary<string, BlittableJsonReaderObject> includes = null)
         {
             if (pageSize == 0 )
                 return new TimeSeriesRangeResult();
@@ -271,6 +282,14 @@ namespace Raven.Server.Documents.Handlers
 
             var oldStart = start;
             var lastResult = true;
+
+            DynamicJsonValue djv = null;
+            
+            if (includeDocument || includeTags)
+            {
+                djv = new DynamicJsonValue();
+                includes ??= new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            }
 
             foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
             {
@@ -294,6 +313,33 @@ namespace Raven.Server.Documents.Handlers
                         break;
                     }
 
+                    if (includes != null)
+                    {
+                        if (includeDocument && includes.ContainsKey(docId) == false)
+                        {
+                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, throwOnConflict: false);
+                            doc?.EnsureMetadata();
+                            includes[docId] = doc?.Data;
+
+                            ComputeHttpEtags.HashChangeVector(state, doc?.ChangeVector);
+
+                            djv[docId] = doc?.Data;
+                        }
+
+                        if (includeTags && singleResult.Tag != null && 
+                            includes.ContainsKey(singleResult.Tag) == false)
+                        {
+                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, singleResult.Tag, throwOnConflict: false);
+                            doc?.EnsureMetadata();
+
+                            includes[singleResult.Tag] = doc?.Data;
+
+                            ComputeHttpEtags.HashChangeVector(state, doc?.ChangeVector);
+
+                            djv[singleResult.Tag] = doc?.Data;
+                        }
+                    }
+
                     values.Add(new TimeSeriesEntry
                     {
                         Timestamp = singleResult.Timestamp,
@@ -312,13 +358,18 @@ namespace Raven.Server.Documents.Handlers
             if ((oldStart > 0 ) && (values.Count == 0))
                 return new TimeSeriesRangeResult();
 
-            return new TimeSeriesRangeResult
+            var result = new TimeSeriesRangeResult
             {
-                From = (oldStart > 0) ? values[0].Timestamp : from,
+                From = (oldStart > 0) ? values[0].Timestamp : @from,
                 To = lastResult ? to : values.Last().Timestamp,
                 Entries = values.ToArray(),
-                Hash = ComputeHttpEtags.FinalizeHash(size, state)
+                Hash = ComputeHttpEtags.FinalizeHash(size, state),
             };
+
+            if (djv != null)
+                result.Includes = context.ReadObject(djv, "TimeSeriesRangeIncludes/" + docId);
+
+            return result;
         }
 
         public static unsafe DateTime ParseDate(string dateStr, string name)
@@ -452,6 +503,14 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesRangeResult.TotalResults));
                     writer.WriteInteger(totalCount.Value);
+                }
+
+                if (rangeResult.Includes != null)
+                {
+                    // add included documents to the response 
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TimeSeriesRangeResult.Includes));
+                    writer.WriteObject(rangeResult.Includes);
                 }
             }
             writer.WriteEndObject();
