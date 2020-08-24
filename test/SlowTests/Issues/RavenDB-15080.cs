@@ -44,7 +44,6 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-
                 using (var session = storeA.OpenAsyncSession())
                 {
                     var countersFor = session.CountersFor("users/1");
@@ -82,7 +81,7 @@ namespace SlowTests.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    foreach (var details in db.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(ctx,"products/74-A"))
+                    foreach (var details in db.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(ctx, "products/74-A"))
                     {
                         hashSetAll.Clear();
                         hashSetWithValues.Clear();
@@ -124,7 +123,7 @@ namespace SlowTests.Issues
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    foreach (var details in db.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(ctx,"products/74-A"))
+                    foreach (var details in db.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(ctx, "products/74-A"))
                     {
                         hashSetAll.Clear();
                         hashSetWithValues.Clear();
@@ -237,7 +236,7 @@ namespace SlowTests.Issues
                     var doc = session.Load<User>("users/1");
                     var counterNames = session.Advanced.GetCountersFor(doc);
                     Assert.Equal(1, counterNames.Count);
-                    Assert.Equal("abc", counterNames[0]); // metadata counter-names should preserve their original casing 
+                    Assert.Equal("abc", counterNames[0]); // metadata counter-names should preserve their original casing
                 }
 
                 using (var session = store.OpenSession())
@@ -394,7 +393,6 @@ namespace SlowTests.Issues
                     Assert.Equal(1, counters.Count);
                     Assert.Equal("Cats", counters[0]);
                 }
-
             }
         }
 
@@ -503,7 +501,6 @@ namespace SlowTests.Issues
                     Assert.NotNull(counter);
                     Assert.Equal(1, counter.Value);
                 }
-
             }
         }
 
@@ -530,7 +527,7 @@ namespace SlowTests.Issues
                 {
                     var company = session.Load<Company>("companies/1");
                     // the document is now tracked by the session,
-                    // so now counters-cache has access to '@counters' from metadata 
+                    // so now counters-cache has access to '@counters' from metadata
 
                     // searching for the counter's name in '@counters' should be done in a case insensitive manner
                     // counter name should be found in '@counters' => go to server

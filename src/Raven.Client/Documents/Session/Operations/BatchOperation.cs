@@ -188,6 +188,8 @@ namespace Raven.Client.Documents.Session.Operations
             using (documentInfo.Document)
             using (documentInfo.Metadata)
             {
+                documentInfo.Metadata.Modifications[Constants.Documents.Metadata.ChangeVector] = documentInfo.ChangeVector;
+
                 documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
                 documentInfo.Metadata.Modifications = null;
 

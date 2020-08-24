@@ -582,7 +582,7 @@ namespace Raven.Server.Documents
 
             if (dbIdIndex < existingCount)
             {
-                var counter = (CounterValues*)existingCounter.Ptr + dbIdIndex; // existingCounter.Ptr + sizeof(CounterValues) * dbIdIndex 
+                var counter = (CounterValues*)existingCounter.Ptr + dbIdIndex; // existingCounter.Ptr + sizeof(CounterValues) * dbIdIndex
                 try
                 {
                     value = checked(counter->Value + delta); //inc
@@ -672,8 +672,8 @@ namespace Raven.Server.Documents
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope ReWriteBlob(
-            DocumentsOperationContext context, 
-            BlittableJsonReaderObject.RawBlob blob, 
+            DocumentsOperationContext context,
+            BlittableJsonReaderObject.RawBlob blob,
             HashSet<int> usedDbIndexes,
             out BlittableJsonReaderObject.RawBlob newBlob)
         {
@@ -682,14 +682,14 @@ namespace Raven.Server.Documents
             Span<CounterValues> newValues = stackalloc CounterValues[usedDbIndexes.Count];
             var currentIndex = 0;
             var newSize = 0;
-            
+
             foreach (int oldIndex in usedDbIndexes)
             {
                 if (oldIndex < partialValues)
                 {
                     newValues[currentIndex] = GetPartialValue(oldIndex, blob);
                 }
-                
+
                 if (newValues[currentIndex].Value != 0)
                     newSize = currentIndex + 1;
 
@@ -697,7 +697,7 @@ namespace Raven.Server.Documents
             }
 
             var scope = context.Allocator.Allocate(newSize * SizeOfCounterValues, out var newVal);
-            fixed (byte* ptr = MemoryMarshal.Cast<CounterValues, byte>(newValues.Slice(0,newSize)))
+            fixed (byte* ptr = MemoryMarshal.Cast<CounterValues, byte>(newValues.Slice(0, newSize)))
             {
                 Memory.Copy(newVal.Ptr, ptr, newSize * SizeOfCounterValues);
             }
@@ -728,7 +728,7 @@ namespace Raven.Server.Documents
                     for (int index = 0; index < numberOfPartialValues; index++)
                     {
                         var val = GetPartialValue(index, blob);
-                        if (val.Value != 0) 
+                        if (val.Value != 0)
                             usedDbIdsIndexes.Add(index);
                     }
                 }
@@ -793,7 +793,6 @@ namespace Raven.Server.Documents
                         builder.WriteValue(item);
                     }
                 }
-                
 
                 builder.WriteArrayEnd();
 
@@ -1006,7 +1005,7 @@ namespace Raven.Server.Documents
                                 var counterName = prop.Name;
                                 var value = 0L;
                                 if (localCounterValues != null)
-                                    value = InternalGetCounterValue(localCounterValues, documentId, counterName);
+                                    value = InternalGetCounterValue(localCounterValues, documentId, counterName, capOnOverflow: true);
 
                                 context.Transaction.AddAfterCommitNotification(new CounterChange
                                 {
@@ -1320,22 +1319,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues, string docId, string counterName)
+        internal static long InternalGetCounterValue(BlittableJsonReaderObject.RawBlob localCounterValues, string docId, string counterName, bool capOnOverflow = false)
         {
             Debug.Assert(localCounterValues != null, "localCounterValues == null");
             var count = localCounterValues.Length / SizeOfCounterValues;
             long value = 0;
-
+            long localValue = 0;
             try
             {
                 for (int index = 0; index < count; index++)
                 {
-                    value = checked(value + ((CounterValues*)localCounterValues.Ptr)[index].Value);
+                    localValue = ((CounterValues*)localCounterValues.Ptr)[index].Value;
+                    value = checked(value + localValue);
                 }
             }
             catch (OverflowException e)
             {
-                CounterOverflowException.ThrowFor(docId, counterName, e);
+                if (capOnOverflow == false)
+                    CounterOverflowException.ThrowFor(docId, counterName, e);
+
+                return value + localValue > 0 ?
+                    long.MinValue :
+                    long.MaxValue;
             }
 
             return value;
@@ -1480,7 +1485,7 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            foreach (string c in GetCountersForDocumentInternal(context, docId, table)) 
+            foreach (string c in GetCountersForDocumentInternal(context, docId, table))
                 yield return c;
         }
 
@@ -1548,7 +1553,7 @@ namespace Raven.Server.Documents
             return new BlittableJsonReaderObject(existing.Read((int)CountersTable.Data, out int oldSize), oldSize, context);
         }
 
-        internal CounterValues? GetCounterValue(DocumentsOperationContext context, string docId, string counterName)
+        internal CounterValues? GetCounterValue(DocumentsOperationContext context, string docId, string counterName, bool capOnOverflow = false)
         {
             if (string.IsNullOrEmpty(counterName) ||
                 TryGetRawBlob(context, docId, counterName, out var etag, out var blob) == false)
@@ -1556,7 +1561,7 @@ namespace Raven.Server.Documents
 
             return new CounterValues
             {
-                Value = InternalGetCounterValue(blob, docId, counterName), 
+                Value = InternalGetCounterValue(blob, docId, counterName, capOnOverflow),
                 Etag = etag
             };
         }
@@ -2396,7 +2401,6 @@ namespace Raven.Server.Documents
                 using (_docIdScope)
                 using (_counterNameScope)
                 {
-
                 }
             }
         }

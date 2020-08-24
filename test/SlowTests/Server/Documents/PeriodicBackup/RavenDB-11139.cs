@@ -296,7 +296,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(5, files.Length);
                 Assert.True(files.First().EndsWith("ravendb-full-backup"), "files.First().EndsWith('ravendb-full-backup')");
 
-                File.Delete(files.First());                            // delete full backup file     
+                File.Delete(files.First());                            // delete full backup file
 
                 var restoreConfig = new RestoreBackupConfiguration()
                 {
@@ -1077,7 +1077,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     ModifyDatabaseName = s => databaseName
                 }))
                 {
-
                     using (var session = store2.OpenAsyncSession(new SessionOptions
                     {
                         TransactionMode = TransactionMode.ClusterWide
@@ -1141,7 +1140,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var documentDatabase = (await GetDocumentDatabaseInstanceFor(store));
                 RunBackup(result.TaskId, documentDatabase, true, store);    // Snapshot BACKUP
 
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User
@@ -1203,7 +1201,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal("Egor", bestUser.Name);
                         Assert.Equal("Egor2", mediocreUser1.Name);
                         Assert.Equal("Egor3", mediocreUser2.Name);
-
 
                         var user11 = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<User>("emojis/poo");
                         Assert.Equal(user1.Name, user11.Value.Name);
@@ -1349,7 +1346,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     stats = store2.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
                     Assert.Equal(count, stats.CountOfCompareExchange);
 
-
                     using (var session = store.OpenAsyncSession())
                     {
                         var user = new User
@@ -1403,7 +1399,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var str = "";
                     for (int j = 0; j < count; j++)
                     {
-
                         str += list[k];
                     }
 
@@ -1529,7 +1524,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var str = "";
                     for (int j = 0; j < count; j++)
                     {
-
                         str += list[k];
                     }
 
