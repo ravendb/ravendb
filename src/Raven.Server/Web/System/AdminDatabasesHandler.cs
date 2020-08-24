@@ -646,11 +646,9 @@ namespace Raven.Server.Web.System
                 {
                     restoreType = RestoreType.Local;
                 }
-
                 var operationId = ServerStore.Operations.GetNextOperationId();
                 var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                 RestoreBackupTaskBase restoreBackupTask;
-                string databaseName;
                 switch (restoreType)
                 {
                     case RestoreType.Local:
@@ -660,7 +658,6 @@ namespace Raven.Server.Web.System
                             localConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(localConfiguration, restoreBackupTask);
                         break;
                     case RestoreType.S3:
                         var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
@@ -669,7 +666,6 @@ namespace Raven.Server.Web.System
                             s3Configuration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(s3Configuration, restoreBackupTask);
                         break;
                     case RestoreType.Azure:
                         var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
@@ -678,7 +674,6 @@ namespace Raven.Server.Web.System
                             azureConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(azureConfiguration, restoreBackupTask);
                         break;
                     case RestoreType.GoogleCloud:
                         var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
@@ -687,7 +682,6 @@ namespace Raven.Server.Web.System
                             googlCloudConfiguration,
                             ServerStore.NodeTag,
                             cancelToken);
-                        databaseName = await ValidateFreeSpace(googlCloudConfiguration, restoreBackupTask);
                         break;
 
                     default:
@@ -696,7 +690,7 @@ namespace Raven.Server.Web.System
 
                 var t = ServerStore.Operations.AddOperation(
                     null,
-                    $"Database restore: {databaseName}",
+                    $"Database restore: {restoreBackupTask.RestoreFromConfiguration.DatabaseName}",
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
                     id: operationId, token: cancelToken);
@@ -706,52 +700,6 @@ namespace Raven.Server.Web.System
                     writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
             }
-        }
-
-        private async Task<string> ValidateFreeSpace(RestoreBackupConfigurationBase restoreBackup, RestoreBackupTaskBase restoreBackupTask)
-        {
-            var extension = Path.GetExtension(restoreBackup.LastFileNameToRestore);
-            if (extension == Constants.Documents.PeriodicBackup.SnapshotExtension ||
-                extension == Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)
-            {
-                long backupSizeInBytes;
-
-                try
-                {
-                    backupSizeInBytes = await restoreBackupTask.CalculateBackupSizeInBytes();
-                }
-                catch (Exception e)
-                {
-                    if (e is InvalidDataException)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Restore database from snapshot operation failed. Invalid snapshot file {restoreBackup.LastFileNameToRestore}", e);
-                        throw new InvalidDataException($"Invalid snapshot file {restoreBackup.LastFileNameToRestore} ", e);
-                    }
-
-                    if (e is FileNotFoundException)
-                    {
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations($"Restore database from snapshot operation failed. Could not find file {restoreBackup.LastFileNameToRestore}", e);
-                        throw new FileNotFoundException($"Could not find file {restoreBackup.LastFileNameToRestore} ", e);
-                    }
-
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Restore database from snapshot operation failed. Error reading snapshot file {restoreBackup.LastFileNameToRestore}", e);
-
-                    throw new IOException($"Error reading snapshot file {restoreBackup.LastFileNameToRestore}. Please provide a valid snapshot file.", e);
-                }
-
-                var baseDataDirectory = ServerStore.Configuration.Core.DataDirectory.FullPath;
-
-                var destinationPath = string.IsNullOrEmpty(restoreBackup.DataDirectory) == false
-                    ? new PathSetting(restoreBackup.DataDirectory, baseDataDirectory).FullPath
-                    : RavenConfiguration.GetDataDirectoryPath(ServerStore.Configuration.Core, restoreBackup.DatabaseName, ResourceType.Database);
-
-                BackupHelper.AssertFreeSpaceForSnapshot(destinationPath, backupSizeInBytes, "restore a backup", Logger);
-            }
-
-            return restoreBackup.DatabaseName;
         }
 
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
