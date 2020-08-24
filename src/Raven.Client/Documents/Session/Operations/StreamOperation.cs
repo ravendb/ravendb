@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
@@ -155,9 +156,9 @@ namespace Raven.Client.Documents.Session.Operations
             return enumerator;
         }
 
-        public async Task<IAsyncEnumerator<BlittableJsonReaderObject>> SetResultAsync(StreamResult response)
+        public async Task<YieldStreamResults> SetResultAsync(StreamResult response, CancellationToken token = default)
         {
-            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isTimeSeriesStream: false, isAsync: true, _statistics);
+            var enumerator = new YieldStreamResults(_session, response, _isQueryStream, isTimeSeriesStream: false, isAsync: true, _statistics, token);
             await enumerator.InitializeAsync().ConfigureAwait(false);
 
             return enumerator;
@@ -170,15 +171,17 @@ namespace Raven.Client.Documents.Session.Operations
             private readonly UnmanagedJsonParser _parser;
             private readonly JsonParserState _state;
             private readonly JsonOperationContext.MemoryBuffer _buffer;
+            private readonly CancellationToken _token;
             private BlittableJsonReaderObject _current;
 
-            public TimeSeriesStreamEnumerator(InMemoryDocumentSessionOperations session, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
+            public TimeSeriesStreamEnumerator(InMemoryDocumentSessionOperations session, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer, CancellationToken token = default)
             {
                 _session = session;
                 _peepingTomStream = peepingTomStream;
                 _parser = parser;
                 _state = state;
                 _buffer = buffer;
+                _token = token;
             }
 
             public void Initialize()
@@ -193,7 +196,7 @@ namespace Raven.Client.Documents.Session.Operations
                 if (property.StartsWith(Constants.TimeSeries.QueryFunction) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
-                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -206,11 +209,11 @@ namespace Raven.Client.Documents.Session.Operations
                 {
                     while (await MoveNextAsync().ConfigureAwait(false))
                     {
-                    
+                        // we need to consume the rest of the stream, before we can move next the outer enumerator
                     }
                 }
 
-                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_state.CurrentTokenType != JsonParserToken.EndObject)
@@ -221,7 +224,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             public async ValueTask<bool> MoveNextAsync()
             {
-                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -233,7 +236,7 @@ namespace Raven.Client.Documents.Session.Operations
 
                 using (var builder = new BlittableJsonDocumentBuilder(_session.Context, BlittableJsonDocumentBuilder.UsageMode.None, "readArray/singleResult", _parser, _state))
                 {
-                    await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
+                    await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
 
                     _current = builder.CreateReader();
                     return true;
@@ -262,14 +265,9 @@ namespace Raven.Client.Documents.Session.Operations
             }
         }
 
-        internal static bool IsTimeSeriesStreamResult<T>()
-        {
-            return typeof(ITimeSeriesQueryStreamResult).IsAssignableFrom(typeof(T));
-        }
-
         internal class YieldStreamResults : IAsyncEnumerator<BlittableJsonReaderObject>, IEnumerator<BlittableJsonReaderObject>
         {
-            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics)
+            public YieldStreamResults(InMemoryDocumentSessionOperations session, StreamResult response, bool isQueryStream, bool isTimeSeriesStream, bool isAsync, StreamQueryStatistics streamQueryStatistics, CancellationToken token = default)
             {
                 _response = response ?? throw new InvalidOperationException("The index does not exists, failed to stream results");
                 _peepingTomStream = new PeepingTomStream(_response.Stream, session.Context);
@@ -277,6 +275,7 @@ namespace Raven.Client.Documents.Session.Operations
                 _isQueryStream = isQueryStream;
                 _isAsync = isAsync;
                 _streamQueryStatistics = streamQueryStatistics;
+                _token = token;
                 _isTimeSeriesStream = isTimeSeriesStream;
             }
 
@@ -291,6 +290,7 @@ namespace Raven.Client.Documents.Session.Operations
             private readonly bool _isAsync;
             private readonly bool _isTimeSeriesStream;
             private readonly StreamQueryStatistics _streamQueryStatistics;
+            private readonly CancellationToken _token;
             private readonly PeepingTomStream _peepingTomStream;
             private int _docsCountOnCachedRenewSession;
             private bool _cachedItemsRenew;
@@ -380,12 +380,12 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_timeSeriesIt != null)
                     await _timeSeriesIt.DisposeAsync().ConfigureAwait(false);
 
-                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)
                 {
-                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                     if (_state.CurrentTokenType != JsonParserToken.EndObject)
@@ -400,9 +400,9 @@ namespace Raven.Client.Documents.Session.Operations
                         _cachedItemsRenew = builder.NeedResetPropertiesCache();
 
                     if (_isTimeSeriesStream)
-                        await UnmanagedJsonParserHelper.ReadPropertyAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
+                        await UnmanagedJsonParserHelper.ReadPropertyAsync(builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
                     else
-                        await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer).ConfigureAwait(false);
+                        await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer, _token).ConfigureAwait(false);
 
                     Current = builder.CreateReader();
                     if (_isTimeSeriesStream)
@@ -473,7 +473,7 @@ namespace Raven.Client.Documents.Session.Operations
                     _parser = new UnmanagedJsonParser(_session.Context, _state, "stream contents");
                     _returnBuffer = _session.Context.GetMemoryBuffer(out _buffer);
 
-                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                     if (_state.CurrentTokenType != JsonParserToken.StartObject)
@@ -487,7 +487,7 @@ namespace Raven.Client.Documents.Session.Operations
                     if (string.Equals(property, "Results") == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
-                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer).ConfigureAwait(false) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer, _token).ConfigureAwait(false) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
 
                     if (_state.CurrentTokenType != JsonParserToken.StartArray)

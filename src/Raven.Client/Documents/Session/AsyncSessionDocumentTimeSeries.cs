@@ -387,18 +387,18 @@ namespace Raven.Client.Documents.Session
             return GetAsyncInternal<TimeSeriesRollupEntry<TValues>>(from, to, start, pageSize, token);
         }
 
-        internal async Task<TimeSeriesStreamEnumerator<TTValues>> GetTimeSeriesStreamResult<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) where TTValues : TimeSeriesEntry
+        internal async Task<TimeSeriesStreamEnumerator<TTValues>> GetTimeSeriesStreamResult<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
             var streamOperation = new TimeSeriesStreamOperation(Session, DocId, Name, from, to, offset);
             var command = streamOperation.CreateRequest();
-            await Session.RequestExecutor.ExecuteAsync(command, Session.Context, Session.SessionInfo).ConfigureAwait(false);
-            var result = await streamOperation.SetResultAsync(command.Result).ConfigureAwait(false);
-            return new TimeSeriesStreamEnumerator<TTValues>(result);
+            await Session.RequestExecutor.ExecuteAsync(command, Session.Context, Session.SessionInfo, token).ConfigureAwait(false);
+            var result = await streamOperation.SetResultAsync(command.Result, token).ConfigureAwait(false);
+            return new TimeSeriesStreamEnumerator<TTValues>(result, token);
         }
 
-        internal async Task<IAsyncEnumerator<TTValues>> GetAsyncStream<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) where TTValues : TimeSeriesEntry
+        internal async Task<IAsyncEnumerator<TTValues>> GetAsyncStream<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
-            return await GetTimeSeriesStreamResult<TTValues>(from, to, offset).ConfigureAwait(false);
+            return await GetTimeSeriesStreamResult<TTValues>(from, to, offset, token).ConfigureAwait(false);
         }
 
         internal async Task<IEnumerator<TTValues>> GetStream<TTValues>(DateTime? from = null, DateTime? to = null, TimeSpan? offset = null) where TTValues : TimeSeriesEntry
@@ -406,19 +406,19 @@ namespace Raven.Client.Documents.Session
             return await GetTimeSeriesStreamResult<TTValues>(from, to, offset).ConfigureAwait(false);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesEntry>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        Task<IAsyncEnumerator<TimeSeriesEntry>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
-            return GetAsyncStream<TimeSeriesEntry>(from, to, offset);
+            return GetAsyncStream<TimeSeriesEntry>(from, to, offset, token);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        Task<IAsyncEnumerator<TimeSeriesRollupEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesRollupEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
-            return GetAsyncStream<TimeSeriesRollupEntry<TValues>>(from, to, offset);
+            return GetAsyncStream<TimeSeriesRollupEntry<TValues>>(from, to, offset, token);
         }
 
-        Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset)
+        Task<IAsyncEnumerator<TimeSeriesEntry<TValues>>> IAsyncTimeSeriesStreamingBase<TimeSeriesEntry<TValues>>.StreamAsync(DateTime? @from, DateTime? to, TimeSpan? offset, CancellationToken token)
         {
-            return GetAsyncStream<TimeSeriesEntry<TValues>>(from, to, offset);
+            return GetAsyncStream<TimeSeriesEntry<TValues>>(from, to, offset, token);
         }
     }
 }
