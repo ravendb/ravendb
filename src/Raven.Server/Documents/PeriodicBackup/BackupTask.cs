@@ -52,13 +52,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly bool _isBackupEncrypted;
         private readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
         private Action<IOperationProgress> _onProgress;
-        private readonly long _taskId;
+        private readonly string _taskName;
         internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
         public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, Logger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
         {
             _database = database;
-            _taskId = backupParameters.TaskId;
+            _taskName = backupParameters.Name;
             _operationId = backupParameters.OperationId;
             _previousBackupStatus = backupParameters.BackupStatus;
             _startTimeUtc = backupParameters.StartTimeUtc;
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _tempBackupPath = backupParameters.TempBackupPath;
             _configuration = configuration;
             _logger = logger;
-            _isServerWide = _configuration.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
+            _isServerWide = backupParameters.Name?.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) ?? false;
             _isBackupEncrypted = IsBackupEncrypted(_database, _configuration);
             _forTestingPurposes = forTestingPurposes;
             _backupResult = GenerateBackupResult();
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public IOperationResult RunPeriodicBackup(Action<IOperationProgress> onProgress, ref PeriodicBackupStatus runningBackupStatus)
         {
             _onProgress = onProgress;
-            AddInfo($"Started task: '{_configuration.Name}'");
+            AddInfo($"Started task: '{_taskName}'");
 
             var totalSw = Stopwatch.StartNew();
             var operationCanceled = false;
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 _database.NotificationCenter.Add(AlertRaised.Create(
                     _database.Name,
-                    $"Periodic Backup task: '{_configuration.Name}'",
+                    $"Periodic Backup task: '{_taskName}'",
                     message,
                     AlertType.PeriodicBackup,
                     NotificationSeverity.Error,
@@ -800,7 +800,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 FolderName = folderName,
                 FileName = fileName,
                 DatabaseName = _database.Name,
-                TaskName = _configuration.Name,
+                TaskName = _taskName,
 
                 BackupType = _configuration.BackupType
             };

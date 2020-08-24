@@ -13,6 +13,7 @@ namespace Raven.Client.Documents.Operations.Backups
 {
     public class PeriodicBackupConfiguration : BackupConfiguration, IDatabaseTask, IDynamicJsonValueConvertible
     {
+        public string Name { get; set; }
         public long TaskId { get; set; }
         public bool Disabled { get; set; }
         public string MentorNode { get; set; }
@@ -76,6 +77,7 @@ namespace Raven.Client.Documents.Operations.Backups
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
+            json[nameof(Name)] = Name;
             json[nameof(TaskId)] = TaskId;
             json[nameof(Disabled)] = Disabled;
             json[nameof(MentorNode)] = MentorNode;
