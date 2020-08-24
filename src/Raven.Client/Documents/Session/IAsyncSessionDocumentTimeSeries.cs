@@ -7,6 +7,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Session
@@ -20,6 +21,9 @@ namespace Raven.Client.Documents.Session
         IAsyncTimeSeriesStreamingBase<TimeSeriesEntry>
     {
         Task<TimeSeriesEntry[]> GetAsync(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue,
+            CancellationToken token = default);
+
+        Task<TimeSeriesEntry[]> GetAsync(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue,
             CancellationToken token = default);
     }
 

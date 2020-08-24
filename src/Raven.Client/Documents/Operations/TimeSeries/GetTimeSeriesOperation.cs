@@ -112,18 +112,7 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 if (_includes != null)
                 {
-                    var includeBuilder = new IncludeBuilder<TValues>(DocumentConventions.Default);
-                    _includes.Invoke(includeBuilder);
-
-                    if (includeBuilder.IncludeTimeSeriesDocument)
-                    {
-                        pathBuilder.Append("&includeDocument=true");
-                    }
-
-                    if (includeBuilder.IncludeTimeSeriesDocument)
-                    {
-                        pathBuilder.Append("&includeTags=true");
-                    }
+                    AddIncludesToRequest(pathBuilder, _includes);
                 }
 
                 var request = new HttpRequestMessage {Method = HttpMethod.Get};
@@ -131,6 +120,22 @@ namespace Raven.Client.Documents.Operations.TimeSeries
                 url = pathBuilder.ToString();
 
                 return request;
+            }
+
+            internal static void AddIncludesToRequest(StringBuilder pathBuilder, Action<ITimeSeriesIncludeBuilder> includes)
+            {
+                var includeBuilder = new IncludeBuilder<TValues>(DocumentConventions.Default);
+                includes.Invoke(includeBuilder);
+
+                if (includeBuilder.IncludeTimeSeriesDocument)
+                {
+                    pathBuilder.Append("&includeDocument=true");
+                }
+
+                if (includeBuilder.IncludeTimeSeriesTags)
+                {
+                    pathBuilder.Append("&includeTags=true");
+                }
             }
 
             public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)

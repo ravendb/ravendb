@@ -51,6 +51,11 @@ namespace Raven.Client.Documents.Session
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(from, to, start, pageSize));
         }
 
+        public TimeSeriesEntry[] Get(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start = 0, int pageSize = int.MaxValue)
+        {
+            return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsync(from, to, includes, start, pageSize));
+        }
+
         TimeSeriesEntry<TValues>[] ISessionDocumentTypedTimeSeries<TValues>.Get(DateTime? from, DateTime? to, int start, int pageSize)
         {
             return AsyncHelpers.RunSync(() => _asyncSessionTimeSeries.GetAsyncInternal<TimeSeriesEntry<TValues>>(from, to, start, pageSize));

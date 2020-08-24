@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null);
     }
 
-    public interface ITimeSeriesIncludeBuilder : ITimeSeriesIncludeBuilder<object, ITimeSeriesIncludeBuilder>
+    public interface ITimeSeriesIncludeBuilder
     {
         ITimeSeriesIncludeBuilder IncludeTags();
 

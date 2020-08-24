@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow;
@@ -17,26 +18,29 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         private readonly IEnumerable<TimeSeriesRange> _ranges;
         private readonly int _start;
         private readonly int _pageSize;
+        private readonly Action<ITimeSeriesIncludeBuilder> _includes;
 
         public GetMultipleTimeSeriesOperation(string docId, IEnumerable<TimeSeriesRange> ranges, int start = 0, int pageSize = int.MaxValue)
-            : this(docId, start, pageSize)
+            : this(docId, ranges, start, pageSize, includes: null)
         {
-            _ranges = ranges ?? throw new ArgumentNullException(nameof(ranges));
         }
 
-        private GetMultipleTimeSeriesOperation(string docId, int start, int pageSize)
+        internal GetMultipleTimeSeriesOperation(string docId, IEnumerable<TimeSeriesRange> ranges, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes)
         {
+            _ranges = ranges ?? throw new ArgumentNullException(nameof(ranges));
+            
             if (string.IsNullOrEmpty(docId))
                 throw new ArgumentNullException(nameof(docId));
-
+            
             _docId = docId;
             _start = start;
             _pageSize = pageSize;
+            _includes = includes;
         }
 
         public RavenCommand<TimeSeriesDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new GetMultipleTimeSeriesCommand(_docId, _ranges, _start, _pageSize);
+            return new GetMultipleTimeSeriesCommand(_docId, _ranges, _start, _pageSize, _includes);
         }
 
         internal class GetMultipleTimeSeriesCommand : RavenCommand<TimeSeriesDetails>
@@ -45,13 +49,15 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             private readonly IEnumerable<TimeSeriesRange> _ranges;
             private readonly int _start;
             private readonly int _pageSize;
+            private readonly Action<ITimeSeriesIncludeBuilder> _includes;
 
-            public GetMultipleTimeSeriesCommand(string docId, IEnumerable<TimeSeriesRange> ranges, int start, int pageSize)
+            public GetMultipleTimeSeriesCommand(string docId, IEnumerable<TimeSeriesRange> ranges, int start, int pageSize, Action<ITimeSeriesIncludeBuilder> includes = null)
             {
                 _docId = docId ?? throw new ArgumentNullException(nameof(docId));
                 _ranges = ranges;
                 _start = start;
                 _pageSize = pageSize;
+                _includes = includes;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -92,6 +98,11 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
                 if (any == false)
                     throw new InvalidOperationException("Argument 'ranges' cannot be null or empty");
+
+                if (_includes != null)
+                {
+                    GetTimeSeriesOperation.GetTimeSeriesCommand.AddIncludesToRequest(pathBuilder, _includes);
+                }
 
                 var request = new HttpRequestMessage
                 {
