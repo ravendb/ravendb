@@ -505,7 +505,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     var backupParameters = new BackupParameters
                     {
-                        TaskId = periodicBackup.Configuration.TaskId,
                         RetentionPolicy = periodicBackup.Configuration.RetentionPolicy,
                         StartTimeUtc = periodicBackup.StartTimeInUtc,
                         BackupStatus = periodicBackup.BackupStatus,
@@ -513,7 +512,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         IsFullBackup = isFullBackup,
                         BackupToLocalFolder = backupToLocalFolder,
                         TempBackupPath = _tempBackupPath,
-                        OperationId = operationId
+                        OperationId = operationId,
+                        Name = periodicBackup.Configuration.Name
                     };
 
                     var backupTask = new BackupTask(_database, backupParameters, periodicBackup.Configuration, _logger, _forTestingPurposes);

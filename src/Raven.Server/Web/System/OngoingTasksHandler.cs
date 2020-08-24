@@ -502,25 +502,21 @@ namespace Raven.Server.Web.System
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "database-backup");
                 var backupConfiguration = JsonDeserializationServer.BackupConfiguration(json);
-                if (string.IsNullOrWhiteSpace(backupConfiguration.Name))
-                {
-                    backupConfiguration.Name = $"One Time Backup #{Interlocked.Increment(ref _oneTimeBackupCounter)}";
-                }
+                var backupName = $"One Time Backup #{Interlocked.Increment(ref _oneTimeBackupCounter)}";
 
-                PeriodicBackupRunner.CheckServerHealthBeforeBackup(ServerStore, backupConfiguration.Name);
+                PeriodicBackupRunner.CheckServerHealthBeforeBackup(ServerStore, backupName);
                 ServerStore.LicenseManager.AssertCanAddPeriodicBackup(backupConfiguration);
                 BackupConfigurationHelper.AssertBackupConfigurationInternal(backupConfiguration);
                 BackupConfigurationHelper.AssertDestinationAndRegionAreAllowed(backupConfiguration, ServerStore);
 
                 var sw = Stopwatch.StartNew();
-                ServerStore.ConcurrentBackupsCounter.StartBackup(backupConfiguration.Name, Logger);
+                ServerStore.ConcurrentBackupsCounter.StartBackup(backupName, Logger);
                 try
                 {
                     var operationId = ServerStore.Operations.GetNextOperationId();
                     var cancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
                     var backupParameters = new BackupParameters
                     {
-                        TaskId = -1,
                         RetentionPolicy = null,
                         StartTimeUtc = SystemTime.UtcNow,
                         IsOneTimeBackup = true,
@@ -528,7 +524,8 @@ namespace Raven.Server.Web.System
                         OperationId = ServerStore.Operations.GetNextOperationId(),
                         BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                         IsFullBackup = true,
-                        TempBackupPath = (Database.Configuration.Storage.TempPath ?? Database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp")
+                        TempBackupPath = (Database.Configuration.Storage.TempPath ?? Database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp"),
+                        Name = backupName
                     };
 
                     var backupTask = new BackupTask(Database, backupParameters, backupConfiguration, Logger);
@@ -561,11 +558,11 @@ namespace Raven.Server.Web.System
                                 catch (Exception e)
                                 {
                                     if (Logger.IsOperationsEnabled)
-                                        Logger.Operations($"Failed to run the backup thread: '{backupConfiguration.Name}'", e);
+                                        Logger.Operations($"Failed to run the backup thread: '{backupName}'", e);
 
                                     tcs.SetException(e);
                                 }
-                            }, null, $"Backup thread {backupConfiguration.Name} for database '{Database.Name}'");
+                            }, null, $"Backup thread {backupName} for database '{Database.Name}'");
                             return tcs.Task;
                         },
                         id: operationId, token: cancelToken);
@@ -577,7 +574,7 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
-                    var message = $"Failed to run backup: '{backupConfiguration.Name}'";
+                    var message = $"Failed to run backup: '{backupName}'";
 
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations(message, e);
@@ -594,7 +591,7 @@ namespace Raven.Server.Web.System
                 }
                 finally
                 {
-                    ServerStore.ConcurrentBackupsCounter.FinishBackup(backupConfiguration.Name, backupStatus: null, sw.Elapsed, Logger);
+                    ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
                 }
             }
         }
