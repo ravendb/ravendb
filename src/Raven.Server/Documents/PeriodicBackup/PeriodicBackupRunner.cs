@@ -767,15 +767,16 @@ namespace Raven.Server.Documents.PeriodicBackup
         private PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
         {
             var backupStatus = GetBackupStatusFromCluster(_serverStore, _database.Name, taskId);
+            return ComparePeriodicBackupStatus(taskId, backupStatus, inMemoryBackupStatus);
+        }
+
+        private static PeriodicBackupStatus ComparePeriodicBackupStatus(long taskId, PeriodicBackupStatus backupStatus, PeriodicBackupStatus inMemoryBackupStatus)
+        {
             if (backupStatus == null)
             {
-                backupStatus = inMemoryBackupStatus ?? new PeriodicBackupStatus
-                {
-                    TaskId = taskId
-                };
+                backupStatus = inMemoryBackupStatus ?? new PeriodicBackupStatus {TaskId = taskId};
             }
-            else if (inMemoryBackupStatus?.Version > backupStatus.Version &&
-                     inMemoryBackupStatus?.NodeTag == backupStatus.NodeTag)
+            else if (inMemoryBackupStatus?.Version > backupStatus.Version && inMemoryBackupStatus.NodeTag == backupStatus.NodeTag)
             {
                 // the in memory backup status is more updated
                 // and is of the same node (current one)
@@ -1041,36 +1042,91 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public BackupInfo GetBackupInfo()
         {
-            if (_periodicBackups.Count == 0)
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                return GetBackupInfoInternal(context);
+            }
+        }
+
+        public BackupInfo GetBackupInfo(TransactionOperationContext context)
+        {
+            return GetBackupInfoInternal(context);
+        }
+
+        private BackupInfo GetBackupInfoInternal(TransactionOperationContext context)
+        {
+            var oneTimeBackupStatus = GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId: 0L);
+
+            if (_periodicBackups.Count == 0 && oneTimeBackupStatus == null)
                 return null;
 
-            var allBackupTicks = new List<long>();
-            var allNextBackupTimeSpanSeconds = new List<double>();
+            var lastBackup = 0L;
+            PeriodicBackupStatus lastBackupStatus = null;
+            var intervalUntilNextBackupInSec = long.MaxValue;
+            if (oneTimeBackupStatus?.LastFullBackup != null && oneTimeBackupStatus.LastFullBackup.Value.Ticks > lastBackup)
+            {
+                lastBackup = oneTimeBackupStatus.LastFullBackup.Value.Ticks;
+                lastBackupStatus = oneTimeBackupStatus;
+            }
+
             foreach (var periodicBackup in _periodicBackups)
             {
-                var configuration = periodicBackup.Value.Configuration;
-                var backupStatus = GetBackupStatus(configuration.TaskId, periodicBackup.Value.BackupStatus);
-                if (backupStatus == null)
+                var status = ComparePeriodicBackupStatus(periodicBackup.Value.Configuration.TaskId,
+                    backupStatus: GetBackupStatusFromCluster(_serverStore, context, _database.Name, periodicBackup.Value.Configuration.TaskId),
+                    inMemoryBackupStatus: periodicBackup.Value.BackupStatus);
+
+                if (status.LastFullBackup != null && status.LastFullBackup.Value.Ticks > lastBackup)
+                {
+                    lastBackup = status.LastFullBackup.Value.Ticks;
+                    lastBackupStatus = status;
+                }
+
+                if (status.LastIncrementalBackup != null && status.LastIncrementalBackup.Value.Ticks > lastBackup)
+                {
+                    lastBackup = status.LastIncrementalBackup.Value.Ticks;
+                    lastBackupStatus = status;
+                }
+
+                var nextBackup = GetNextBackupDetails(periodicBackup.Value.Configuration, status, _serverStore.NodeTag, skipErrorLog: true);
+                if (nextBackup == null)
                     continue;
 
-                if (backupStatus.LastFullBackup != null)
-                    allBackupTicks.Add(backupStatus.LastFullBackup.Value.Ticks);
-
-                if (backupStatus.LastIncrementalBackup != null)
-                    allBackupTicks.Add(backupStatus.LastIncrementalBackup.Value.Ticks);
-
-                var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag, skipErrorLog: true);
-                if (nextBackup != null)
-                {
-                    allNextBackupTimeSpanSeconds.Add(nextBackup.TimeSpan.TotalSeconds);
-                }
+                if (nextBackup.TimeSpan.Ticks < intervalUntilNextBackupInSec)
+                    intervalUntilNextBackupInSec = nextBackup.TimeSpan.Ticks;
             }
 
             return new BackupInfo
             {
-                LastBackup = allBackupTicks.Count == 0 ? (DateTime?)null : new DateTime(allBackupTicks.Max()),
-                IntervalUntilNextBackupInSec = allNextBackupTimeSpanSeconds.Count == 0 ? 0 : allNextBackupTimeSpanSeconds.Min()
+                LastBackup = lastBackup == 0L ? (DateTime?)null : new DateTime(lastBackup),
+                IntervalUntilNextBackupInSec = intervalUntilNextBackupInSec == long.MaxValue ? 0 : new TimeSpan(intervalUntilNextBackupInSec).TotalSeconds,
+                BackupTaskType = lastBackupStatus?.TaskId == 0 ? BackupTaskType.OneTime : BackupTaskType.Periodic,
+                Destinations = AddDestinations(lastBackupStatus)
             };
+
+            static List<string> AddDestinations(PeriodicBackupStatus backupStatus)
+            {
+                if (backupStatus == null)
+                    return null;
+
+                var destinations = new List<string>();
+                if (backupStatus.UploadToAzure.Skipped == false)
+                    destinations.Add(nameof(BackupConfiguration.BackupDestination.Azure));
+                if (backupStatus.UploadToGlacier.Skipped == false)
+                    destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonGlacier));
+                if (backupStatus.UploadToFtp.Skipped == false)
+                    destinations.Add(nameof(BackupConfiguration.BackupDestination.FTP));
+                if (backupStatus.UploadToGoogleCloud.Skipped == false)
+                    destinations.Add(nameof(BackupConfiguration.BackupDestination.GoogleCloud));
+                if (backupStatus.UploadToS3.Skipped == false)
+                    destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonS3));
+                if (backupStatus.LocalBackup.TempFolderUsed == false)
+                    destinations.Add(nameof(BackupConfiguration.BackupDestination.Local));
+                if (destinations.Count == 0)
+                    destinations.Add(nameof(BackupConfiguration.BackupDestination.None));
+
+                return destinations;
+            }
         }
 
         public RunningBackup OnGoingBackup(long taskId)

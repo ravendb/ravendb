@@ -28,6 +28,7 @@ namespace Raven.Client.Documents.Operations.Backups
             GoogleCloudBackup = new UploadToGoogleCloud();
             GlacierBackup = new UploadToGlacier();
             FtpBackup = new UploadToFtp();
+            LocalBackup = new LocalBackup();
         }
 
         public override DynamicJsonValue ToJson()

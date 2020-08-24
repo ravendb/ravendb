@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
@@ -19,12 +20,18 @@ namespace Raven.Client.ServerWide.Operations
 
         public double IntervalUntilNextBackupInSec { get; set; }
 
+        public BackupTaskType BackupTaskType { get; set; }
+
+        public List<string> Destinations { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(LastBackup)] = LastBackup,
-                [nameof(IntervalUntilNextBackupInSec)] = IntervalUntilNextBackupInSec
+                [nameof(IntervalUntilNextBackupInSec)] = IntervalUntilNextBackupInSec,
+                [nameof(BackupTaskType)] = BackupTaskType.ToString(),
+                [nameof(Destinations)] = Destinations == null ? null : new DynamicJsonArray(Destinations)
             };
         }
     }

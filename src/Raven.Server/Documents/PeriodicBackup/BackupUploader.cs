@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             where S : BackupSettings
             where T : CloudUploadStatus
         {
-            if (PeriodicBackupConfiguration.CanBackupUsing(settings) == false)
+            if (BackupConfiguration.CanBackupUsing(settings) == false)
                 return;
 
             Debug.Assert(uploadStatus != null);

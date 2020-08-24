@@ -14,7 +14,6 @@ using FastTests.Server.Basic.Entities;
 using Newtonsoft.Json;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -29,9 +28,11 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -2030,6 +2031,42 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
 
                await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new BackupOperation(config)));
+            }
+        }
+
+        [Fact]
+        public async Task CanGetOneTimeBackupStatusFromDatabasesInfo()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var name = "EGR";
+
+            using (var store = GetDocumentStore(new Options {DeleteDatabaseOnDispose = true, Path = NewDataPath()}))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = name}, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new BackupConfiguration {BackupType = BackupType.Backup, LocalSettings = new LocalSettings {FolderPath = backupPath}};
+
+                var operation = await store.Maintenance.SendAsync(new BackupOperation(config));
+                var backupResult = (BackupResult)await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+
+                var client = store.GetRequestExecutor().HttpClient;
+                var response = await client.GetAsync(store.Urls.First() + $"/databases?name={store.Database}");
+                string result = response.Content.ReadAsStringAsync().Result;
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    using var bjro = ctx.ReadForMemory(result, "test");
+                    var databaseInfo = JsonDeserializationServer.DatabaseInfo(bjro);
+                    Assert.NotNull(databaseInfo);
+                    Assert.Equal(BackupTaskType.OneTime, databaseInfo.BackupInfo.BackupTaskType);
+                    Assert.Equal(1, databaseInfo.BackupInfo.Destinations.Count);
+                    Assert.Equal(nameof(BackupConfiguration.BackupDestination.Local), databaseInfo.BackupInfo.Destinations.First());
+                    Assert.NotNull(databaseInfo.BackupInfo.LastBackup);
+                    Assert.Equal(0, databaseInfo.BackupInfo.IntervalUntilNextBackupInSec);
+                }
             }
         }
 

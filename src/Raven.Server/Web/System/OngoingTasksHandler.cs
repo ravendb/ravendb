@@ -521,7 +521,7 @@ namespace Raven.Server.Web.System
                         StartTimeUtc = SystemTime.UtcNow,
                         IsOneTimeBackup = true,
                         BackupStatus = new PeriodicBackupStatus {TaskId = -1},
-                        OperationId = ServerStore.Operations.GetNextOperationId(),
+                        OperationId = operationId,
                         BackupToLocalFolder = BackupConfiguration.CanBackupUsing(backupConfiguration.LocalSettings),
                         IsFullBackup = true,
                         TempBackupPath = (Database.Configuration.Storage.TempPath ?? Database.Configuration.Core.DataDirectory).Combine("OneTimeBackupTemp"),
@@ -546,8 +546,9 @@ namespace Raven.Server.Web.System
 
                                     using (Database.PreventFromUnloading())
                                     {
-                                        var runningBackupStatus = new PeriodicBackupStatus {TaskId = -1};
+                                        var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0 };
                                         var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+                                        BackupTask.SaveBackupStatus(runningBackupStatus, Database, Logger);
                                         tcs.SetResult(backupResult);
                                     }
                                 }
@@ -562,6 +563,10 @@ namespace Raven.Server.Web.System
 
                                     tcs.SetException(e);
                                 }
+                                finally
+                                {
+                                    ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
+                                }
                             }, null, $"Backup thread {backupName} for database '{Database.Name}'");
                             return tcs.Task;
                         },
@@ -574,6 +579,8 @@ namespace Raven.Server.Web.System
                 }
                 catch (Exception e)
                 {
+                    ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
+
                     var message = $"Failed to run backup: '{backupName}'";
 
                     if (Logger.IsOperationsEnabled)
@@ -588,10 +595,6 @@ namespace Raven.Server.Web.System
                         details: new ExceptionDetails(e)));
 
                     throw;
-                }
-                finally
-                {
-                    ServerStore.ConcurrentBackupsCounter.FinishBackup(backupName, backupStatus: null, sw.Elapsed, Logger);
                 }
             }
         }
