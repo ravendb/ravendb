@@ -1003,7 +1003,7 @@ namespace Raven.Server.Smuggler.Documents
 
             if (item.Document != null)
             {
-                item.Document.Data.Dispose();
+                item.Document.Dispose();
 
                 if (item.Attachments != null)
                 {
