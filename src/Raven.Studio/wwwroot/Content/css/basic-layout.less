@@ -103,7 +103,17 @@ body:not(.setup-shell) {
 
         .notifications-pin-toggle {
             background-color: transparent;
+            display: inline-block;
+            cursor: pointer;
+            height: 30px;
+            min-width: 30px;
             border: none;
+            text-align: center;
+
+            i {
+                display: block;
+                top: 0;
+            }
 
             .icon-pinned {
                 display: none;
@@ -606,6 +616,10 @@ body {
             transition: opacity @menu-transition-ease;
             display: block;
             text-align: center;
+
+            i {
+                top: 0;
+            }
         }
     }
 
