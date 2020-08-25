@@ -72,6 +72,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(UploadToGlacier)] = UploadToGlacier?.ToJson();
             json[nameof(UploadToAzure)] = UploadToAzure?.ToJson();
             json[nameof(UploadToGoogleCloud)] = UploadToGoogleCloud?.ToJson();
+            json[nameof(UploadToFtp)] = UploadToFtp?.ToJson();
             json[nameof(LastEtag)] = LastEtag;
             json[nameof(LastRaftIndex)] = LastRaftIndex?.ToJson();
             json[nameof(FolderName)] = FolderName;
