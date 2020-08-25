@@ -138,7 +138,7 @@ select timeseries(
                     var result = query.First();
 
                     Assert.Equal(totalMinutes, result.Results.Length);
-                    Assert.Equal(entriesCount, result.Count);
+                    Assert.Equal(totalMinutes, result.Count);
 
                     for (var i = 0; i < result.Results.Length; i++)
                     {
@@ -492,7 +492,7 @@ select timeseries(
                     var result = query.First();
 
                     Assert.Equal(totalMinutes, result.Results.Length);
-                    Assert.Equal(entriesCount, result.Count);
+                    Assert.Equal(totalMinutes, result.Count);
 
                     for (var i = 0; i < result.Results.Length; i++)
                     {
