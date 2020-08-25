@@ -39,7 +39,8 @@ namespace Raven.Server.Smuggler.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static bool IsPreV4Revision(BuildVersionType buildType, string id, Document document)
         {
-            Debug.Assert(buildType == BuildVersionType.V3);
+            if (buildType == BuildVersionType.V3 == false)
+                return false;
 
             if ((document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) != NonPersistentDocumentFlags.LegacyRevision)
                 return false;
@@ -576,8 +577,6 @@ namespace Raven.Server.Smuggler.Documents
 
         private SmugglerProgressBase.Counts ProcessDocuments(SmugglerResult result, BuildVersionType buildType)
         {
-            var isV3 = buildType == BuildVersionType.V3;
-
             using (var actions = _destination.Documents())
             {
                 List<LazyStringValue> legacyIdsToDelete = null;
@@ -586,7 +585,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _token.ThrowIfCancellationRequested();
 
-                    var isPreV4Revision = isV3 && IsPreV4Revision(buildType, item.Document.Id, item.Document);
+                    var isPreV4Revision = IsPreV4Revision(buildType, item.Document.Id, item.Document);
                     if (isPreV4Revision)
                     {
                         result.RevisionDocuments.ReadCount++;
@@ -648,7 +647,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     SetDocumentFlags(item, buildType);
 
-                    if (SkipDocument(isV3, isPreV4Revision, item, result, ref legacyIdsToDelete))
+                    if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
                         continue;
 
                     actions.WriteDocument(item, result.Documents);
@@ -659,7 +658,7 @@ namespace Raven.Server.Smuggler.Documents
                 TryHandleLegacyDocumentTombstones(legacyIdsToDelete, actions, result);
             }
 
-            if (isV3 && result.RevisionDocuments.ReadCount > 0)
+            if (buildType == BuildVersionType.V3 && result.RevisionDocuments.ReadCount > 0)
                 result.RevisionDocuments.Processed = true;
 
             return result.Documents;
@@ -707,9 +706,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private bool SkipDocument(bool isV3, bool isPreV4Revision, DocumentItem item, SmugglerResult result, ref List<LazyStringValue> legacyIdsToDelete)
+        private bool SkipDocument(BuildVersionType buildType, bool isPreV4Revision, DocumentItem item, SmugglerResult result, ref List<LazyStringValue> legacyIdsToDelete)
         {
-            if (isV3 == false)
+            if (buildType == BuildVersionType.V3 == false)
                 return false;
 
             if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false && isPreV4Revision)
