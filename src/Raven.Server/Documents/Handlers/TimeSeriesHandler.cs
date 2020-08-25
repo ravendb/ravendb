@@ -275,9 +275,9 @@ namespace Raven.Server.Documents.Handlers
             foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
             {
                 if (individualValues == null && 
-                    start > segmentResult.Summary.Span[0].Count)
+                    start > segmentResult.Summary.NumberOfLiveEntries)
                 {
-                    start -= segmentResult.Summary.Span[0].Count;
+                    start -= segmentResult.Summary.NumberOfLiveEntries;
                     continue;
                 }
 

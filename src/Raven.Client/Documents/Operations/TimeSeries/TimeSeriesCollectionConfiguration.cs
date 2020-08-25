@@ -153,6 +153,23 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return null;
         }
 
+        internal TimeValue MaxRetention
+        {
+            get
+            {
+                if (_maxRetention.HasValue)
+                    return _maxRetention.Value;
+
+                if (Policies == null || Policies.Count == 0)
+                    return TimeValue.MaxValue;
+
+                _maxRetention = Policies.Last().RetentionTime;
+                return _maxRetention.Value;
+            }
+        }
+
+        private TimeValue? _maxRetention;
+
         internal int GetPolicyIndexByTimeSeries(string name)
         {
             var separatorIndex = name.IndexOf(TimeSeriesConfiguration.TimeSeriesRollupSeparator);

@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.TimeSeries
     public class SegmentResult
     {
         public DateTime Start, End;
-        public StatefulTimestampValueSpan Summary;
+        public TimeSeriesValuesSegment Summary;
         public string ChangeVector;
         private readonly TimeSeriesReader _reader;
 
@@ -226,7 +226,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                 }
 
-                result.Count += _currentSegment.SegmentValues.Span[0].Count;
+                result.Count += _currentSegment.NumberOfLiveEntries;
             } while (NextSegment(out _));
 
             return result;
@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.TimeSeries
                         segmentResult.End <= _to)
                     {
                         // we can yield the whole segment in one go
-                        segmentResult.Summary = _currentSegment.SegmentValues;
+                        segmentResult.Summary = _currentSegment;
                         yield return (null, segmentResult);
                     }
                     else
