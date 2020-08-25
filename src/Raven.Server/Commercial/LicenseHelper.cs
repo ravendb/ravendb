@@ -127,7 +127,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private static bool TryDeserializeLicense(string licenseString, out License license)
+        internal static bool TryDeserializeLicense(string licenseString, out License license)
         {
             try
             {
