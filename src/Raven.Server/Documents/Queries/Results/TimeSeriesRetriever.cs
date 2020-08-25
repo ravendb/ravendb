@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Linq;
 using Lucene.Net.Store;
 using Raven.Client;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
@@ -131,17 +130,10 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 foreach (var cur in items)
                 {
-                    MaybeMoveToNextRange(cur.Timestamp, out var value, out var filledGaps);
-                    if (filledGaps != null)
+                    foreach (var value in MaybeMoveToNextRange(cur.Timestamp))
                     {
-                        foreach (var filledGap in filledGaps)
-                        {
-                            yield return filledGap;
-                        }
-                    }
-
-                    if (value != null)
                         yield return value;
+                    }
 
                     if (ShouldFilter(cur, timeSeriesFunction.Where))
                         continue;
@@ -153,22 +145,22 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            void MaybeMoveToNextRange(DateTime ts, out DynamicJsonValue value, out IEnumerable<DynamicJsonValue> filledGaps)
+            IEnumerable<DynamicJsonValue> MaybeMoveToNextRange(DateTime ts)
             {
-                value = default;
-                filledGaps = default;
-
                 if (rangeSpec.WithinRange(ts))
-                    return;
+                    yield break;
 
                 if (interpolationType != InterpolationType.None)
                 {
-                    filledGaps = HandleGapsIfNeeded(ts);
+                    foreach (var filledGap in HandleGapsIfNeeded(ts))
+                    {
+                        yield return filledGap;
+                    }
                 }
 
                 if (aggStates[0].Any)
                 {
-                    value = AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
+                    yield return AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
                 }
 
                 for (int i = 0; i < aggStates.Length; i++)
@@ -206,16 +198,10 @@ namespace Raven.Server.Documents.Queries.Results
                     else
                     {
                         //We might need to close the old aggregation range and start a new one
-                        MaybeMoveToNextRange(it.Segment.Start, out var value, out var filledGaps);
-                        if (filledGaps != null)
+                        foreach (var value in MaybeMoveToNextRange(it.Segment.Start))
                         {
-                            foreach (var filledGap in filledGaps)
-                            {
-                                yield return filledGap;
-                            }
-                        }
-                        if (value != null)
                             yield return value;
+                        }
 
                         // now we need to see if we can consume the whole segment, or
                         // if the range it cover needs to be broken up to multiple ranges.
