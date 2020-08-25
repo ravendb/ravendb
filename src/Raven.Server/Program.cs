@@ -306,6 +306,7 @@ namespace Raven.Server
                     return;
 
                 string licenseJson = null;
+                var fromPath = false;
                 if (string.IsNullOrEmpty(serverStore.Configuration.Licensing.License) == false)
                 {
                     licenseJson = serverStore.Configuration.Licensing.License;
@@ -315,6 +316,7 @@ namespace Raven.Server
                     try
                     {
                         licenseJson = File.ReadAllText(serverStore.Configuration.Licensing.LicensePath.FullPath);
+                        fromPath = true;
                     }
                     catch
                     {
@@ -333,12 +335,15 @@ namespace Raven.Server
                         var localLicenseStatus = LicenseManager.GetLicenseStatus(localLicense);
                         if (localLicenseStatus.Expiration >= RavenVersionAttribute.Instance.ReleaseDate)
                         {
-                            serverStore.LicenseManager.ActivateLicenseOnInitialize += () => serverStore.LicenseManager.TryActivateLicense(throwOnActivationFailure: false);
+                            serverStore.LicenseManager.OnBeforeInitialize += () => serverStore.LicenseManager.TryActivateLicense(throwOnActivationFailure: false);
                             return;
                         }
+
+                        var configurationKey =
+                            fromPath ? RavenConfiguration.GetKey(x => x.Licensing.LicensePath) : RavenConfiguration.GetKey(x => x.Licensing.License);
                         expiredLicenseMessage = localLicense.Id == license.Id 
                             ? ". You can update current license using the setting.json file"
-                            : $". Parsed license '{localLicense.Id}' from setting.json file is also expired: {FormattedDateTime(localLicenseStatus.Expiration ?? DateTime.MinValue)}";
+                            : $". The license '{localLicense.Id}' obtained from '{configurationKey}' with expiration date of '{FormattedDateTime(localLicenseStatus.Expiration ?? DateTime.MinValue)}' is also expired.";
                     }
                     else
                     {

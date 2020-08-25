@@ -64,7 +64,7 @@ namespace Raven.Server.Commercial
         private LicenseSupportInfo _lastKnownSupportInfo;
 
         public event Action LicenseChanged;
-        public event Action ActivateLicenseOnInitialize;
+        public event Action OnBeforeInitialize;
 
         public static readonly OsInfo OsInfo = OsInfoExtensions.GetOsInfo();
 
@@ -112,7 +112,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                ActivateLicenseOnInitialize?.Invoke();
+                OnBeforeInitialize?.Invoke();
 
                 _licenseStorage.Initialize(environment, contextPool);
 
