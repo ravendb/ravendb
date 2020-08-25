@@ -7,7 +7,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.TimeSeries;
-using Raven.Client.Documents.Session.TimeSeries;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;

@@ -1134,6 +1134,10 @@ namespace Raven.Server.Documents.TimeSeries
                     throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must be sorted by their timestamps, and cannot contain duplicate timestamps. " +
                                                    $"Got: current '{currentTimestamp:O}', next '{next.Timestamp:O}', make sure your measures have at least 1ms interval.");
 
+                if (next.Values.Length == 0 && // dead values can have 0 length
+                    next.Status == TimeSeriesValuesSegment.Live)
+                    throw new InvalidDataException($"The entries of '{_name}' time-series for document '{_documentId}' must contain at least one value");
+
                 if (_fromReplication == false)
                 {
                     AssertNoNanValue(next);
