@@ -156,10 +156,10 @@ namespace Raven.Server.Json
                     wp.WritePropertyName(nameof(processProgress.NumberOfTimeSeriesDeletedRangesToProcess));
                     wp.WriteInteger(processProgress.NumberOfTimeSeriesDeletedRangesToProcess);
                     wp.WriteComma();
-                    
+
                     wp.WritePropertyName(nameof(processProgress.TotalNumberOfTimeSeriesDeletedRanges));
                     wp.WriteInteger(processProgress.TotalNumberOfTimeSeriesDeletedRanges);
-                    
+
                     wp.WriteEndObject();
                 });
 
@@ -972,7 +972,7 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(index.Type));
                 writer.WriteString(index.Type.ToString());
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(index.SourceType));
                 writer.WriteString(index.SourceType.ToString());
                 writer.WriteComma();
@@ -1194,7 +1194,7 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(progress.SourceType));
             writer.WriteString(progress.SourceType.ToString());
-            
+
             writer.WriteEndObject();
         }
 
@@ -1357,7 +1357,7 @@ namespace Raven.Server.Json
                 return;
             }
 
-            // Explicitly not disposing it, a single document can be 
+            // Explicitly not disposing it, a single document can be
             // used multiple times in a single query, for example, due to projections
             // so we will let the context handle it, rather than handle it directly ourselves
             //using (document.Data)
@@ -1655,7 +1655,7 @@ namespace Raven.Server.Json
             Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
         {
             writer.WriteStartObject();
-            
+
             var first = true;
             foreach (var kvp in timeSeries)
             {
@@ -1666,7 +1666,27 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(kvp.Key);
 
-                await TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
+                await TimeSeriesHandler.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteTimeSeries(this BlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in timeSeries)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
             }
 
             writer.WriteEndObject();

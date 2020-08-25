@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Commands
         private readonly string[] _counters;
         private readonly bool _includeAllCounters;
 
-        private readonly IEnumerable<TimeSeriesRange> _timeSeriesIncludes;
+        private readonly IEnumerable<AbstractTimeSeriesRange> _timeSeriesIncludes;
         private readonly string[] _compareExchangeValueIncludes;
         private readonly bool _metadataOnly;
 
@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<TimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
+        public GetDocumentsCommand(string[] ids, string[] includes, string[] counterIncludes, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
             : this(ids, includes, metadataOnly)
         {
             _counters = counterIncludes;
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Commands
             _compareExchangeValueIncludes = compareExchangeValueIncludes;
         }
 
-        public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, IEnumerable<TimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
+        public GetDocumentsCommand(string[] ids, string[] includes, bool includeAllCounters, IEnumerable<AbstractTimeSeriesRange> timeSeriesIncludes, string[] compareExchangeValueIncludes, bool metadataOnly)
             : this(ids, includes, metadataOnly)
         {
             _includeAllCounters = includeAllCounters;
@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Commands
 
             if (_timeSeriesIncludes != null)
             {
-                foreach (var range in _timeSeriesIncludes)
+                foreach (var range in _timeSeriesIncludes.OfType<TimeSeriesRange>()) // TODO [ppekrol]
                 {
                     pathBuilder.Append("&timeseries=").Append(Uri.EscapeDataString(range.Name))
                         .Append("&from=").Append(range.From?.GetDefaultRavenFormat())

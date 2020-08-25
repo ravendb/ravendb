@@ -1,5 +1,7 @@
 ﻿using System;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Queries.AST;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -16,11 +18,11 @@ namespace Raven.Server.Documents.Queries
 
             if (string.Equals(methodName, "cmpxchg", StringComparison.OrdinalIgnoreCase))
                 return MethodType.CompareExchange;
-            
+
             if (string.Equals(methodName, "boost", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Boost;
 
-            if (string.Equals(methodName,"regex",StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(methodName, "regex", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Regex;
 
             if (string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
@@ -104,6 +106,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "timeseries", StringComparison.OrdinalIgnoreCase))
                 return MethodType.TimeSeries;
 
+            if (string.Equals(methodName, "last", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Last;
+
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 
@@ -113,6 +118,79 @@ namespace Raven.Server.Documents.Queries
         public static void ThrowMethodNotSupported(MethodType methodType, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Method '{methodType}' is not supported.", queryText, parameters);
+        }
+
+        public static class TimeSeries
+        {
+            public static TimeValue Last(MethodExpression expression, string queryText, BlittableJsonReaderObject parameters)
+            {
+                try
+                {
+                    if (expression.Arguments.Count != 2)
+                        throw new InvalidOperationException("Method 'last()' expects two arguments to be provided");
+
+                    var duration = QueryMethod.Helpers.GetLong(expression.Arguments[0], parameters);
+                    var timeValueUnitAsString = QueryMethod.Helpers.GetString(expression.Arguments[1], parameters);
+
+                    var offset = 0;
+                    return RangeGroup.ParseTimePeriodFromString(duration, timeValueUnitAsString, ref offset);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidQueryException("Could not parse last() method.", queryText, parameters, e);
+                }
+            }
+        }
+
+        public static class Helpers
+        {
+            public static string GetString(QueryExpression expression, BlittableJsonReaderObject parameters)
+            {
+                switch (expression)
+                {
+                    case ValueExpression ve:
+                        switch (ve.GetValue(parameters))
+                        {
+                            case string s:
+                                return s;
+                            case StringSegment ss:
+                                return ss.ToString();
+                            default:
+                                throw new InvalidOperationException("TODO ppekrol");
+                        }
+                    default:
+                        throw new InvalidOperationException("TODO ppekrol");
+                }
+            }
+
+            public static long GetLong(QueryExpression expression, BlittableJsonReaderObject parameters)
+            {
+                switch (expression)
+                {
+                    case ValueExpression ve:
+                        switch (ve.GetValue(parameters))
+                        {
+                            case long l:
+                                return l;
+                            case string s:
+                                return Parse(s);
+                            case StringSegment ss:
+                                return Parse(ss.ToString());
+                            default:
+                                throw new InvalidOperationException("TODO ppekrol");
+                        }
+                    default:
+                        throw new InvalidOperationException("TODO ppekrol");
+                }
+
+                static long Parse(string s)
+                {
+                    if (long.TryParse(s, out var sAsLong) == false)
+                        throw new InvalidOperationException("TODO ppekrol");
+
+                    return sAsLong;
+                }
+            }
         }
     }
 }

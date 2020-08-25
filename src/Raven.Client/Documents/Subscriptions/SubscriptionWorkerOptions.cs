@@ -29,7 +29,9 @@ namespace Raven.Client.Documents.Subscriptions
         public IDisposable ReturnContext;
         public List<BlittableJsonReaderObject> Includes;
         public List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> CounterIncludes;
+        public List<BlittableJsonReaderObject> TimeSeriesIncludes;
     }
+
     internal class SubscriptionConnectionServerMessage
     {
         internal enum MessageType
@@ -40,6 +42,7 @@ namespace Raven.Client.Documents.Subscriptions
             Data,
             Includes,
             CounterIncludes,
+            TimeSeriesIncludes,
             Confirm,
             Error
         }
@@ -72,12 +75,13 @@ namespace Raven.Client.Documents.Subscriptions
         public BlittableJsonReaderObject Includes { get; set; }
         public BlittableJsonReaderObject CounterIncludes { get; set; }
         public Dictionary<string, string[]> IncludedCounterNames { get; set; }
+        public BlittableJsonReaderObject TimeSeriesIncludes { get; set; }
         public string Exception { get; set; }
         public string Message { get; set; }
     }
 
     /// <summary>
-    /// Holds subscription connection properties, control both how client and server side behaves   
+    /// Holds subscription connection properties, control both how client and server side behaves
     /// </summary>
     public class SubscriptionWorkerOptions
     {
@@ -141,7 +145,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         /// <summary>
         /// Will continue the subscription work until the server have no more new documents to send.
-        /// That's a useful practice for ad-hoc, one-time, persistent data processing. 
+        /// That's a useful practice for ad-hoc, one-time, persistent data processing.
         /// </summary>
         public bool CloseWhenNoDocsLeft { get; set; }
 

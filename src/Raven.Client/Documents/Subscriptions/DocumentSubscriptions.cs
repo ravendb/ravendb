@@ -8,14 +8,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Sparrow.Collections;
@@ -97,8 +100,12 @@ namespace Raven.Client.Documents.Subscriptions
         {
             criteria ??= new SubscriptionCreationOptions();
             var collectionName = conventions.GetCollectionName(typeof(T));
-            if (criteria.Query == null)
+            StringBuilder queryBuilder;
+            if (criteria.Query != null)
+                queryBuilder = new StringBuilder(criteria.Query);
+            else
             {
+                queryBuilder = new StringBuilder();
                 var tType = typeof(T);
                 var includeRevisions = tType.IsConstructedGenericType && tType.GetGenericTypeDefinition() == typeof(Revision<>);
                 if (includeRevisions)
@@ -106,10 +113,11 @@ namespace Raven.Client.Documents.Subscriptions
                     collectionName = conventions.GetCollectionName(tType.GenericTypeArguments[0]);
                 }
                 if (includeRevisions)
-                    criteria.Query = $"from '{collectionName.Replace("'", "\\'")}' (Revisions = true)";
+                    queryBuilder.Append($"from '{collectionName.Replace("'", "\\'")}' (Revisions = true)");
                 else
-                    criteria.Query = $"from '{collectionName.Replace("'", "\\'")}'";
-                criteria.Query += " as doc";
+                    queryBuilder.Append($"from '{collectionName.Replace("'", "\\'")}'");
+
+                queryBuilder.Append(" as doc");
             }
 
             if (predicate != null)
@@ -131,9 +139,10 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.StringSupport.Instance
                     ));
 
-                criteria.Query = $"declare function predicate() {{ return {script} }}{Environment.NewLine}" +
-                                 $"{criteria.Query}{Environment.NewLine}" +
-                                 "where predicate.call(doc)";
+                queryBuilder
+                    .Insert(0, $"declare function predicate() {{ return {script} }}{Environment.NewLine}")
+                    .AppendLine()
+                    .Append("where predicate.call(doc)");
             }
 
             if (project != null)
@@ -155,7 +164,11 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.CounterSupport.Instance,
                         JavascriptConversionExtensions.CompareExchangeSupport.Instance
                     ));
-                criteria.Query += Environment.NewLine + "select " + script;
+
+                queryBuilder
+                    .AppendLine()
+                    .Append("select ")
+                    .Append(script);
             }
 
             if (includes != null)
@@ -167,19 +180,26 @@ namespace Raven.Client.Documents.Subscriptions
 
                 if (builder.DocumentsToInclude?.Count > 0)
                 {
-                    criteria.Query += Environment.NewLine + "include ";
+                    queryBuilder
+                        .AppendLine()
+                        .Append("include ");
 
                     foreach (var inc in builder.DocumentsToInclude)
                     {
                         var include = "doc." + inc;
 
                         if (numberOfIncludesAdded > 0)
-                            criteria.Query += ",";
+                            queryBuilder.Append(",");
 
                         if (IncludesUtil.RequiresQuotes(include, out var escapedInclude))
-                            criteria.Query += $"'{escapedInclude}'";
+                        {
+                            queryBuilder
+                                .Append("'")
+                                .Append(escapedInclude)
+                                .Append("'");
+                        }
                         else
-                            criteria.Query += include;
+                            queryBuilder.Append(include);
 
                         numberOfIncludesAdded++;
                     }
@@ -188,32 +208,61 @@ namespace Raven.Client.Documents.Subscriptions
                 if (builder.AllCounters)
                 {
                     if (numberOfIncludesAdded == 0)
-                        criteria.Query += Environment.NewLine + "include ";
+                    {
+                        queryBuilder
+                            .AppendLine()
+                            .Append("include ");
+                    }
 
-                    criteria.Query += $"counters()";
+                    var token = CounterIncludesToken.All(string.Empty);
+                    token.WriteTo(queryBuilder);
 
                     numberOfIncludesAdded++;
                 }
                 else if (builder.CountersToInclude?.Count > 0)
                 {
                     if (numberOfIncludesAdded == 0)
-                        criteria.Query += Environment.NewLine + "include ";
+                    {
+                        queryBuilder
+                            .AppendLine()
+                            .Append("include ");
+                    }
 
                     foreach (var counterName in builder.CountersToInclude)
                     {
                         if (numberOfIncludesAdded > 0)
-                            criteria.Query += ",";
+                            queryBuilder.Append(",");
 
-                        if (IncludesUtil.RequiresQuotes(counterName, out var escapedCounterName))
-                            criteria.Query += $"counters({escapedCounterName})";
-                        else
-                            criteria.Query += $"counters({counterName})";
+                        var token = CounterIncludesToken.Create(string.Empty, counterName);
+                        token.WriteTo(queryBuilder);
+
+                        numberOfIncludesAdded++;
+                    }
+                }
+
+                if (builder.TimeSeriesToInclude != null)
+                {
+                    foreach (var timeSeriesRange in builder.TimeSeriesToInclude)
+                    {
+                        if (numberOfIncludesAdded == 0)
+                        {
+                            queryBuilder
+                                .AppendLine()
+                                .Append("include ");
+                        }
+
+                        if (numberOfIncludesAdded > 0)
+                            queryBuilder.Append(",");
+
+                        var token = TimeSeriesIncludesToken.Create(string.Empty, timeSeriesRange);
+                        token.WriteTo(queryBuilder);
 
                         numberOfIncludesAdded++;
                     }
                 }
             }
 
+            criteria.Query = queryBuilder.ToString();
             return criteria;
         }
 

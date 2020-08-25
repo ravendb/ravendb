@@ -129,6 +129,7 @@ namespace Raven.Server.Documents.Queries
             {
                 case ValueExpression _:
                 case FieldExpression _:
+                case MethodExpression _:
                     break;
                 default:
                     throw new InvalidQueryException("Method 'timeseries()' expects value token (timeseries name) or field token (source alias) " +
@@ -140,9 +141,10 @@ namespace Raven.Server.Documents.Queries
                 switch (arguments[i])
                 {
                     case ValueExpression _:
+                    case MethodExpression _:
                         break;
                     default:
-                        throw new InvalidQueryException($"Method 'timeseries()' expects value token as an argument at index {i}, got {arguments[0]} type", queryText, parameters);
+                        throw new InvalidQueryException($"Method 'timeseries()' expects value token as an argument or method at index {i}, got {arguments[0]} type", queryText, parameters);
                 }
             }
         }

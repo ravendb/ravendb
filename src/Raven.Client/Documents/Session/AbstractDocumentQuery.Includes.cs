@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Session
             }
         }
 
-        private void IncludeTimeSeries(string alias, Dictionary<string, HashSet<TimeSeriesRange>> timeSeriesToInclude)
+        private void IncludeTimeSeries(string alias, Dictionary<string, HashSet<AbstractTimeSeriesRange>> timeSeriesToInclude)
         {
             if (timeSeriesToInclude?.Count > 0 == false)
                 return;

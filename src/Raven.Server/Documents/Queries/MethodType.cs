@@ -21,6 +21,8 @@
         Max,
         Average,
 
+        Last,
+
         CompareExchange,
         
         Spatial_Circle,

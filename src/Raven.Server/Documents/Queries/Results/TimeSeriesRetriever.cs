@@ -1075,7 +1075,8 @@ namespace Raven.Server.Documents.Queries.Results
                                                 $"was unable to read '{methodName}' expression '{valueExpression}'");
             }
 
-            return RangeGroup.ParseTimePeriodFromString(timePeriod);
+            var offset = 0;
+            return RangeGroup.ParseTimePeriodFromString(timePeriod, ref offset);
         }
 
         private TimeSpan? GetOffset(ValueExpression offsetExpression, string name)

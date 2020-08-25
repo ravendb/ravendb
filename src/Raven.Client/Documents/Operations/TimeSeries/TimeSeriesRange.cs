@@ -1,10 +1,27 @@
 ﻿using System;
+using Sparrow;
 
 namespace Raven.Client.Documents.Operations.TimeSeries
 {
-    public class TimeSeriesRange
+    public class TimeSeriesRange : AbstractTimeSeriesRange
+    {
+        public DateTime? From, To;
+    }
+
+    internal class TimeSeriesTimeRange : AbstractTimeSeriesRange
+    {
+        public TimeValue Time;
+        public TimeSeriesRangeType Type;
+    }
+
+    public abstract class AbstractTimeSeriesRange
     {
         public string Name;
-        public DateTime? From, To;
+    }
+
+    public enum TimeSeriesRangeType
+    {
+        None,
+        Last
     }
 }
