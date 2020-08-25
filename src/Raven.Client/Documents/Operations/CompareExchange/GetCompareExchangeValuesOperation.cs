@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations.CompareExchange
 
         private readonly bool _materializeMetadata;
 
-        internal GetCompareExchangeValuesOperation(string[] keys)
+        public GetCompareExchangeValuesOperation(string[] keys)
             : this(keys, materializeMetadata: true)
         {
         }
