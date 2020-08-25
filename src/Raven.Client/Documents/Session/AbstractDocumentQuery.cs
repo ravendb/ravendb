@@ -19,6 +19,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Sparrow;
@@ -225,8 +226,18 @@ namespace Raven.Client.Documents.Session
             Timeout = waitTimeout ?? DefaultTimeout;
         }
 
+        internal LazyQueryOperation<T> GetLazyQueryOperation()
+        {
+            QueryOperation ??= InitializeQueryOperation();
+
+            return new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
+        }
+        
         protected internal QueryOperation InitializeQueryOperation()
         {
+            var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
+            TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
+            
             var indexQuery = GetIndexQuery();
 
             return new QueryOperation(TheSession,

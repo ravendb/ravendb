@@ -29,6 +29,7 @@ using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using MethodCallExpression = System.Linq.Expressions.MethodCallExpression;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -760,14 +761,36 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitGreaterThan(BinaryExpression expression)
         {
-            if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
+            bool isStringCompare = false;
+
+            if (IsStringCompareTo(expression))
+            {
+                if (expression.Left is ConstantExpression)
+                {
+                    VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
+                    return;
+                }
+
+                expression = NormalizeStringCompareExpression(expression);
+
+                isStringCompare = true;
+            }
+            else if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
             {
                 VisitLessThan(Expression.LessThan(expression.Right, expression.Left));
                 return;
             }
+
             var memberInfo = GetMember(expression.Left);
             var memberType = GetMemberType(memberInfo);
-            var value = GetValueFromExpression(expression.Right, memberType);
+
+            object value;
+
+            if (isStringCompare)
+                value = ((expression.Left as MethodCallExpression).Arguments[0] as ConstantExpression).Value;
+            else
+                value = GetValueFromExpression(expression.Right, memberType);
+
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
             if (ShouldExcludeNullTypes(memberType))
@@ -790,7 +813,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitGreaterThanOrEqual(BinaryExpression expression)
         {
-            if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
+            bool isStringCompare = false;
+
+            if (IsStringCompareTo(expression))
+            {
+                if (expression.Left is ConstantExpression)
+                {
+                    VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
+                    return;
+                }
+
+                expression = NormalizeStringCompareExpression(expression);
+
+                isStringCompare = true;
+            }
+            else if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
             {
                 VisitLessThanOrEqual(Expression.LessThanOrEqual(expression.Right, expression.Left));
                 return;
@@ -799,7 +836,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberInfo = GetMember(expression.Left);
             var memberType = GetMemberType(memberInfo);
 
-            var value = GetValueFromExpression(expression.Right, memberType);
+            object value;
+
+            if (isStringCompare)
+                value = ((expression.Left as MethodCallExpression).Arguments[0] as ConstantExpression).Value;
+            else
+                value = GetValueFromExpression(expression.Right, memberType);
+
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
             if (ShouldExcludeNullTypes(memberType))
@@ -826,14 +869,36 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitLessThan(BinaryExpression expression)
         {
-            if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
+            bool isStringCompare = false;
+            
+            if (IsStringCompareTo(expression))
+            {
+                if (expression.Left is ConstantExpression)
+                {
+                    VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
+                    return;
+                }
+
+                expression = NormalizeStringCompareExpression(expression);
+
+                isStringCompare = true;
+            }
+            else if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
             {
                 VisitGreaterThan(Expression.GreaterThan(expression.Right, expression.Left));
                 return;
             }
+
             var memberInfo = GetMember(expression.Left);
             var memberType = GetMemberType(memberInfo);
-            var value = GetValueFromExpression(expression.Right, memberType);
+
+            object value;
+
+            if (isStringCompare)
+                value = ((expression.Left as MethodCallExpression).Arguments[0] as ConstantExpression).Value;
+            else
+                value = GetValueFromExpression(expression.Right, memberType);
+
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
 
             if (ShouldExcludeNullTypes(memberType))
@@ -855,7 +920,21 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void VisitLessThanOrEqual(BinaryExpression expression)
         {
-            if (IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
+            bool isStringCompare = false;
+
+            if (IsStringCompareTo(expression))
+            {
+                if (expression.Left is ConstantExpression)
+                {
+                    VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
+                    return;
+                }
+
+                expression = NormalizeStringCompareExpression(expression);
+
+                isStringCompare = true;
+            }
+            else if(IsMemberAccessForQuerySource(expression.Left) == false && IsMemberAccessForQuerySource(expression.Right))
             {
                 VisitGreaterThanOrEqual(Expression.GreaterThanOrEqual(expression.Right, expression.Left));
                 return;
@@ -863,7 +942,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberInfo = GetMember(expression.Left);
             var memberType = GetMemberType(memberInfo);
 
-            var value = GetValueFromExpression(expression.Right, memberType);
+            object value;
+
+            if (isStringCompare)
+                value = ((expression.Left as MethodCallExpression).Arguments[0] as ConstantExpression).Value;
+            else
+                value = GetValueFromExpression(expression.Right, memberType);
+
             var fieldName = GetFieldNameForRangeQuery(memberInfo, value);
             if (ShouldExcludeNullTypes(memberType))
             {
@@ -879,6 +964,118 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 DocumentQuery.WhereNotEquals(fieldName, null, _insideExact);
                 DocumentQuery.CloseSubclause();
             }
+        }
+
+        private bool IsStringCompareTo(BinaryExpression expression, bool throwOnInvalidExpression = true)
+        {
+            switch (expression.NodeType)
+            {
+                case ExpressionType.LessThan:
+                case ExpressionType.LessThanOrEqual:
+                case ExpressionType.GreaterThan:
+                case ExpressionType.GreaterThanOrEqual:
+                    break;
+                default:
+                    return false;
+            }
+
+            bool checkValidComparison(MethodCallExpression methodCall, Expression compareExpression)
+            {
+                // non-static string compare: x => x.CompareTo("Dave") > 0
+                if (methodCall.Object != null)
+                {
+                    if (IsMemberAccessForQuerySource(methodCall.Object) && !(methodCall.Arguments[0] is ConstantExpression)
+                        || !IsMemberAccessForQuerySource(methodCall.Object) && !IsMemberAccessForQuerySource(methodCall.Arguments[0]))
+                    {
+                        if (throwOnInvalidExpression)
+                            throw new NotSupportedException("String comparisons must be between a field and a constant value. " +
+                                                            $"`{methodCall.Object}` and `{methodCall.Arguments[0]}` do not satisfy those requirements, so cannot convert {expression} to a proper query.");
+
+                        return false;
+                    }
+                }
+
+                if (compareExpression is ConstantExpression compareValue && compareValue.Value.Equals(0))
+                    return true;
+
+                if (throwOnInvalidExpression)
+                    throw new InvalidOperationException("When using string.Compare(), you must always compare against 0");
+
+                return false;
+            }
+
+            if (expression.Left is MethodCallExpression leftMethodCall && leftMethodCall.Method.DeclaringType == typeof(string))
+            {
+                if (leftMethodCall.Method.Name == nameof(string.CompareTo) || leftMethodCall.Method.Name == nameof(string.Compare))
+                {
+                    if (!checkValidComparison(leftMethodCall, expression.Right))
+                        return false;
+
+                    return true;
+                }
+            }
+            else if (expression.Right is MethodCallExpression rightMethodCall && rightMethodCall.Method.DeclaringType == typeof(string))
+            {
+                if (rightMethodCall.Method.Name == nameof(string.CompareTo) || rightMethodCall.Method.Name == nameof(string.Compare))
+                {
+                    if (!checkValidComparison(rightMethodCall, expression.Left))
+                        return false;
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static MethodInfo StringCompareStaticMethodInfo = typeof(string).GetMethod(nameof(string.CompareTo), new Type[] { typeof(string) });
+
+
+        //x => string.Compare(x.Name, ("Dave")) > 0 -> x => x.Name.CompareTo("Dave") > 0
+        private BinaryExpression NormalizeStringCompareExpression(BinaryExpression expression)
+        {
+            bool leftMethodCall = true;
+
+            var methodCall = expression.Left as MethodCallExpression;
+
+            if (methodCall == null)
+            {
+                leftMethodCall = false;
+                methodCall = expression.Right as MethodCallExpression;
+            }
+
+            if (methodCall.Method.Name != nameof(string.Compare))
+                return expression;
+
+            if(methodCall.Method.GetParameters().Length != 2)
+                throw new NotSupportedException("string.Compare(string, string) is the only supported overload.");
+
+            MemberExpression memberExpression;
+            ConstantExpression constantExpression;
+
+            if (IsMemberAccessForQuerySource(methodCall.Arguments[0]))
+            {
+                memberExpression = methodCall.Arguments[0] as MemberExpression;
+                constantExpression = methodCall.Arguments[1] as ConstantExpression;
+            }
+            else if (IsMemberAccessForQuerySource(methodCall.Arguments[1]))
+            {
+                memberExpression = methodCall.Arguments[1] as MemberExpression;
+                constantExpression = methodCall.Arguments[0] as ConstantExpression;
+            }
+            else
+                throw new NotSupportedException("String comparisons between two constants are not supported. " +
+                                                "The comparison should be between a field and a constant value. " +
+                                                $"`{methodCall.Arguments[0]}` and `{methodCall.Arguments[1]}` are both constants, so cannot convert {expression} to a proper query.");
+
+            var normalizedExpression = Expression.Call(memberExpression,
+                StringCompareStaticMethodInfo,
+                constantExpression);
+
+            if (leftMethodCall)
+                return Expression.MakeBinary(expression.NodeType, normalizedExpression, expression.Right);
+
+            return Expression.MakeBinary(expression.NodeType, expression.Left, normalizedExpression);
         }
 
         private void VisitAny(MethodCallExpression expression)

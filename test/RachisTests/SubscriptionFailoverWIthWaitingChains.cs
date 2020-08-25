@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -18,6 +19,7 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -260,6 +262,51 @@ namespace RachisTests
             }
         }
 
+        [Fact]
+        public async Task SubscriptionShouldReconnectOnExceptionInTcpListener()
+        {
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                RunInMemory = false,
+                RegisterForDisposal = false,
+            });
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server,
+                ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin,
+            }))
+            {
+                var mre = new AsyncManualResetEvent();
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User());
+                    session.SaveChanges();
+                }
+
+                var subsId = await store.Subscriptions.CreateAsync<User>();
+                using var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subsId)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                });
+                subsWorker.OnSubscriptionConnectionRetry += ex =>
+                {
+                    Assert.NotNull(ex);
+                    Assert.True(ex.GetType() == typeof(IOException) || ex.GetType() == typeof(EndOfStreamException));
+                    mre.Set();
+                };
+                var task = subsWorker.Run(x => { });
+                server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = true;
+                try
+                {
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(30)));
+                }
+                finally
+                {
+                    server.ForTestingPurposesOnly().ThrowExceptionInListenToNewTcpConnection = false;
+                }
+            }
+        }
+
         private static async Task AssertNoSubscriptionLeftAlive(string dbName, int SubscriptionsCount, Raven.Server.RavenServer curNode)
         {
             if (false == curNode.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var resourceTask))
@@ -294,6 +341,7 @@ namespace RachisTests
                 await Task.Delay(1000);
             }
         }
+
         private List<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new List<(SubscriptionWorker<dynamic>, Exception)>();
         private List<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new List<(SubscriptionWorker<dynamic>, Exception)>();
 
@@ -457,7 +505,7 @@ namespace RachisTests
                         catch (Exception e)
                         {
                             errors.Add(e);
-                            rehabNodes = new List<string>{"error"};
+                            rehabNodes = new List<string> { "error" };
                         }
                     }
                     await Task.Delay(1000);

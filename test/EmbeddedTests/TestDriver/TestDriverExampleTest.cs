@@ -1,8 +1,10 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using EmbeddedTests.Platform;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.TestDriver;
 using Xunit;
 
@@ -137,6 +139,42 @@ namespace EmbeddedTests.TestDriver
                     Assert.Equal("Test", docWithConvention.Name);
                 }
             }
+        }
+
+        [Fact]
+        public void ShouldRemoveTheDatabaseDirectoryAfterTheTest()
+        {
+            string databaseDirectoryPath;
+            using (var documentStore = GetDocumentStore())
+            {
+                databaseDirectoryPath = Path.Combine(AppContext.BaseDirectory, "RavenDB", "Databases", documentStore.Database);
+
+                Assert.True(Directory.Exists(databaseDirectoryPath));
+
+                using (var session = documentStore.OpenSession())
+                {
+                    session.Query<TestDoc>()
+                        .Statistics(out var stats1)
+                        .Where(x => x.Name == "John")
+                        .ToList();
+
+                    session.Query<TestDocConvention>()
+                        .Statistics(out var stats2)
+                        .Where(x => x.Name == "John")
+                        .ToList();
+
+                    var indexesDirectoryPath = Path.Combine(databaseDirectoryPath, "Indexes");
+
+                    Assert.True(Directory.Exists(indexesDirectoryPath));
+                    Assert.Equal(2, Directory.GetDirectories(indexesDirectoryPath).Length);
+
+                    documentStore.Maintenance.Send(new DeleteIndexOperation(stats1.IndexName));
+
+                    Assert.Equal(1, Directory.GetDirectories(indexesDirectoryPath).Length);
+                }
+            }
+
+            Assert.False(Directory.Exists(databaseDirectoryPath));
         }
     }
 }

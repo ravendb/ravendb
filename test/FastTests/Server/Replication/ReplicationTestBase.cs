@@ -296,7 +296,6 @@ namespace FastTests.Server.Replication
             {
                 WaitForReset();
                 _mre.Set();
-                WaitForReset();
             }
 
             private void WaitForReset(int timeout = 15_000)
@@ -307,7 +306,7 @@ namespace FastTests.Server.Replication
                     if (_mre.IsSet == false)
                         return;
 
-                    Thread.Sleep(150);
+                    Thread.Sleep(16);
                 }
 
                 throw new TimeoutException();
@@ -315,6 +314,7 @@ namespace FastTests.Server.Replication
 
             public void Dispose()
             {
+                WaitForReset();
                 _database.ReplicationLoader.DebugWaitAndRunReplicationOnce = null;
                 _mre.Set();
             }

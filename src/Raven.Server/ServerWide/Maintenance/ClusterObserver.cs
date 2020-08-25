@@ -28,7 +28,7 @@ using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
-    class ClusterObserver : IDisposable
+    internal class ClusterObserver : IDisposable
     {
         private readonly PoolOfThreads.LongRunningWork _observe;
         private readonly CancellationTokenSource _cts;
@@ -96,7 +96,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly long _moveToRehabTime;
         private readonly long _rotateGraceTime;
         private long _lastIndexCleanupTimeInTicks;
-        private long _lastTombstonesCleanupTimeInTicks;
+        internal long _lastTombstonesCleanupTimeInTicks;
         internal long _lastExpiredCompareExchangeCleanupTimeInTicks;
         private bool _hasMoreTombstones = false;
 
@@ -104,7 +104,6 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             return (_decisionsLog.ToArray(), _iteration);
         }
-
 
         public void Run(CancellationToken token)
         {
@@ -340,7 +339,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         internal async Task CleanUpUnusedAutoIndexes(DatabaseObservationState databaseState)
         {
-            if (AllDatabaseNodesHasReport(databaseState) == false) 
+            if (AllDatabaseNodesHasReport(databaseState) == false)
                 return;
 
             var indexes = new Dictionary<string, TimeSpan>();
@@ -558,7 +557,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return null;
             }
 
-            if (AllDatabaseNodesHasReport(state) == false) 
+            if (AllDatabaseNodesHasReport(state) == false)
                 return null;
 
             long commandCount = long.MaxValue;
@@ -1320,7 +1319,6 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var node in clusterTopology.AllNodes.Keys)
             {
-
                 if (databaseNodes.Contains(node))
                     continue;
 
@@ -1366,8 +1364,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     highestChangeVectors = cv;
                 }
-                // In conflict we need to choose between 2 nodes that are not synced. 
-                // So we take the one with the most documents.  
+                // In conflict we need to choose between 2 nodes that are not synced.
+                // So we take the one with the most documents.
                 if (status == ConflictStatus.Conflict)
                 {
                     if (report.NumberOfDocuments > maxDocsCount)
@@ -1396,20 +1394,18 @@ namespace Raven.Server.ServerWide.Maintenance
             promote when the indexes actually caught up. We do that by also requiring that all indexes
             will be either fully caught up (non stale) or that they are at most a single cycle behind.
 
-            This is check by looking at the global etag from the previous round, and comparing it to the 
+            This is check by looking at the global etag from the previous round, and comparing it to the
             last etag that each index indexed in the current round. Note that technically, we need to compare
             on a per collection basis, but we can avoid it by noting that if the collection's last etag is
             not beyond the previous max etag, then the index will therefor not be non stale.
 
-
              */
-
 
             foreach (var mentorIndex in mentor)
             {
                 // we go over all of the mentor indexes to validated that the promotable has them.
                 // Since we don't save in the state machine the definition of side-by-side indexes, we will skip them, because
-                // the promotable don't have them. 
+                // the promotable don't have them.
 
                 if (mentorIndex.Value.IsSideBySide)
                     continue;
@@ -1448,7 +1444,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}' and not up-to-date (prev: {lastPrevEtag}, current: {lastIndexEtag}).";
                     return false;
                 }
-
             }
 
             reason = null;

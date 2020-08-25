@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Counters;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
@@ -124,6 +125,50 @@ namespace SlowTests.Client.Counters
                     Assert.Equal("likes", counters[2]);
 
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CounterConflictBetweenNewAndDeleted()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", 100000);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1").Delete("likes");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    session.CountersFor("users/1").Increment("dislikes", 100000);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                await SetupReplicationAsync(storeB, storeA);
+
+                EnsureReplicating(storeA, storeB);
+                
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var counters = await session.CountersFor("users/1").GetAllAsync();
+                    var counter = counters.First();
+                    Assert.Equal("dislikes", counter.Key);
+                    Assert.Equal(100000, counter.Value);
+                }
+
+                await EnsureNoReplicationLoop(Server, storeA.Database);
+                await EnsureNoReplicationLoop(Server, storeB.Database);
             }
         }
 
@@ -387,6 +432,24 @@ namespace SlowTests.Client.Counters
         }
 
         [Fact]
+        public async Task CanSplitCounterWithUnicode()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User(), "users/1");
+                    var counter = session.CountersFor("users/1");
+                    for (int i = 0; i < 3000; i++)
+                    {
+                        counter.Increment($"⭐{i}");
+                    }
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanHandleIncomingCounterReplicationWhenCounterGroupDocumentsAreSplitDifferently()
         {
             using (var storeA = GetDocumentStore())
@@ -634,6 +697,94 @@ namespace SlowTests.Client.Counters
                         Assert.NotNull(await session.LoadAsync<User>("users/2"));
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task CountersTotalValueCanOverflow()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 2);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 2 + 2);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+
+                Assert.True(WaitForDocument(storeB, "users/1"));
+
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    var ex = await Assert.ThrowsAsync<CounterOverflowException>(async () => await session.CountersFor("users/1").GetAsync("likes"));
+                    Assert.Contains("Overflow detected in counter 'likes' from document 'users/1'", ex.Message);
+
+                    // but we will allow to decrement the partial counter value nevertheless
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 4);
+                    ex = await Assert.ThrowsAsync<CounterOverflowException>(async () => await session.SaveChangesAsync());
+                    Assert.Contains("Overflow detected in counter 'likes' from document 'users/1'", ex.Message);
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    // but we will allow only to _decrement_ the partial counter value nevertheless
+                    session.CountersFor("users/1").Increment("likes", - long.MaxValue / 4);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 4);
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(storeA, storeB);
+            }
+        }
+
+        [Fact]
+        public async Task CountersTotalValueCanOverflow2()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 3);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = storeB.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 3);
+                    await session.SaveChangesAsync();
+                }
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var session = storeA.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+                    session.CountersFor("users/1").Increment("likes", long.MaxValue / 2);
+                    await session.SaveChangesAsync();
+                }
+
+                EnsureReplicating(storeA, storeB);
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,7 +44,6 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-
                 using (var session = storeA.OpenAsyncSession())
                 {
                     var countersFor = session.CountersFor("users/1");
@@ -54,6 +55,91 @@ namespace SlowTests.Issues
                     }
 
                     await session.SaveChangesAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SplitCounterShouldRemoveUnusedEntries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.SendAsync(new CreateSampleDataOperation(DatabaseItemType.CounterGroups | DatabaseItemType.Documents));
+                using (var session = store.OpenAsyncSession())
+                {
+                    var counter = session.CountersFor("products/74-A");
+                    for (int i = 0; i < 3000; i++)
+                    {
+                        counter.Increment($"⭐{i}");
+                    }
+                    await session.SaveChangesAsync();
+                }
+                var hashSetAll = new HashSet<string>();
+                var hashSetWithValues = new HashSet<string>();
+
+                var db = await GetDocumentDatabaseInstanceFor(store);
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    foreach (var details in db.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(ctx, "products/74-A"))
+                    {
+                        hashSetAll.Clear();
+                        hashSetWithValues.Clear();
+
+                        foreach (var item in db.DocumentsStorage.CountersStorage.GetCountersFromCounterGroup(details))
+                        {
+                            var x = item.DbId;
+                            var y = item.Value;
+
+                            hashSetAll.Add(x);
+                            if (y != 0)
+                                hashSetWithValues.Add(x);
+                        }
+
+                        Assert.Equal(hashSetWithValues.Count, hashSetAll.Count);
+                    }
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var counter = session.CountersFor("products/74-A");
+                    for (int i = 0; i < 2345; i++)
+                    {
+                        counter.Delete($"⭐{i}");
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var counter = session.CountersFor("products/74-A");
+                    for (int i = 0; i < 1000; i++)
+                    {
+                        counter.Increment($"{i}⭐");
+                    }
+                    await session.SaveChangesAsync();
+                }
+
+                using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    foreach (var details in db.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(ctx, "products/74-A"))
+                    {
+                        hashSetAll.Clear();
+                        hashSetWithValues.Clear();
+
+                        foreach (var item in db.DocumentsStorage.CountersStorage.GetCountersFromCounterGroup(details))
+                        {
+                            var x = item.DbId;
+                            var y = item.Value;
+
+                            hashSetAll.Add(x);
+                            if (y != 0)
+                                hashSetWithValues.Add(x);
+                        }
+
+                        Assert.Equal(hashSetWithValues.Count, hashSetAll.Count);
+                    }
                 }
             }
         }
@@ -150,7 +236,7 @@ namespace SlowTests.Issues
                     var doc = session.Load<User>("users/1");
                     var counterNames = session.Advanced.GetCountersFor(doc);
                     Assert.Equal(1, counterNames.Count);
-                    Assert.Equal("abc", counterNames[0]); // metadata counter-names should preserve their original casing 
+                    Assert.Equal("abc", counterNames[0]); // metadata counter-names should preserve their original casing
                 }
 
                 using (var session = store.OpenSession())
@@ -307,7 +393,6 @@ namespace SlowTests.Issues
                     Assert.Equal(1, counters.Count);
                     Assert.Equal("Cats", counters[0]);
                 }
-
             }
         }
 
@@ -416,7 +501,6 @@ namespace SlowTests.Issues
                     Assert.NotNull(counter);
                     Assert.Equal(1, counter.Value);
                 }
-
             }
         }
 
@@ -443,7 +527,7 @@ namespace SlowTests.Issues
                 {
                     var company = session.Load<Company>("companies/1");
                     // the document is now tracked by the session,
-                    // so now counters-cache has access to '@counters' from metadata 
+                    // so now counters-cache has access to '@counters' from metadata
 
                     // searching for the counter's name in '@counters' should be done in a case insensitive manner
                     // counter name should be found in '@counters' => go to server

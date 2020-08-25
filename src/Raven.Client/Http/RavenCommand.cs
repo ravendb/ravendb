@@ -61,6 +61,7 @@ namespace Raven.Client.Http
         public bool CanCache { get; protected set; }
         public bool CanCacheAggressively { get; protected set; }
         public string SelectedNodeTag { get; protected set; }
+        public int NumberOfAttempts { get; internal set; }
 
         internal long FailoverTopologyEtag = -2;
 

@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -202,6 +203,21 @@ namespace Sparrow.Json
 
         public long Location => (long)_objStart;
 
+        public string[] GetSortedPropertyNames()
+        {
+            var propertyNames = new string[_propCount];
+
+            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
+
+            for (int i = 0; i < _propCount; i++)
+            {
+                GetPropertyTypeAndPosition(i, metadataSize, out _, out int _, out int id);
+                propertyNames[i] = GetPropertyName(id);
+            }
+
+            return propertyNames;
+
+        }
 
         /// <summary>
         /// Returns an array of property names, ordered in the order it was stored 
@@ -218,10 +234,7 @@ namespace Sparrow.Json
 
             for (int i = 0; i < _propCount; i++)
             {
-                BlittableJsonToken token;
-                int position;
-                int id;
-                GetPropertyTypeAndPosition(i, metadataSize, out token, out position, out id);
+                GetPropertyTypeAndPosition(i, metadataSize, out _, out int position, out int id);
                 offsets[i] = position;
                 propertyNames[i] = GetPropertyName(id);
             }
@@ -897,18 +910,14 @@ namespace Sparrow.Json
         public ulong GetHashOfPropertyNames()
         {
             AssertContextNotDisposed();
+            var metadataSize = (_currentOffsetSize + _currentPropertyIdSize + sizeof(byte));
 
             ulong hash = (ulong)_propCount;
             for (int i = 0; i < _propCount; i++)
             {
-                var propertyNameOffsetPtr = _propNames + sizeof(byte) + i * _propNamesDataOffsetSize;
-                var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
-
-                // Get the relative "In Document" position of the property Name
-                var propRelativePos = (int)(_propNames - propertyNameOffset - _mem);
-                var size = ReadVariableSizeInt(propRelativePos, out var offset);
-
-                hash = Hashing.XXHash64.Calculate(_mem + propRelativePos + offset, (ulong)size, hash);
+                GetPropertyTypeAndPosition(i, metadataSize, out _, out int _, out int id);
+                var prop = GetPropertyName(id);
+                hash = Hashing.XXHash64.Calculate(prop.Buffer, (ulong)prop.Size, hash);
             }
             return hash;
         }
@@ -1387,10 +1396,26 @@ namespace Sparrow.Json
             return true;
         }
 
+        private int _hashCode;
+        [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
         {
             AssertContextNotDisposed();
-            return _propCount;
+            if (_hashCode == 0)
+            {
+                ulong hash = GetHashOfPropertyNames();
+                PropertyDetails prop = default;
+                for (int i = 0; i < _propCount; i++)
+                {
+                    GetPropertyByIndex(i, ref prop, false);
+                    hash = Hashing.Combine(hash, (ulong)(prop.Value?.GetHashCode() ?? 0));
+                }
+
+                _hashCode = (int)Hashing.Mix(hash);
+                if (_hashCode == 0)
+                    _hashCode++;
+            }
+            return _hashCode;
         }
 
         [Conditional("DEBUG")]
