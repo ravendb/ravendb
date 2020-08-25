@@ -10,31 +10,6 @@ namespace Raven.Server.Documents.Queries
 {
     public partial class GraphQueryRunner
     {
-        public struct PathSegment : IEquatable<PathSegment>
-        {
-            public readonly long From;
-            public readonly long To;
-
-            public PathSegment(long @from, long to)
-            {
-                From = @from;
-                To = to;
-            }
-
-            public bool Equals(PathSegment other)
-            {
-                return From == other.From && To == other.To;
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                return obj is PathSegment segment && Equals(segment);
-            }
-
-            public override int GetHashCode() => HashCode.Combine(From, To);
-        }
-
         public class MatchCollection : IEquatable<MatchCollection>, IEnumerable<Match>
         {
             private List<Match> _data = new List<Match>();

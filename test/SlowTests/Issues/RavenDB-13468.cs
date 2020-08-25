@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations;
@@ -65,6 +66,34 @@ namespace SlowTests.Issues
 
                         }
                     }
+
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var rand = new Random(357);
+                        var counters = session.CountersFor("domainclaimchecks");
+                        for (int i = 0; i < 3000; i++)
+                        {
+                            counters.Increment(rand.Next(0, 10000).ToString());
+                        }
+                        session.SaveChanges();
+                    }
+
+                    using (var session = store.OpenSession(databaseName))
+                    {
+                        var counters = session.CountersFor("domainclaimchecks").GetAll();
+
+                        foreach (var counter in counters)
+                        {
+                            var name = counter.Key;
+                            var value = counter.Value;
+
+                            if (countersSnapshot[name] != null)
+                                Assert.True((long)countersSnapshot[name] == value, $"{name} is has {value} but expects {(long)countersSnapshot[name]}");
+
+                        }
+                    }
+                    WaitForUserToContinueTheTest(store);
+
                 }
 
             }

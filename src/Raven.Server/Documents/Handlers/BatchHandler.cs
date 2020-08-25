@@ -1001,6 +1001,26 @@ namespace Raven.Server.Documents.Handlers
                             });
 
                             break;
+                        case CommandType.TimeSeriesCopy:
+
+                            var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, cmd.Name, DateTime.MinValue, DateTime.MaxValue);
+
+                            var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.DestinationId, fromEtl: false);
+
+                            var cv = Database.DocumentsStorage.TimeSeriesStorage.AppendTimestamp(context,
+                                    cmd.DestinationId,
+                                    docCollection,
+                                    cmd.DestinationName,
+                                    reader.AllValues()
+                                );
+
+                            Reply.Add(new DynamicJsonValue
+                            {
+                                [nameof(BatchRequestParser.CommandData.Id)] = cmd.DestinationId,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = cv,
+                                [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
+                            });
+                            break;
                         case CommandType.Counters:
                             EtlGetDocIdFromPrefixIfNeeded(ref cmd.Counters.DocumentId, cmd, lastPutResult);
 

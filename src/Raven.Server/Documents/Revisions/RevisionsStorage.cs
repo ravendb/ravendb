@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.Revisions
                 for (var i = 0; i < counterNames.Length; i++)
                 {
                     var counter = counterNames[i].ToString();
-                    var val = _documentsStorage.CountersStorage.GetCounterValue(context, id, counter)?.Value;
+                    var val = _documentsStorage.CountersStorage.GetCounterValue(context, id, counter, capOnOverflow: true)?.Value;
                     if (val == null)
                         continue;
                     dvj[counter] = val.Value;

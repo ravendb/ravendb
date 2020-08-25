@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
                         case CounterOperationType.Increment:
                             LastChangeVector =
                                 _database.DocumentsStorage.CountersStorage.IncrementCounter(context, docId, docCollection, operation.CounterName, operation.Delta, out var exists);
-                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail);
+                            GetCounterValue(context, _database, docId, operation.CounterName, _replyWithAllNodesValues, CountersDetail, capValueOnOverflow: operation.Delta < 0);
 
                             if (exists == false)
                             {
@@ -527,7 +527,11 @@ namespace Raven.Server.Documents.Handlers
 
                         lastCv = kvp.Value[kvp.Value.Count - 1].ChangeVector;
 
-                        counters[name] = new BlittableJsonReaderObject.RawBlob { Ptr = newVal.Ptr, Length = CountersStorage.SizeOfCounterValues * kvp.Value.Count };
+                        counters[name] = new BlittableJsonReaderObject.RawBlob
+                        {
+                            Ptr = newVal.Ptr,
+                            Length = CountersStorage.SizeOfCounterValues * kvp.Value.Count
+                        };
                     }
 
                     var values = context.ReadObject(new DynamicJsonValue
@@ -663,7 +667,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private static void GetCounterValue(DocumentsOperationContext context, DocumentDatabase database, string docId,
-            string counterName, bool addFullValues, CountersDetail result)
+            string counterName, bool addFullValues, CountersDetail result, bool capValueOnOverflow = false)
         {
             long value = 0;
             long etag = 0;
@@ -682,7 +686,12 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (OverflowException e)
                     {
-                        CounterOverflowException.ThrowFor(docId, counterName, e);
+                        if (capValueOnOverflow == false)
+                            CounterOverflowException.ThrowFor(docId, counterName, e);
+
+                        value = value + partialValue.PartialValue > 0 ?
+                            long.MinValue :
+                            long.MaxValue;
                     }
 
                     fullValues[partialValue.ChangeVector] = partialValue.PartialValue;
@@ -696,7 +705,7 @@ namespace Raven.Server.Documents.Handlers
             }
             else
             {
-                var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName);
+                var v = database.DocumentsStorage.CountersStorage.GetCounterValue(context, docId, counterName, capValueOnOverflow);
 
                 if (v == null)
                 {

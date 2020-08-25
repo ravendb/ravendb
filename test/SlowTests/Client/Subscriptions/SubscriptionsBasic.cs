@@ -406,52 +406,77 @@ namespace SlowTests.Client.Subscriptions
                 var state = subscriptions.First();
                 Assert.Equal("from 'Users' as doc", state.Query);
 
-                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
-                using var docs = new CountdownEvent(count);
-
-                var t = subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
-
-                for (int i = 0; i < count; i++)
-                {
-                    var age = i < (count / 2) ? 18 : 19;
-                    using (var session = store.OpenSession())
-                    {
-                        session.Store(new User
-                        {
-                            Name = $"EGR_{i}",
-                            Age = age
-                        });
-                        session.SaveChanges();
-                    }
-                }
-
-                Assert.True(docs.Wait(_reasonableWaitTime));
-
                 const string newQuery = "from Users where Age > 18";
 
-                store.Subscriptions.Update(new SubscriptionUpdateOptions
+                using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName)
                 {
-                    Name = state.SubscriptionName,
-                    Query = newQuery,
-                    ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime}"
-                });
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                }))
+                {
+                    subscription.OnSubscriptionConnectionRetry += x =>
+                    {
+                        var sce = x as SubscriptionClosedException;
+                        Assert.NotNull(sce);
+                        Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
+                        Assert.True(sce.CanReconnect);
+                        Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
+                    };
 
-                var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
-                var newState = newSubscriptions.First();
-                Assert.Equal(1, newSubscriptions.Count);
-                Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
-                Assert.Equal(newQuery, newState.Query);
-                Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+                    using var first = new CountdownEvent(count);
+                    using var second = new CountdownEvent(count / 2);
 
-                var e = Assert.Throws<AggregateException>(() => t.Wait());
-                Assert.Equal(typeof(SubscriptionClosedException), e.InnerException.GetType()); 
-                Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", e.InnerException.Message);
-                
-                using var cde = new CountdownEvent(count / 2);
-                using var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
-                var task = s.Run(x => cde.Signal(x.NumberOfItemsInBatch));
+                    var t = subscription.Run(x =>
+                    {
+                        if (first.IsSet)
+                            second.Signal(x.NumberOfItemsInBatch);
+                        else
+                            first.Signal(x.NumberOfItemsInBatch);
+                    });
 
-                Assert.True(cde.Wait(_reasonableWaitTime));
+                    for (int i = 0; i < count; i++)
+                    {
+                        var age = i < (count / 2) ? 18 : 19;
+                        using (var session = store.OpenSession())
+                        {
+                            session.Store(new User
+                            {
+                                Name = $"EGR_{i}",
+                                Age = age
+                            });
+                            session.SaveChanges();
+                        }
+                    }
+
+                    Assert.True(first.Wait(_reasonableWaitTime));
+                    await store.Subscriptions.UpdateAsync(new SubscriptionUpdateOptions
+                    {
+                        Name = state.SubscriptionName,
+                        Query = newQuery,
+                        ChangeVector = $"{Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime}"
+                    });
+
+                    var newSubscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 5);
+                    var newState = newSubscriptions.First();
+                    Assert.Equal(1, newSubscriptions.Count);
+                    Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
+                    Assert.Equal(newQuery, newState.Query);
+                    Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+
+                    var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                    using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var query = WaitForValue(() =>
+                        {
+                            var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
+                            return connectionState?.Connection?.SubscriptionState.Query;
+                        }, newQuery);
+
+                        Assert.Equal(newQuery, query);
+                    }
+
+                    Assert.True(second.Wait(_reasonableWaitTime));
+                }
             }
         }
 
@@ -468,20 +493,36 @@ namespace SlowTests.Client.Subscriptions
                 var state = subscriptions.First();
                 Assert.Equal("from 'Users' as doc", state.Query);
 
-                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
-                using var docs = new CountdownEvent(count);
-
-                var t = subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
-
-                for (int i = 0; i < count; i++)
+                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName)
                 {
-                    var age = i < (count / 2) ? 18 : 19;
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                });
+                subscription.OnSubscriptionConnectionRetry += x =>
+                {
+                    var sce = x as SubscriptionClosedException;
+                    Assert.NotNull(sce);
+                    Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
+                    Assert.True(sce.CanReconnect);
+                    Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
+                };
+                using var docs = new CountdownEvent(count / 2);
+
+                var flag = true;
+                var t = subscription.Run(x =>
+                {
+                    if (docs.IsSet)
+                        flag = false;
+                    docs.Signal(x.NumberOfItemsInBatch);
+                });
+
+                for (int i = 0; i < count / 2; i++)
+                {
                     using (var session = store.OpenSession())
                     {
                         session.Store(new User
                         {
                             Name = $"EGR_{i}",
-                            Age = age
+                            Age = 18
                         });
                         session.SaveChanges();
                     }
@@ -505,15 +546,34 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
 
-                using var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
-                var flag = true;
-                var task = s.Run(x => flag = false);
+                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var query = WaitForValue(() =>
+                    {
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
 
-                var e = Assert.Throws<AggregateException>(() => t.Wait());
-                Assert.Equal(typeof(SubscriptionClosedException), e.InnerException.GetType());
-                Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", e.InnerException.Message);
+                        return connectionState?.Connection?.SubscriptionState.Query;
+                    }, newQuery);
 
-                await Task.Delay(1000);
+                    Assert.Equal(newQuery, query);
+                }
+
+                for (int i = count / 2; i < count; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User
+                        {
+                            Name = $"EGR_{i}",
+                            Age = 18
+                        });
+                        session.SaveChanges();
+                    }
+                }
+
+                await Task.Delay(500);
                 Assert.True(flag);
             }
         }
@@ -531,7 +591,18 @@ namespace SlowTests.Client.Subscriptions
                 var state = subscriptions.First();
                 Assert.Equal("from 'Users' as doc", state.Query);
 
-                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
+                using var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName)
+                {
+                    TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(16)
+                });
+                subscription.OnSubscriptionConnectionRetry += x =>
+                {
+                    var sce = x as SubscriptionClosedException;
+                    Assert.NotNull(sce);
+                    Assert.Equal(typeof(SubscriptionClosedException), x.GetType());
+                    Assert.True(sce.CanReconnect);
+                    Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", x.Message);
+                };
                 using var docs = new CountdownEvent(count);
 
                 var t = subscription.Run(x => docs.Signal(x.NumberOfItemsInBatch));
@@ -566,14 +637,20 @@ namespace SlowTests.Client.Subscriptions
                 Assert.Equal(state.SubscriptionName, newState.SubscriptionName);
                 Assert.Equal(newQuery, newState.Query);
                 Assert.Equal(state.SubscriptionId, newState.SubscriptionId);
+                var db = await GetDocumentDatabaseInstanceFor(store, store.Database);
+                using (db.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var query = WaitForValue(() =>
+                    {
+                        var connectionState = db.SubscriptionStorage.GetSubscriptionConnection(ctx, state.SubscriptionName);
 
-                var e = Assert.Throws<AggregateException>(() => t.Wait());
-                Assert.Equal(typeof(SubscriptionClosedException), e.InnerException.GetType());
-                Assert.Equal($"Subscription With Id '{state.SubscriptionName}' was closed.  Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionClosedException: The subscription {state.SubscriptionName} query has been modified, connection must be restarted", e.InnerException.Message);
+                        return connectionState?.Connection?.SubscriptionState.Query;
+                    }, newQuery);
 
+                    Assert.Equal(newQuery, query);
+                }
 
-                using var s = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(state.SubscriptionName));
-                var task = s.Run(x => docs.Signal(x.NumberOfItemsInBatch));
                 for (int i = 0; i < count / 2; i++)
                 {
                     using (var session = store.OpenSession())

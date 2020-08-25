@@ -1313,7 +1313,8 @@ more responsive application.
                     commandType != CommandType.AttachmentCOPY &&
                     commandType != CommandType.AttachmentMOVE &&
                     commandType != CommandType.Counters &&
-                    commandType != CommandType.TimeSeries)
+                    commandType != CommandType.TimeSeries &&
+                    commandType != CommandType.TimeSeriesCopy)
                     DeferredCommandsDictionary[(id, CommandType.ClientModifyDocumentCommand, null)] = command;
             }
         }

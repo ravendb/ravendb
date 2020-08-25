@@ -1044,8 +1044,10 @@ namespace Raven.Server.Documents.Indexes
                 });
             }
 
-            if (index.Configuration.RunInMemory)
-                return;
+            // we always want to try to delete the directories
+            // because Voron and Periodic Backup are creating temp ones
+            //if (index.Configuration.RunInMemory)
+            //    return;
 
             var name = IndexDefinitionBase.GetIndexNameSafeForFileSystem(index.Name);
 

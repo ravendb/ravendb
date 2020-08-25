@@ -526,6 +526,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 table.Set(tvb);
             }
         }
+        
 
         private static unsafe void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix,
     Slice countersGroupKey, BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, BlittableJsonReaderObject originalNames, string changeVector, string dbId)
@@ -579,6 +580,84 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         table.Insert(tvb);
                     }
                 }
+            }
+        }
+
+        private static (BlittableJsonReaderObject First, BlittableJsonReaderObject Second) SplitCounterDocument(DocumentsOperationContext context,
+            BlittableJsonReaderObject values, BlittableJsonReaderArray dbIds, BlittableJsonReaderObject originalNames)
+        {
+            // here we rely on the internal sort order of the blittables, because we go through them
+            // in lexical order
+            var fst = CreateHalfDocument(context, values, 0, values.Count / 2, dbIds, originalNames);
+            var snd = CreateHalfDocument(context, values, values.Count / 2, values.Count, dbIds, originalNames);
+
+            return (fst, snd);
+        }
+
+        private static unsafe BlittableJsonReaderObject CreateHalfDocument(DocumentsOperationContext context, BlittableJsonReaderObject values, int start, int end,
+            BlittableJsonReaderArray dbIds, BlittableJsonReaderObject originalNames)
+        {
+            BlittableJsonReaderObject.PropertyDetails prop = default;
+
+            using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+            {
+                context.CachedProperties.NewDocument();
+                builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+                builder.StartWriteObjectDocument();
+
+                builder.StartWriteObject();
+
+                builder.WritePropertyName(Values);
+                builder.StartWriteObject();
+
+                for (int i = start; i < end; i++)
+                {
+                    values.GetPropertyByIndex(i, ref prop);
+                    builder.WritePropertyName(prop.Name);
+                    if (prop.Value is BlittableJsonReaderObject.RawBlob blob)
+                        builder.WriteRawBlob(blob.Ptr, blob.Length);
+                    else if (prop.Value is LazyStringValue lsv)
+                        builder.WriteValue(lsv); // delete counter
+                    else
+                        throw new InvalidDataException("Unknown type: " + prop.Token + " when trying to split counter doc");
+                }
+
+                builder.WriteObjectEnd();
+
+                builder.WritePropertyName(DbIds);
+
+                builder.StartWriteArray();
+
+                for (var index = 0; index < dbIds.Length; index++)
+                {
+                    var item = (LazyStringValue)dbIds[index];
+                    builder.WriteValue(item);
+                }
+
+                builder.WriteArrayEnd();
+
+                builder.WritePropertyName(CounterNames);
+                builder.StartWriteObject();
+
+                for (int i = start; i < end; i++)
+                {
+                    originalNames.GetPropertyByIndex(i, ref prop);
+
+                    builder.WritePropertyName(prop.Name);
+                    if (prop.Value is LazyStringValue lsv)
+                        builder.WriteValue(lsv);
+                    else if (prop.Value is LazyCompressedStringValue compressed)
+                        builder.WriteValue(compressed);
+                    else
+                        throw new InvalidDataException("Unknown type: " + prop.Token + " when trying to split counter doc");
+                }
+
+                builder.WriteObjectEnd();
+
+                builder.WriteObjectEnd();
+                builder.FinalizeDocument();
+
+                return builder.CreateReader();
             }
         }
     }

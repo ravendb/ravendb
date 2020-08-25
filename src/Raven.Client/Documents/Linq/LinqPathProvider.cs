@@ -92,6 +92,17 @@ namespace Raven.Client.Documents.Linq
                     };
                 }
 
+                if (callExpression.Method.Name == "CompareTo" && callExpression.Method.DeclaringType == typeof(string))
+                {
+                    var target = GetPath(callExpression.Object);
+                    return new Result
+                    {
+                        MemberType = typeof(string),
+                        IsNestedPath = false,
+                        Path = target.Path
+                    };
+                }
+
                 if (IsCounterCall(callExpression))
                 {
                     return CreateCounterResult(callExpression);
