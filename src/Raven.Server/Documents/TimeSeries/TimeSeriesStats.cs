@@ -389,7 +389,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        public IEnumerable<Slice> GetTimeSeriesByPolicyFromStartDate(DocumentsOperationContext context, CollectionName collection, string policy, DateTime start, int take)
+        public IEnumerable<Slice> GetTimeSeriesByPolicyFromStartDate(DocumentsOperationContext context, CollectionName collection, string policy, DateTime start, long take)
         {
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
             if (table == null)
@@ -417,16 +417,17 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CombinePolicyNameAndTicks(DocumentsOperationContext context, string policy, long ticks, out Slice slice, out Slice policySlice)
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CombinePolicyNameAndTicks(DocumentsOperationContext context, string policy, long ticks, out Slice key, out Slice policyNameSlice)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, policy, out policySlice, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetSliceFromId(context, policy, out policyNameSlice, SpecialChars.RecordSeparator))
             {
-                var size = policySlice.Size + sizeof(long);
+                var size = policyNameSlice.Size + sizeof(long);
                 var scope = context.Allocator.Allocate(size, out var str);
-                policySlice.CopyTo(str.Ptr);
-                *(long*)(str.Ptr + policySlice.Size) = Bits.SwapBytes(ticks);
+                policyNameSlice.CopyTo(str.Ptr);
+                *(long*)(str.Ptr + policyNameSlice.Size) = Bits.SwapBytes(ticks);
 
-                slice = new Slice(str);
+                Slice.External(context.Allocator, str, 0, policyNameSlice.Size, out policyNameSlice);
+                key = new Slice(str);
                 return scope;
             }
         }

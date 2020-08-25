@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                         else
                         {
-                            var span = it.Segment.Summary.Span;
+                            var span = it.Segment.Summary.SegmentValues.Span;
                             for (int i = 0; i < aggStates.Length; i++)
                             {
                                 aggStates[i].Segment(span, reader.IsRaw);
