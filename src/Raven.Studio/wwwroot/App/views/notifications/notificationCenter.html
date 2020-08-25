@@ -1,12 +1,9 @@
 <div id="notification-center" class="flex-vertical" data-bind="css: { 'show-notifications': notificationCenter.showNotifications() }, with: notificationCenter">
 
-    <div class="padding" data-bind="visible: noNewNotifications">
-        <i class="icon-xl icon-empty-set text-muted"></i>
-        <h2 class="text-center text-muted">No new notifications</h2>
-    </div>
 
-    <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="if: includeInDom, visible: !noNewNotifications()">
-        <div class="flex-grow flex-horizontal flex-stretch-items">
+
+    <div class="notification-actions flex-horizontal flex-stretch-items" data-bind="if: includeInDom">
+        <div class="flex-horizontal flex-stretch-items">
             <button data-bind="click: _.partial(filterBySeverity, null), css: { active: !severityFilter() }"
                     title="Show all notifications" class="notification-type-toggle active">
                 All
@@ -20,18 +17,22 @@
             <button data-bind="click: _.partial(filterBySeverity, 'Error'), css: { active: severityFilter() === 'Error' }, text: errorItemsCount"
                     title="Filter by severity: Error" class="notification-type-toggle type-danger"></button>
         </div>
-
-        <button data-bind="click: dismissAll" class="dismiss">Dismiss all</button>
+        <button data-bind="click: dismissAll" class="dismiss"><i class="icon-dismiss-all"></i> Dismiss all</button>
+        <div class="flex-grow"></div>
         <button data-bind="{ click: pinNotifications.toggle.bind(pinNotifications), css: { 'pinned': pinNotifications() } }" class="notifications-pin-toggle"><i class="icon-pin"></i><i class="icon-pinned"></i></button>
+    </div>
 
+    <div class="padding" data-bind="visible: noNewNotifications">
+        <i class="icon-xl icon-empty-set text-muted"></i>
+        <h2 class="text-center text-muted">No new notifications</h2>
     </div>
-    <div data-bind="if: includeInDom">
-        <div class="notification-list scroll">
-            <!-- ko foreach: visibleNotifications-->
-            <div data-bind="template: { name: type + '-template' }"></div>
-            <!-- /ko -->
-        </div>
+
+    <div class="notification-list scroll" data-bind="if: includeInDom">
+        <!-- ko foreach: visibleNotifications-->
+        <div data-bind="template: { name: type + '-template' }"></div>
+        <!-- /ko -->
     </div>
+
 </div>
 
 <script type="text/html" id="OperationChanged-template">
