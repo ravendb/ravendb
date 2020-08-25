@@ -9,7 +9,10 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
@@ -19,6 +22,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.TrafficWatch;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -375,6 +379,27 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        public static unsafe (TimeSeriesRangeType Type, TimeValue Time) ParseTime(QueryExpression expression, string queryText, BlittableJsonReaderObject parameters = null)
+        {
+            var methodExpression = expression as MethodExpression;
+            if (methodExpression == null)
+                throw new InvalidQueryException("TODO ppekrol", queryText, parameters);
+
+            TimeSeriesRangeType type;
+            TimeValue time;
+            switch (QueryMethod.GetMethodType(methodExpression.Name.ToString()))
+            {
+                case MethodType.Last:
+                    type = TimeSeriesRangeType.Last;
+                    time = QueryMethod.TimeSeries.Last(methodExpression, queryText, parameters);
+                    break;
+                default:
+                    throw new InvalidQueryException("TODO ppekrol", queryText, parameters);
+            }
+
+            return (type, time);
+        }
+
         private static unsafe string CombineHashesFromMultipleRanges(Dictionary<string, List<TimeSeriesRangeResult>> ranges)
         {
             // init hash
@@ -409,7 +434,7 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TimeSeriesDetails.Values));
-                    await WriteTimeSeriesRangeResults(context, writer, documentId, ranges);
+                    await WriteTimeSeriesRangeResultsAsync(context, writer, documentId, ranges);
                 }
                 writer.WriteEndObject();
 
@@ -417,7 +442,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal static async Task WriteTimeSeriesRangeResults(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
+        internal static async Task WriteTimeSeriesRangeResultsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
         {
             if (dictionary == null)
             {
@@ -426,50 +451,100 @@ namespace Raven.Server.Documents.Handlers
             }
 
             writer.WriteStartObject();
+
+            bool first = true;
+            foreach (var (name, ranges) in dictionary)
             {
-                bool first = true;
-                foreach (var (name, ranges) in dictionary)
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(name);
+
+                writer.WriteStartArray();
                 {
-                    if (first == false)
-                        writer.WriteComma();
-
-                    first = false;
-
-                    writer.WritePropertyName(name);
-
-                    writer.WriteStartArray();
+                    (long Count, DateTime Start, DateTime End) stats = default;
+                    if (documentId != null)
                     {
-                        (long Count, DateTime Start, DateTime End) stats = default;
-                        if (documentId != null)
-                        {
-                            Debug.Assert(context != null);
-                            stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
-                        }
-
-                        for (var i = 0; i < ranges.Count; i++)
-                        {
-                            long? totalCount = null;
-
-                            if (i > 0)
-                                writer.WriteComma();
-
-                            if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
-                            {
-                                totalCount = stats.Count;
-                            }
-
-                            WriteRange(writer, ranges[i], totalCount);
-
-                            await writer.MaybeOuterFlushAsync();
-                        }
+                        Debug.Assert(context != null);
+                        stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
                     }
-                    writer.WriteEndArray();
+
+                    for (var i = 0; i < ranges.Count; i++)
+                    {
+                        long? totalCount = null;
+
+                        if (i > 0)
+                            writer.WriteComma();
+
+                        if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
+                        {
+                            totalCount = stats.Count;
+                        }
+
+                        WriteRange(writer, ranges[i], totalCount);
+
+                        await writer.MaybeOuterFlushAsync();
+                    }
                 }
+                writer.WriteEndArray();
             }
+
             writer.WriteEndObject();
         }
 
-        private static void WriteRange(AsyncBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
+        internal static void WriteTimeSeriesRangeResults(DocumentsOperationContext context, BlittableJsonTextWriter writer, string documentId, Dictionary<string, List<TimeSeriesRangeResult>> dictionary)
+        {
+            if (dictionary == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
+            writer.WriteStartObject();
+
+            bool first = true;
+            foreach (var (name, ranges) in dictionary)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(name);
+
+                writer.WriteStartArray();
+                {
+                    (long Count, DateTime Start, DateTime End) stats = default;
+                    if (documentId != null)
+                    {
+                        Debug.Assert(context != null);
+                        stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                    }
+
+                    for (var i = 0; i < ranges.Count; i++)
+                    {
+                        long? totalCount = null;
+
+                        if (i > 0)
+                            writer.WriteComma();
+
+                        if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
+                        {
+                            totalCount = stats.Count;
+                        }
+
+                        WriteRange(writer, ranges[i], totalCount);
+                    }
+                }
+                writer.WriteEndArray();
+            }
+
+            writer.WriteEndObject();
+        }
+
+        private static void WriteRange(AbstractBlittableJsonTextWriter writer, TimeSeriesRangeResult rangeResult, long? totalCount)
         {
             writer.WriteStartObject();
             {

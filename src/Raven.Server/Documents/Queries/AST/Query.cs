@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (GraphQuery == null)
             {
-                GraphQuery = new GraphQuery();                
+                GraphQuery = new GraphQuery();
             }
 
             if (GraphQuery.WithDocumentQueries.TryGetValue(alias, out var existing))
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (GraphQuery == null)
             {
-                GraphQuery = new GraphQuery();               
+                GraphQuery = new GraphQuery();
             }
 
             if (GraphQuery.WithEdgePredicates.ContainsKey(alias))
@@ -220,7 +220,7 @@ namespace Raven.Server.Documents.Queries.AST
                 InitByMonth(origin);
             else
                 throw new ArgumentException($"Either {nameof(Ticks)} or {nameof(Months)} should be set");
-            
+
             _origin = _start;
             _init = true;
         }
@@ -418,14 +418,9 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public static TimeValue ParseTimePeriodFromString(string source)
+        public static TimeValue ParseTimePeriodFromString(long duration, string source, ref int offset)
         {
             TimeValue result;
-            var offset = 0;
-
-            var duration = ParseNumber(source, ref offset);
-            if (offset >= source.Length)
-                throw new ArgumentException("Unable to find range specification in: " + source);
 
             while (char.IsWhiteSpace(source[offset]) && offset < source.Length)
             {
@@ -485,7 +480,7 @@ namespace Raven.Server.Documents.Queries.AST
                 case 'q':
                     if (TryConsumeMatch(source, ref offset, "quarters") == false)
                         TryConsumeMatch(source, ref offset, "quarter");
-                    
+
                     duration *= 3;
                     AssertValidDurationInMonths(duration);
                     result = TimeValue.FromMonths((int)duration);
@@ -511,6 +506,15 @@ namespace Raven.Server.Documents.Queries.AST
                 throw new ArgumentException("After range specification, found additional unknown data: " + source);
 
             return result;
+        }
+
+        public static TimeValue ParseTimePeriodFromString(string source, ref int offset)
+        {
+            var duration = ParseNumber(source, ref offset);
+            if (offset >= source.Length)
+                throw new ArgumentException("Unable to find range specification in: " + source);
+
+            return ParseTimePeriodFromString(duration, source, ref offset);
         }
 
         private static void AssertValidDurationInMonths(long duration)
@@ -542,17 +546,18 @@ namespace Raven.Server.Documents.Queries.AST
                     break;
             }
 
-            for (; i < source.Length; i++)
+            int j;
+            for (j = 0; i < source.Length; j++)
             {
-                if (char.IsNumber(source[i]) == false)
+                if (char.IsNumber(source[i + j]) == false)
                     break;
             }
 
             fixed (char* s = source)
             {
-                if (long.TryParse(new ReadOnlySpan<char>(s + offset, i), out var amount))
+                if (long.TryParse(new ReadOnlySpan<char>(s + i, j), out var amount))
                 {
-                    offset = i;
+                    offset = i + j;
                     return amount;
                 }
             }

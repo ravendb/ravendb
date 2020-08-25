@@ -42,6 +42,14 @@ namespace Raven.Client.Documents.Session.Loaders
         ITimeSeriesIncludeBuilder IncludeDocument();
     }
 
+    public interface ISubscriptionTimeSeriesIncludeBuilder<T, out TBuilder>
+    {
+        TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time);
+
+        TBuilder IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time);
+
+        TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time);
+    }
     public interface ICompareExchangeValueIncludeBuilder<T, out TBuilder>
     {
         TBuilder IncludeCompareExchangeValue(string path);
@@ -59,7 +67,7 @@ namespace Raven.Client.Documents.Session.Loaders
     {
     }
 
-    public interface ISubscriptionIncludeBuilder<T> : IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>, ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>
+    public interface ISubscriptionIncludeBuilder<T> : IDocumentIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>, ICounterIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>, ISubscriptionTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>
     {
     }
 
@@ -78,7 +86,7 @@ namespace Raven.Client.Documents.Session.Loaders
     {
         internal HashSet<string> DocumentsToInclude;
 
-        internal IEnumerable<TimeSeriesRange> TimeSeriesToInclude
+        internal IEnumerable<AbstractTimeSeriesRange> TimeSeriesToInclude
         {
             get
             {
@@ -118,7 +126,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
         internal Dictionary<string, (bool AllCounters, HashSet<string> CountersToInclude)> CountersToIncludeBySourcePath;
 
-        internal Dictionary<string, HashSet<TimeSeriesRange>> TimeSeriesToIncludeBySourceAlias;
+        internal Dictionary<string, HashSet<AbstractTimeSeriesRange>> TimeSeriesToIncludeBySourceAlias;
         internal HashSet<string> CompareExchangeValuesToInclude;
 
         internal bool IncludeTimeSeriesTags;
@@ -369,6 +377,29 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
+
+        ISubscriptionIncludeBuilder<T> ISubscriptionTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeTimeSeries(string.Empty, name, type, time);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> ISubscriptionTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
+        {
+            if (names is null)
+                throw new ArgumentNullException(nameof(names));
+
+            foreach (var name in names)
+                IncludeTimeSeries(string.Empty, name, type, time);
+
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> ISubscriptionTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeTimeSeries(string.Empty, string.Empty, type, time);
+            return this;
+        }
         private void IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
@@ -477,12 +508,12 @@ namespace Raven.Client.Documents.Session.Loaders
 
             if (TimeSeriesToIncludeBySourceAlias == null)
             {
-                TimeSeriesToIncludeBySourceAlias = new Dictionary<string, HashSet<TimeSeriesRange>>();
+                TimeSeriesToIncludeBySourceAlias = new Dictionary<string, HashSet<AbstractTimeSeriesRange>>();
             }
 
             if (TimeSeriesToIncludeBySourceAlias.TryGetValue(alias, out var hashSet) == false)
             {
-                TimeSeriesToIncludeBySourceAlias[alias] = hashSet = new HashSet<TimeSeriesRange>(comparer: TimeSeriesRangeComparer.Instance);
+                TimeSeriesToIncludeBySourceAlias[alias] = hashSet = new HashSet<AbstractTimeSeriesRange>(comparer: AbstractTimeSeriesRangeComparer.Instance);
             }
 
             hashSet.Add(new TimeSeriesRange
@@ -492,24 +523,66 @@ namespace Raven.Client.Documents.Session.Loaders
                 To = to?.EnsureUtc()
             });
         }
+
+        private void IncludeTimeSeries(string alias, string name, TimeSeriesRangeType type, TimeValue time)
+        {
+            AssertValid(name, type, time);
+
+            if (TimeSeriesToIncludeBySourceAlias == null)
+            {
+                TimeSeriesToIncludeBySourceAlias = new Dictionary<string, HashSet<AbstractTimeSeriesRange>>();
+            }
+
+            if (TimeSeriesToIncludeBySourceAlias.TryGetValue(alias, out var hashSet) == false)
+            {
+                TimeSeriesToIncludeBySourceAlias[alias] = hashSet = new HashSet<AbstractTimeSeriesRange>(comparer: AbstractTimeSeriesRangeComparer.Instance);
+            }
+
+            hashSet.Add(new TimeSeriesTimeRange
+            {
+                Name = name,
+                Time = time,
+                Type = type
+            });
+
+            static void AssertValid(string name, TimeSeriesRangeType type, TimeValue time)
+            {
+                if (name is null)
+                    throw new ArgumentNullException(nameof(name));
+
+                switch (type)
+                {
+                    case TimeSeriesRangeType.None:
+                        if (time == default)
+                            return;
+
+                        throw new InvalidOperationException($"Time range type cannot be set to '{nameof(TimeSeriesRangeType.None)}' when time is specified.");
+                    case TimeSeriesRangeType.Last:
+                        if (time != default)
+                            return;
+
+                        throw new InvalidOperationException($"Time range type cannot be set to '{nameof(TimeSeriesRangeType.Last)}' when time is not specified.");
+                    default:
+                        throw new NotSupportedException($"Not supported time range type '{type}'.");
+                };
+            }
+        }
     }
 
-
-
-    internal class TimeSeriesRangeComparer : IEqualityComparer<TimeSeriesRange>
+    internal class AbstractTimeSeriesRangeComparer : IEqualityComparer<AbstractTimeSeriesRange>
     {
-        public static TimeSeriesRangeComparer Instance = new TimeSeriesRangeComparer();
+        public static AbstractTimeSeriesRangeComparer Instance = new AbstractTimeSeriesRangeComparer();
 
-        private TimeSeriesRangeComparer()
+        private AbstractTimeSeriesRangeComparer()
         {
         }
 
-        public bool Equals(TimeSeriesRange x, TimeSeriesRange y)
+        public bool Equals(AbstractTimeSeriesRange x, AbstractTimeSeriesRange y)
         {
             return string.Equals(x?.Name, y?.Name, StringComparison.OrdinalIgnoreCase);
         }
 
-        public int GetHashCode(TimeSeriesRange obj)
+        public int GetHashCode(AbstractTimeSeriesRange obj)
         {
             return obj.Name.GetHashCode();
         }

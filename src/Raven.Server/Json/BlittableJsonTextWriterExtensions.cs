@@ -1669,7 +1669,27 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(kvp.Key);
 
-                await TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
+                await TimeSeriesHandler.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteTimeSeries(this BlittableJsonTextWriter writer, Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
+        {
+            writer.WriteStartObject();
+
+            var first = true;
+            foreach (var kvp in timeSeries)
+            {
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+
+                writer.WritePropertyName(kvp.Key);
+
+                TimeSeriesHandler.WriteTimeSeriesRangeResults(context: null, writer, documentId: null, kvp.Value);
             }
 
             writer.WriteEndObject();
