@@ -881,7 +881,6 @@ namespace Raven.Server.Smuggler.Documents
                 if (_log.IsInfoEnabled)
                     _log.Info($"Importing {Documents.Count:#,#0} documents");
 
-                var isV3 = _buildType == BuildVersionType.V3;
                 var idsOfDocumentsToUpdateAfterAttachmentDeletion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
 
@@ -983,7 +982,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    if (isV3 && DatabaseSmuggler.IsPreV4Revision(_buildType, id, document))
+                    if (DatabaseSmuggler.IsPreV4Revision(_buildType, id, document))
                     {
                         // handle old revisions
                         if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
