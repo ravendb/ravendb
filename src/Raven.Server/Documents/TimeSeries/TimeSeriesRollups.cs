@@ -437,7 +437,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                     if (config.MaxRetention < TimeValue.MaxValue)
                     {
-                        var rollupStartTicks = Math.Max(rollupStart.Ticks, _now.Add(-policy.AggregationTime).Add(-config.MaxRetention).Ticks);
+                        var next = new DateTime(NextRollup(_now.Add(-config.MaxRetention), policy)).Add(-policy.AggregationTime);
+                        var rollupStartTicks = Math.Max(rollupStart.Ticks, next.Ticks);
                         rollupStart = new DateTime(rollupStartTicks);
                     }
 
