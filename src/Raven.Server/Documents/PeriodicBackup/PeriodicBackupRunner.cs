@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations(message, e);
 
-                    ScheduleNextBackup(periodicBackup, null);
+                    ScheduleNextBackup(periodicBackup, elapsed: null, underLock: false);
 
                     _database.NotificationCenter.Add(AlertRaised.Create(
                         _database.Name,
@@ -639,7 +639,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private void ScheduleNextBackup(PeriodicBackup periodicBackup, TimeSpan? elapsed)
+        private void ScheduleNextBackup(PeriodicBackup periodicBackup, TimeSpan? elapsed, bool underLock = true)
         {
             try
             {
@@ -652,7 +652,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
                 {
                     var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
-                    periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
+                    periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true, underLock);
                 }
             }
             catch (Exception e)

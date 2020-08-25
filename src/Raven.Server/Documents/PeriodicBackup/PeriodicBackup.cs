@@ -77,25 +77,37 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void UpdateTimer(Timer newBackupTimer, bool discardIfDisabled = false)
+        public void UpdateTimer(Timer newBackupTimer, bool discardIfDisabled = false, bool underLock = true)
         {
-            using (UpdateBackupTask())
+            if (underLock)
             {
-                if (Disposed)
+                using (UpdateBackupTask())
                 {
-                    newBackupTimer.Dispose();
-                    return;
+                    UpdateTimerInternal(newBackupTimer, discardIfDisabled);
                 }
-
-                if (discardIfDisabled && BackupTimer == null)
-                {
-                    newBackupTimer.Dispose();
-                    return;
-                }
-
-                BackupTimer?.Dispose();
-                BackupTimer = newBackupTimer;
             }
+            else
+            {
+                UpdateTimerInternal(newBackupTimer, discardIfDisabled);
+            }
+        }
+
+        private void UpdateTimerInternal(Timer newBackupTimer, bool discardIfDisabled)
+        {
+            if (Disposed)
+            {
+                newBackupTimer.Dispose();
+                return;
+            }
+
+            if (discardIfDisabled && BackupTimer == null)
+            {
+                newBackupTimer.Dispose();
+                return;
+            }
+
+            BackupTimer?.Dispose();
+            BackupTimer = newBackupTimer;
         }
 
         public bool HasScheduledBackup()
