@@ -310,7 +310,7 @@ namespace Raven.Server.Documents.Handlers
                 throw new InvalidOperationException("Parameters 'timeseriesNames', 'fromList' and 'toList' must be of equal length. " +
                                                     $"Got : timeseriesNames.Count = {timeSeriesNames.Count}, fromList.Count = {fromList.Count}, toList.Count = {toList.Count}.");
 
-            var hs = new HashSet<TimeSeriesRange>(TimeSeriesRangeComparer.Instance);
+            var hs = new HashSet<AbstractTimeSeriesRange>(AbstractTimeSeriesRangeComparer.Instance);
 
             for (int i = 0; i < timeSeriesNames.Count; i++)
             {
@@ -326,8 +326,7 @@ namespace Raven.Server.Documents.Handlers
                 });
             }
 
-            includeTimeSeries = new IncludeTimeSeriesCommand(context,
-                new Dictionary<string, HashSet<TimeSeriesRange>> { { string.Empty, hs } });
+            includeTimeSeries = new IncludeTimeSeriesCommand(context, new Dictionary<string, HashSet<AbstractTimeSeriesRange>> { { string.Empty, hs } });
         }
 
         private async Task<int> WriteDocumentsJsonAsync(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes,
@@ -401,7 +400,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 // We HAVE to read the document in full, trying to parallelize the doc read
-                // and the identity generation needs to take into account that the identity 
+                // and the identity generation needs to take into account that the identity
                 // generation can fail and will leave the reading task hanging if we abort
                 // easier to just do in synchronously
                 var doc = await context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
@@ -663,11 +662,11 @@ namespace Raven.Server.Documents.Handlers
             }
             catch (Voron.Exceptions.VoronConcurrencyErrorException)
             {
-                // RavenDB-10581 - If we have a concurrency error on "doc-id/" 
+                // RavenDB-10581 - If we have a concurrency error on "doc-id/"
                 // this means that we have existing values under the current etag
-                // we'll generate a new (random) id for them. 
+                // we'll generate a new (random) id for them.
 
-                // The TransactionMerger will re-run us when we ask it to as a 
+                // The TransactionMerger will re-run us when we ask it to as a
                 // separate transaction
                 if (_id?.EndsWith(_database.IdentityPartsSeparator) == true)
                 {

@@ -72,12 +72,13 @@ namespace Raven.Client.ServerWide.Tcp
         public static readonly int SubscriptionBaseLine = 40;
         public static readonly int SubscriptionIncludes = 41_400;
         public static readonly int SubscriptionCounterIncludes = 50_000;
+        public static readonly int SubscriptionTimeSeriesIncludes = 51_000;
         public static readonly int TestConnectionBaseLine = 50;
 
         public static readonly int ClusterTcpVersion = ClusterBaseLine;
         public static readonly int HeartbeatsTcpVersion = Heartbeats42000;
         public static readonly int ReplicationTcpVersion = ReplicationWithTimeSeries;
-        public static readonly int SubscriptionTcpVersion = SubscriptionCounterIncludes;
+        public static readonly int SubscriptionTcpVersion = SubscriptionTimeSeriesIncludes;
         public static readonly int TestConnectionTcpVersion = TestConnectionBaseLine;
 
         static TcpConnectionHeaderMessage()
@@ -183,14 +184,17 @@ namespace Raven.Client.ServerWide.Tcp
             {
                 public bool BaseLine = true;
             }
+
             public class NoneFeatures
             {
                 public bool BaseLine = true;
             }
+
             public class DropFeatures
             {
                 public bool BaseLine = true;
             }
+
             public class SubscriptionFeatures
             {
                 public bool BaseLine = true;
@@ -198,21 +202,27 @@ namespace Raven.Client.ServerWide.Tcp
                 public bool Includes;
 
                 public bool CounterIncludes;
+
+                public bool TimeSeriesIncludes;
             }
+
             public class ClusterFeatures
             {
                 public bool BaseLine = true;
             }
+
             public class HeartbeatsFeatures
             {
                 public bool BaseLine = true;
                 public bool SendChangesOnly;
                 public bool IncludeServerInfo;
             }
+
             public class TestConnectionFeatures
             {
                 public bool BaseLine = true;
             }
+
             public class ReplicationFeatures
             {
                 public bool BaseLine = true;
@@ -243,6 +253,7 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Subscription] = new List<int>
                 {
+                    SubscriptionTimeSeriesIncludes,
                     SubscriptionCounterIncludes,
                     SubscriptionIncludes,
                     SubscriptionBaseLine
@@ -297,6 +308,15 @@ namespace Raven.Client.ServerWide.Tcp
                 },
                 [OperationTypes.Subscription] = new Dictionary<int, SupportedFeatures>
                 {
+                    [SubscriptionTimeSeriesIncludes] = new SupportedFeatures(SubscriptionCounterIncludes)
+                    {
+                        Subscription = new SupportedFeatures.SubscriptionFeatures
+                        {
+                            TimeSeriesIncludes = true,
+                            CounterIncludes = true,
+                            Includes = true
+                        }
+                    },
                     [SubscriptionCounterIncludes] = new SupportedFeatures(SubscriptionCounterIncludes)
                     {
                         Subscription = new SupportedFeatures.SubscriptionFeatures
@@ -345,7 +365,6 @@ namespace Raven.Client.ServerWide.Tcp
                     {
                         Replication = new SupportedFeatures.ReplicationFeatures
                         {
-
                             // 'ReplicationFeatures.Counters' feature is NOT supported in v4.2 (and above),
                             // it was replaced by 'ReplicationFeatures.CountersBatch'.
                             // However, when negotiating with v4.1.x we want to agree
@@ -408,7 +427,6 @@ namespace Raven.Client.ServerWide.Tcp
                 }
             };
 
-
         public enum SupportedStatus
         {
             OutOfRange,
@@ -440,7 +458,7 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static int GetOperationTcpVersion(OperationTypes operationType, int index = 0)
         {
-            // we don't check the if the index go out of range, since this is expected and means that we don't have 
+            // we don't check the if the index go out of range, since this is expected and means that we don't have
             switch (operationType)
             {
                 case OperationTypes.Ping:

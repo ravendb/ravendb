@@ -59,6 +59,7 @@ namespace Raven.Client.Documents.Subscriptions
         public List<Item> Items { get; } = new List<Item>();
         private List<BlittableJsonReaderObject> _includes;
         private List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
+        private List<BlittableJsonReaderObject> _timeSeriesIncludes;
 
         public IDocumentSession OpenSession()
         {
@@ -145,6 +146,12 @@ namespace Raven.Client.Documents.Subscriptions
                     s.RegisterCounters(item.Includes, item.IncludedCounterNames);
             }
 
+            if (_timeSeriesIncludes?.Count > 0)
+            {
+                foreach (var item in _timeSeriesIncludes)
+                    s.RegisterTimeSeries(item);
+            }
+
             foreach (var item in Items)
             {
                 if (item.Projection || item.Revision)
@@ -176,6 +183,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             _includes = batch.Includes;
             _counterIncludes = batch.CounterIncludes;
+            _timeSeriesIncludes = batch.TimeSeriesIncludes;
 
             Items.Capacity = Math.Max(Items.Capacity, batch.Messages.Count);
             Items.Clear();

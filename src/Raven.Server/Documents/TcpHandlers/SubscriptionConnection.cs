@@ -17,9 +17,11 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Json;
@@ -46,6 +48,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment IncludesSegment = new StringSegment(nameof(QueryResult.Includes));
         private static readonly StringSegment CounterIncludesSegment = new StringSegment(nameof(QueryResult.CounterIncludes));
+        private static readonly StringSegment TimeSeriesIncludesSegment = new StringSegment(nameof(QueryResult.TimeSeriesIncludes));
         private static readonly StringSegment IncludedCounterNamesSegment = new StringSegment(nameof(QueryResult.IncludedCounterNames));
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
@@ -157,6 +160,12 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 if (Subscription.CounterIncludes != null && Subscription.CounterIncludes.Length > 0)
                     throw new SubscriptionInvalidStateException($"Subscription with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support Counter Includes.");
+            }
+
+            if (_supportedFeatures.Subscription.TimeSeriesIncludes == false)
+            {
+                if (Subscription.TimeSeriesIncludes != null && Subscription.TimeSeriesIncludes.TimeSeries.Count > 0)
+                    throw new SubscriptionInvalidStateException($"Subscription with ID '{SubscriptionId}' cannot be opened because it requires the protocol to support TimeSeries Includes.");
             }
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
@@ -700,10 +709,13 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     IncludeDocumentsCommand includeDocumentsCommand = null;
                     IncludeCountersCommand includeCountersCommand = null;
+                    IncludeTimeSeriesCommand includeTimeSeriesCommand = null;
                     if (_supportedFeatures.Subscription.Includes)
                         includeDocumentsCommand = new IncludeDocumentsCommand(TcpConnection.DocumentDatabase.DocumentsStorage, docsContext, Subscription.Includes, isProjection: _filterAndProjectionScript != null);
                     if (_supportedFeatures.Subscription.CounterIncludes && Subscription.CounterIncludes != null)
                         includeCountersCommand = new IncludeCountersCommand(TcpConnection.DocumentDatabase, docsContext, Subscription.CounterIncludes);
+                    if (_supportedFeatures.Subscription.TimeSeriesIncludes && Subscription.TimeSeriesIncludes != null)
+                        includeTimeSeriesCommand = new IncludeTimeSeriesCommand(docsContext, Subscription.TimeSeriesIncludes.TimeSeries);
 
                     foreach (var result in _documentsFetcher.GetDataToSend(docsContext, includeDocumentsCommand, _startEtag))
                     {
@@ -756,6 +768,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             includeDocumentsCommand?.Gather(result.Doc);
                             includeCountersCommand?.Fill(result.Doc);
+                            includeTimeSeriesCommand?.Fill(result.Doc);
 
                             writer.WriteDocument(docsContext, result.Doc, metadataOnly: false);
                         }
@@ -779,13 +792,16 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (includeDocumentsCommand != null)
                         {
                             writer.WriteStartObject();
+
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
                             writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
                             writer.WriteComma();
+
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludesSegment));
                             var includes = new List<Document>();
                             includeDocumentsCommand.Fill(includes);
                             writer.WriteIncludes(docsContext, includes);
+
                             writer.WriteEndObject();
                         }
 
@@ -803,6 +819,20 @@ namespace Raven.Server.Documents.TcpHandlers
 
                             writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(IncludedCounterNamesSegment));
                             writer.WriteIncludedCounterNames(includeCountersCommand.CountersToGetByDocId);
+
+                            writer.WriteEndObject();
+                        }
+
+                        if (includeTimeSeriesCommand != null)
+                        {
+                            writer.WriteStartObject();
+
+                            writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TypeSegment));
+                            writer.WriteValue(BlittableJsonToken.String, docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(docsContext.GetLazyStringForFieldWithCaching(TimeSeriesIncludesSegment));
+                            writer.WriteTimeSeries(includeTimeSeriesCommand.Results);
 
                             writer.WriteEndObject();
                         }
@@ -865,7 +895,7 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
-        private async Task FlushDocsToClient(BlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
+        private async Task FlushDocsToClient(AbstractBlittableJsonTextWriter writer, int flushedDocs, bool endOfBatch = false)
         {
             CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
@@ -972,7 +1002,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     // ignored
                 }
-                
+
                 try
                 {
                     CancellationTokenSource.Dispose();
@@ -996,6 +1026,7 @@ namespace Raven.Server.Documents.TcpHandlers
             public bool Revisions;
             public string[] Includes;
             public string[] CounterIncludes;
+            internal TimeSeriesIncludesField TimeSeriesIncludes;
         }
 
         public static ParsedSubscription ParseSubscriptionQuery(string query)
@@ -1016,7 +1047,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 throw new NotSupportedException("Subscription cannot specify an update clause");
 
             bool revisions = false;
-            if (q.From.Filter is BinaryExpression filter)
+            if (q.From.Filter is Queries.AST.BinaryExpression filter)
             {
                 switch (filter.Operator)
                 {
@@ -1048,6 +1079,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             List<string> includes = null;
             List<string> counterIncludes = null;
+            TimeSeriesIncludesField timeSeriesIncludes = null;
             if (q.Include != null)
             {
                 foreach (var include in q.Include)
@@ -1055,32 +1087,61 @@ namespace Raven.Server.Documents.TcpHandlers
                     switch (include)
                     {
                         case MethodExpression me:
-                            var methodType = QueryMethod.GetMethodType(me.Name.Value);
-                            if (methodType != MethodType.Counters)
-                                goto default;
-
-                            QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
-
-                            if (counterIncludes == null)
-                                counterIncludes = new List<string>();
-
-                            if (me.Arguments.Count > 0)
+                            switch (QueryMethod.GetMethodType(me.Name.Value))
                             {
-                                var argument = me.Arguments[0];
+                                case MethodType.Counters:
+                                    QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
 
-                                counterIncludes.Add(ExtractPathFromExpression(argument));
+                                    if (counterIncludes == null)
+                                        counterIncludes = new List<string>();
+
+                                    if (me.Arguments.Count > 0)
+                                    {
+                                        var argument = me.Arguments[0];
+
+                                        counterIncludes.Add(ExtractPathFromExpression(argument, q));
+                                    }
+                                    break;
+                                case MethodType.TimeSeries:
+                                    QueryValidator.ValidateIncludeTimeseries(me.Arguments, q.QueryText, null);
+
+                                    if (timeSeriesIncludes == null)
+                                        timeSeriesIncludes = new TimeSeriesIncludesField();
+
+                                    switch (me.Arguments.Count)
+                                    {
+                                        case 1: // include timeseries(last(7, 'months'))
+                                            {
+                                                var (type, time) = TimeSeriesHandler.ParseTime(me.Arguments[0], q.QueryText);
+                                                timeSeriesIncludes.AddTimeSeries(string.Empty, type, time);
+                                            }
+                                            break;
+                                        case 2: // include timeseries('Name', last(7, 'months'));
+                                            {
+                                                var name = ExtractValueFromExpression(me.Arguments[0]);
+                                                var (type, time) = TimeSeriesHandler.ParseTime(me.Arguments[1], q.QueryText);
+                                                timeSeriesIncludes.AddTimeSeries(name, type, time);
+                                            }
+                                            break;
+                                        default:
+                                            throw new NotSupportedException("TODO ppekrol");
+                                    }
+
+                                    break;
+                                default:
+                                    throw new NotSupportedException("TODO ppekrol");
                             }
                             break;
                         default:
                             if (includes == null)
                                 includes = new List<string>();
 
-                            includes.Add(ExtractPathFromExpression(include));
+                            includes.Add(ExtractPathFromExpression(include, q));
                             break;
                     }
                 }
 
-                string ExtractPathFromExpression(QueryExpression expression)
+                static string ExtractPathFromExpression(QueryExpression expression, Query q)
                 {
                     switch (expression)
                     {
@@ -1090,6 +1151,19 @@ namespace Raven.Server.Documents.TcpHandlers
                         case ValueExpression ve:
                             (string memberPath, string _) = QueryMetadata.ParseExpressionPath(expression, ve.Token.Value, q.From.Alias);
                             return memberPath;
+                        default:
+                            throw new InvalidOperationException("Subscription only support include of fields, but got: " + expression);
+                    }
+                }
+
+                static string ExtractValueFromExpression(QueryExpression expression)
+                {
+                    switch (expression)
+                    {
+                        case FieldExpression fe:
+                            return fe.FieldValue;
+                        case ValueExpression ve:
+                            return ve.GetValue(null)?.ToString();
                         default:
                             throw new InvalidOperationException("Subscription only support include of fields, but got: " + expression);
                     }
@@ -1104,7 +1178,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     Collection = collectionName,
                     Revisions = revisions,
                     Includes = includes?.ToArray(),
-                    CounterIncludes = counterIncludes?.ToArray()
+                    CounterIncludes = counterIncludes?.ToArray(),
+                    TimeSeriesIncludes = timeSeriesIncludes
                 };
             }
 

@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Session.Operations
         private string[] _countersToInclude;
         private string[] _compareExchangeValuesToInclude;
         private bool _includeAllCounters;
-        private IEnumerable<TimeSeriesRange> _timeSeriesToInclude;
+        private IEnumerable<AbstractTimeSeriesRange> _timeSeriesToInclude;
 
         private bool _resultsSet;
         private GetDocumentsResult _results;
@@ -79,7 +79,7 @@ namespace Raven.Client.Documents.Session.Operations
             return this;
         }
 
-        public LoadOperation WithTimeSeries(IEnumerable<TimeSeriesRange> timeseries)
+        public LoadOperation WithTimeSeries(IEnumerable<AbstractTimeSeriesRange> timeseries)
         {
             if (timeseries != null)
                 _timeSeriesToInclude = timeseries;

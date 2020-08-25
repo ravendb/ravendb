@@ -508,6 +508,7 @@ namespace Raven.Client.Documents.Subscriptions
             var incomingBatch = new List<SubscriptionConnectionServerMessage>();
             var includes = new List<BlittableJsonReaderObject>();
             var counterIncludes = new List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)>();
+            var timeSeriesIncludes = new List<BlittableJsonReaderObject>();
             IDisposable returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
             bool endOfBatch = false;
             while (endOfBatch == false && _processingCts.IsCancellationRequested == false)
@@ -528,6 +529,9 @@ namespace Raven.Client.Documents.Subscriptions
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.CounterIncludes:
                         counterIncludes.Add((receivedMessage.CounterIncludes, receivedMessage.IncludedCounterNames));
+                        break;
+                    case SubscriptionConnectionServerMessage.MessageType.TimeSeriesIncludes:
+                        timeSeriesIncludes.Add(receivedMessage.TimeSeriesIncludes);
                         break;
                     case SubscriptionConnectionServerMessage.MessageType.EndOfBatch:
                         endOfBatch = true;
@@ -555,7 +559,8 @@ namespace Raven.Client.Documents.Subscriptions
                 Messages = incomingBatch,
                 ReturnContext = returnContext,
                 Includes = includes,
-                CounterIncludes = counterIncludes
+                CounterIncludes = counterIncludes,
+                TimeSeriesIncludes = timeSeriesIncludes
             };
         }
 

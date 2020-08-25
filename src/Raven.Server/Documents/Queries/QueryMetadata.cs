@@ -766,7 +766,7 @@ namespace Raven.Server.Documents.Queries
 
             if (start == expression.Arguments.Count)
             {
-                timeSeriesIncludes.TimeSeries[alias ?? string.Empty] = new HashSet<TimeSeriesRange>(TimeSeriesRangeComparer.Instance);
+                timeSeriesIncludes.TimeSeries[alias ?? string.Empty] = new HashSet<AbstractTimeSeriesRange>(AbstractTimeSeriesRangeComparer.Instance);
                 return;
             }
 
