@@ -1938,6 +1938,62 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public async Task ShouldClearAllCompareExchangeTombstonesIfThereIsABackupThatNeverOccur()
+        {
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options { Server = server }))
+            {
+                WaitForFirstCompareExchangeTombstonesClean(server);
+                var indexesList = new Dictionary<string, long>();
+                // create 3 unique values
+                for (int i = 0; i < 3; i++)
+                {
+                    var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>($"{i}", i, 0));
+                    indexesList.Add($"{i}", res.Index);
+                }
+
+                // delete 1 unique value
+                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList["2"]));
+                Assert.NotNull(del.Value);
+                indexesList.Remove("2");
+
+                // full backup without incremental
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = "backupPath1"
+                    },
+                    Name = "full",
+                    FullBackupFrequency = "0 0 1 1 *",
+                    BackupType = BackupType.Backup
+                };
+
+                var result1 = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+                config.Name = "backupPath2";
+                config.IncrementalBackupFrequency = "0 0 1 1 *";
+                var result2 = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    Assert.Equal(1, numOfCompareExchangeTombstones);
+                    // clean tombstones
+                    Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, await server.ServerStore.Observer.CleanUpCompareExchangeTombstones(store.Database, null, context));
+                }
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                    Assert.Equal(0, numOfCompareExchangeTombstones);
+                    Assert.Equal(2, numOfCompareExchanges);
+                }
+            }
+        }
+
         private static List<string> ConcatStringInList(List<string> list)
         {
             for (var i = 0; i < list.Count; i++)
