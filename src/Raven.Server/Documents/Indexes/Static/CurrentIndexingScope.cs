@@ -89,12 +89,19 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyString != null && id.Equals(keyString))
                     return source;
 
-                var key = keyLazy ?? keyString;
+                var key = keyLazy != null 
+                    ? keyLazy.AsSpan<char>() 
+                    : keyString.AsSpan();
 
                 if (key.Length == 0)
                     return DynamicNullObject.Null;
+                
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.
+                
+                // making sure that we normalize the case of the key so we'll be able to find
+                // it in case insensitive manner
+                // In addition, special characters need to be escaped
                 DocumentIdWorker.GetSliceFromId(_documentsContext, key, out var keySlice);
                 
                 var references = GetReferencesForDocument(id);

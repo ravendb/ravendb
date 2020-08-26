@@ -45,15 +45,19 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        public static int FindEscapePositionsMaxSize(StringSegment str, out int escapedCount)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int FindEscapePositionsMaxSize(string str, out int escapedCount)
+        {
+            return FindEscapePositionsMaxSize(str.AsSpan(), out escapedCount);
+        }
+        
+        public static int FindEscapePositionsMaxSize(ReadOnlySpan<char> str, out int escapedCount)
         {
             var count = 0;
             var controlCount = 0;
 
-            for (int i = 0; i < str.Length; i++)
+            foreach (var value in str)
             {
-                char value = str[i];
-
                 // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
                 // 8  => '\b' => 0000 1000
                 // 9  => '\t' => 0000 1001

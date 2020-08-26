@@ -34,10 +34,9 @@ namespace Raven.Client.Documents.Session.Tokens
 
             if (IsDynamic)
             {
-                writer
-                    .Append("from '")
-                    .Append(StringExtensions.EscapeString(CollectionName))
-                    .Append("'");
+                writer.Append("from '");
+                StringExtensions.EscapeString(writer, CollectionName);
+                writer.Append("'");
             }
             else
             {

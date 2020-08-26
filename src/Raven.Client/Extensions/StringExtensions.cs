@@ -64,30 +64,52 @@ namespace Raven.Client.Extensions
         private static readonly char[] LiteralSymbolsToEscape = { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
         private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
-        public static string EscapeString(string value) 
+        public static string EscapeString(string value)
         {
+            if (string.IsNullOrEmpty(value))
+                return value;
+            
             var builder = new StringBuilder(6 * value.Length);
-            foreach (var c in value)
-            {
-                builder.Append(EscapeChar(c));
-            }
+            EscapeStringInternal(builder, value);
             return builder.ToString();
         }
         
-        public static string EscapeChar(char c)
+        public static void EscapeString(StringBuilder builder, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return;
+
+            EscapeStringInternal(builder, value);
+        }
+
+        private static void EscapeStringInternal(StringBuilder builder, string value)
+        {
+            foreach (var c in value)
+            {
+                EscapeChar(builder, c);
+            }
+        }
+
+        public static void EscapeChar(StringBuilder builder, char c)
         {
             var index = Array.IndexOf(LiteralSymbolsToEscape, c);
 
             if (index != -1)
-                return LiteralEscapedSymbols[index];
+            {
+                builder.Append(LiteralEscapedSymbols[index]);
+                return;
+            }
 
-            if (char.IsLetterOrDigit(c) == false 
-                && char.IsWhiteSpace(c) == false 
-                && char.IsSymbol(c) == false 
+            if (char.IsLetterOrDigit(c) == false
+                && char.IsWhiteSpace(c) == false
+                && char.IsSymbol(c) == false
                 && char.IsPunctuation(c) == false)
-                return @"\u" + ((int)c).ToString("x4");
+            {
+                builder.AppendFormat(@"\u{0:x4}", (int)c);
+                return;
+            }
 
-            return c.ToString();
+            builder.Append(c);
         }
     }
 }

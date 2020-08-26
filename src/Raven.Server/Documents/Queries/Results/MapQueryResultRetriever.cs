@@ -48,10 +48,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
         {
-            using (Slice.From(_context.Allocator, id, out var idSlice))
-            {
-                return DocumentsStorage.Get(_context, idSlice, fields);
-            }
+            return DocumentsStorage.Get(_context, id, fields);
         }
 
         protected override Document LoadDocument(string id)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -23,9 +24,25 @@ namespace Raven.Server.Documents
             ThreadLocalCleanup.ReleaseThreadLocalState += () => _jsonParserState = null;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
             TransactionOperationContext<TTransaction> context, string id, out Slice idSlice,
             byte? separator = null)
+            where TTransaction : RavenTransaction
+        {
+            return GetSliceFromId(context, id.AsSpan(), out idSlice, separator);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
+            TransactionOperationContext<TTransaction> context, LazyStringValue id, out Slice idSlice,
+            byte? separator = null)
+            where TTransaction : RavenTransaction
+        {
+            return GetSliceFromId(context, id.AsSpan<char>(), out idSlice, separator);
+        }
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(TransactionOperationContext<TTransaction> context, ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
             where TTransaction : RavenTransaction
         {
             if (_jsonParserState == null)
@@ -39,14 +56,14 @@ namespace Raven.Server.Documents
             var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id, out _);
 
             if (strLength > MaxIdSize)
-                ThrowDocumentIdTooBig(id);
+                ThrowDocumentIdTooBig(id.ToString());
 
             var internalScope = context.Allocator.Allocate(
-               maxStrSize  // this buffer is allocated to also serve the GetSliceFromUnicodeKey
+                maxStrSize // this buffer is allocated to also serve the GetSliceFromUnicodeKey
                 + sizeof(char) * id.Length
                 + escapePositionsSize
                 + (separator != null ? 1 : 0),
-               out var buffer);
+                out var buffer);
 
             idSlice = new Slice(buffer);
 
@@ -58,6 +75,7 @@ namespace Raven.Server.Documents
                     strLength = ReadFromUnicodeKey(id, buffer, maxStrSize, separator);
                     goto Finish;
                 }
+
                 if ((ch >= 65) && (ch <= 90))
                     buffer.Ptr[i] = (byte)(ch | 0x20);
                 else
@@ -70,13 +88,14 @@ namespace Raven.Server.Documents
                 buffer.Ptr[strLength] = separator.Value;
                 strLength++;
             }
-        Finish:
+
+            Finish:
             buffer.Truncate(strLength);
             return internalScope;
         }
 
         private static int ReadFromUnicodeKey(
-            string key,
+            ReadOnlySpan<char> key,
             ByteString buffer,
             int maxByteCount,
             byte? separator)
@@ -94,6 +113,7 @@ namespace Raven.Server.Documents
             return size;
         }
 
+        
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
         public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext, LazyStringValue str, out Slice loweredKey)
