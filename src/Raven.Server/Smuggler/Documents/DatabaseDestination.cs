@@ -991,6 +991,7 @@ namespace Raven.Server.Smuggler.Documents
                         var endIndex = id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                         var newId = id.Substring(0, endIndex);
 
+                        Document parentDocument = null;
                         if (_database.DocumentsStorage.Get(context, newId, DocumentFields.Id) == null)
                         {
                             var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
@@ -998,18 +999,34 @@ namespace Raven.Server.Smuggler.Documents
                         }
                         else
                         {
+                            // the order of revisions in v3.x is different than we have in v4.x
+                            // in v4.x: rev1, rev2, rev3, document (the change vector of the last revision is identical to the document)
+                            // in v3.x: rev1, rev2, document, rev3
+                            parentDocument = _database.DocumentsStorage.Get(context, newId);
                             _missingDocumentsForRevisions.TryRemove(newId, out _);
                         }
 
+                        document.Flags |= DocumentFlags.HasRevisions;
                         _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags,
                             document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+
+                        if (parentDocument != null)
+                        {
+                            // the change vector of the document must be identical to the one of the last revision
+                            databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+                            parentDocument.Data = parentDocument.Data.Clone(context);
+
+                            _database.DocumentsStorage.Put(context, parentDocument.Id, null,
+                                parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, parentDocument.Flags, parentDocument.NonPersistentFlags);
+                        }
+
                         continue;
                     }
 
                     PutAttachments(context, document, isRevision: false, out _);
 
                     newEtag = _database.DocumentsStorage.GenerateNextEtag();
-                        document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
+                    document.ChangeVector = _database.DocumentsStorage.GetNewChangeVector(context, newEtag);
                     databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
 
                     _database.DocumentsStorage.Put(context, id, null, document.Data, document.LastModified.Ticks, document.ChangeVector, document.Flags, document.NonPersistentFlags);

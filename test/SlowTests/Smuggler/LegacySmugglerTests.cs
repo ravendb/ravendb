@@ -164,7 +164,7 @@ namespace SlowTests.Smuggler
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
                 Assert.Equal(5, stats.CountOfRevisionDocuments);
-                Assert.Equal(8, stats.LastDocEtag);
+                Assert.Equal(10, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
@@ -180,10 +180,12 @@ namespace SlowTests.Smuggler
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(5, metadata.Count);
                     Assert.Equal("Users", metadata.GetString(Constants.Documents.Metadata.Collection));
-                    Assert.StartsWith("A:7-", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
-                    Assert.Equal(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal($"{DocumentFlags.HasRevisions}", metadata.GetString(Constants.Documents.Metadata.Flags));
                     Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
                     Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
+
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.StartsWith("RV:", changeVector);
 
                     var revisions = session.Advanced.Revisions.GetFor<User>("users/1");
                     Assert.Equal(4, revisions.Count);
@@ -193,10 +195,15 @@ namespace SlowTests.Smuggler
                         metadata = session.Advanced.GetMetadataFor(revisions[i]);
                         Assert.Equal(5, metadata.Count);
                         Assert.Equal("Users", metadata.GetString(Constants.Documents.Metadata.Collection));
-                        Assert.Equal($"RV:{4 - i}-AAAAAQAAAQAAAAAAAAAAAw", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
-                        Assert.Equal(DocumentFlags.Revision.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                        Assert.Equal($"{DocumentFlags.HasRevisions}, {DocumentFlags.Revision}", metadata.GetString(Constants.Documents.Metadata.Flags));
                         Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
                         Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
+
+                        var revisionChangeVector = metadata.GetString(Constants.Documents.Metadata.ChangeVector);
+                        Assert.Equal($"RV:{4 - i}-AAAAAQAAAQAAAAAAAAAAAw", revisionChangeVector);
+
+                        if (i == 0)
+                            Assert.Equal(changeVector, revisionChangeVector);
                     }
                 }
             }
@@ -219,7 +226,7 @@ namespace SlowTests.Smuggler
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
                 Assert.Equal(6, stats.CountOfRevisionDocuments);
-                Assert.Equal(9, stats.LastDocEtag);
+                Assert.Equal(11, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
@@ -232,6 +239,7 @@ namespace SlowTests.Smuggler
                     var test = session.Load<Test>("test");
                     Assert.NotNull(test);
                     Assert.Equal("4", test.Name);
+                    var changeVector = session.Advanced.GetChangeVectorFor(test);
 
                     var revisions = session.Advanced.Revisions.GetFor<User>("test");
 
@@ -240,6 +248,15 @@ namespace SlowTests.Smuggler
                     Assert.Equal("2", revisions[2].Name);
                     Assert.Equal("1", revisions[3].Name);
                     Assert.Equal("...", revisions[4].Name);
+
+                    foreach (var revision in revisions)
+                    {
+                        var metadata = session.Advanced.GetMetadataFor(revision);
+                        Assert.Equal($"{DocumentFlags.HasRevisions}, {DocumentFlags.Revision}", metadata.GetString(Constants.Documents.Metadata.Flags));
+                    }
+
+                    var revisionChangeVector = session.Advanced.GetChangeVectorFor(revisions[0]);
+                    Assert.Equal(changeVector, revisionChangeVector);
                 }
             }
         }
