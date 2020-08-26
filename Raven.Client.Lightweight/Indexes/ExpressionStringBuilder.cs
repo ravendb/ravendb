@@ -1729,7 +1729,7 @@ namespace Raven.Client.Indexes
             return node.Method.IsSpecialName && (node.Method.Name.StartsWith("get_") || node.Method.Name.StartsWith("set_"));
         }
 
-        private static bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
+        private bool ShouldConvertToDynamicEnumerable(MethodCallExpression node)
         {
             var declaringType = node.Method.DeclaringType;
             if (declaringType == null)
@@ -1739,6 +1739,12 @@ namespace Raven.Client.Indexes
                 switch (node.Method.Name)
                 {
                     case "ToArray":
+#if DNXCORE50
+                        return false;
+#else
+                        return convention.PrettifyGeneratedLinqExpressions == false;
+#endif
+
                     case "First":
                     case "FirstOrDefault":
                     case "Single":
