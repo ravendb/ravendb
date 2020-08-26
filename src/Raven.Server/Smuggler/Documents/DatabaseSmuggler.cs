@@ -236,11 +236,14 @@ namespace Raven.Server.Smuggler.Documents
             if (ensureStepsProcessed)
             {
                 counts.Processed = true;
-
+                
                 if (counts is SmugglerProgressBase.CountsWithLastEtag countsWithEtag)
                 {
                     countsWithEtag.Attachments.Processed = true;
                 }
+
+                if (buildType == BuildVersionType.V3 && type == DatabaseItemType.Documents && result.RevisionDocuments.ReadCount > 0)
+                    result.RevisionDocuments.Processed = true;
             }
 
             result.AddInfo($"Finished processing {type}. {counts}");
