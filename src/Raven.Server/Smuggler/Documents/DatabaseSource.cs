@@ -9,12 +9,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Documents;
-using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents.Data;
@@ -465,34 +463,34 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
-            if (collectionsToExport?.Count > 0)
-            {
-                foreach (var collection in collectionsToExport)
+            var enumerator = new PulsedTransactionEnumerator<TimeSeriesItem, TimeSeriesIterationState>(_context,
+                state =>
                 {
-                    foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, collection, _startDocumentEtag, long.MaxValue))
-                    {
-                        yield return new TimeSeriesItem
-                        {
-                            Name =  _database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(_context, ts.DocId, ts.Name),
-                            DocId = ts.DocId,
-                            Baseline = ts.Start,
-                            ChangeVector = ts.ChangeVector,
-                            Collection = ts.Collection,
-                            SegmentSize = ts.SegmentSize,
-                            Segment = ts.Segment,
-                            Etag = ts.Etag,
-                        };
-                    }
-                }
+                    if (state.StartEtagByCollection.Count != 0)
+                        return GetTimeSeriesFromCollections(_context, state);
 
-                yield break;
+                    return GetAllTimeSeriesItems(_context, state.StartEtag);
+                },
+                new TimeSeriesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
+                {
+                    StartEtag = _startDocumentEtag, 
+                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                });
+
+            while (enumerator.MoveNext())
+            {
+                yield return enumerator.Current;
             }
+        }
 
-            foreach (var ts in _database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(_context, _startDocumentEtag, long.MaxValue))
+        private static IEnumerable<TimeSeriesItem> GetAllTimeSeriesItems(DocumentsOperationContext context, long startEtag)
+        {
+            var database = context.DocumentDatabase;
+            foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, startEtag, long.MaxValue))
             {
                 yield return new TimeSeriesItem
                 {
-                    Name = _database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(_context, ts.DocId, ts.Name),
+                    Name = database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, ts.DocId, ts.Name),
                     DocId = ts.DocId,
                     Baseline = ts.Start,
                     ChangeVector = ts.ChangeVector,
@@ -501,6 +499,34 @@ namespace Raven.Server.Smuggler.Documents
                     Segment = ts.Segment,
                     Etag = ts.Etag
                 };
+            }
+        }
+
+        private static IEnumerable<TimeSeriesItem> GetTimeSeriesFromCollections(DocumentsOperationContext context, TimeSeriesIterationState state)
+        {
+            var database = context.DocumentDatabase;
+            var collections = state.StartEtagByCollection.Keys.ToList();
+
+            foreach (var collection in collections)
+            {
+                var etag = state.StartEtagByCollection[collection];
+
+                state.CurrentCollection = collection;
+
+                foreach (var ts in database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesFrom(context, collection, etag, long.MaxValue))
+                {
+                    yield return new TimeSeriesItem
+                    {
+                        Name = database.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, ts.DocId, ts.Name),
+                        DocId = ts.DocId,
+                        Baseline = ts.Start,
+                        ChangeVector = ts.ChangeVector,
+                        Collection = ts.Collection,
+                        SegmentSize = ts.SegmentSize,
+                        Segment = ts.Segment,
+                        Etag = ts.Etag,
+                    };
+                }
             }
         }
 
