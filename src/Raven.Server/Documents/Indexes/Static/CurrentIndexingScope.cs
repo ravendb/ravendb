@@ -89,29 +89,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyString != null && id.Equals(keyString))
                     return source;
 
-                Slice keySlice;
-                if (keyLazy != null)
-                {
-                    if (keyLazy.Length == 0)
-                        return DynamicNullObject.Null;
+                var key = keyLazy ?? keyString;
 
-                    // we intentionally don't dispose of the scope here, this is being tracked by the references
-                    // and will be disposed there.
-                    Slice.External(_documentsContext.Allocator, keyLazy, out keySlice);
-                }
-                else
-                {
-                    if (keyString.Length == 0)
-                        return DynamicNullObject.Null;
-                    // we intentionally don't dispose of the scope here, this is being tracked by the references
-                    // and will be disposed there.
-                    Slice.From(_documentsContext.Allocator, keyString, out keySlice);
-                }
-
-                // making sure that we normalize the case of the key so we'll be able to find
-                // it in case insensitive manner
-                _documentsContext.Allocator.ToLowerCase(ref keySlice.Content);
-
+                if (key.Length == 0)
+                    return DynamicNullObject.Null;
+                // we intentionally don't dispose of the scope here, this is being tracked by the references
+                // and will be disposed there.
+                DocumentIdWorker.GetSliceFromId(_documentsContext, key, out var keySlice);
+                
                 var references = GetReferencesForDocument(id);
 
                 references.Add(keySlice);

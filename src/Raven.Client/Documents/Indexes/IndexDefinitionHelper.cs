@@ -214,7 +214,8 @@ namespace Raven.Client.Documents.Indexes
             if (StringExtensions.IsIdentifier(collectionName))
                 return "docs." + collectionName;
 
-            return "docs[@\"" + collectionName.Replace("\"", "\"\"") + "\"]";
+            collectionName = StringExtensions.EscapeString(collectionName);
+            return "docs[@\"" + collectionName + "\"]";
         }
 
         internal static IndexType DetectStaticIndexType(string map, string reduce)

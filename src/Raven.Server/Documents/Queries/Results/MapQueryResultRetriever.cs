@@ -5,6 +5,7 @@ using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Voron;
 
 namespace Raven.Server.Documents.Queries.Results
 {
@@ -47,7 +48,10 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, DocumentFields fields, IState state)
         {
-            return DocumentsStorage.Get(_context, id, fields);
+            using (Slice.From(_context.Allocator, id, out var idSlice))
+            {
+                return DocumentsStorage.Get(_context, idSlice, fields);
+            }
         }
 
         protected override Document LoadDocument(string id)
