@@ -1,4 +1,6 @@
+using System;
 using System.Globalization;
+using System.Text;
 
 namespace Raven.Client.Extensions
 {
@@ -57,6 +59,35 @@ namespace Raven.Client.Extensions
             }
 
             return true;
+        }
+        
+        private static readonly char[] LiteralSymbolsToEscape = { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
+        private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
+
+        public static string EscapeString(string value) 
+        {
+            var builder = new StringBuilder(6 * value.Length);
+            foreach (var c in value)
+            {
+                builder.Append(EscapeChar(c));
+            }
+            return builder.ToString();
+        }
+        
+        public static string EscapeChar(char c)
+        {
+            var index = Array.IndexOf(LiteralSymbolsToEscape, c);
+
+            if (index != -1)
+                return LiteralEscapedSymbols[index];
+
+            if (char.IsLetterOrDigit(c) == false 
+                && char.IsWhiteSpace(c) == false 
+                && char.IsSymbol(c) == false 
+                && char.IsPunctuation(c) == false)
+                return @"\u" + ((int)c).ToString("x4");
+
+            return c.ToString();
         }
     }
 }

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Lambda2Js;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Loaders;
@@ -109,10 +110,9 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     collectionName = conventions.GetCollectionName(tType.GenericTypeArguments[0]);
                 }
-                if (includeRevisions)
-                    criteria.Query = $"from '{collectionName.Replace("'", "\\'")}' (Revisions = true)";
-                else
-                    criteria.Query = $"from '{collectionName.Replace("'", "\\'")}'";
+
+                var replace = StringExtensions.EscapeString(collectionName);
+                criteria.Query = includeRevisions ? $"from '{replace}' (Revisions = true)" : $"from '{replace}'";
                 criteria.Query += " as doc";
             }
 

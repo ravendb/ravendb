@@ -15,6 +15,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
@@ -25,9 +26,6 @@ namespace Raven.Client.Documents.Indexes
     internal class ExpressionStringBuilder : ExpressionVisitor
     {
         // Fields
-        private static readonly char[] LiteralSymbolsToEscape = { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
-        private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
-
         private readonly StringBuilder _out = new StringBuilder();
         private readonly DocumentConventions _conventions;
         private readonly Type _queryRoot;
@@ -856,25 +854,15 @@ namespace Raven.Client.Documents.Indexes
             if (value.Length == 0)
                 return;
 
-            _out.Append(string.Concat(value.ToCharArray().Select(EscapeChar)));
+            var concat = StringExtensions.EscapeString(value);
+            _out.Append(concat);
         }
+
+        
 
         private void OutLiteral(char c)
         {
-            _out.Append(EscapeChar(c));
-        }
-
-        private static string EscapeChar(char c)
-        {
-            var index = Array.IndexOf(LiteralSymbolsToEscape, c);
-
-            if (index != -1)
-                return LiteralEscapedSymbols[index];
-
-            if (!char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c) && !char.IsSymbol(c) && !char.IsPunctuation(c))
-                return @"\u" + ((int)c).ToString("x4");
-
-            return c.ToString();
+            _out.Append(StringExtensions.EscapeChar(c));
         }
 
         private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)
@@ -1488,9 +1476,10 @@ namespace Raven.Client.Documents.Indexes
                     if (methodInfo.Name == nameof(AbstractIndexCreationTask.LoadDocument))
                     {
                         var type = methodInfo.GetGenericArguments()[0];
-                        var collection = _conventions.GetCollectionName(type);
 
-                        Out($"k1 => {methodInfo.Name}(k1, \"{collection}\")");
+                        Out($"k1 => {methodInfo.Name}(k1, \"");
+                        OutLiteral(_conventions.GetCollectionName(type));
+                        Out("\")");
                     }
                     else
                     {
@@ -1767,8 +1756,9 @@ namespace Raven.Client.Documents.Indexes
                 var parameters = node.Method.GetParameters();
                 if (parameters.Length == 1)
                 {
-                    var collection = _conventions.GetCollectionName(type);
-                    Out($", \"{collection}\"");
+                    Out($", \"");
+                    OutLiteral(_conventions.GetCollectionName(type));
+                    Out("\"");
                 }
                 else if (parameters.Length == 2)
                 {
