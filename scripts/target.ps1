@@ -34,6 +34,13 @@ $TARGET_SPECS = (
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
         "TargetId" = "rpi"
+    },
+     @{
+        "Name"      = "arm-64";
+        "Runtime"   = "linux-arm64";
+        "PkgType"   = "tar.bz2";
+        "IsUnix"    = $True;
+        "TargetId" = "arm64"
     }
 );
 
