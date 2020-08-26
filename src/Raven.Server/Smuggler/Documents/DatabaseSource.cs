@@ -61,12 +61,15 @@ namespace Raven.Server.Smuggler.Documents
         public string LastDatabaseChangeVector { get; private set; }
         public long LastRaftIndex { get; private set; }
 
+        private readonly SmugglerSourceType _type;
+
         public DatabaseSource(DocumentDatabase database, long startDocumentEtag, long startRaftIndex, Logger logger)
         {
             _database = database;
             _startDocumentEtag = startDocumentEtag;
             _startRaftIndex = startRaftIndex;
             _logger = logger;
+            _type = _startDocumentEtag == 0 ? SmugglerSourceType.FullExport : SmugglerSourceType.IncrementalExport;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
@@ -463,6 +466,12 @@ namespace Raven.Server.Smuggler.Documents
         {
             Debug.Assert(_context != null);
 
+            var initialState = new TimeSeriesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
+            {
+                StartEtag = _startDocumentEtag, 
+                StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+            };
+
             var enumerator = new PulsedTransactionEnumerator<TimeSeriesItem, TimeSeriesIterationState>(_context,
                 state =>
                 {
@@ -470,12 +479,7 @@ namespace Raven.Server.Smuggler.Documents
                         return GetTimeSeriesFromCollections(_context, state);
 
                     return GetAllTimeSeriesItems(_context, state.StartEtag);
-                },
-                new TimeSeriesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
-                {
-                    StartEtag = _startDocumentEtag, 
-                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
-                });
+                }, initialState);
 
             while (enumerator.MoveNext())
             {
@@ -533,6 +537,11 @@ namespace Raven.Server.Smuggler.Documents
         public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
             return 0; // no-op
+        }
+
+        public SmugglerSourceType GetSourceType()
+        {
+            return _type;
         }
     }
 }

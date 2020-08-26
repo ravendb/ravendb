@@ -731,6 +731,11 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
+        public SmugglerSourceType GetSourceType()
+        {
+            return SmugglerSourceType.Import;
+        }
+
         public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
         {
             return ReadDocuments(actions);
