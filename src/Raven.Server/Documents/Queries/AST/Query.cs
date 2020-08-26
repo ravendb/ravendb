@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -789,7 +790,7 @@ namespace Raven.Server.Documents.Queries.AST
             TotalCount += (long)values[(int)AggregationType.Count];
         }
 
-        public List<double> GetFinalValues()
+        public IEnumerable<double> GetFinalValues(double? scale = null)
         {
             switch (Aggregation)
             {
@@ -817,20 +818,13 @@ namespace Raven.Server.Documents.Queries.AST
                     throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
             }
 
-            return _values;
-        }
-
-        public List<double> GetValues()
-        {
-            if (Aggregation == AggregationType.Count)
-            {
-                return _count;
-            }
+            if (scale.HasValue)
+                return _values.Select(x => x * scale.Value);
 
             return _values;
         }
 
-        public void SetValues(List<double> values)
+        public void SetValues(IEnumerable<double> values)
         {
             if (Aggregation == AggregationType.Count)
             {
@@ -840,11 +834,5 @@ namespace Raven.Server.Documents.Queries.AST
 
             _values = new List<double>(values);
         }
-
-        public void SetCount(List<double> count)
-        {
-            _count = new List<double>(count);
-        }
     }
-
 }
