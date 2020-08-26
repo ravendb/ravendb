@@ -629,6 +629,8 @@ namespace Raven.Server.Smuggler.Documents
                     if (item.Document.Id == null)
                         ThrowInvalidData();
 
+                    result.Documents.LastEtag = item.Document.Etag;
+
                     if (CanSkipDocument(item.Document, buildType))
                     {
                         SkipDocument(item, result);
@@ -666,8 +668,6 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
 
                     actions.WriteDocument(item, result.Documents);
-
-                    result.Documents.LastEtag = item.Document.Etag;
                 }
 
                 TryHandleLegacyDocumentTombstones(legacyIdsToDelete, actions, result);
@@ -1039,6 +1039,7 @@ namespace Raven.Server.Smuggler.Documents
 
             using (var actions = _destination.TimeSeries())
             {
+                var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
                 foreach (var ts in _source.GetTimeSeries(_options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
@@ -1047,9 +1048,11 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.TimeSeries.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
 
-                    actions.WriteTimeSeries(ts);
-
                     result.TimeSeries.LastEtag = ts.Etag;
+
+                    var shouldSkip = isFullBackup && ts.Segment.NumberOfLiveEntries == 0;
+                    if (shouldSkip == false)
+                        actions.WriteTimeSeries(ts);
                 }
             }
 
