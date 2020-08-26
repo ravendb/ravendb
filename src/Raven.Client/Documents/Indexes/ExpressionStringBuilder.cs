@@ -851,18 +851,17 @@ namespace Raven.Client.Documents.Indexes
 
         private void OutLiteral(string value)
         {
-            if (value.Length == 0)
+            if (string.IsNullOrEmpty(value))
                 return;
 
-            var concat = StringExtensions.EscapeString(value);
-            _out.Append(concat);
+            StringExtensions.EscapeString(_out, value);
         }
 
         
 
         private void OutLiteral(char c)
         {
-            _out.Append(StringExtensions.EscapeChar(c));
+            StringExtensions.EscapeChar(_out, c);
         }
 
         private void ConvertTypeToCSharpKeywordIncludeNullable(Type type)
