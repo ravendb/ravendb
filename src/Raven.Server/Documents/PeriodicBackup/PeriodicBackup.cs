@@ -77,9 +77,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public void UpdateTimer(Timer newBackupTimer, bool discardIfDisabled = false, bool underLock = true)
+        public void UpdateTimer(Timer newBackupTimer, bool lockTaken, bool discardIfDisabled = false)
         {
-            if (underLock)
+            if (lockTaken == false)
             {
                 using (UpdateBackupTask())
                 {
