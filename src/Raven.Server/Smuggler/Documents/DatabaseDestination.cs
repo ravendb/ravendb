@@ -1014,7 +1014,9 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             // the change vector of the document must be identical to the one of the last revision
                             databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
-                            parentDocument.Data = parentDocument.Data.Clone(context);
+
+                            using (parentDocument.Data)
+                                parentDocument.Data = parentDocument.Data.Clone(context);
 
                             _database.DocumentsStorage.Put(context, parentDocument.Id, null,
                                 parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, parentDocument.Flags, parentDocument.NonPersistentFlags);
