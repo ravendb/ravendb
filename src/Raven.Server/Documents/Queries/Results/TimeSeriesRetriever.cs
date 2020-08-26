@@ -111,18 +111,12 @@ namespace Raven.Server.Documents.Queries.Results
 
             var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
             type = ResultType.Aggregated;
-            TimeSeriesAggregation[] aggStates;
+
             GapData gapData = default;
 
-            if (timeSeriesFunction.Select != null)
-            {
-                aggStates = new TimeSeriesAggregation[timeSeriesFunction.Select.Count];
-                InitializeAggregationStates(timeSeriesFunction, aggStates);
-            }
-            else
-            {
-                aggStates = AllAggregationTypes();
-            }
+            var aggStates = timeSeriesFunction.Select != null ? 
+                InitializeAggregationStates(timeSeriesFunction) : 
+                AllAggregationTypes();
 
             return GetAggregatedValues();
 
@@ -130,9 +124,12 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 foreach (var cur in items)
                 {
-                    foreach (var value in MaybeMoveToNextRange(cur.Timestamp))
+                    if (MaybeMoveToNextRange(cur.Timestamp, out var values))
                     {
-                        yield return value;
+                        foreach (var value in values)
+                        {
+                            yield return value;
+                        }
                     }
 
                     if (ShouldFilter(cur, timeSeriesFunction.Where))
@@ -145,30 +142,44 @@ namespace Raven.Server.Documents.Queries.Results
                 }
             }
 
-            IEnumerable<DynamicJsonValue> MaybeMoveToNextRange(DateTime ts)
+            bool MaybeMoveToNextRange(DateTime ts, out IEnumerable<DynamicJsonValue> values)
             {
+                values = default;
                 if (rangeSpec.WithinRange(ts))
-                    yield break;
+                    return false;
 
-                if (interpolationType != InterpolationType.None)
+                values = CurrentRangeValues();
+                return true;
+
+                IEnumerable<DynamicJsonValue> CurrentRangeValues()
                 {
-                    foreach (var filledGap in HandleGapsIfNeeded(ts))
+                    if (interpolationType != InterpolationType.None)
                     {
-                        yield return filledGap;
+                        if (gapData.HaveGap)
+                        {
+                            // fill the gaps between previous range and current range
+                            gapData.UpTo = rangeSpec.Start;
+                            foreach (var filledGap in FillMissingGaps(gapData, aggStates, interpolationType))
+                            {
+                                yield return filledGap;
+                            }
+                        }
+
+                        InitializeGapsIfNeeded(ts);
                     }
-                }
 
-                if (aggStates[0].Any)
-                {
-                    yield return AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
-                }
+                    if (aggStates[0].Any)
+                    {
+                        yield return AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
+                    }
 
-                for (int i = 0; i < aggStates.Length; i++)
-                {
-                    aggStates[i].Init();
-                }
+                    for (int i = 0; i < aggStates.Length; i++)
+                    {
+                        aggStates[i].Init();
+                    }
 
-                rangeSpec.MoveToNextRange(ts);
+                    rangeSpec.MoveToNextRange(ts);
+                }
             }
 
             IEnumerable<DynamicJsonValue> GetRawValues()
@@ -198,9 +209,12 @@ namespace Raven.Server.Documents.Queries.Results
                     else
                     {
                         //We might need to close the old aggregation range and start a new one
-                        foreach (var value in MaybeMoveToNextRange(it.Segment.Start))
+                        if (MaybeMoveToNextRange(it.Segment.Start, out var values))
                         {
-                            yield return value;
+                            foreach (var value in values)
+                            {
+                                yield return value;
+                            }
                         }
 
                         // now we need to see if we can consume the whole segment, or
@@ -756,18 +770,8 @@ namespace Raven.Server.Documents.Queries.Results
                 return field.FieldValueWithoutAlias;
             }
 
-            IEnumerable<DynamicJsonValue> HandleGapsIfNeeded(DateTime ts)
+            void InitializeGapsIfNeeded(DateTime ts)
             {
-                if (gapData.HaveGap)
-                {
-                    // fill the gaps between previous range and current range
-                    gapData.UpTo = rangeSpec.Start;
-                    foreach (var filledGap in FillMissingGaps(gapData, aggStates, interpolationType))
-                    {
-                        yield return filledGap;
-                    }
-                }
-
                 if (gapData.PreviousStats == null)
                 {
                     // initialize gap data
@@ -791,7 +795,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (gapData.StartRange.WithinRange(ts))
                 {
                     gapData.HaveGap = false;
-                    yield break;
+                    return;
                 }
 
                 gapData.HaveGap = true;
@@ -803,8 +807,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     gapData.PreviousStats[i] ??= new TimeSeriesAggregation(aggStates[i].Aggregation, aggStates[i].Name);
                     gapData.PreviousStats[i].Init();
-                    gapData.PreviousStats[i].SetValues(aggStates[i].GetValues());
-                    gapData.PreviousStats[i].SetCount(aggStates[i].Count);
+                    gapData.PreviousStats[i].SetValues(aggStates[i].GetFinalValues());
                 }
             }
         }
@@ -890,46 +893,31 @@ namespace Raven.Server.Documents.Queries.Results
                 end = gapData.StartRange.End;
             }
         }
-        
 
-        private static void GenerateMissingPointLinear(DateTime x, DateTime xA, DateTime xB, TimeSeriesAggregation[] yA, TimeSeriesAggregation[] yB)
+
+        private void GenerateMissingPointLinear(DateTime x, DateTime xA, DateTime xB, TimeSeriesAggregation[] yA, TimeSeriesAggregation[] yB)
         {
             Debug.Assert(yA.Length == yB.Length, "Invalid aggregation stats");
 
-            bool hasCount = false;
             var quotient = (double)(x.Ticks - xA.Ticks) / (xB.Ticks - xA.Ticks);
-
             for (int i = 0; i < yA.Length; i++)
             {
-                InterpolateValues(yA[i], yB[i], quotient);
-
-                hasCount |= yA[i].Aggregation == AggregationType.Count ||
-                            (yA[i].Aggregation == AggregationType.Average && i == 0);
-            }
-
-            if (hasCount == false)
-            {
-                yA[0].SetCount(LinearInterpolation(yA[0].Count, yB[0].Count, quotient));
+                yA[i].SetValues(InterpolateValues(yA[i], yB[i], quotient));
             }
         }
 
-        private static void InterpolateValues(TimeSeriesAggregation yA, TimeSeriesAggregation yB, double quotient)
+        private static List<double> InterpolateValues(TimeSeriesAggregation yA, TimeSeriesAggregation yB, double quotient)
         {
             Debug.Assert(yA.Aggregation == yB.Aggregation, "Invalid aggregation stats");
 
-            var valuesA = yA.GetValues();
-            var valuesB = yB.GetValues();
+            var valuesA = yA.GetFinalValues().ToList();
+            var valuesB = yB.GetFinalValues().ToList();
 
-            yA.SetValues(LinearInterpolation(valuesA, valuesB, quotient));
-
-            if (yA.Aggregation == AggregationType.Average)
-            {
-                // need to add count
-                yA.SetCount(LinearInterpolation(yA.Count, yB.Count, quotient));
-            }
+            LinearInterpolation(valuesA, valuesB, quotient);
+            return valuesA;
         }
 
-        private static List<double> LinearInterpolation(List<double> valuesA, List<double> valuesB, double quotient)
+        private static void LinearInterpolation(List<double> valuesA, List<double> valuesB, double quotient)
         {
             var minLength = Math.Min(valuesA.Count, valuesB.Count);
             if (minLength < valuesA.Count)
@@ -947,8 +935,6 @@ namespace Raven.Server.Documents.Queries.Results
                 // override valuesA[index] by the result 
                 valuesA[index] = ya + (yb - ya) * quotient;
             }
-
-            return valuesA;
         }
 
         private static object GetValueFromRolledUpEntry(int index, SingleResult singleResult)
@@ -1069,7 +1055,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private long GetAggregatedSum(DynamicJsonValue value)
         {
-            return (long)((DynamicJsonArray)value[nameof(TimeSeriesRangeAggregation.Count)]).Items[0];
+            return Convert.ToInt64(((DynamicJsonArray)value[nameof(TimeSeriesRangeAggregation.Count)]).Items[0]);
         }
 
         private void AddNames(DynamicJsonValue result)
@@ -1266,8 +1252,9 @@ namespace Raven.Server.Documents.Queries.Results
             return GetFieldFromDocument(fe, document);
         }
 
-        private static void InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction, TimeSeriesAggregation[] aggStates)
+        private static TimeSeriesAggregation[] InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction)
         {
+            var stats = new Dictionary<AggregationType, TimeSeriesAggregation>();
             for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
             {
                 var select = timeSeriesFunction.Select[i];
@@ -1275,13 +1262,13 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                     {
-                        aggStates[i] = new TimeSeriesAggregation(type, select.StringSegment?.ToString());
+                        stats[type] = new TimeSeriesAggregation(type, select.StringSegment?.ToString());
                         continue;
                     }
 
                     if (me.Name.Value == "avg")
                     {
-                        aggStates[i] = new TimeSeriesAggregation(AggregationType.Average);
+                        stats[AggregationType.Average] = new TimeSeriesAggregation(AggregationType.Average);
                         continue;
                     }
 
@@ -1290,6 +1277,12 @@ namespace Raven.Server.Documents.Queries.Results
 
                 throw new ArgumentException("Unknown method in timeseries query: " + select.QueryExpression);
             }
+
+            // we always want to have 'Count' in the result
+            if (stats.ContainsKey(AggregationType.Count) == false)
+                stats[AggregationType.Count] = new TimeSeriesAggregation(AggregationType.Count);
+
+            return stats.Values.ToArray();
         }
 
         private DynamicJsonValue AddTimeSeriesResult(TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
@@ -1305,49 +1298,13 @@ namespace Raven.Server.Documents.Queries.Results
                 [nameof(TimeSeriesRangeAggregation.From)] = from, 
                 [nameof(TimeSeriesRangeAggregation.To)] = to
             };
-            var shouldAddCount = true;
 
             for (int i = 0; i < aggStates.Length; i++)
             {
-                var finalValues = aggStates[i].GetFinalValues();
-                if (aggStates[i].Aggregation == AggregationType.Count)
-                {
-                    AddCount(finalValues, result);
-                    shouldAddCount = false;
-                    continue;
-                }
-
-                var dja = new DynamicJsonArray();
-                foreach (var val in finalValues)
-                {
-                    if (_scale.HasValue)
-                    {
-                        dja.Add(val * _scale.Value);
-                        continue;
-                    }
-
-                    dja.Add(val);
-                }
-
-                result[aggStates[i].Name] = dja;
-            }
-
-            if (shouldAddCount)
-            {
-                AddCount(aggStates[0].Count, result);
+                result[aggStates[i].Name] = new DynamicJsonArray(aggStates[i].GetFinalValues(_scale).Cast<object>());
             }
 
             return result;
-        }
-
-        private static void AddCount(IEnumerable<double> items, DynamicJsonValue result)
-        {
-            var dja = new DynamicJsonArray();
-            foreach (var val in items)
-            {
-                dja.Add((long)val);
-            }
-            result[nameof(TimeSeriesRangeAggregation.Count)] = dja;
         }
 
         private DateTime? GetDateValue(QueryExpression qe, DeclaredFunction func, object[] args)
