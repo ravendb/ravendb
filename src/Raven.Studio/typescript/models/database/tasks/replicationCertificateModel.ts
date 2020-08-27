@@ -6,7 +6,7 @@ class replicationCertificateModel {
     certificate = ko.observable<string>(); // public & private key
     certificatePassphrase = ko.observable<string>();
     
-    publicKey = ko.observable<string>(); // public key only
+    publicKey = ko.observable<string>();
     thumbprint = ko.observable<string>();
     
     expirationText = ko.observable<string>();

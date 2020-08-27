@@ -72,8 +72,7 @@ class replicationAccessBaseModel {
     addHubToSinkInputPrefixWithBlink() {
         if (!this.hubToSinkPrefixes().filter(prefix => prefix.path() === this.inputPrefixHubToSink().path()).length) {
             const itemToAdd = new prefixPathModel(this.inputPrefixHubToSink().path());
-            this.hubToSinkPrefixes().unshift(itemToAdd);
-            this.hubToSinkPrefixes(this.hubToSinkPrefixes());
+            this.hubToSinkPrefixes.unshift(itemToAdd);
 
             this.inputPrefixHubToSink().path(null);
             $("#hubToSink .collection-list li").first().addClass("blink-style");
@@ -83,8 +82,7 @@ class replicationAccessBaseModel {
     addSinkToHubInputPrefixWithBlink() {
         if (!this.sinkToHubPrefixes().filter(prefix => prefix.path() === this.inputPrefixSinkToHub().path()).length) {
             const itemToAdd = new prefixPathModel(this.inputPrefixSinkToHub().path());
-            this.sinkToHubPrefixes().unshift(itemToAdd);
-            this.sinkToHubPrefixes(this.sinkToHubPrefixes());
+            this.sinkToHubPrefixes.unshift(itemToAdd);
 
             this.inputPrefixSinkToHub().path(null);
             $("#sinkToHub .collection-list li").first().addClass("blink-style");
@@ -92,13 +90,13 @@ class replicationAccessBaseModel {
     }
     
     removePrefixPathHubToSink(pathToRemove: string) {
-        const itemsList = this.hubToSinkPrefixes().filter(prefix => prefix.path() !== pathToRemove);
-        this.hubToSinkPrefixes(itemsList);
+        const itemToRemove = this.hubToSinkPrefixes().find(x => x.path() === pathToRemove);
+        this.hubToSinkPrefixes.remove(itemToRemove);
     }
     
     removePrefixPathSinkToHub(pathToRemove: string) {
-        const itemsList = this.sinkToHubPrefixes().filter(prefix => prefix.path() !== pathToRemove);
-        this.sinkToHubPrefixes(itemsList);
+        const itemToRemove = this.sinkToHubPrefixes().find(x => x.path() === pathToRemove);
+        this.sinkToHubPrefixes.remove(itemToRemove);
     }
     
     toDto(): Raven.Client.Documents.Operations.Replication.ReplicationHubAccess {

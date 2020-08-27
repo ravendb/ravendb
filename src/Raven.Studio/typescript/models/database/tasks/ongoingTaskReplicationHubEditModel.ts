@@ -20,8 +20,8 @@ class ongoingTaskReplicationHubEditModel {
     allowReplicationFromHubToSink = ko.observable<boolean>(true);
     allowReplicationFromSinkToHub = ko.observable<boolean>();
     replicationMode: KnockoutComputed<Raven.Client.Documents.Operations.Replication.PullReplicationMode>;
-    
-    filteringRequiredForHub = ko.observable<boolean>();
+   
+    withFiltering = ko.observable<boolean>();
    
     replicationAccessItems = ko.observableArray<replicationAccessHubModel>([]);
     
@@ -66,7 +66,7 @@ class ongoingTaskReplicationHubEditModel {
         this.allowReplicationFromHubToSink(dto.Mode.includes("HubToSink"));
         this.allowReplicationFromSinkToHub(dto.Mode.includes("SinkToHub"));
         
-        this.filteringRequiredForHub(dto.FilteringIsRequired);
+        this.withFiltering(dto.WithFiltering);
     }
 
     toDto(taskId: number): Raven.Client.Documents.Operations.Replication.PullReplicationDefinition {
@@ -76,7 +76,7 @@ class ongoingTaskReplicationHubEditModel {
             TaskId: taskId,
             DelayReplicationFor: this.showDelayReplication() ? generalUtils.formatAsTimeSpan(this.delayReplicationTime() * 1000) : null,
             Mode: this.replicationMode(),
-            FilteringIsRequired: this.filteringRequiredForHub()
+            WithFiltering: this.withFiltering()
         } as Raven.Client.Documents.Operations.Replication.PullReplicationDefinition;
     }
     
@@ -128,7 +128,7 @@ class ongoingTaskReplicationHubEditModel {
             Disabled: false,
             MentorNode: null,
             TaskId: null,
-            FilteringIsRequired: false,
+            WithFiltering: false,
             Mode: "HubToSink"
         } as Raven.Client.Documents.Operations.Replication.PullReplicationDefinition);
     }

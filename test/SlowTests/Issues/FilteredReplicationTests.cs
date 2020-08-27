@@ -98,7 +98,7 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
-                FilteringIsRequired = true
+                WithFiltering = true
             }));
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
                 new ReplicationHubAccess
@@ -176,6 +176,7 @@ namespace SlowTests.Issues
                 {
                     Name = "pull" +i,
                     Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                    WithFiltering = true
                 }));
 
                 ids[i] = op.TaskId;
@@ -198,6 +199,7 @@ namespace SlowTests.Issues
             {
                 Name = "pull1",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                WithFiltering = true
             }));
 
             var accesses = await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull1"));
@@ -281,7 +283,7 @@ namespace SlowTests.Issues
             {
                 Name = "pull",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
-                FilteringIsRequired = true
+                WithFiltering = true
             }));
 
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull", new ReplicationHubAccess
@@ -425,7 +427,7 @@ namespace SlowTests.Issues
             {
                 Name = "push",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
-                FilteringIsRequired = true
+                WithFiltering = true
             }));
 
             await storeB.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("push", new ReplicationHubAccess
@@ -544,7 +546,7 @@ namespace SlowTests.Issues
             {
                 Name = "both",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
-                FilteringIsRequired = true
+                WithFiltering = true
             }));
 
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
@@ -648,7 +650,7 @@ namespace SlowTests.Issues
             {
                 Name = "both",
                 Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
-                FilteringIsRequired = true
+                WithFiltering = true
             }));
 
             await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
@@ -699,7 +701,7 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
-                FilteringIsRequired = false
+                WithFiltering = false
             }));
             
             var ex = await Assert.ThrowsAsync<RavenException>( async () => 
@@ -734,7 +736,7 @@ namespace SlowTests.Issues
             await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
             {
                 Name = "pull",
-                FilteringIsRequired = true
+                WithFiltering = true
             }));
             
             var ex = await Assert.ThrowsAsync<RavenException>( async () => 
