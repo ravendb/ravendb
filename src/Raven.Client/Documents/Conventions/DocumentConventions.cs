@@ -213,6 +213,8 @@ namespace Raven.Client.Documents.Conventions
         private bool _saveEnumsAsIntegers;
         private char _identityPartsSeparator;
         private bool _disableTopologyUpdates;
+
+        private Func<InMemoryDocumentSessionOperations, object, string, bool> _shouldIgnoreEntityChanges;
         private Func<MemberInfo, bool> _findIdentityProperty;
         private Func<string, string> _transformTypeCollectionNameToDocumentIdPrefix;
         private Func<string, object, Task<string>> _asyncDocumentIdGenerator;
@@ -251,6 +253,16 @@ namespace Raven.Client.Documents.Conventions
         private bool _sendApplicationIdentifier;
         private Size _maxContextSizeToKeep;
         private ISerializationConventions _serialization;
+
+        public Func<InMemoryDocumentSessionOperations, object, string, bool> ShouldIgnoreEntityChanges
+        {
+            get => _shouldIgnoreEntityChanges;
+            set
+            {
+                AssertNotFrozen();
+                _shouldIgnoreEntityChanges = value;
+            }
+        }
 
         public Size MaxContextSizeToKeep
         {
