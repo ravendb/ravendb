@@ -112,7 +112,7 @@ class editReplicationHubTask extends viewModelBase {
             const h2sPaths = x.AllowedHubToSinkPaths.map(x => new prefixPathModel(x));
             const s2hPaths = x.AllowedSinkToHubPaths.map(x => new prefixPathModel(x));
            
-            return new replicationAccessHubModel(x.Name, certificate, h2sPaths, s2hPaths, this.editedHubTask().filteringRequiredForHub() ,false);
+            return new replicationAccessHubModel(x.Name, certificate, h2sPaths, s2hPaths, this.editedHubTask().withFiltering() ,false);
         });
 
         this.editedHubTask().replicationAccessItems(accessItems);
@@ -149,7 +149,7 @@ class editReplicationHubTask extends viewModelBase {
             model.mentorNode,
             model.delayReplicationTime,
             model.showDelayReplication,
-            model.filteringRequiredForHub,
+            model.withFiltering,
             model.allowReplicationFromHubToSink,
             model.allowReplicationFromSinkToHub
         ], false, jsonUtil.newLineNormalizingHashFunction)
@@ -193,7 +193,7 @@ class editReplicationHubTask extends viewModelBase {
     }
 
     saveReplicationAccessItem() {
-        if (this.editedHubTask().filteringRequiredForHub()) {
+        if (this.editedHubTask().withFiltering()) {
             if (!this.isValid(this.editedReplicationAccessItem().validationGroupForSaveWithFiltering)) {
                 return;
             }
@@ -248,7 +248,7 @@ class editReplicationHubTask extends viewModelBase {
     }
     
     addItem() {
-        this.editedReplicationAccessItem(replicationAccessHubModel.empty(this.editedHubTask().filteringRequiredForHub()));
+        this.editedReplicationAccessItem(replicationAccessHubModel.empty(this.editedHubTask().withFiltering()));
         this.initTooltips();
     }
    
@@ -404,7 +404,7 @@ class editReplicationHubTask extends viewModelBase {
             return;
         }
         
-        if (this.editedHubTask().filteringRequiredForHub()) {
+        if (this.editedHubTask().withFiltering()) {
             if (!this.isValid(this.editedReplicationAccessItem().validationGroupForExportWithFiltering)) {
                 return;
             }

@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
                 
                 var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "register-hub-access");
                 var access = JsonDeserializationClient.ReplicationHubAccess(blittableJson);
-                access.Validate(hubDefinition.FilteringIsRequired);
+                access.Validate(hubDefinition.WithFiltering);
 
                 using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
                 var publicKeyPinningHash = cert.GetPublicKeyPinningHash();
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName("Task index");
+                    writer.WritePropertyName("TaskIndex");
                     writer.WriteInteger(result.Index);
                     writer.WriteEndObject();
                 }
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName("Task index");
+                    writer.WritePropertyName("TaskIndex");
                     writer.WriteInteger(result.Index);
                     writer.WriteEndObject();
                 }

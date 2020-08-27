@@ -84,7 +84,7 @@
                             <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: $root.canDefineCertificates">
                                 <label class="control-label">&nbsp;</label>
                                 <div class="toggle">
-                                    <input id="toggleFiltering" type="checkbox" data-bind="checked: filteringRequiredForHub, enable: $root.isNewTask" />
+                                    <input id="toggleFiltering" type="checkbox" data-bind="checked: withFiltering, enable: $root.isNewTask" />
                                     <label for="toggleFiltering">Allow Replication Filtering
                                         <small class="margin-left margin-left-sm" data-bind="visible: $root.isNewTask">
                                             <i id="replication-filtering-info" class="icon-info text-info"></i>
@@ -119,7 +119,7 @@
                 <div data-bind="if: $root.canDefineCertificates">
                     <div class="flex-horizontal">
                         <h3 class="margin-top margin-top-lg" 
-                            data-bind="text: filteringRequiredForHub() ? 'Filtered Replication Access' : 'Replication Access'">
+                            data-bind="text: withFiltering() ? 'Filtered Replication Access' : 'Replication Access'">
                         </h3>
                         <div class="flex-separator"></div>
                         <div class="toggle margin-top" data-bind="if: replicationAccessItems().length">
@@ -171,7 +171,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div data-bind="if: $parent.filteringRequiredForHub" class="margin-bottom">
+                            <div data-bind="if: $parent.withFiltering" class="margin-bottom">
                                 <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: !$root.showAccessDetails()">
                                     <label class="control-label">Filtering Replication</label>
                                     <div class="margin-top margin-top-xs">
@@ -268,7 +268,7 @@
                                 <span class="help-block" data-bind="validationMessage: certificate"></span>
                             </div>
                         </div>
-                        <div data-bind="visible: $parent.filteringRequiredForHub" class="margin-bottom margin-bottom-lg">
+                        <div data-bind="visible: $parent.withFiltering" class="margin-bottom margin-bottom-lg">
                             <hr>
                             <div class="margin-bottom margin-bottom-lg">
                                 <h3>Filter Replicated Documents by Id Prefixes</h3>
@@ -380,7 +380,7 @@
                                     <i class="icon-cancel"></i><span>Cancel</span>
                                 </button>
                             </div>
-                            <div data-bind="visible: $parent.filteringRequiredForHub">
+                            <div data-bind="visible: $parent.withFiltering">
                                 <button class="btn btn-default" title="Clone this Replication Access"
                                         data-bind="click: $root.cloneReplicationAccessItem, , disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate()">
                                     <i class="icon-clone"></i><span>Clone</span>

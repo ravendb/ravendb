@@ -47,10 +47,10 @@ class certificateUtils {
     
     static extractBase64(publicKey: string) {
         // extract the base 64 from a pem format
-        let baset64 = publicKey.replace(certificateUtils.certificatePrefix, "");
-        baset64 = baset64.replace(certificateUtils.certificatePostfix, "");
-        baset64 = baset64.replace(/(\r\n|\n|\r)/g, "");
-        return baset64.trim();
+        let base64 = publicKey.replace(certificateUtils.certificatePrefix, "");
+        base64 = base64.replace(certificateUtils.certificatePostfix, "");
+        base64 = base64.replace(/(\r\n|\n|\r)/g, "");
+        return base64.trim();
     }
 } 
 

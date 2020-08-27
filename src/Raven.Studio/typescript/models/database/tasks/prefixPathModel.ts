@@ -17,9 +17,13 @@ class prefixPathModel {
                     validator: () => {
                         if (this.path()) {
                             const pathLength = this.path().length;
+                            if (pathLength === 1) {
+                                return true;
+                            }
+                            
                             const lastChar = this.path().charAt(pathLength - 1);
                             const prevChar = this.path().charAt(pathLength - 2);
-                            return pathLength === 1 || lastChar != '*' || prevChar === '/' || prevChar === '-'
+                            return lastChar != '*' || prevChar === '/' || prevChar === '-';
                         }
                         
                         return true;
