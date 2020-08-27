@@ -747,6 +747,9 @@ namespace Raven.Client.Documents.Subscriptions
                 case RavenException _:
                     _processingCts.Cancel();
                     return false;
+                case InvalidOperationException _:
+                    _processingCts.Cancel();
+                    return false;
                 default:
                     AssertLastConnectionFailure();
                     return true;
