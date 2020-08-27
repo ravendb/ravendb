@@ -1150,6 +1150,20 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Tombstone> GetTombstonesInReverseOrderFrom(DocumentsOperationContext context, long etag, long start, long take)
+        {
+            var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekBackwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, start))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToTombstone(context, ref result.Reader);
+            }
+        }
+
         public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, List<string> collections, long etag, long take)
         {
             foreach (var collection in collections)
