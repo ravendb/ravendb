@@ -13,7 +13,7 @@ class saveServerWideBackupCommand extends commandBase {
         return this.put<Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse>(url, JSON.stringify(this.configuration))
             .done((results: Raven.Client.ServerWide.Operations.Configuration.PutServerWideBackupConfigurationResponse) => {
                 const taskTypeText = isNewTask ? "created" : "updated";
-                this.reportSuccess(`Succefully ${taskTypeText} Server-wide backup configuration`);
+                this.reportSuccess(`The Server-wide backup configuration was ${taskTypeText} successfully`);
             })
             .fail(response => this.reportError(`Failed to save Server-Wide Backup: ${this.configuration.Name}`, response.responseText, response.statusText));
     }
