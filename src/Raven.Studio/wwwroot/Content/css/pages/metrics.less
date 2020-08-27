@@ -1,5 +1,13 @@
 ﻿.metricsContainer {
     position: relative;
+
+    .extent {
+        cursor: ew-resize !important;
+    }
+
+    .resize {
+        cursor: col-resize !important;
+    }
 }
 
 .metricsContainer canvas, .metricsContainer svg {
@@ -140,7 +148,7 @@ rect.pane {
             }
 
             .gaps {
-                color: fadeout(@brand-primary, 50%);
+                color: fadeout(@panel-bg-2, 25%);
             }
 
             .trackBackground {
