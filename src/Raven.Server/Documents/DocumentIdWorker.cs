@@ -39,7 +39,7 @@ namespace Raven.Server.Documents
             byte? separator = null)
             where TTransaction : RavenTransaction
         {
-            return GetSliceFromId(context, id.AsSpan<char>(), out idSlice, separator);
+            return GetSliceFromId(context, id.AsCharSpan(), out idSlice, separator);
         }
 
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(TransactionOperationContext<TTransaction> context, ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)

@@ -84,10 +84,9 @@ namespace Sparrow.Json
             }
         }
 
-        public Span<T> AsSpan<T>()
+        public Span<char> AsCharSpan()
         {
-            Debug.Assert(typeof(T) == typeof(char) || typeof(T) == typeof(byte));
-            return new Span<T>(_buffer, _size);
+            return new Span<char>(_buffer, _size / sizeof(char));
         }
         
         public void CopyTo(byte* dest)

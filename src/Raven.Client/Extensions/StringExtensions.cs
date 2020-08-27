@@ -64,16 +64,6 @@ namespace Raven.Client.Extensions
         private static readonly char[] LiteralSymbolsToEscape = { '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' };
         private static readonly string[] LiteralEscapedSymbols = { @"\'", @"\""", @"\\", @"\a", @"\b", @"\f", @"\n", @"\r", @"\t", @"\v" };
 
-        public static string EscapeString(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                return value;
-            
-            var builder = new StringBuilder(6 * value.Length);
-            EscapeStringInternal(builder, value);
-            return builder.ToString();
-        }
-        
         public static void EscapeString(StringBuilder builder, string value)
         {
             if (string.IsNullOrEmpty(value))
