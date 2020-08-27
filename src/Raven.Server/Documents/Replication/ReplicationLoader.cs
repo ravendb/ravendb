@@ -21,6 +21,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -82,6 +83,14 @@ namespace Raven.Server.Documents.Replication
         private readonly ConcurrentBag<ReplicationNode> _internalDestinations = new ConcurrentBag<ReplicationNode>();
         private readonly HashSet<ExternalReplicationBase> _externalDestinations = new HashSet<ExternalReplicationBase>();
 
+        private readonly HubInfoForCleaner _hubInfoForCleaner = new HubInfoForCleaner();
+
+        private class HubInfoForCleaner
+        {
+            public long _lastEtag;
+            public DateTime _lastCleanup;
+        }
+
         private class LastEtagPerDestination
         {
             public long LastEtag;
@@ -99,6 +108,7 @@ namespace Raven.Server.Documents.Replication
                 return long.MaxValue;
 
             long minEtag = long.MaxValue;
+
             foreach (var lastEtagPerDestination in _lastSendEtagPerDestination)
             {
                 replicationNodes.Remove(lastEtagPerDestination.Key);
@@ -129,6 +139,85 @@ namespace Raven.Server.Documents.Replication
 
             return minEtag;
         }
+
+        public long GetMinimalEtagForTombstoneCleanupWithHubReplication()
+        {
+            long minEtag = long.MaxValue;
+
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                if (!_server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name).HubPullReplicationDefinitionExist())
+                    return minEtag;
+
+                var time = Database.Configuration.Tombstones.CleanupIntervalForHubReplication.GetValue(TimeUnit.Hours);
+                if (_hubInfoForCleaner._lastCleanup.AddHours(time) > Database.Time.GetUtcNow())
+                {
+                    return _hubInfoForCleaner._lastEtag == 0 ? minEtag : _hubInfoForCleaner._lastEtag;
+                }
+            }
+
+            long daysToSave = Database.Configuration.Tombstones.TombstoneHistoryWithHubDefinition.GetValue(TimeUnit.Days);
+
+            var lastDateToSave = Database.Time.GetUtcNow().AddDays(-daysToSave);
+            _hubInfoForCleaner._lastCleanup = Database.Time.GetUtcNow();
+
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (Database.DocumentsStorage.GetNumberOfTombstones(context) == 0)
+                    return _hubInfoForCleaner._lastEtag;
+                var max = DocumentsStorage.ReadLastTombstoneEtag(context.Transaction.InnerTransaction);
+                var min = _hubInfoForCleaner._lastEtag;
+                var maxTombstone = Database.DocumentsStorage.GetTombstoneByEtag(context, max);
+
+                if (maxTombstone.LastModified <= lastDateToSave)
+                {
+                    //All tombstones can be deleted
+                    _hubInfoForCleaner._lastEtag = max;
+                    return _hubInfoForCleaner._lastEtag;
+                }
+
+                var minTombstone = Database.DocumentsStorage.GetTombstonesFrom(context, min, 0, 1).First();
+                min = minTombstone.Etag;
+
+                if (minTombstone.LastModified > lastDateToSave)
+                {
+                    // Can't delete tombstones yet
+                    _hubInfoForCleaner._lastEtag = minTombstone.Etag - 1;
+                    return _hubInfoForCleaner._lastEtag;
+                }
+                while (true)
+                {
+                    var newEtag = ((max - min) / 2) + min;
+
+                    var newTombstone = Database.DocumentsStorage.GetTombstonesFrom(context, newEtag, 0, 1).First();
+
+                    if (newTombstone.Etag == max)
+                    {
+                        foreach (var t in Database.DocumentsStorage.GetTombstonesInReverseOrderFrom(context, newEtag, 0, 2))
+                        {
+                            if (t.Etag >= newEtag) continue;
+                            newTombstone = t;
+                            break;
+                        }
+
+                        if (newTombstone.Etag == min)
+                        {
+                            _hubInfoForCleaner._lastEtag = min;
+                            return _hubInfoForCleaner._lastEtag;
+                        }
+                    }
+                    if (newTombstone.LastModified <= lastDateToSave)
+                    {
+                        min = newTombstone.Etag;
+                        continue;
+                    }
+                    max = newTombstone.Etag;
+                }
+            }
+        }
+
 
         private readonly Logger _log;
 
@@ -1545,7 +1634,8 @@ namespace Raven.Server.Documents.Replication
 
         public Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType)
         {
-            var minEtag = GetMinimalEtagForReplication();
+            var minEtag = Math.Min(GetMinimalEtagForTombstoneCleanupWithHubReplication(), GetMinimalEtagForReplication());
+
             var result = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
             {
                 { Constants.Documents.Collections.AllDocumentsCollection, minEtag },

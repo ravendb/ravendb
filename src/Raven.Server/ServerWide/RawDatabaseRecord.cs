@@ -297,6 +297,11 @@ namespace Raven.Server.ServerWide
             return null;
         }
 
+        public bool HubPullReplicationDefinitionExist()
+        {
+            return _record.TryGet(nameof(DatabaseRecord.HubPullReplications), out BlittableJsonReaderArray bjra) && (bjra?.Length > 0);
+        }
+
         private List<long> _periodicBackupsTaskIds;
 
         public List<long> PeriodicBackupsTaskIds
