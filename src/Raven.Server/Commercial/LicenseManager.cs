@@ -63,6 +63,7 @@ namespace Raven.Server.Commercial
         private LicenseSupportInfo _lastKnownSupportInfo;
 
         public event Action LicenseChanged;
+        public event Action OnBeforeInitialize;
 
         public static readonly OsInfo OsInfo = OsInfoExtensions.GetOsInfo();
 
@@ -110,6 +111,8 @@ namespace Raven.Server.Commercial
         {
             try
             {
+                OnBeforeInitialize?.Invoke();
+
                 _licenseStorage.Initialize(environment, contextPool);
 
                 var firstServerStartDate = _licenseStorage.GetFirstServerStartDate();
