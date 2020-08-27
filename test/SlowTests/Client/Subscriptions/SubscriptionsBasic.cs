@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using FastTests;
 using FastTests.Client.Subscriptions;
+using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
@@ -706,6 +710,45 @@ namespace SlowTests.Client.Subscriptions
                 }
 
                 await t;
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrowWhenCannotDeserializeEntity()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionName = store.Subscriptions.Create(new SubscriptionCreationOptions() { Query = @"from Dogs" });
+
+                using (var commands = store.Commands())
+                {
+                    Dog dog = new Dog(DateTime.UtcNow) { Name = 1 };
+                    var str = JsonSerializer.Serialize<Dog>(dog);
+                    dynamic json = JObject.Parse(str);
+                    json.Name = "a";
+                    await commands.PutAsync("dog/1", null, json, new Dictionary<string, object>
+                    {
+                        {Constants.Documents.Metadata.Collection, "Dogs"}
+                    });
+                }
+
+                var subscription = store.Subscriptions.GetSubscriptionWorker<Dog>(subscriptionName);
+                var users = new List<Dog>();
+                await Assert.ThrowsAsync<InvalidOperationException>(() => subscription.Run(x =>
+                {
+                }).WaitAsync(TimeSpan.FromSeconds(15)));
+            }
+        }
+
+        public class Dog
+        {
+            public int Name { get; set; }
+
+            public DateTime Zz { get; set; }
+
+            public Dog(DateTime zz)
+            {
+                Zz = zz;
             }
         }
     }
