@@ -77,7 +77,6 @@ class perCollectionIncludes {
     }
 }
 
-
 class query extends viewModelBase {
 
     static readonly timeSeriesFormat = "YYYY-MM-DD HH:mm:ss.SSS";
@@ -175,8 +174,6 @@ class query extends viewModelBase {
     canExportCsv: KnockoutComputed<boolean>;
     
     isMapReduceIndex: KnockoutComputed<boolean>;
-    queryResultsContainMatchingDocuments: KnockoutComputed<boolean>;
-    
     isCollectionQuery: KnockoutComputed<boolean>;
     isGraphQuery: KnockoutComputed<boolean>;
     isDynamicQuery: KnockoutComputed<boolean>;
@@ -206,11 +203,15 @@ class query extends viewModelBase {
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
 
     queriedIndex: KnockoutComputed<string>;
+    queriedIndexInfo = ko.observable<Raven.Client.Documents.Operations.IndexInformation>();
+    
     queriedIndexLabel: KnockoutComputed<string>;
     queriedIndexDescription: KnockoutComputed<string>;
 
     queriedFieldsOnly = ko.observable<boolean>(false);
     queriedIndexEntries = ko.observable<boolean>(false);
+    
+    queryResultsContainMatchingDocuments: KnockoutComputed<boolean>;
     
     isEmptyFieldsResult = ko.observable<boolean>(false);
     
@@ -313,12 +314,14 @@ class query extends viewModelBase {
             this.queriedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.queriedIndex()) : null);
 
         this.isMapReduceIndex = ko.pureComputed(() => {
-            const currentIndex = this.getCurrentIndex();
+            this.getQueriedIndexInfo();
+            const currentIndex = this.queriedIndexInfo();
             return !!currentIndex && (currentIndex.Type === "AutoMapReduce" || currentIndex.Type === "MapReduce" || currentIndex.Type === "JavaScriptMapReduce");
         });
 
         this.queryResultsContainMatchingDocuments = ko.pureComputed(() => {
-            const currentIndex = this.getCurrentIndex();
+            this.getQueriedIndexInfo();
+            const currentIndex = this.queriedIndexInfo();
             return !!currentIndex && currentIndex.SourceType === "Documents" && !this.isMapReduceIndex();
         });
         
@@ -410,7 +413,7 @@ class query extends viewModelBase {
 
         const criteria = this.criteria();
 
-        criteria.showFields.subscribe(() => this.runQuery());   
+        criteria.showFields.subscribe(() => this.runQuery());
       
         criteria.indexEntries.subscribe((checked) => {
             if (checked && this.isCollectionQuery()) {
@@ -541,7 +544,7 @@ class query extends viewModelBase {
                         name
                     }]);
                     this.timeSeriesGraphs.push(chart);
-                    this.goToTimeSeriesTab(chart);    
+                    this.goToTimeSeriesTab(chart);
                 } else {
                     const table = new timeSeriesTableDetails(documentId, name, value);
                     this.timeSeriesTables.push(table);
@@ -630,20 +633,25 @@ class query extends viewModelBase {
         this.queryHasFocus(true);
     }
     
-    private getCurrentIndex() {
+    private getQueriedIndexInfo() {
         const indexName = this.queriedIndex();
-        if (!indexName)
-            return null;
-
-        let currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
-        
-        if (!currentIndex) {
-            // fetch indexes since this view may not be up-to-date if index was defined outside of studio
-            this.fetchAllIndexes(this.activeDatabase());
-            currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
+        if (!indexName) {
+            this.queriedIndexInfo(null);
+        } else {
+            let currentIndex = this.indexes() ? this.indexes().find(i => i.Name === indexName) : null;
+            if (currentIndex) {
+                this.queriedIndexInfo(currentIndex);
+            } else {
+                // fetch indexes since this view may not be up-to-date if index was defined outside of studio
+                this.fetchAllIndexes(this.activeDatabase())
+                    .done(() => {
+                        this.queriedIndexInfo(this.indexes() ? this.indexes().find(i => i.Name === indexName) : null);
+                    })
+                    .fail(() => {
+                        this.queriedIndexInfo(null);
+                    });
+            }
         }
-        
-        return currentIndex;
     }
     
     private getTimeSeriesColumns(grid: virtualGridController<any>, tab: timeSeriesTableDetails): virtualColumn[] {
@@ -802,7 +810,7 @@ class query extends viewModelBase {
             
             try {
                 this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
-                this.csvUrl(queryCmd.getCsvUrl());    
+                this.csvUrl(queryCmd.getCsvUrl());
             } catch (error) {
                 // it may throw when unable to compute query parameters, etc.
                 messagePublisher.reportError("Unable to run the query", error.message, null, false);
@@ -817,10 +825,10 @@ class query extends viewModelBase {
                 const queryForAllFields = this.criteria().showFields();
                                 
                 // Note: 
-                // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution  
+                // When server response is '304 Not Modified' then the browser cached data contains duration time from the 'first' execution
                 // If we ask browser to report the 304 state then 'response content' is empty 
                 // This is why we need to measure the execution time here ourselves..
-                const startQueryTime = new Date().getTime();                             
+                const startQueryTime = new Date().getTime();
                 
                 command.execute()
                     .always(() => {
@@ -963,9 +971,9 @@ class query extends viewModelBase {
                     })
                         .done(result => {
                             if (result.can) {
-                                this.saveQueryToStorage(this.criteria().toStorageDto());   
+                                this.saveQueryToStorage(this.criteria().toStorageDto());
                             }
-                        });  
+                        });
                 } else {
                     this.saveQueryToStorage(this.criteria().toStorageDto());
                 }
@@ -1023,7 +1031,7 @@ class query extends viewModelBase {
             const existing = this.savedQueries().find(x => x.name === doc.name);
             
             if (existing) {
-                this.savedQueries.remove(existing);                    
+                this.savedQueries.remove(existing);
             }
 
             this.savedQueries.unshift(doc);
@@ -1053,7 +1061,7 @@ class query extends viewModelBase {
 
     useQuery() {
         const queryDoc = this.criteria();
-        const previewItem  = this.previewItem();
+        const previewItem = this.previewItem();
         queryDoc.copyFrom(previewItem);
         
         // Reset settings
@@ -1186,7 +1194,7 @@ class query extends viewModelBase {
         const newQuery: storedQueryDto = criteria.toStorageDto();
 
         const queryUrl = appUrl.forQuery(this.activeDatabase(), newQuery.hash);
-        this.updateUrl(queryUrl);        
+        this.updateUrl(queryUrl);
     }
 
     runRecentQuery(storedQuery: storedQueryDto) {
@@ -1346,7 +1354,7 @@ class query extends viewModelBase {
 
     closeTimeSeriesTab(tab: timeSeriesPlotDetails | timeSeriesTableDetails) {
         if (this.currentTab() === tab) {
-            this.goToResultsTab();    
+            this.goToResultsTab();
         }
 
         if (tab instanceof timeSeriesPlotDetails) {
