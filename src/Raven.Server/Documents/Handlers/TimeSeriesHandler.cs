@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize, 
-            bool includeDocument = false, bool includeTags = false, Dictionary<string, BlittableJsonReaderObject> includes = null)
+            bool includeDocument = false, bool includeTags = false, Dictionary<string, BlittableJsonReaderObject> includesDictionary = null)
         {
             if (pageSize == 0 )
                 return new TimeSeriesRangeResult();
@@ -283,12 +283,24 @@ namespace Raven.Server.Documents.Handlers
             var oldStart = start;
             var lastResult = true;
 
-            DynamicJsonValue djv = null;
+            DynamicJsonValue includes = null;
             
             if (includeDocument || includeTags)
             {
-                djv = new DynamicJsonValue();
-                includes ??= new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+                includes = new DynamicJsonValue();
+                includesDictionary ??= new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (includeDocument && includesDictionary.ContainsKey(docId) == false)
+            {
+                var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, throwOnConflict: false);
+                doc?.EnsureMetadata();
+                includesDictionary[docId] = doc?.Data;
+
+                if (doc?.Data != null)
+                    includes[docId] = doc.Data;
+
+                ComputeHttpEtags.HashChangeVector(state, doc?.ChangeVector);
             }
 
             foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
@@ -313,30 +325,20 @@ namespace Raven.Server.Documents.Handlers
                         break;
                     }
 
-                    if (includes != null)
+                    if (includesDictionary != null)
                     {
-                        if (includeDocument && includes.ContainsKey(docId) == false)
-                        {
-                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, throwOnConflict: false);
-                            doc?.EnsureMetadata();
-                            includes[docId] = doc?.Data;
-
-                            ComputeHttpEtags.HashChangeVector(state, doc?.ChangeVector);
-
-                            djv[docId] = doc?.Data;
-                        }
-
                         if (includeTags && singleResult.Tag != null && 
-                            includes.ContainsKey(singleResult.Tag) == false)
+                            includesDictionary.ContainsKey(singleResult.Tag) == false)
                         {
                             var doc = context.DocumentDatabase.DocumentsStorage.Get(context, singleResult.Tag, throwOnConflict: false);
                             doc?.EnsureMetadata();
 
-                            includes[singleResult.Tag] = doc?.Data;
+                            includesDictionary[singleResult.Tag] = doc?.Data;
+
+                            if (doc?.Data != null)
+                                includes[singleResult.Tag] = doc.Data;
 
                             ComputeHttpEtags.HashChangeVector(state, doc?.ChangeVector);
-
-                            djv[singleResult.Tag] = doc?.Data;
                         }
                     }
 
@@ -355,19 +357,24 @@ namespace Raven.Server.Documents.Handlers
                     break;
             }
 
-            if ((oldStart > 0 ) && (values.Count == 0))
-                return new TimeSeriesRangeResult();
-
-            var result = new TimeSeriesRangeResult
+            TimeSeriesRangeResult result;
+            if (oldStart > 0 && values.Count == 0)
             {
-                From = (oldStart > 0) ? values[0].Timestamp : @from,
-                To = lastResult ? to : values.Last().Timestamp,
-                Entries = values.ToArray(),
-                Hash = ComputeHttpEtags.FinalizeHash(size, state),
-            };
+                result =  new TimeSeriesRangeResult();
+            }
+            else
+            {
+                result = new TimeSeriesRangeResult
+                {
+                    From = (oldStart > 0) ? values[0].Timestamp : @from,
+                    To = lastResult ? to : values.Last().Timestamp,
+                    Entries = values.ToArray(),
+                    Hash = ComputeHttpEtags.FinalizeHash(size, state),
+                };
+            }
 
-            if (djv != null)
-                result.Includes = context.ReadObject(djv, "TimeSeriesRangeIncludes/" + docId);
+            if (includes?.Properties.Count > 0)
+                result.Includes = context.ReadObject(includes, "TimeSeriesRangeIncludes/" + docId);
 
             return result;
         }
