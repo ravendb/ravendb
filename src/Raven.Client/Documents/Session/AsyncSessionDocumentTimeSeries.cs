@@ -79,11 +79,11 @@ namespace Raven.Client.Documents.Session
 
                     if (Session.NoTracking == false)
                     {
+                        HandleIncludes(rangeResult);
+
                         var index = ranges[0].From > to ? 0 : ranges.Count;
                         ranges.Insert(index, rangeResult);
                     }
-
-                    HandleIncludes(rangeResult);
 
                     return rangeResult.Entries;
                 }
@@ -101,8 +101,7 @@ namespace Raven.Client.Documents.Session
             }
 
 
-            if (includes == null && 
-                Session.DocumentsById.TryGetValue(DocId, out var document) &&
+            if (Session.DocumentsById.TryGetValue(DocId, out var document) &&
                 document.Metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray metadataTimeSeries) &&
                 metadataTimeSeries.BinarySearch(Name, StringComparison.OrdinalIgnoreCase) < 0)
             {
@@ -119,10 +118,10 @@ namespace Raven.Client.Documents.Session
             if (rangeResult == null)
                 return null;
 
-            HandleIncludes(rangeResult);
-
             if (Session.NoTracking == false)
             {
+                HandleIncludes(rangeResult);
+
                 if (Session.TimeSeriesByDocId.TryGetValue(DocId, out cache) == false)
                 {
                     Session.TimeSeriesByDocId[DocId] = cache = new Dictionary<string, List<TimeSeriesRangeResult>>(StringComparer.OrdinalIgnoreCase);
