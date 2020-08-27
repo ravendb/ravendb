@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     return source;
 
                 var key = keyLazy != null 
-                    ? keyLazy.AsSpan<char>() 
+                    ? keyLazy.AsCharSpan() 
                     : keyString.AsSpan();
 
                 if (key.Length == 0)
