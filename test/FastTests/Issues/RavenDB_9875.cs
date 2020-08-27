@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Xunit;
@@ -27,7 +28,8 @@ namespace FastTests.Issues
                 typeof(GetRevisionsCommand),
                 typeof(SingleNodeBatchCommand),
                 typeof(ClusterWideBatchCommand),
-                typeof(PatchOperation.PatchCommand)
+                typeof(PatchOperation.PatchCommand),
+                typeof(GetTimeSeriesOperation<>.GetTimeSeriesCommand)
             };
 
         [Fact]
@@ -77,7 +79,7 @@ namespace FastTests.Issues
                     {
                         if (_willNotUseTheCacheOutsideItsScopeBecauseWeDoubleCheckedThat.Contains(type) == false)
                         {
-                            sb.AppendLine("The type " + type.FullName + " has filed " + item.Name + " of type " + item.FieldType.FullName + " and didn't validate that is isn't copying the cached value correctly");
+                            sb.AppendLine("The type " + type.FullName + " has field " + item.Name + " of type " + item.FieldType.FullName + " and didn't validate that is isn't copying the cached value correctly");
                         }
                     }
                 }

@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Handlers
                         break;
                     }
 
-                    if (includesDictionary != null)
+                    if (includes != null)
                     {
                         if (includeTags && singleResult.Tag != null && 
                             includesDictionary.ContainsKey(singleResult.Tag) == false)
