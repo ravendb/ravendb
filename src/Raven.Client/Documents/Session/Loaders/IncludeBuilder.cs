@@ -351,21 +351,21 @@ namespace Raven.Client.Documents.Session.Loaders
             return this;
         }
 
-        public ITimeSeriesIncludeBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null)
-        {
-            IncludeTimeSeries(string.Empty, name, from, to);
-            return this;
-        }
-
-        public ITimeSeriesIncludeBuilder IncludeTags()
+        ITimeSeriesIncludeBuilder ITimeSeriesIncludeBuilder.IncludeTags()
         {
             IncludeTimeSeriesTags = true;
             return this;
         }
 
-        public ITimeSeriesIncludeBuilder IncludeDocument()
+        ITimeSeriesIncludeBuilder ITimeSeriesIncludeBuilder.IncludeDocument()
         {
             IncludeTimeSeriesDocument = true;
+            return this;
+        }
+
+        public ITimeSeriesIncludeBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null)
+        {
+            IncludeTimeSeries(string.Empty, name, from, to);
             return this;
         }
 
