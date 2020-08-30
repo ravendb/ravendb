@@ -22,6 +22,7 @@ import popoverUtils = require("common/popoverUtils");
 import getReplicationHubAccessCommand = require("commands/database/tasks/getReplicationHubAccessCommand");
 import prefixPathModel = require("models/database/tasks/prefixPathModel");
 import deleteReplicationHubAccessConfigCommand = require("commands/database/tasks/deleteReplicationHubAccessConfigCommand");
+import genUtils = require("common/generalUtils");
 
 class editReplicationHubTask extends viewModelBase {
 
@@ -40,8 +41,7 @@ class editReplicationHubTask extends viewModelBase {
     spinners = { 
         saveHubTask: ko.observable<boolean>(false),
         saveReplicationAccess: ko.observable<boolean>(false),
-        generateCertificate: ko.observable<boolean>(false),
-        importCertificate: ko.observable<boolean>(false)
+        generateCertificate: ko.observable<boolean>(false)
     };
     
     constructor() {
@@ -55,7 +55,7 @@ class editReplicationHubTask extends viewModelBase {
                                    "saveReplicationHubTask", "saveReplicationAccessItem");
     }
 
-    activate(args: any) { 
+    activate(args: any) {
         super.activate(args);
         const deferredHubTaskInfo = $.Deferred<void>();
         const deferredAccessInfo = $.Deferred<void>();
@@ -67,15 +67,14 @@ class editReplicationHubTask extends viewModelBase {
             
             new getReplicationHubTaskInfoCommand(this.activeDatabase(), this.taskId)
                 .execute()
-                .done((hubResult: Raven.Client.Documents.Operations.Replication.PullReplicationDefinitionAndCurrentConnections) => { 
+                .done((hubResult: Raven.Client.Documents.Operations.Replication.PullReplicationDefinitionAndCurrentConnections) => {
                     this.editedHubTask(new ongoingTaskReplicationHubEditModel(hubResult.Definition));
                     deferredHubTaskInfo.resolve();
                     
-                    const self = this;
                     new getReplicationHubAccessCommand(this.activeDatabase(), this.editedHubTask().taskName())
                         .execute()
                         .done((accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) => {
-                            self.processResults(accessResult);
+                            this.processResults(accessResult);
                             deferredAccessInfo.resolve();
                         })
                         .fail(() => {
@@ -87,8 +86,7 @@ class editReplicationHubTask extends viewModelBase {
                     deferredHubTaskInfo.reject();
                     router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                 });
-            
-            
+
         } else {
             // 2. Creating a new task
             this.isNewTask(true);
@@ -99,7 +97,7 @@ class editReplicationHubTask extends viewModelBase {
         deferredHubTaskInfo.done(() => this.initObservables());
 
         if (args.taskId) {
-            return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo, deferredAccessInfo); 
+            return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo, deferredAccessInfo);
         }
         
         return $.when<any>(this.loadPossibleMentors(), deferredHubTaskInfo);
@@ -112,7 +110,7 @@ class editReplicationHubTask extends viewModelBase {
             const h2sPaths = x.AllowedHubToSinkPaths.map(x => new prefixPathModel(x));
             const s2hPaths = x.AllowedSinkToHubPaths.map(x => new prefixPathModel(x));
            
-            return new replicationAccessHubModel(x.Name, certificate, h2sPaths, s2hPaths, this.editedHubTask().withFiltering() ,false);
+            return new replicationAccessHubModel(x.Name, certificate, h2sPaths, s2hPaths, this.editedHubTask().withFiltering(), false);
         });
 
         this.editedHubTask().replicationAccessItems(accessItems);
@@ -193,14 +191,9 @@ class editReplicationHubTask extends viewModelBase {
     }
 
     saveReplicationAccessItem() {
-        if (this.editedHubTask().withFiltering()) {
-            if (!this.isValid(this.editedReplicationAccessItem().validationGroupForSaveWithFiltering)) {
-                return;
-            }
-        } else {
-            if (!this.isValid(this.editedReplicationAccessItem().validationGroupForSaveNoFiltering)) {
-                return;
-            }
+        const accessValidation = this.editedReplicationAccessItem().getValidationGroupForSave(this.editedHubTask().withFiltering());
+        if (!this.isValid(accessValidation)) {
+            return
         }
 
         this.spinners.saveReplicationAccess(true);
@@ -210,15 +203,14 @@ class editReplicationHubTask extends viewModelBase {
             this.editedReplicationAccessItem().sinkToHubPrefixes(this.editedReplicationAccessItem().hubToSinkPrefixes());
         }
              
-        const self = this;
         new saveReplicationHubAccessConfigCommand(this.activeDatabase(), 
             this.editedHubTask().taskName(), this.editedReplicationAccessItem().toDto())
             .execute()
             .done(() => {
-                new getReplicationHubAccessCommand(self.activeDatabase(), self.editedHubTask().taskName())
+                new getReplicationHubAccessCommand(this.activeDatabase(), this.editedHubTask().taskName())
                     .execute()
                     .done((accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) => {
-                        self.processResults(accessResult);
+                        this.processResults(accessResult);
                         this.editedReplicationAccessItem(null);
                     });
             })
@@ -267,7 +259,7 @@ class editReplicationHubTask extends viewModelBase {
    
     editItem(replicationAcessItem: replicationAccessHubModel) {
         // work on a copy, not on original
-        let copyOfAccessItem = replicationAccessHubModel.clone(replicationAcessItem);
+        const copyOfAccessItem = replicationAccessHubModel.clone(replicationAcessItem);
         this.editedReplicationAccessItem(copyOfAccessItem);
 
         this.initTooltips();
@@ -295,29 +287,26 @@ class editReplicationHubTask extends viewModelBase {
 
     warnAboutUnsavedChanges() {
         return this.confirmationMessage("Unsaved changes",
-            `<div>You have unsaved changes. How do you want to proceed?</div>`, {
-                buttons: ["Cancel", "Continue"],
+            "You have unsaved changes. How do you want to proceed?",
+            { buttons: ["Cancel", "Continue"] })
+    }
+
+    deleteReplicationAccessItem(accessItemToDelete: replicationAccessHubModel) {
+        this.confirmationMessage("Are you sure?",
+            `Delete Replication Access <strong>${genUtils.escapeHtml(accessItemToDelete.replicationAccessName())}</strong>?`, {
+                buttons: ["Cancel", "Delete"],
                 html: true
             })
-    }
-  
-    deleteReplicationAccessItem(accessItemToDelete: replicationAccessHubModel) {
-        this.confirmationMessage("Are you sure?", 
-            `<div>Delete Replication Access: ${accessItemToDelete.replicationAccessName()}?</div>`, {
-            buttons: ["Cancel", "Delete"],
-            html: true
-        })
             .done(result => {
                 if (result.can) {
-                    const self = this;
-                    new deleteReplicationHubAccessConfigCommand(this.activeDatabase(), 
+                    new deleteReplicationHubAccessConfigCommand(this.activeDatabase(),
                         this.editedHubTask().taskName(), accessItemToDelete.certificate().thumbprint())
                         .execute()
                         .done(() => {
-                            new getReplicationHubAccessCommand(self.activeDatabase(), self.editedHubTask().taskName())
+                            new getReplicationHubAccessCommand(this.activeDatabase(), this.editedHubTask().taskName())
                                 .execute()
                                 .done((accessResult: Raven.Client.Documents.Operations.Replication.ReplicationHubAccessResult) => {
-                                    self.processResults(accessResult);
+                                    this.processResults(accessResult);
                                 });
                         })
                 }
@@ -351,9 +340,7 @@ class editReplicationHubTask extends viewModelBase {
     }
 
     importCertificate(fileInput: HTMLInputElement) {
-        this.spinners.importCertificate(true);
-        fileImporter.readAsText(fileInput,data => this.certificateImported(data));
-        this.spinners.importCertificate(false);
+        fileImporter.readAsText(fileInput, data => this.certificateImported(data));
     }
 
     certificateImported(cert: string) {
@@ -404,14 +391,9 @@ class editReplicationHubTask extends viewModelBase {
             return;
         }
         
-        if (this.editedHubTask().withFiltering()) {
-            if (!this.isValid(this.editedReplicationAccessItem().validationGroupForExportWithFiltering)) {
-                return;
-            }
-        } else {
-            if (!this.isValid(this.editedReplicationAccessItem().validationGroupForExportNoFiltering)) {
-                return;
-            }
+        const accessValidation = this.editedReplicationAccessItem().getValidationGroupForExport(this.editedHubTask().withFiltering());
+        if (!this.isValid(accessValidation)) {
+            return
         }
         
         this.exportConfiguration(true);
@@ -425,7 +407,7 @@ class editReplicationHubTask extends viewModelBase {
 
         let configurationToExport = {
             Database: databaseName,
-            HubTaskName: hubTaskItem.taskName(),
+            HubName: hubTaskItem.taskName(),
             TopologyUrls: topologyUrls,
             AllowHubToSinkMode: hubTaskItem.allowReplicationFromHubToSink(),
             AllowSinkToHubMode: hubTaskItem.allowReplicationFromSinkToHub()
@@ -451,9 +433,9 @@ class editReplicationHubTask extends viewModelBase {
         }
 
         let fileName = includeAccessInfo ? "hubAccessConfiguration" : "hubConfiguration";
-        let accessName = includeAccessInfo ? this.editedReplicationAccessItem().replicationAccessName() : "";
+        const accessName = includeAccessInfo ? this.editedReplicationAccessItem().replicationAccessName() + "-" : "";
         
-        fileName = `${fileName}-${hubTaskItem.taskName()}-${accessName}-${databaseName}.json`;
+        fileName = `${fileName}-${hubTaskItem.taskName()}-${accessName}${databaseName}.json`;
         
         fileDownloader.downloadAsJson(configurationToExport, fileName);
     }

@@ -29,6 +29,7 @@ class fileImporter {
         const file = fileInput.files[0];
         const fileName = file.name;
         const reader = new FileReader();
+        
         reader.onload = function() {
             onImport(this.result as string, fileName);
             task.resolve();
@@ -42,6 +43,7 @@ class fileImporter {
         (reader as any)[mode](file);
         
         fileInput.value = "";
+        
         return task.promise();
     }
 } 

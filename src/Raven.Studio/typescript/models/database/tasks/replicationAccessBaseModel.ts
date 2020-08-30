@@ -70,8 +70,11 @@ class replicationAccessBaseModel {
     }
 
     addHubToSinkInputPrefixWithBlink() {
-        if (!this.hubToSinkPrefixes().filter(prefix => prefix.path() === this.inputPrefixHubToSink().path()).length) {
-            const itemToAdd = new prefixPathModel(this.inputPrefixHubToSink().path());
+        const pathToAdd = this.inputPrefixHubToSink().path();
+        
+        if (!this.hubToSinkPrefixes().find(prefix => prefix.path() === pathToAdd))
+        { 
+            const itemToAdd = new prefixPathModel(pathToAdd);
             this.hubToSinkPrefixes.unshift(itemToAdd);
 
             this.inputPrefixHubToSink().path(null);
@@ -80,8 +83,10 @@ class replicationAccessBaseModel {
     }
 
     addSinkToHubInputPrefixWithBlink() {
-        if (!this.sinkToHubPrefixes().filter(prefix => prefix.path() === this.inputPrefixSinkToHub().path()).length) {
-            const itemToAdd = new prefixPathModel(this.inputPrefixSinkToHub().path());
+        const pathToAdd = this.inputPrefixSinkToHub().path();
+        
+        if (!this.sinkToHubPrefixes().find(prefix => prefix.path() === pathToAdd)) {
+            const itemToAdd = new prefixPathModel(pathToAdd);
             this.sinkToHubPrefixes.unshift(itemToAdd);
 
             this.inputPrefixSinkToHub().path(null);

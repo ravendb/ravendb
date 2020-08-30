@@ -303,12 +303,12 @@ class editReplicationSinkTask extends viewModelBase {
             
             const config = JSON.parse(contents) as pullReplicationExportFileFormat;
             
-            if (!config.Database || !config.HubTaskName || !config.TopologyUrls) {
+            if (!config.Database || !config.HubName || !config.TopologyUrls) {
                 messagePublisher.reportError("Invalid configuration format");
                 return;
             }
 
-            hubName = config.HubTaskName;
+            hubName = config.HubName;
             h2sMode = config.AllowHubToSinkMode;
             s2hMode = config.AllowSinkToHubMode;
             

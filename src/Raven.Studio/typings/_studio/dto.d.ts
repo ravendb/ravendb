@@ -653,15 +653,15 @@ type timeMagnitude = "minutes" | "hours" | "days";
 
 interface pullReplicationExportFileFormat {
     Database: string;
-    HubTaskName: string;
+    HubName: string;
     TopologyUrls: Array<string>;
-    AccessName: string,
-    Certificate: string,
-    AllowHubToSinkMode: boolean,
-    AllowSinkToHubMode: boolean,
-    HubToSinkPrefixes: Array<string>,
-    SinkToHubPrefixes: Array<string>,
-    UseSamePrefixes: boolean
+    AccessName: string;
+    Certificate: string;
+    AllowHubToSinkMode: boolean;
+    AllowSinkToHubMode: boolean;
+    HubToSinkPrefixes: Array<string>;
+    SinkToHubPrefixes: Array<string>;
+    UseSamePrefixes: boolean;
 }
 
 interface certificateInfo {
