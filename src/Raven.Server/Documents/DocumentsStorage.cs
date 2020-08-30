@@ -1164,6 +1164,11 @@ namespace Raven.Server.Documents
             }
         }
 
+        public Tombstone GetTombstoneAtOrBefore(DocumentsOperationContext context, long etag)
+        {
+            return GetTombstonesInReverseOrderFrom(context, etag, 0, 2).FirstOrDefault(t => t.Etag <= etag);
+        }
+
         public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, List<string> collections, long etag, long take)
         {
             foreach (var collection in collections)
