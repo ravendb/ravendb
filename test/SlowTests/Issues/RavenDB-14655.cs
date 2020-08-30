@@ -180,5 +180,56 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task GetTombstoneAtOrBeforeTest()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Maintenance.ForDatabase(store.Database).SendAsync(new PutPullReplicationAsHubOperation("hub"));
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                using (var session = store.OpenSession())
+                {
+                    for (int i = 0; i < 5; i++)
+                    {
+                        session.Store(new User(), "user/" + i);
+                    }
+                    session.SaveChanges();
+                }
+                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("user/3");
+                        session.Delete("user/4");
+                        session.SaveChanges();
+                    }
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 5; i < 10; i++)
+                        {
+                            session.Store(new User(), "user/" + i);
+                        }
+                        session.SaveChanges();
+                    }
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Delete("user/7");
+                        session.Delete("user/9");
+                        session.SaveChanges();
+                    }
+
+                    using (context.OpenReadTransaction())
+                    {
+                        var tombstone = database.DocumentsStorage.GetTombstoneAtOrBefore(context, 7);
+                        Assert.Equal(7, tombstone.Etag);
+                        tombstone = database.DocumentsStorage.GetTombstoneAtOrBefore(context, 8);
+                        Assert.Equal(7, tombstone.Etag);
+                    }
+
+                }
+            }
+        }
     }
 }

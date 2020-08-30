@@ -16,14 +16,14 @@ namespace Raven.Server.Config.Categories
 
         [DefaultValue(14)]
         [TimeUnit(TimeUnit.Days)]
-        [ConfigurationEntry("Tombstones.TombstoneHistoryWithHubDefinitionInDays", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Tombstones.RetentionTimeWithReplicationHubInDays ", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [Description("Time (in days) to save tombsones when we have hub replication definition.")]
-        public TimeSetting TombstoneHistoryWithHubDefinition { get; set; }
+        public TimeSetting RetentionTimeWithReplicationHub { get; set; }
 
         [DefaultValue(24)]
         [TimeUnit(TimeUnit.Hours)]
-        [ConfigurationEntry("Tombstones.EtagCheckForCleanupWithHubInHours", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Tombstones.CleanupIntervalWithReplicationHubInHrs", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         [Description("Time (in hours) for new check for tombstone cleanup with hub definition.")]
-        public TimeSetting CleanupIntervalForHubReplication { get; set; }
+        public TimeSetting CleanupIntervalWithReplicationHub { get; set; }
     }
 }
