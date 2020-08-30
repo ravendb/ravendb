@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -135,7 +136,11 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includeDoc, includeTags);
+                var includesCommand = includeDoc || includeTags 
+                    ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags) 
+                    : null;
+
+                var ranges = GetTimeSeriesRangeResults(context, documentId, names, fromList, toList, start, pageSize, includesCommand);
 
                 var actualEtag = CombineHashesFromMultipleRanges(ranges);
 
@@ -185,7 +190,11 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includeDoc, includeTags);
+                var includesCommand = includeDoc || includeTags
+                    ? new IncludeDocumentsDuringTimeSeriesLoadingCommand(context, documentId, includeDoc, includeTags)
+                    : null;
+
+                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includesCommand);
 
                 var etag = GetStringFromHeaders("If-None-Match");
                 if (etag == rangeResult.Hash)
@@ -211,7 +220,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize, bool includeDocument, bool includeTags)
+        private static Dictionary<string, List<TimeSeriesRangeResult>> GetTimeSeriesRangeResults(DocumentsOperationContext context, string documentId, StringValues names, StringValues fromList, StringValues toList, int start, int pageSize, IncludeDocumentsDuringTimeSeriesLoadingCommand includes)
         {
             if (fromList.Count != toList.Count)
                 throw new ArgumentException("Length of query string values 'from' must be equal to the length of query string values 'to'");
@@ -227,10 +236,6 @@ namespace Raven.Server.Documents.Handlers
             if (pageSize == 0)
                 return rangeResultDictionary;
 
-            Dictionary<string, BlittableJsonReaderObject> includes = null;
-            if (includeDocument || includeTags)
-                includes = new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-
             for (int i = 0; i < fromList.Count; i++)
             {
                 var name = names[i];
@@ -242,7 +247,7 @@ namespace Raven.Server.Documents.Handlers
                 var from = string.IsNullOrEmpty(fromList[i]) ? DateTime.MinValue : ParseDate(fromList[i], name);
                 var to = string.IsNullOrEmpty(toList[i]) ? DateTime.MaxValue : ParseDate(toList[i], name);
 
-                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includeDocument, includeTags, includes);
+                var rangeResult = GetTimeSeriesRange(context, documentId, name, from, to, ref start, ref pageSize, includes);
                 if (rangeResult.Hash != null)
                 {
                     if (rangeResultDictionary.TryGetValue(name, out var list) == false)
@@ -263,7 +268,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         internal static unsafe TimeSeriesRangeResult GetTimeSeriesRange(DocumentsOperationContext context, string docId, string name, DateTime from, DateTime to, ref int start, ref int pageSize, 
-            bool includeDocument = false, bool includeTags = false, Dictionary<string, BlittableJsonReaderObject> includesDictionary = null)
+            IncludeDocumentsDuringTimeSeriesLoadingCommand includesCommand = null)
         {
             if (pageSize == 0 )
                 return new TimeSeriesRangeResult();
@@ -283,25 +288,7 @@ namespace Raven.Server.Documents.Handlers
             var oldStart = start;
             var lastResult = true;
 
-            DynamicJsonValue includes = null;
-            
-            if (includeDocument || includeTags)
-            {
-                includes = new DynamicJsonValue();
-                includesDictionary ??= new Dictionary<string, BlittableJsonReaderObject>(StringComparer.OrdinalIgnoreCase);
-            }
-
-            if (includeDocument && includesDictionary.ContainsKey(docId) == false)
-            {
-                var doc = context.DocumentDatabase.DocumentsStorage.Get(context, docId, throwOnConflict: false);
-                doc?.EnsureMetadata();
-                includesDictionary[docId] = doc?.Data;
-
-                if (doc?.Data != null)
-                    includes[docId] = doc.Data;
-
-                ComputeHttpEtags.HashChangeVector(state, doc?.ChangeVector);
-            }
+            includesCommand?.InitializeNewRangeResult(state);
 
             foreach (var (individualValues, segmentResult) in reader.SegmentsOrValues())
             {
@@ -325,22 +312,7 @@ namespace Raven.Server.Documents.Handlers
                         break;
                     }
 
-                    if (includes != null)
-                    {
-                        if (includeTags && singleResult.Tag != null && 
-                            includesDictionary.ContainsKey(singleResult.Tag) == false)
-                        {
-                            var doc = context.DocumentDatabase.DocumentsStorage.Get(context, singleResult.Tag, throwOnConflict: false);
-                            doc?.EnsureMetadata();
-
-                            includesDictionary[singleResult.Tag] = doc?.Data;
-
-                            if (doc?.Data != null)
-                                includes[singleResult.Tag] = doc.Data;
-
-                            ComputeHttpEtags.HashChangeVector(state, doc?.ChangeVector);
-                        }
-                    }
+                    includesCommand?.Fill(singleResult.Tag);
 
                     values.Add(new TimeSeriesEntry
                     {
@@ -373,8 +345,7 @@ namespace Raven.Server.Documents.Handlers
                 };
             }
 
-            if (includes?.Properties.Count > 0)
-                result.Includes = context.ReadObject(includes, "TimeSeriesRangeIncludes/" + docId);
+            includesCommand?.AddIncludesToResult(result);
 
             return result;
         }

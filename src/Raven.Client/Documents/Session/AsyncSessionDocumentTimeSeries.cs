@@ -40,9 +40,9 @@ namespace Raven.Client.Documents.Session
             return GetTimeSeriesAndIncludes<TimeSeriesEntry>(from, to, includes, start, pageSize, token);
         }
 
-        public async Task<TTValues[]> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
+        public Task<TTValues[]> GetAsyncInternal<TTValues>(DateTime? from = null, DateTime? to = null, int start = 0, int pageSize = int.MaxValue, CancellationToken token = default) where TTValues : TimeSeriesEntry
         {
-            return await GetTimeSeriesAndIncludes<TTValues>(from, to, includes: null, start, pageSize, token).ConfigureAwait(false);
+            return GetTimeSeriesAndIncludes<TTValues>(from, to, includes: null, start, pageSize, token);
         }
 
         private async Task<TTValues[]> GetTimeSeriesAndIncludes<TTValues>(DateTime? from, DateTime? to, Action<ITimeSeriesIncludeBuilder> includes, int start, int pageSize, CancellationToken token) where TTValues : TimeSeriesEntry
