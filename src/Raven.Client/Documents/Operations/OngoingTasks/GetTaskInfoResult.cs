@@ -160,9 +160,9 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
         public string CertificatePublicKey { get; set; }
         
-        public string AccessName;
-        public string[] AllowedHubToSinkPaths;
-        public string[] AllowedSinkToHubPaths;
+        public string AccessName { get; set; }
+        public string[] AllowedHubToSinkPaths { get; set; }
+        public string[] AllowedSinkToHubPaths { get; set; }
 
         public override DynamicJsonValue ToJson()
         {

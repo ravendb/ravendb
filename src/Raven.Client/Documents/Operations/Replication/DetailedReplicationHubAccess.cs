@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public DateTime NotBefore, NotAfter;
         public string Subject;
         public string Issuer;
-        
+
         public string[] AllowedHubToSinkPaths;
         public string[] AllowedSinkToHubPaths;
 
@@ -20,5 +20,10 @@ namespace Raven.Client.Documents.Operations.Replication
                 return a;
             return b ?? Array.Empty<string>();
         }
+    }
+
+    public class ReplicationHubAccessResponse
+    {
+        public long RaftCommandIndex { get; set; }
     }
 }

@@ -86,11 +86,10 @@ namespace Raven.Server.Documents.Handlers
                 var result = await Server.ServerStore.SendToLeaderAsync(command);
                 await WaitForIndexToBeApplied(context, result.Index);
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName("TaskIndex");
+                    writer.WritePropertyName(nameof(ReplicationHubAccessResponse.RaftCommandIndex));
                     writer.WriteInteger(result.Index);
                     writer.WriteEndObject();
                 }
@@ -114,11 +113,10 @@ namespace Raven.Server.Documents.Handlers
                 var result = await Server.ServerStore.SendToLeaderAsync(command);
                 await WaitForIndexToBeApplied(context, result.Index);
                 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName("TaskIndex");
+                    writer.WritePropertyName(nameof(ReplicationHubAccessResponse.RaftCommandIndex));
                     writer.WriteInteger(result.Index);
                     writer.WriteEndObject();
                 }
@@ -183,23 +181,23 @@ namespace Raven.Server.Documents.Handlers
                 throw new BadRequestException("This endpoint requires secured server.");
 
             ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();
-            
-            var validMonths = GetIntValueQueryString("validMonths", required: false) ?? 0;
-            var validYears = GetIntValueQueryString("validYears", required: false) ?? 0;
 
-            if (validMonths > 0 && validYears > 0)
+            var validMonths = GetIntValueQueryString("validMonths", required: false);
+            var validYears = GetIntValueQueryString("validYears", required: false);
+
+            if (validMonths.HasValue && validYears.HasValue)
             {
                 throw new BadRequestException("Please provide validation period in either months or years. Not both.");
             }
 
             var notAfter = DateTime.UtcNow.AddMonths(3);
-            if (validMonths > 0)
+            if (validMonths.HasValue && validMonths.Value > 0)
             {
-                notAfter = DateTime.UtcNow.AddMonths(validMonths);
-            }
-            if (validYears > 0)
+                notAfter = DateTime.UtcNow.AddMonths(validMonths.Value);
+            } 
+            else if (validYears.HasValue && validYears.Value > 0)
             {
-                notAfter = DateTime.UtcNow.AddMonths(validYears);
+                notAfter = DateTime.UtcNow.AddYears(validYears.Value);
             }
 
             var log = new StringBuilder();

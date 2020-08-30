@@ -141,7 +141,7 @@
                         </h3>
                     </div>
                 </div>
-                <div class="scroll" id="replicationAccessList">
+                <div class="scroll replication-access-list">
                     <div data-bind="foreach: replicationAccessItems">
                         <div class="panel panel-hover padding"
                              data-bind="css: { active: $root.editedReplicationAccessItem() && $data.certificate() === $root.editedReplicationAccessItem().certificate() }">
@@ -259,8 +259,8 @@
                                     <label for="certificateFilePicker" class="btn btn-default">
                                         <i class="icon-import"></i><span>Import existing certificate</span>
                                     </label>
-                                    <button type="button" class="btn btn-default" title="RavenDb will generate a certificate for you"
-                                            data-bind="click: $root.generateCertificate, disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate(),
+                                    <button type="button" class="btn btn-default" title="RavenDB will generate a certificate for you"
+                                            data-bind="click: $root.generateCertificate, disable: $root.spinners.generateCertificate,
                                                        css: { 'btn-spinner' : $root.spinners.generateCertificate }">
                                         <i class="icon-magic-wand"></i><span>Generate new certificate</span>
                                     </button>
@@ -271,7 +271,7 @@
                         <div data-bind="visible: $parent.withFiltering" class="margin-bottom margin-bottom-lg">
                             <hr>
                             <div class="margin-bottom margin-bottom-lg">
-                                <h3>Filter Replicated Documents by Id Prefixes</h3>
+                                <h3>Filter Replicated Documents by ID Prefixes</h3>
                             </div>
                             <div class="form-group" data-bind="validationElement: inputPrefixHubToSink().path">
                                 <label for="hubToSink" class="control-label">From Hub to Sink
@@ -344,26 +344,26 @@
                                 <div>
                                     <div class="flex-horizontal">
                                         <div class="has-disable-reason" data-placement="bottom"
-                                             data-bind="attr: { 'data-original-title': $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableExport() ?
+                                             data-bind="attr: { 'data-original-title': $root.spinners.generateCertificate() || disableExport() ?
                                                                 'Please provide required configuration data before exporting.' : '',
-                                                                'title': !$root.spinners.generateCertificate() && !$root.spinners.importCertificate() && !disableExport() ?
+                                                                'title': !$root.spinners.generateCertificate() && !disableExport() ?
                                                                 'Export this access configuration to a .json file' : '' }">
                                             <button class="btn btn-default"
                                                     data-bind="click: $root.exportAccessConfiguration,
-                                                               disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableExport()">
+                                                               disable: $root.spinners.generateCertificate() || disableExport()">
                                                 <i class="icon-export"></i><span>Export access configuration</span>
                                             </button>
                                         </div>
                                         <div class="has-disable-reason" data-placement="bottom"
                                              data-bind="if: isNewAccessItem,
-                                                        attr: { 'data-original-title': $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableDownload() ?
+                                                        attr: { 'data-original-title': $root.spinners.generateCertificate() || disableDownload() ?
                                                                  usingExistingCertificate() ? 'Download is available only for a RavenDb generated certificate.' :
                                                                 'Please add a certificate before downloading.' : '',
-                                                                'title': !$root.spinners.generateCertificate() && !$root.spinners.importCertificate() && !disableDownload() ?
+                                                                'title': !$root.spinners.generateCertificate() && !disableDownload() ?
                                                                 'Download the generated certificate to a .pfx file' : '' }">
                                             <button class="btn btn-default" title="Download the generated certificate"
                                                     data-bind="click: $root.downloadCertificate, 
-                                                               disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate() || disableDownload()">
+                                                               disable: $root.spinners.generateCertificate() || disableDownload()">
                                                 <i class="icon-export"></i><span>Download generated certificate</span>
                                             </button>
                                         </div>
@@ -382,13 +382,13 @@
                             </div>
                             <div data-bind="visible: $parent.withFiltering">
                                 <button class="btn btn-default" title="Clone this Replication Access"
-                                        data-bind="click: $root.cloneReplicationAccessItem, , disable: $root.spinners.generateCertificate() || $root.spinners.importCertificate()">
+                                        data-bind="click: $root.cloneReplicationAccessItem, disable: $root.spinners.generateCertificate">
                                     <i class="icon-clone"></i><span>Clone</span>
                                 </button>
                             </div>
                             <div>
                                 <button class="btn btn-primary" title="Save this Replication Access"
-                                        data-bind="disable: $root.spinners.saveReplicationAccess() || $root.spinners.generateCertificate() || $root.spinners.importCertificate() || !dirtyFlag().isDirty(), 
+                                        data-bind="disable: $root.spinners.saveReplicationAccess() || $root.spinners.generateCertificate() || !dirtyFlag().isDirty(), 
                                                    css: { 'btn-spinner': $root.spinners.saveReplicationAccess }, click: $root.saveReplicationAccessItem">
                                     <i class="icon-save"></i><span>Save</span>
                                 </button>

@@ -113,7 +113,23 @@ class replicationAccessHubModel extends replicationAccessBaseModel {
             replicationAccessName: this.replicationAccessName,
             certificate: this.certificate
         });
-    }    
+    }
+    
+    getValidationGroupForExport(withFiltering: boolean) {
+        if (withFiltering) {
+            return this.validationGroupForExportWithFiltering;
+        }
+        
+        return this.validationGroupForExportNoFiltering;;
+    }
+
+    getValidationGroupForSave(withFiltering: boolean) {
+        if (withFiltering) {
+            return this.validationGroupForSaveWithFiltering;
+        }
+
+        return this.validationGroupForSaveNoFiltering;;
+    }
 
     static empty(filteringRequired: boolean): replicationAccessHubModel {
         return new replicationAccessHubModel("", null, [], [], filteringRequired);

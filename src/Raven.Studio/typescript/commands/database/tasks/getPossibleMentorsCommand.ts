@@ -14,10 +14,9 @@ class getPossibleMentorsCommand extends commandBase {
         };
 
         return this.query<string[]>(url, args, null, (dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
-            return dbInfo.NodesTopology
-                .Members
-                .map(x => x.NodeTag);
-        });
+            return dbInfo.NodesTopology.Members.map(x => x.NodeTag);
+        })
+        .fail((response: JQueryXHR) => this.reportError("Failed to get possible mentors", response.responseText, response.statusText));
     }
 }
 

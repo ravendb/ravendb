@@ -3498,8 +3498,10 @@ namespace Raven.Server.ServerWide
                     ["Database"] = database
                 };
 
-                var newBlittable = context.ReadObject(blittable, "create replication access blittable");
-                yield return newBlittable;
+                using (blittable)
+                {
+                    yield return context.ReadObject(blittable, "create replication access blittable");
+                }
             }
         }
 
