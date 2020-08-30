@@ -733,10 +733,40 @@ namespace SlowTests.Client.Subscriptions
                 }
 
                 var subscription = store.Subscriptions.GetSubscriptionWorker<Dog>(subscriptionName);
-                var users = new List<Dog>();
-                await Assert.ThrowsAsync<InvalidOperationException>(() => subscription.Run(x =>
+                await Assert.ThrowsAsync<SubscriptionClosedException>(() => subscription.Run(x => { }).WaitAsync(_reasonableWaitTime));
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions() { Query = @"from Dogs" });
+                var mre = new AsyncManualResetEvent();
+                using (var session = store.OpenAsyncSession())
                 {
-                }).WaitAsync(TimeSpan.FromSeconds(15)));
+                    await session.StoreAsync(new Dog(DateTime.Now) { Name = 1 });
+                    await session.SaveChangesAsync();
+                }
+
+                var subscription = store.Subscriptions.GetSubscriptionWorker<Dog>(subscriptionName);
+                try
+                {
+                    subscription.ForTestingPurposesOnly().SimulateUnexpectedException = true;
+
+                    subscription.OnUnexpectedSubscriptionError += x =>
+                    {
+                        mre.Set();
+                    };
+                    var t = subscription.Run(x => { });
+
+                    Assert.True(await mre.WaitAsync(_reasonableWaitTime));
+                }
+                finally
+                {
+                    subscription._forTestingPurposes = null;
+                }
             }
         }
 

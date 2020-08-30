@@ -55,6 +55,7 @@ namespace Raven.Client.Documents.Subscriptions
         public event AfterAcknowledgmentAction AfterAcknowledgment;
 
         public event Action<Exception> OnSubscriptionConnectionRetry;
+        public event Action<Exception> OnUnexpectedSubscriptionError;
 
         internal SubscriptionWorker(SubscriptionWorkerOptions options, DocumentStore documentStore, string dbName)
         {
@@ -615,6 +616,9 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 try
                 {
+                    if (_forTestingPurposes != null && _forTestingPurposes.SimulateUnexpectedException)
+                        throw new InvalidOperationException("SimulateUnexpectedException");
+
                     CloseTcpClient();
                     if (_logger.IsInfoEnabled)
                     {
@@ -747,10 +751,8 @@ namespace Raven.Client.Documents.Subscriptions
                 case RavenException _:
                     _processingCts.Cancel();
                     return false;
-                case InvalidOperationException _:
-                    _processingCts.Cancel();
-                    return false;
                 default:
+                    OnUnexpectedSubscriptionError?.Invoke(ex);
                     AssertLastConnectionFailure();
                     return true;
             }
@@ -785,5 +787,20 @@ namespace Raven.Client.Documents.Subscriptions
         }
 
         public event Action<SubscriptionWorker<T>> OnDisposed = delegate { };
+
+        internal TestingStuff _forTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (_forTestingPurposes != null)
+                return _forTestingPurposes;
+
+            return _forTestingPurposes = new TestingStuff();
+        }
+
+        internal class TestingStuff
+        {
+            internal bool SimulateUnexpectedException;
+        }
     }
 }
