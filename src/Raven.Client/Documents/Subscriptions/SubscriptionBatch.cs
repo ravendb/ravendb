@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -213,7 +214,14 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     else
                     {
-                        instance = _requestExecutor.Conventions.Serialization.DefaultConverter.FromBlittable<T>(curDoc, id);
+                        try
+                        {
+                            instance = _requestExecutor.Conventions.Serialization.DefaultConverter.FromBlittable<T>(curDoc, id);
+                        }
+                        catch (InvalidOperationException e)
+                        {
+                            throw new SubscriptionClosedException($"Could not serialize document '{id}' to '{typeof(T)}'. Closing the subscription.", e);
+                        }
                     }
 
                     if (string.IsNullOrEmpty(id) == false)
