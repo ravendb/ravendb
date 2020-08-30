@@ -72,7 +72,7 @@ namespace StressTests.Client.TimeSeries
                     session.Store(new User(), "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", null, TimeSpan.FromSeconds(15)));
                 }
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
@@ -80,12 +80,14 @@ namespace StressTests.Client.TimeSeries
                 var sp = Stopwatch.StartNew();
                 await Task.Delay((TimeSpan)retention / 2);
 
-                WaitForUserToContinueTheTest(store);
-
+                var debug = new Dictionary<string, (long Count, DateTime Start, DateTime End)>();
                 var check = true;
                 while (check)
                 {
-                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention / 10), $"too long has passed {sp.Elapsed}, retention is {retention}");
+                    Assert.True(sp.Elapsed < ((TimeSpan)retention).Add((TimeSpan)retention / 10),
+                        $"too long has passed {sp.Elapsed}, retention is {retention} {Environment.NewLine}" +
+                        $"debug: {string.Join(',', debug.Select(kvp => $"{kvp.Key}: ({kvp.Value.Count},{kvp.Value.Start},{kvp.Value.End})"))}");
+
                     await Task.Delay(100);
                     check = false;
                     foreach (var server in Servers)
@@ -99,16 +101,20 @@ namespace StressTests.Client.TimeSeries
                             var reader = tss.GetReader(ctx, "users/karmel", "Heartrate", DateTime.MinValue, DateTime.MaxValue);
 
                             if (stats.Count == 0)
+                            {
+                                debug.Remove(server.ServerStore.NodeTag);
                                 continue;
+                            }
 
                             check = true;
-
                             Assert.Equal(stats.Start, reader.First().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                             Assert.Equal(stats.End, reader.Last().Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                            debug[server.ServerStore.NodeTag] = stats;
                         }
                     }
                 }
 
+                Assert.Empty(debug);
                 Assert.True(sp.Elapsed < (TimeSpan)retention + (TimeSpan)retention / 10);
                 await Task.Delay(3000); // let the dust to settle
 
