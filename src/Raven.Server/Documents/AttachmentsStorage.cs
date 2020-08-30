@@ -614,9 +614,8 @@ namespace Raven.Server.Documents
 
         public bool AttachmentExists(DocumentsOperationContext context, LazyStringValue hash)
         {
-            var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             using (Slice.From(context.Allocator, hash.Buffer, hash.Size, out var slice))
-                return tree.StreamExist(slice);
+                return AttachmentExists(context, slice);
         }
 
         public bool AttachmentExists(DocumentsOperationContext context, Slice base64Hash)
