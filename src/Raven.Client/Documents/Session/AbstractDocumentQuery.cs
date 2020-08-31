@@ -1840,7 +1840,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
 
         protected QueryData CreateTimeSeriesQueryData<TTs>(Func<ITimeSeriesQueryBuilder, TTs> timeSeriesQuery)
         {
-            var builder = new TimeSeriesQueryBuilder();
+            var builder = new TimeSeriesQueryBuilder<T>(this, _linqPathProvider);
             timeSeriesQuery.Invoke(builder);
 
             var fields = new[] { $"{Constants.TimeSeries.SelectFieldName}({builder.QueryText})" };
