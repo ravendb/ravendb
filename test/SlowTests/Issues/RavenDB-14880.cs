@@ -46,13 +46,14 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var re = store.GetRequestExecutor(databaseName);
-                var configurationChanges = new HashSet<long>();
+                var configurationChanges = new List<long>();
 
                 re.ClientConfigurationChanged += (sender, tuple) =>
                 {
                     // since this is a cluster operation, when we fail-over to another node for reads,
                     // the other node might not get the configuration change yet and we might get the "old" configuration back
-                    configurationChanges.Add(re.ClientConfigurationEtag);
+                    if(configurationChanges.Contains(tuple.RaftCommandIndex) == false)
+                        configurationChanges.Add(tuple.RaftCommandIndex);
                 };
 
                 SetClientConfiguration(new ClientConfiguration
@@ -83,11 +84,15 @@ namespace SlowTests.Issues
 
                 Assert.Equal(2, value);
 
-                for (var i = 0; i < 5; i++)
+                var i = 0;
+                long prev;
+                do
                 {
+                    prev = re.ClientConfigurationEtag;
                     ExecuteQuery(store);
                     Assert.Equal(2, configurationChanges.Count);
-                }
+                    i++;
+                } while (i < 5 || prev != re.ClientConfigurationEtag);
 
                 Assert.Equal(re.ClientConfigurationEtag, configurationChanges.Last());
 
