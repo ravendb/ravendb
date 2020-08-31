@@ -81,7 +81,7 @@ namespace SlowTests.SparrowTests
                     await logger.OperationsAsync("Some message");
                 }
                 afterEndFiles = Directory.GetFiles(path);
-                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.fileName.Equals(f) && tc.shouldExist == false));
+                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.fileName.Contains(f) && tc.shouldExist == false));
             }, false, 10_000, 1_000);
 
             loggingSource.EndLogging();
