@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -93,15 +94,28 @@ namespace SlowTests.Bugs
             {
                 Map = users =>
                     from user in users
-                    select new { CarManufacturer = LoadDocument<Car>(user.CarId.ToString()).Manufacturer};
+                    select new { CarManufacturer = LoadDocument<Car>(user.CarId).Manufacturer};
             }
         }
 
-        public static IEnumerable<object[]> GetCharactersToTest()
+        private static IEnumerable<char> GetChars()
         {
             return Enumerable.Range(1, 31)
                 .Select(i => (char)i)
-                .Concat(new[] { 'a', '-', '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' })
+                .Concat(new[] { 'a', '-', '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v' });
+        }
+        
+        private static IEnumerable<object[]> GetCharactersToTest()
+        {
+            return GetChars()
+                .Distinct()
+                .Select(c => new object[]{c});
+        }
+
+        private static IEnumerable<object[]> GetCharactersToTestWithSpecial()
+        {
+            return GetChars()
+                .Concat(new[] { 'Ā', 'Ȁ', 'Ѐ', 'Ԁ', '؀', '܀', 'ऀ', 'ਅ', 'ଈ', 'అ', 'ഊ', 'ข', 'ဉ', 'ᄍ', 'ሎ', 'ጇ', 'ᐌ', 'ᔎ', 'ᘀ', 'ᜩ', 'ᢹ', 'ᥤ', 'ᨇ' })
                 .Distinct()
                 .Select(c => new object[]{c});
         }
@@ -115,7 +129,7 @@ namespace SlowTests.Bugs
         }
         
         [Theory]
-        [MemberData(nameof(GetCharactersToTest))]
+        [MemberData(nameof(GetCharactersToTestWithSpecial))]
         public async Task FindCollectionName_WhenIndexWithLoadByLazyString(char c)
         {
             await TestWhenCollectionAndIdContainSpecialChars<LoadWithLazyStringIndex>(c);

@@ -84,9 +84,9 @@ namespace Sparrow.Json
             }
         }
 
-        public Span<char> AsCharSpan()
+        public Span<byte> AsSpan()
         {
-            return new Span<char>(_buffer, _size / sizeof(char));
+            return new Span<byte>(_buffer, _size);
         }
         
         public void CopyTo(byte* dest)

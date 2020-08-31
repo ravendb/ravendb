@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
@@ -39,7 +41,17 @@ namespace Raven.Server.Documents
             byte? separator = null)
             where TTransaction : RavenTransaction
         {
-            return GetSliceFromId(context, id.AsCharSpan(), out idSlice, separator);
+            var charCount = Encodings.Utf8.GetCharCount(id.Buffer, id.Size);
+            var tempBuffer = ByteStringContext.ToLowerTempBuffer;
+            if (tempBuffer == null || tempBuffer.Length < charCount)
+                ByteStringContext.ToLowerTempBuffer = tempBuffer = new char[Bits.PowerOf2(charCount)];
+
+            fixed (char* pChars = tempBuffer)
+            {
+                if(id.Size > 0)
+                    charCount = Encodings.Utf8.GetChars(id.Buffer, id.Size, pChars, tempBuffer.Length);
+                return GetSliceFromId(context, new Span<char>(pChars, charCount), out idSlice, separator);
+            }
         }
 
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(TransactionOperationContext<TTransaction> context, ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
