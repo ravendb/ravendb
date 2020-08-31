@@ -6,6 +6,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Sparrow;
@@ -16,15 +17,26 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     internal class TimeSeriesQueryVisitor<T>
     {
         private readonly RavenQueryProviderProcessor<T> _providerProcessor;
+        private readonly IAbstractDocumentQuery<T> _documentQuery;
+        private readonly LinqPathProvider _linqPathProvider;
+
+
         private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
         private string _src, _between, _where, _groupBy, _last, _first, _loadTag, _offset, _scale;
 
         public List<string> Parameters { get; internal set; }
 
-        public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor)
+        public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor) : 
+            this(processor.DocumentQuery, processor.LinqPathProvider)
         {
             _providerProcessor = processor;
+        }
+
+        internal TimeSeriesQueryVisitor(IAbstractDocumentQuery<T> documentQuery, LinqPathProvider linqPathProvider)
+        {
+            _documentQuery = documentQuery;
+            _linqPathProvider = linqPathProvider;
         }
 
         private void VisitMethod(MethodCallExpression mce)
@@ -70,7 +82,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                   unary.Operand is LambdaExpression lambda))
                 throw new NotSupportedException("Unsupported expression in Where clause " + expression);
 
-            _whereVisitor = new TimeSeriesWhereClauseVisitor<T>(lambda.Parameters[0].Name, _providerProcessor.DocumentQuery);
+            _whereVisitor = new TimeSeriesWhereClauseVisitor<T>(lambda.Parameters[0].Name, _documentQuery);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
                 LoadByTag(lambda.Parameters[1].Name);
@@ -239,34 +251,44 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             else
             {
-                var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
-                Parameters = new List<string>();
-
-                if (_providerProcessor.FromAlias == null)
-                {
-                    _providerProcessor.AddFromAlias(sourceAlias);
-                    Parameters.Add(sourceAlias);
-                }
-                else
-                {
-                    if (mce.Arguments[0] is ParameterExpression)
-                    {
-                        Parameters.Add(sourceAlias);
-                    }
-                    else
-                    {
-                        Parameters.Add(_providerProcessor.FromAlias);
-                        if (sourceAlias != _providerProcessor.FromAlias)
-                        {
-                            Parameters.Add(sourceAlias);
-                        }
-                    }
-                }
-
                 _src = GetNameFromArgument(mce.Arguments[1]);
 
-                if (mce.Arguments[1] is ParameterExpression == false)
-                    _src = $"{sourceAlias}.{_src}";
+                if (!(mce.Arguments[0] is ConstantExpression constant))
+                    throw new InvalidOperationException(); //todo
+
+                if (constant.Value != null)
+                {
+                    var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+
+                    if (_providerProcessor != null)
+                    {
+                        Parameters = new List<string>();
+
+                        if (_providerProcessor.FromAlias == null)
+                        {
+                            _providerProcessor.AddFromAlias(sourceAlias);
+                            Parameters.Add(sourceAlias);
+                        }
+                        else
+                        {
+                            if (mce.Arguments[0] is ParameterExpression)
+                            {
+                                Parameters.Add(sourceAlias);
+                            }
+                            else
+                            {
+                                Parameters.Add(_providerProcessor.FromAlias);
+                                if (sourceAlias != _providerProcessor.FromAlias)
+                                {
+                                    Parameters.Add(sourceAlias);
+                                }
+                            }
+                        }
+                    }
+
+                    if (mce.Arguments[1] is ParameterExpression == false)
+                        _src = $"{sourceAlias}.{_src}";
+                }
 
                 if (mce.Arguments.Count == 4)
                     Between(mce);
@@ -347,10 +369,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             var to = GetDateValue(mce.Arguments[3]);
 
             if (!(mce.Arguments[2] is ParameterExpression))
-                from = _providerProcessor.DocumentQuery.ProjectionParameter(from);
+                from = _documentQuery.ProjectionParameter(from);
 
             if (!(mce.Arguments[3] is ParameterExpression))
-                to = _providerProcessor.DocumentQuery.ProjectionParameter(to);
+                to = _documentQuery.ProjectionParameter(to);
 
             _between = $" between {from} and {to}";
         }
@@ -389,9 +411,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 ? p.Name 
                 : exp.ToString();
 
-            var objects = (IEnumerable)_providerProcessor.LinqPathProvider.GetValueFromExpression(mce.Arguments[1], typeof(IEnumerable));
+            var objects = (IEnumerable)_linqPathProvider.GetValueFromExpression(mce.Arguments[1], typeof(IEnumerable));
 
-            var parameter = _providerProcessor.DocumentQuery.ProjectionParameter(objects);
+            var parameter = _documentQuery.ProjectionParameter(objects);
 
             _where = $" where {path} in ({parameter})";
         }
@@ -481,7 +503,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private string GetDateValue(Expression exp)
         {
             if (exp is ConstantExpression constant)
+            {
+                if (constant.Value is DateTime dt)
+                    return dt.EnsureUtc().GetDefaultRavenFormat();
+
                 return constant.Value.ToString();
+            }
 
             if (exp is ParameterExpression p)
             {
