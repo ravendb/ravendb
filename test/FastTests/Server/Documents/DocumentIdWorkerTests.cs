@@ -56,6 +56,18 @@ namespace FastTests.Server.Documents
                 }
             }
         }
+        
+        [Fact]
+        public void GetSliceFromId_WhenEmptyLazyString_ShouldNotThrow()
+        {
+            using var ctx = DocumentsOperationContext.ShortTermSingleUse(null);
+            const string str = "";
+            var lazyString = ctx.GetLazyString(str);
+            using (DocumentIdWorker.GetSliceFromId(ctx, lazyString, out var lowerId))
+            {
+                Assert.Equal(str.ToLower(), lowerId.ToString());
+            }
+        }
 
         [Fact]
         public async Task GetSliceFromId_WhenStringIsUnicode_ShouldNotModifyTheValueAcceptToLower()
