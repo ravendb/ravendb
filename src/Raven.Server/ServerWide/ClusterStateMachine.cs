@@ -3294,6 +3294,7 @@ namespace Raven.Server.ServerWide
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
+            long? oldTaskId = null;
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -3304,7 +3305,6 @@ namespace Raven.Server.ServerWide
                     var newBackups = new DynamicJsonArray();
 
                     var periodicBackupConfiguration = JsonDeserializationCluster.PeriodicBackupConfiguration(serverWideBlittable);
-                    long? oldTaskId = null;
                     oldDatabaseRecord.TryGet(nameof(DatabaseRecord.Encrypted), out bool encrypted);
                     PutServerWideBackupConfigurationCommand.UpdateTemplateForDatabase(periodicBackupConfiguration, databaseName, encrypted);
 
