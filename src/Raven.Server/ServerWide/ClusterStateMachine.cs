@@ -3492,10 +3492,8 @@ namespace Raven.Server.ServerWide
                 
                 blittable.Modifications = new DynamicJsonValue(blittable)
                 {
-                    ["Certificate"] = GetCertificateAsBase64(val),
-                    ["Thumbprint"] = thumbprint,
-                    ["HubDefinitionName"] = hub,
-                    ["Database"] = database
+                    [nameof(DetailedReplicationHubAccess.Certificate)] = GetCertificateAsBase64(val),
+                    [nameof(DetailedReplicationHubAccess.Thumbprint)] = thumbprint
                 };
 
                 using (blittable)
