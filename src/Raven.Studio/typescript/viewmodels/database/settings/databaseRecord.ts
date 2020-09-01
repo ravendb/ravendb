@@ -76,9 +76,9 @@ class databaseRecord extends viewModelBase {
 
                     this.forceFold = false;
                     this.isDocumentCollapsed(true);
-        }
+                }
             });
-    }
+       }
     }
 
     toggleCollapse() {

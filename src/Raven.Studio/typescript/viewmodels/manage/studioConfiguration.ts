@@ -22,9 +22,15 @@ class studioConfiguration extends viewModelBase {
                     Environment: settings.environment.getValue(),
                     Disabled: settings.disabled.getValue(),
                     ReplicationFactor: settings.replicationFactor.getValue(),
-                    SendUsageStats: settings.sendUsageStats.getValue()
+                    SendUsageStats: settings.sendUsageStats.getValue(),
+                    CollapseDocsWhenOpening: settings.collapseDocsWhenOpening.getValue()
                 });
             });
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+        $('.studio-configuration [data-toggle="tooltip"]').tooltip();
     }
     
     saveConfiguration() {
@@ -37,12 +43,12 @@ class studioConfiguration extends viewModelBase {
                 settings.environment.setValueLazy(model.environment());
                 settings.sendUsageStats.setValueLazy(model.sendUsageStats());
                 settings.replicationFactor.setValueLazy(model.replicationFactor());
+                settings.collapseDocsWhenOpening.setValue(model.collapseDocsWhenOpening());
                 
                 settings.save()
                     .always(() => this.spinners.save(false));
             })
     }
-    
 }
 
 export = studioConfiguration;

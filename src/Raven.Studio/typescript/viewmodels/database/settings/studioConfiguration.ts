@@ -3,11 +3,13 @@ import getStudioConfigurationCommand = require("commands/resources/getStudioConf
 import databaseStudioConfigurationModel = require("models/database/settings/databaseStudioConfigurationModel");
 import eventsCollector = require("common/eventsCollector");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
+import appUrl = require("common/appUrl");
 
 class studioConfiguration extends viewModelBase {
 
     model: databaseStudioConfigurationModel;
-    
+    serverWideStudioConfigurationUrl = appUrl.forGlobalStudioConfiguration();
+
     static environments = databaseStudioConfigurationModel.environments;
     
     spinners = {
@@ -24,6 +26,11 @@ class studioConfiguration extends viewModelBase {
             });
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+        $('.studio-configuration [data-toggle="tooltip"]').tooltip();
+    }
+
     saveConfiguration() {
         if (!this.isValid(this.model.validationGroup)) {
             return;
@@ -33,7 +40,7 @@ class studioConfiguration extends viewModelBase {
 
         this.spinners.save(true);
 
-        new saveStudioConfigurationCommand(this.model.toDto(), this.activeDatabase())
+        new saveStudioConfigurationCommand(this.model.toRemoteDto(), this.activeDatabase())
             .execute()
             .always(() => this.spinners.save(false));
     }

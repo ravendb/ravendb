@@ -186,12 +186,12 @@ class shell extends viewModelBase {
                 // load global settings
                 studioSettings.default.globalSettings()
                     .done((settings: globalSettings) => this.onGlobalConfiguration(settings));
+                
                 studioSettings.default.registerOnSettingChangedHandler(name => true, (name: string, setting: studioSetting<any>) => {
                     // if any remote configuration was changed, then force reload
                     if (setting.saveLocation === "remote") {
                         studioSettings.default.globalSettings()
                             .done(settings => this.onGlobalConfiguration(settings));
-                        
                     }
                 });
 

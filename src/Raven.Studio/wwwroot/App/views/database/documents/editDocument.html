@@ -119,9 +119,18 @@
             </div>
             <div class="clearfix" data-bind="visible: !isDeleteRevision() && !inDiffMode()">
                 <div class="btn-group btn-group-sm pull-right" role="group" data-bind="visible: !inDiffMode()">
-                    <button type="button" class="btn btn-default" title="Format document" data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument"><span class="icon-indent"></span> <span>Format</span></button>
-                    <button type="button" class="btn btn-default" title="Toggle collapse" data-toggle="button" data-bind="click: toggleAutoCollapse"><span data-bind="attr: { class: autoCollapseMode() ? 'icon-expand' : 'icon-collapse' }"></span> <span>Toggle collapse</span></button>
-                    <button type="button" class="btn btn-default" title="Switch to 'new lines' mode" data-toggle="button" data-bind="click: toggleNewlineMode"><span class="icon-newline"></span> <span>Toggle new lines</span></button>
+                    <button type="button" class="btn btn-default" title="Format document" 
+                            data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument">
+                        <i class="icon-indent"></i><span>Format</span>
+                    </button>
+                    <button class="btn btn-default btn-sm" data-bind="click: toggleCollapse, css: { 'active': !isDocumentCollapsed() }">
+                        <i data-bind="attr: { class: isDocumentCollapsed() ? 'icon-unfold' : 'icon-fold'} "></i>
+                        <span data-bind="text: isDocumentCollapsed() ? 'Expand document' : 'Collapse document'"></span>
+                    </button>
+                    <button type="button" class="btn btn-default" title="Switch to 'new lines' mode" data-toggle="button" 
+                            data-bind="click: toggleNewlineMode">
+                        <i class="icon-newline"></i><span>Toggle new lines</span>
+                    </button>
                 </div>
             </div>
         </div>

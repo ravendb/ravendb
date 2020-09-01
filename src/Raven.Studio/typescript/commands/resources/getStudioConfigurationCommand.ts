@@ -25,7 +25,6 @@ class getStudioConfigurationCommand extends commandBase {
 
         return loadTask;
     }
-    
 }
 
 export = getStudioConfigurationCommand;

@@ -1,21 +1,27 @@
-<div class="content-container">
+<div class="content-container studio-configuration">
     <form class="flex-form" data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
-            <div class="toolbar">
+            <div class="toolbar no-margin">
                 <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
-                    <i class="icon-save"></i> <span>Save</span>
+                    <i class="icon-save"></i><span>Save</span>
                 </button>
             </div>
             <div class="row flex-row">
                 <div class="col-xs-12 col-lg-6 flex-vertical">
+                    <div class="margin-bottom margin-bottom-xs flex-horizontal">
+                        <div class="flex-separator"></div>
+                        <small title="Navigate to the server-wide Studio Configuration View">
+                            <a target="_blank" data-bind="attr: { href: serverWideStudioConfigurationUrl }">&nbsp;Go to Server-Wide Studio Configuration View</a>
+                        </small>
+                    </div>
                     <div class="panel">
-                        <div class="panel-body">
-                            <h3>Studio Configuration</h3>
+                        <div class="panel-body margin-bottom margin-bottom-lg">
+                            <h3 class="margin-top">Studio Configuration</h3>
                             <div class="form-group">
-                                <div>
+                                <div class="margin-top margin-top-lg">
                                     <label class="control-label">Environment</label>
                                 </div>
-                                <div style="position: relative">
+                                <div style="position: relative" class="margin-top margin-top-lg">
                                     <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                         <span data-bind="text: model.environment"></span>
                                         <span class="caret"></span>
