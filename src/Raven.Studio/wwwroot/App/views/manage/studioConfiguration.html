@@ -1,4 +1,4 @@
-<div class="content-container">
+<div class="content-container studio-configuration">
     <form class="flex-form" data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
             <div class="toolbar">
@@ -10,12 +10,12 @@
                 <div class="col-xs-12 col-lg-6 flex-vertical">
                     <div class="panel">
                         <div class="panel-body">
-                            <h3>Studio Configuration</h3>
+                            <h3 class="margin-top">Studio Configuration</h3>
                             <div class="form-group">
-                                <div>
+                                <div class="margin-top margin-top-lg">
                                     <label class="control-label">Environment</label>
                                 </div>
-                                <div style="position: relative">
+                                <div style="position: relative" class="margin-top margin-top-lg">
                                     <button class="btn btn-block dropdown-toggle" type="button" data-toggle="dropdown">
                                         <span data-bind="text: model.environment"></span>
                                         <span class="caret"></span>
@@ -26,22 +26,25 @@
                                     <span class="help-block" data-bind="validationMessage: model.environment"></span>
                                 </div>
                             </div>
-                            
                             <div class="form-group">
                                 <div>
-                                    <label class="control-label">
-                                        Default replication factor
-                                    </label>
+                                    <label class="control-label">Default replication factor</label>
                                 </div>
-                                <input class="form-control" type="number" min="0"
+                                <input class="form-control" type="number" min="1"
                                        data-bind="numericInput: model.replicationFactor" placeholder="Cluster size (default)" />
                             </div>
-                            
-                            <div class="form-group" data-bind="with: model">
+                            <div class="form-group">
                                 <label class="control-label">&nbsp; </label>
                                 <div class="toggle">
-                                    <input id="sendUsageStats" type="checkbox" class="styled" data-bind="checked: sendUsageStats">
-                                    <label for="sendUsageStats">Help us improve Studio, by gathering anonymous usage statistics</label>
+                                    <input id="sendUsageStats" type="checkbox" class="styled" data-bind="checked: model.sendUsageStats">
+                                    <label for="sendUsageStats">Help us improve the Studio, by gathering anonymous usage statistics</label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle" data-placement="right" data-toggle="tooltip" title="Display documents as collapsed when opening" data-animation="true">
+                                    <input id="collapseDocs" type="checkbox" data-bind="checked: model.collapseDocsWhenOpening" />
+                                    <label for="collapseDocs">Collapse documents when opening</label>
                                 </div>
                             </div>
                         </div>

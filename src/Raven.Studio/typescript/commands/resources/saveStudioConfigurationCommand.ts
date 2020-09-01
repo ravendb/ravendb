@@ -12,9 +12,8 @@ class saveStudioConfigurationCommand extends commandBase {
         const url = endpoints.databases.adminConfiguration.adminConfigurationStudio;
         return this.put<void>(url, JSON.stringify(this.dto), this.db, { dataType: undefined})
             .fail((response: JQueryXHR) => this.reportError(`Failed to save studio configuration`, response.responseText, response.statusText)) 
-            .done(() => this.reportSuccess("Saved studio configuration"));
+            .done(() => this.reportSuccess("Studio configuration was saved successfully"));
     }
-    
 }
 
 export = saveStudioConfigurationCommand;

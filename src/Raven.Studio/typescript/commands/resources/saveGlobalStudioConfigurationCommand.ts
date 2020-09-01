@@ -13,7 +13,6 @@ class saveGlobalStudioConfigurationCommand extends commandBase {
             .fail((response: JQueryXHR) => this.reportError(`Failed to save Studio configuration`, response.responseText, response.statusText)) 
             .done(() => this.reportSuccess("Saved Studio configuration"));
     }
-    
 }
 
 export = saveGlobalStudioConfigurationCommand;

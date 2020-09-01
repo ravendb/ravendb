@@ -100,7 +100,6 @@ class studioSettings {
             dispose: () => _.pull(this.onSettingChangedHandlers, entry)
         }
     }
-
 }
 
 export = studioSettings;

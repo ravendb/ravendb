@@ -1,5 +1,4 @@
 /// <reference path="../../../typings/tsd.d.ts" />
-
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import abstractSettings = require("common/settings/abstractSettings");
@@ -11,7 +10,7 @@ class databaseSettings extends abstractSettings {
     private readonly remoteSettingsSaver: (settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration, db: database) => JQueryPromise<void>;
 
     constructor(removeSettingsLoader: (db: database) => JQueryPromise<Raven.Client.Documents.Operations.Configuration.StudioConfiguration>,
-                onSettingChanged: (key: string, value: studioSetting<any>) => void, 
+                onSettingChanged: (key: string, value: studioSetting<any>) => void,
                 db: database) {
         super(onSettingChanged);
         this.db = db;
@@ -32,7 +31,6 @@ class databaseSettings extends abstractSettings {
     protected saveConfigDocument(settingsToSave: any): JQueryPromise<void> {
         return this.remoteSettingsSaver(settingsToSave, this.db);
     }
-
 }
 
 export = databaseSettings;

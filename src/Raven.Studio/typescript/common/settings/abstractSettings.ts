@@ -1,8 +1,6 @@
 /// <reference path="../../../typings/tsd.d.ts" />
-
 import simpleStudioSetting = require("common/settings/simpleStudioSetting");
 import studioSetting = require("common/settings/studioSetting");
-
 
 abstract class abstractSettings {
 

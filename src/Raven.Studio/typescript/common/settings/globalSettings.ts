@@ -10,8 +10,9 @@ class globalSettings extends abstractSettings {
     private readonly remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>;
     private readonly remoteSettingsSaver: (settings: Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration) => JQueryPromise<void>;
 
-    replicationFactor = new simpleStudioSetting<number>(
-        "remote", null, x => this.saveSetting(x));
+    replicationFactor = new simpleStudioSetting<number>("remote", null, x => this.saveSetting(x));
+    
+    collapseDocsWhenOpening = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
     
     numberFormatting = new simpleStudioSetting<studio.settings.numberFormatting>("local", "formatted", x => this.saveSetting(x));
     dontShowAgain = new dontShowAgainSettings(x => this.saveSetting(x));

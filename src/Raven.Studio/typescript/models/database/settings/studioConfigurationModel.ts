@@ -2,6 +2,7 @@
 
 interface globalStudioConfigurationOptions extends Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration {
     SendUsageStats: boolean;
+    CollapseDocsWhenOpening: boolean;
 }
 
 class studioConfigurationModel {
@@ -12,7 +13,8 @@ class studioConfigurationModel {
     sendUsageStats = ko.observable<boolean>(false);
     disabled = ko.observable<boolean>();
     replicationFactor = ko.observable<number>(null);
-    
+    collapseDocsWhenOpening = ko.observable<boolean>();
+
     validationGroup: KnockoutValidationGroup;
     
     constructor(dto: globalStudioConfigurationOptions) {
@@ -22,6 +24,7 @@ class studioConfigurationModel {
         this.disabled(dto.Disabled);
         this.sendUsageStats(dto.SendUsageStats);
         this.replicationFactor(dto.ReplicationFactor);
+        this.collapseDocsWhenOpening(dto.CollapseDocsWhenOpening);
     }
     
     private initValidation() {

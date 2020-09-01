@@ -26,14 +26,12 @@ import copyToClipboard = require("common/copyToClipboard");
 import deleteAttachmentCommand = require("commands/database/documents/attachments/deleteAttachmentCommand");
 import setCounterCommand = require("commands/database/documents/counters/setCounterCommand");
 import CountersDetail = Raven.Client.Documents.Operations.Counters.CountersDetail;
-
 import deleteDocuments = require("viewmodels/common/deleteDocuments");
 import viewModelBase = require("viewmodels/viewModelBase");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
 import getDocumentAtRevisionCommand = require("commands/database/documents/getDocumentAtRevisionCommand");
 import changeVectorUtils = require("common/changeVectorUtils");
-
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import database = require("models/resources/database");
@@ -43,6 +41,8 @@ import getDocumentRevisionsCountCommand = require("commands/database/documents/g
 import documentWarningsConfirm = require("viewmodels/database/documents/documentWarningsConfirm");
 import forceRevisionCreationCommand = require("commands/database/documents/forceRevisionCreationCommand");
 import getTimeSeriesStatsCommand = require("commands/database/documents/timeSeries/getTimeSeriesStatsCommand");
+import studioSettings = require("common/settings/studioSettings");
+import globalSettings = require("common/settings/globalSettings");
 
 interface revisionToCompare {
     date: string;
@@ -152,6 +152,10 @@ class editDocument extends viewModelBase {
     canViewRevisions: KnockoutComputed<boolean>;
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
+
+    collapseDocsWhenOpening = ko.observable<boolean>(false);
+    isDocumentCollapsed = ko.observable<boolean>(false);
+    forceFold: boolean = false;
     
     constructor() {
         super();
@@ -213,6 +217,25 @@ class editDocument extends viewModelBase {
         (ace as any).config.loadModule("ace/mode/raven_document_newline_friendly");
 
         this.connectedDocuments.compositionComplete();
+        
+        studioSettings.default.globalSettings()
+            .done((settings: globalSettings) => {
+                if (settings.collapseDocsWhenOpening.getValue()) {
+                    const collapse = settings.collapseDocsWhenOpening.getValue();
+                    this.collapseDocsWhenOpening(collapse);
+                    this.forceFold = collapse;
+                }
+        });
+
+        if (this.docEditor) {
+            this.docEditor.getSession().on("changeAnnotation", () => {
+                if (this.forceFold) {
+                    this.foldAll();
+                    this.forceFold = false;
+                    this.isDocumentCollapsed(true);
+                }
+            });
+        }
 
         this.focusOnEditor();
     }
@@ -624,13 +647,13 @@ class editDocument extends viewModelBase {
         }
     }
 
-    toggleAutoCollapse() {
-        eventsCollector.default.reportEvent("document", "toggle-auto-collapse");
-        this.autoCollapseMode.toggle();
-        if (this.autoCollapseMode()) {
-            this.foldAll();
-        } else {
+    toggleCollapse() {
+        if (this.isDocumentCollapsed()) {
             this.docEditor.getSession().unfold(null, true);
+            this.isDocumentCollapsed(false);
+        } else {
+            this.foldAll();
+            this.isDocumentCollapsed(true);
         }
     }
 
@@ -1022,6 +1045,10 @@ class editDocument extends viewModelBase {
                     });
 
                 this.displayDocumentChange(false);
+                
+                if (this.collapseDocsWhenOpening()) {
+                    this.forceFold = true;
+                }
             });
     }
 
@@ -1122,6 +1149,11 @@ class editDocument extends viewModelBase {
         }
         
         this.inDiffMode(false);
+
+        if (this.collapseDocsWhenOpening() && this.isDocumentCollapsed()) {
+            this.foldAll();
+            this.isDocumentCollapsed(true);
+        }
     }
 
     forceCreateRevision() {
