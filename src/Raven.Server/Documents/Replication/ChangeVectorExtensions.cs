@@ -63,15 +63,8 @@ namespace Raven.Server.Documents.Replication
             } while (tag != 0);
         }
 
-        public static int FromBase26(string tag)
-        {
-            var val = 0;
-            for (int i = 0; i < tag.Length; i++)
-            {
-                val *= 26;
-                val += (tag[i] - 'A');
-            }
-            return val;
-        }
+        public static int FromBase26(string tag) => tag.ParseNodeTag();
+
+        public static readonly int SinkTag = FromBase26("SINK");
     }
 }

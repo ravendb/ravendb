@@ -1933,8 +1933,10 @@ namespace Raven.Server.Rachis
             if (nodeTag == InitialTag)
                 return;
 
-            if (nodeTag.Equals("RAFT"))
-                ThrowInvalidNodeTag(nodeTag, "It is a reserved tag.");
+            if (nodeTag.Equals("RAFT", StringComparison.OrdinalIgnoreCase))
+                ThrowInvalidNodeTag(nodeTag, "RAFT is a reserved tag.");
+            if (nodeTag.Equals("SINK", StringComparison.OrdinalIgnoreCase))
+                ThrowInvalidNodeTag(nodeTag, "SINK is a reserved tag.");
             if (nodeTag.Length > 4)
                 ThrowInvalidNodeTag(nodeTag, "Max node tag length is 4.");
             // Node tag must not contain ':' or '-' chars as they are in use in change vector.

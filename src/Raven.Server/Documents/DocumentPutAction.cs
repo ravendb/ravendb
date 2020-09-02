@@ -14,6 +14,7 @@ using Voron.Data.Tables;
 using System.Linq;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.Replication;
 using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
@@ -149,7 +150,7 @@ namespace Raven.Server.Documents
                 var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
                 nonPersistentFlags |= result.NonPersistentFlags;
 
-                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags))
+                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, flags, nonPersistentFlags)) 
                     changeVector = result.ChangeVector;
 
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
@@ -233,6 +234,26 @@ namespace Raven.Server.Documents
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
             }
+        }
+
+        private static string StripSinkTags(string from, string exclude)
+        {
+            if (from.Contains("SINK", StringComparison.OrdinalIgnoreCase) == false)
+                return from;
+
+            var newChangeVector = new List<ChangeVectorEntry>();
+            var changeVectorList = from.ToChangeVectorList();
+
+            foreach (var entry in changeVectorList)
+            {
+                if (entry.NodeTag != ChangeVectorExtensions.SinkTag ||
+                    exclude.Contains(entry.DbId))
+                {
+                    newChangeVector.Add(entry);
+                }
+            }
+
+            return newChangeVector.SerializeVector();
         }
 
         public void InitializeFromDatabaseRecord(DatabaseRecord record)
@@ -330,17 +351,13 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(changeVector) == false)
                 return (changeVector, nonPersistentFlags);
 
-            string oldChangeVector;
+            string oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
             if (fromReplication == false)
             {
-                if (context.LastDatabaseChangeVector == null)
-                    context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
-                oldChangeVector = context.LastDatabaseChangeVector;
+                context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
+                oldChangeVector = ChangeVectorUtils.MergeVectors(oldChangeVector, context.LastDatabaseChangeVector);
             }
-            else
-            {
-                oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
-            }
+
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
             context.SkipChangeVectorValidation = _documentsStorage.TryRemoveUnusedIds(ref changeVector);
             return (changeVector, nonPersistentFlags);
@@ -348,17 +365,20 @@ namespace Raven.Server.Documents
 
         private static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, string changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
+            var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+            changeVector = StripSinkTags(changeVector, currentGlobalChangeVector);
+
             // this is raft created document, so it must contain only the RAFT element 
             if (flags.Contain(DocumentFlags.FromClusterTransaction))
             {
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(currentGlobalChangeVector, changeVector);
                 return false;
             }
 
             // the resolved document must preserve the original change vector (without the global change vector) to avoid ping-pong replication.
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResolver))
             {
-                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context), changeVector);
+                context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(currentGlobalChangeVector, changeVector);
                 return false;
             }
 

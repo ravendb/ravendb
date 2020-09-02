@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
@@ -66,6 +67,7 @@ namespace Raven.Server.Documents.Replication
         private IncomingReplicationStatsAggregator _lastStats;
 
         public readonly string PullReplicationName;
+        public readonly PullReplicationMode Mode;
 
         public bool PullReplication => PullReplicationName != null;
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
@@ -75,11 +77,11 @@ namespace Raven.Server.Documents.Replication
             ReplicationLatestEtagRequest replicatedLastEtag,
             ReplicationLoader parent,
             JsonOperationContext.MemoryBuffer bufferToCopy,
-            string[] allowedPaths,
-            string pullReplicationName)
+            ReplicationLoader.IncomingPullReplicationParams pullReplicationParams = null)
         {
-            if(allowedPaths != null && allowedPaths.Length > 0)
-                _allowedPathsValidator = new AllowedPathsValidator(allowedPaths);
+            if (pullReplicationParams?.AllowedPaths != null && pullReplicationParams.AllowedPaths.Length > 0)
+                _allowedPathsValidator = new AllowedPathsValidator(pullReplicationParams.AllowedPaths);
+
             _disposeOnce = new DisposeOnce<SingleAttempt>(DisposeInternal);
 
             _connectionOptions = options;
@@ -91,7 +93,9 @@ namespace Raven.Server.Documents.Replication
             SupportedFeatures = TcpConnectionHeaderMessage.GetSupportedFeaturesFor(options.Operation, options.ProtocolVersion);
             ConnectionInfo.RemoteIp = ((IPEndPoint)_tcpClient.Client.RemoteEndPoint).Address.ToString();
             _parent = parent;
-            PullReplicationName = pullReplicationName;
+            PullReplicationName = pullReplicationParams?.Name;
+            Mode = pullReplicationParams?.Mode ?? PullReplicationMode.None;
+
             CertificateThumbprint = options.Certificate?.Thumbprint;
 
             _log = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(_database.Name);
@@ -343,7 +347,8 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _lastDocumentEtag, ConnectionInfo.SourceDatabaseId,
-                                    _replicationFromAnotherSource);
+                                    _replicationFromAnotherSource, Mode == PullReplicationMode.SinkToHub);
+
                                 if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                                 {
                                     if (_log.IsInfoEnabled)
@@ -530,7 +535,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (stats.For(ReplicationOperation.Incoming.Storage))
                     {
-                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag);
+                        var replicationCommand = new MergedDocumentReplicationCommand(dataForReplicationCommand, lastEtag, Mode);
                         task = _database.TxMerger.Enqueue(replicationCommand);
                         //We need a new context here
                         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext msgContext))
@@ -940,13 +945,15 @@ namespace Raven.Server.Documents.Replication
             private readonly long _lastDocumentEtag;
             private readonly string _sourceDatabaseId;
             private readonly AsyncManualResetEvent _trigger;
+            private readonly bool _isHub;
 
-            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger)
+            public MergedUpdateDatabaseChangeVectorCommand(string changeVector, long lastDocumentEtag, string sourceDatabaseId, AsyncManualResetEvent trigger, bool isHub)
             {
                 _changeVector = changeVector;
                 _lastDocumentEtag = lastDocumentEtag;
                 _sourceDatabaseId = sourceDatabaseId;
                 _trigger = trigger;
+                _isHub = isHub;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -959,12 +966,16 @@ namespace Raven.Server.Documents.Replication
                     operationsCount++;
                 }
 
+                if (_isHub)
+                    return operationsCount;
+
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
                 if (conflictStatus != ConflictStatus.Update)
                     return operationsCount;
 
                 operationsCount++;
+                
                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(current, _changeVector);
                 context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
                 {
@@ -987,7 +998,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     ChangeVector = _changeVector,
                     LastDocumentEtag = _lastDocumentEtag,
-                    SourceDatabaseId = _sourceDatabaseId
+                    SourceDatabaseId = _sourceDatabaseId,
+                    IsHub = _isHub
                 };
             }
         }
@@ -995,12 +1007,19 @@ namespace Raven.Server.Documents.Replication
         internal class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly long _lastEtag;
+            private readonly PullReplicationMode _mode;
             private readonly DataForReplicationCommand _replicationInfo;
+            private readonly bool _isHub;
+            private readonly bool _isSink;
 
-            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag)
+            public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, PullReplicationMode mode)
             {
                 _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
+                _mode = mode;
+
+                _isHub = mode == PullReplicationMode.SinkToHub;
+                _isSink = mode == PullReplicationMode.HubToSink;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -1027,8 +1046,18 @@ namespace Raven.Server.Documents.Replication
                         }
 
                         operationsCount++;
+
+                        if (_isSink) 
+                            ReplaceKnownSinkEntries(context, ref item.ChangeVector);
+
+                        var changeVectorToMerge = item.ChangeVector;
+
+                        if (_isHub) 
+                            changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
+
                         var rcvdChangeVector = item.ChangeVector;
-                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
+
+                        context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVectorToMerge, context.LastDatabaseChangeVector);
 
                         TimeSeriesStorage tss;
                         LazyStringValue docId;
@@ -1302,6 +1331,70 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
+            private static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
+            {
+                var globalDbIds = context.LastDatabaseChangeVector?.ToChangeVectorList()?.Select(x => x.DbId).ToList();
+                var incoming = changeVector.ToChangeVectorList();
+                var knownEntries = new List<ChangeVectorEntry>();
+                var newIncoming = new List<ChangeVectorEntry>();
+
+                foreach (var entry in incoming)
+                {
+                    if (globalDbIds?.Contains(entry.DbId) == true)
+                    {
+                        newIncoming.Add(entry);
+                        knownEntries.Add(entry);
+                    }
+                    else
+                    {
+                        newIncoming.Add(new ChangeVectorEntry
+                        {
+                            DbId = entry.DbId,
+                            Etag = entry.Etag,
+                            NodeTag = ChangeVectorExtensions.SinkTag
+                        });
+                    }
+                }
+
+                changeVector = newIncoming.SerializeVector();
+
+                return knownEntries.Count > 0 ? 
+                    knownEntries.SerializeVector() : 
+                    null;
+            }
+
+            private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
+            {
+                if (changeVector.Contains("SINK", StringComparison.OrdinalIgnoreCase) == false)
+                    return;
+
+                var global = context.LastDatabaseChangeVector?.ToChangeVectorList();
+                var incoming = changeVector.ToChangeVectorList();
+                var newIncoming = new List<ChangeVectorEntry>();
+
+                foreach (var entry in incoming)
+                {
+                    if (entry.NodeTag == ChangeVectorExtensions.SinkTag)
+                    {
+                        var found = global?.Find(x => x.DbId == entry.DbId) ?? default;
+                        if (found.Etag > 0)
+                        {
+                            newIncoming.Add(new ChangeVectorEntry
+                            {
+                                DbId = entry.DbId,
+                                Etag = entry.Etag,
+                                NodeTag = found.NodeTag
+                            });
+                            continue;
+                        }
+                    }
+
+                    newIncoming.Add(entry);
+                }
+
+                changeVector = newIncoming.SerializeVector();
+            }
+
             private static void UpdateTimeSeriesNameIfNeeded(DocumentsOperationContext context, LazyStringValue docId, TimeSeriesReplicationItem segment, TimeSeriesStorage tss)
             {
                 using (var slicer = new TimeSeriesSliceHolder(context, docId, segment.Name))
@@ -1380,6 +1473,7 @@ namespace Raven.Server.Documents.Replication
 
                 return new MergedDocumentReplicationCommandDto
                 {
+                    Mode = _mode,
                     LastEtag = _lastEtag,
                     SupportedFeatures = _replicationInfo.SupportedFeatures,
                     ReplicatedItemDtos = _replicationInfo.ReplicatedItems.Select(i => i.Clone(context)).ToArray(),
@@ -1395,10 +1489,12 @@ namespace Raven.Server.Documents.Replication
         public string ChangeVector;
         public long LastDocumentEtag;
         public string SourceDatabaseId;
+        public bool IsHub;
 
         public IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, SourceDatabaseId, new AsyncManualResetEvent());
+            var command = new IncomingReplicationHandler.MergedUpdateDatabaseChangeVectorCommand(ChangeVector, LastDocumentEtag, SourceDatabaseId,
+                new AsyncManualResetEvent(), IsHub);
             return command;
         }
     }
@@ -1407,6 +1503,7 @@ namespace Raven.Server.Documents.Replication
     {
         public ReplicationBatchItem[] ReplicatedItemDtos;
         public long LastEtag;
+        public PullReplicationMode Mode;
         public TcpConnectionHeaderMessage.SupportedFeatures SupportedFeatures;
         public string SourceDatabaseId;
         public KeyValuePair<string, Stream>[] ReplicatedAttachmentStreams;
@@ -1444,7 +1541,7 @@ namespace Raven.Server.Documents.Replication
                 Logger = LoggingSource.Instance.GetLogger<IncomingReplicationHandler>(database.Name)
             };
 
-            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag);
+            return new IncomingReplicationHandler.MergedDocumentReplicationCommand(dataForReplicationCommand, LastEtag, Mode);
         }
 
         private AttachmentReplicationItem CreateReplicationAttachmentStream(DocumentsOperationContext context, KeyValuePair<string, Stream> arg)
