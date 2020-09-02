@@ -50,6 +50,7 @@ namespace FastTests.Blittable
             public TimeSpan timeSpanSeconds;
             public TimeSpan timeSpanMiliseconds;
             public TimeSpan timeSpanNanoseconds;
+            public string[] stringArray;
         }
 
         [Fact]
@@ -86,15 +87,16 @@ namespace FastTests.Blittable
                 timeSpanMinutes = TimeSpan.FromMinutes(1),
                 timeSpanSeconds = TimeSpan.FromSeconds(1),
                 timeSpanMiliseconds = TimeSpan.FromMilliseconds(1),
-                timeSpanNanoseconds = TimeSpan.FromTicks(1)
+                timeSpanNanoseconds = TimeSpan.FromTicks(1),
+                stringArray = new []{ "test", null, string.Empty }
             };
+
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var blittableValues = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(values, context);
 
                 var valuesDeserialized = JsonDeserializationTest.SerializationDeserializationValidation(blittableValues);
 
-                var valuesType = typeof(Values);
                 Assert.Equal(values.intMinVal, valuesDeserialized.intMinVal);
                 Assert.Equal(values.intMaxVal, valuesDeserialized.intMaxVal);
                 Assert.Equal(values.longMinVal, valuesDeserialized.longMinVal);
@@ -125,6 +127,7 @@ namespace FastTests.Blittable
                 Assert.Equal(values.timeSpanSeconds, valuesDeserialized.timeSpanSeconds);
                 Assert.Equal(values.timeSpanMiliseconds, valuesDeserialized.timeSpanMiliseconds);
                 Assert.Equal(values.timeSpanNanoseconds, valuesDeserialized.timeSpanNanoseconds);
+                Assert.True(values.stringArray.SequenceEqual(valuesDeserialized.stringArray));
             }
         }
     }

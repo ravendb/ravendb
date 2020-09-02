@@ -617,7 +617,7 @@ namespace Sparrow.Json
                 return collection.ToArray();
 
             foreach (var value in jsonArray)
-                collection.Add(value.ToString());
+                collection.Add(value?.ToString());
 
             return collection.ToArray();
         }
