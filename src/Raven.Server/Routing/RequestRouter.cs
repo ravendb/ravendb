@@ -210,6 +210,13 @@ namespace Raven.Server.Routing
             }
         }
 
+        public static bool TryGetUserAgent(HttpContext context, out string userAgent)
+        {
+            context.Request.Headers.TryGetValue(Constants.Headers.UserAgent, out var userAgentHeader);
+            userAgent = userAgentHeader.ToString().ToLower();
+            return userAgent != null;
+        }
+        
         public static bool TryGetClientVersion(HttpContext context, out Version version)
         {
             version = null;
@@ -375,12 +382,19 @@ namespace Raven.Server.Routing
             RavenServer.AuthenticateConnection feature,
             AuthorizationStatus authorizationStatus)
         {
+            TryGetUserAgent(context, out var userAgent);
+            var userAgentChrome = userAgent.Contains("chrome");
+
             string message;
             if (feature == null ||
                 feature.Status == RavenServer.AuthenticationStatus.None ||
                 feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client.";
+                if (userAgentChrome)
+                {
+                    message += ChromeCertificateMessage;
+                }
             }
             else
             {
@@ -396,11 +410,16 @@ namespace Raven.Server.Routing
                 {
                     message =
                         $"The supplied client certificate '{name}' is unknown to the server. In order to register your certificate please contact your system administrator.";
+                    if (userAgentChrome)
+                    {
+                        message += ChromeCertificateMessage;
+                    } 
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarIssuer)
                 {
                     message =
-                        $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry.";
+                        $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. " +
+                        $"<br>To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
                 {
@@ -424,6 +443,7 @@ namespace Raven.Server.Routing
                     message = "Access to the server was denied.";
                 }
             }
+            
             switch (authorizationStatus)
             {
                 case AuthorizationStatus.ClusterAdmin:
@@ -477,5 +497,8 @@ namespace Raven.Server.Routing
                 }
             }
         }
+        
+        private const string ChromeCertificateMessage = "<br>Your certificate store may be cached by Chrome. " +
+            "Use Ctrl+Shift+N to create a new private browsing tab, which will not cache any certificates.";
     }
 }
