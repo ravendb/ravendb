@@ -390,7 +390,7 @@ namespace Raven.Server.Routing
                 feature.Status == RavenServer.AuthenticationStatus.None ||
                 feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
-                message = "This server requires client certificate for authentication, but none was provided by the client.";
+                message = "This server requires client certificate for authentication, but none was provided by the client. Did you forget to install the certificate?";
                 if (userAgentChrome)
                 {
                     message += ChromeCertificateMessage;
