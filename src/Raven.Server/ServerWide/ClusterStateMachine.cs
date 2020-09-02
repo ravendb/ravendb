@@ -1466,7 +1466,7 @@ namespace Raven.Server.ServerWide
 
             foreach (object databaseToExclude in databasesToExclude)
             {
-                if (databaseName.Equals(databaseToExclude.ToString(), StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(databaseName, databaseToExclude.ToString(), StringComparison.OrdinalIgnoreCase))
                     return true;
             }
 
