@@ -379,12 +379,12 @@ namespace Raven.Server.Documents.Replication
                     switch (header.AuthorizeInfo.AuthorizeAs)
                     {
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                            if ((pullReplicationDefinition.Mode & PullReplicationMode.HubToSink) != PullReplicationMode.HubToSink)
+                            if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.HubToSink) == false)
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
                             CreatePullReplicationAsHub(tcpConnectionOptions, buffer, supportedVersions, pullReplicationDefinition, header);
                             return;
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                            if ((pullReplicationDefinition.Mode & PullReplicationMode.SinkToHub) != PullReplicationMode.SinkToHub)
+                            if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.SinkToHub) == false)
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Push Replication");
                             if (certificate == null)
                                 throw new InvalidOperationException("Incoming filtered replication is only supported when using a certificate");
@@ -456,7 +456,13 @@ namespace Raven.Server.Documents.Replication
         public void RunPullReplicationAsSink(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer, PullReplicationAsSink destination)
         {
             string[] allowedPaths = DetailedReplicationHubAccess.Preferred(destination.AllowedHubToSinkPaths, destination.AllowedSinkToHubPaths);
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, allowedPaths, destination.HubName);
+            var pullParams = new IncomingPullReplicationParams
+            {
+                Name = destination.HubName,
+                AllowedPaths = allowedPaths,
+                Mode = PullReplicationMode.HubToSink
+            };
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullParams);
             newIncoming.Failed += RetryPullReplication;
 
             PoolOfThreads.PooledThread.ResetCurrentThreadName();
@@ -487,7 +493,18 @@ namespace Raven.Server.Documents.Replication
         private void CreateIncomingInstance(TcpConnectionOptions tcpConnectionOptions, string[] allowedPaths, string pullReplicationName,
                         JsonOperationContext.MemoryBuffer buffer)
         {
-            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, allowedPaths, pullReplicationName);
+            IncomingPullReplicationParams pullParams = null;
+            if (pullReplicationName != null)
+            {
+                pullParams = new IncomingPullReplicationParams
+                {
+                    Name = pullReplicationName,
+                    AllowedPaths = allowedPaths,
+                    Mode = PullReplicationMode.SinkToHub
+                };
+            }
+            
+            var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullParams);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // need to safeguard against two concurrent connection attempts
@@ -510,21 +527,26 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        public class IncomingPullReplicationParams
+        {
+            public string Name;
+            public string[] AllowedPaths;
+            public PullReplicationMode Mode;
+        }
+
         private IncomingReplicationHandler CreateIncomingReplicationHandler(
             TcpConnectionOptions tcpConnectionOptions,
             JsonOperationContext.MemoryBuffer buffer,
-            string[] allowedPaths,
-            string pullReplicationName)
+            IncomingPullReplicationParams incomingPullParams)
         {
-            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, allowedPaths, buffer);
+            var getLatestEtagMessage = IncomingInitialHandshake(tcpConnectionOptions, incomingPullParams?.AllowedPaths, buffer);
 
             var newIncoming = new IncomingReplicationHandler(
                 tcpConnectionOptions,
                 getLatestEtagMessage,
                 this,
                 buffer,
-                allowedPaths,
-                pullReplicationName);
+                incomingPullParams);
 
             newIncoming.DocumentsReceived += OnIncomingReceiveSucceeded;
             return newIncoming;
