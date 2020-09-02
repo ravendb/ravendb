@@ -65,7 +65,7 @@ namespace Raven.Server.Web
             return unsecuredAccessFlagsHtml;
         }
         
-        public static string RenderStudioAuthErrorPage(string reason)
+        public static string RenderStudioAuthErrorPage(string reason, string reasonAddon)
         {
             using (var reader = new StreamReader(
                 typeof(RavenServer).Assembly.GetManifestResourceStream(AuthErrorPageHtmlResource)))
@@ -74,7 +74,8 @@ namespace Raven.Server.Web
 
                 return RenderPlaceholders(html, new Dictionary<string, string>
                 {
-                    {"AUTH_ERROR", WebUtility.HtmlEncode(reason)}
+                    {"AUTH_ERROR", WebUtility.HtmlEncode(reason)},
+                    {"AUTH_ERROR_ADDON", WebUtility.HtmlEncode(reasonAddon)}
                 });
             }
         }

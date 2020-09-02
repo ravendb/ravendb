@@ -49,9 +49,14 @@ namespace Raven.Client
             public const string StudioVersion = "Raven-Studio-Version";
 
             public const string IfNoneMatch = "If-None-Match";
+            
             public const string TransferEncoding = "Transfer-Encoding";
+            
             public const string ContentEncoding = "Content-Encoding";
+            
             public const string ContentLength = "Content-Length";
+            
+            public const string UserAgent = "User-Agent";
         }
 
         public class Platform
