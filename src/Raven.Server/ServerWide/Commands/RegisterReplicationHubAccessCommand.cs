@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Util;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -50,27 +52,28 @@ namespace Raven.Server.ServerWide.Commands
             string databaseName,
             string hubName,
             ReplicationHubAccess access,
-            string certPublicKeyHash,
-            string certThumbprint,
-            string uniqueRequestId,
-            string issuer,
-            string subject,
-            DateTime notBefore,
-            DateTime notAfter)
+            X509Certificate2 certificate,
+            string uniqueRequestId)
         {
-            UniqueRequestId = uniqueRequestId;
             Database = databaseName;
             HubName = hubName;
-            CertificatePublicKeyHash = certPublicKeyHash;
-            CertificateThumbprint = certThumbprint;
-            CertificateBase64 = access.CertificateBase64;
+
             Name = access.Name;
+            CertificateBase64 = access.CertificateBase64;
             AllowedHubToSinkPaths = access.AllowedHubToSinkPaths;
             AllowedSinkToHubPaths = access.AllowedSinkToHubPaths;
-            NotBefore = notBefore;
-            NotAfter = notAfter;
-            Issuer = issuer;
-            Subject = subject;
+
+            if (certificate != null)
+            {
+                CertificatePublicKeyHash = certificate.GetPublicKeyPinningHash();
+                CertificateThumbprint = certificate.Thumbprint;
+                NotBefore = certificate.NotBefore;
+                NotAfter = certificate.NotAfter;
+                Issuer = certificate.Issuer;
+                Subject = certificate.Subject;
+            }
+
+            UniqueRequestId = uniqueRequestId;
         }
 
         public override DynamicJsonValue ToJson(JsonOperationContext context)
@@ -90,6 +93,21 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(Subject)] = Subject;
             djv[nameof(RegisteringSamePublicKeyPinningHash)] = RegisteringSamePublicKeyPinningHash;
             return djv;
+        }
+
+        public DynamicJsonValue PrepareForStorage()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(HubName)] = HubName,
+                [nameof(AllowedHubToSinkPaths)] = AllowedHubToSinkPaths,
+                [nameof(AllowedSinkToHubPaths)] = AllowedSinkToHubPaths,
+                [nameof(NotBefore)] = NotBefore,
+                [nameof(NotAfter)] = NotAfter,
+                [nameof(Issuer)] = Issuer,
+                [nameof(Subject)] = Subject
+            };
         }
     }
 

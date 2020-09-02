@@ -1802,17 +1802,7 @@ namespace Raven.Server.ServerWide
             using (Slice.From(context.Allocator, (command.Database + "/" + command.HubName + "/" + command.CertificateThumbprint).ToLowerInvariant(), out var keySlice))
             using (Slice.From(context.Allocator, (command.Database + "/" + command.HubName + "/" + command.CertificatePublicKeyHash).ToLowerInvariant(),
                 out var publicKeySlice))
-            using (var obj = context.ReadObject(new DynamicJsonValue
-            {
-                [nameof(command.AllowedHubToSinkPaths)] = command.AllowedHubToSinkPaths,
-                [nameof(command.AllowedSinkToHubPaths)] = command.AllowedSinkToHubPaths,
-                [nameof(command.HubName)] = command.HubName,
-                [nameof(command.Issuer)] = command.Issuer,
-                [nameof(command.NotBefore)] = command.NotBefore,
-                [nameof(command.NotAfter)] = command.NotAfter,
-                [nameof(command.Subject)] = command.Subject,
-                [nameof(command.Name)] = command.Name,
-            }, "inner-val"))
+            using (var obj = context.ReadObject(command.PrepareForStorage(), "inner-val"))
             {
                 if (_clusterAuditLog.IsInfoEnabled)
                     _clusterAuditLog.Info(
@@ -1833,7 +1823,7 @@ namespace Raven.Server.ServerWide
                     }
                 }
 
-                if (!command.RegisteringSamePublicKeyPinningHash)
+                if (command.RegisteringSamePublicKeyPinningHash == false)
                     return;
 
                 // here we'll clear the old values
