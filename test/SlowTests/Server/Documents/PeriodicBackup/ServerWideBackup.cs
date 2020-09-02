@@ -766,6 +766,53 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task FailToAddNullOrEmptyDatabaseNames()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            using (var store = GetDocumentStore())
+            {
+                var serverWideBackupConfiguration = new ServerWideBackupConfiguration
+                {
+                    Disabled = false,
+                    FullBackupFrequency = "0 2 * * 0",
+                    IncrementalBackupFrequency = "0 2 * * 1",
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    DatabasesToExclude = new[]
+                    {
+                        null,
+                        "test"
+                    }
+                };
+
+                await SaveAndAssertError();
+
+                serverWideBackupConfiguration.DatabasesToExclude = new[]
+                {
+                    string.Empty
+                };
+
+                await SaveAndAssertError();
+
+                serverWideBackupConfiguration.DatabasesToExclude = new[]
+                {
+                    " "
+                };
+
+                await SaveAndAssertError();
+
+                async Task SaveAndAssertError()
+                {
+                    var error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration)));
+                    Assert.Contains($"{nameof(ServerWideBackupConfiguration.DatabasesToExclude)} cannot contain null or empty database names", error.Message);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanCreateSnapshotBackupForNonEncryptedDatabase()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
