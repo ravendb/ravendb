@@ -78,11 +78,8 @@ namespace Raven.Server.Documents.Handlers
                 access.Validate(hubDefinition.WithFiltering);
 
                 using var cert = new X509Certificate2(Convert.FromBase64String(access.CertificateBase64));
-                var publicKeyPinningHash = cert.GetPublicKeyPinningHash();
 
-                var command = new RegisterReplicationHubAccessCommand(Database.Name, hubTaskName, access, publicKeyPinningHash, cert.Thumbprint, GetRaftRequestIdFromQuery(),
-                    cert.Issuer, cert.Subject, cert.NotBefore, cert.NotAfter);
-                
+                var command = new RegisterReplicationHubAccessCommand(Database.Name, hubTaskName, access, cert, GetRaftRequestIdFromQuery());
                 var result = await Server.ServerStore.SendToLeaderAsync(command);
                 await WaitForIndexToBeApplied(context, result.Index);
 

@@ -2493,16 +2493,18 @@ namespace Raven.Server
             {
                 try
                 {
-                    await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub, new ReplicationHubAccess
+                    var access = new ReplicationHubAccess
                     {
                         AllowedHubToSinkPaths = replicationHubAccess.AllowedHubToSinkPaths,
                         AllowedSinkToHubPaths = replicationHubAccess.AllowedSinkToHubPaths,
                         Name = replicationHubAccess.Name,
                         CertificateBase64 = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
-                    }, certificate.GetPublicKeyPinningHash(), certificate.Thumbprint, RaftIdGenerator.NewId(), certificate.Issuer, certificate.Subject, certificate.NotBefore, certificate.NotAfter)
-                    {
-                        RegisteringSamePublicKeyPinningHash = true
-                    })
+                    };
+
+                    await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub, access, certificate, RaftIdGenerator.NewId())
+                        {
+                            RegisteringSamePublicKeyPinningHash = true
+                        })
                         .ConfigureAwait(false);
                 }
                 catch (Exception e)
