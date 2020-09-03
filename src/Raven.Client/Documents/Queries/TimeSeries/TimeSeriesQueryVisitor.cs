@@ -107,7 +107,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             if (expression is ConstantExpression constantExpression)
             {
-                timePeriod = constantExpression.Value.ToString();
+                if (constantExpression.Value is Action<ITimePeriodBuilder> action)
+                {
+                    // document query
+                    timePeriod = GetTimePeriodFromAction(action, out with);
+                }
+                else
+                {
+                    timePeriod = constantExpression.Value.ToString();
+                }
             }
 
             else if (expression is LambdaExpression lambda)
@@ -129,7 +137,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     groupByCall = mce;
                 }
 
-                timePeriod = GetTimePeriod(groupByCall, nameof(ITimeSeriesQueryable.GroupBy));
+                timePeriod = GetTimePeriodFromMethodCall(groupByCall, nameof(ITimeSeriesQueryable.GroupBy));
             }
 
             else
@@ -138,6 +146,23 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
 
             _groupBy = $" group by '{timePeriod}' {with}";
+        }
+
+        private static string GetTimePeriodFromAction(Action<ITimePeriodBuilder> action, out string with)
+        {
+            with = null;
+
+            var builder = new TimePeriodBuilder();
+            action.Invoke(builder);
+
+            var timePeriod = builder.GetTimePeriod();
+
+            if (builder.Options != null && builder.Options.Interpolation != InterpolationType.None)
+            {
+                with = $"with interpolation({builder.Options.Interpolation})";
+            }
+
+            return timePeriod;
         }
 
         private static string GroupByWith(MethodCallExpression callExpression, Expression expression)
@@ -307,16 +332,28 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (_first != null)
                 throw new InvalidQueryException($"Cannot use both '{nameof(ITimeSeriesQueryable.FromFirst)}' and '{nameof(ITimeSeriesQueryable.FromLast)}' in the same Time Series query function ");
 
-            if (!(expression is LambdaExpression lambda) || 
-                !(lambda.Body is MethodCallExpression methodCall))
-            {
-                ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.FromLast));
-                return;
-            }
-
-            var timePeriod = GetTimePeriod(methodCall, nameof(ITimeSeriesQueryable.FromLast));
+            var timePeriod = GetTimePeriodFromExpression(expression, nameof(ITimeSeriesQueryable.FromLast));
 
             _last = $" last {timePeriod}";
+        }
+
+        private static string GetTimePeriodFromExpression(Expression expression, string method)
+        {
+            if (expression is ConstantExpression constant &&
+                constant.Value is Action<ITimePeriodBuilder> action)
+            {
+                // document query
+                return GetTimePeriodFromAction(action, out _);
+            }
+            
+            if (!(expression is LambdaExpression lambda) ||
+                !(lambda.Body is MethodCallExpression methodCall))
+            {
+                ThrowInvalidMethodArgument(expression, method);
+                return null;
+            }
+
+            return GetTimePeriodFromMethodCall(methodCall, method);
         }
 
         private void First(Expression expression)
@@ -324,14 +361,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             if (_last != null)
                 throw new InvalidQueryException($"Cannot use both '{nameof(ITimeSeriesQueryable.FromFirst)}' and '{nameof(ITimeSeriesQueryable.FromLast)}' in the same Time Series query function ");
 
-            if (!(expression is LambdaExpression lambda) ||
-                !(lambda.Body is MethodCallExpression methodCall))
-            {
-                ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.FromFirst));
-                return;
-            }
-
-            var timePeriod = GetTimePeriod(methodCall, nameof(ITimeSeriesQueryable.FromFirst));
+            var timePeriod = GetTimePeriodFromExpression(expression, nameof(ITimeSeriesQueryable.FromFirst));
 
             _first = $" first {timePeriod}";
         }
@@ -528,7 +558,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return d.EnsureUtc().GetDefaultRavenFormat();
         }
 
-        private static string GetTimePeriod(MethodCallExpression callExpression, string method)
+        private static string GetTimePeriodFromMethodCall(MethodCallExpression callExpression, string method)
         {
             if (callExpression.Method.DeclaringType != typeof(ITimePeriodBuilder))
             {
@@ -543,6 +573,80 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private static void ThrowInvalidMethodArgument(Expression argument, string method)
         {
             throw new InvalidOperationException($"Invalid '{method}' argument: '{argument}'");
+        }
+
+        internal class TimePeriodBuilder : ITimePeriodBuilder, ITimeSeriesAggregationOperations
+        {
+            private int _duration;
+            private string _methodName;
+
+            public TimeSeriesAggregationOptions Options { get; private set; }
+
+            public string GetTimePeriod()
+            {
+                return $"{_duration} {_methodName}";
+            }
+
+            public ITimeSeriesAggregationOperations Milliseconds(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Milliseconds);
+                return this;
+            }
+
+            public ITimeSeriesAggregationOperations Seconds(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Seconds);
+                return this;
+            }
+
+            public ITimeSeriesAggregationOperations Minutes(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Minutes);
+                return this;
+            }
+
+            public ITimeSeriesAggregationOperations Hours(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Hours);
+                return this;
+            }
+
+            public ITimeSeriesAggregationOperations Days(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Days);
+                return this;
+            }
+
+            public ITimeSeriesAggregationOperations Months(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Months);
+                return this;
+            }
+
+            public ITimeSeriesAggregationOperations Quarters(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Quarters);
+                return this;
+            }
+
+            public ITimeSeriesAggregationOperations Years(int duration)
+            {
+                _duration = duration;
+                _methodName = nameof(Years);
+                return this;
+            }
+
+            public void WithOptions(TimeSeriesAggregationOptions options)
+            {
+                Options = options;
+            }
         }
     }
 
