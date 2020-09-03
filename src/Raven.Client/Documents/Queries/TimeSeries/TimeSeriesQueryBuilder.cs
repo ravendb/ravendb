@@ -9,35 +9,52 @@ using Raven.Client.Documents.Session.TimeSeries;
 
 namespace Raven.Client.Documents.Queries.TimeSeries
 {
-    public interface ITimeSeriesQueryBuilder : ITimeSeriesQueryable, ITimeSeriesAggregationQueryable
+    public interface ITimeSeriesQueryBuilder : ITimeSeriesQueryable
     {
         T Raw<T>(string queryText) where T : TimeSeriesQueryResult;
 
         ITimeSeriesQueryBuilder From(string name);
 
-        ITimeSeriesQueryBuilder From(object documentInstance, string name);
-
         ITimeSeriesQueryBuilder Between(DateTime start, DateTime end);
+
+        new ITimeSeriesQueryBuilder FromLast(Action<ITimePeriodBuilder> timePeriod);
+
+        new ITimeSeriesQueryBuilder FromFirst(Action<ITimePeriodBuilder> timePeriod);
+
+        new ITimeSeriesLoadTagBuilder<TTag> LoadByTag<TTag>();
     }
 
-    internal class TimeSeriesQueryBuilder<TEntity> : ITimeSeriesQueryBuilder
+    public interface ITimeSeriesLoadTagBuilder<TTag>
+    {
+        ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, TTag, bool>> predicate);
+    }
+
+    internal class TimeSeriesLoadTagBuilder<TEntity, TTag> : ITimeSeriesLoadTagBuilder<TTag>
+    {
+        private readonly TimeSeriesQueryBuilder<TEntity> _parent;
+
+        public TimeSeriesLoadTagBuilder(TimeSeriesQueryBuilder<TEntity> builder)
+        {
+            _parent = builder;
+        }
+
+        public ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, TTag, bool>> predicate)
+        {
+            return _parent.Where(predicate);
+        }
+    }
+
+    internal class TimeSeriesQueryBuilder<TEntity> : ITimeSeriesQueryBuilder, ITimeSeriesAggregationQueryable
     {
         private string _query;
-
         private string _name;
-        private object _doc;
-
         private DateTime? _start;
         private DateTime? _end;
-
-        private Expression _expression;
         private MethodCallExpression _callExpression;
-
-        private IAbstractDocumentQuery<TEntity> _documentQuery;
-        private LinqPathProvider _linqPathProvider;
+        private readonly IAbstractDocumentQuery<TEntity> _documentQuery;
+        private readonly LinqPathProvider _linqPathProvider;
 
         public string QueryText => _query;
-
 
         public TimeSeriesQueryBuilder(IAbstractDocumentQuery<TEntity> abstractDocumentQuery, LinqPathProvider linqPathProvider)
         {
@@ -45,18 +62,44 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _linqPathProvider = linqPathProvider;
         }
 
-
         public T Raw<T>(string queryText) where T : TimeSeriesQueryResult
         {
             _query = queryText;
             return default;
         }
 
+        /*private void Act<T>([CallerMemberName] string name = null, Expression arg = null)
+        {
+            switch (name)
+            {
+                case nameof(ITimeSeriesQueryBuilder.Where):
+                    break;
+                case nameof(ITimeSeriesQueryBuilder.LoadByTag):
+                    break;
+                case nameof(ITimeSeriesQueryBuilder.GroupBy):
+                    break;
+                case nameof(ITimeSeriesQueryBuilder.Select):
+                    break;
+                case nameof(ITimeSeriesQueryBuilder.Offset):
+                    break;
+                case nameof(ITimeSeriesQueryBuilder.Scale):
+                    break;
+                case nameof(ITimeSeriesQueryBuilder.FromFirst):
+                    break;
+                case nameof(ITimeSeriesQueryBuilder.FromLast):
+                    break;
+
+                default:
+                    throw new ArgumentException(name);
+            }
+        }*/
+
         public ITimeSeriesQueryBuilder From(string name)
         {
             _name = name;
 
-            var methodInfo = typeof(RavenQuery).GetMethods()
+            var methodInfo = typeof(RavenQuery)
+                .GetMethods()
                 .SingleOrDefault(method => 
                     method.Name == nameof(RavenQuery.TimeSeries) && 
                     method.IsGenericMethod == false && 
@@ -69,32 +112,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 Expression.Constant(_name)
             );
 
-            /*_expression = RavenQuery.TimeSeries().
-            _expression = Expression.Call(method: )*/
-            return this;
-        }
-
-        public ITimeSeriesQueryBuilder From(object documentInstance, string name)
-        {
-            //todo check name not set
-
-            _doc = documentInstance;
-            _name = name;
-
-            var methodInfo = typeof(RavenQuery).GetMethods()
-                .SingleOrDefault(method =>
-                    method.Name == nameof(RavenQuery.TimeSeries) &&
-                    method.IsGenericMethod == false &&
-                    method.GetParameters().Length == 2);
-
-            Debug.Assert(methodInfo != null);
-
-            _callExpression = Expression.Call(
-                methodInfo,
-                Expression.Constant(_doc),
-                Expression.Constant(_name)
-            );
-
             return this;
         }
 
@@ -103,7 +120,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _start = start;
             _end = end;
 
-            var methodInfo = typeof(RavenQuery).GetMethods()
+            var methodInfo = typeof(RavenQuery)
+                .GetMethods()
                 .SingleOrDefault(method =>
                     method.Name == nameof(RavenQuery.TimeSeries) &&
                     method.IsGenericMethod == false &&
@@ -114,7 +132,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             _callExpression = Expression.Call(
                 methodInfo,
-                Expression.Constant(_doc),
+                Expression.Constant(null),
                 Expression.Constant(_name),
                 Expression.Constant(_start),
                 Expression.Constant(_end)
@@ -123,82 +141,133 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return this;
         }
 
-
-        /*var query = session.Advanced.DocumentQuery<User>()
-            .WhereGreaterThan(u => u.Age, 21)
-            .SelectTimeSeries(builder => builder.From(name)
-                .Between(start, end)
-                .Where(ts => ts.Tag == "watches/fitbit")
-                .GroupBy(g => g.Months(1)
-                    .Select(x => new
-                    {
-                        Max = x.Max()
-                    })))*/
         public ITimeSeriesQueryable Where(Expression<Func<TimeSeriesEntry, bool>> predicate)
         {
-            ModifyCallExpression(predicate, typeof(ITimeSeriesQueryable).GetMethod(nameof(ITimeSeriesQueryable.Where)));
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesQueryable.Where));
+
+            ModifyCallExpression(methodInfo, predicate);
+
             return this;
         }
 
-        private void ModifyCallExpression(Expression arg, MethodInfo methodInfo)
+        internal ITimeSeriesQueryable Where<TTag>(Expression<Func<TimeSeriesEntry, TTag, bool>> predicate)
         {
-            Debug.Assert(_callExpression != null);
-            Debug.Assert(methodInfo != null);
+            var methodInfo = typeof(ITimeSeriesLoadQueryable<TTag>)
+                .GetMethod(nameof(ITimeSeriesLoadQueryable<TTag>.Where));
 
-            _callExpression = Expression.Call(_callExpression, methodInfo, arg);
+            ModifyCallExpression(methodInfo, predicate);
+
+            return this;
         }
 
-        public ITimeSeriesQueryable Offset(TimeSpan offset)
+        ITimeSeriesLoadTagBuilder<TTag> ITimeSeriesQueryBuilder.LoadByTag<TTag>()
         {
-            throw new NotImplementedException();
-        }
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesQueryable.LoadByTag))?
+                .MakeGenericMethod(typeof(TTag));
 
-        ITimeSeriesAggregationQueryable ITimeSeriesAggregationQueryable.Offset(TimeSpan offset)
-        {
-            throw new NotImplementedException();
-        }
+            ModifyCallExpression(methodInfo);
 
-        public ITimeSeriesQueryable Scale(double value)
-        {
-            throw new NotImplementedException();
-        }
-
-        ITimeSeriesAggregationQueryable ITimeSeriesAggregationQueryable.Scale(double value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ITimeSeriesQueryable FromLast(Action<ITimePeriodBuilder> timePeriod)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ITimeSeriesLoadQueryable<TEntity> LoadByTag<TEntity>()
-        {
-            throw new NotImplementedException();
+            return new TimeSeriesLoadTagBuilder<TEntity, TTag>(this);
         }
 
         public ITimeSeriesAggregationQueryable GroupBy(string s)
         {
             var methodInfo = typeof(ITimeSeriesQueryable)
-                .GetMethod(nameof(ITimeSeriesQueryable.GroupBy), new []{ typeof(string) });
-            ModifyCallExpression(Expression.Constant(s), methodInfo);
+                .GetMethod(nameof(ITimeSeriesQueryable.GroupBy), new[] { typeof(string) });
+            ModifyCallExpression(methodInfo, Expression.Constant(s));
             return this;
         }
 
         public ITimeSeriesAggregationQueryable GroupBy(Action<ITimePeriodBuilder> timePeriod)
         {
-            throw new NotImplementedException();
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesQueryable.GroupBy), new[] { typeof(Action<ITimePeriodBuilder>) });
+
+            ModifyCallExpression(methodInfo, Expression.Constant(timePeriod));
+
+            return this;
         }
 
-        public ITimeSeriesAggregationQueryable Select(Expression<Func<ITimeSeriesGrouping, object>> selector)
+        ITimeSeriesAggregationQueryable ITimeSeriesQueryable.Select(Expression<Func<ITimeSeriesGrouping, object>> selector)
         {
-            throw new NotImplementedException();
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesAggregationQueryable.Select));
+
+            ModifyCallExpression(methodInfo, selector);
+
+            return this;
+        }
+
+        ITimeSeriesAggregationQueryable ITimeSeriesAggregationQueryable.Select(Expression<Func<ITimeSeriesGrouping, object>> selector)
+        {
+            var methodInfo = typeof(ITimeSeriesAggregationQueryable)
+                .GetMethod(nameof(ITimeSeriesAggregationQueryable.Select));
+
+            ModifyCallExpression(methodInfo, selector);
+
+            return this;
+        }
+
+        ITimeSeriesQueryable ITimeSeriesQueryable.Offset(TimeSpan offset)
+        {
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesQueryable.Offset));
+
+            ModifyCallExpression(methodInfo, Expression.Constant(offset));
+
+            return this;
+        }
+
+        ITimeSeriesAggregationQueryable ITimeSeriesAggregationQueryable.Offset(TimeSpan offset)
+        {
+            var methodInfo = typeof(ITimeSeriesAggregationQueryable)
+                .GetMethod(nameof(ITimeSeriesAggregationQueryable.Offset));
+
+            ModifyCallExpression(methodInfo, Expression.Constant(offset));
+
+            return this;
+        }
+
+        ITimeSeriesQueryable ITimeSeriesQueryable.Scale(double value)
+        {
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesQueryable.Scale));
+
+            ModifyCallExpression(methodInfo, Expression.Constant(value));
+
+            return this;
+        }
+
+        ITimeSeriesAggregationQueryable ITimeSeriesAggregationQueryable.Scale(double value)
+        {
+            var methodInfo = typeof(ITimeSeriesAggregationQueryable)
+                .GetMethod(nameof(ITimeSeriesAggregationQueryable.Scale));
+
+            ModifyCallExpression(methodInfo, Expression.Constant(value));
+
+            return this;
+        }
+
+        ITimeSeriesQueryBuilder ITimeSeriesQueryBuilder.FromFirst(Action<ITimePeriodBuilder> timePeriod)
+        {
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesQueryable.FromFirst));
+
+            ModifyCallExpression(methodInfo, Expression.Constant(timePeriod));
+
+            return this;
+        }
+
+        ITimeSeriesQueryBuilder ITimeSeriesQueryBuilder.FromLast(Action<ITimePeriodBuilder> timePeriod)
+        {
+            var methodInfo = typeof(ITimeSeriesQueryable)
+                .GetMethod(nameof(ITimeSeriesQueryable.FromLast));
+
+            ModifyCallExpression(methodInfo, Expression.Constant(timePeriod));
+
+            return this;
         }
 
         public TimeSeriesRawResult ToList()
@@ -214,6 +283,31 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             ToList();
             return default;
         }
-    }
 
+        ITimeSeriesLoadQueryable<TEntity1> ITimeSeriesQueryable.LoadByTag<TEntity1>()
+        {
+            // never called
+            throw new NotImplementedException();
+        }
+
+        public ITimeSeriesQueryable FromLast(Action<ITimePeriodBuilder> timePeriod)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void ModifyCallExpression(MethodInfo methodInfo, Expression arg = null)
+        {
+            Debug.Assert(_callExpression != null);
+            Debug.Assert(methodInfo != null);
+
+            _callExpression = arg == null 
+                ? Expression.Call(_callExpression, methodInfo) 
+                : Expression.Call(_callExpression, methodInfo, arg);
+        }
+    }
 }
