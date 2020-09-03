@@ -484,20 +484,34 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
                     if (singleBackupStatus == null)
-                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                        continue;
 
-                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LocalBackup), out BlittableJsonReaderObject localBackup) == false
-                        || singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndex) == false)
-                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastFullBackupInternal), out DateTime? lastFullBackupInternal) == false || lastFullBackupInternal == null)
+                    {
+                        // never backed up yet
+                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal) == false || lastIncrementalBackupInternal == null)
+                            continue;
+                    }
 
-                    if (lastRaftIndex.TryGet(nameof(LastRaftIndex.LastEtag), out long? lastEtag) == false)
-                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                    if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false ||
+                        lastRaftIndexBlittable == null)
+                    {
+                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
+                        {
+                            // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
+                            return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                        }
 
-                    if (lastEtag == null)
-                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                        continue;
+                    }
 
-                    if (lastEtag < maxEtag)
-                        maxEtag = lastEtag.Value;
+                    if (lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false || lastRaftIndex == null)
+                    {
+                        continue;
+                    }
+
+                    if (lastRaftIndex < maxEtag)
+                        maxEtag = lastRaftIndex.Value;
 
                     if (maxEtag == 0)
                         return CompareExchangeTombstonesCleanupState.NoMoreTombstones;

@@ -823,6 +823,56 @@ namespace SlowTests.Smuggler
         }
 
         [Fact]
+        public async Task ExportShouldSkipDeadSegments()
+        {
+            var file = GetTempFileName();
+            var baseline = DateTime.Today;
+
+            try
+            {
+                using (var store1 = GetDocumentStore())
+                using (var store2 = GetDocumentStore())
+                {
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1" }, "users/1");
+
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        for (int i = 0; i < 360; i++)
+                        {
+                            session.TimeSeriesFor("users/1", "Heartrate").Append(baseline.AddSeconds(i * 10), new[] { i % 60d }, "watches/1");
+                        }
+                        await session.SaveChangesAsync();
+                    }
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        session.TimeSeriesFor("users/1", "Heartrate").Delete();
+                        await session.SaveChangesAsync();
+                    }
+
+                    var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    var stats = await store2.Maintenance.SendAsync(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfDocuments);
+                    Assert.Equal(0, stats.CountOfTimeSeriesSegments);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
         public async Task CanExportAndImportTimeSeriesWithRollups()
         {
             var file = GetTempFileName();

@@ -256,6 +256,9 @@ namespace Raven.Server.Smuggler.Documents
                             countsWithEtagAndAttachments.Attachments.Skipped = _options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false;
                             break;
                     }
+
+                if (buildType == BuildVersionType.V3 && type == DatabaseItemType.Documents && result.RevisionDocuments.ReadCount > 0)
+                    result.RevisionDocuments.Processed = true;
                 }
             }
 
@@ -616,7 +619,17 @@ namespace Raven.Server.Smuggler.Documents
                 foreach (DocumentItem item in _source.GetDocuments(_options.Collections, actions))
                 {
                     _token.ThrowIfCancellationRequested();
+
+                    var isPreV4Revision = IsPreV4Revision(buildType, item.Document.Id, item.Document);
+                    if (isPreV4Revision)
+                    {
+                        result.RevisionDocuments.ReadCount++;
+                    }
+                    else
+                    {
                     result.Documents.ReadCount++;
+                    }
+
                     if (result.Documents.ReadCount % 1000 == 0)
                     {
                         var message = $"Read {result.Documents.ReadCount:#,#;;0} documents.";
@@ -635,6 +648,8 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (item.Document.Id == null)
                         ThrowInvalidData();
+
+                    result.Documents.LastEtag = item.Document.Etag;
 
                     if (CanSkipDocument(item.Document, buildType))
                     {
@@ -669,16 +684,17 @@ namespace Raven.Server.Smuggler.Documents
 
                     SetDocumentFlags(item, buildType);
 
-                    if (SkipDocument(item, buildType, actions, result, ref legacyIdsToDelete))
+                    if (SkipDocument(buildType, isPreV4Revision, item, result, ref legacyIdsToDelete))
                         continue;
 
                     actions.WriteDocument(item, result.Documents);
-
-                    result.Documents.LastEtag = item.Document.Etag;
                 }
 
                 TryHandleLegacyDocumentTombstones(legacyIdsToDelete, actions, result);
             }
+
+            if (buildType == BuildVersionType.V3 && result.RevisionDocuments.ReadCount > 0)
+                result.RevisionDocuments.Processed = true;
 
             return result.Documents;
         }
@@ -734,13 +750,12 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private bool SkipDocument(DocumentItem item, BuildVersionType buildType, IDocumentActions actions, SmugglerResult result, ref List<LazyStringValue> legacyIdsToDelete)
+        private bool SkipDocument(BuildVersionType buildType, bool isPreV4Revision, DocumentItem item, SmugglerResult result, ref List<LazyStringValue> legacyIdsToDelete)
         {
             if (buildType == BuildVersionType.V3 == false)
                 return false;
 
-            if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false &&
-                IsPreV4Revision(buildType, item.Document.Id, item.Document))
+            if (_options.OperateOnTypes.HasFlag(DatabaseItemType.RevisionDocuments) == false && isPreV4Revision)
             {
                 result.Documents.SkippedCount++;
                 if (result.Documents.SkippedCount % 1000 == 0)
@@ -751,11 +766,8 @@ namespace Raven.Server.Smuggler.Documents
 
             if ((item.Document.NonPersistentFlags & NonPersistentDocumentFlags.LegacyDeleteMarker) == NonPersistentDocumentFlags.LegacyDeleteMarker)
             {
-                if (legacyIdsToDelete == null)
-                    legacyIdsToDelete = new List<LazyStringValue>();
-
+                legacyIdsToDelete ??= new List<LazyStringValue>();
                 legacyIdsToDelete.Add(item.Document.Id);
-
                 return true;
             }
 
@@ -1067,6 +1079,7 @@ namespace Raven.Server.Smuggler.Documents
 
             using (var actions = _destination.TimeSeries())
             {
+                var isFullBackup = _source.GetSourceType() == SmugglerSourceType.FullExport;
                 foreach (var ts in _source.GetTimeSeries(_options.Collections))
                 {
                     _token.ThrowIfCancellationRequested();
@@ -1075,9 +1088,11 @@ namespace Raven.Server.Smuggler.Documents
                     if (result.TimeSeries.ReadCount % 1000 == 0)
                         AddInfoToSmugglerResult(result, $"Read {result.TimeSeries.ReadCount:#,#;;0} time series.");
 
-                    actions.WriteTimeSeries(ts);
-
                     result.TimeSeries.LastEtag = ts.Etag;
+
+                    var shouldSkip = isFullBackup && ts.Segment.NumberOfLiveEntries == 0;
+                    if (shouldSkip == false)
+                        actions.WriteTimeSeries(ts);
                 }
             }
 
@@ -1090,7 +1105,7 @@ namespace Raven.Server.Smuggler.Documents
 
             if (item.Document != null)
             {
-                item.Document.Data.Dispose();
+                item.Document.Dispose();
 
                 if (item.Attachments != null)
                 {

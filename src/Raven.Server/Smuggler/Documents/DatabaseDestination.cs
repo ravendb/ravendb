@@ -208,7 +208,7 @@ namespace Raven.Server.Smuggler.Documents
                 _log = log;
                 _enqueueThreshold = new Sparrow.Size(database.Is32Bits ? 2 : 32, SizeUnit.Megabytes);
 
-                _missingDocumentsForRevisions = isRevision ? new ConcurrentDictionary<string, CollectionName>() : null;
+                _missingDocumentsForRevisions = isRevision || buildType == BuildVersionType.V3 ? new ConcurrentDictionary<string, CollectionName>() : null;
                 _documentIdsOfMissingAttachments = isRevision ? null : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 _command = new MergedBatchPutCommand(database, buildType, log, _missingDocumentsForRevisions, _documentIdsOfMissingAttachments)
                 {
@@ -344,7 +344,8 @@ namespace Raven.Server.Smuggler.Documents
 
             private void DeleteRevisionsForNonExistingDocuments()
             {
-                if (_missingDocumentsForRevisions == null)
+                if (_missingDocumentsForRevisions == null ||
+                    _missingDocumentsForRevisions.Count == 0)
                     return;
 
                 _revisionDeleteCommand = new MergedBatchDeleteRevisionCommand(_database, _log);
@@ -917,6 +918,7 @@ namespace Raven.Server.Smuggler.Documents
                 _resetContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
                 _missingDocumentsForRevisions = missingDocumentsForRevisions;
                 _documentIdsOfMissingAttachments = documentIdsOfMissingAttachments;
+
                 if (_database.Is32Bits)
                 {
                     using (var ctx = DocumentsOperationContext.ShortTermSingleUse(database))
@@ -940,6 +942,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 var idsOfDocumentsToUpdateAfterAttachmentDeletion = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+
                 foreach (var documentType in Documents)
                 {
                     var tombstone = documentType.Tombstone;
@@ -1046,8 +1049,37 @@ namespace Raven.Server.Smuggler.Documents
                         var endIndex = id.IndexOf(DatabaseSmuggler.PreV4RevisionsDocumentId, StringComparison.OrdinalIgnoreCase);
                         var newId = id.Substring(0, endIndex);
 
+                        Document parentDocument = null;
+                        if (_database.DocumentsStorage.Get(context, newId, DocumentFields.Id) == null)
+                        {
+                            var collection = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
+                            _missingDocumentsForRevisions.TryAdd(newId, collection);
+                        }
+                        else
+                        {
+                            // the order of revisions in v3.x is different than we have in v4.x
+                            // in v4.x: rev1, rev2, rev3, document (the change vector of the last revision is identical to the document)
+                            // in v3.x: rev1, rev2, document, rev3
+                            parentDocument = _database.DocumentsStorage.Get(context, newId);
+                            _missingDocumentsForRevisions.TryRemove(newId, out _);
+                        }
+
+                        document.Flags |= DocumentFlags.HasRevisions;
                         _database.DocumentsStorage.RevisionsStorage.Put(context, newId, document.Data, document.Flags,
                             document.NonPersistentFlags, document.ChangeVector, document.LastModified.Ticks);
+
+                        if (parentDocument != null)
+                        {
+                            // the change vector of the document must be identical to the one of the last revision
+                            databaseChangeVector = ChangeVectorUtils.MergeVectors(databaseChangeVector, document.ChangeVector);
+
+                            using (parentDocument.Data)
+                                parentDocument.Data = parentDocument.Data.Clone(context);
+
+                            _database.DocumentsStorage.Put(context, parentDocument.Id, null,
+                                parentDocument.Data, parentDocument.LastModified.Ticks, document.ChangeVector, parentDocument.Flags, parentDocument.NonPersistentFlags);
+                        }
+
                         continue;
                     }
 

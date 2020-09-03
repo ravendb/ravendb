@@ -1081,6 +1081,67 @@ namespace SlowTests.Client.TimeSeries.Policies
         }
 
         [Fact]
+        public async Task CanRetainAndRollup2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var now = DateTime.UtcNow;
+                var minutes = 1440;
+                var baseline = now.AddMinutes(-minutes);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    for (int i = 0; i <= minutes; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i), new[] {29d * i, 30 * i}, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                var raw = new RawTimeSeriesPolicy(TimeValue.FromMinutes(30));
+                var p = new TimeSeriesPolicy("By10Minutes",TimeValue.FromMinutes(10), TimeValue.FromHours(3));
+                var p2 = new TimeSeriesPolicy("ByHour",TimeValue.FromHours(1), TimeValue.FromHours(12));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            RawPolicy = raw,
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                p, p2
+                            }
+                        },
+                    }
+                };
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                
+                var database = await GetDocumentDatabaseInstanceFor(store);
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                WaitForUserToContinueTheTest(store);
+                using (var session = store.OpenSession())
+                {
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate")?
+                        .Get(DateTime.MinValue, DateTime.MaxValue)
+                        .Where(entry => entry.IsRollup == false)
+                        .ToList();
+                    Assert.NotNull(ts);
+                    Assert.Equal(30, ts.Count);
+                    var ts1 = session.TimeSeriesFor("users/karmel", p.GetTimeSeriesName("Heartrate")).Get().ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get().ToList();
+                    Assert.Equal(((TimeSpan)p.RetentionTime).TotalMinutes / ((TimeSpan)p.AggregationTime).TotalMinutes, ts1.Count);
+                    Assert.Equal(((TimeSpan)p2.RetentionTime).TotalMinutes / ((TimeSpan)p2.AggregationTime).TotalMinutes, ts2.Count);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanRetainAndRollupForMonths()
         {
             using (var store = GetDocumentStore())

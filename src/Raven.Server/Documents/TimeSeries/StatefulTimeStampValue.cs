@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Raven.Server.Documents.TimeSeries
@@ -69,6 +68,8 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public Span<StatefulTimestampValue> Span => new Span<StatefulTimestampValue>(Pointer, Length);
+
+        public int NumberOfEntries => Span.Length > 0 ? Span[0].Count : 0;
     }
 
     public struct TimestampState

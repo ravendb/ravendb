@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.TimeSeries
                         tvb.Add(collectionSlice);
                         tvb.Add(Bits.SwapBytes(NextRollup(DateTime.MinValue, _to)));
                         tvb.Add(policyToApply);
-                        tvb.Add(0);
+                        tvb.Add(0L);
                         tvb.Add(changeVectorSlice);
 
                         table.Set(tvb);
@@ -377,6 +377,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public void DeleteByPrimaryKeyPrefix(DocumentsOperationContext context, Slice prefix)
+        {
+            RollupSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollupTable, 16);
+            var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
+            table.DeleteByPrimaryKeyPrefix(prefix);
+        }
+
         internal class RollupTimeSeriesCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly TimeSeriesConfiguration _configuration;
@@ -400,7 +407,6 @@ namespace Raven.Server.Documents.TimeSeries
                 var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
                 RollupSchema.Create(context.Transaction.InnerTransaction, TimeSeriesRollupTable, 16);
                 var table = context.Transaction.InnerTransaction.OpenTable(RollupSchema, TimeSeriesRollupTable);
-
                 foreach (var item in _states)
                 {
                     if (_configuration == null)
@@ -412,14 +418,11 @@ namespace Raven.Server.Documents.TimeSeries
                     if (config.Disabled)
                         continue;
                         
+                    if (table.ReadByKey(item.Key, out var current) == false)
+                        continue;
+
                     var policy = config.GetPolicyByName(item.RollupPolicy, out _);
                     if (policy == null)
-                    {
-                        table.DeleteByKey(item.Key);
-                        continue;
-                    }
-
-                    if (table.ReadByKey(item.Key, out var current) == false)
                     {
                         table.DeleteByKey(item.Key);
                         continue;
@@ -428,10 +431,17 @@ namespace Raven.Server.Documents.TimeSeries
                     if (item.Etag != DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref current))
                         continue; // concurrency check
 
-                    var rollupStart = item.NextRollup.Add(-policy.AggregationTime);
                     var rawTimeSeries = item.Name.Split(TimeSeriesConfiguration.TimeSeriesRollupSeparator)[0];
                     var intoTimeSeries = policy.GetTimeSeriesName(rawTimeSeries);
-                    
+                    var rollupStart = item.NextRollup.Add(-policy.AggregationTime);
+
+                    if (config.MaxRetention < TimeValue.MaxValue)
+                    {
+                        var next = new DateTime(NextRollup(_now.Add(-config.MaxRetention), policy)).Add(-policy.AggregationTime);
+                        var rollupStartTicks = Math.Max(rollupStart.Ticks, next.Ticks);
+                        rollupStart = new DateTime(rollupStartTicks);
+                    }
+
                     var intoReader = tss.GetReader(context, item.DocId, intoTimeSeries, rollupStart, DateTime.MaxValue);
                     var previouslyAggregated = intoReader.AllValues().Any();
                     if (previouslyAggregated)
@@ -537,9 +547,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                         tss.DeleteTimestampRange(context, removeRequest);
                     }
-                    
-                    tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, verifyName: false);
-                    RolledUp++;
+
+                    var before = context.LastDatabaseChangeVector;
+                    var after = tss.AppendTimestamp(context, item.DocId, item.Collection, intoTimeSeries, values, verifyName: false);
+                    if (before != after)
+                        RolledUp++;
+
                     table.DeleteByKey(item.Key);
 
                     var stats = tss.Stats.GetStats(context, item.DocId, item.Name);
@@ -832,7 +845,7 @@ namespace Raven.Server.Documents.TimeSeries
                     }
                     else
                     {
-                        var span = it.Segment.Summary.Span;
+                        var span = it.Segment.Summary.SegmentValues.Span;
                         aggStates.Segment(span);
                     }
                 }

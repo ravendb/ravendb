@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return;
                 }
 
-                periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus));
+                periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus), lockTaken: false);
             }
             catch (Exception e)
             {
@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 };
 
                 var timer = new Timer(TimerCallback, backupTaskDetails, backupTaskDetails.TimeSpan, Timeout.InfiniteTimeSpan);
-                periodicBackup.UpdateTimer(timer);
+                periodicBackup.UpdateTimer(timer, lockTaken: false);
             }
         }
 
@@ -586,7 +586,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (_logger.IsOperationsEnabled)
                         _logger.Operations(message, e);
 
-                    ScheduleNextBackup(periodicBackup, null);
+                    ScheduleNextBackup(periodicBackup, elapsed: null, lockTaken: true);
 
                     _database.NotificationCenter.Add(AlertRaised.Create(
                         _database.Name,
@@ -635,11 +635,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             finally
             {
-                ScheduleNextBackup(periodicBackup, backupResult?.Elapsed);
+                ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);
             }
         }
 
-        private void ScheduleNextBackup(PeriodicBackup periodicBackup, TimeSpan? elapsed)
+        private void ScheduleNextBackup(PeriodicBackup periodicBackup, TimeSpan? elapsed, bool lockTaken)
         {
             try
             {
@@ -652,7 +652,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
                 {
                     var newBackupTimer = GetTimer(periodicBackup.Configuration, periodicBackup.BackupStatus);
-                    periodicBackup.UpdateTimer(newBackupTimer, discardIfDisabled: true);
+                    periodicBackup.UpdateTimer(newBackupTimer, lockTaken, discardIfDisabled: true);
                 }
             }
             catch (Exception e)
@@ -719,7 +719,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 case TaskStatus.ClusterDown:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be rescheduled on current node.";
                     var status = GetBackupStatus(backupInfo.TaskId, periodicBackup.BackupStatus);
-                    periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, status));
+                    periodicBackup.UpdateTimer(GetTimer(periodicBackup.Configuration, status), lockTaken: false);
                     break;
                 default:
                     msg = $"Backup {backupInfo.TaskId}, current status is {taskStatus}, the backup will be canceled on current node.";
@@ -871,7 +871,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
 
                 if (taskState == TaskStatus.ActiveByCurrentNode)
-                    periodicBackup.UpdateTimer(GetTimer(newConfiguration, backupStatus));
+                    periodicBackup.UpdateTimer(GetTimer(newConfiguration, backupStatus), lockTaken: false);
 
                 return;
             }
@@ -898,7 +898,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (previousConfiguration.HasBackupFrequencyChanged(newConfiguration) == false && existingBackupState.HasScheduledBackup())
                         return;
 
-                    existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus));
+                    existingBackupState.UpdateTimer(GetTimer(newConfiguration, backupStatus), lockTaken: false);
                     return;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(taskState), taskState, null);

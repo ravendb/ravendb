@@ -36,6 +36,16 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport);
 
         long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token);
+
+        SmugglerSourceType GetSourceType();
+        
+    }
+    public enum SmugglerSourceType
+    {
+        None,
+        FullExport,
+        IncrementalExport,
+        Import
     }
 
     public class IndexDefinitionAndType

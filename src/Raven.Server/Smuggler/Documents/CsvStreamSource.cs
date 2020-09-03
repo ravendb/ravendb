@@ -439,6 +439,11 @@ namespace Raven.Server.Smuggler.Documents
             return 0;
         }
 
+        public SmugglerSourceType GetSourceType()
+        {
+            return SmugglerSourceType.Import;
+        }
+
         public void Dispose()
         {
         }

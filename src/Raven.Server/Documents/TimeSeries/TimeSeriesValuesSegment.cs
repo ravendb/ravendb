@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public int NumberOfEntries => Header->NumberOfEntries;
 
-        public int NumberOfLiveEntries => SegmentValues.Span[0].Count;
+        public int NumberOfLiveEntries => SegmentValues.NumberOfEntries;
 
         public void Initialize(int numberOfValues)
         {
@@ -454,17 +454,17 @@ namespace Raven.Server.Documents.TimeSeries
                     var cur = baseline.AddMilliseconds(ts);
                     var tag = SetTimestampTag(context, tagPointer);
 
-                    var end = values.Length;
-                    while (end >= 0 && double.IsNaN(values[end - 1]))
+                    var length = values.Length;
+                    while (length > 0 && double.IsNaN(values[length - 1]))
                     {
-                        end--;
+                        length--;
                     }
                     
                     yield return new SingleResult
                     {
                         Timestamp = cur,
                         Tag = tag,
-                        Values = new Memory<double>(values, 0, end),
+                        Values = new Memory<double>(values, 0, length),
                         Status = status
                     };
                 }
@@ -747,7 +747,7 @@ namespace Raven.Server.Documents.TimeSeries
             Min = new InnerList(segment, SummaryType.Min);
             Max = new InnerList(segment, SummaryType.Max);
             Sum = new InnerList(segment, SummaryType.Sum);
-            Count = segment.SegmentValues.Span[0].Count;
+            Count = segment.NumberOfLiveEntries;
         }
 
         private enum SummaryType

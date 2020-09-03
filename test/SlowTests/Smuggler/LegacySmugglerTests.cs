@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
@@ -150,7 +149,7 @@ namespace SlowTests.Smuggler
 
         [Theory]
         [InlineData("SlowTests.Smuggler.Data.Revisions_3.5.35220.ravendbdump")]
-        public async Task CanImportRevisions(string file)
+        public async Task CanImportRevisions1(string file)
         {
             using (var stream = GetType().Assembly.GetManifestResourceStream(file))
             using (var store = GetDocumentStore())
@@ -165,7 +164,7 @@ namespace SlowTests.Smuggler
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.Equal(2, stats.CountOfDocuments);
                 Assert.Equal(5, stats.CountOfRevisionDocuments);
-                Assert.Equal(8, stats.LastDocEtag);
+                Assert.Equal(10, stats.LastDocEtag);
 
                 var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
                 Assert.Equal(2, collectionStats.CountOfDocuments);
@@ -181,10 +180,12 @@ namespace SlowTests.Smuggler
                     var metadata = session.Advanced.GetMetadataFor(user);
                     Assert.Equal(5, metadata.Count);
                     Assert.Equal("Users", metadata.GetString(Constants.Documents.Metadata.Collection));
-                    Assert.StartsWith("A:7-", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
-                    Assert.Equal(DocumentFlags.HasRevisions.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                    Assert.Equal($"{DocumentFlags.HasRevisions}", metadata.GetString(Constants.Documents.Metadata.Flags));
                     Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
                     Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
+
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.StartsWith("RV:", changeVector);
 
                     var revisions = session.Advanced.Revisions.GetFor<User>("users/1");
                     Assert.Equal(4, revisions.Count);
@@ -194,11 +195,149 @@ namespace SlowTests.Smuggler
                         metadata = session.Advanced.GetMetadataFor(revisions[i]);
                         Assert.Equal(5, metadata.Count);
                         Assert.Equal("Users", metadata.GetString(Constants.Documents.Metadata.Collection));
-                        Assert.Equal($"RV:{4 - i}-AAAAAQAAAQAAAAAAAAAAAw", metadata.GetString(Constants.Documents.Metadata.ChangeVector));
-                        Assert.Equal(DocumentFlags.Revision.ToString(), metadata.GetString(Constants.Documents.Metadata.Flags));
+                        Assert.Equal($"{DocumentFlags.HasRevisions}, {DocumentFlags.Revision}", metadata.GetString(Constants.Documents.Metadata.Flags));
                         Assert.Equal("users/1", metadata.GetString(Constants.Documents.Metadata.Id));
                         Assert.NotEqual(DateTime.MinValue.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite), metadata.GetString(Constants.Documents.Metadata.LastModified));
+
+                        var revisionChangeVector = metadata.GetString(Constants.Documents.Metadata.ChangeVector);
+                        Assert.Equal($"RV:{4 - i}-AAAAAQAAAQAAAAAAAAAAAw", revisionChangeVector);
+
+                        if (i == 0)
+                            Assert.Equal(changeVector, revisionChangeVector);
                     }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("SlowTests.Smuggler.Data.DocumentWithRevisions.ravendbdump")]
+        public async Task CanImportRevisions2(string file)
+        {
+            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
+            using (var store = GetDocumentStore())
+            {
+                Assert.NotNull(stream);
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(2, stats.CountOfDocuments);
+                Assert.Equal(6, stats.CountOfRevisionDocuments);
+                Assert.Equal(11, stats.LastDocEtag);
+
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(2, collectionStats.CountOfDocuments);
+                Assert.Equal(2, collectionStats.Collections.Count);
+                Assert.Equal(1, collectionStats.Collections["@empty"]);
+                Assert.Equal(1, collectionStats.Collections["test"]);
+
+                using (var session = store.OpenSession())
+                {
+                    var test = session.Load<Test>("test");
+                    Assert.NotNull(test);
+                    Assert.Equal("4", test.Name);
+                    var changeVector = session.Advanced.GetChangeVectorFor(test);
+
+                    var revisions = session.Advanced.Revisions.GetFor<User>("test");
+
+                    Assert.Equal("4", revisions[0].Name);
+                    Assert.Equal("3", revisions[1].Name);
+                    Assert.Equal("2", revisions[2].Name);
+                    Assert.Equal("1", revisions[3].Name);
+                    Assert.Equal("...", revisions[4].Name);
+
+                    foreach (var revision in revisions)
+                    {
+                        var metadata = session.Advanced.GetMetadataFor(revision);
+                        Assert.Equal($"{DocumentFlags.HasRevisions}, {DocumentFlags.Revision}", metadata.GetString(Constants.Documents.Metadata.Flags));
+                    }
+
+                    var revisionChangeVector = session.Advanced.GetChangeVectorFor(revisions[0]);
+                    Assert.Equal(changeVector, revisionChangeVector);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("SlowTests.Smuggler.Data.RevisionsWithoutADocument.ravendbdump")]
+        public async Task CanImportRevisionsWithoutADocument(string file)
+        {
+            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
+            using (var store = GetDocumentStore())
+            {
+                Assert.NotNull(stream);
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database);
+
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(1, stats.CountOfDocuments);
+                Assert.Equal(7, stats.CountOfRevisionDocuments);
+                Assert.Equal(2, stats.LastDocEtag);
+
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(1, collectionStats.CountOfDocuments);
+                Assert.Equal(2, collectionStats.Collections.Count);
+                Assert.Equal(1, collectionStats.Collections["@empty"]);
+                Assert.Equal(0, collectionStats.Collections["test"]);
+
+                using (var session = store.OpenSession())
+                {
+                    var test = session.Load<Test>("test");
+                    Assert.Null(test);
+
+                    var revisions = session.Advanced.Revisions.GetFor<User>("test");
+                    Assert.Equal(6, revisions.Count);
+
+                    var metadata = session.Advanced.GetMetadataFor(revisions[0]);
+                    Assert.Equal($"{DocumentFlags.HasRevisions}, {DocumentFlags.DeleteRevision}", metadata.GetString(Constants.Documents.Metadata.Flags));
+
+                    Assert.Equal("4", revisions[1].Name);
+                    Assert.Equal("3", revisions[2].Name);
+                    Assert.Equal("2", revisions[3].Name);
+                    Assert.Equal("1", revisions[4].Name);
+                    Assert.Equal("...", revisions[5].Name);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("SlowTests.Smuggler.Data.RevisionsWithoutADocument.ravendbdump")]
+        public async Task CanImportRevisionsWithoutADocumentWithPurgeOnDelete(string file)
+        {
+            using (var stream = GetType().Assembly.GetManifestResourceStream(file))
+            using (var store = GetDocumentStore())
+            {
+                Assert.NotNull(stream);
+
+                await RevisionsHelper.SetupRevisions(Server.ServerStore, store.Database, x => x.Default.PurgeOnDelete = true);
+
+                var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+                await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.Equal(1, stats.CountOfDocuments);
+                Assert.Equal(1, stats.CountOfRevisionDocuments);
+                Assert.Equal(2, stats.LastDocEtag);
+
+                var collectionStats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+                Assert.Equal(1, collectionStats.CountOfDocuments);
+                Assert.Equal(2, collectionStats.Collections.Count);
+                Assert.Equal(1, collectionStats.Collections["@empty"]);
+                Assert.Equal(0, collectionStats.Collections["test"]);
+
+                using (var session = store.OpenSession())
+                {
+                    var test = session.Load<Test>("test");
+                    Assert.Null(test);
+
+                    var revisions = session.Advanced.Revisions.GetFor<User>("test");
+                    Assert.Equal(0, revisions.Count);
                 }
             }
         }
@@ -242,6 +381,11 @@ namespace SlowTests.Smuggler
             public string Name { get; set; }
 
             public string Version { get; set; }
+        }
+
+        private class Test
+        {
+            public string Name { get; set; }
         }
     }
 }
