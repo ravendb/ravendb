@@ -152,24 +152,9 @@ namespace Raven.Server.Web.System
         [RavenAction("/auth-error.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task StudioAuthError()
         {
-            string reason;
-            string reasonAddon;
             var error = GetStringQueryString("err");
-
-            var stringBreak = error.IndexOf("<br>");
-            if (stringBreak != -1)
-            {
-               reason = error.Substring(0, stringBreak);
-               reasonAddon = error.Substring(stringBreak + 4);
-            }
-            else
-            {
-               reason = error;
-               reasonAddon = "";
-            }
-
             HttpContext.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
-            return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(reason, reasonAddon));
+            return HttpContext.Response.WriteAsync(HtmlUtil.RenderStudioAuthErrorPage(error));
         }
 
         [RavenAction("/eula/index.html", "GET", AuthorizationStatus.UnauthenticatedClients)]
@@ -469,7 +454,6 @@ namespace Raven.Server.Web.System
                     // likely to not be there
                     continue;
                 }
-
 
                 foreach (var ext in FileExtensionToContentTypeMapping.Keys)
                 {

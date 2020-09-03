@@ -209,13 +209,6 @@ namespace Raven.Server.Routing
                     });
             }
         }
-
-        public static bool TryGetUserAgent(HttpContext context, out string userAgent)
-        {
-            context.Request.Headers.TryGetValue(Constants.Headers.UserAgent, out var userAgentHeader);
-            userAgent = userAgentHeader.ToString().ToLower();
-            return userAgent != null;
-        }
         
         public static bool TryGetClientVersion(HttpContext context, out Version version)
         {
@@ -382,19 +375,13 @@ namespace Raven.Server.Routing
             RavenServer.AuthenticateConnection feature,
             AuthorizationStatus authorizationStatus)
         {
-            TryGetUserAgent(context, out var userAgent);
-            var userAgentChrome = userAgent.Contains("chrome");
-
             string message;
             if (feature == null ||
                 feature.Status == RavenServer.AuthenticationStatus.None ||
                 feature.Status == RavenServer.AuthenticationStatus.NoCertificateProvided)
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client. Did you forget to install the certificate?";
-                if (userAgentChrome)
-                {
-                    message += ChromeCertificateMessage;
-                }
+                message += BrowserCertificateMessage;
             }
             else
             {
@@ -408,18 +395,14 @@ namespace Raven.Server.Routing
 
                 if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
                 {
-                    message =
-                        $"The supplied client certificate '{name}' is unknown to the server. In order to register your certificate please contact your system administrator.";
-                    if (userAgentChrome)
-                    {
-                        message += ChromeCertificateMessage;
-                    } 
+                    message = $"The supplied client certificate '{name}' is unknown to the server. In order to register your certificate please contact your system administrator.";
+                    message += BrowserCertificateMessage;
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarIssuer)
                 {
-                    message =
-                        $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. " +
-                        $"<br>To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry.";
+                    message = $"The supplied client certificate '{name}' is unknown to the server but has a known Public Key Pinning Hash. Will not use it to authenticate because the issuer is unknown. " +
+                              Environment.NewLine + 
+                              $"To fix this, the admin can register the pinning hash of the *issuer* certificate: '{feature.IssuerHash}' in the '{RavenConfiguration.GetKey(x => x.Security.WellKnownIssuerHashes)}' configuration entry.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
                 {
@@ -431,8 +414,7 @@ namespace Raven.Server.Routing
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
                 {
-                    message =
-                        $"The supplied client certificate '{name}' has expired on {feature.Certificate.NotAfter:D}. Please contact your system administrator in order to obtain a new one.";
+                    message = $"The supplied client certificate '{name}' has expired on {feature.Certificate.NotAfter:D}. Please contact your system administrator in order to obtain a new one.";
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
                 {
@@ -498,7 +480,7 @@ namespace Raven.Server.Routing
             }
         }
         
-        private const string ChromeCertificateMessage = "<br>Your certificate store may be cached by Chrome. " +
-            "Use Ctrl+Shift+N to create a new private browsing tab, which will not cache any certificates.";
+        private static readonly string BrowserCertificateMessage = Environment.NewLine + "Your certificate store may be cached by the browser. " +
+            "Create a new private browsing tab, which will not cache any certificates. (Ctrl+Shift+N in Chrome, Ctrl+Shift+P in Firefox)";
     }
 }
