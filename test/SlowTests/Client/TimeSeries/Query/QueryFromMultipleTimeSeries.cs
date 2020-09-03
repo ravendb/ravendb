@@ -1207,7 +1207,7 @@ select out()
                     var result = query.First();
 
                     Assert.Equal("Karmel Indych", result.FullName);
-                    Assert.Equal(result.TotalMax, total);
+                    Assert.Equal(total, result.TotalMax);
                 }
             }
         }

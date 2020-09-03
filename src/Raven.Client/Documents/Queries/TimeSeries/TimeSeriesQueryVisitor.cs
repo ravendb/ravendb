@@ -276,47 +276,50 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             else
             {
-                _src = GetNameFromArgument(mce.Arguments[1]);
-
-                if (!(mce.Arguments[0] is ConstantExpression constant))
-                    throw new InvalidOperationException(); //todo
-
-                if (constant.Value != null)
+                if (_providerProcessor != null)
                 {
+                    // linq query
                     var sourceAlias = LinqPathProvider.RemoveTransparentIdentifiersIfNeeded(mce.Arguments[0].ToString());
+                    Parameters = new List<string>();
 
-                    if (_providerProcessor != null)
+                    if (_providerProcessor.FromAlias == null)
                     {
-                        Parameters = new List<string>();
-
-                        if (_providerProcessor.FromAlias == null)
+                        _providerProcessor.AddFromAlias(sourceAlias);
+                        Parameters.Add(sourceAlias);
+                    }
+                    else
+                    {
+                        if (mce.Arguments[0] is ParameterExpression)
                         {
-                            _providerProcessor.AddFromAlias(sourceAlias);
                             Parameters.Add(sourceAlias);
                         }
                         else
                         {
-                            if (mce.Arguments[0] is ParameterExpression)
+                            Parameters.Add(_providerProcessor.FromAlias);
+                            if (sourceAlias != _providerProcessor.FromAlias)
                             {
                                 Parameters.Add(sourceAlias);
-                            }
-                            else
-                            {
-                                Parameters.Add(_providerProcessor.FromAlias);
-                                if (sourceAlias != _providerProcessor.FromAlias)
-                                {
-                                    Parameters.Add(sourceAlias);
-                                }
                             }
                         }
                     }
 
+                    _src = GetNameFromArgument(mce.Arguments[1]);
+
                     if (mce.Arguments[1] is ParameterExpression == false)
+                    {
                         _src = $"{sourceAlias}.{_src}";
+                    }
+                }
+                else
+                {
+                    // document query
+                    _src = GetNameFromArgument(mce.Arguments[1]);
                 }
 
                 if (mce.Arguments.Count == 4)
+                {
                     Between(mce);
+                }
             }
 
             if (_whereVisitor?.Parameters == null) 
@@ -324,7 +327,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             Parameters ??= new List<string>();
             Parameters.AddRange(_whereVisitor.Parameters);
-
         }
 
         private void Last(Expression expression)
@@ -353,6 +355,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 return null;
             }
 
+            // linq query
             return GetTimePeriodFromMethodCall(methodCall, method);
         }
 

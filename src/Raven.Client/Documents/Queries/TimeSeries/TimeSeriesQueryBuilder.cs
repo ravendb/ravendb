@@ -68,32 +68,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return default;
         }
 
-        /*private void Act<T>([CallerMemberName] string name = null, Expression arg = null)
-        {
-            switch (name)
-            {
-                case nameof(ITimeSeriesQueryBuilder.Where):
-                    break;
-                case nameof(ITimeSeriesQueryBuilder.LoadByTag):
-                    break;
-                case nameof(ITimeSeriesQueryBuilder.GroupBy):
-                    break;
-                case nameof(ITimeSeriesQueryBuilder.Select):
-                    break;
-                case nameof(ITimeSeriesQueryBuilder.Offset):
-                    break;
-                case nameof(ITimeSeriesQueryBuilder.Scale):
-                    break;
-                case nameof(ITimeSeriesQueryBuilder.FromFirst):
-                    break;
-                case nameof(ITimeSeriesQueryBuilder.FromLast):
-                    break;
-
-                default:
-                    throw new ArgumentException(name);
-            }
-        }*/
-
         public ITimeSeriesQueryBuilder From(string name)
         {
             _name = name;
@@ -176,6 +150,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             var methodInfo = typeof(ITimeSeriesQueryable)
                 .GetMethod(nameof(ITimeSeriesQueryable.GroupBy), new[] { typeof(string) });
+
             ModifyCallExpression(methodInfo, Expression.Constant(s));
             return this;
         }
@@ -286,18 +261,20 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         ITimeSeriesLoadQueryable<TEntity1> ITimeSeriesQueryable.LoadByTag<TEntity1>()
         {
-            // never called
-            throw new NotImplementedException();
+            ThrowMethodNotSupported(nameof(ITimeSeriesQueryable.LoadByTag));
+            return default;
         }
 
-        public ITimeSeriesQueryable FromLast(Action<ITimePeriodBuilder> timePeriod)
+        ITimeSeriesQueryable ITimeSeriesQueryable.FromLast(Action<ITimePeriodBuilder> timePeriod)
         {
-            throw new NotImplementedException();
+            ThrowMethodNotSupported(nameof(ITimeSeriesQueryable.FromLast));
+            return default;
         }
 
-        public ITimeSeriesQueryable FromFirst(Action<ITimePeriodBuilder> timePeriod)
+        ITimeSeriesQueryable ITimeSeriesQueryable.FromFirst(Action<ITimePeriodBuilder> timePeriod)
         {
-            throw new NotImplementedException();
+            ThrowMethodNotSupported(nameof(ITimeSeriesQueryable.FromFirst));
+            return default;
         }
 
         private void ModifyCallExpression(MethodInfo methodInfo, Expression arg = null)
@@ -308,6 +285,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _callExpression = arg == null 
                 ? Expression.Call(_callExpression, methodInfo) 
                 : Expression.Call(_callExpression, methodInfo, arg);
+        }
+
+        private static void ThrowMethodNotSupported(string method)
+        {
+            // precaution, shouldn't be called
+            // we overridden these methods in 'ITimeSeriesQueryBuilder'
+
+            throw new NotSupportedException($"Method 'ITimeSeriesQueryable.{method}' is not supported via DocumentQuery. " +
+                                            $"Use 'ITimeSeriesQueryBuilder.{method}' instead.");
         }
     }
 }

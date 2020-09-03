@@ -1024,7 +1024,6 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-
         [Fact]
         public void CanQueryTimeSeriesAggregation_WhereOnVariable()
         {
