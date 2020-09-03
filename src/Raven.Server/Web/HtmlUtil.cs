@@ -65,8 +65,16 @@ namespace Raven.Server.Web
             return unsecuredAccessFlagsHtml;
         }
         
-        public static string RenderStudioAuthErrorPage(string reason, string reasonAddon)
+        public static string RenderStudioAuthErrorPage(string error)
         {
+            var errorLines = error.Split(Environment.NewLine);
+            string errorText = "";
+            
+            foreach (var errorLine in errorLines)
+            {
+                errorText += $"<p>{WebUtility.HtmlEncode(errorLine)}</p>";
+            }
+
             using (var reader = new StreamReader(
                 typeof(RavenServer).Assembly.GetManifestResourceStream(AuthErrorPageHtmlResource)))
             {
@@ -74,8 +82,7 @@ namespace Raven.Server.Web
 
                 return RenderPlaceholders(html, new Dictionary<string, string>
                 {
-                    {"AUTH_ERROR", WebUtility.HtmlEncode(reason)},
-                    {"AUTH_ERROR_ADDON", WebUtility.HtmlEncode(reasonAddon)}
+                    {"AUTH_ERROR", errorText}
                 });
             }
         }
