@@ -282,7 +282,7 @@ namespace Raven.Server.Documents.Replication
                                 docItem.Flags.Contain(DocumentFlags.HasAttachments))
                             {
                                 var type = (docItem.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
-                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, docItem.Id))
+                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, docItem.Id, docItem.ChangeVector))
                                 {
                                     // we need to filter attachments that are been sent in the same batch as the document
                                     if (attachment.Etag >= prevLastEtag)
