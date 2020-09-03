@@ -213,80 +213,39 @@ namespace Raven.Server.Documents.Replication
                     var skippedReplicationItemsInfo = new SkippedReplicationItemsInfo();
                     short lastTransactionMarker = -1;
                     long prevLastEtag = _lastEtag;
+                    var transactionMarkersToBeIncludedInBatch = new HashSet<short>();
 
                     using (_stats.Storage.Start())
-                    {                        
+                    {
                         foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
                         {
                             _parent.CancellationToken.ThrowIfCancellationRequested();
-
-                            if (lastTransactionMarker != item.TransactionMarker)
+                            if (CanContinueBatch(ref next) == false)
                             {
-                                if (delay.Ticks > 0)
-                                {
-                                    var nextReplication = item.LastModifiedTicks + delay.Ticks;
-                                    if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
-                                    {
-                                        if (Interlocked.CompareExchange(ref next, nextReplication, currentNext) == currentNext)
-                                        {
-                                            wasInterrupted = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                lastTransactionMarker = item.TransactionMarker;
-
-                                if (_parent.SupportedFeatures.Replication.TimeSeries == false)
-                                {
-                                    AssertNotTimeSeriesForLegacyReplication(item);
-                                }
-
-                                if (_parent.SupportedFeatures.Replication.CountersBatch == false)
-                                {                                    
-                                    AssertNotCounterForLegacyReplication(item);
-                                }
-
-                                if (_parent.SupportedFeatures.Replication.ClusterTransaction == false )
-                                {
-                                    AssertNotClusterTransactionDocumentForLegacyReplication(item);
-                                }
-
-                                // We want to limit batch sizes to reasonable limits.
-                                var totalSize =
-                                    size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
-
-                                if (maxSizeToSend.HasValue && totalSize > maxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
-                                    batchSize.HasValue && numberOfItemsSent > batchSize.Value)
-                                {
-                                    wasInterrupted = true;
-                                    break;
-                                }
-
-                                if (_stats.Storage.CurrentStats.InputCount % 16384 == 0)
-                                {
-                                    // ReSharper disable once PossibleLossOfFraction
-                                    if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
-                                    {
-                                        wasInterrupted = true;
-                                        break;
-                                    }
-                                }
+                                wasInterrupted = true;
+                                break;
                             }
 
                             _stats.Storage.RecordInputAttempt();
-
                             // here we add missing attachments in the same batch as the document that contains them without modifying the last etag or transaction boundary
                             if (MissingAttachmentsInLastBatch &&
                                 item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                                 item is DocumentReplicationItem docItem &&
                                 docItem.Flags.Contain(DocumentFlags.HasAttachments))
                             {
-                                var type = (docItem.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
+                                var type = (docItem.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                                 foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, docItem.Id, docItem.ChangeVector))
                                 {
                                     // we need to filter attachments that are been sent in the same batch as the document
                                     if (attachment.Etag >= prevLastEtag)
+                                    {
+                                        Debug.Assert(docItem.TransactionMarker == attachment.TransactionMarker, $"{nameof(docItem)}.{nameof(docItem.TransactionMarker)} == {nameof(attachment)}.{nameof(attachment.TransactionMarker)}");
+                                        // treat the rare case when revision's attachment was created under different TransactionMarker
+                                        if (docItem.TransactionMarker != attachment.TransactionMarker)
+                                            transactionMarkersToBeIncludedInBatch.Add(attachment.TransactionMarker);
+
                                         continue;
+                                    }
 
                                     var stream = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(documentsContext, attachment.Base64Hash);
                                     attachment.Stream = stream;
@@ -308,9 +267,77 @@ namespace Raven.Server.Documents.Replication
                             size += item.Size;
 
                             numberOfItemsSent++;
+
+                            bool CanContinueBatch(ref long localNext)
+                            {
+                                if (lastTransactionMarker == item.TransactionMarker)
+                                    return true;
+
+                                transactionMarkersToBeIncludedInBatch.Remove(lastTransactionMarker);
+                                if (transactionMarkersToBeIncludedInBatch.Count != 0)
+                                {
+                                    // continue the batch to include connected items with different TransactionMarker
+                                    lastTransactionMarker = item.TransactionMarker;
+                                    return true;
+                                }
+
+                                if (delay.Ticks > 0)
+                                {
+                                    var nextReplication = item.LastModifiedTicks + delay.Ticks;
+                                    if (_parent._database.Time.GetUtcNow().Ticks < nextReplication)
+                                    {
+                                        if (Interlocked.CompareExchange(ref localNext, nextReplication, currentNext) == currentNext)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                }
+                                lastTransactionMarker = item.TransactionMarker;
+
+                                if (_parent.SupportedFeatures.Replication.TimeSeries == false)
+                                {
+                                    AssertNotTimeSeriesForLegacyReplication(item);
+                                }
+
+                                if (_parent.SupportedFeatures.Replication.CountersBatch == false)
+                                {
+                                    AssertNotCounterForLegacyReplication(item);
+                                }
+
+                                if (_parent.SupportedFeatures.Replication.ClusterTransaction == false)
+                                {
+                                    AssertNotClusterTransactionDocumentForLegacyReplication(item);
+                                }
+
+                                // We want to limit batch sizes to reasonable limits.
+                                var totalSize =
+                                    size + documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
+
+                                if (maxSizeToSend.HasValue && totalSize > maxSizeToSend.Value.GetValue(SizeUnit.Bytes) ||
+                                    batchSize.HasValue && numberOfItemsSent > batchSize.Value)
+                                {
+                                    return false;
+                                }
+
+                                if (_stats.Storage.CurrentStats.InputCount % 16384 == 0)
+                                {
+                                    // ReSharper disable once PossibleLossOfFraction
+                                    if ((_parent._parent.MinimalHeartbeatInterval / 2) < _stats.Storage.Duration.TotalMilliseconds)
+                                    {
+                                        return false;
+                                    }
+                                }
+
+                                return true;
+                            }
                         }
                     }
-                    
+
+                    if (transactionMarkersToBeIncludedInBatch.Count != 0)
+                    {
+                        Debug.Assert(transactionMarkersToBeIncludedInBatch.Count == 0, $"{nameof(transactionMarkersToBeIncludedInBatch)}.{nameof(transactionMarkersToBeIncludedInBatch.Count)} == 0");
+                    }
+
                     if (_log.IsInfoEnabled)
                     {
                         if (skippedReplicationItemsInfo.SkippedItems > 0)
