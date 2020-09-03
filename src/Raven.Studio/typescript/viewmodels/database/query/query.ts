@@ -314,13 +314,15 @@ class query extends viewModelBase {
             this.queriedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.queriedIndex()) : null);
 
         this.isMapReduceIndex = ko.pureComputed(() => {
-            this.getQueriedIndexInfo();
             const currentIndex = this.queriedIndexInfo();
             return !!currentIndex && (currentIndex.Type === "AutoMapReduce" || currentIndex.Type === "MapReduce" || currentIndex.Type === "JavaScriptMapReduce");
         });
 
         this.queryResultsContainMatchingDocuments = ko.pureComputed(() => {
-            this.getQueriedIndexInfo();
+            if (this.isCollectionQuery()) {
+                return true;
+            }
+            
             const currentIndex = this.queriedIndexInfo();
             return !!currentIndex && currentIndex.SourceType === "Documents" && !this.isMapReduceIndex();
         });
@@ -936,6 +938,9 @@ class query extends viewModelBase {
                             
                             this.autoOpenGraph = false;
                         }
+                        
+                        // get index info After query was run because it could be a newly generated auto-index
+                        this.getQueriedIndexInfo();
                     })
                     .fail((request: JQueryXHR) => {
                         resultsTask.reject(request);
