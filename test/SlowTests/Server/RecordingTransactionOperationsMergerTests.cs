@@ -1072,30 +1072,6 @@ namespace SlowTests.Server
             throw new InvalidOperationException($"Waited '{sw.Elapsed}' for conflict to be resolved on '{id}' but it did not happen.");
         }
 
-        private static async Task WaitForConflict(IDocumentStore slave, string id, int timeout = 15_000)
-        {
-            var timeoutAsTimeSpan = TimeSpan.FromMilliseconds(timeout);
-            var sw = Stopwatch.StartNew();
-
-            while (sw.Elapsed < timeoutAsTimeSpan)
-            {
-                using (var session = slave.OpenAsyncSession())
-                {
-                    try
-                    {
-                        await session.LoadAsync<User>(id);
-                        await Task.Delay(100);
-                    }
-                    catch (ConflictException)
-                    {
-                        return;
-                    }
-                }
-            }
-
-            throw new InvalidOperationException($"Waited '{sw.Elapsed}' for conflict on '{id}' but it did not happen.");
-        }
-
         [Fact]
         public async Task RecordingDeleteAttachmentCommand()
         {

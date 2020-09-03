@@ -355,7 +355,7 @@ namespace Raven.Server.Documents
             if (fromReplication == false)
             {
                 context.LastDatabaseChangeVector ??= GetDatabaseChangeVector(context);
-                oldChangeVector = ChangeVectorUtils.MergeVectors(oldChangeVector, context.LastDatabaseChangeVector);
+                oldChangeVector = ChangeVectorUtils.MergeVectors(context.LastDatabaseChangeVector, oldChangeVector);
             }
 
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
