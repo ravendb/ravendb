@@ -1,6 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -46,6 +52,53 @@ namespace FastTests.Client
                     tempUser = newSession.Load<User>("users/1");
                     Assert.Equal(tempUser.Age, 10);
                 }
+            }
+        }
+
+        private static IEnumerable<object[]>  GetMetadataStaticFields()
+        {
+            return typeof(Constants.Documents.Metadata)
+                .GetFields( System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public)
+                .Select(p => p.GetValue(null).ToString())
+                .Distinct()
+                .SelectMany(s =>
+                {
+                    var builder = new StringBuilder(s);
+                    //Just replacing one char in the end
+                    builder[^1] = builder[^1] == 'a' ? 'b' : 'a';
+                    return new[] {new object[] {builder.ToString()}};
+                });
+        }
+        
+        [Theory]
+        [MemberData(nameof(GetMetadataStaticFields))]
+        public async Task StoreDocument_WheHasUserMetadataPropertyWithLengthEqualsToInternalRavenDbMetadataPropertyLength(string metadataPropNameToTest)
+        {
+            const string id = "id1";
+            const string value = "Value";
+            
+            using var store = GetDocumentStore();
+            using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+            {
+                var executor = store.GetRequestExecutor();
+                using var dis = executor.ContextPool.AllocateOperationContext(out var context);
+                var p = context.ReadObject(new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [metadataPropNameToTest] = value
+
+                    }
+                }, $"{nameof(metadataPropNameToTest)} {metadataPropNameToTest}");
+                await session.StoreAsync(p, null, id);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var entity = await session.LoadAsync<DynamicJsonValue>(id);
+                var metadata = session.Advanced.GetMetadataFor(entity);
+                Assert.Equal(value, metadata[metadataPropNameToTest]);
             }
         }
 
