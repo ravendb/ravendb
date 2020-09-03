@@ -16,10 +16,20 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         internal List<string> Parameters;
 
+        private (string From, string To) _renameTagAlias;
+
         public TimeSeriesWhereClauseVisitor(string alias, IAbstractDocumentQuery<T> documentQuery)
         {
             _alias = alias;
             _documentQuery = documentQuery;
+        }
+
+        public void Rename(string from, string to)
+        {
+            if (from == to)
+                return;
+            
+            _renameTagAlias = (from, to);
         }
 
         public Expression VisitWhere(Expression expression)
@@ -46,6 +56,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         protected override Expression VisitParameter(ParameterExpression node)
         {
             Parameters ??= new List<string>();
+
+            if (ShouldRename(node))
+            {
+                var renamed = _renameTagAlias.To;
+                Parameters.Add(renamed);
+                return Expression.Parameter(node.Type, renamed);
+            }
+            
             Parameters.Add(node.Name);
 
             return base.VisitParameter(node);
@@ -77,6 +95,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private bool IsWhereAlias(Expression expression)
         {
             return expression is ParameterExpression p && p.Name == _alias;
+        }
+
+        private bool ShouldRename(Expression expression)
+        {
+            return expression is ParameterExpression p && _renameTagAlias.From == p.Name;
         }
 
         protected override Expression VisitConstant(ConstantExpression node)

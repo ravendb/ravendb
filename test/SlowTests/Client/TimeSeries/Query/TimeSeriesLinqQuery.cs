@@ -22,7 +22,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
         }
 
-        private class Person
+        public class Person
         {
             public string Id { get; set; }
 
@@ -33,7 +33,7 @@ namespace SlowTests.Client.TimeSeries.Query
             public string WorksAt { get; set; }
         }
 
-        private class Watch
+        public class Watch
         {
             public string Manufacturer { get; set; }
 

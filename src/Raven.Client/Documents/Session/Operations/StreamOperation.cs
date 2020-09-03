@@ -202,9 +202,15 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_state.CurrentTokenType != JsonParserToken.StartArray)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
             }
+            
+            private bool _done;
+            private bool _disposed;
 
             public async ValueTask DisposeAsync()
             {
+                if (_disposed)
+                    return;
+
                 if (_done == false)
                 {
                     while (await MoveNextAsync().ConfigureAwait(false))
@@ -218,9 +224,10 @@ namespace Raven.Client.Documents.Session.Operations
 
                 if (_state.CurrentTokenType != JsonParserToken.EndObject)
                     UnmanagedJsonParserHelper.ThrowInvalidJson(_peepingTomStream);
+
+                _disposed = true;
             }
 
-            private bool _done;
 
             public async ValueTask<bool> MoveNextAsync()
             {
