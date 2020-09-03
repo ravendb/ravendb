@@ -1312,8 +1312,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             var functionBody = Scanner.Input.Substring(funcBodyStart, Scanner.Position - funcBodyStart);
 
-            if (_timeSeriesParser == null)
-                _timeSeriesParser = new QueryParser();
+            _timeSeriesParser ??= new QueryParser();
             _timeSeriesParser.Init(functionBody);
 
             if (_timeSeriesParser.Scanner.TryScan('{') == false)
@@ -1408,12 +1407,12 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 if (!(loadExpressions[0].Item1 is FieldExpression fe))
                 {
-                    ThrowInvalidQueryException($"Expected to have a filed expression after LOAD, but got expression '{loadExpressions[0]}' of type '{loadExpressions[0].Item1.Type}'");
+                    ThrowInvalidQueryException($"Expected to have a field expression after LOAD, but got expression '{loadExpressions[0]}' of type '{loadExpressions[0].Item1.Type}'");
                     return null; //never hit
 
                 }
 
-                if (fe.FieldValue != "Tag")
+                if (string.Equals("tag", fe.FieldValue, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     ThrowInvalidQueryException($"Expected to find 'Tag' after LOAD in time series function '{name}', but got '{fe.FieldValue}'." +
                                                "In time series functions you can only use LOAD in order to load by the 'Tag' property of a time series entry. " +
@@ -1433,7 +1432,26 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
             {
-                tsf.GroupBy.Value = GetTimePeriodValueExpression(name, "GROUP BY");
+                tsf.GroupBy.TimePeriod = GetTimePeriodValueExpression(name, "GROUP BY");
+
+                if (Scanner.TryScan(","))
+                {
+                    if (Scanner.TryScan("TAG"))
+                    {
+                        tsf.GroupBy.Tag = true;
+                    }
+                    else if (Field(out var groupByField))
+                    {
+                        if (tsf.LoadTagAs == null)
+                            ThrowInvalidQueryException("Group by field expression, is expected to be used with 'Load' document by tag.");
+
+                        tsf.GroupBy.Field = groupByField;
+                    }
+                    else
+                    {
+                        ThrowParseException($"Expected 'Tag' or Field as a second group parameter in time series function '{name}'");
+                    }
+                }
 
                 if (Scanner.TryScan("WITH"))
                 {

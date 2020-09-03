@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using Lucene.Net.Store;
@@ -43,15 +42,15 @@ namespace Raven.Server.Documents.Queries.Results
 
         private double? _scale;
 
-        private static TimeSeriesAggregation[] AllAggregationTypes() =>  new[]
+        private static Dictionary<AggregationType, string> AllAggregationTypes() => new Dictionary<AggregationType, string>
         {
-            new TimeSeriesAggregation(AggregationType.First),
-            new TimeSeriesAggregation(AggregationType.Last),
-            new TimeSeriesAggregation(AggregationType.Min),
-            new TimeSeriesAggregation(AggregationType.Max),
-            new TimeSeriesAggregation(AggregationType.Sum),
-            new TimeSeriesAggregation(AggregationType.Count),
-            new TimeSeriesAggregation(AggregationType.Average),
+            [AggregationType.First] = null,
+            [AggregationType.Last] = null,
+            [AggregationType.Min] = null,
+            [AggregationType.Max] = null,
+            [AggregationType.Sum] = null,
+            [AggregationType.Count] = null,
+            [AggregationType.Average] = null
         };
 
         public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments)
@@ -69,13 +68,13 @@ namespace Raven.Server.Documents.Queries.Results
             Raw,
             Aggregated
         }
-        
-        public IEnumerable<DynamicJsonValue> InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, out ResultType type)
+
+        public IEnumerable<DynamicJsonValue> InvokeTimeSeriesFunction(DeclaredFunction declaredFunction, string documentId, object[] args, out ResultType resultType)
         {
             var timeSeriesFunction = declaredFunction.TimeSeries;
             
             _source = GetSourceAndId();
-            type = ResultType.None;
+            resultType = ResultType.None;
 
             _stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
             if (_stats.Count == 0)
@@ -86,45 +85,48 @@ namespace Raven.Server.Documents.Queries.Results
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
             var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, offset);
 
-            var groupBy = timeSeriesFunction.GroupBy.Value?.GetValue(_queryParameters)?.ToString();
+            var groupByTimePeriod = timeSeriesFunction.GroupBy.TimePeriod?.GetValue(_queryParameters)?.ToString();
+            var groupByTag = timeSeriesFunction.GroupBy.HasGroupByTag;
+            var filterByTag = timeSeriesFunction.Where != null;
+            var individualValuesOnly = groupByTag || filterByTag;
+
             RangeGroup rangeSpec;
-            if (groupBy != null)
+            if (groupByTimePeriod != null)
             {
-                rangeSpec = RangeGroup.ParseRangeFromString(groupBy);
+                rangeSpec = RangeGroup.ParseRangeFromString(groupByTimePeriod);
             }
             else
             {
                 rangeSpec = new RangeGroup();
                 rangeSpec.InitializeFullRange(from, to);
             }
-            var reader = groupBy == null
+
+            var reader = groupByTimePeriod == null
                 ? new TimeSeriesReader(_context, documentId, _source, from, to, offset)
                 : new TimeSeriesMultiReader(_context, documentId, _source, _collection, from, to, offset, rangeSpec.ToTimeValue()) as ITimeSeriesReader;
 
             _scale = GetScale(declaredFunction, timeSeriesFunction.Scale);
 
-            if (timeSeriesFunction.GroupBy.Value == null && timeSeriesFunction.Select == null)
+            if (timeSeriesFunction.GroupBy.TimePeriod == null && timeSeriesFunction.Select == null)
             {
-                type = ResultType.Raw;
+                resultType = ResultType.Raw;
                 return GetRawValues();
             }
 
             var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
-            type = ResultType.Aggregated;
+            resultType = ResultType.Aggregated;
 
-            GapData gapData = default;
+            var aggregationTypes = InitializeAggregationStates(timeSeriesFunction);
 
-            var aggStates = timeSeriesFunction.Select != null ? 
-                InitializeAggregationStates(timeSeriesFunction) : 
-                AllAggregationTypes();
+            var aggregationHolder = new AggregationHolder(_context.Allocator, aggregationTypes, interpolationType);
 
             return GetAggregatedValues();
 
             IEnumerable<DynamicJsonValue> AggregateIndividualItems(IEnumerable<SingleResult> items)
             {
-                foreach (var cur in items)
+                foreach (var current in items)
                 {
-                    if (MaybeMoveToNextRange(cur.Timestamp, out var values))
+                    if (MaybeMoveToNextRange(current.Timestamp, out var values))
                     {
                         foreach (var value in values)
                         {
@@ -132,14 +134,29 @@ namespace Raven.Server.Documents.Queries.Results
                         }
                     }
 
-                    if (ShouldFilter(cur, timeSeriesFunction.Where))
+                    if (ShouldFilter(current, timeSeriesFunction.Where))
                         continue;
 
-                    for (int i = 0; i < aggStates.Length; i++)
+                    var stats = aggregationHolder[GetBucket(current)];
+                    for (int i = 0; i < stats.Length; i++)
                     {
-                        aggStates[i].Step(cur.Values.Span, reader.IsRaw);
+                        stats[i].Step(current.Values.Span, reader.IsRaw);
                     }
                 }
+            }
+
+            object GetBucket(SingleResult result = null)
+            {
+                if (result == null)
+                    return null;
+
+                if (timeSeriesFunction.GroupBy.HasGroupByTag == false)
+                    return null;
+
+                if (timeSeriesFunction.GroupBy.Tag)
+                    return result.Tag;
+
+                return GetValueFromLoadedTag(timeSeriesFunction.GroupBy.Field, result);
             }
 
             bool MaybeMoveToNextRange(DateTime ts, out IEnumerable<DynamicJsonValue> values)
@@ -153,29 +170,12 @@ namespace Raven.Server.Documents.Queries.Results
 
                 IEnumerable<DynamicJsonValue> CurrentRangeValues()
                 {
-                    if (interpolationType != InterpolationType.None)
+                    if (aggregationHolder.HasValues)
                     {
-                        if (gapData.HaveGap)
+                        foreach (var result in aggregationHolder.AddCurrentToResults(rangeSpec, _scale))
                         {
-                            // fill the gaps between previous range and current range
-                            gapData.UpTo = rangeSpec.Start;
-                            foreach (var filledGap in FillMissingGaps(gapData, aggStates, interpolationType))
-                            {
-                                yield return filledGap;
-                            }
+                            yield return result;
                         }
-
-                        InitializeGapsIfNeeded(ts);
-                    }
-
-                    if (aggStates[0].Any)
-                    {
-                        yield return AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
-                    }
-
-                    for (int i = 0; i < aggStates.Length; i++)
-                    {
-                        aggStates[i].Init();
                     }
 
                     rangeSpec.MoveToNextRange(ts);
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Queries.Results
                         // if the range it cover needs to be broken up to multiple ranges.
                         // For example, if the segment covers 3 days, but we have group by 1 hour,
                         // we still have to deal with the individual values
-                        if (it.Segment.End > rangeSpec.End || timeSeriesFunction.Where != null)
+                        if (it.Segment.End > rangeSpec.End || individualValuesOnly)
                         {
                             foreach (var segment in AggregateIndividualItems(it.Segment.Values))
                             {
@@ -231,27 +231,21 @@ namespace Raven.Server.Documents.Queries.Results
                         else
                         {
                             var span = it.Segment.Summary.SegmentValues.Span;
-                            for (int i = 0; i < aggStates.Length; i++)
+                            var stats = aggregationHolder[GetBucket()];
+                            for (int i = 0; i < stats.Length; i++)
                             {
-                                aggStates[i].Segment(span, reader.IsRaw);
+                                stats[i].Segment(span, reader.IsRaw);
                             }
                         }
                     }
                 }
 
-                if (gapData.HaveGap)
+                if (aggregationHolder.HasValues)
                 {
-                    // fill the gaps between previous range and current range
-                    gapData.UpTo = rangeSpec.Start;
-                    foreach (var filledGap in FillMissingGaps(gapData, aggStates, interpolationType))
+                    foreach (var result in aggregationHolder.AddCurrentToResults(rangeSpec, _scale))
                     {
-                        yield return filledGap;
+                        yield return result;
                     }
-                }
-
-                if (aggStates[0].Any)
-                {
-                    yield return AddTimeSeriesResult(aggStates, rangeSpec.Start, rangeSpec.End);
                 }
 
                 _argumentValuesDictionary?.Clear();
@@ -769,47 +763,6 @@ namespace Raven.Server.Documents.Queries.Results
 
                 return field.FieldValueWithoutAlias;
             }
-
-            void InitializeGapsIfNeeded(DateTime ts)
-            {
-                if (gapData.PreviousStats == null)
-                {
-                    // initialize gap data
-                    gapData.PreviousStats = new TimeSeriesAggregation[aggStates.Length];
-                    gapData.StartRange = new RangeGroup
-                    {
-                        Months = rangeSpec.Months, 
-                        Ticks = rangeSpec.Ticks, 
-                        TicksAlignment = rangeSpec.TicksAlignment
-                    };
-
-                    gapData.StartRange.InitializeRange(rangeSpec.End);
-                }
-                else
-                {
-                    // update gap data
-                    gapData.StartRange.MoveToNextRange(rangeSpec.End);
-                }
-
-                // check if there's a gap between current and next range
-                if (gapData.StartRange.WithinRange(ts))
-                {
-                    gapData.HaveGap = false;
-                    return;
-                }
-
-                gapData.HaveGap = true;
-
-                // update PreviousStats.
-                // we will fill the gaps when we're finished with the next range
-
-                for (int i = 0; i < aggStates.Length; i++)
-                {
-                    gapData.PreviousStats[i] ??= new TimeSeriesAggregation(aggStates[i].Aggregation, aggStates[i].Name);
-                    gapData.PreviousStats[i].Init();
-                    gapData.PreviousStats[i].SetValues(aggStates[i].GetFinalValues());
-                }
-            }
         }
 
         private static InterpolationType GetInterpolationType(MethodExpression groupByWith)
@@ -849,91 +802,6 @@ namespace Raven.Server.Documents.Queries.Results
                     throw new InvalidOperationException($"Failed to execute time series query function '{declaredFunction.Name}'. " +
                                                         $"Invalid type on 'scale' argument : expected 'scale' to be of type '{typeof(double)}', " +
                                                         $"'{typeof(long)}' or '{nameof(LazyNumberValue)}', but got : '{scale.GetType()}'.");
-            }
-        }
-
-        private IEnumerable<DynamicJsonValue> FillMissingGaps(GapData gapData, TimeSeriesAggregation[] currentStats, InterpolationType interpolationType)
-        {   
-            var start = gapData.StartRange.Start;
-            var end = gapData.StartRange.End;
-            var to = gapData.UpTo;
-
-            Debug.Assert(start < to, "Invalid gap data");
-
-            DateTime prev = gapData.StartRange.Months != 0 
-                ? start.AddMonths(-gapData.StartRange.Months) 
-                : start.Add(-(end - start));
-
-            while (start < to)
-            {
-                TimeSeriesAggregation[] statsToAdd;
-                switch (interpolationType)
-                {
-                    case InterpolationType.None:
-                        yield break;
-                    case InterpolationType.Linear:
-                        GenerateMissingPointLinear(start, prev, to, gapData.PreviousStats, currentStats);
-                        statsToAdd = gapData.PreviousStats;
-                        prev = start;
-                        break;
-                    case InterpolationType.Nearest:
-                        statsToAdd = start - prev <= to - start 
-                            ? gapData.PreviousStats
-                            : currentStats;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException("Unknown InterpolationType : " + interpolationType);
-                }
-
-                // fill gap
-                yield return AddTimeSeriesResult(statsToAdd, start, end);
-
-                gapData.StartRange.MoveToNextRange(end);
-                start = gapData.StartRange.Start;
-                end = gapData.StartRange.End;
-            }
-        }
-
-
-        private void GenerateMissingPointLinear(DateTime x, DateTime xA, DateTime xB, TimeSeriesAggregation[] yA, TimeSeriesAggregation[] yB)
-        {
-            Debug.Assert(yA.Length == yB.Length, "Invalid aggregation stats");
-
-            var quotient = (double)(x.Ticks - xA.Ticks) / (xB.Ticks - xA.Ticks);
-            for (int i = 0; i < yA.Length; i++)
-            {
-                yA[i].SetValues(InterpolateValues(yA[i], yB[i], quotient));
-            }
-        }
-
-        private static List<double> InterpolateValues(TimeSeriesAggregation yA, TimeSeriesAggregation yB, double quotient)
-        {
-            Debug.Assert(yA.Aggregation == yB.Aggregation, "Invalid aggregation stats");
-
-            var valuesA = yA.GetFinalValues().ToList();
-            var valuesB = yB.GetFinalValues().ToList();
-
-            LinearInterpolation(valuesA, valuesB, quotient);
-            return valuesA;
-        }
-
-        private static void LinearInterpolation(List<double> valuesA, List<double> valuesB, double quotient)
-        {
-            var minLength = Math.Min(valuesA.Count, valuesB.Count);
-            if (minLength < valuesA.Count)
-            {
-                valuesA.RemoveRange(minLength - 1, valuesA.Count - minLength);
-            }
-
-            for (var index = 0; index < minLength; index++)
-            {
-                var yb = valuesB[index];
-                var ya = valuesA[index];
-
-                // y = yA + (yB - yA) * ((x - xa) / (xb - xa))
-
-                // override valuesA[index] by the result 
-                valuesA[index] = ya + (yb - ya) * quotient;
             }
         }
 
@@ -1236,8 +1104,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private object GetValueFromLoadedTag(FieldExpression fe, SingleResult singleResult)
         {
-            if (_loadedDocuments == null)
-                _loadedDocuments = new Dictionary<string, Document>();
+            _loadedDocuments ??= new Dictionary<string, Document>();
 
             var tag = singleResult.Tag?.ToString();
             if (tag == null)
@@ -1252,9 +1119,15 @@ namespace Raven.Server.Documents.Queries.Results
             return GetFieldFromDocument(fe, document);
         }
 
-        private static TimeSeriesAggregation[] InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction)
+        private static Dictionary<AggregationType, string> InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction)
         {
-            var stats = new Dictionary<AggregationType, TimeSeriesAggregation>();
+            if (timeSeriesFunction.Scale == null)
+                return AllAggregationTypes();
+
+            var stats = new Dictionary<AggregationType, string>
+            {
+                [AggregationType.Count] = null // we always want to have 'Count' in the result
+            };
             for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
             {
                 var select = timeSeriesFunction.Select[i];
@@ -1262,13 +1135,13 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                     {
-                        stats[type] = new TimeSeriesAggregation(type, select.StringSegment?.ToString());
+                        stats[type] =  select.StringSegment?.ToString();
                         continue;
                     }
 
                     if (me.Name.Value == "avg")
                     {
-                        stats[AggregationType.Average] = new TimeSeriesAggregation(AggregationType.Average);
+                        stats[AggregationType.Average] = null;
                         continue;
                     }
 
@@ -1278,33 +1151,7 @@ namespace Raven.Server.Documents.Queries.Results
                 throw new ArgumentException("Unknown method in timeseries query: " + select.QueryExpression);
             }
 
-            // we always want to have 'Count' in the result
-            if (stats.ContainsKey(AggregationType.Count) == false)
-                stats[AggregationType.Count] = new TimeSeriesAggregation(AggregationType.Count);
-
-            return stats.Values.ToArray();
-        }
-
-        private DynamicJsonValue AddTimeSeriesResult(TimeSeriesAggregation[] aggStates, DateTime start, DateTime next)
-        {
-            DateTime? from = start, to = next;
-            if (start == DateTime.MinValue)
-                from = null;
-            if (next == DateTime.MaxValue)
-                to = null;
-
-            var result = new DynamicJsonValue
-            {
-                [nameof(TimeSeriesRangeAggregation.From)] = from, 
-                [nameof(TimeSeriesRangeAggregation.To)] = to
-            };
-
-            for (int i = 0; i < aggStates.Length; i++)
-            {
-                result[aggStates[i].Name] = new DynamicJsonArray(aggStates[i].GetFinalValues(_scale).Cast<object>());
-            }
-
-            return result;
+            return stats;
         }
 
         private DateTime? GetDateValue(QueryExpression qe, DeclaredFunction func, object[] args)
@@ -1356,16 +1203,5 @@ namespace Raven.Server.Documents.Queries.Results
             "yyyy-MM-ddTHH:mm",
             "yyyy-MM-ddTHH:mm:ss.fff"
         };
-
-        private struct GapData
-        {
-            public bool HaveGap;
-
-            public DateTime UpTo;
-
-            public RangeGroup StartRange;
-
-            public TimeSeriesAggregation[] PreviousStats;
-        }
     }
 }

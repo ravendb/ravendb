@@ -125,7 +125,18 @@ namespace Raven.Server.Documents.Queries.AST
         public List<(QueryExpression QueryExpression, StringSegment? StringSegment)> Select;
         public StringSegment? LoadTagAs;
         public ValueExpression Last, First, Offset, Scale;
-        public (ValueExpression Value, MethodExpression With) GroupBy;
+        public TimeSeriesGroupBy GroupBy;
+    }
+
+    public struct TimeSeriesGroupBy
+    {
+        public ValueExpression TimePeriod;
+        public bool Tag;
+        public FieldExpression Field;
+
+        public MethodExpression With;
+
+        public bool HasGroupByTag => Tag || Field != null;
     }
 
     public unsafe struct RangeGroup
@@ -261,12 +272,24 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
+        public void MoveToNextRange()
+        {
+            MoveToNextRange(_end);
+        }
+
         public bool WithinRange(DateTime timestamp)
         {
             if (_init == false)
                 InitializeRange(timestamp);
 
             return timestamp >= _start && timestamp < _end;
+        }
+
+        public bool WithinNextRange(DateTime timestamp)
+        {
+            var copy = this; // this a struct, and we don't want to affect the state of the current one
+            copy.MoveToNextRange(copy.End);
+            return copy.WithinRange(timestamp);
         }
 
         public static RangeGroup ParseRangeFromString(string s)
@@ -534,7 +557,7 @@ namespace Raven.Server.Documents.Queries.AST
     {
         public AggregationType Aggregation;
 
-        public bool Any => _values.Count > 0;
+        public bool Any => NumberOfValues > 0;
 
         private List<double> _values;
 
@@ -546,6 +569,7 @@ namespace Raven.Server.Documents.Queries.AST
 
         public string Name;
 
+        public int NumberOfValues => _values.Count;
 
         public TimeSeriesAggregation(AggregationType type, string name = null)
         {
@@ -822,17 +846,6 @@ namespace Raven.Server.Documents.Queries.AST
                 return _values.Select(x => x * scale.Value);
 
             return _values;
-        }
-
-        public void SetValues(IEnumerable<double> values)
-        {
-            if (Aggregation == AggregationType.Count)
-            {
-                _count = new List<double>(values);
-                return;
-            }
-
-            _values = new List<double>(values);
         }
     }
 }

@@ -118,7 +118,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         [JsonIgnore]
         private TimeSeriesStreamEnumerator<TResult> _timeSeriesStream;
-
+        
         void ITimeSeriesQueryStreamResult.SetStream(StreamOperation.TimeSeriesStreamEnumerator stream)
         {
             _timeSeriesStream = new TimeSeriesStreamEnumerator<TResult>(stream);
@@ -145,6 +145,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public long[] Count;
         public double[] Max, Min, Last, First, Average, Sum;
         public DateTime To, From;
+
+        public string Key { get; private set; }
 
         [OnDeserialized]
         internal void OnNewtonSoftJsonDeserialized(StreamingContext context)

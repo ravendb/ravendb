@@ -23,8 +23,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private TimeSeriesWhereClauseVisitor<T> _whereVisitor;
         private StringBuilder _selectFields;
-        private string _src, _between, _where, _groupBy, _last, _first, _loadTag, _offset, _scale;
-
+        private string _src, _between, _where, _groupBy, _last, _first, _loadTag, _loadTagAlias, _offset, _scale;
         public List<string> Parameters { get; internal set; }
 
         public TimeSeriesQueryVisitor(RavenQueryProviderProcessor<T> processor) : 
@@ -85,7 +84,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _whereVisitor = new TimeSeriesWhereClauseVisitor<T>(lambda.Parameters[0].Name, _documentQuery);
 
             if (lambda.Parameters.Count == 2) // Where((ts, tag) => ...)
+            {
+                if (_loadTagAlias != null) // alias is already taken by 'group by tag' and we need to use the same one 
+                    _whereVisitor.Rename(lambda.Parameters[1].Name, _loadTagAlias);
+
                 LoadByTag(lambda.Parameters[1].Name);
+            } 
             
             if (lambda.Body is BinaryExpression be)
                 WhereBinary(be);
@@ -97,13 +101,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void LoadByTag(string alias)
         {
-            _loadTag = $" load Tag as {alias}";
+            _loadTagAlias ??= alias;
+            _loadTag ??= $" load Tag as {alias}";
         }
 
         private void GroupBy(Expression expression)
         {
             string timePeriod;
             string with = null;
+            string groupByTag = null;
 
             if (expression is ConstantExpression constantExpression)
             {
@@ -120,24 +126,15 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             else if (expression is LambdaExpression lambda)
             {
-                if (!(lambda.Body is MethodCallExpression mce))
+                if (!(lambda.Body is MethodCallExpression methodCall))
                 {
                     ThrowInvalidMethodArgument(lambda, nameof(ITimeSeriesQueryable.GroupBy));
                     return;
                 }
 
-                MethodCallExpression groupByCall;
-                if (mce.Object is MethodCallExpression innerCall)
-                {
-                    groupByCall = innerCall;
-                    with = GroupByWith(mce, lambda);
-                }
-                else
-                {
-                    groupByCall = mce;
-                }
-
-                timePeriod = GetTimePeriodFromMethodCall(groupByCall, nameof(ITimeSeriesQueryable.GroupBy));
+                with = GroupByWith(ref methodCall);
+                groupByTag = GroupByTag(ref methodCall);
+                timePeriod = GetTimePeriodFromMethodCall(methodCall, nameof(ITimeSeriesQueryable.GroupBy));
             }
 
             else
@@ -145,7 +142,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 timePeriod = expression.ToString();
             }
 
-            _groupBy = $" group by '{timePeriod}' {with}";
+            _groupBy = $" group by '{timePeriod}' {groupByTag} {with}";
         }
 
         private static string GetTimePeriodFromAction(Action<ITimePeriodBuilder> action, out string with)
@@ -165,16 +162,73 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return timePeriod;
         }
 
-        private static string GroupByWith(MethodCallExpression callExpression, Expression expression)
+        private string GroupByTag(ref MethodCallExpression groupByCall)
         {
+            if (groupByCall.Method.DeclaringType != typeof(ITimeSeriesAggregationOperations)) 
+                return null;
+
+            if (!(groupByCall.Object is MethodCallExpression innerCall2))
+            {
+                ThrowInvalidMethodArgument(groupByCall, nameof(ITimeSeriesQueryable.GroupBy));
+                return null;
+            }
+            
+            string groupByTag;
+
+            switch (groupByCall.Method.Name)
+            {
+                case nameof(ITimeSeriesAggregationOperations.ByTag):
+                    switch (groupByCall.Arguments.Count)
+                    {
+                        case 0:
+                            groupByTag = ", tag";
+                            break;
+                        case 1:
+                            if (!(groupByCall.Arguments[0] is LambdaExpression groupByTagCall) || groupByTagCall.Parameters.Count != 1)
+                            {
+                                ThrowInvalidMethodArgument(groupByCall, nameof(ITimeSeriesAggregationOperations.ByTag));
+                                return null;
+                            }
+
+                            if (groupByTagCall.Body.NodeType != ExpressionType.Convert || !(groupByTagCall.Body is UnaryExpression convert))
+                            {
+                                ThrowInvalidMethodArgument(groupByTagCall.Body, "parameter must be of Convert type e.g. 'ByTag<User>(user => user.Name)'");
+                                return null;
+                            }
+
+                            LoadByTag(groupByTagCall.Parameters[0].Name);
+                            groupByTag = $", {convert.Operand}";
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(ITimeSeriesAggregationOperations.ByTag), "Invalid number of arguments");
+                    }
+
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(groupByCall.Method.Name), "Unknown method name");
+            }
+
+            groupByCall = innerCall2;
+
+            return groupByTag;
+        }
+
+        private static string GroupByWith(ref MethodCallExpression callExpression)
+        {
+            if (callExpression.Method.Name != nameof(ITimeSeriesAggregationOperations.WithOptions))
+                return null;
+
             if (callExpression.Method.DeclaringType != typeof(ITimeSeriesAggregationOperations))
             {
-                ThrowInvalidMethodArgument(expression, nameof(ITimeSeriesQueryable.GroupBy));
+                ThrowInvalidMethodArgument(callExpression, nameof(ITimeSeriesQueryable.GroupBy));
                 return null;
             }
 
-            if (callExpression.Method.Name != nameof(ITimeSeriesAggregationOperations.WithOptions))
-                throw new NotSupportedException("Unsupported method in GroupBy clause: " + callExpression.Method.Name);
+            if (!(callExpression.Object is MethodCallExpression inner))
+            {
+                ThrowInvalidMethodArgument(callExpression, nameof(ITimeSeriesQueryable.GroupBy));
+                return null;
+            }
 
             LinqPathProvider.GetValueFromExpressionWithoutConversion(callExpression.Arguments[0], out var value);
             if (!(value is TimeSeriesAggregationOptions options))
@@ -182,6 +236,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 ThrowInvalidMethodArgument(callExpression.Arguments[0], nameof(ITimeSeriesAggregationOperations.WithOptions));
                 return null;
             }
+
+            callExpression = inner;
 
             if (options.Interpolation == InterpolationType.None) 
                 return null;
@@ -649,6 +705,16 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             public void WithOptions(TimeSeriesAggregationOptions options)
             {
                 Options = options;
+            }
+
+            public ITimeSeriesAggregationOperations ByTag()
+            {
+                throw new NotImplementedException();
+            }
+
+            public ITimeSeriesAggregationOperations ByTag<TEntity>(Func<TEntity, object> selector)
+            {
+                throw new NotImplementedException();
             }
         }
     }
