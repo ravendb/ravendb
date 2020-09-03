@@ -1,4 +1,4 @@
-<div data-bind="if:  !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
+<div data-bind="if: !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
     <div class="flex-window edit-index">
         <div class="toolbar">
             <div class="row">
@@ -27,7 +27,7 @@
             <div class="col-sm-2">
                 <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background">Maps</h2>
                 <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
-            </div>           
+            </div>
             <div class="col-sm-10">
                 <div data-bind="foreach: editedIndex().maps">
                     <div class="clearfix">
@@ -348,7 +348,7 @@
 <script type="text/html" id="field-template">
     <div class="panel-body">
         <div class="row">
-            <div class="col-xs-8 col-sm-6 col-xl-3  margin-bottom">
+            <div class="col-xs-8 col-sm-6 col-xl-3 margin-bottom">
                 <h3 data-bind="visible: isDefaultOptions()">Default field options</h3>
                 <div class="form-group" data-bind="if: !isDefaultOptions(), validationElement: name">
                     <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }">
@@ -361,7 +361,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right  margin-bottom">
+            <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right margin-bottom">
                 <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, click: toggleAdvancedOptions">
                     <i class="icon-settings"></i><span>Advanced</span>
                 </button>
@@ -551,7 +551,7 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="properties-item" data-bind="visible: canProvideAnalyzer">
+                        <div class="properties-item">
                             <span class="properties-label">Analyzer</span>
                             <div class="btn-group properties-value">
                                 <input class="form-control" placeholder="StandardAnalyzer" autocomplete="off"

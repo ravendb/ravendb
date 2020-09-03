@@ -108,7 +108,6 @@ class indexFieldOptions {
 
     hasSpatialOptions = ko.observable<boolean>(false);
     showAdvancedOptions = ko.observable<boolean>(false);
-    canProvideAnalyzer = ko.pureComputed(() => this.indexing() === "Search");
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
