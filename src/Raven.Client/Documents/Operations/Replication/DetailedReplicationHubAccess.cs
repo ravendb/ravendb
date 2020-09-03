@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations.Replication
         }
     }
 
-    public class ReplicationHubAccessResponse
+    internal class ReplicationHubAccessResponse
     {
         public long RaftCommandIndex { get; set; }
     }
