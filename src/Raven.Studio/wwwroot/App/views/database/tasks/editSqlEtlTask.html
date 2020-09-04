@@ -194,7 +194,7 @@
                     </div>
                 </div>                
                 <div data-bind="foreach: editedSqlEtl().sqlTables">
-                    <div class="panel">
+                    <div class="panel panel-hover">
                         <div class="padding padding-sm flex-horizontal item">
                             <div class="row flex-grow">
                                 <div class="col-sm-4">
@@ -227,7 +227,7 @@
                     </div>
                 </div>
                 <div class="transformation-scripts-list" data-bind="foreach: transformationScripts">
-                    <div class="panel item" data-bind="css: { active: $data === $root.transformationScriptSelectedForEdit() }">
+                    <div class="panel panel-hover item" data-bind="css: { active: $data === $root.transformationScriptSelectedForEdit() }">
                         <div class="padding padding-sm">
                             <div class="flex-horizontal">
                                 <div class="flex-grow info">
