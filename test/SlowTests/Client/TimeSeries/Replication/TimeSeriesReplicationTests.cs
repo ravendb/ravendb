@@ -413,6 +413,77 @@ namespace SlowTests.Client.TimeSeries.Replication
         }
 
         [Fact]
+        public async Task CanReplicateFullSegment2()
+        {
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                var fullSegment = 329;
+
+                using (var session = storeA.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+
+                    // seg1
+                    for (int j = 0; j < fullSegment; j++)
+                    {
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddMinutes(j), new double[] {j * 2, j * 2, j * 2, j * 2, j * 2}, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+
+                    // seg2
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(fullSegment), new double[] {fullSegment *2, fullSegment*2, fullSegment*2, fullSegment*2, fullSegment*2}, "watches/fitbit");
+                    session.SaveChanges();
+
+                    var stats = storeA.Maintenance.Send(new GetStatisticsOperation());
+                    Assert.Equal(2, stats.CountOfTimeSeriesSegments);
+                }
+
+                using (var session = storeB.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+
+                    // seg1
+                    for (int j = 0; j < fullSegment - 1; j++)
+                    {
+                        session.TimeSeriesFor("users/ayende", "Heartrate")
+                            .Append(baseline.AddMinutes(j).AddMinutes(1), new double[] {j * 2, j * 2, j * 2, j * 2, j * 2}, "watches/fitbit");
+                    }
+
+                    var last = (fullSegment - 2) * 2;
+                    session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Append(baseline.AddMinutes(fullSegment).AddMinutes(2), new double[] {last, last, last, last, last}, "watches/fitbit");
+
+                    session.SaveChanges();
+
+                    var stats = storeB.Maintenance.Send(new GetStatisticsOperation());
+                    Assert.Equal(1, stats.CountOfTimeSeriesSegments);
+                }
+
+                await SetupReplicationAsync(storeB, storeA);
+                EnsureReplicating(storeB, storeA);
+
+                await SetupReplicationAsync(storeA, storeB);
+                EnsureReplicating(storeA, storeB);
+
+                using (var sessionA = storeA.OpenSession())
+                using (var sessionB = storeB.OpenSession())
+                {
+                    var valsA = sessionA.TimeSeriesFor("users/ayende", "Heartrate").Get().ToList();
+                    var valsB = sessionB.TimeSeriesFor("users/ayende", "Heartrate").Get().ToList();
+
+                    Assert.Equal(valsA.Count, valsB.Count);
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanReplicateMany()
         {
             using (var storeA = GetDocumentStore())

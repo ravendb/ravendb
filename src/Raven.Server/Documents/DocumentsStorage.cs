@@ -1607,7 +1607,7 @@ namespace Raven.Server.Documents
                     AttachmentsStorage.DeleteAttachmentsOfDocument(context, lowerId, changeVector, modifiedTicks);
 
                 CountersStorage.DeleteCountersForDocument(context, id, collectionName);
-                TimeSeriesStorage.DeleteTimeSeriesForDocument(context, id, collectionName);
+                TimeSeriesStorage.DeleteAllTimeSeriesForDocument(context, id, collectionName);
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {

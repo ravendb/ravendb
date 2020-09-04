@@ -34,6 +34,8 @@
     <None Remove="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data.zip" />
     <None Remove="Data\RavenDB_15223\counters.4.2.103.ravendb-snapshot" />
     <None Remove="Data\RavenDB_15223\manycounters.4.2.103.ravendb-snapshot" />
+    <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
+    <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
@@ -97,10 +99,12 @@
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
     <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
+    <EmbeddedResource Include="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Document_Without_Attachment_Stream.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Identities_3.5.35288.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Indexes_And_Transformers_3.5.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Revisions_3.5.35220.ravendbdump" />
   </ItemGroup>
   <ItemGroup>

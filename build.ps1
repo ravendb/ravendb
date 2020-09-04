@@ -6,6 +6,7 @@ param(
     [switch]$MacOs,
     [switch]$Osx,
     [switch]$Rpi,
+    [switch]$LinuxArm64,
     [switch]$DontRebuildStudio,
     [switch]$DontBuildStudio,
     [switch]$JustStudio,
@@ -106,6 +107,10 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
 
     if ($Rpi) {
         $Target = @( "rpi" );
+    }
+
+    if ($LinuxArm64) {
+        $Target = @( "linux-arm64" );
     }
 }
 
