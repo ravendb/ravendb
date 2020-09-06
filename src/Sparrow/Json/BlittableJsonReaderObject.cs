@@ -387,24 +387,24 @@ namespace Sparrow.Json
                     }
                     else if (result is LazyStringValue lazyStringValue)
                     {
-                        obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
+                        obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type, CultureInfo.InvariantCulture);
                         // TODO: Try
                         // obj = (T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromString(lazyStringValue.ToString());
                     }
                     else if (result is LazyNumberValue lnv)
                     {
-                        obj = (T)Convert.ChangeType(lnv, type);
+                        obj = (T)Convert.ChangeType(lnv, type, CultureInfo.InvariantCulture);
                     }
                     else if (result is LazyCompressedStringValue lazyCompressStringValue)
                     {
                         if (type == typeof(LazyStringValue))
                             obj = (T)(object)lazyCompressStringValue.ToLazyStringValue();
                         else
-                            obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
+                            obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type, CultureInfo.InvariantCulture);
                     }
                     else
                     {
-                        obj = (T)Convert.ChangeType(result, type);
+                        obj = (T)Convert.ChangeType(result, type, CultureInfo.InvariantCulture);
                     }
                 }
                 catch
@@ -497,19 +497,19 @@ namespace Sparrow.Json
                         switch (result)
                         {
                             case LazyStringValue lazyStringValue:
-                                obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type);
+                                obj = (T)Convert.ChangeType(lazyStringValue.ToString(), type, CultureInfo.InvariantCulture);
                                 break;
                             case LazyNumberValue lazyNumberValue:
-                                obj = (T)Convert.ChangeType(lazyNumberValue, type);
+                                obj = (T)Convert.ChangeType(lazyNumberValue, type, CultureInfo.InvariantCulture);
                                 break;
                             case LazyCompressedStringValue lazyCompressStringValue:
                                 if (type == typeof(LazyStringValue))
                                     obj = (T)(object)lazyCompressStringValue.ToLazyStringValue();
                                 else
-                                    obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type);
+                                    obj = (T)Convert.ChangeType(lazyCompressStringValue.ToString(), type, CultureInfo.InvariantCulture);
                                 break;
                             default:
-                                obj = (T)Convert.ChangeType(result, type);
+                                obj = (T)Convert.ChangeType(result, type, CultureInfo.InvariantCulture);
                                 break;
                         }
                     }
