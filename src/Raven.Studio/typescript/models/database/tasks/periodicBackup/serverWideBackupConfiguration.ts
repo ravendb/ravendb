@@ -43,7 +43,7 @@ class serverWideBackupConfiguration extends periodicBackupConfiguration {
             },
             SnapshotSettings: null,
             RetentionPolicy: null,
-            DatabasesToExclude: null
+            ExcludedDatabases: null
         }, serverLimits, encryptedDatabase, isServerWide);
     }
 }
