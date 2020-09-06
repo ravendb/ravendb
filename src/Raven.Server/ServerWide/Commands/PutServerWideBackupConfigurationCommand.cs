@@ -35,9 +35,9 @@ namespace Raven.Server.ServerWide.Commands
                 Value.Name = GenerateTaskName(previousValue);
             }
 
-            if (Value.DatabasesToExclude != null &&
-                Value.DatabasesToExclude.Any(string.IsNullOrWhiteSpace))
-                throw new RachisApplyException($"{nameof(ServerWideBackupConfiguration.DatabasesToExclude)} cannot contain null or empty database names");
+            if (Value.ExcludedDatabases != null &&
+                Value.ExcludedDatabases.Any(string.IsNullOrWhiteSpace))
+                throw new RachisApplyException($"{nameof(ServerWideBackupConfiguration.ExcludedDatabases)} cannot contain null or empty database names");
 
             Value.TaskId = index;
 

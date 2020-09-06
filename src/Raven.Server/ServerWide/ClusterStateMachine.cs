@@ -1461,12 +1461,15 @@ namespace Raven.Server.ServerWide
 
         private static bool IsExcluded(BlittableJsonReaderObject configurationBlittable, string databaseName)
         {
-            if (configurationBlittable.TryGet(nameof(ServerWideBackupConfiguration.DatabasesToExclude), out BlittableJsonReaderArray databasesToExclude) == false)
+            if (configurationBlittable.TryGet(nameof(ServerWideBackupConfiguration.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases) == false)
                 return false;
 
-            foreach (object databaseToExclude in databasesToExclude)
+            foreach (object excludedDatabase in excludedDatabases)
             {
-                if (string.Equals(databaseName, databaseToExclude.ToString(), StringComparison.OrdinalIgnoreCase))
+                if (excludedDatabase == null)
+                    continue;
+
+                if (string.Equals(databaseName, excludedDatabase.ToString(), StringComparison.OrdinalIgnoreCase))
                     return true;
             }
 
@@ -3324,8 +3327,8 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    if (serverWideBackupConfiguration.DatabasesToExclude == null ||
-                        serverWideBackupConfiguration.DatabasesToExclude.Contains(databaseName, StringComparer.OrdinalIgnoreCase) == false)
+
+                    if (serverWideBackupConfiguration.IsExcluded(databaseName) == false)
                     {
                         periodicBackupConfiguration.TaskId = oldTaskId ?? index;
                         newBackups.Add(periodicBackupConfiguration.ToJson());
