@@ -19,11 +19,11 @@ class indexFieldOptions {
 
     static readonly analyzersNamesDictionary: analyzerName[] = [
         { shortName: "Keyword Analyzer", fullName: "KeywordAnalyzer" },
-        { shortName: "LowerCase Keyword Analyzer", fullName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
+        { shortName: "LowerCase Keyword Analyzer", fullName: null }, // default option
         { shortName: "LowerCase Whitespace Analyzer", fullName: "LowerCaseWhitespaceAnalyzer" },
         { shortName: "NGram Analyzer", fullName:"NGramAnalyzer" },
         { shortName: "Simple Analyzer", fullName: "SimpleAnalyzer" },
-        { shortName: "Standard Analyzer", fullName: null }, // default option
+        { shortName: "Standard Analyzer", fullName: "StandardAnalyzer" },
         { shortName: "Stop Analyzer", fullName: "StopAnalyzer" },
         { shortName: "Whitespace Analyzer", fullName:"WhitespaceAnalyzer" }
     ];
@@ -74,11 +74,11 @@ class indexFieldOptions {
     name = ko.observable<string>();
     
     isDefaultFieldOptions = ko.pureComputed(() => this.name() === indexFieldOptions.DefaultFieldOptions);
-    isStandardAnalyzer = ko.pureComputed(() => !this.analyzer() || this.analyzer() === 'StandardAnalyzer' || this.analyzer() === 'Lucene.Net.Analysis.Standard.StandardAnalyzer');
+  
+    analyzer = ko.observable<string>();
+    isDefaultAnalyzer = ko.pureComputed(() => !this.analyzer() || this.analyzer() === "LowerCase Keyword Analyzer"); 
 
     parent = ko.observable<indexFieldOptions>();
-
-    analyzer = ko.observable<string>();
 
     indexing = ko.observable<Raven.Client.Documents.Indexes.FieldIndexing>();
     effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
@@ -127,18 +127,13 @@ class indexFieldOptions {
         } else {
             this.spatial(spatialOptions.empty());
         }
-        
-        if (this.indexing() === "Search" && this.isStandardAnalyzer()) {
-            this.fullTextSearch(true);
-            
-            if (this.storage() === "Yes" && this.termVector() === "WithPositionsAndOffsets") {
-                this.highlighting(true);
-            }
-        }
+
+        this.computeFullTextSearch();
+        this.computeHighlighting();
         
         if ((this.termVector() && this.termVector() !== "No") ||
             (this.indexing() && this.indexing() !== "Default") ||
-            (this.analyzer() && this.analyzer() !== "StandardAnalyzer")) {
+            (!this.isDefaultAnalyzer())) {
             this.showAdvancedOptions(true);
         }
         
@@ -256,12 +251,11 @@ class indexFieldOptions {
     }
 
     private computeFullTextSearch() {
-        this.fullTextSearch(this.isStandardAnalyzer() &&
-            this.indexing() === "Search");
-        
         if (this.indexing() === null) {
             this.fullTextSearch(null);
-        } 
+        }
+        
+        this.fullTextSearch(this.indexing() !== "No" &&  (!this.isDefaultAnalyzer() || (this.indexing() === "Search")));
     }
 
     private computeHighlighting() {
@@ -280,6 +274,10 @@ class indexFieldOptions {
         if (this.indexing() === null) {
             // take analyzer from default if indexing is set to 'inherit'
             this.analyzer(this.parent().analyzer());
+        }
+        
+        if (this.indexing() === "No") {
+            this.analyzer(null);
         }
     }
     
@@ -331,7 +329,7 @@ class indexFieldOptions {
         const field = new indexFieldOptions("", {
             Storage: "No",
             Indexing: "Default",
-            Analyzer: "StandardAnalyzer",
+            Analyzer: "LowerCase Keyword Analyzer",
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: "No"
@@ -377,4 +375,4 @@ class indexFieldOptions {
     }
 }
 
-export = indexFieldOptions; 
+export = indexFieldOptions;
