@@ -15,7 +15,9 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
@@ -701,7 +703,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(2, record.PeriodicBackups.Count);
 
-                serverWideBackupConfiguration.DatabasesToExclude = new[] {store.Database};
+                serverWideBackupConfiguration.ExcludedDatabases = new[] {store.Database};
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
 
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
@@ -727,7 +729,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         FolderPath = backupPath
                     },
-                    DatabasesToExclude = new []
+                    ExcludedDatabases = new []
                     {
                         newDbName
                     }
@@ -755,13 +757,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(1, record.PeriodicBackups.Count);
 
-                serverWideBackupConfiguration.DatabasesToExclude = new[] {store.Database};
+                serverWideBackupConfiguration.ExcludedDatabases = new[] {store.Database};
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
 
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(2, record.PeriodicBackups.Count);
                 Assert.Equal(backupConfiguration.Name, record.PeriodicBackups[0].Name);
                 Assert.Equal(PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(serverWideBackupConfiguration.Name), record.PeriodicBackups[1].Name);
+
+                serverWideBackupConfiguration.ExcludedDatabases = null;
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration));
+
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var tasks = Server.ServerStore.Cluster.GetServerWideBackupConfigurations(context, serverWideBackupConfiguration.Name).ToList();
+                    Assert.Equal(1, tasks.Count);
+
+                    tasks[0].TryGet(nameof(ServerWideBackupConfiguration.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases);
+                    Assert.NotNull(excludedDatabases);
+                    Assert.Equal(0, excludedDatabases.Length);
+                }
+
+                var newDbName2 = store.Database + "-testDatabase2";
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName2)));
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
+                Assert.Equal(2, record.PeriodicBackups.Count);
+
+                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName2));
+                Assert.Equal(1, record.PeriodicBackups.Count);
             }
         }
 
@@ -781,7 +806,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         FolderPath = backupPath
                     },
-                    DatabasesToExclude = new[]
+                    ExcludedDatabases = new[]
                     {
                         null,
                         "test"
@@ -790,14 +815,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 await SaveAndAssertError();
 
-                serverWideBackupConfiguration.DatabasesToExclude = new[]
+                serverWideBackupConfiguration.ExcludedDatabases = new[]
                 {
                     string.Empty
                 };
 
                 await SaveAndAssertError();
 
-                serverWideBackupConfiguration.DatabasesToExclude = new[]
+                serverWideBackupConfiguration.ExcludedDatabases = new[]
                 {
                     " "
                 };
@@ -807,7 +832,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 async Task SaveAndAssertError()
                 {
                     var error = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(serverWideBackupConfiguration)));
-                    Assert.Contains($"{nameof(ServerWideBackupConfiguration.DatabasesToExclude)} cannot contain null or empty database names", error.Message);
+                    Assert.Contains($"{nameof(ServerWideBackupConfiguration.ExcludedDatabases)} cannot contain null or empty database names", error.Message);
                 }
             }
         }
