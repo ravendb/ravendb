@@ -47,6 +47,8 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, GetDocumentsResult> GetDocumentsResult = GenerateJsonDeserializationRoutine<GetDocumentsResult>();
 
+        public static readonly Func<BlittableJsonReaderObject, ConditionalGetResult> ConditionalGetResult = GenerateJsonDeserializationRoutine<ConditionalGetResult>();
+
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
 
         public static readonly Func<BlittableJsonReaderObject, AttachmentDetails> AttachmentDetails = GenerateJsonDeserializationRoutine<AttachmentDetails>();
