@@ -436,7 +436,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
+                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration);
                         break;
                     case nameof(DeleteServerWideBackupConfigurationCommand):
                         UpdateValue<string>(context, type, cmd, index, skipNotifyValueChanged: true);
@@ -3049,7 +3049,7 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
         }
 
-        private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
+        private void UpdateDatabasesWithNewServerWideBackupConfiguration(TransactionOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration)
         {
             if (serverWideBackupConfiguration == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration is null for command type: {type}");
@@ -3082,7 +3082,18 @@ namespace Raven.Server.ServerWide
                     {
                         foreach (BlittableJsonReaderObject backup in backups)
                         {
-                            if (IsServerWideBackupWithTaskName(backup, periodicBackupConfiguration.Name))
+                            if (backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string backupName)  == false || backupName == null)
+                                throw new RachisInvalidOperationException(
+                                    $"This {nameof(PeriodicBackupConfiguration)} of {result.Key} has no value for {nameof(PeriodicBackupConfiguration.Name)}. This should not happens\n{backup}");
+                            
+                            if (serverWideBackupConfiguration.ToRemoveFromDatabaseRecord != null)
+                            {
+                                var toRemove = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(serverWideBackupConfiguration.ToRemoveFromDatabaseRecord);
+                                if(backupName.Equals(toRemove, StringComparison.OrdinalIgnoreCase))
+                                    continue;
+                            }
+                                
+                            if(backupName.Equals(periodicBackupConfiguration.Name, StringComparison.OrdinalIgnoreCase))
                             {
                                 if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
                                     oldTaskId = taskId;
@@ -3096,7 +3107,7 @@ namespace Raven.Server.ServerWide
 
                     using (oldDatabaseRecord)
                     {
-                        periodicBackupConfiguration.TaskId = oldTaskId ?? index;
+                        periodicBackupConfiguration.TaskId = oldTaskId ?? serverWideBackupConfiguration.TaskId;
                         newBackups.Add(periodicBackupConfiguration.ToJson());
 
                         oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
@@ -3110,7 +3121,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? index, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
         }
 
         private void DeleteServerWideBackupConfigurationFromAllDatabases(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
