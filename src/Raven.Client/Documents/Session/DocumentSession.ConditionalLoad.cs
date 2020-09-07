@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session
         /// <inheritdoc />
         public (T Entity, string ChangeVector) ConditionalLoad<T>(string id, string changeVector)
         {
-            if (id == null)
+            if (string.IsNullOrEmpty(id))
                 throw new ArgumentNullException(nameof(id));
 
             if (Advanced.IsLoaded(id))
@@ -29,8 +29,8 @@ namespace Raven.Client.Documents.Session
                 return (e, cv);
             }
 
-            if (changeVector == null)
-                return default;
+            if (string.IsNullOrEmpty(changeVector))
+                throw new InvalidOperationException($"The requested document with id '{id} is not loaded in to the session and could not conditional load when {nameof(changeVector)} is null or empty.");
 
             IncrementRequestCount();
             var cmd = new ConditionalGetDocumentsCommand(id, changeVector);
@@ -43,9 +43,6 @@ namespace Raven.Client.Documents.Session
                 case HttpStatusCode.NotFound:
                     return default; // value is missing
             }
-
-            if (cmd.Result.Results.Length == 0)
-                return (default, cmd.Result.ChangeVector);
 
             var documentInfo = DocumentInfo.GetNewDocumentInfo((BlittableJsonReaderObject)cmd.Result.Results[0]);
             var r = TrackEntity<T>(documentInfo);

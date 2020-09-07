@@ -29,8 +29,8 @@ namespace FastTests.Issues
                 typeof(SingleNodeBatchCommand),
                 typeof(ClusterWideBatchCommand),
                 typeof(PatchOperation.PatchCommand),
-                typeof(GetTimeSeriesOperation<>.GetTimeSeriesCommand)
-            };
+                typeof(GetTimeSeriesOperation<>.GetTimeSeriesCommand),
+                typeof(ConditionalGetDocumentsCommand)            };
 
         [Fact]
         public void Commands_should_be_careful_about_blittable_usage()
