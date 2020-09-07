@@ -4,6 +4,7 @@ interface computedAppUrls {
 
     databases: KnockoutComputed<string>;
     serverDashboard: KnockoutComputed<string>;
+    backups: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
     clientConfiguration: KnockoutComputed<string>;
     studioConfiguration: KnockoutComputed<string>;
