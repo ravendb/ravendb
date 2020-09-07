@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -35,7 +36,7 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenSession())
                 {
-                    var user = newestSession.ConditionalLoad<User>("users/1", cv);
+                    var user = newestSession.Advanced.ConditionalLoad<User>("users/1", cv);
                     Assert.Equal(user.Entity.Name, "RavenDB 5.1");
                     Assert.NotNull(user.ChangeVector);
                     Assert.NotEqual(cv, user.ChangeVector);
@@ -67,7 +68,7 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenSession())
                 {
-                    var user = newestSession.ConditionalLoad<User>("users/1", cv);
+                    var user = newestSession.Advanced.ConditionalLoad<User>("users/1", cv);
                     Assert.Equal(default, user.Entity);
                     Assert.Equal(cv, user.ChangeVector);
                 }
@@ -98,8 +99,8 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenSession())
                 {
-                    Assert.Equal(default, newestSession.ConditionalLoad<User>("users/2", cv));
-                    Assert.Equal(default, newestSession.ConditionalLoad<User>("users/2", null));
+                    Assert.Equal(default, newestSession.Advanced.ConditionalLoad<User>("users/2", cv));
+                    Assert.Throws<InvalidOperationException>(() => newestSession.Advanced.ConditionalLoad<User>("users/2", null));
                 }
             }
         }
@@ -128,7 +129,7 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenAsyncSession())
                 {
-                    var user = await newestSession.ConditionalLoadAsync<User>("users/1", cv);
+                    var user = await newestSession.Advanced.ConditionalLoadAsync<User>("users/1", cv);
                     Assert.Equal(user.Entity.Name, "RavenDB 5.1");
                     Assert.NotNull(user.ChangeVector);
                     Assert.NotEqual(cv, user.ChangeVector);
@@ -160,7 +161,7 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenAsyncSession())
                 {
-                    var user = await newestSession.ConditionalLoadAsync<User>("users/1", cv);
+                    var user = await newestSession.Advanced.ConditionalLoadAsync<User>("users/1", cv);
                     Assert.Equal(default, user.Entity);
                     Assert.Equal(cv, user.ChangeVector);
                 }
@@ -191,8 +192,8 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenAsyncSession())
                 {
-                    Assert.Equal(default, await newestSession.ConditionalLoadAsync<User>("users/2", cv));
-                    Assert.Equal(default, await newestSession.ConditionalLoadAsync<User>("users/2", null));
+                    Assert.Equal(default, await newestSession.Advanced.ConditionalLoadAsync<User>("users/2", cv));
+                    await Assert.ThrowsAsync<InvalidOperationException>(async () => await newestSession.Advanced.ConditionalLoadAsync<User>("users/2", null));
                 }
             }
         }

@@ -7,9 +7,9 @@
 namespace Raven.Client.Documents.Session
 {
     /// <summary>
-    ///     Interface for document session
+    ///     Advanced synchronous session operations
     /// </summary>
-    public partial interface IDocumentSession
+    public partial interface IAdvancedSessionOperations
     {
         /// <summary>
         ///     Conditional load the specified entity with the specified id and changeVector.

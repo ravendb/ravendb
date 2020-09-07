@@ -9,8 +9,10 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Documents.Session
 {
-    /// <inheritdoc />
-    public partial interface IAsyncDocumentSession
+    /// <summary>
+    ///     Advanced async session operations
+    /// </summary>
+    public partial interface IAsyncAdvancedSessionOperations
     {
         /// <summary>
         ///     Conditional load the specified entity with the specified id and changeVector.
