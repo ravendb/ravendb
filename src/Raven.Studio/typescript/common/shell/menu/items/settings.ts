@@ -131,6 +131,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-manage-dbgroup',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
+        new leafMenuItem({
+            route: 'databases/backups',
+            moduleId: 'viewmodels/resources/backups',
+            title: 'Backups',
+            nav: true,
+            css: 'icon-backups',
+            dynamicHash: appUrls.backups
+        }),
         new separatorMenuItem(),
         new separatorMenuItem('Tasks'),
         new leafMenuItem({

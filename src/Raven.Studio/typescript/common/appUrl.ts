@@ -27,6 +27,7 @@ class appUrl {
 
         serverDashboard: ko.pureComputed(() => appUrl.forServerDashboard()),
         databases: ko.pureComputed(() => appUrl.forDatabases()),
+        backups: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),
         studioConfiguration: ko.pureComputed(() => appUrl.forStudioConfiguration(appUrl.currentDatabase())),
@@ -187,6 +188,10 @@ class appUrl {
     static forDatabases(databaseToCompact?: string): string {
         const compactPart = databaseToCompact ? "?compact=" + encodeURIComponent(databaseToCompact) : "";
         return "#databases" + compactPart;
+    }
+
+    static forBackups(db: database | databaseInfo): string {
+        return "#databases/backups?" + appUrl.getEncodedDbPart(db);
     }
 
     static forAbout(): string {
