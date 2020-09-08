@@ -26,11 +26,6 @@ class studioConfiguration extends viewModelBase {
             });
     }
 
-    compositionComplete() {
-        super.compositionComplete();
-        $('.studio-configuration [data-toggle="tooltip"]').tooltip();
-    }
-
     saveConfiguration() {
         if (!this.isValid(this.model.validationGroup)) {
             return;
