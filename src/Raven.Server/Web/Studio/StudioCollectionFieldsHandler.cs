@@ -99,24 +99,28 @@ namespace Raven.Server.Web.Studio
                 case BlittableJsonToken.LazyNumber:
                     return FieldType.Number;
                 case BlittableJsonToken.StartArray:
-                    if (value != null)
+                    if (value == null)
+                        return FieldType.Array;
+
+                    var array = (BlittableJsonReaderArray)value;
+                    if (array.Length == 0)
+                        return FieldType.Array;
+
+                    var arrayType = GetFieldType(array.GetArrayType(), null);
+                    switch (arrayType)
                     {
-                        var array = (BlittableJsonReaderArray)value;
-                        var arrayType = GetFieldType(array.GetArrayType(), null);
-                        switch (arrayType)
-                        {
-                            case FieldType.Object:
-                                return FieldType.ArrayObject;
-                            case FieldType.Array:
-                                return FieldType.ArrayArray;
-                            case FieldType.String:
-                                return FieldType.ArrayString;
-                            case FieldType.Number:
-                                return FieldType.ArrayNumber;
-                            case FieldType.Boolean:
-                                return FieldType.ArrayBoolean;
-                        }
+                        case FieldType.Object:
+                            return FieldType.ArrayObject;
+                        case FieldType.Array:
+                            return FieldType.ArrayArray;
+                        case FieldType.String:
+                            return FieldType.ArrayString;
+                        case FieldType.Number:
+                            return FieldType.ArrayNumber;
+                        case FieldType.Boolean:
+                            return FieldType.ArrayBoolean;
                     }
+
                     return FieldType.Array;
                 case BlittableJsonToken.EmbeddedBlittable:
                 case BlittableJsonToken.StartObject:
