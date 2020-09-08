@@ -158,9 +158,9 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            long daysToSave = Database.Configuration.Tombstones.RetentionTimeWithReplicationHub.GetValue(TimeUnit.Hours);
+            long hoursToSave = Database.Configuration.Tombstones.RetentionTimeWithReplicationHub.GetValue(TimeUnit.Hours);
 
-            var lastDateToSave = Database.Time.GetUtcNow().AddHours(-daysToSave);
+            var lastDateToSave = Database.Time.GetUtcNow().AddHours(-hoursToSave);
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
