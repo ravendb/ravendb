@@ -111,7 +111,6 @@ class editDocument extends viewModelBase {
 
     isConflictDocument = ko.observable<boolean>(false);
     isNewLineFriendlyMode = ko.observable<boolean>(false);
-    autoCollapseMode = ko.observable<boolean>(false);
     isSaving = ko.observable<boolean>(false);
     
     displayDocumentChange = ko.observable<boolean>(false);
@@ -221,18 +220,16 @@ class editDocument extends viewModelBase {
         studioSettings.default.globalSettings()
             .done((settings: globalSettings) => {
                 if (settings.collapseDocsWhenOpening.getValue()) {
-                    const collapse = settings.collapseDocsWhenOpening.getValue();
-                    this.collapseDocsWhenOpening(collapse);
-                    this.forceFold = collapse;
+                    this.collapseDocsWhenOpening(true);
+                    this.forceFold = true;
                 }
         });
 
         if (this.docEditor) {
             this.docEditor.getSession().on("changeAnnotation", () => {
                 if (this.forceFold) {
-                    this.foldAll();
                     this.forceFold = false;
-                    this.isDocumentCollapsed(true);
+                    this.collapseDocument();
                 }
             });
         }
@@ -649,12 +646,28 @@ class editDocument extends viewModelBase {
 
     toggleCollapse() {
         if (this.isDocumentCollapsed()) {
-            this.docEditor.getSession().unfold(null, true);
-            this.isDocumentCollapsed(false);
+            this.unfoldDocument();
         } else {
-            this.foldAll();
-            this.isDocumentCollapsed(true);
+            this.collapseDocument();
         }
+    }
+
+    adjustCollapseState() {
+        if (this.collapseDocsWhenOpening()) {
+            this.collapseDocument();
+        } else {
+            this.unfoldDocument();
+        }
+    }
+    
+    collapseDocument() {
+        this.foldAll();
+        this.isDocumentCollapsed(true);
+    }
+    
+    unfoldDocument() {
+        this.docEditor.getSession().unfold(null, true);
+        this.isDocumentCollapsed(false);
     }
 
     foldAll() {
@@ -716,6 +729,7 @@ class editDocument extends viewModelBase {
         this.userSpecifiedId(docId);
 
         this.setActiveTab();
+        this.adjustCollapseState();
     }
 
     saveDocument() {
@@ -904,10 +918,6 @@ class editDocument extends viewModelBase {
                 this.inReadOnlyMode(false);
                 this.displayDocumentChange(false);
                 this.dirtyFlag().reset();
-
-                if (this.autoCollapseMode()) {
-                    this.foldAll();
-                }
                 
                 this.getDocumentPhysicalSize(id);
                 
@@ -995,13 +1005,8 @@ class editDocument extends viewModelBase {
             .done((doc: document) => {
                 this.document(doc);
                 this.displayDocumentChange(false);
-
                 this.inReadOnlyMode(true);
-
                 this.dirtyFlag().reset();
-                if (this.autoCollapseMode()) {
-                    this.foldAll();
-                }
             })
             .fail(() => {
                 this.dirtyFlag().reset();
@@ -1024,10 +1029,6 @@ class editDocument extends viewModelBase {
                 this.revisionChangeVector(changeVector);
 
                 this.dirtyFlag().reset();
-
-                if (this.autoCollapseMode()) {
-                    this.foldAll();
-                }
             })
             .fail(() => messagePublisher.reportError("Could not find requested revision. Redirecting to latest version"))
             .always(() => this.isBusy(false));
@@ -1149,11 +1150,7 @@ class editDocument extends viewModelBase {
         }
         
         this.inDiffMode(false);
-
-        if (this.collapseDocsWhenOpening() && this.isDocumentCollapsed()) {
-            this.foldAll();
-            this.isDocumentCollapsed(true);
-        }
+        this.adjustCollapseState();
     }
 
     forceCreateRevision() {
