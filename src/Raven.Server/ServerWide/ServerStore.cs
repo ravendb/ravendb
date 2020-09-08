@@ -707,6 +707,9 @@ namespace Raven.Server.ServerWide
             {
                 NotificationCenter.Add(alertRaised);
             }
+            
+            if(PlatformDetails.RunningOnDocker == false)
+                CheckSwapAndRaiseNotification();
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
@@ -723,6 +726,17 @@ namespace Raven.Server.ServerWide
 
             Initialized = true;
             InitializationCompleted.Set();
+        }
+
+        private void CheckSwapAndRaiseNotification()
+        {
+            var swapSize = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended).TotalSwapSize;
+            if (swapSize < Configuration.Memory.MinSwapSize)
+                NotificationCenter.Add(AlertRaised.Create(null, 
+                    "Low swap size",
+                    $"The current swap size is {swapSize} and it is lower then the threshold defined {Configuration.Memory.MinSwapSize}", 
+                    AlertType.LowSwapSize,
+                    NotificationSeverity.Warning));
         }
 
         private void BeforeAppendToRaftLog(TransactionOperationContext ctx, CommandBase cmd)
