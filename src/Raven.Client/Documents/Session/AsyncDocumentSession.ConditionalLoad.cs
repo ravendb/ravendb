@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Session
                 }
 
                 if (string.IsNullOrEmpty(changeVector))
-                    throw new InvalidOperationException($"The requested document with id '{id} is not loaded in to the session and could not conditional load when {nameof(changeVector)} is null or empty.");
+                    throw new InvalidOperationException($"The requested document with id '{id} is not loaded into the session and could not conditional load when {nameof(changeVector)} is null or empty.");
 
                 IncrementRequestCount();
                 var cmd = new ConditionalGetDocumentsCommand(id, changeVector);
