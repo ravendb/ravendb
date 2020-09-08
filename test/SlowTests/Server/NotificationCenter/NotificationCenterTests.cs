@@ -17,9 +17,11 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Sparrow.Server.Collections;
 using Xunit;
 using Xunit.Abstractions;
@@ -545,6 +547,25 @@ namespace SlowTests.Server.NotificationCenter
                     Assert.Equal(4, jsonAlerts.Count); // 6 out of 10 are being filtered out
                 }
             }
+        }
+        
+        [Fact]
+        public void WhenActualSwapSmallerThenMinSwapConfigured_ShouldRaiseNotification()
+        {
+            var memoryInfoResult = MemoryInformation.GetMemoryInfo();
+            var minSwapConfig = (memoryInfoResult.TotalPhysicalMemory + new Sparrow.Size(1, SizeUnit.Megabytes)).GetValue(SizeUnit.Megabytes).ToString();
+            var customSettings = new Dictionary<string, string>
+            {
+                [RavenConfiguration.GetKey(x => x.Memory.MinSwapSize)] = minSwapConfig
+            };
+
+            UseNewLocalServer(customSettings);
+
+            using var dis = Server.ServerStore.NotificationCenter.GetStored(out var alerts, postponed: false);
+            var alertsList = alerts.ToList();
+
+            var isLowSwapSizeRaised = alertsList.Any(a => a.Json[nameof(AlertRaised.AlertType)].ToString() == AlertType.LowSwapSize.ToString());
+            Assert.True(isLowSwapSizeRaised, $"Actual swap {memoryInfoResult.TotalSwapSize}, min swap config {minSwapConfig}, total memory {memoryInfoResult.TotalPhysicalMemory}");
         }
 
         private static List<Notification> CreateSampleNotificationsForFilterOutTest()
