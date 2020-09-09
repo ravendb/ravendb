@@ -19,7 +19,9 @@ class databaseRecord extends viewModelBase {
     isForbidden = ko.observable<boolean>(false);
     
     inEditMode = ko.observable<boolean>(false);
+    
     hideEmptyValues = ko.observable<boolean>(false);
+    selectedHideState: boolean;
 
     static containerId = "#databaseSettingsContainer";
 
@@ -34,7 +36,7 @@ class databaseRecord extends viewModelBase {
         });
         
         this.hideEmptyValues.subscribe(() => {
-            this.setVisibleDocumentText()
+            this.setVisibleDocumentText();
         })
         
         this.bindToCurrentInstance("toggleCollapse", "save", "exitEditMode");
@@ -92,8 +94,10 @@ class databaseRecord extends viewModelBase {
     }
     
     private collapseDocument() {
-        this.foldAll();
-        this.isDocumentCollapsed(true);
+        if (this.docEditor) {
+            this.foldAll();
+            this.isDocumentCollapsed(true);
+        }
     }
     
     private unfoldDocument() {
@@ -122,6 +126,7 @@ class databaseRecord extends viewModelBase {
             .done(result => {
                 if (result.can) {
                     this.inEditMode(true);
+                    this.selectedHideState = this.hideEmptyValues();
                     this.hideEmptyValues(false);
                     this.unfoldDocument();
                 }
@@ -130,6 +135,7 @@ class databaseRecord extends viewModelBase {
     
     exitEditMode() {
         this.inEditMode(false);
+        this.hideEmptyValues(this.selectedHideState);
     }
     
     confirm() {
@@ -164,7 +170,14 @@ class databaseRecord extends viewModelBase {
     private setVisibleDocumentText() {
         const docText = this.stringify(this.document().toDto(), this.hideEmptyValues());
         this.documentText(docText);
-        this.isDocumentCollapsed() ? this.collapseDocument() : this.unfoldDocument();
+
+        // must keep the collapse state because although user didn't actively changed it, 
+        // the documentText has changed and it changes the ace editor state
+        if (this.isDocumentCollapsed()) {
+            this.collapseDocument()
+        } else {
+            this.unfoldDocument();
+        }
     }
 
     private stringify(obj: any, stripNullAndEmptyValues: boolean = false) {
