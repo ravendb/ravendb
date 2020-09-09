@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
@@ -1357,6 +1358,51 @@ namespace FastTests
                 });
 
                 session.SaveChanges();
+            }
+        }
+        
+        protected void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
+        {
+            //This try catch is only to investigate RavenDB-15366 issue
+            try
+            {
+                session.SaveChanges();
+            }
+            catch (Exception e)
+            {
+                if (!(session is InMemoryDocumentSessionOperations inMemoryDocumentSessionOperations))
+                    throw;
+
+                foreach (var entity in inMemoryDocumentSessionOperations.DocumentsByEntity)
+                {
+                    if (!(entity.Key is T t) || t != loaded)
+                        continue;
+
+                    var blittable = inMemoryDocumentSessionOperations.JsonConverter.ToBlittable(entity.Key, entity.Value);
+                    throw new InvalidOperationException($"blittable: {blittable}\n documentInfo {entity.Value.Document}", e);
+                }
+            }
+        }
+        protected async Task SaveChangesWithTryCatchAsync<T>(IAsyncDocumentSession session, T loaded) where T : class
+        {
+            //This try catch is only to investigate RavenDB-15366 issue
+            try
+            {
+                await session.SaveChangesAsync();
+            }
+            catch (Exception e)
+            {
+                if (!(session is InMemoryDocumentSessionOperations inMemoryDocumentSessionOperations))
+                    throw;
+
+                foreach (var entity in inMemoryDocumentSessionOperations.DocumentsByEntity)
+                {
+                    if (!(entity.Key is T u) || u != loaded)
+                        continue;
+
+                    var blittable = inMemoryDocumentSessionOperations.JsonConverter.ToBlittable(entity.Key, entity.Value);
+                    throw new InvalidOperationException($"blittable: {blittable}\n documentInfo {entity.Value.Document}", e);
+                }
             }
         }
     }

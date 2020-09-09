@@ -250,7 +250,7 @@ namespace SlowTests.Issues
                     Assert.Equal((ulong)123, loaded.Ulong);
 
                     session.Advanced.Patch<User, ulong>(loaded, u => u.Ulong, 234);
-                    session.SaveChanges();
+                    SaveChangesWithTryCatch(session, loaded);
                 }
 
                 using (var session = store.OpenSession())
