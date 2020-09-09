@@ -1426,60 +1426,61 @@ input[type=file] + .form-control {
                 background-color: @panel-bg;
             }
         }
+    }
 
-        .list-properties {
-            .property-item {
-                display: flex;
-                align-items: center;
-                padding: @gutter/8 0;
 
-                .property-name, .property-value {
-                    display: inline-block;
-                    line-height: 1.1;
-                }
-
-                .property-name {
-                    min-width: 200px;
-                }
-
-                .property-value {
-                    flex-grow: 1;
-                }
-            }
-        }
-
-        .inline-properties {
+    .list-properties {
+        .property-item {
             display: flex;
-            flex-wrap: wrap;
-            margin: -@gutter/4 -@gutter/2;
+            align-items: center;
+            padding: @gutter/8 0;
 
-            .property-item {
-                padding: @gutter/4 @gutter/2;
+            .property-name, .property-value {
+                display: inline-block;
+                line-height: 1.1;
+            }
 
-                .property-name, .property-value {
-                    line-height: 1.1;
-                }
+            .property-name {
+                min-width: 200px;
+            }
 
-                .property-name {
-                    margin-bottom: 3px;
-                }
+            .property-value {
+                flex-grow: 1;
             }
         }
+    }
 
-        .list-properties, .inline-properties {
+    .inline-properties {
+        display: flex;
+        flex-wrap: wrap;
+        margin: -@gutter/4 -@gutter/2;
 
-            .property-item {
+        .property-item {
+            padding: @gutter/4 @gutter/2;
 
-                .property-name {
-                    font-size: 11px;
-                    text-transform: uppercase;
-                    font-weight: 600;
-                    color: @text-muted;
-                }
+            .property-name, .property-value {
+                line-height: 1.1;
+            }
 
-                .property-value {
-                    color: @text-color;
-                }
+            .property-name {
+                margin-bottom: 3px;
+            }
+        }
+    }
+
+    .list-properties, .inline-properties {
+
+        .property-item {
+
+            .property-name {
+                font-size: 11px;
+                text-transform: uppercase;
+                font-weight: 600;
+                color: @text-muted;
+            }
+
+            .property-value {
+                color: @text-color;
             }
         }
     }
@@ -1564,7 +1565,7 @@ input[type=file] + .form-control {
         &.state-offline {
             box-shadow: 0 0 0 1px @gray inset;
         }
-        
+
         .panel-addon {
             border-bottom: solid 1px @brand-primary-dark;
             border-right: solid 1px @brand-primary-dark;
@@ -1997,6 +1998,7 @@ ul.properties {
 @import "prism.less";
 @import "ace.less";
 @import "bootstrap-duration-picker.less";
+@import "pages/backups.less";
 @import "pages/tasks-sampleData";
 @import "pages/tasks-csvImport";
 @import "pages/tasks-subscriptions";
