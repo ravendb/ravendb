@@ -19,6 +19,7 @@ class databaseRecord extends viewModelBase {
     isForbidden = ko.observable<boolean>(false);
     
     inEditMode = ko.observable<boolean>(false);
+    hideEmptyValues = ko.observable<boolean>(false);
 
     static containerId = "#databaseSettingsContainer";
 
@@ -26,12 +27,15 @@ class databaseRecord extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
 
-        this.document.subscribe(doc => {
-            if (doc) {
-                const docText = this.stringify(doc.toDto());
-                this.documentText(docText);
+        this.document.subscribe(document => {
+            if (document) {
+                this.setVisibleDocumentText();
             }
         });
+        
+        this.hideEmptyValues.subscribe(() => {
+            this.setVisibleDocumentText()
+        })
         
         this.bindToCurrentInstance("toggleCollapse", "save", "exitEditMode");
     }
@@ -72,10 +76,8 @@ class databaseRecord extends viewModelBase {
         if (this.docEditor) {
             this.docEditor.getSession().on("tokenizerUpdate", () => {
                 if (this.forceFold) {
-                    this.foldAll();
-
                     this.forceFold = false;
-                    this.isDocumentCollapsed(true);
+                    this.collapseDocument();
                 }
             });
         }
@@ -83,15 +85,25 @@ class databaseRecord extends viewModelBase {
 
     toggleCollapse() {
         if (this.isDocumentCollapsed()) {
+            this.unfoldDocument();
+        } else {
+            this.collapseDocument();
+        }
+    }
+    
+    private collapseDocument() {
+        this.foldAll();
+        this.isDocumentCollapsed(true);
+    }
+    
+    private unfoldDocument() {
+        if (this.docEditor) {
             this.docEditor.getSession().unfold(null, true);
             this.isDocumentCollapsed(false);
-        } else {
-            this.foldAll();
-            this.isDocumentCollapsed(true);
         }
     }
 
-    foldAll() {
+    private foldAll() {
         const AceRange = ace.require("ace/range").Range;
         this.docEditor.getSession().foldAll();
         const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
@@ -109,19 +121,15 @@ class databaseRecord extends viewModelBase {
         this.confirm()
             .done(result => {
                 if (result.can) {
-                    const docText = this.stringify(this.document().toDto(), false);
-                    this.documentText(docText);
                     this.inEditMode(true);
-                    this.isDocumentCollapsed(false);
+                    this.hideEmptyValues(false);
+                    this.unfoldDocument();
                 }
             })
     }
     
     exitEditMode() {
-        const docText = this.stringify(this.document().toDto(), true);
-        this.documentText(docText);
         this.inEditMode(false);
-        this.isDocumentCollapsed(false);
     }
     
     confirm() {
@@ -152,13 +160,23 @@ class databaseRecord extends viewModelBase {
             .execute()
             .done((document: document) => this.document(document));
     }
+    
+    private setVisibleDocumentText() {
+        const docText = this.stringify(this.document().toDto(), this.hideEmptyValues());
+        this.documentText(docText);
+        this.isDocumentCollapsed() ? this.collapseDocument() : this.unfoldDocument();
+    }
 
-    private stringify(obj: any, stripNullAndEmptyValues: boolean = true) {
+    private stringify(obj: any, stripNullAndEmptyValues: boolean = false) {
         const prettifySpacing = 4;
         if (stripNullAndEmptyValues) {
             return JSON.stringify(obj, (key, val) => {
-                // strip out null properties
-                return _.isNull(val) || _.isEqual(val, {}) ? undefined : val;
+                const isNull = _.isNull(val);
+                const isEmptyObj = _.isEqual(val, {});
+                const isEmptyArray = _.isEqual(val, []);
+                
+                return isNull || isEmptyObj || isEmptyArray ? undefined : val;
+                
             }, prettifySpacing);
         } else {
             return JSON.stringify(obj, null, prettifySpacing);
