@@ -292,8 +292,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             // precaution, shouldn't be called
             // we overridden these methods in 'ITimeSeriesQueryBuilder'
 
-            throw new NotSupportedException($"Method 'ITimeSeriesQueryable.{method}' is not supported via DocumentQuery. " +
-                                            $"Use 'ITimeSeriesQueryBuilder.{method}' instead.");
+            throw new NotSupportedException($"Method '{nameof(ITimeSeriesQueryable)}.{method}' is not supported via DocumentQuery. " +
+                                            $"Use '{nameof(ITimeSeriesQueryBuilder)}.{method}' instead.");
         }
     }
 }
