@@ -1150,7 +1150,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Tombstone> GetTombstonesInReverseOrderFrom(DocumentsOperationContext context, long etag, long start, long take)
+        public IEnumerable<Tombstone> GetTombstonesInReverseEtagOrderFrom(DocumentsOperationContext context, long etag, long start, long take)
         {
             var table = new Table(TombstonesSchema, context.Transaction.InnerTransaction);
 
@@ -1166,7 +1166,7 @@ namespace Raven.Server.Documents
 
         public Tombstone GetTombstoneAtOrBefore(DocumentsOperationContext context, long etag)
         {
-            return GetTombstonesInReverseOrderFrom(context, etag, 0, 2).FirstOrDefault(t => t.Etag <= etag);
+            return GetTombstonesInReverseEtagOrderFrom(context, etag, 0, 2).FirstOrDefault(t => t.Etag <= etag);
         }
 
         public IEnumerable<Tombstone> GetTombstonesFrom(DocumentsOperationContext context, List<string> collections, long etag, long take)
