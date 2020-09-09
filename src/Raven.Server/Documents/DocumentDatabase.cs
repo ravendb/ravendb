@@ -459,9 +459,6 @@ namespace Raven.Server.Documents
                 if (topology.Promotables.Contains(ServerStore.NodeTag))
                 {
                     await Task.Delay(1000, DatabaseShutdown);
-                    if (DatabaseShutdown.IsCancellationRequested)
-                        return;
-
                     continue;
                 }
 
