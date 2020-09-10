@@ -653,7 +653,7 @@ namespace FastTests
                 }
                 catch
                 {
-                    if (sw.ElapsedMilliseconds <= timeout)
+                    if (sw.ElapsedMilliseconds > timeout)
                     {
                         throw;
                     }

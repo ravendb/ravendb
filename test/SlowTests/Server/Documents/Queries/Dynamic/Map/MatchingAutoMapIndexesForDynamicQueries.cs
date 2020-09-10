@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -8,6 +10,8 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -54,7 +58,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Companies WHERE Name = 'IBM'"));
 
@@ -76,7 +80,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
@@ -113,8 +117,8 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 }
             });
 
-            add_index(usersByName);
-            add_index(usersByNameAndAge);
+            AddIndex(usersByName);
+            AddIndex(usersByNameAndAge);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
 
@@ -137,7 +141,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(usersByName);
+            AddIndex(usersByName);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Age = 29"));
 
@@ -170,7 +174,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
             
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' AND Address.Street ='1stAvenue' AND Friends[].Name = 'Jon'"));
 
@@ -193,7 +197,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Name"));
 
@@ -216,7 +220,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users ORDER BY Address.ZipCode AS double"));
 
@@ -239,7 +243,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight"));
 
@@ -262,7 +266,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
 
             var dynamicQueryWithStringSorting = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Age > 9 ORDER BY Age AS long"));
 
@@ -292,11 +296,11 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
                 },
             });
 
-            add_index(definition);
+            AddIndex(definition);
 
             var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek'"));
 
-            var index = get_index(definition.Name);
+            var index = GetIndex(definition.Name);
 
             index.SetState(IndexState.Disabled);
 
@@ -400,12 +404,100 @@ include highlight(Name, 18, 2)
             }
         }
 
-        private void add_index(AutoMapIndexDefinition definition)
+        [Fact]
+        public void Choose_the_most_up_to_date_index()
+        {
+            Initialize();
+
+            var definition1 = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+            });
+            AddIndex(definition1);
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
+            using (var tx = context.OpenWriteTransaction())
+            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+            {
+                ["Name"] = "Grisha",
+                ["Company"] = "Hibernating Rhinos",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Users"
+                }
+            }))
+            {
+                _documentDatabase.DocumentsStorage.Put(context, "users/1", null, doc);
+                tx.Commit();
+            }
+
+            var index = GetIndex(definition1.Name);
+            WaitForIndexMap(index, 1);
+            var explanations = new List<DynamicQueryToIndexMatcher.Explanation>();
+            VerifyIndex("FROM Users where Name = 'Grisha'", definition1.Name);
+            Assert.Empty(explanations);
+
+            _documentDatabase.IndexStore.StopIndexing();
+
+            var definition2 = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+                new AutoIndexField
+                {
+                    Name = "Company",
+                    Storage = FieldStorage.No,
+                },
+            });
+
+            AddIndex(definition2);
+            VerifyIndex("FROM Users where Name = 'Grisha'", definition1.Name);
+            Assert.Equal(1, explanations.Count);
+            Assert.Equal(definition2.Name, explanations[0].Index);
+            Assert.Equal("Wasn't the most up to date index matching this query", explanations[0].Reason);
+
+            explanations.Clear();
+            VerifyIndex("FROM Users where Company = 'Hibernating Rhinos'", definition2.Name);
+            Assert.Equal(2, explanations.Count);
+            Assert.Equal(definition1.Name, explanations[0].Index);
+            Assert.Equal("The following field is missing: Company", explanations[0].Reason);
+            Assert.Equal(definition1.Name, explanations[1].Index);
+            Assert.Equal("A better match was available", explanations[1].Reason);
+
+            _documentDatabase.IndexStore.StartIndexing();
+            index = GetIndex(definition2.Name);
+            WaitForIndexMap(index, 1);
+
+            explanations.Clear();
+            VerifyIndex("FROM Users where Name = 'Grisha'", definition2.Name);
+            Assert.Equal(1, explanations.Count);
+            Assert.Equal(definition1.Name, explanations[0].Index);
+            Assert.Equal("Wasn't the widest index matching this query", explanations[0].Reason);
+
+            void VerifyIndex(string query, string expectedIndexName)
+            {
+                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(query));
+
+                var result = _sut.Match(dynamicQuery, explanations);
+
+                Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
+                Assert.Equal(expectedIndexName, result.IndexName);
+            }
+        }
+
+        private void AddIndex(AutoMapIndexDefinition definition)
         {
             AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()));
         }
 
-        private Index get_index(string name)
+        private Index GetIndex(string name)
         {
             return _documentDatabase.IndexStore.GetIndex(name);
         }

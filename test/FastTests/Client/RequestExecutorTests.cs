@@ -19,7 +19,7 @@ namespace FastTests.Client
         {
         }
 
-        [Theory]
+        [LicenseRequiredTheory]
         [InlineData(0, 1, "OnBeforeRequest", "OnAfterRequests")]
         [InlineData(1, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest", "OnAfterRequests")]
         [InlineData(2, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest")]

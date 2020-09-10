@@ -429,20 +429,22 @@ namespace Raven.Server.Documents
                         }
 
                         // @attachments
-                        SeenAttachments = true;
-                        if (OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false &&
-                            *(long*)(state.StringBuffer + 1) == 7308612546338255969 &&
+                        if (*(long*)(state.StringBuffer + 1) == 7308612546338255969 &&
                             *(short*)(state.StringBuffer + 1 + sizeof(long)) == 29806 &&
                             state.StringBuffer[1 + sizeof(long) + sizeof(short)] == (byte)'s')
                         {
-                            if (reader.Read() == false)
+                            SeenAttachments = true;
+                            if (OperateOnTypes.HasFlag(DatabaseItemType.Attachments) == false)
                             {
-                                _verifyStartArray = true;
-                                _state = State.IgnoreArray;
-                                aboutToReadPropertyName = false;
-                                return true;
+                                if (reader.Read() == false)
+                                {
+                                    _verifyStartArray = true;
+                                    _state = State.IgnoreArray;
+                                    aboutToReadPropertyName = false;
+                                    return true;
+                                }
+                                goto case -2;
                             }
-                            goto case -2;
                         }
                     }
 
