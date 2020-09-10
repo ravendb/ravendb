@@ -3082,23 +3082,27 @@ namespace Raven.Server.ServerWide
 
                     if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
                     {
-                        var editedConfigFound = false;
+                        var isBackupToEditFound = false;
                         foreach (BlittableJsonReaderObject backup in backups)
                         {
-                            //Even though we rebuild the whole list of the configurations just one should be modified
-                            //In addition the same configuration should be modified in all databases  
-                            if (editedConfigFound == false && CheckIfEditedConfig(backup, periodicBackupConfiguration, allSeverWideBackupNames, ref old, ref editedConfigFound))
+                            //Even though we rebuild the whole configurations list just one should be modified
+                            //In addition the same configuration should be modified in all databases 
+                            if (isBackupToEditFound || IsBackupToEdit(backup, periodicBackupConfiguration.Name, allSeverWideBackupNames) == false)
+                            {
+                                newBackups.Add(backup);
                                 continue;
-                            
-                            newBackups.Add(backup);
+                            }
+
+                            isBackupToEditFound = true;
+
+                            if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
+                                periodicBackupConfiguration.TaskId = taskId;
                         }
                     }
 
                     using (oldDatabaseRecord)
                     {
-                        periodicBackupConfiguration.TaskId = old.TaskId ?? serverWideBackupConfiguration.TaskId;
                         newBackups.Add(periodicBackupConfiguration.ToJson());
-
                         oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                         {
                             [nameof(DatabaseRecord.PeriodicBackups)] = newBackups
@@ -3113,37 +3117,26 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, old.TaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
         }
 
-        private static bool CheckIfEditedConfig(BlittableJsonReaderObject backup, 
-            PeriodicBackupConfiguration periodicBackupConfiguration, 
-            HashSet<string> allSeverWideBackupNames,
-            ref (long? TaskId, string Name) old, 
-            ref bool editedConfigFound)
+        private static bool IsBackupToEdit(BlittableJsonReaderObject backup, 
+            string periodicBackupConfigName, 
+            HashSet<string> severWideBackupNames)
         {
             if (backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string backupName) == false || backupName == null) 
                 return false;
+
+            if (backupName.StartsWith(ServerWideBackupConfiguration.NamePrefix) == false) 
+                return false;
             
-            if (old != default)
+            if (backupName.Equals(periodicBackupConfigName, StringComparison.OrdinalIgnoreCase))
             {
-                if (backupName.Equals(old.Name))
-                {
-                    editedConfigFound = true;
-                    return true;
-                }
-            }
-            else if (backupName.StartsWith(ServerWideBackupConfiguration.NamePrefix))
+                //server-wide backup to update when name is not modified
+                return true;
+            } 
+            if(severWideBackupNames.Contains(backupName) == false) 
             {
-                if (backupName.Equals(periodicBackupConfiguration.Name, StringComparison.OrdinalIgnoreCase) //Existing server-wide backup to update with __same__ name
-                    || allSeverWideBackupNames.Contains(backupName) == false) //Existing server-wide backup to update with __different__ name
-                {
-                    old.Name = backupName;
-                    if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
-                        old.TaskId = taskId;
-
-                    editedConfigFound = true;
-                    return true;
-                }
+                //server-wide backup to update when modify name
+                return true;
             }
-
             return false;
         }
 
