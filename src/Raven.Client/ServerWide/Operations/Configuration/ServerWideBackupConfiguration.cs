@@ -6,7 +6,6 @@ namespace Raven.Client.ServerWide.Operations.Configuration
     public class ServerWideBackupConfiguration : PeriodicBackupConfiguration
     {
         internal static string NamePrefix = "Server Wide Backup";
-        internal string ToRemoveFromDatabaseRecord { get; set; }
 
         public override DynamicJsonValue ToJson()
         {

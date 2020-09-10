@@ -43,7 +43,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 if (previousValue.TryGet(Value.Name, out object _) == false)
                 {
-                    if (prevTaskId > 0)
+                    if (prevTaskId != 0)
                     {
                         foreach (var propertyName in previousValue.GetPropertyNames())
                         {
@@ -71,10 +71,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 var modifications = new DynamicJsonValue(previousValue);
                 if (oldName != null && oldName.Equals(Value.Name) == false)
-                {
                     modifications.Remove(oldName);
-                    Value.ToRemoveFromDatabaseRecord = oldName;
-                }
 
                 modifications[Value.Name] = Value.ToJson();
                 var blittableJsonReaderObject = context.ReadObject(previousValue, Name);

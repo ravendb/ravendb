@@ -785,8 +785,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal($"{serverWideConfiguration.FtpSettings.Url}/{databaseName}", backupConfiguration.FtpSettings.Url);
         }
         
-        [Fact]
-        public async Task ServerWideBackup_WhenEditingName_ShouldNotCreateNewOne()
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(10)]
+        public async Task ServerWideBackup_WhenEditingName_ShouldNotCreateNewOne(int additionalBackupCount)
         {
             const string firstName = "FirstName";
             const string changedName = "changedName";
@@ -799,7 +802,26 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 LocalSettings = new LocalSettings {FolderPath = "test/folder"},
                 Name = firstName
             }));
+
+            for (var i = 0; i < additionalBackupCount; i++)
+            {
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "0 2 * * 0",
+                    LocalSettings = new LocalSettings {FolderPath = $"test/folder{i}"},
+                    Name = "NameServerWide" + i
+                }));
+                
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings {FolderPath = $"test/folder{i}"},
+                    IncrementalBackupFrequency = "0 2 * * 0",
+                    Name = "Name" + i
+                }));
+            }
             
+            var recordBeforeEditing = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
             var configuration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
             configuration.Name = changedName;
             await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(configuration));
@@ -809,9 +831,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var oldBackup = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(changedName));
             Assert.NotNull(oldBackup);
                 
-            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-            
-            Assert.Equal(1, record.PeriodicBackups.Count);
+            var recordAfterEditing = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+            Assert.True(recordBeforeEditing.PeriodicBackups.Count == recordAfterEditing.PeriodicBackups.Count, GatherAdditionalInformationOnFailing());
+            var beforeEditingConfig = recordBeforeEditing.PeriodicBackups.FirstOrDefault(b => b.Name.EndsWith(firstName));
+            Assert.True(beforeEditingConfig != null, GatherAdditionalInformationOnFailing());
+            var afterEditingConfig = recordAfterEditing.PeriodicBackups.First(b => b.Name.EndsWith(changedName));
+            Assert.True(afterEditingConfig != null, GatherAdditionalInformationOnFailing());
+            Assert.Equal(beforeEditingConfig.TaskId, afterEditingConfig.TaskId);
+
+            string GatherAdditionalInformationOnFailing()
+            {
+                return $"Periodic backups before editing: {string.Join("; ", recordBeforeEditing.PeriodicBackups.Select(b => b.Name))}{Environment.NewLine}" +
+                       $"Periodic backups after editing: {string.Join("; ", recordAfterEditing.PeriodicBackups.Select(b => b.Name))}";
+            }
         }
 
         [Fact]

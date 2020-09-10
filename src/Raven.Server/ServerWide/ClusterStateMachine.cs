@@ -3063,7 +3063,9 @@ namespace Raven.Server.ServerWide
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            long? oldTaskId = null;
+            (long? TaskId, string name) old = default;
+            
+            var allSeverWideBackupNames = GetSeverWideBackupNames(context);
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -3080,34 +3082,21 @@ namespace Raven.Server.ServerWide
 
                     if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
                     {
+                        var editedConfigFound = false;
                         foreach (BlittableJsonReaderObject backup in backups)
                         {
-                            if (backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string backupName)  == false || backupName == null)
-                                throw new RachisInvalidOperationException(
-                                    $"This {nameof(PeriodicBackupConfiguration)} of {result.Key} has no value for {nameof(PeriodicBackupConfiguration.Name)}. This should not happens\n{backup}");
-                            
-                            if (serverWideBackupConfiguration.ToRemoveFromDatabaseRecord != null)
-                            {
-                                var toRemove = PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(serverWideBackupConfiguration.ToRemoveFromDatabaseRecord);
-                                if(backupName.Equals(toRemove, StringComparison.OrdinalIgnoreCase))
-                                    continue;
-                            }
-                                
-                            if(backupName.Equals(periodicBackupConfiguration.Name, StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
-                                    oldTaskId = taskId;
-
+                            //Even though we rebuild the whole list of the configurations just one should be modified
+                            //In addition the same configuration should be modified in all databases  
+                            if (editedConfigFound == false && CheckIfEditedConfig(backup, periodicBackupConfiguration, allSeverWideBackupNames, ref old, ref editedConfigFound))
                                 continue;
-                            }
-
+                            
                             newBackups.Add(backup);
                         }
                     }
 
                     using (oldDatabaseRecord)
                     {
-                        periodicBackupConfiguration.TaskId = oldTaskId ?? serverWideBackupConfiguration.TaskId;
+                        periodicBackupConfiguration.TaskId = old.TaskId ?? serverWideBackupConfiguration.TaskId;
                         newBackups.Add(periodicBackupConfiguration.ToJson());
 
                         oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
@@ -3121,7 +3110,60 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, old.TaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
+        }
+
+        private static bool CheckIfEditedConfig(BlittableJsonReaderObject backup, 
+            PeriodicBackupConfiguration periodicBackupConfiguration, 
+            HashSet<string> allSeverWideBackupNames,
+            ref (long? TaskId, string Name) old, 
+            ref bool editedConfigFound)
+        {
+            if (backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string backupName) == false || backupName == null) 
+                return false;
+            
+            if (old != default)
+            {
+                if (backupName.Equals(old.Name))
+                {
+                    editedConfigFound = true;
+                    return true;
+                }
+            }
+            else if (backupName.StartsWith(ServerWideBackupConfiguration.NamePrefix))
+            {
+                if (backupName.Equals(periodicBackupConfiguration.Name, StringComparison.OrdinalIgnoreCase) //Existing server-wide backup to update with __same__ name
+                    || allSeverWideBackupNames.Contains(backupName) == false) //Existing server-wide backup to update with __different__ name
+                {
+                    old.Name = backupName;
+                    if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
+                        old.TaskId = taskId;
+
+                    editedConfigFound = true;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static unsafe HashSet<string> GetSeverWideBackupNames(TransactionOperationContext context)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, ServerWideBackupConfigurationsKey, out Slice valueNameLowered))
+            {
+                var severWideBackupNames = new HashSet<string>();
+                if (items.ReadByKey(valueNameLowered, out var tvr))
+                {
+                    var ptr = tvr.Read(2, out int size);
+                    using var previousValue = new BlittableJsonReaderObject(ptr, size, context);
+                    foreach (var backupName in previousValue.GetPropertyNames())
+                    {
+                        severWideBackupNames.Add(PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(backupName));
+                    }
+                } 
+                return severWideBackupNames;
+            }
         }
 
         private void DeleteServerWideBackupConfigurationFromAllDatabases(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
