@@ -7,7 +7,7 @@ function labelMatcher<T>(labels: Array<valueAndLabelItem<T, string>>): (arg: T) 
 }
 
 function yesNoLabelProvider(arg: boolean) {
-    return arg ? 'Yes' : 'No';
+    return arg ? "Yes" : "No";
 }
 
 interface analyzerName {
@@ -18,17 +18,27 @@ interface analyzerName {
 class indexFieldOptions {
 
     static readonly analyzersNamesDictionary: analyzerName[] = [
+        // default analyzer for indexing.Exact
         { shortName: "Keyword Analyzer", fullName: "KeywordAnalyzer" },
+        
+        // default analyzer for indexing.Default or when 'index fields options' are not defined
         { shortName: "LowerCase Keyword Analyzer", fullName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
+        
         { shortName: "LowerCase Whitespace Analyzer", fullName: "LowerCaseWhitespaceAnalyzer" },
         { shortName: "NGram Analyzer", fullName:"NGramAnalyzer" },
         { shortName: "Simple Analyzer", fullName: "SimpleAnalyzer" },
-        { shortName: "Standard Analyzer", fullName: null }, // default option
+        
+        // default analyzer for indexing.Search
+        { shortName: "Standard Analyzer", fullName: "StandardAnalyzer" },
+        
         { shortName: "Stop Analyzer", fullName: "StopAnalyzer" },
         { shortName: "Whitespace Analyzer", fullName:"WhitespaceAnalyzer" }
+        
     ];
 
-    static readonly analyzersNames = indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName);
+    static readonly analyzersNames = indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName)
+        // exclude the default analyzer from dropdown list (shown only for Indexing.Default is selected)
+        .filter(x => x != "LowerCase Keyword Analyzer");
 
     static readonly DefaultFieldOptions = "__all_fields";
     
@@ -74,12 +84,20 @@ class indexFieldOptions {
     name = ko.observable<string>();
     
     isDefaultFieldOptions = ko.pureComputed(() => this.name() === indexFieldOptions.DefaultFieldOptions);
-    isStandardAnalyzer = ko.pureComputed(() => !this.analyzer() || this.analyzer() === 'StandardAnalyzer' || this.analyzer() === 'Lucene.Net.Analysis.Standard.StandardAnalyzer');
-
+    
     parent = ko.observable<indexFieldOptions>();
 
     analyzer = ko.observable<string>();
-
+    disabledAnalyzerText = ko.observable<string>();
+    
+    isDefaultAnalyzer = ko.pureComputed(() => this.analyzer() === "LowerCase Keyword Analyzer" ||
+                                              this.analyzer() === "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer");
+    
+    // show analyzer only if Indexing.Search defined -or- if analyzer is defined
+    showAnalyzer = ko.pureComputed(() => this.indexing() === "Search" ||
+                                         (this.indexing() === null && this.parent().indexing() === "Search") ||
+                                         this.analyzer());
+    
     indexing = ko.observable<Raven.Client.Documents.Indexes.FieldIndexing>();
     effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
     defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
@@ -105,10 +123,10 @@ class indexFieldOptions {
     defaultHighlighting = this.defaultComputed(x => x.highlighting(), yesNoLabelProvider);
 
     spatial = ko.observable<spatialOptions>();
-
     hasSpatialOptions = ko.observable<boolean>(false);
+    
     showAdvancedOptions = ko.observable<boolean>(false);
-    canProvideAnalyzer = ko.pureComputed(() => this.indexing() === "Search");
+    explainIndexingStatus: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
@@ -116,7 +134,12 @@ class indexFieldOptions {
     constructor(name: string, dto: Raven.Client.Documents.Indexes.IndexFieldOptions, parentFields?: indexFieldOptions) {
         this.name(name);
         this.parent(parentFields);
+        
         this.analyzer(dto.Analyzer);
+        if (this.isDefaultAnalyzer()) {
+            this.analyzer("LowerCase Keyword Analyzer"); // show short name in ui
+        }
+        
         this.indexing(dto.Indexing);
         this.storage(dto.Storage);
         this.suggestions(dto.Suggestions);
@@ -129,17 +152,12 @@ class indexFieldOptions {
             this.spatial(spatialOptions.empty());
         }
         
-        if (this.indexing() === "Search" && this.isStandardAnalyzer()) {
-            this.fullTextSearch(true);
-            
-            if (this.storage() === "Yes" && this.termVector() === "WithPositionsAndOffsets") {
-                this.highlighting(true);
-            }
-        }
+        this.computeFullTextSearch();
+        this.computeHighlighting();
         
         if ((this.termVector() && this.termVector() !== "No") ||
             (this.indexing() && this.indexing() !== "Default") ||
-            (this.analyzer() && this.analyzer() !== "StandardAnalyzer")) {
+            this.analyzer()) {
             this.showAdvancedOptions(true);
         }
         
@@ -153,66 +171,69 @@ class indexFieldOptions {
         // used to avoid circular updates
         let changeInProgess = false;
 
-        const onFullTextChanged = () => {
+        this.fullTextSearch.subscribe(() => {
             if (!changeInProgess) {
                 const newValue = this.fullTextSearch();
                 
                 changeInProgess = true;
                 
-                if (newValue) {
-                    this.analyzer(null);
-                    this.indexing("Search");
-                    
-                    // make sure advanced options are visible
-                    this.showAdvancedOptions(true);
-                } else {
-                    this.analyzer(null);
-                    this.indexing("Default");
+                switch (newValue) {
+                    case true:
+                        this.indexing("Search");
+                        this.showAdvancedOptions(true);
+                        break;
+                    case false:
+                        this.indexing("Default");
+                        break;
+                    case null:
+                        if (this.parent().fullTextSearch()) {
+                            this.indexing("Search");
+                            this.showAdvancedOptions(true);
+                        } else {
+                            this.indexing("Default");
+                        }
+                        break;
                 }
                 
+                this.computeAnalyzer();
                 this.computeHighlighting();
+                
                 changeInProgess = false;
             }
-        };
+        });
 
-        this.fullTextSearch.subscribe(() => onFullTextChanged());
-        
-        const onHighlightingChanged = () => {
+        this.highlighting.subscribe(() => {
             if (!changeInProgess) {
                 const newValue = this.highlighting();
 
                 changeInProgess = true;
                 
                 if (newValue) {
-                    this.analyzer(null);
                     this.storage("Yes");
                     this.indexing("Search");
                     this.termVector("WithPositionsAndOffsets");
                 } else if (newValue === null) {
-                    this.analyzer(null);
                     this.storage(null);
                     this.indexing(null);
                     this.termVector(null);
                 } else {
-                    this.analyzer(null);
                     this.storage("No");
                     this.indexing("Default");
                     this.termVector("No");
                 }
                 
+                this.computeAnalyzer();
                 this.computeFullTextSearch();
                 changeInProgess = false;
             }
-        };
-        
-        this.highlighting.subscribe(() => onHighlightingChanged());
+        });
         
         this.indexing.subscribe(() => {
             if (!changeInProgess) {
                 changeInProgess = true;
+                this.computeAnalyzer();
                 this.computeFullTextSearch();
                 this.computeHighlighting();
-                this.computeAnalyzer();
                 changeInProgess = false;
             }
         });
@@ -254,20 +275,51 @@ class indexFieldOptions {
             this.hasSpatialOptions,
             this.spatial().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+
+        this.explainIndexingStatus = ko.pureComputed(() => {
+           // This case can result from defining an index outside of Studio, where Analyzer is defined but Indexing is Not defined.
+           // In this case the server uses Indexing.Search under the hood, even though we get Indexing.Default from the server.
+           return (!!this.analyzer() &&
+                   !this.isDefaultAnalyzer() &&
+                   this.indexing() === null && 
+                   (this.parent().indexing() === null || this.parent().indexing() === "Default"));
+        });
     }
 
     private computeFullTextSearch() {
-        this.fullTextSearch(this.isStandardAnalyzer() &&
-            this.indexing() === "Search");
+        let fts = false;
         
-        if (this.indexing() === null) {
-            this.fullTextSearch(null);
-        } 
+        switch (this.indexing()) {
+            case "Search":
+                fts = true;
+                break;
+            // 'Exact', 'No' & 'Default' stay false
+            case null:
+                if (!this.analyzer()) {
+                    fts = null;
+                } else {
+                    switch (this.parent().indexing()) {
+                        case "Search":
+                            fts = true;
+                            break;
+                        // 'Exact' & 'No' stay false
+                        case "Default":
+                        case null:
+                            if (!this.isDefaultAnalyzer()) {
+                                fts = true;
+                            }
+                            break;
+                    }
+                }
+                break;
+        }
+        
+        this.fullTextSearch(fts);
     }
 
     private computeHighlighting() {
         this.highlighting(!this.analyzer() &&
-                           this.indexing() === 'Search' &&
+                           this.indexing() === "Search" &&
                            this.storage() === "Yes" && 
                            this.termVector() === "WithPositionsAndOffsets");
        
@@ -277,10 +329,35 @@ class indexFieldOptions {
         }
     }
     
-    private computeAnalyzer() {
-        if (this.indexing() === null) {
-            // take analyzer from default if indexing is set to 'inherit'
-            this.analyzer(this.parent().analyzer());
+    public computeAnalyzer() {
+        const thisIndexing = this.indexing();
+        const parentIndexing = this.parent().indexing();
+
+        if (thisIndexing === "No" ||
+           (thisIndexing === null && parentIndexing === "No")) {
+            this.analyzer(null);
+        }
+        
+        this.disabledAnalyzerText("");
+        const helpMsg = "To set a different analyzer, select the 'Indexing.Search' option first."
+        
+        if (thisIndexing === "Exact" ||
+           (thisIndexing === null && parentIndexing === "Exact")) {
+            this.analyzer("KeywordAnalyzer"); 
+            this.disabledAnalyzerText("KeywordAnalyzer is used when selecting Indexing.Exact. " + helpMsg);
+        } 
+        
+        if (thisIndexing === "Default" ||
+           (thisIndexing === null && parentIndexing === "Default") ||
+           (thisIndexing === null && parentIndexing === null)) {
+            this.analyzer("LowerCase Keyword Analyzer");
+            this.disabledAnalyzerText("LowerCaseKeywordAnalyzer is used when selecting Indexing.Default. " + helpMsg);
+        }
+        
+        if (thisIndexing === "Search" ||
+            (thisIndexing === null && parentIndexing === "Search"))
+        {
+            this.analyzer("StandardAnalyzer");
         }
     }
     
@@ -378,4 +455,4 @@ class indexFieldOptions {
     }
 }
 
-export = indexFieldOptions; 
+export = indexFieldOptions;

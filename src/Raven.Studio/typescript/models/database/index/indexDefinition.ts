@@ -81,13 +81,17 @@ class indexDefinition {
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
             this.defaultFieldOptions(defaultFieldOptions);
+            
             defaultFieldOptions.parent(indexFieldOptions.globalDefaults());
             this.fields.remove(defaultFieldOptions);
 
             this.fields().forEach(field => {
                 field.parent(defaultFieldOptions);
             });
+
+            this.initDefaultFieldOptionsSubscriptions();
         }
+        
         this.lockMode = dto.LockMode;
         this.priority(dto.Priority);
         this.configuration(this.parseConfiguration(dto.Configuration));
@@ -103,7 +107,7 @@ class indexDefinition {
         }
     } 
     
-    private initValidation() {        
+    private initValidation() {
         
         const checkIndexName = (val: string,
                                 params: any,
@@ -142,7 +146,7 @@ class indexDefinition {
             },
             validation: [
                 {
-                    validator: (reduceContent: string) =>  (this.hasReduce() && reduceContent && reduceContent.trim()) ||
+                    validator: (reduceContent: string) => (this.hasReduce() && reduceContent && reduceContent.trim()) ||
                                                            !this.hasReduce(),
                     message: `Reduce function is empty`
                 }
@@ -179,7 +183,21 @@ class indexDefinition {
             fields: this.fields
         });
     }
+    
+    private initDefaultFieldOptionsSubscriptions() {
+        this.defaultFieldOptions().indexing.subscribe(() => {
+            this.fields().forEach(x => x.computeAnalyzer())
+        });
 
+        this.defaultFieldOptions().fullTextSearch.subscribe(() => {
+            this.fields().forEach(x => {
+                if (x.fullTextSearch() === null) {
+                    x.fullTextSearch.valueHasMutated();
+                }
+            })
+        })
+    }
+    
     private parseConfiguration(config: Raven.Client.Documents.Indexes.IndexConfiguration): Array<configurationItem> {
         const configurations = [] as configurationItem[];
 
@@ -222,7 +240,7 @@ class indexDefinition {
     
     private additionalSourceToDto(): dictionary<string> {
         if (!this.additionalSources().length) {
-            return null;  
+            return null;
         }
         const result = {} as dictionary<string>;
         
@@ -284,6 +302,8 @@ class indexDefinition {
         this.fields().forEach(field => {
             field.parent(fieldOptions);
         });
+        
+        this.initDefaultFieldOptionsSubscriptions();
     }
 
     addConfigurationOption() {

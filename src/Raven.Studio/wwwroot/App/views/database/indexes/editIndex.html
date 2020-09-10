@@ -1,11 +1,11 @@
-<div data-bind="if:  !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
+<div data-bind="if: !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
     <div class="flex-window edit-index">
         <div class="toolbar">
             <div class="row">
                 <div class="col-lg-6">
                     <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
                         <div class="input-group-addon">Index name</div>
-                        <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus">
+                        <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus" />
                     </div>
                 </div>
             </div>
@@ -27,7 +27,7 @@
             <div class="col-sm-2">
                 <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background">Maps</h2>
                 <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
-            </div>           
+            </div>
             <div class="col-sm-10">
                 <div data-bind="foreach: editedIndex().maps">
                     <div class="clearfix">
@@ -94,7 +94,7 @@
                     <div class="row">
                         <div class="col-lg-4">
                             <div class="toggle margin-left">
-                                <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection">
+                                <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection" />
                                 <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
                                     <small><i id="reduce-output-info" class="icon-info text-info"></i></small>
                                 </label>
@@ -103,14 +103,14 @@
                         <div class="col-lg-7 margin-left">
                             <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
                                 <input type="text" class="form-control" placeholder="Enter Name for the Reduce Results Collection"
-                                       data-bind="textInput: reduceOutputCollectionName" autocomplete="off">
+                                       data-bind="textInput: reduceOutputCollectionName" autocomplete="off" />
                             </div>
                         </div>
                     </div>
                     <div class="row" data-bind="collapse: outputReduceToCollection()">
                         <div class="col-lg-5">
                             <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
-                                <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection">
+                                <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection" />
                                 <label class="control-label"><strong>Create References to Results Collection </strong>
                                     <small><i id="reference-docs-info" class="icon-info text-info"></i></small>
                                 </label>
@@ -126,7 +126,7 @@
                             </div>
                             <div class="col-lg-7 margin-left">
                                 <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID" id="referencePattern"
-                                       data-bind="textInput: patternForReferencesToReduceOutputCollection" autocomplete="off">
+                                       data-bind="textInput: patternForReferencesToReduceOutputCollection" autocomplete="off" />
                             </div>
                         </div>
                         <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
@@ -137,7 +137,7 @@
                             </div>
                             <div class="col-lg-7 margin-left">
                             <input type="text" class="form-control" placeholder="Enter Name for the Reference Documents Collection (Optional)" id="referenceCollectionName"
-                                   data-bind="textInput: collectionNameForReferenceDocuments" autocomplete="off">
+                                   data-bind="textInput: collectionNameForReferenceDocuments" autocomplete="off" />
                             </div>
                         </div>
                     </div>
@@ -191,7 +191,7 @@
                                     <div class="form-group">
                                         <!--<label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>-->
                                         <div class="col-xs-12 col-sm-7 col-lg-8" data-bind="css: {  }, validationElement: key">
-                                            <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" autocomplete="off">
+                                            <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" autocomplete="off" />
                                             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
                                                 <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
                                                     <a role="menuitem" tabindex="-1" href="#">
@@ -201,7 +201,7 @@
                                             </ul>
                                         </div>
                                         <div class="col-xs-9 col-sm-3" data-bind="validationElement: value">
-                                            <input class="form-control" placeholder="Value" data-bind="textInput: value">
+                                            <input class="form-control" placeholder="Value" data-bind="textInput: value" />
                                         </div>
                                         <div class="col-xs-3 col-sm-2 col-lg-1">
                                             <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)"><i class="icon-trash"></i></button>
@@ -217,7 +217,7 @@
                 </div>
                 <div role="tabpanel" class="tab-pane fade" id="additionalSources">
                     <div class="flex-horizontal">
-                        <input type="file" accept=".cs,.js" id="additionalSourceFilePicker" class="hidden" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1">
+                        <input type="file" accept=".cs,.js" id="additionalSourceFilePicker" class="hidden" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" />
                         <div>
                             <label for="additionalSourceFilePicker" class="btn btn-primary">
                                 <i class="icon-upload"></i><span>Upload Source File</span>
@@ -253,7 +253,7 @@
                 <div class="col-lg-8 col-xl-6 flex-horizontal">
                     <div class="input-group flex-grow" data-bind="validationElement: editedIndex().name">
                         <div class="input-group-addon">Index name</div>
-                        <input class="form-control" data-bind="textInput: editedIndex().name" disabled>
+                        <input class="form-control" data-bind="textInput: editedIndex().name" disabled />
                     </div>
                 </div>
                 <div class="col-lg-4 col-xl-6 flex-horizontal">
@@ -348,10 +348,10 @@
 <script type="text/html" id="field-template">
     <div class="panel-body">
         <div class="row">
-            <div class="col-xs-8 col-sm-6 col-xl-3  margin-bottom">
+            <div class="col-xs-8 col-sm-6 col-xl-3 margin-bottom">
                 <h3 data-bind="visible: isDefaultOptions()">Default field options</h3>
                 <div class="form-group" data-bind="if: !isDefaultOptions(), validationElement: name">
-                    <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }">
+                    <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }" />
                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#fieldName' + $index(), foreach: $root.createFieldNameAutocompleter($data)">
                         <li role="presentation" data-bind="click: $parent.name.bind($parent, $data)">
                             <a role="menuitem" tabindex="-1" href="#">
@@ -361,7 +361,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right  margin-bottom">
+            <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right margin-bottom">
                 <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, click: toggleAdvancedOptions">
                     <i class="icon-settings"></i><span>Advanced</span>
                 </button>
@@ -425,7 +425,7 @@
                     </div>
                     <div class="properties-item" data-bind="visible: !isDefaultOptions(), if: !isDefaultOptions()">
                         <div class="toggle toggle-right">
-                            <input class="styled" type="checkbox" data-bind="checked: hasSpatialOptions, attr: { id: 'spatial_toggle_' + $index() }">
+                            <input class="styled" type="checkbox" data-bind="checked: hasSpatialOptions, attr: { id: 'spatial_toggle_' + $index() }" />
                             <label class="properties-label" data-bind="attr: { for: 'spatial_toggle_' + $index() }">
                                 Spatial
                             </label>
@@ -538,7 +538,11 @@
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Indexing</span>
+                            <span class="properties-label">Indexing
+                                <span class="margin-left margin-left-sm" data-bind="visible: explainIndexingStatus">
+                                    <i class="icon-info text-info indexing-status"></i>
+                                </span>
+                            </span>
                             <div class="btn-group properties-value">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveIndexing }">
                                     <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
@@ -551,20 +555,23 @@
                                 </ul>
                             </div>
                         </div>
-                        <div class="properties-item" data-bind="visible: canProvideAnalyzer">
+                        <div class="properties-item" data-bind="visible: showAnalyzer">
                             <span class="properties-label">Analyzer</span>
                             <div class="btn-group properties-value">
-                                <input class="form-control" placeholder="StandardAnalyzer" autocomplete="off"
-                                       data-bind="textInput: analyzer, attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()) }">
-                                <ul class="dropdown-menu" role="menu"
-                                    data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: $root.createAnalyzerNameAutocompleter($data.analyzer()),
-                                               css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
-                                    <li role="presentation" data-bind="click: $parent.analyzer.bind($parent, $data)" >
-                                        <a role="menuitem" tabindex="-1" href="#">
-                                            <span data-bind="text: $data"></span>
-                                        </a>
-                                    </li>
-                                </ul>
+                                <div class="has-disable-reason" data-bind="attr: { 'data-original-title': disabledAnalyzerText }" data-placement="top">
+                                    <input class="form-control" placeholder="StandardAnalyzer" autocomplete="off"
+                                           data-bind="textInput: analyzer, disable: !!disabledAnalyzerText(),
+                                                      attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()) }" />
+                                    <ul class="dropdown-menu" role="menu"
+                                        data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: $root.createAnalyzerNameAutocompleter($data.analyzer()),
+                                                       css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
+                                        <li role="presentation" data-bind="click: $parent.analyzer.bind($parent, $data)" >
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
