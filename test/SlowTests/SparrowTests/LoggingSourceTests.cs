@@ -81,7 +81,7 @@ namespace SlowTests.SparrowTests
                     await logger.OperationsAsync("Some message");
                 }
                 afterEndFiles = Directory.GetFiles(path);
-                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.fileName.Contains(f) && tc.shouldExist == false));
+                return IsContainsShouldNotExistFiles(afterEndFiles, toCheckLogFiles, compressing);
             }, false, 10_000, 1_000);
 
             loggingSource.EndLogging();
@@ -109,6 +109,12 @@ namespace SlowTests.SparrowTests
             {
                 throw new InvalidOperationException($"Logs after end - {JustFileNamesAsString(afterEndFiles)}", e);
             }
+        }
+
+        private static bool IsContainsShouldNotExistFiles(string[] exitFiles, List<(string fileName, bool shouldExist)> toCheckLogFiles, bool compressing)
+        {
+            return exitFiles.Any(f => toCheckLogFiles
+                .Any(tc => tc.shouldExist == false && (tc.fileName.Equals(f) || compressing && (tc.fileName + ".gz").Equals(f))));
         }
 
         [Theory]
@@ -258,7 +264,7 @@ namespace SlowTests.SparrowTests
                     await logger.OperationsAsync("Some message");
                 }
                 afterEndFiles = Directory.GetFiles(path);
-                return afterEndFiles.Any(f => toCheckLogFiles.Any(tc => tc.fileName.Equals(f) && tc.shouldExist == false));
+                return IsContainsShouldNotExistFiles(afterEndFiles, toCheckLogFiles, compressing);
             }, false, 10_000, 1_000);
 
             loggingSource.EndLogging();
