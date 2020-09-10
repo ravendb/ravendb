@@ -81,7 +81,7 @@ namespace SlowTests.SparrowTests
                     await logger.OperationsAsync("Some message");
                 }
                 afterEndFiles = Directory.GetFiles(path);
-                return IsContainsShouldNotExistFiles(afterEndFiles, toCheckLogFiles, compressing);
+                return DoesContainFilesThatShouldNotBeFound(afterEndFiles, toCheckLogFiles, compressing);
             }, false, 10_000, 1_000);
 
             loggingSource.EndLogging();
@@ -111,7 +111,7 @@ namespace SlowTests.SparrowTests
             }
         }
 
-        private static bool IsContainsShouldNotExistFiles(string[] exitFiles, List<(string fileName, bool shouldExist)> toCheckLogFiles, bool compressing)
+        private static bool DoesContainFilesThatShouldNotBeFound(string[] exitFiles, List<(string fileName, bool shouldExist)> toCheckLogFiles, bool compressing)
         {
             return exitFiles.Any(f => toCheckLogFiles
                 .Any(tc => tc.shouldExist == false && (tc.fileName.Equals(f) || compressing && (tc.fileName + ".gz").Equals(f))));
@@ -264,7 +264,7 @@ namespace SlowTests.SparrowTests
                     await logger.OperationsAsync("Some message");
                 }
                 afterEndFiles = Directory.GetFiles(path);
-                return IsContainsShouldNotExistFiles(afterEndFiles, toCheckLogFiles, compressing);
+                return DoesContainFilesThatShouldNotBeFound(afterEndFiles, toCheckLogFiles, compressing);
             }, false, 10_000, 1_000);
 
             loggingSource.EndLogging();
