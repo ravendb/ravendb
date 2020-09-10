@@ -204,10 +204,25 @@ class editIndex extends viewModelBase {
                             "</li>" +
                             "<li>" +
                                 "<strong>Default name</strong> is: <strong>'{reduce-results-collection-name} / References.'</strong>" +
-                            "</li>" +                    
+                            "</li>" +
                         "</ul> " +
                     "</small>"
             });
+
+        popoverUtils.longWithHover($(".indexing-status"),
+            {
+                content:
+                    `<small>
+                        This index field was defined outside of studio.<br>
+                        The <strong>Indexing</strong> property contains <i>'Default'</i> since it was not set for this index field.<br>
+                        Note: the server will be using <strong>Indexing.Search</strong> since an Analyzer is defined.
+                    </small>`
+            });
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+        this.setupDisableReasons();
     }
     
     private initValidation() {
@@ -247,7 +262,7 @@ class editIndex extends viewModelBase {
         
         const hasAnyDirtyConfiguration = ko.pureComputed(() => {
            let anyDirty = false;
-           indexDef.configuration().forEach(config =>  {
+           indexDef.configuration().forEach(config => {
                if (config.dirtyFlag().isDirty()) {
                    anyDirty = true;
                } 
@@ -257,7 +272,7 @@ class editIndex extends viewModelBase {
         
         const hasAnyDirtyField = ko.pureComputed(() => {
             let anyDirty = false;
-            indexDef.fields().forEach(field =>  {
+            indexDef.fields().forEach(field => {
                 if (field.dirtyFlag().isDirty()) {
                     anyDirty = true;
                 }
@@ -350,6 +365,7 @@ class editIndex extends viewModelBase {
     addField() {
         eventsCollector.default.reportEvent("index", "add-field");
         this.editedIndex().addField();
+        this.setupDisableReasons();
     }
 
     removeField(field: indexFieldOptions) {
@@ -364,6 +380,7 @@ class editIndex extends viewModelBase {
     addDefaultField() {
         eventsCollector.default.reportEvent("index", "add-field");
         this.editedIndex().addDefaultField();
+        this.setupDisableReasons();
     }
 
     addConfigurationOption() {
@@ -500,7 +517,7 @@ class editIndex extends viewModelBase {
     }
 
     save() {
-        const editedIndex = this.editedIndex();      
+        const editedIndex = this.editedIndex();
         
         viewHelpers.asyncValidationCompleted(editedIndex.validationGroup, () => {
             if (!this.validate()) {
@@ -620,7 +637,7 @@ class editIndex extends viewModelBase {
         new formatIndexCommand(this.activeDatabase(), textToFormat())
             .execute()
             .done((formatedText) => {
-                textToFormat(formatedText.Expression);             
+                textToFormat(formatedText.Expression);
             });
     }
 
@@ -629,7 +646,7 @@ class editIndex extends viewModelBase {
         fileImporter.readAsText(fileInput, (data, fileName) => this.onFileAdded(fileName, data));
     }
     
-    private onFileAdded(fileName: string, contents: string) {        
+    private onFileAdded(fileName: string, contents: string) {
         const newItem = additionalSource.create(this.findUniqueNameForAdditionalSource(fileName), contents);
         this.editedIndex().additionalSources.push(newItem);
         this.selectedSourcePreview(newItem);
@@ -675,7 +692,7 @@ class editIndex extends viewModelBase {
     shouldDropupMenu(field: indexFieldOptions, placeInList: number) {
         return ko.pureComputed(() => {
 
-            // todo: calculate dropup menu according to location in view port..        
+            // todo: calculate dropup menu according to location in view port..
 
             if (field.isDefaultFieldOptions() && this.editedIndex().fields().length)
                 return false; // both default + a field is showing

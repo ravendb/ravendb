@@ -12,6 +12,7 @@ class getIndexDefinitionCommand extends commandBase {
         const args = {
             name: this.indexName
         };
+        
         const url = endpoints.databases.index.indexes;
 
         const extractor = (results: resultsDto<Raven.Client.Documents.Indexes.IndexDefinition>) =>
