@@ -2,11 +2,16 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
+using Sparrow.LowMemory;
 
 namespace Raven.Server.Config.Categories
 {
     public class PerformanceHintsConfiguration : ConfigurationCategory
     {
+        public PerformanceHintsConfiguration()
+        {
+            MinSwapSize = MemoryInformation.TotalPhysicalMemory;
+        }
         [Description("The size of a document after which it will get into the huge documents collection")]
         [DefaultValue(5)]
         [SizeUnit(SizeUnit.Megabytes)]
@@ -33,5 +38,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         public TimeSetting TooLongRequestThreshold { get; set; }
+        
+        [Description("The minimum swap size. If the swap size is lower a notification will arise")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("PerformanceHints.Memory.MinSwapSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MinSwapSize { get; set; }
     }
 }

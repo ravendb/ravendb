@@ -20,8 +20,6 @@ namespace Raven.Server.Config.Categories
             UseTotalDirtyMemInsteadOfMemUsage = PlatformDetails.RunningOnDocker;
 
             EnableHighTemporaryDirtyMemoryUse = false; //MemoryInformation.TotalPhysicalMemory.GetValue(SizeUnit.Gigabytes) >= 2;
-
-            MinSwapSize = MemoryInformation.TotalPhysicalMemory;
         }
 
         [Description("The minimum amount of available memory RavenDB will attempt to achieve (free memory lower than this value will trigger low memory behavior)")]
@@ -73,11 +71,5 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Memory.TemporaryDirtyMemoryChecksPeriodInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting TemporaryDirtyMemoryChecksPeriod { get; set; }
-        
-        [Description("The minimum swap size. If the swap size is lower a notification will arise")]
-        [DefaultValue(DefaultValueSetInConstructor)]
-        [SizeUnit(SizeUnit.Megabytes)]
-        [ConfigurationEntry("Memory.MinSwapSize", ConfigurationEntryScope.ServerWideOnly)]
-        public Size MinSwapSize { get; set; }
     }
 }
