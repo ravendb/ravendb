@@ -9,42 +9,25 @@ class serverWideBackupConfiguration extends periodicBackupConfiguration {
                 dto: Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration, 
                 serverLimits: periodicBackupServerLimitsResponse, 
                 encryptedDatabase: boolean,
-        isServerWide: boolean) {
+                isServerWide: boolean) {
 
         super(databaseName, dto, serverLimits, encryptedDatabase, isServerWide);
+
+        this.databasesToExclude(dto.ExcludedDatabases);
     }
 
     toDto(): Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration {
         const backupConfigurationDto = super.toDto();
 
         const dto = backupConfigurationDto as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration;
-        dto.DatabasesToExclude = this.databasesToExclude();
+        dto.ExcludedDatabases = this.databasesToExclude();
         return dto;
     }
 
     static empty(databaseName: KnockoutObservable<string>, serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean, isServerWide: boolean): serverWideBackupConfiguration {
-        return new serverWideBackupConfiguration(databaseName, {
-            TaskId: 0,
-            Disabled: false,
-            Name: null,
-            BackupType: null,
-            FullBackupFrequency: null,
-            IncrementalBackupFrequency: null,
-            LocalSettings: null,
-            S3Settings: null,
-            GlacierSettings: null,
-            AzureSettings: null,
-            GoogleCloudSettings: null,
-            FtpSettings: null,
-            MentorNode: null,
-            BackupEncryptionSettings: {
-                Key: "",
-                EncryptionMode: null
-            },
-            SnapshotSettings: null,
-            RetentionPolicy: null,
-            ExcludedDatabases: null
-        }, serverLimits, encryptedDatabase, isServerWide);
+        const dto = periodicBackupConfiguration.emptyDto() as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration;
+        dto.ExcludedDatabases = null;
+        return new serverWideBackupConfiguration(databaseName, dto, serverLimits, encryptedDatabase, isServerWide);
     }
 }
 
