@@ -250,7 +250,11 @@ class periodicBackupConfiguration {
     }
 
     static empty(databaseName: KnockoutObservable<string>, serverLimits: periodicBackupServerLimitsResponse, encryptedDatabase: boolean, isServerWide: boolean): periodicBackupConfiguration {
-        return new periodicBackupConfiguration(databaseName, {
+        return new periodicBackupConfiguration(databaseName, periodicBackupConfiguration.emptyDto(), serverLimits, encryptedDatabase, isServerWide);
+    }
+
+    static emptyDto(): Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration {
+        return {
             TaskId: 0,
             Disabled: false,
             Name: null,
@@ -270,8 +274,7 @@ class periodicBackupConfiguration {
             },
             SnapshotSettings: null,
             RetentionPolicy: null,
-            
-        }, serverLimits, encryptedDatabase, isServerWide);
+        }
     }
 }
 
