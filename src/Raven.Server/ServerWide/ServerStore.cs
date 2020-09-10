@@ -708,7 +708,7 @@ namespace Raven.Server.ServerWide
                 NotificationCenter.Add(alertRaised);
             }
             
-            if(PlatformDetails.RunningOnDocker == false)
+            if (PlatformDetails.RunningOnDocker == false)
                 CheckSwapAndRaiseNotification();
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
@@ -730,11 +730,11 @@ namespace Raven.Server.ServerWide
 
         private void CheckSwapAndRaiseNotification()
         {
-            var swapSize = Server.MetricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended).TotalSwapSize;
-            if (swapSize < Configuration.Memory.MinSwapSize)
+            var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
+            if (swapSize < Configuration.PerformanceHints.MinSwapSize)
                 NotificationCenter.Add(AlertRaised.Create(null, 
                     "Low swap size",
-                    $"The current swap size is {swapSize} and it is lower then the threshold defined {Configuration.Memory.MinSwapSize}", 
+                    $"The current swap size is {swapSize} and it is lower then the threshold defined {Configuration.PerformanceHints.MinSwapSize}", 
                     AlertType.LowSwapSize,
                     NotificationSeverity.Warning));
         }
