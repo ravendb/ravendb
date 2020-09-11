@@ -173,7 +173,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 return null;
             }
             
-            string groupByTag;
+            string groupByTag = null;
 
             switch (groupByCall.Method.Name)
             {
@@ -189,15 +189,32 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                                 ThrowInvalidMethodArgument(groupByCall, nameof(ITimeSeriesAggregationOperations.ByTag));
                                 return null;
                             }
+                            LoadByTag(groupByTagCall.Parameters[0].Name);
 
-                            if (groupByTagCall.Body.NodeType != ExpressionType.Convert || !(groupByTagCall.Body is UnaryExpression convert))
+                            switch (groupByTagCall.Body.NodeType)
                             {
-                                ThrowInvalidMethodArgument(groupByTagCall.Body, "parameter must be of Convert type e.g. 'ByTag<User>(user => user.Name)'");
-                                return null;
+                                case ExpressionType.Convert:
+                                    if (!(groupByTagCall.Body is UnaryExpression convert))
+                                    {
+                                        ThrowInvalidMethodArgument(groupByTagCall.Body, "parameter must be of Convert type e.g. 'ByTag<User>(user => user.Name)'");
+                                        return null;
+                                    }
+                                    groupByTag = $", {convert.Operand}";
+
+                                    break;
+                                case ExpressionType.Parameter:
+                                case ExpressionType.MemberAccess:
+
+                                    groupByTag = $", {groupByTagCall.Body}";
+
+                                    break;
+                                   
+                                default:
+                                    ThrowInvalidMethodArgument(groupByTagCall.Body, "Not supported type");
+                                    return null;
                             }
 
-                            LoadByTag(groupByTagCall.Parameters[0].Name);
-                            groupByTag = $", {convert.Operand}";
+
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(nameof(ITimeSeriesAggregationOperations.ByTag), "Invalid number of arguments");

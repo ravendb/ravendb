@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         private Dictionary<string, Document> _loadedDocuments;
 
+        private Dictionary<LazyStringValue, object> _bucketByTag;
+
         private string _source;
         private string _collection;
 
@@ -118,7 +120,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             var aggregationTypes = InitializeAggregationStates(timeSeriesFunction);
 
-            var aggregationHolder = new AggregationHolder(_context.Allocator, aggregationTypes, interpolationType);
+            var aggregationHolder = new AggregationHolder(_context, aggregationTypes, interpolationType);
 
             return GetAggregatedValues();
 
@@ -148,15 +150,24 @@ namespace Raven.Server.Documents.Queries.Results
             object GetBucket(SingleResult result = null)
             {
                 if (result == null)
-                    return null;
+                    return AggregationHolder.NullBucket;
 
                 if (timeSeriesFunction.GroupBy.HasGroupByTag == false)
-                    return null;
+                    return AggregationHolder.NullBucket;
+
 
                 if (timeSeriesFunction.GroupBy.Tag)
+                {
+                    if (result.Tag == null)
+                        return AggregationHolder.NullBucket;
                     return result.Tag;
+                }
 
-                return GetValueFromLoadedTag(timeSeriesFunction.GroupBy.Field, result);
+                _bucketByTag ??= new Dictionary<LazyStringValue, object>(LazyStringValueComparer.Instance);
+                if (_bucketByTag.TryGetValue(result.Tag, out var value))
+                    return value;
+
+                return _bucketByTag[result.Tag.Clone(_context)] = GetValueFromLoadedTag(timeSeriesFunction.GroupBy.Field, result) ?? AggregationHolder.NullBucket;
             }
 
             bool MaybeMoveToNextRange(DateTime ts, out IEnumerable<DynamicJsonValue> values)
@@ -1121,7 +1132,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static Dictionary<AggregationType, string> InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction)
         {
-            if (timeSeriesFunction.Scale == null)
+            if (timeSeriesFunction.Select == null)
                 return AllAggregationTypes();
 
             var stats = new Dictionary<AggregationType, string>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -38,6 +39,10 @@ namespace SlowTests.Client.TimeSeries.Query
             public string Manufacturer { get; set; }
 
             public double Accuracy { get; set; }
+
+            public int? Year { get; set; }
+
+            public List<string> Prizes { get; set; }
 
         }
 

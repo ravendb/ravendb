@@ -97,9 +97,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return expression is ParameterExpression p && p.Name == _alias;
         }
 
-        private bool ShouldRename(Expression expression)
+        private bool ShouldRename(ParameterExpression expression)
         {
-            return expression is ParameterExpression p && _renameTagAlias.From == p.Name;
+            return _renameTagAlias.From == expression.Name;
         }
 
         protected override Expression VisitConstant(ConstantExpression node)
