@@ -1,8 +1,7 @@
 ﻿.backups {
-    .manual-backups {
-        flex-basis: 0;
-        flex-grow: 1;
+    .manual-backups, .periodic-backups {
         overflow: auto;
+        max-height: 50%;
     }
 
     .node {
@@ -13,6 +12,12 @@
             font-size: 18px;
             position: relative;
             top: 1px;
+        }
+    }
+
+    @media (min-width: @screen-lg) {
+        & > div {
+            max-height: 100%;
         }
     }
 }
