@@ -148,7 +148,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         public double[] Max, Min, Last, First, Average, Sum;
         public DateTime To, From;
 
-        public string Key { get; private set; }
+        public object Key { get; private set; }
 
         [OnDeserialized]
         internal void OnNewtonSoftJsonDeserialized(StreamingContext context)

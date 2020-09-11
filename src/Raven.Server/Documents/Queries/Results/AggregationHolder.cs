@@ -4,36 +4,34 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server;
-using Voron;
 
 namespace Raven.Server.Documents.Queries.Results
 {
     public class AggregationHolder
     {
+        public static readonly object NullBucket = new object();
+
         // local pool, for current query
         private readonly ObjectPool<TimeSeriesAggregation[], TimeSeriesAggregationReset> _pool;
+        private readonly int _poolSize = 32;
 
-        private readonly ByteStringContext _context;
+        private readonly DocumentsOperationContext _context;
         private readonly InterpolationType _interpolationType;
 
         private readonly AggregationType[] _types;
         private readonly string[] _names;
 
-        private Dictionary<ulong, TimeSeriesAggregation[]> _current;
-        private Dictionary<ulong, PreviousAggregation> _previous;
-
-        private Dictionary<ulong, string> _keyNames;
-        private Dictionary<object, ulong> _keyCache;
+        private Dictionary<object, TimeSeriesAggregation[]> _current;
+        private Dictionary<object, PreviousAggregation> _previous;
 
         public bool HasValues => _current?.Count > 0;
 
-        public AggregationHolder(ByteStringContext context, Dictionary<AggregationType, string> types, InterpolationType interpolationType)
+        public AggregationHolder(DocumentsOperationContext context, Dictionary<AggregationType, string> types, InterpolationType interpolationType)
         {
             _context = context;
 
@@ -41,7 +39,10 @@ namespace Raven.Server.Documents.Queries.Results
             _types = types.Keys.ToArray();
 
             _interpolationType = interpolationType;
-            _pool = new ObjectPool<TimeSeriesAggregation[], TimeSeriesAggregationReset>(TimeSeriesAggregationFactory);
+            if (_interpolationType != InterpolationType.None)
+                _poolSize *= 2;
+
+            _pool = new ObjectPool<TimeSeriesAggregation[], TimeSeriesAggregationReset>(TimeSeriesAggregationFactory, _poolSize);
         }
 
         private TimeSeriesAggregation[] TimeSeriesAggregationFactory()
@@ -57,13 +58,13 @@ namespace Raven.Server.Documents.Queries.Results
             return bucket;
         }
 
-
         public TimeSeriesAggregation[] this[object bucket]
         {
             get
             {
-                var key = GetKey(bucket);
-                _current ??= new Dictionary<ulong, TimeSeriesAggregation[]>();
+                var key = Clone(bucket);
+
+                _current ??= new Dictionary<object, TimeSeriesAggregation[]>();
                 if (_current.TryGetValue(key, out var value))
                     return value;
 
@@ -103,7 +104,7 @@ namespace Raven.Server.Documents.Queries.Results
             _current = null;
         }
 
-        private DynamicJsonValue ToJson(double? scale, DateTime? from, DateTime? to, ulong key, TimeSeriesAggregation[] value)
+        private DynamicJsonValue ToJson(double? scale, DateTime? from, DateTime? to, object key, TimeSeriesAggregation[] value)
         {
             if (from == DateTime.MinValue)
                 from = null;
@@ -125,7 +126,7 @@ namespace Raven.Server.Documents.Queries.Results
             return result;
         }
 
-        private IEnumerable<(ulong Key, PreviousAggregation Previous, TimeSeriesAggregation[] Current)> GetGapsPerBucket(DateTime to)
+        private IEnumerable<(object Key, PreviousAggregation Previous, TimeSeriesAggregation[] Current)> GetGapsPerBucket(DateTime to)
         {
             if (_current == null || _previous == null)
                 yield break;
@@ -147,20 +148,20 @@ namespace Raven.Server.Documents.Queries.Results
             }
         }
 
-        private string GetNameFromKey(ulong key)
+        private object GetNameFromKey(object key)
         {
-            if (_keyNames == null)
+            if (key == NullBucket)
                 return null;
 
-            if (_keyNames.TryGetValue(key, out var name))
-                return name;
+            if (key is Document doc)
+                return doc.Id;
 
-            return null;
+            return key;
         }
 
-        private void UpdatePrevious(ulong key, RangeGroup range, TimeSeriesAggregation[] values)
+        private void UpdatePrevious(object key, RangeGroup range, TimeSeriesAggregation[] values)
         {
-            _previous ??= new Dictionary<ulong, PreviousAggregation>();
+            _previous ??= new Dictionary<object, PreviousAggregation>();
             if (_previous.TryGetValue(key, out var result) == false)
             {
                 result = _previous[key] = new PreviousAggregation();
@@ -174,62 +175,28 @@ namespace Raven.Server.Documents.Queries.Results
             result.Range = range;
         }
 
-        private ulong GetKey(object value)
+        private object Clone(object value)
         {
-            if (value == null)
-                return 0;
-
-            _keyCache ??= new Dictionary<object, ulong>();
-            if (_keyCache.TryGetValue(value, out var key) == false)
-                key = _keyCache[key] = CalculateKey(value);
-
-            _keyNames ??= new Dictionary<ulong, string>();
-            _keyNames.TryAdd(key, value.ToString());
-            return key;
-        }
-
-        private unsafe ulong CalculateKey(object value)
-        {
-            if (value == null || value is DynamicNullObject)
-                return 0;
+            if (value == null || value == NullBucket)
+                return NullBucket;
 
             if (value is LazyStringValue lsv)
-                return Hashing.XXHash64.Calculate(lsv.Buffer, (ulong)lsv.Size);
+                return lsv.Clone(_context);
 
             if (value is string s)
-            {
-                using (Slice.From(_context, s, out Slice str))
-                    return Hashing.XXHash64.Calculate(str.Content.Ptr, (ulong)str.Size);
-            }
-
-            if (value is LazyCompressedStringValue lcsv)
-                return Hashing.XXHash64.Calculate(lcsv.Buffer, (ulong)lcsv.CompressedSize);
-
-            if (value is long l)
-            {
-                unchecked
-                {
-                    return (ulong)l;
-                }
-            }
-
-            if (value is ulong ul)
-                return ul;
+                return Clone(_context.GetLazyString(s));
 
             if (value is decimal d)
-                return Hashing.XXHash64.Calculate((byte*)&d, sizeof(decimal));
+                return d;
 
-            if (value is int num)
-                return (ulong)num;
+            if (value.GetType().IsPrimitive)
+                return value;
 
-            if (value is bool b)
-                return b ? 1UL : 2UL;
-
-            if (value is double dbl)
-                return (ulong)dbl;
+            if (value is LazyCompressedStringValue lcsv)
+                return Clone(lcsv.ToLazyStringValue());
 
             if (value is LazyNumberValue lnv)
-                return CalculateKey(lnv.Inner);
+                return new LazyNumberValue(lnv.Inner.Clone(_context));
 
             long? ticks = null;
             if (value is DateTime time)
@@ -247,41 +214,27 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (value is BlittableJsonReaderObject json)
             {
-                var hash = 0UL;
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
+                return json.CloneOnTheSameContext();
+            }
 
-                for (int i = 0; i < json.Count; i++)
-                {
-                    // this call ensures properties to be returned in the same order, regardless their storing order
-                    json.GetPropertyByIndex(i, ref prop);
-
-                    hash += CalculateKey(prop.Value);
-                }
-
-                return hash;
+            if (value is BlittableJsonReaderArray arr)
+            {
+                return arr.Clone(_context);
             }
 
             if (value is IEnumerable enumerable)
             {
-                var hash = 0UL;
-                foreach (var item in enumerable)
+                return _context.ReadObject(new DynamicJsonValue
                 {
-                    hash += CalculateKey(item);
-                }
-
-                return hash;
+                    ["Result"] = new DynamicJsonArray(enumerable.Cast<object>())
+                }, "GetBucketJsonArray");
             }
 
             if (value is DynamicJsonValue djv)
-            {
-                var hash = 0UL;
-                foreach (var item in djv.Properties)
-                {
-                    hash += CalculateKey(item.Value);
-                }
+                return _context.ReadObject(djv, "GetBucketJsonValue");
 
-                return hash;
-            }
+            if (value is Document doc)
+                return doc;
 
             throw new NotSupportedException($"Unable to group by type: {value.GetType()}");
         }

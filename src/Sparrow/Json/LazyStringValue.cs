@@ -144,6 +144,11 @@ namespace Sparrow.Json
             Memory.Copy(dest, _buffer, _size);
         }
 
+        public LazyStringValue Clone(JsonOperationContext context)
+        {
+            return context.GetLazyString(_buffer, _size);
+        }
+
         public bool HasStringValue => _string != null;
 
         [ThreadStatic]

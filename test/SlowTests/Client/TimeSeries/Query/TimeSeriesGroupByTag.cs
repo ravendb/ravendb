@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -186,22 +187,187 @@ namespace SlowTests.Client.TimeSeries.Query
                     var monthBaseline = new DateTime(baseline.Year, baseline.Month, 1);
 
                     var val1 = agg[0];
-                    Assert.Equal(10, double.Parse(val1.Key));
+                    Assert.Equal(10.0m, val1.Key);
                     Assert.Equal(monthBaseline, val1.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(1), val1.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(3, val1.Count[0]);
 
                     var val2 = agg[1];
-                    Assert.Equal(10, double.Parse(val2.Key));
+                    Assert.Equal(10.0m, val2.Key);
                     Assert.Equal(monthBaseline.AddMonths(1), val2.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(2), val2.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(2, val2.Count[0]);
 
                     var val3 = agg[2];
-                    Assert.Equal(5, double.Parse(val3.Key));
+                    Assert.Equal(5.0m, val3.Key);
                     Assert.Equal(monthBaseline.AddMonths(1), val3.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(2), val3.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(1, val3.Count[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanGroupByNull()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = PopulateCanGroupByLoadedTag(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<TimeSeriesLinqQuery.Person>()
+                        .Select(u => RavenQuery.TimeSeries(u, "Heartrate", baseline.EnsureUtc(), baseline.AddMonths(2).EnsureUtc())
+                            .GroupBy(g => g
+                                .Months(1)
+                                .ByTag<TimeSeriesLinqQuery.Watch>(w => w.Year)
+                            )
+                            .Select(g => new {Average = g.Average(), Max = g.Max()})
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(6, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(3, agg.Length);
+
+                    var monthBaseline = new DateTime(baseline.Year, baseline.Month, 1);
+
+                    var val1 = agg[0];
+                    Assert.Equal(null, val1.Key);
+                    Assert.Equal(monthBaseline, val1.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(1), val1.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(3, val1.Count[0]);
+
+                    var val2 = agg[1];
+                    Assert.Equal(null, val2.Key);
+                    Assert.Equal(monthBaseline.AddMonths(1), val2.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(2), val2.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(2, val2.Count[0]);
+
+                    var val3 = agg[2];
+                    Assert.Equal(0L, val3.Key);
+                    Assert.Equal(monthBaseline.AddMonths(1), val3.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(2), val3.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(1, val3.Count[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanGroupByDocument()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = PopulateCanGroupByLoadedTag(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<TimeSeriesLinqQuery.Person>()
+                        .Select(u => RavenQuery.TimeSeries(u, "Heartrate", baseline.EnsureUtc(), baseline.AddMonths(2).EnsureUtc())
+                            .GroupBy(g => g
+                                .Months(1)
+                                .ByTag<TimeSeriesLinqQuery.Watch>(w => w)
+                            )
+                            .Select(g => new {Average = g.Average(), Max = g.Max()})
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(6, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(5, agg.Length);
+
+                    var monthBaseline = new DateTime(baseline.Year, baseline.Month, 1);
+
+                    var val1 = agg[0];
+                    Assert.Equal("watches/fitbit", val1.Key);
+                    Assert.Equal(monthBaseline, val1.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(1), val1.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(2, val1.Count[0]);
+
+                    var val2 = agg[1];
+                    Assert.Equal("watches/apple", val2.Key);
+                    Assert.Equal(monthBaseline, val2.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(1), val2.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(1, val2.Count[0]);
+
+                    var val3 = agg[2];
+                    Assert.Equal("watches/apple", val3.Key);
+                    Assert.Equal(monthBaseline.AddMonths(1), val3.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(2), val3.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(1, val3.Count[0]);
+
+                    var val4 = agg[3];
+                    Assert.Equal("watches/sony", val4.Key);
+                    Assert.Equal(monthBaseline.AddMonths(1), val4.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(2), val4.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(1, val4.Count[0]);
+
+                    var val5 = agg[4];
+                    Assert.Equal("watches/fitbit", val5.Key);
+                    Assert.Equal(monthBaseline.AddMonths(1), val5.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(2), val5.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(1, val5.Count[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanGroupByArray()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = PopulateCanGroupByLoadedTag(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<TimeSeriesLinqQuery.Person>()
+                        .Select(u => RavenQuery.TimeSeries(u, "Heartrate", baseline.EnsureUtc(), baseline.AddMonths(2).EnsureUtc())
+                            .GroupBy(g => g
+                                .Months(1)
+                                .ByTag<TimeSeriesLinqQuery.Watch>(w => w.Prizes)
+                            )
+                            .Select(g => new {Average = g.Average(), Max = g.Max()})
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(6, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(4, agg.Length);
+
+                    var monthBaseline = new DateTime(baseline.Year, baseline.Month, 1);
+
+                    var val1 = agg[0];
+                    Assert.Equal(new JArray("2012","2013"), val1.Key);
+                    Assert.Equal(monthBaseline, val1.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(1), val1.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(2, val1.Count[0]);
+
+                    var val2 = agg[1];
+                    Assert.Equal(new JArray("2012"), val2.Key);
+                    Assert.Equal(monthBaseline, val2.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(1), val2.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(1, val2.Count[0]);
+
+                    var val3 = agg[2];
+                    Assert.Equal(new JArray("2012"), val3.Key);
+                    Assert.Equal(monthBaseline.AddMonths(1), val3.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(2), val3.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(2, val3.Count[0]);
+
+                    var val4 = agg[3];
+                    Assert.Equal(new JArray("2012","2013"), val4.Key);
+                    Assert.Equal(monthBaseline.AddMonths(1), val4.From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(monthBaseline.AddMonths(2), val4.To, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(1, val4.Count[0]);
                 }
             }
         }
@@ -235,19 +401,19 @@ namespace SlowTests.Client.TimeSeries.Query
                     var monthBaseline = new DateTime(baseline.Year, baseline.Month, 1);
 
                     var val1 = agg[0];
-                    Assert.Equal(10, double.Parse(val1.Key));
+                    Assert.Equal(10.0m, val1.Key);
                     Assert.Equal(monthBaseline, val1.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(1), val1.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(3, val1.Count[0]);
 
                     var val2 = agg[1];
-                    Assert.Equal(10, double.Parse(val2.Key));
+                    Assert.Equal(10.0m, val2.Key);
                     Assert.Equal(monthBaseline.AddMonths(1), val2.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(2), val2.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(2, val2.Count[0]);
 
                     var val3 = agg[2];
-                    Assert.Equal(5, double.Parse(val3.Key));
+                    Assert.Equal(5.0m, val3.Key);
                     Assert.Equal(monthBaseline.AddMonths(1), val3.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(2), val3.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(1, val3.Count[0]);
@@ -285,13 +451,13 @@ namespace SlowTests.Client.TimeSeries.Query
                     var monthBaseline = new DateTime(baseline.Year, baseline.Month, 1);
 
                     var val1 = agg[0];
-                    Assert.Equal(10, double.Parse(val1.Key));
+                    Assert.Equal(10.0m, val1.Key);
                     Assert.Equal(monthBaseline, val1.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(1), val1.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(3, val1.Count[0]);
 
                     var val2 = agg[1];
-                    Assert.Equal(10, double.Parse(val2.Key));
+                    Assert.Equal(10.0m, val2.Key);
                     Assert.Equal(monthBaseline.AddMonths(1), val2.From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(monthBaseline.AddMonths(2), val2.To, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(2, val2.Count[0]);
@@ -466,8 +632,8 @@ namespace SlowTests.Client.TimeSeries.Query
                                 {
                                     var current = entryStream.Current;
 
-                                    dic.TryAdd(current.Key, new List<TimeSeriesRangeAggregation>());
-                                    dic[current.Key].Add(current);
+                                    dic.TryAdd(current.Key.ToString(), new List<TimeSeriesRangeAggregation>());
+                                    dic[current.Key.ToString()].Add(current);
                                 }
                             }
                         }
@@ -513,11 +679,11 @@ namespace SlowTests.Client.TimeSeries.Query
             {
                 session.Store(new TimeSeriesLinqQuery.Person {Age = 25}, "people/1");
 
-                session.Store(new TimeSeriesLinqQuery.Watch {Manufacturer = "Fitbit", Accuracy = 10}, "watches/fitbit");
+                session.Store(new TimeSeriesLinqQuery.Watch {Manufacturer = "Fitbit", Accuracy = 10, Prizes = new List<string>{"2012","2013"}}, "watches/fitbit");
 
-                session.Store(new TimeSeriesLinqQuery.Watch {Manufacturer = "Apple", Accuracy = 10}, "watches/apple");
+                session.Store(new TimeSeriesLinqQuery.Watch {Manufacturer = "Apple", Accuracy = 10, Prizes = new List<string>{"2012"}}, "watches/apple");
 
-                session.Store(new TimeSeriesLinqQuery.Watch {Manufacturer = "Sony", Accuracy = 5}, "watches/sony");
+                session.Store(new TimeSeriesLinqQuery.Watch {Manufacturer = "Sony", Accuracy = 5, Year = 0, Prizes = new List<string>{"2012"}}, "watches/sony");
 
                 var tsf = session.TimeSeriesFor("people/1", "HeartRate");
 
