@@ -5,14 +5,18 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
+using FastTests.Utils;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.NotificationCenter;
@@ -1307,6 +1311,76 @@ namespace SlowTests.Server.Replication
                     Assert.Equal(3, count);
                 }
 
+            }
+        }
+
+        [Fact]
+        public async Task DistributedDatabaseWithRevision_WhenReAadNodeToGroup_ShouldNotHaveConflicts()
+        {
+            var (nodes, leader) = await CreateRaftCluster(3);
+
+            var nodeA = nodes.First(n => n.ServerStore.NodeTag == "A");
+            const string nodeTagToRemove = "B";
+
+            using var store = GetDocumentStore(new Options {Server = nodeA, ReplicationFactor = 3});
+
+            var config = new RevisionsConfiguration {Default = new RevisionsCollectionConfiguration()};
+            await RevisionsHelper.SetupRevisions(store, leader.ServerStore, config);
+
+            var entity = new User();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(entity);
+                await session.SaveChangesAsync();
+
+                for (var i = 0; i < 3; i++)
+                {
+                    entity.Name = $"Changed{i}";
+                    await session.SaveChangesAsync();
+                }
+            }
+
+            await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, nodeTagToRemove, TimeSpan.FromSeconds(30)));
+            await WaitForValueAsync(async () =>
+            {
+                var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                return res != null && res.Topology.Count == 2;
+            }, true);
+
+            await WaitForValueAsync(async () =>
+            {
+                await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database, nodeTagToRemove));
+                return true; 
+            }, true, interval: 1000);
+            
+            await WaitForValueAsync(async () =>
+            {
+                var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                return res != null && res.Topology.Members.Count == 3;
+            }, true);
+            
+            using var storeA = new DocumentStore
+            {
+                Database = store.Database,
+                Urls = new []{nodeA.WebUrl}
+            }.Initialize();
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                entity.Name = "Change after adding again node B";
+                await session.StoreAsync(entity);
+                await session.SaveChangesAsync();
+            }
+
+            await Task.Delay(15 * 1000);
+            var conflicts = await store.Commands().GetConflictsForAsync(entity.Id);
+            Assert.Empty(conflicts);
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<User>(entity.Id);
+                var metadata = session.Advanced.GetMetadataFor(loaded);
+                var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+                Assert.DoesNotContain(DocumentFlags.Resolved.ToString(), flags);
             }
         }
 

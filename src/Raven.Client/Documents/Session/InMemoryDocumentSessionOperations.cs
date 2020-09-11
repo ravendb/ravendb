@@ -2115,6 +2115,10 @@ more responsive application.
                     continue;
                 prop.SetValue(ref entity, prop.GetValue(documentInfo.Entity));
             }
+
+            if (DocumentsById.TryGetValue(documentInfo.Id, out DocumentInfo documentInfoById))
+                documentInfoById.Entity = entity;
+
         }
 
         protected static T GetOperationResult<T>(object result)
