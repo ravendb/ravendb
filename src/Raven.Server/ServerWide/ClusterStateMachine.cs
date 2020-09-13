@@ -3065,7 +3065,7 @@ namespace Raven.Server.ServerWide
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
             (long? TaskId, string name) old = default;
             
-            var allSeverWideBackupNames = GetSeverWideBackupNames(context);
+            var allServerWideBackupNames = GetSeverWideBackupNames(context);
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -3087,7 +3087,7 @@ namespace Raven.Server.ServerWide
                         {
                             //Even though we rebuild the whole configurations list just one should be modified
                             //In addition the same configuration should be modified in all databases 
-                            if (isBackupToEditFound || IsBackupToEdit(backup, periodicBackupConfiguration.Name, allSeverWideBackupNames) == false)
+                            if (isBackupToEditFound || IsServerWideBackupToEdit(backup, periodicBackupConfiguration.Name, allServerWideBackupNames) == false)
                             {
                                 newBackups.Add(backup);
                                 continue;
@@ -3117,7 +3117,7 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, old.TaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
         }
 
-        private static bool IsBackupToEdit(BlittableJsonReaderObject backup, 
+        private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject backup, 
             string periodicBackupConfigName, 
             HashSet<string> severWideBackupNames)
         {
@@ -3132,7 +3132,7 @@ namespace Raven.Server.ServerWide
                 //server-wide backup to update when name is not modified
                 return true;
             } 
-            if(severWideBackupNames.Contains(backupName) == false) 
+            if (severWideBackupNames.Contains(backupName) == false) 
             {
                 //server-wide backup to update when modify name
                 return true;
