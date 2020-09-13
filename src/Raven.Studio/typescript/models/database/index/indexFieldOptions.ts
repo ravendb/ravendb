@@ -38,7 +38,7 @@ class indexFieldOptions {
 
     static readonly analyzersNames = indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName)
         // exclude the default analyzer from dropdown list (shown only for Indexing.Default is selected)
-        .filter(x => x != "LowerCase Keyword Analyzer");
+        .filter(x => x !== "LowerCase Keyword Analyzer");
 
     static readonly DefaultFieldOptions = "__all_fields";
     
