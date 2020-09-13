@@ -741,6 +741,88 @@ where Tag = 'watches/fitbit'
         }
 
         [Fact]
+        public void TimeSeriesDocumentQuery_UsingBuilder_GroupByTag()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person
+                    {
+                        Age = 25
+                    }, "people/1");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 70
+                    }, "watches/fitbit");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 90
+                    }, "watches/apple");
+
+                    session.Store(new Watch
+                    {
+                        Accuracy = 180
+                    }, "watches/sony");
+
+                    var tsf = session.TimeSeriesFor("people/1", "HeartRate");
+
+                    tsf.Append(baseline.AddMinutes(61), new[] { 59d }, "watches/fitbit");
+                    tsf.Append(baseline.AddMinutes(62), new[] { 79d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(63), new[] { 69d }, "watches/fitbit");
+
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(61), new[] { 159d }, "watches/apple");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(62), new[] { 179d }, "watches/sony");
+                    tsf.Append(baseline.AddMonths(1).AddMinutes(63), new[] { 169d }, "watches/fitbit");
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.DocumentQuery<Person>()
+                        .WhereGreaterThan(p => p.Age, 21)
+                        .SelectTimeSeries(builder => builder
+                            .From("Heartrate")
+                            .Between(baseline, baseline.AddMonths(2))
+                            .LoadByTag<Watch>()
+                            .Where((entry, watch) => entry.Value <= watch.Accuracy)
+                            .GroupBy(g => g.Months(1).ByTag<Watch>(w => w.Accuracy))
+                            .Select(g => new
+                            {
+                                Avg = g.Average(),
+                                Max = g.Max()
+                            })
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(4, result.Count);
+
+                    var agg = result.Results;
+
+                    Assert.Equal(3, agg.Length);
+
+                    Assert.Equal(69, agg[0].Max[0]);
+                    Assert.Equal(64, agg[0].Average[0]);
+                    Assert.Equal(2, agg[0].Count[0]);
+
+                    Assert.Equal(79, agg[1].Max[0]);
+                    Assert.Equal(79, agg[1].Average[0]);
+                    Assert.Equal(1, agg[1].Count[0]);
+
+                    Assert.Equal(179, agg[2].Max[0]);
+                    Assert.Equal(179, agg[2].Average[0]);
+                    Assert.Equal(1, agg[2].Count[0]);
+                }
+            }
+        }
+
+        [Fact]
         public void TimeSeriesDocumentQuery_UsingBuilder_GroupByWithInterpolation()
         {
             using (var store = GetDocumentStore())

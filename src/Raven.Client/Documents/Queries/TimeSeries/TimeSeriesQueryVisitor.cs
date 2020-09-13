@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
@@ -101,6 +103,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private void LoadByTag(string alias)
         {
+            if (alias == null)
+                return;
+
             _loadTagAlias ??= alias;
             _loadTag ??= $" load Tag as {alias}";
         }
@@ -116,7 +121,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 if (constantExpression.Value is Action<ITimePeriodBuilder> action)
                 {
                     // document query
-                    timePeriod = GetTimePeriodFromAction(action, out with);
+                    timePeriod = GetTimePeriodFromAction(action, out with, out groupByTag, out var alias);
+                    LoadByTag(alias);
                 }
                 else
                 {
@@ -145,7 +151,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             _groupBy = $" group by '{timePeriod}' {groupByTag} {with}";
         }
 
-        private static string GetTimePeriodFromAction(Action<ITimePeriodBuilder> action, out string with)
+        private static string GetTimePeriodFromAction(Action<ITimePeriodBuilder> action, out string with, out string groupByTag, out string alias)
         {
             with = null;
 
@@ -153,6 +159,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             action.Invoke(builder);
 
             var timePeriod = builder.GetTimePeriod();
+            groupByTag = builder.GroupByTag;
+            alias = builder.LoadAlias;
 
             if (builder.Options != null && builder.Options.Interpolation != InterpolationType.None)
             {
@@ -172,48 +180,23 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 ThrowInvalidMethodArgument(groupByCall, nameof(ITimeSeriesQueryable.GroupBy));
                 return null;
             }
-            
-            string groupByTag = null;
 
-            switch (groupByCall.Method.Name)
+            var method = groupByCall.Method;
+            var arguments = groupByCall.Arguments;
+            groupByCall = innerCall2;
+
+            string groupByTag;
+            switch (method.Name)
             {
                 case nameof(ITimeSeriesAggregationOperations.ByTag):
-                    switch (groupByCall.Arguments.Count)
+                    switch (arguments.Count)
                     {
                         case 0:
                             groupByTag = ", tag";
                             break;
                         case 1:
-                            if (!(groupByCall.Arguments[0] is LambdaExpression groupByTagCall) || groupByTagCall.Parameters.Count != 1)
-                            {
-                                ThrowInvalidMethodArgument(groupByCall, nameof(ITimeSeriesAggregationOperations.ByTag));
-                                return null;
-                            }
-                            LoadByTag(groupByTagCall.Parameters[0].Name);
-
-                            switch (groupByTagCall.Body.NodeType)
-                            {
-                                case ExpressionType.Convert:
-                                    if (!(groupByTagCall.Body is UnaryExpression convert))
-                                    {
-                                        ThrowInvalidMethodArgument(groupByTagCall.Body, "parameter must be of Convert type e.g. 'ByTag<User>(user => user.Name)'");
-                                        return null;
-                                    }
-                                    groupByTag = $", {convert.Operand}";
-
-                                    break;
-                                case ExpressionType.Parameter:
-                                case ExpressionType.MemberAccess:
-
-                                    groupByTag = $", {groupByTagCall.Body}";
-
-                                    break;
-                                   
-                                default:
-                                    ThrowInvalidMethodArgument(groupByTagCall.Body, "Not supported type");
-                                    return null;
-                            }
-
+                            groupByTag = GroupByTagFromMethod(arguments[0], out var alias);
+                            LoadByTag(alias);
 
                             break;
                         default:
@@ -222,10 +205,55 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(groupByCall.Method.Name), "Unknown method name");
+                    throw new ArgumentOutOfRangeException(nameof(method.Name), "Unknown method name");
             }
 
-            groupByCall = innerCall2;
+            return groupByTag;
+        }
+
+        internal static string GroupByTagFromMethod(Expression argument, out string alias)
+        {
+            string groupByTag;
+            Expression lambda = argument;
+            if (argument.NodeType == ExpressionType.Quote && 
+                argument is UnaryExpression quoteExpression)
+            {
+                lambda = quoteExpression.Operand;
+            }
+
+            if (!(lambda is LambdaExpression groupByTagCall) || groupByTagCall.Parameters.Count != 1)
+            {
+                throw new InvalidOperationException("Group by tag selector must be a lambda and contain only one parameter.");
+            }
+
+            alias = groupByTagCall.Parameters[0].Name;
+
+            switch (groupByTagCall.Body.NodeType)
+            {
+                case ExpressionType.Convert:
+                    if (!(groupByTagCall.Body is UnaryExpression convert))
+                    {
+                        ThrowInvalidMethodArgument(groupByTagCall.Body, "Convert expression operand must be of member access type e.g. 'ByTag<User>(user => user.Name)'");
+                        return null;
+                    }
+
+                    if (convert.Operand.NodeType != ExpressionType.MemberAccess)
+                        ThrowInvalidMethodArgument(convert, "Convert expression operand must be of member access type e.g. 'ByTag<User>(user => user.Name)'");
+
+                    groupByTag = $", {convert.Operand}";
+
+                    break;
+                case ExpressionType.Parameter:
+                case ExpressionType.MemberAccess:
+
+                    groupByTag = $", {groupByTagCall.Body}";
+
+                    break;
+
+                default:
+                    ThrowInvalidMethodArgument(groupByTagCall.Body, $"Not supported node type {groupByTagCall.Body.NodeType}");
+                    return null;
+            }
 
             return groupByTag;
         }
@@ -418,7 +446,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 constant.Value is Action<ITimePeriodBuilder> action)
             {
                 // document query
-                return GetTimePeriodFromAction(action, out _);
+                return GetTimePeriodFromAction(action, out _, out _, out _);
             }
             
             if (!(expression is LambdaExpression lambda) ||
@@ -658,6 +686,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             public TimeSeriesAggregationOptions Options { get; private set; }
 
+            public string LoadAlias;
+            public string GroupByTag;
+
             public string GetTimePeriod()
             {
                 return $"{_duration} {_methodName}";
@@ -726,12 +757,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
             public ITimeSeriesAggregationOperations ByTag()
             {
-                throw new NotImplementedException();
+                GroupByTag = ", tag";
+                return this;
             }
 
-            public ITimeSeriesAggregationOperations ByTag<TEntity>(Func<TEntity, object> selector)
+            public ITimeSeriesAggregationOperations ByTag<TEntity>(Expression<Func<TEntity, object>> selector)
             {
-                throw new NotImplementedException();
+                GroupByTag = GroupByTagFromMethod(selector, out LoadAlias);
+                return this;
             }
         }
     }
