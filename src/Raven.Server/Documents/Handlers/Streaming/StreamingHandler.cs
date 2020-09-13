@@ -110,6 +110,7 @@ namespace Raven.Server.Documents.Handlers.Streaming
                     {
                         context.Write(writer, entry.ToTimeSeriesEntryJson());
                         writer.WriteComma();
+                        await writer.MaybeOuterFlushAsync();
                     }
                     writer.WriteEndArray();
                     writer.WriteEndObject();
