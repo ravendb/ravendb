@@ -65,8 +65,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             }
             
             _token.ThrowIfCancellationRequested();
-
-            Current = Converter(_outer.Current);
+            using (_outer.Current)
+            {
+                Current = Converter(_outer.Current);
+            }
             return true;
         }
 
