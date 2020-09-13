@@ -97,6 +97,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         double[] Last();
 
         long[] Count();
+
+        double[] Percentile(double number);
     }
 
     public interface ITimePeriodBuilder

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -559,10 +560,6 @@ namespace Raven.Server.Documents.Queries.AST
 
         public bool Any => NumberOfValues > 0;
 
-        private List<double> _values;
-
-        private List<double> _count;
-
         public List<double> Count => _count;
 
         public long TotalCount;
@@ -570,6 +567,13 @@ namespace Raven.Server.Documents.Queries.AST
         public string Name;
 
         public int NumberOfValues => _values.Count;
+        private List<double> _values;
+
+        private List<double> _count;
+
+        private readonly double _percentileFactor;
+
+        private readonly List<List<double>> _rankedValues;
 
         public TimeSeriesAggregation(AggregationType type, string name = null)
         {
@@ -580,10 +584,22 @@ namespace Raven.Server.Documents.Queries.AST
             _values = new List<double>();
         }
 
+        internal TimeSeriesAggregation(double percentile, string name = null) : this(AggregationType.Percentile, name)
+        {
+            if (percentile < 0 || percentile > 100)
+                throw new ArgumentOutOfRangeException(
+                    $"Invalid argument passed to 'Percentile' aggregation method: {percentile}. Argument must be a number between 0 and 100");
+
+            _percentileFactor = percentile / 100;
+            _rankedValues = new List<List<double>>();
+        }
+
         public void Init()
         {
             _count.Clear();
             _values.Clear();
+
+            _rankedValues?.Clear();
         }
 
         public void Segment(Span<StatefulTimestampValue> values, bool isRaw)
@@ -633,12 +649,15 @@ namespace Raven.Server.Documents.Queries.AST
                         break;
                     case AggregationType.Count:
                         break;
+                    case AggregationType.Percentile:
+                        throw new InvalidOperationException($"Cannot use method '{nameof(Segment)}' on aggregation type '{nameof(AggregationType.Percentile)}' ");
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
 
                 _count[i] += values[i].Count;
             }
+
             TotalCount += (long)_count[0];
         }
 
@@ -689,9 +708,24 @@ namespace Raven.Server.Documents.Queries.AST
                         break;
                     case AggregationType.Count:
                         break;
+                    case AggregationType.Percentile:
+                        for (var j = _rankedValues.Count; j < values.Length; j++)
+                        {
+                            _rankedValues.Add(new List<double>());
+                        }
+
+                        var currentRankedList = _rankedValues[i];
+                        var loc = currentRankedList.BinarySearch(val);
+                        if (loc >= 0)
+                            currentRankedList.Insert(loc + 1, val);
+                        else
+                            currentRankedList.Insert(~loc, val);
+
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
+
                 _count[i]++;
             }
 
@@ -714,9 +748,7 @@ namespace Raven.Server.Documents.Queries.AST
             for (int i = 0; i < originalNumOfValues; i++)
             {
                 var index = i * 6;
-                var val = Aggregation == AggregationType.Average ? 
-                    values[index + (int)AggregationType.Sum] : 
-                    values[index + (int)Aggregation];
+                var val = Aggregation == AggregationType.Average ? values[index + (int)AggregationType.Sum] : values[index + (int)Aggregation];
 
                 switch (Aggregation)
                 {
@@ -752,6 +784,7 @@ namespace Raven.Server.Documents.Queries.AST
                 val = values[index + (int)AggregationType.Count];
                 _count[i] += (long)val.Sum;
             }
+
             TotalCount += (long)_count[0];
         }
 
@@ -837,7 +870,10 @@ namespace Raven.Server.Documents.Queries.AST
 
                         _values[i] = _values[i] / _count[i];
                     }
+
                     break;
+                case AggregationType.Percentile:
+                    return GetPercentiles();
                 default:
                     throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
             }
@@ -846,6 +882,22 @@ namespace Raven.Server.Documents.Queries.AST
                 return _values.Select(x => x * scale.Value);
 
             return _values;
+        }
+
+        private IEnumerable<double> GetPercentiles()
+        {
+            /*if (scale.HasValue)
+            {
+                // todo
+                return _values.Select(x => x * scale.Value);
+            }*/
+
+            foreach (var list in _rankedValues)
+            {
+                var index = (int)Math.Ceiling(_percentileFactor * list.Count);
+
+                yield return list[index - 1];
+            }
         }
     }
 }
