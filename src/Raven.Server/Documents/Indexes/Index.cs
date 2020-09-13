@@ -2733,6 +2733,9 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
+
+                    token.ThrowIfCancellationRequested();
+
                     AssertIndexState();
                     marker.HoldLock();
 
