@@ -71,11 +71,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
                 {
-                    HandleFacets(returnedReaders, result, facetsByName);
+                    HandleFacets(returnedReaders, result, facetsByName, token);
                     continue;
                 }
 
-                HandleRangeFacets(result, returnedReaders);
+                HandleRangeFacets(result, returnedReaders, token);
             }
 
             UpdateFacetResults(results, query, facetsByName);
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 .ToList();
         }
 
-        private void HandleRangeFacets(KeyValuePair<string, FacetedQueryParser.FacetResult> result, List<ReaderFacetInfo> returnedReaders)
+        private void HandleRangeFacets(KeyValuePair<string, FacetedQueryParser.FacetResult> result, List<ReaderFacetInfo> returnedReaders, CancellationToken token)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
 
@@ -104,6 +104,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var ranges = result.Value.Ranges;
                 foreach (var kvp in termsForField)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     for (int i = 0; i < ranges.Count; i++)
                     {
                         var parsedRange = ranges[i];
@@ -131,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private void HandleFacets(List<ReaderFacetInfo> returnedReaders, KeyValuePair<string, FacetedQueryParser.FacetResult> result, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private void HandleFacets(List<ReaderFacetInfo> returnedReaders, KeyValuePair<string, FacetedQueryParser.FacetResult> result, Dictionary<string, Dictionary<string, FacetValue>> facetsByName, CancellationToken token)
         {
             foreach (var readerFacetInfo in returnedReaders)
             {
@@ -142,6 +144,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var kvp in termsForField)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var needToApplyAggregation = result.Value.Aggregations.Count > 0;
                     var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
                     var intersectCount = intersectedDocuments.Count;
