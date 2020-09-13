@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.Queries.AST;
@@ -181,36 +181,28 @@ namespace Raven.Server.Documents.Queries.Results
                 return NullBucket;
 
             if (value is LazyStringValue lsv)
-                return lsv.Clone(_context);
+                return lsv.ToString();
 
             if (value is string s)
-                return Clone(_context.GetLazyString(s));
+                return s;
 
-            if (value is decimal d)
-                return d;
-
-            if (value.GetType().IsPrimitive)
+            if (value is ValueType)
                 return value;
 
             if (value is LazyCompressedStringValue lcsv)
-                return Clone(lcsv.ToLazyStringValue());
+                return lcsv.ToString();
 
             if (value is LazyNumberValue lnv)
-                return new LazyNumberValue(lnv.Inner.Clone(_context));
+                return lnv.ToDouble(CultureInfo.InvariantCulture);
 
-            long? ticks = null;
             if (value is DateTime time)
-                ticks = time.Ticks;
-            if (value is DateTimeOffset offset)
-                ticks = offset.Ticks;
-            if (value is TimeSpan span)
-                ticks = span.Ticks;
+                return time.ToString("O");
 
-            if (ticks.HasValue)
-            {
-                var t = ticks.Value;
-                return (ulong)t;
-            }
+            if (value is DateTimeOffset offset)
+                return offset.ToString("O");
+
+            if (value is TimeSpan span)
+                return span.ToString("c");
 
             if (value is BlittableJsonReaderObject json)
             {
@@ -221,17 +213,6 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 return arr.Clone(_context);
             }
-
-            if (value is IEnumerable enumerable)
-            {
-                return _context.ReadObject(new DynamicJsonValue
-                {
-                    ["Result"] = new DynamicJsonArray(enumerable.Cast<object>())
-                }, "GetBucketJsonArray");
-            }
-
-            if (value is DynamicJsonValue djv)
-                return _context.ReadObject(djv, "GetBucketJsonValue");
 
             if (value is Document doc)
                 return doc;
