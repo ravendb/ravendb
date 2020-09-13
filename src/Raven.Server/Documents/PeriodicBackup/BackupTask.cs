@@ -94,6 +94,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
+                if (_forTestingPurposes != null && _forTestingPurposes.SimulateFailedBackup)
+                    throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
+
                 if (runningBackupStatus.LocalBackup == null)
                     runningBackupStatus.LocalBackup = new LocalBackup();
 
