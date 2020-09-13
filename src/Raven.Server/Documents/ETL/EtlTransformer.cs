@@ -193,18 +193,19 @@ namespace Raven.Server.Documents.ETL
             if ((Current.Document.Flags & DocumentFlags.HasTimeSeries) == DocumentFlags.HasTimeSeries == false)
                 return JsValue.Null;
 
-            const int paramsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.ParamsCount;
+            const int minParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MinParamsCount;
+            const int maxParamsCount = Transformation.TimeSeriesTransformation.LoadTimeSeries.MaxParamsCount;
             const string signature = Transformation.TimeSeriesTransformation.LoadTimeSeries.Signature;
             
-            if (args.Length != paramsCount)
-                ThrowInvalidScriptMethodCall($"{signature} must have {paramsCount} arguments");
+            if (args.Length < minParamsCount || args.Length > maxParamsCount)
+                ThrowInvalidScriptMethodCall($"{signature} must have between {minParamsCount} to {maxParamsCount} arguments");
                 
             if(args[0].IsString() == false)
                 ThrowInvalidScriptMethodCall($"{signature}. The argument timeSeriesName must be a string");
             var timeSeriesName = args[0].AsString();
 
-            var from = ScriptRunner.GetDateArg(args[1], signature, "from"); 
-            var to = ScriptRunner.GetDateArg(args[2], signature, "to"); 
+            var from = args.Length < 2 ? DateTime.MinValue : ScriptRunner.GetDateArg(args[1], signature, "from"); 
+            var to = args.Length < 3 ? DateTime.MaxValue : ScriptRunner.GetDateArg(args[2], signature, "to"); 
                 
             var loadTimeSeriesReference = CreateLoadTimeSeriesReference(timeSeriesName, @from, to);
 

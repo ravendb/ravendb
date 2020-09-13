@@ -838,6 +838,50 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.DoesNotContain(ts, t=> t.Timestamp == notInRange[1]);
         }
 
+        [Fact]
+        public async Task RavenEtlWithTimeSeries_WhenUseTimeSeriesExplicitlyWithNoRange()
+        {
+            const string collection = "Users";
+            const string script = @"
+var person = loadToPeople(this);
+person.addTimeSeries(loadTimeSeries('Heartrate'));
+";
+            const string timeSeriesName = "Heartrate";
+            const string tag = "fitbit";
+            const double value = 58d;
+            const string documentId = "users/1";
+
+            var time = new DateTime(2020, 04, 27);
+            
+            var (src, dest, _) = CreateSrcDestAndAddEtl(collection, script, collection.Length == 0, srcOptions:_options);
+
+            using (var session = src.OpenAsyncSession())
+            {
+                var entity = new User { Name = "Joe Doe" };
+                await session.StoreAsync(entity, documentId);
+                session.TimeSeriesFor(documentId, timeSeriesName).Append(time, new[] {value}, tag);
+
+                await session.SaveChangesAsync();
+            }
+
+            var destDoc = await AssertWaitForNotNullAsync(async () =>
+            {
+                using var session = dest.OpenAsyncSession();
+                var result = await session
+                    .Advanced
+                    .LoadStartingWithAsync<User>(documentId, null, 0, 128);
+                return result.FirstOrDefault();
+            });
+                
+            TimeSeriesEntry[] ts = null;
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = dest.OpenAsyncSession();
+                ts = await session.TimeSeriesFor(destDoc.Id, timeSeriesName).GetAsync();
+                return ts?.Length;
+            }, 1);
+        }
+
         [Theory]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenAppendMoreTimeSeriesInAnotherSession_ShouldSrcBeAsDest(
