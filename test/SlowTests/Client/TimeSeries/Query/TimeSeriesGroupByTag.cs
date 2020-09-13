@@ -86,7 +86,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-         [Fact]
+        [Fact]
         public void CanGroupByTagLinq()
         {
             using (var store = GetDocumentStore())
