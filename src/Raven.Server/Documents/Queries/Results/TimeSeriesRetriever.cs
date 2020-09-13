@@ -122,6 +122,9 @@ namespace Raven.Server.Documents.Queries.Results
 
             var aggregationHolder = new AggregationHolder(_context, aggregationTypes, interpolationType);
 
+
+            var shouldUseIndividualItems = timeSeriesFunction.Where != null || aggStates.Any(s => s.Aggregation == AggregationType.Percentile);
+
             return GetAggregatedValues();
 
             IEnumerable<DynamicJsonValue> AggregateIndividualItems(IEnumerable<SingleResult> items)
@@ -234,9 +237,9 @@ namespace Raven.Server.Documents.Queries.Results
                         // we still have to deal with the individual values
                         if (it.Segment.End > rangeSpec.End || individualValuesOnly)
                         {
-                            foreach (var segment in AggregateIndividualItems(it.Segment.Values))
+                            foreach (var value in AggregateIndividualItems(it.Segment.Values))
                             {
-                                yield return segment;
+                                yield return value;
                             }
                         }
                         else

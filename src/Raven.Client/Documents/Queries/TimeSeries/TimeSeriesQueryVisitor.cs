@@ -328,8 +328,28 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     {
                         if (!(c is MethodCallExpression selectCall))
                             throw new InvalidOperationException("Invalid Select argument " + c);
-                        AddSelectField(selectCall.Method.Name);
+
+                        if (selectCall.Arguments.Count == 0)
+                        {
+                            AddSelectField(selectCall.Method.Name);
+                            continue;
+                        }
+                        
+                        Debug.Assert(selectCall.Arguments.Count == 1 && selectCall.Method.Name.Equals(nameof(AggregationType.Percentile)), 
+                            "wrong number of arguments passed to method " + selectCall.Method.Name);
+
+                        object value;
+                        if (selectCall.Arguments[0] is ConstantExpression constant)
+                            value = constant.Value;
+                        else
+                            LinqPathProvider.GetValueFromExpressionWithoutConversion(selectCall.Arguments[0], out value);
+
+                        if (!(value is double d))
+                            throw new InvalidOperationException("Invalid Select argument " + c);
+
+                        AddSelectField(selectCall.Method.Name, d);
                     }
+
                     break;
                 case ExpressionType.MemberInit:
                     var initExp = (MemberInitExpression)body;
@@ -614,7 +634,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             return queryBuilder.ToString();
         }
 
-        private void AddSelectField(string name)
+        private void AddSelectField(string name, double? value = null)
         {
             switch (name)
             {
@@ -625,9 +645,10 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesGrouping.First):
                 case nameof(ITimeSeriesGrouping.Last):
                 case nameof(ITimeSeriesGrouping.Average):
+                case nameof(ITimeSeriesGrouping.Percentile):
                     if (_selectFields.Length > 0)
                         _selectFields.Append(", ");
-                    _selectFields.Append($"{name.ToLower()}()");
+                    _selectFields.Append($"{name.ToLower()}({value})");
                     break;
                 default:
                     throw new NotSupportedException("Unsupported aggregation method " + name);
