@@ -55,6 +55,12 @@
                                              <div class="property-name">Retention Policy:</div>
                                              <div class="property-value text-details"><span data-bind="text: retentionPolicyHumanized"></span></div>
                                          </div>
+                                         <!-- ko foreach: excludedDatabases -->
+                                         <div class="property-item">
+                                             <div class="property-name" data-bind="text: $data === $parent.excludedDatabases()[0] ? 'Excluded Databases:' : ''"></div>
+                                             <div class="property-value" data-bind="text: $data, attr: { 'title': $data }"></div>
+                                         </div>
+                                         <!-- /ko -->
                                      </div>
                                  </div>
                                  <div class="flex-noshrink">
