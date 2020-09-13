@@ -129,7 +129,8 @@ namespace Raven.Client.Documents.Operations.ETL
             {
                 public const string Name  = "loadTimeSeries";
                 public const string Signature  = "loadTimeSeries(timeSeriesName, from, to)";
-                public const int ParamsCount = 3;
+                public const int MinParamsCount = 1;
+                public const int MaxParamsCount = 3;
             }
             
             internal static class HasTimeSeries
