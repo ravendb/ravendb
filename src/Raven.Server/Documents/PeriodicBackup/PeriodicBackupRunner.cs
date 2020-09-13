@@ -1110,17 +1110,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return null;
 
                 var destinations = new List<string>();
-                if (backupStatus.UploadToAzure.Skipped == false)
+                if (backupStatus.UploadToAzure?.Skipped == false)
                     destinations.Add(nameof(BackupConfiguration.BackupDestination.Azure));
-                if (backupStatus.UploadToGlacier.Skipped == false)
+                if (backupStatus.UploadToGlacier?.Skipped == false)
                     destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonGlacier));
-                if (backupStatus.UploadToFtp.Skipped == false)
+                if (backupStatus.UploadToFtp?.Skipped == false)
                     destinations.Add(nameof(BackupConfiguration.BackupDestination.FTP));
-                if (backupStatus.UploadToGoogleCloud.Skipped == false)
+                if (backupStatus.UploadToGoogleCloud?.Skipped == false)
                     destinations.Add(nameof(BackupConfiguration.BackupDestination.GoogleCloud));
-                if (backupStatus.UploadToS3.Skipped == false)
+                if (backupStatus.UploadToS3?.Skipped == false)
                     destinations.Add(nameof(BackupConfiguration.BackupDestination.AmazonS3));
-                if (backupStatus.LocalBackup.TempFolderUsed == false)
+                if (backupStatus.LocalBackup?.TempFolderUsed == false)
                     destinations.Add(nameof(BackupConfiguration.BackupDestination.Local));
                 if (destinations.Count == 0)
                     destinations.Add(nameof(BackupConfiguration.BackupDestination.None));
