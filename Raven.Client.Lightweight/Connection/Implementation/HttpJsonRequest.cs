@@ -906,7 +906,7 @@ namespace Raven.Client.Connection.Implementation
         private class PushContent : HttpContent
         {
             private readonly Action<Stream, TaskCompletionSource<object>> action;
-            private readonly TaskCompletionSource<object> tcs = new TaskCompletionSource<object>();
+            private readonly TaskCompletionSource<object> tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             public PushContent(Action<Stream, TaskCompletionSource<object>> action)
             {
