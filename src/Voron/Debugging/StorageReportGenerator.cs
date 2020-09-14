@@ -151,11 +151,16 @@ namespace Voron.Debugging
             var journalReports = journals.Select(journal =>
             {
                 var snapshot = journal.GetSnapshot();
+                var journalWriter = journal.JournalWriter;
+
+                if (journalWriter == null)
+                    return null;
+
                 return new JournalReport
                 {
                     Flushed = false,
                     Number = journal.Number,
-                    AllocatedSpaceInBytes = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
+                    AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
                     Available4Kbs = snapshot.Available4Kbs,
                     LastTransaction = snapshot.LastTransaction,
                 };
@@ -163,16 +168,21 @@ namespace Voron.Debugging
             var flushedJournalReports = flushedJournals.Select(journal =>
             {
                 var snapshot = journal.GetSnapshot();
+                var journalWriter = journal.JournalWriter;
+
+                if (journalWriter == null)
+                    return null;
+
                 return new JournalReport
                 {
                     Flushed = true,
                     Number = journal.Number,
-                    AllocatedSpaceInBytes = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
+                    AllocatedSpaceInBytes = (long)journalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte,
                     Available4Kbs = snapshot.Available4Kbs,
                     LastTransaction = snapshot.LastTransaction,
                 };
             });
-            return journalReports.Concat(flushedJournalReports).ToList();
+            return journalReports.Concat(flushedJournalReports).Where(x => x != null).ToList();
         }
 
         public static List<TempBufferReport> GenerateTempBuffersReport(VoronPathSetting tempPath, VoronPathSetting journalPath)
