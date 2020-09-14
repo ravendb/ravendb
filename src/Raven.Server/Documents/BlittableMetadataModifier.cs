@@ -398,7 +398,8 @@ namespace Raven.Server.Documents
                 case 11: // @timeseries
                     // always remove the @timeseries metadata
                     if (state.StringBuffer[0] != (byte)'@' ||
-                        *(long*)(state.StringBuffer + 1) != 7598247067624761716)
+                        *(long*)(state.StringBuffer + 1) != 7598247067624761716 ||
+                        *(short*)(state.StringBuffer + 1 + sizeof(long)) != 29541)
                     {
                         aboutToReadPropertyName = true;
                         return true;
