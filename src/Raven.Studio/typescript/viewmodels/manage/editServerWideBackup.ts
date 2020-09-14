@@ -15,14 +15,13 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class editServerWideBackup extends viewModelBase {
     
-    // Using the periodic-backup-configuration-model in this view since there isn't much difference to account for a child class..
     configuration = ko.observable<serverWideBackupConfiguration>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();
 
-    isAddingNewBackupTask = ko.observable<boolean>(true);    
+    isAddingNewBackupTask = ko.observable<boolean>(true);
     
     constructor() {
         super();
@@ -74,7 +73,7 @@ class editServerWideBackup extends viewModelBase {
 
             return deferred
                 .then(() => {
-                    this.dirtyFlag = this.configuration().dirtyFlag;
+                    this.dirtyFlag = this.configuration().serverWideDirtyFlag;
 
                     this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
                     this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
