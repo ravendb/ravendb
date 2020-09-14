@@ -459,11 +459,11 @@ namespace Raven.Server.Documents
                 var topology = ServerStore.LoadDatabaseTopology(Name);
                 if (topology.Promotables.Contains(ServerStore.NodeTag))
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(1000, DatabaseShutdown);
                     continue;
                 }
 
-                await _hasClusterTransaction.WaitAsync();
+                await _hasClusterTransaction.WaitAsync(DatabaseShutdown);
                 if (DatabaseShutdown.IsCancellationRequested)
                     return;
 

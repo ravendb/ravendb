@@ -1,11 +1,10 @@
 import app = require("durandal/app");
 import router = require("plugins/router");
-
 import document = require("models/database/documents/document");
 import documentMetadata = require("models/database/documents/documentMetadata");
 import collection = require("models/database/documents/collection");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
-import cloneAttachmentsAndCountersCommand = require("commands/database/documents/cloneAttachmentsAndCountersCommand");
+import cloneRelatedItemsCommand = require("commands/database/documents/cloneRelatedItemsCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentPhysicalSizeCommand = require("commands/database/documents/getDocumentPhysicalSizeCommand");
 import getDocumentsFromCollectionCommand = require("commands/database/documents/getDocumentsFromCollectionCommand");
@@ -505,10 +504,9 @@ class editDocument extends viewModelBase {
         });
 
         this.canViewTimeSeries = ko.pureComputed(() => {
-            // TODO: Bring this back once issue RavenDB-14386 is done
-            // if (this.isClone()) {
-            //     return true;
-            // }
+            if (this.isClone()) {
+                return true;
+            }
             
             return !this.connectedDocuments.isArtificialDocument() && !this.connectedDocuments.isHiloDocument() && !this.isCreatingNewDocument() && !this.isDeleteRevision();
         });
@@ -678,25 +676,28 @@ class editDocument extends viewModelBase {
     }
 
     createClone() {
-        const attachments = this.document().__metadata.attachments() 
+        const attachments = this.document().__metadata.attachments()
             ? this.document().__metadata.attachments().map(x => editDocument.mapToAttachmentItem(this.editedDocId(), x))
             : [];
+
+        const documentHasCounters = this.crudActionsProvider().countersCount() > 0;
         
-        if (this.crudActionsProvider().countersCount() > 0) {
-            // looks like we have at least one counter - download current values before doing clone
-            this.normalActionProvider.fetchCounters("", 0, 1024 * 1024)
-                .then(counters => {
-                    this.createCloneInternal(attachments, counters.items);
-                })
-        } else {
-            this.createCloneInternal(attachments, []);
-        }
+        const fetchCountersTask = documentHasCounters ?
+            // Must get counter values from server since cloning counters is a 'create' operation (not copy)
+            this.normalActionProvider.fetchCounters("", 0, 1024 * 1024) :
+            $.when<pagedResult<counterItem>>({ items: [], totalResultCount: 0 } as pagedResult<counterItem>);
+        
+        const fetchTimeseriesTask = this.normalActionProvider.fetchTimeSeries("", 0, 1024 * 1024);
+
+        $.when<any>(fetchCountersTask, fetchTimeseriesTask)
+            .done((counters: pagedResult<counterItem>, timeSeries: pagedResult<timeSeriesItem>) => {
+                this.createCloneInternal(attachments, timeSeries.items, counters.items);
+            })
     }
     
-    private createCloneInternal(attachments: attachmentItem[], counters: counterItem[]) {
+    private createCloneInternal(attachments: attachmentItem[], timeseries: timeSeriesItem[], counters: counterItem[]) {
         // Show current document as a new document...
-        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.activeDatabase, 
-            attachments, counters, () => this.connectedDocuments.reload()));
+        this.crudActionsProvider(new clonedDocumentCrudActions(this, this.activeDatabase, attachments, timeseries, counters, () => this.connectedDocuments.reload()));
 
         this.isCreatingNewDocument(true);
         this.isClone(true);
@@ -1462,7 +1463,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     private changeVector: string;
     private fromRevision: boolean;
     
-    constructor(parentView: editDocument, db: KnockoutObservable<database>, attachments: attachmentItem[], counters: counterItem[], reload: () => void) {
+    constructor(parentView: editDocument, db: KnockoutObservable<database>, attachments: attachmentItem[], timeSeries: timeSeriesItem[], counters: counterItem[], reload: () => void) {
         this.parentView = parentView;
         this.sourceDocumentId = parentView.editedDocId();
         
@@ -1474,6 +1475,7 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
         this.changeVector = sourceDocument.__metadata.changeVector();
         
         this.attachments(attachments);
+        this.timeSeries(timeSeries);
         this.counters(counters);
 
         _.bindAll(this, "setCounter");
@@ -1559,8 +1561,16 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     }
     
     fetchTimeSeries(nameFilter: string, skip: number, take: number): JQueryPromise<pagedResult<timeSeriesItem>> {
-        //TODO:
-        return null;
+        let timeseries: timeSeriesItem[] = this.timeSeries();
+
+        if (nameFilter) {
+            timeseries = timeseries.filter(ts => ts.name.toLocaleLowerCase().includes(nameFilter));
+        }
+
+        return $.Deferred<pagedResult<timeSeriesItem>>().resolve({
+            items: timeseries,
+            totalResultCount: timeseries.length
+        });
     }
 
     fetchRevisionsCount(docId: string, db: database): void {
@@ -1568,14 +1578,15 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
     }
     
     saveRelatedItems(targetDocumentId: string): JQueryPromise<void> {
-        
-        //TODO: !
-        
         const hasAttachments = this.attachmentsCount() > 0;
+        const hasTimeseries = this.timeSeriesCount() > 0;
         const hasCounters = this.countersCount() > 0;
-        if (hasAttachments || hasCounters) {
+        
+        if (hasAttachments || hasTimeseries || hasCounters) {
             
             const attachmentNames = this.attachments().map(x => x.name);
+            const timeseries = this.timeSeries().map(x => x.name);
+            
             const counters: Array<{ name: string, value: number }> = this.counters().map(x => {
                 return {
                     name: x.counterName,
@@ -1583,8 +1594,8 @@ class clonedDocumentCrudActions implements editDocumentCrudActions {
                 }
             });
             
-            return new cloneAttachmentsAndCountersCommand(this.sourceDocumentId, this.fromRevision, this.changeVector, 
-                targetDocumentId, this.db(), attachmentNames, counters)
+            return new cloneRelatedItemsCommand(this.sourceDocumentId, this.fromRevision, this.changeVector, 
+                targetDocumentId, this.db(), attachmentNames, timeseries, counters)
                 .execute();
         } else {
             // no need for extra call

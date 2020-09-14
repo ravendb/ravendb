@@ -19,6 +19,9 @@ class databaseRecord extends viewModelBase {
     isForbidden = ko.observable<boolean>(false);
     
     inEditMode = ko.observable<boolean>(false);
+    
+    hideEmptyValues = ko.observable<boolean>(false);
+    selectedHideState: boolean;
 
     static containerId = "#databaseRecordContainer";
 
@@ -26,12 +29,15 @@ class databaseRecord extends viewModelBase {
         super();
         aceEditorBindingHandler.install();
 
-        this.document.subscribe(doc => {
-            if (doc) {
-                const docText = this.stringify(doc.toDto());
-                this.documentText(docText);
+        this.document.subscribe(document => {
+            if (document) {
+                this.setVisibleDocumentText();
             }
         });
+        
+        this.hideEmptyValues.subscribe(() => {
+            this.setVisibleDocumentText();
+        })
         
         this.bindToCurrentInstance("toggleCollapse", "save", "exitEditMode");
     }
@@ -72,10 +78,8 @@ class databaseRecord extends viewModelBase {
         if (this.docEditor) {
             this.docEditor.getSession().on("tokenizerUpdate", () => {
                 if (this.forceFold) {
-                    this.foldAll();
-
                     this.forceFold = false;
-                    this.isDocumentCollapsed(true);
+                    this.collapseDocument();
                 }
             });
        }
@@ -83,15 +87,27 @@ class databaseRecord extends viewModelBase {
 
     toggleCollapse() {
         if (this.isDocumentCollapsed()) {
-            this.docEditor.getSession().unfold(null, true);
-            this.isDocumentCollapsed(false);
+            this.unfoldDocument();
         } else {
+            this.collapseDocument();
+        }
+    }
+    
+    private collapseDocument() {
+        if (this.docEditor) {
             this.foldAll();
             this.isDocumentCollapsed(true);
         }
     }
+    
+    private unfoldDocument() {
+        if (this.docEditor) {
+            this.docEditor.getSession().unfold(null, true);
+            this.isDocumentCollapsed(false);
+        }
+    }
 
-    foldAll() {
+    private foldAll() {
         const AceRange = ace.require("ace/range").Range;
         this.docEditor.getSession().foldAll();
         const folds = <any[]> this.docEditor.getSession().getFoldsInRange(new AceRange(0, 0, this.docEditor.getSession().getLength(), 0));
@@ -108,19 +124,17 @@ class databaseRecord extends viewModelBase {
         this.confirm()
             .done(result => {
                 if (result.can) {
-                    const docText = this.stringify(this.document().toDto(), false);
-                    this.documentText(docText);
                     this.inEditMode(true);
-                    this.isDocumentCollapsed(false);
+                    this.selectedHideState = this.hideEmptyValues();
+                    this.hideEmptyValues(false);
+                    this.unfoldDocument();
                 }
             })
     }
     
     exitEditMode() {
-        const docText = this.stringify(this.document().toDto(), true);
-        this.documentText(docText);
         this.inEditMode(false);
-        this.isDocumentCollapsed(false);
+        this.hideEmptyValues(this.selectedHideState);
     }
     
     confirm() {
@@ -151,17 +165,31 @@ class databaseRecord extends viewModelBase {
             .execute()
             .done((document: document) => this.document(document));
     }
+    
+    private setVisibleDocumentText() {
+        const docText = this.stringify(this.document().toDto(), this.hideEmptyValues());
+        this.documentText(docText);
 
-    private stringify(obj: any, stripNullAndEmptyValues: boolean = true) {
+        // must keep the collapse state because although user didn't actively changed it, 
+        // the documentText has changed and it changes the ace editor state
+        if (this.isDocumentCollapsed()) {
+            this.collapseDocument()
+        } else {
+            this.unfoldDocument();
+        }
+    }
+
+    private stringify(obj: any, stripNullAndEmptyValues: boolean = false) {
         const prettifySpacing = 4;
         
         if (stripNullAndEmptyValues) {
-            return JSON.stringify(obj, function(key, val) {
-                // Strip out null values for all entries except for 'Settings'
-                if (this === obj.Settings) {
-                    return _.isEqual(val, {}) ? undefined : val;
-                }
-                return _.isNull(val) || _.isEqual(val, {}) ? undefined : val;
+            return JSON.stringify(obj, (key, val) => {
+                const isNull = _.isNull(val);
+                const isEmptyObj = _.isEqual(val, {});
+                const isEmptyArray = _.isEqual(val, []);
+                
+                return isNull || isEmptyObj || isEmptyArray ? undefined : val;
+                
             }, prettifySpacing);
         } else {
             return JSON.stringify(obj, null, prettifySpacing);

@@ -4,6 +4,7 @@ using Jint.Native;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
 using Raven.Server.Documents.Indexes.Static.JavaScript;
+using Raven.Client;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -27,6 +28,12 @@ namespace Raven.Server.Documents.Patch
 
         public virtual bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
         {
+            if (reference.GetReferencedName() == Constants.Documents.Metadata.Key && 
+                reference.GetBase() is BlittableObjectInstance boi)
+            {
+                value = engine.Invoke(ScriptRunner.SingleRun.GetMetadataMethod, boi);
+                return true;
+            }
             if (reference.GetReferencedName() == "reduce" &&
                 value.IsArray() && value.AsArray().Length == 0)
             {

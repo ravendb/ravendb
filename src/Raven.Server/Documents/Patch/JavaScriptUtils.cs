@@ -51,7 +51,6 @@ namespace Raven.Server.Documents.Patch
 
             if (!(boi.Blittable[Constants.Documents.Metadata.Key] is BlittableJsonReaderObject metadata))
                 return JsValue.Null;
-
             metadata.Modifications = new DynamicJsonValue
             {
                 [Constants.Documents.Metadata.ChangeVector] = boi.ChangeVector,
@@ -66,7 +65,9 @@ namespace Raven.Server.Documents.Patch
                 metadata.Modifications[Constants.Documents.Metadata.SpatialResult] = boi.Distance.Value.ToJson();
 
             metadata = Context.ReadObject(metadata, boi.DocumentId);
-            return TranslateToJs(_scriptEngine, Context, metadata);
+            JsValue metadataJs = TranslateToJs(_scriptEngine, Context, metadata);
+            boi.Set(new JsString(Constants.Documents.Metadata.Key), metadataJs);
+            return metadataJs;
         }
 
         internal JsValue AttachmentsFor(JsValue self, JsValue[] args)
@@ -259,7 +260,7 @@ namespace Raven.Server.Documents.Patch
             if (o is Tuple<Document, Lucene.Net.Documents.Document, IState, Dictionary<string, IndexField>, bool?, ProjectionOptions> t)
             {
                 var d = t.Item1;
-                return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d.Id, d.LastModified, d.ChangeVector)
+                return new BlittableObjectInstance(engine, null, Clone(d.Data, context), d)
                 {
                     LuceneDocument = t.Item2,
                     LuceneState = t.Item3,
@@ -270,7 +271,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (o is Document doc)
             {
-                return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc.Id, doc.LastModified, doc.ChangeVector);
+                return new BlittableObjectInstance(engine, null, Clone(doc.Data, context), doc);
             }
             if (o is DocumentConflict dc)
             {
@@ -314,7 +315,7 @@ namespace Raven.Server.Documents.Patch
                 var args = new JsValue[1];
                 for (var i = 0; i < docList.Count; i++)
                 {
-                    args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i].Id, docList[i].LastModified, docList[i].ChangeVector);
+                    args[0] = new BlittableObjectInstance(engine, null, Clone(docList[i].Data, context), docList[i]);
                     engine.Array.PrototypeObject.Push(jsArray, args);
                 }
                 return jsArray;

@@ -689,7 +689,7 @@ namespace FastTests.Client
                     //concat
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(101, 102, 103));
                     session.Advanced.Patch(loaded, u => u.Stuff, roles => roles.Add(new Stuff { Key = 102 }, new Stuff { Phone = "123456" }));
-                    await session.SaveChangesAsync();
+                    await SaveChangesWithTryCatchAsync(session, loaded);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -702,7 +702,7 @@ namespace FastTests.Client
                     Assert.Equal(loaded.Stuff[3].Phone, "123456");
 
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(new[] { 201, 202, 203 }));
-                    await session.SaveChangesAsync();
+                    await SaveChangesWithTryCatchAsync(session, loaded);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -779,7 +779,7 @@ namespace FastTests.Client
 
                     // infer type & the id from entity
                     session.Advanced.Increment(loaded, u => u.Stuff[0].Key, -3);
-                    await session.SaveChangesAsync();
+                    await SaveChangesWithTryCatchAsync(session, loaded);
                 }
 
                 using (var session = store.OpenAsyncSession())

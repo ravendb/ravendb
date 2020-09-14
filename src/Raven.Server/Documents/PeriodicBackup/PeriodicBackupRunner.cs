@@ -327,10 +327,18 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             try
             {
-                if (_cancellationToken.IsCancellationRequested)
-                    return;
-
                 var backupDetails = (NextBackup)backupTaskDetails;
+
+                if (_cancellationToken.IsCancellationRequested)
+                {
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        var type = backupDetails.IsFull ? "full" : "incremental";
+                        _logger.Operations($"Canceling the {type} backup task '{backupDetails.TaskId}' after the {nameof(TimerCallback)}.");
+                    }
+
+                    return;
+                }
 
                 if (ShouldRunBackupAfterTimerCallbackAndRescheduleIfNeeded(backupDetails, out PeriodicBackup periodicBackup) == false)
                     return;
@@ -347,10 +355,17 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             try
             {
-                if (_cancellationToken.IsCancellationRequested)
-                    return;
-
                 var backupDetails = (NextBackup)backupTaskDetails;
+
+                if (_cancellationToken.IsCancellationRequested)
+                {
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        var type = backupDetails.IsFull ? "full" : "incremental";
+                        _logger.Operations($"Canceling the {type} backup task '{backupDetails.TaskId}' after the {nameof(LongPeriodTimerCallback)}.");
+                    }
+                    return;
+                }
 
                 if (ShouldRunBackupAfterTimerCallbackAndRescheduleIfNeeded(backupDetails, out PeriodicBackup periodicBackup) == false)
                     return;
@@ -475,7 +490,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 var runningTask = periodicBackup.RunningTask;
                 if (runningTask != null)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Could not start backup task '{periodicBackup.Configuration.TaskId}' because there is already a running backup '{runningTask.Id}'");
+
                     return runningTask.Id;
+                }
 
                 CheckServerHealthBeforeBackup(_serverStore, periodicBackup.Configuration.Name);
                 _serverStore.ConcurrentBackupsCounter.StartBackup(periodicBackup.Configuration.Name, _logger);
@@ -721,7 +741,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (var rawRecord = _serverStore.Cluster.ReadRawDatabaseRecord(context, _database.Name))
             {
                 if (rawRecord == null)
+                {
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Couldn't run backup task '{backupInfo.TaskId}' because database '{_database.Name}' record is null.");
+
                     return false;
+                }
 
                 topology = rawRecord.Topology;
             }

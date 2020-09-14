@@ -156,7 +156,7 @@ namespace Raven.Server.Web.System
                                                     databaseRecord.DeletionInProgress.TryGetValue(node, out var deletionInProgress) &&
                                                     deletionInProgress != DeletionInProgressStatus.No;
                         if (databaseIsBeenDeleted)
-                            throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because the it is currently being deleted from node '{node}'");
+                            throw new InvalidOperationException($"Can't add node {node} to database '{name}' topology because it is currently being deleted from node '{node}'");
 
                         var url = clusterTopology.GetUrlFromTag(node);
                         if (url == null)

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using SlowTests.Issues;
+using SlowTests.Server.Documents.ETL.Raven;
 using Tests.Infrastructure;
 
 namespace Tryouts

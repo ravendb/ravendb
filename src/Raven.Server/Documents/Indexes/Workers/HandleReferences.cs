@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         while (keepRunning)
                         {
                             var hasChanges = false;
-
+                            var indexed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                             using (queryContext.OpenReadTransaction())
                             {
                                 sw.Restart();
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     hasChanges = true;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombstone);
 
-                                    var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedDocument, lastIndexedEtag);
+                                    var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedDocument, lastIndexedEtag, indexed);
 
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
@@ -305,7 +305,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             return moreWorkFound;
         }
 
-        private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext, string collection, Reference referencedDocument, long lastIndexedEtag)
+        private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
+            string collection, Reference referencedDocument, long lastIndexedEtag, HashSet<string> indexed)
         {
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction))
             {
@@ -313,6 +314,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                 if (item == null)
                     continue;
+
+                if (indexed.Add(item.Id) == false)
+                {
+                    item.Dispose();
+                    continue;
+                }
 
                 if (item.Etag > lastIndexedEtag)
                 {
