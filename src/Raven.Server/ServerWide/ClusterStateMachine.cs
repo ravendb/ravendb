@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -674,7 +675,8 @@ namespace Raven.Server.ServerWide
             return e is RachisException ||
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
-                   e is AuthorizationException;
+                   e is AuthorizationException ||
+                   e is CompareExchangeKeyTooBigException;
         }
 
         private void ClusterStateCleanUp(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index)
