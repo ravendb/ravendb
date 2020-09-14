@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json;
 using Constants = Raven.Client.Constants;
+
 namespace Raven.Server.Utils
 {
     public class ConflictResolverAdvisor
@@ -138,7 +139,6 @@ namespace Raven.Server.Utils
             return true;
         }
 
-
         private void HandleSimpleValues(Dictionary<string, object> result, BlittableJsonReaderObject.PropertyDetails prop, int index)
         {
             var conflicted = new Conflicted
@@ -179,7 +179,6 @@ namespace Raven.Server.Utils
                 result.Add(prop.Name, conflicted);
             }
         }
-
 
         private class Conflicted
         {
@@ -262,7 +261,7 @@ namespace Raven.Server.Utils
 
             if (resolver.IsMetadataResolver)
             {
-                if (name != "@metadata")
+                if (name != Constants.Documents.Metadata.Key)
                 {
                     metadataWriter.WritePropertyName(name);
                     metadataWriter.StartWriteObject();

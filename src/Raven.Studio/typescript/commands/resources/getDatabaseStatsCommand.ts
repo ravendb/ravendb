@@ -11,7 +11,8 @@ class getDatabaseStatsCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
         const url = this.getQueryUrlFragment();
-        return this.query<Raven.Client.Documents.Operations.DatabaseStatistics>(url, null, this.db, null, null, this.getTimeToAlert(this.longWait));
+        return this.query<Raven.Client.Documents.Operations.DatabaseStatistics>(url, null, this.db, null, null, this.getTimeToAlert(this.longWait))
+            .fail((response: JQueryXHR) => this.reportError("Failed to get database statistics", response.responseText, response.statusText));
     }
 
     getQueryUrl(): string {

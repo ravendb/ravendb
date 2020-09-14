@@ -215,6 +215,7 @@ namespace Raven.Server.Documents.Patch
             public JavaScriptUtils JavaScriptUtils;
 
             private const string _timeSeriesSignature = "timeseries(doc, name)";
+            public const string GetMetadataMethod = "getMetadata";
 
             public SingleRun(DocumentDatabase database, RavenConfiguration configuration, ScriptRunner runner, List<string> scriptsSource)
             {
@@ -236,7 +237,7 @@ namespace Raven.Server.Documents.Patch
                 });
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
-                ScriptEngine.SetValue("getMetadata", new ClrFunctionInstance(ScriptEngine, "getMetadata", JavaScriptUtils.GetMetadata));
+                ScriptEngine.SetValue(GetMetadataMethod, new ClrFunctionInstance(ScriptEngine, GetMetadataMethod, JavaScriptUtils.GetMetadata));
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, "id", JavaScriptUtils.GetDocumentId));
 
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, "output", OutputDebug));

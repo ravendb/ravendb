@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -82,12 +83,19 @@ namespace Raven.Server.Documents.TcpHandlers
 
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
-                    docsContext,
-                    _collection,
-                    startEtag + 1,
-                    0,
-                    long.MaxValue))
+                IEnumerable<Document> documents = _collection switch
+                {
+                    Constants.Documents.Collections.AllDocumentsCollection => 
+                        _db.DocumentsStorage.GetDocumentsFrom(docsContext, startEtag +1, 0, long.MaxValue),
+                    _ =>
+                    _db.DocumentsStorage.GetDocumentsFrom(
+                        docsContext,
+                        _collection,
+                        startEtag + 1,
+                        0,
+                        long.MaxValue)
+                };
+                foreach (var doc in documents)
                 {
                     using (doc.Data)
                     {

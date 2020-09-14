@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -21,9 +22,9 @@ namespace Raven.Server.SqlMigration.Model
 
         public void SetCollection(string collectionName)
         {
-            Object["@metadata"] = new DynamicJsonValue
+            Object[Constants.Documents.Metadata.Key] = new DynamicJsonValue
             {
-                ["@collection"] = collectionName
+                [Constants.Documents.Metadata.Collection] = collectionName
             };
             Collection = collectionName;
         }
@@ -39,5 +40,5 @@ namespace Raven.Server.SqlMigration.Model
                 throw new InvalidOperationException($"Cannot build document with ID: {Id}", e);
             }
         }
-    }   
+    }
 }

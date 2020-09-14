@@ -98,12 +98,12 @@ namespace Raven.Server.Documents.ETL
             if (args[1].IsObject() == false)
                 ThrowInvalidScriptMethodCall("loadTo(name, obj) second argument must be an object");
 
-            using (var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject()))
-            {
-                LoadToFunction(args[0].AsString(), result);
-
-                return result.Instance;
-            }
+            // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
+            // called _midway_ through the script, so that is not something that we want to do. The caller will
+            // already be calling that.
+            var result = new ScriptRunnerResult(DocumentScript, args[1].AsObject());
+            LoadToFunction(args[0].AsString(), result);
+            return result.Instance;
         }
 
         private JsValue LoadToFunctionTranslator(string name, JsValue self, JsValue[] args)
@@ -114,12 +114,12 @@ namespace Raven.Server.Documents.ETL
             if (args[0].IsObject() == false)
                 ThrowInvalidScriptMethodCall($"loadTo{name}(obj) argument must be an object");
 
-            using (var result = new ScriptRunnerResult(DocumentScript, args[0].AsObject()))
-            {
-                LoadToFunction(name, result);
-
-                return result.Instance;
-            }
+            // explicitly not disposing here, this will clear the context from the JavaScriptUtils, but this is 
+            // called _midway_ through the script, so that is not something that we want to do. The caller will
+            // already be calling that.
+            var result = new ScriptRunnerResult(DocumentScript, args[0].AsObject());
+            LoadToFunction(name, result);
+            return result.Instance;
         }
 
         protected abstract void AddLoadedAttachment(JsValue reference, string name, Attachment attachment);

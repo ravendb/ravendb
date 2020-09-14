@@ -6,15 +6,21 @@
     <!-- /ko -->
     <!-- ko if: !isForbidden() -->
     <form class="flex-grow flex-vertical">
-        <div data-bind="visible: !inEditMode()">
-            <button type="button" class="btn btn-default" data-bind="click: _.partial(refreshFromServer, true)" title="Refresh">
-                <i class="icon-refresh"></i>
-                <span>Refresh</span>
-            </button>
-            <button type="button" class="btn btn-default" data-bind="click: enterEditMode" title="Edit database record.">
-                <i class="icon-edit"></i>
-                <span>Edit</span>
-            </button>
+        <div data-bind="visible: !inEditMode()" class="flex-horizontal">
+            <div class="btn-group">
+                <button type="button" class="btn btn-default" data-bind="click: _.partial(refreshFromServer, true)" title="Refresh">
+                    <i class="icon-refresh"></i>
+                    <span>Refresh</span>
+                </button>
+                <button type="button" class="btn btn-default" data-bind="click: enterEditMode" title="Edit database record.">
+                    <i class="icon-edit"></i>
+                    <span>Edit</span>
+                </button>
+            </div>
+            <div class="toggle">
+                <input id="hideEmptyValues" class="margin-left margin-left-lg" type="checkbox" data-bind="checked: hideEmptyValues">
+                <label for="hideEmptyValues">Hide empty values</label>
+            </div>
         </div>
         <div data-bind="visible: inEditMode()">
             <button type="button" class="btn btn-primary" data-bind="click: save">

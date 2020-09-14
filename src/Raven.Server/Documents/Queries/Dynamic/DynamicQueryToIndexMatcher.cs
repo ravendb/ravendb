@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -79,28 +78,34 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var result = ConsiderUsageOfIndex(query, auto, explanations);
 
-                if (result.MatchType < bestComplete.MatchType)
+                string reason = null;
+                bool hasBetterMatch = false;
+                if (result.MatchType != bestComplete.MatchType)
                 {
-                    explanations?.Add(new Explanation(result.IndexName, "A better match was available"));
-                    continue;
+                    hasBetterMatch = result.MatchType > bestComplete.MatchType;
+                    reason = "A better match was available";
+                }
+                else if (result.LastMappedEtag != bestComplete.LastMappedEtag)
+                {
+                    hasBetterMatch = result.LastMappedEtag > bestComplete.LastMappedEtag;
+                    reason = "Wasn't the most up to date index matching this query";
+                }
+                else if (result.NumberOfMappedFields != bestComplete.NumberOfMappedFields)
+                {
+                    hasBetterMatch = result.NumberOfMappedFields > bestComplete.NumberOfMappedFields;
+                    reason = "Wasn't the widest index matching this query";
                 }
 
-                const string notWidestMsg = "Wasn't the widest / most up to date index matching this query";
-
-
-                if (result.LastMappedEtag <= bestComplete.LastMappedEtag &&
-                    result.NumberOfMappedFields <= bestComplete.NumberOfMappedFields)
+                if (explanations != null &&
+                    bestComplete.MatchType != DynamicQueryMatchType.Failure &&
+                    reason != null)
                 {
-                    explanations?.Add(new Explanation(bestComplete.IndexName, notWidestMsg));
-                    continue;
+                    var indexName = hasBetterMatch ? bestComplete.IndexName : result.IndexName;
+                    explanations.Add(new Explanation(indexName, reason));
                 }
 
-                if (explanations != null && 
-                    bestComplete.MatchType != DynamicQueryMatchType.Failure)
-                {
-                    explanations.Add(new Explanation(bestComplete.IndexName, notWidestMsg));
-                }
-                bestComplete = result;
+                if (hasBetterMatch)
+                    bestComplete = result;
             }
 
             return bestComplete;

@@ -1506,15 +1506,6 @@ namespace Raven.Server.Documents.TimeSeries
                 if (holder.FromReplication == false)
                     return CompareResult.Remote; // if not from replication, remote value is an update
 
-                if (localValues.Length != remote.Values.Length)
-                {
-                    // larger number of values wins
-                    if (localValues.Length > remote.Values.Length)
-                        return CompareResult.Local;
-
-                    return CompareResult.Remote;
-                }
-
                 // deletion wins
                 if (localStatus == TimeSeriesValuesSegment.Dead)
                 {
@@ -1526,6 +1517,15 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (remote.Status == TimeSeriesValuesSegment.Dead) // deletion wins
                     return CompareResult.Remote;
+
+                if (localValues.Length != remote.Values.Length)
+                {
+                    // larger number of values wins
+                    if (localValues.Length > remote.Values.Length)
+                        return CompareResult.Local;
+
+                    return CompareResult.Remote;
+                }
 
                 var compare = localValues.SequenceCompareTo(remote.Values.Span);
                 if (compare == 0)

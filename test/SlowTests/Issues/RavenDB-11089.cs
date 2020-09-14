@@ -774,8 +774,6 @@ from 'Users' as user select output(user)", queryAsString);
 
                 var now = DateTime.Now;
 
-                WaitForUserToContinueTheTest(store);
-
                 using (var session = store.OpenSession())
                 {
                     // explicitly specify id & type
@@ -792,7 +790,7 @@ from 'Users' as user select output(user)", queryAsString);
 
                     // infer type & the id from entity
                     session.Advanced.Patch(loaded, u => u.Stuff[0].Phone, "123456");
-                    session.SaveChanges();
+                    SaveChangesWithTryCatch(session, loaded);
                 }
 
                 using (var session = store.OpenSession())
@@ -1107,7 +1105,7 @@ from 'Users' as user select output(user)", queryAsString);
                     //concat
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(101, 102, 103));
                     session.Advanced.Patch(loaded, u => u.Stuff, roles => roles.Add(new Stuff { Key = 102 }, new Stuff { Phone = "123456" }));
-                    session.SaveChanges();
+                    SaveChangesWithTryCatch(session, loaded);
                 }
 
                 using (var session = store.OpenSession())
@@ -1120,7 +1118,7 @@ from 'Users' as user select output(user)", queryAsString);
                     Assert.Equal(loaded.Stuff[3].Phone, "123456");
 
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(new[] { 201, 202, 203 }));
-                    session.SaveChanges();
+                    SaveChangesWithTryCatch(session, loaded);
                 }
 
                 using (var session = store.OpenSession())
