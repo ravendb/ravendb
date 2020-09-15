@@ -1003,7 +1003,7 @@ namespace Raven.Server.Documents.Handlers
                             break;
                         case CommandType.TimeSeriesCopy:
 
-                            var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, cmd.Name, DateTime.MinValue, DateTime.MaxValue);
+                            var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, cmd.Name, cmd.From ?? DateTime.MinValue, cmd.To ?? DateTime.MaxValue);
 
                             var docCollection = TimeSeriesHandler.ExecuteTimeSeriesBatchCommand.GetDocumentCollection(Database, context, cmd.DestinationId, fromEtl: false);
 
