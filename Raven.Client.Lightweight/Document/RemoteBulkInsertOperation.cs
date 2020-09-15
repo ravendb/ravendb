@@ -364,9 +364,13 @@ namespace Raven.Client.Document
                 errorResponse = e;
             }
 
-            var conflictsDocument = RavenJObject.Load(new RavenJsonTextReader(new StringReader(errorResponse.ResponseString)));
+            using(var stringReader = new StringReader(errorResponse.ResponseString))
+            using (var ravenJsonTextReader = new RavenJsonTextReader(stringReader))
+            {
+                var conflictsDocument = RavenJObject.Load(ravenJsonTextReader);
 
-            throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
+                throw new ConcurrencyException(conflictsDocument.Value<string>("Error"));
+            }
         }
 
         private Task<RavenJToken> GetOperationStatus(long operationId)
