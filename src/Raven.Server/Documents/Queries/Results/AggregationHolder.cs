@@ -29,14 +29,18 @@ namespace Raven.Server.Documents.Queries.Results
         private Dictionary<object, TimeSeriesAggregation[]> _current;
         private Dictionary<object, PreviousAggregation> _previous;
 
+        private double? _percentile;
+
         public bool HasValues => _current?.Count > 0;
 
-        public AggregationHolder(DocumentsOperationContext context, Dictionary<AggregationType, string> types, InterpolationType interpolationType)
+        public AggregationHolder(DocumentsOperationContext context, Dictionary<AggregationType, string> types, InterpolationType interpolationType, double? percentile = null)
         {
             _context = context;
 
             _names = types.Values.ToArray();
             _types = types.Keys.ToArray();
+
+            _percentile = percentile;
 
             _interpolationType = interpolationType;
             if (_interpolationType != InterpolationType.None)
@@ -52,6 +56,15 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 var type = _types[i];
                 var name = _names?[i];
+
+                if (type == AggregationType.Percentile)
+                {
+                    Debug.Assert(_percentile.HasValue, $"Invalid {nameof(AggregationType.Percentile)} aggregation method. 'percentile' argument has no value");
+
+                    bucket[i] = new TimeSeriesAggregation(_percentile.Value, name);
+                    continue;
+                }
+
                 bucket[i] = new TimeSeriesAggregation(type, name);
             }
 
