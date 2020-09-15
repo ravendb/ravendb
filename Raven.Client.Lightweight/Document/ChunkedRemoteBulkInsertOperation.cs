@@ -41,7 +41,11 @@ namespace Raven.Client.Document
             this.changes = changes;
             currentChunkSize = 0;
             RemoteBulkInsertOperationSwitches = 0;
-            current = GetBulkInsertOperation();
+            using (NoSynchronizationContext.Scope())
+            {
+                var currentAsync = GetBulkInsertOperation().ConfigureAwait(false);
+                current= currentAsync.GetAwaiter().GetResult();
+            }
         }
 
         public Guid OperationId
@@ -54,9 +58,25 @@ namespace Raven.Client.Document
 
         public void Write(string id, RavenJObject metadata, RavenJObject data, int? dataSize)
         {
-            current = GetBulkInsertOperation();
+            using (NoSynchronizationContext.Scope())
+            {
+                var currentAsync = GetBulkInsertOperation().ConfigureAwait(false);
+                current = currentAsync.GetAwaiter().GetResult();
+            }
 
             current.Write(id, metadata, data, dataSize);
+
+            if (options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes > 0)
+                currentChunkSize += DocumentHelpers.GetRoughSize(data);
+
+            processedItemsInCurrentOperation++;
+        }
+
+        public async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data, int? dataSize)
+        {
+            current = await GetBulkInsertOperation().ConfigureAwait(false);
+
+            await current.WriteAsync(id, metadata, data, dataSize).ConfigureAwait(false);
 
             if (options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes > 0)
                 currentChunkSize += DocumentHelpers.GetRoughSize(data);
@@ -71,10 +91,9 @@ namespace Raven.Client.Document
                 await current.DisposeAsync().ConfigureAwait(false);
                 current = null;
             }
-
         }
 
-        private RemoteBulkInsertOperation GetBulkInsertOperation()
+        private async Task<RemoteBulkInsertOperation> GetBulkInsertOperation()
         {
             if (current == null)
                 return current = CreateBulkInsertOperation(cachedPreviousEmptyTask);
@@ -84,12 +103,12 @@ namespace Raven.Client.Document
                 {
                     return current;
                 }
-            // if we haven't flushed the previous one yet, we will force 
-            // a disposal of both the previous one and the one before, to avoid 
+            // if we haven't flushed the previous one yet, we will force
+            // a disposal of both the previous one and the one before, to avoid
             // consuming a lot of memory, and to have _too_ much concurrency.
             if (previousTask != null)
             {
-                previousTask.ConfigureAwait(false).GetAwaiter().GetResult();
+                await previousTask.ConfigureAwait(false);
             }
             previousTask = current.DisposeAsync();
             currentChunkSize = 0;

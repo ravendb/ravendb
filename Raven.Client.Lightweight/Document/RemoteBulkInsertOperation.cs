@@ -40,6 +40,8 @@ namespace Raven.Client.Document
 
         void Write(string id, RavenJObject metadata, RavenJObject data, int? dataSize = null);
 
+        Task WriteAsync(string id, RavenJObject metadata, RavenJObject data, int? dataSize = null);
+
         Task WaitForLastTaskToFinish();
 
         Task<int> DisposeAsync();
@@ -331,6 +333,54 @@ namespace Raven.Client.Document
 
             if (operationTask.IsCanceled || operationTask.IsFaulted)
                 operationTask.Wait(); //error early if we have any error
+
+            throw new TimeoutException("Could not flush in the specified timeout, server probably not responding or responding too slowly.\r\nAre you writing very big documents?");
+        }
+
+        public virtual async Task WriteAsync(string id, RavenJObject metadata, RavenJObject data, int? dataSize = null)
+        {
+            if (id == null) throw new ArgumentNullException("id");
+            if (metadata == null) throw new ArgumentNullException("metadata");
+            if (data == null) throw new ArgumentNullException("data");
+            if (aborted) throw new InvalidOperationException("Operation has been aborted");
+
+
+            metadata["@id"] = id;
+            data[Constants.Metadata] = metadata;
+
+            for (int i = 0; i < 2; i++)
+            {
+                if (operationTask.IsCanceled || operationTask.IsFaulted)
+                    await operationTask.ConfigureAwait(false); //error early if we have any error
+
+                try
+                {
+                    if (queue.TryAdd(data, options.WriteTimeoutMilliseconds / 2))
+                    {
+                        if (dataSize != null && dataSize >= BigDocumentSize)
+                        {
+                            //essentially for a BatchSize == 1024 and stream of 1MB documents - the actual batch size will be 128
+                            // --> BatchSize = 1024 / (dataSize = 1024/BigDocumentSize = 250) * 2 == 128
+                            for (int skipDocIndex = 0; skipDocIndex < (dataSize / BigDocumentSize) * 2; skipDocIndex++)
+                            {
+                                if (queue.TryAdd(SkipMarker) == false) //if queue is full just stop adding dummy docs
+                                    break;
+                            }
+                        }
+                        return;
+                    }
+                }
+                catch (InvalidOperationException e)
+                {
+                    //this means that the queue is marked as complete,
+                    //probably, because there was an error
+
+                    break;
+                }
+            }
+
+            if (operationTask.IsCanceled || operationTask.IsFaulted)
+                await operationTask.ConfigureAwait(false); //error early if we have any error
 
             throw new TimeoutException("Could not flush in the specified timeout, server probably not responding or responding too slowly.\r\nAre you writing very big documents?");
         }

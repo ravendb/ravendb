@@ -121,14 +121,14 @@ namespace Raven.Tests.Web.Controllers.Commands
         }
 
         [Route("api/async/commands/getBulkInsertOperation")]
-        public Task<HttpResponseMessage> GetBulkInsertOperation()
+        public async Task<HttpResponseMessage> GetBulkInsertOperation()
         {
             using (var operation = DocumentStore.AsyncDatabaseCommands.GetBulkInsertOperation(new BulkInsertOptions(), DocumentStore.Changes()))
             {
-                operation.Write(Guid.NewGuid().ToString(), new RavenJObject(), new RavenJObject());
+                await operation.WriteAsync(Guid.NewGuid().ToString(), new RavenJObject(), new RavenJObject());
             }
 
-            return new CompletedTask<HttpResponseMessage>(new HttpResponseMessage());
+            return new HttpResponseMessage();
         }
 
         [Route("api/async/commands/getDocuments1")]
