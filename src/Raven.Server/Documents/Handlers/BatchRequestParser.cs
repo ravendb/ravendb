@@ -72,6 +72,8 @@ namespace Raven.Server.Documents.Handlers
             #region Time Series
 
             public TimeSeriesOperation TimeSeries;
+            public DateTime? From;
+            public DateTime? To;
 
             #endregion Time Series
 
@@ -446,6 +448,38 @@ namespace Raven.Server.Documents.Handlers
                                 break;
                         }
                         break;
+                    case CommandPropertyName.From:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.From = null;
+                                break;
+                            case JsonParserToken.String:
+                                commandData.From = DateTime.Parse(GetStringPropertyValue(state));
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
+                    case CommandPropertyName.To:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.To = null;
+                                break;
+                            case JsonParserToken.String:
+                                commandData.To = DateTime.Parse(GetStringPropertyValue(state));
+                                break;
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
                     case CommandPropertyName.DestinationName:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
@@ -800,6 +834,8 @@ namespace Raven.Server.Documents.Handlers
             #region TimeSeries
 
             TimeSeries,
+            From,
+            To,
 
             #endregion TimeSeries
 
@@ -822,7 +858,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 case 2:
                     if (*(short*)state.StringBuffer != 25673)
+                    {
+                        if (*(short*)state.StringBuffer == 28500)
+                            return CommandPropertyName.To;
+
                         return CommandPropertyName.NoSuchProperty;
+                    }
                     return CommandPropertyName.Id;
 
                 case 3:
@@ -842,6 +883,8 @@ namespace Raven.Server.Documents.Handlers
                         return CommandPropertyName.Type;
                     if (*(int*)state.StringBuffer == 1701667150)
                         return CommandPropertyName.Name;
+                    if (*(int*)state.StringBuffer == 1836020294)
+                        return CommandPropertyName.From;
                     return CommandPropertyName.NoSuchProperty;
 
                 case 5:
@@ -979,43 +1022,43 @@ namespace Raven.Server.Documents.Handlers
             switch (state.StringSize)
             {
                 case 3:
-                    if (*(short*)state.StringBuffer == 21840 && 
-                        state.StringBuffer[2] == (byte)'T') 
-                    return CommandType.PUT;
+                    if (*(short*)state.StringBuffer == 21840 &&
+                        state.StringBuffer[2] == (byte)'T')
+                        return CommandType.PUT;
                     break;
 
                 case 5:
                     if (*(int*)state.StringBuffer == 1129595216 &&
-                        state.StringBuffer[4] == (byte)'H') 
-                    return CommandType.PATCH;
+                        state.StringBuffer[4] == (byte)'H')
+                        return CommandType.PATCH;
                     break;
 
                 case 6:
                     if (*(int*)state.StringBuffer == 1162626372 &&
-                        *(short*)(state.StringBuffer + 4) == 17748) 
-                    return CommandType.DELETE;
+                        *(short*)(state.StringBuffer + 4) == 17748)
+                        return CommandType.DELETE;
                     break;
 
                 case 8:
-                    if (*(long*)state.StringBuffer == 8318823012450529091) 
-                    return CommandType.Counters;
+                    if (*(long*)state.StringBuffer == 8318823012450529091)
+                        return CommandType.Counters;
                     break;
 
                 case 10:
                     if (*(long*)state.StringBuffer == 7598246930185808212 &&
-                    *(short*)(state.StringBuffer + sizeof(long)) == 29541)
+                        *(short*)(state.StringBuffer + sizeof(long)) == 29541)
                         return CommandType.TimeSeries;
 
                     if (*(long*)state.StringBuffer == 6071222181947531586 &&
-                        *(short*)(state.StringBuffer + sizeof(long)) == 18499) 
-                    return CommandType.BatchPATCH;
+                        *(short*)(state.StringBuffer + sizeof(long)) == 18499)
+                        return CommandType.BatchPATCH;
                     break;
 
                 case 13:
                     if (*(long*)state.StringBuffer == 7308612546338255937 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1431336046 &&
-                        state.StringBuffer[sizeof(long) + sizeof(int)] == (byte)'T') 
-                    return CommandType.AttachmentPUT;
+                        state.StringBuffer[sizeof(long) + sizeof(int)] == (byte)'T')
+                        return CommandType.AttachmentPUT;
                     break;
 
                 case 14:
@@ -1043,10 +1086,10 @@ namespace Raven.Server.Documents.Handlers
                 case 18:
                     if (*(long*)state.StringBuffer == 5000528724088418115 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 5793150219460305784 &&
-                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 21589) 
-                    return CommandType.CompareExchangePUT;
+                        *(short*)(state.StringBuffer + sizeof(long) + sizeof(long)) == 21589)
+                        return CommandType.CompareExchangePUT;
                     break;
-                
+
                 case 20:
                     if (*(long*)state.StringBuffer == 7598246930185808212 &&
                         *(long*)(state.StringBuffer + sizeof(long)) == 7947001131039880037 &&

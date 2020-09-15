@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     internal class CopyTimeSeriesCommandData : ICommandData
     {
-        public CopyTimeSeriesCommandData(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName)
+        public CopyTimeSeriesCommandData(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, DateTime? from = null, DateTime? to = null)
         {
             if (string.IsNullOrWhiteSpace(sourceDocumentId))
                 throw new ArgumentNullException(nameof(sourceDocumentId));
@@ -25,12 +25,16 @@ namespace Raven.Client.Documents.Commands.Batches
             Name = sourceName;
             DestinationId = destinationDocumentId;
             DestinationName = destinationName;
+            From = from;
+            To = to;
         }
         public string Id { get; }
         public string Name { get; }
         public string ChangeVector { get; }
         public string DestinationId { get; }
         public string DestinationName { get; }
+        public DateTime? From { get; }
+        public DateTime? To { get; }
         public CommandType Type { get; } = CommandType.TimeSeriesCopy;
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
@@ -41,7 +45,9 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Name)] = Name,
                 [nameof(DestinationId)] = DestinationId,
                 [nameof(DestinationName)] = DestinationName,
-                [nameof(Type)] = Type.ToString()
+                [nameof(Type)] = Type.ToString(),
+                [nameof(From)] = From,
+                [nameof(To)] = To
             };
         }
 
