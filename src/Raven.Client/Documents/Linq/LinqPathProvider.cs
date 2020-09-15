@@ -529,6 +529,11 @@ namespace Raven.Client.Documents.Linq
                    || mce.Object?.Type == typeof(ISessionDocumentCounters) && mce.Method.Name == "Get";
         }
 
+        public static bool IsCompareExchangeCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.CmpXchg);
+        }
+
         public static bool IsTimeSeriesCall(MethodCallExpression mce)
         {
             var type = mce.Method.DeclaringType;
