@@ -352,6 +352,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
                     break;
                 case ExpressionType.MemberInit:
+                    // todo aviv
                     var initExp = (MemberInitExpression)body;
                     foreach (var c in initExp.Bindings)
                     {
@@ -359,6 +360,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                     }
                     break;
                 case ExpressionType.Call:
+                    // todo aviv
                     var call = (MethodCallExpression)body;
                     AddSelectField(call.Method.Name);
                     break;
@@ -646,6 +648,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesGrouping.Last):
                 case nameof(ITimeSeriesGrouping.Average):
                 case nameof(ITimeSeriesGrouping.Percentile):
+                case nameof(ITimeSeriesGrouping.Slope):
                     if (_selectFields.Length > 0)
                         _selectFields.Append(", ");
                     _selectFields.Append($"{name.ToLower()}({value})");

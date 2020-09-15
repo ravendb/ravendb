@@ -10,7 +10,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Queries.Results
+namespace Raven.Server.Documents.Queries.Results.TimeSeries
 {
     public class AggregationHolder
     {
@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Queries.Results
         private double? _percentile;
 
         public bool HasValues => _current?.Count > 0;
+
+        public bool HasPercentile => _percentile.HasValue;
 
         public AggregationHolder(DocumentsOperationContext context, Dictionary<AggregationType, string> types, InterpolationType interpolationType, double? percentile = null)
         {
@@ -61,7 +63,7 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     Debug.Assert(_percentile.HasValue, $"Invalid {nameof(AggregationType.Percentile)} aggregation method. 'percentile' argument has no value");
 
-                    bucket[i] = new TimeSeriesAggregation(_percentile.Value, name);
+                    bucket[i] = new TimeSeriesAggregation(type, name, _percentile.Value);
                     continue;
                 }
 
@@ -89,7 +91,7 @@ namespace Raven.Server.Documents.Queries.Results
         {
             if (_interpolationType != InterpolationType.None)
             {
-                foreach (var gap in FillMissingGaps(range.Start, scale))
+                foreach (var gap in FillMissingGaps(range, scale))
                 {
                     yield return gap;
                 }
@@ -133,7 +135,7 @@ namespace Raven.Server.Documents.Queries.Results
 
             for (int i = 0; i < value.Length; i++)
             {
-                result[value[i].Name] = new DynamicJsonArray(value[i].GetFinalValues(scale).Cast<object>());
+                result[value[i].Name] = new DynamicJsonArray(value[i].GetFinalValues(from, to, scale).Cast<object>());
             }
 
             return result;
@@ -240,8 +242,10 @@ namespace Raven.Server.Documents.Queries.Results
             public TimeSeriesAggregation[] Data;
         }
 
-        private IEnumerable<DynamicJsonValue> FillMissingGaps(DateTime to, double? scale)
+        private IEnumerable<DynamicJsonValue> FillMissingGaps(RangeGroup range, double? scale)
         {
+            var to = range.Start;
+
             foreach (var result in GetGapsPerBucket(to))
             {
                 var gapData = result.Previous;
@@ -271,8 +275,8 @@ namespace Raven.Server.Documents.Queries.Results
                         for (int i = 0; i < numberOfAggregations; i++)
                         {
                             Debug.Assert(startData[i].Aggregation == endData[i].Aggregation, "Invalid aggregation type");
-                            initial[i] = new List<double>(startData[i].GetFinalValues(scale));
-                            final[i] = new List<double>(endData[i].GetFinalValues(scale));
+                            initial[i] = new List<double>(startData[i].GetFinalValues(from, start, scale));
+                            final[i] = new List<double>(endData[i].GetFinalValues(to, range.End ,scale));
                         }
 
                         var numberOfValues = Math.Min(startData[0].NumberOfValues, endData[0].NumberOfValues);

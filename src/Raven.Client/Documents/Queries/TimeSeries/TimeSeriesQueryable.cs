@@ -99,6 +99,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         long[] Count();
 
         double[] Percentile(double number);
+
+        double[] Slope();
+
     }
 
     public interface ITimePeriodBuilder
