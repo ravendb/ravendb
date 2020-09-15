@@ -32,6 +32,8 @@ namespace Raven.Client.Document
 
         private Task<int> previousTask;
 
+        private Task<int> cachedPreviousEmptyTask = Task.FromResult(0);
+
         public ChunkedRemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes)
         {
             this.options = options;
@@ -75,7 +77,7 @@ namespace Raven.Client.Document
         private RemoteBulkInsertOperation GetBulkInsertOperation()
         {
             if (current == null)
-                return current = CreateBulkInsertOperation(Task.FromResult(0));
+                return current = CreateBulkInsertOperation(cachedPreviousEmptyTask);
 
             if (processedItemsInCurrentOperation < options.ChunkedBulkInsertOptions.MaxDocumentsPerChunk)
                 if (options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes <= 0 || currentChunkSize < options.ChunkedBulkInsertOptions.MaxChunkVolumeInBytes)
