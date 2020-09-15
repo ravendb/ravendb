@@ -118,12 +118,10 @@ namespace Raven.Server.Documents.Queries.Results
             var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
             resultType = ResultType.Aggregated;
 
-            var aggregationTypes = InitializeAggregationStates(timeSeriesFunction);
+            var aggregationTypes = InitializeAggregationStats(timeSeriesFunction, out var percentile);
+            individualValuesOnly |= percentile.HasValue;
 
-            var aggregationHolder = new AggregationHolder(_context, aggregationTypes, interpolationType);
-
-
-            var shouldUseIndividualItems = timeSeriesFunction.Where != null || aggStates.Any(s => s.Aggregation == AggregationType.Percentile);
+            var aggregationHolder = new AggregationHolder(_context, aggregationTypes, interpolationType, percentile);
 
             return GetAggregatedValues();
 
@@ -1133,8 +1131,10 @@ namespace Raven.Server.Documents.Queries.Results
             return GetFieldFromDocument(fe, document);
         }
 
-        private static Dictionary<AggregationType, string> InitializeAggregationStates(TimeSeriesFunction timeSeriesFunction)
+        private Dictionary<AggregationType, string> InitializeAggregationStats(TimeSeriesFunction timeSeriesFunction, out double? percentile)
         {
+            percentile = null;
+
             if (timeSeriesFunction.Select == null)
                 return AllAggregationTypes();
 
@@ -1142,6 +1142,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 [AggregationType.Count] = null // we always want to have 'Count' in the result
             };
+
             for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
             {
                 var select = timeSeriesFunction.Select[i];
@@ -1149,13 +1150,31 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                     {
+                        if (me.Arguments.Count > 0)
+                        {
+                            if (type != AggregationType.Percentile)
+                                throw new ArgumentException("Wrong number of arguments passed to method " + type);
+
+                            if (!(me.Arguments[0] is ValueExpression ve))
+                                throw new ArgumentException($"Invalid argument passed to method '{nameof(AggregationType.Percentile)}' : " + me.Arguments[0]);
+
+                            percentile = ve.GetValue(_queryParameters) switch
+                            {
+                                long l => l,
+                                double d => d,
+                                LazyNumberValue lnv => lnv,
+                                _ => throw new ArgumentException($"Invalid argument passed to method '{nameof(AggregationType.Percentile)}' : '{ve}'. " +
+                                                                 "Expected argument of type 'long', 'double', or 'LazyNumberValue' but got : " + ve.GetValue(_queryParameters).GetType())
+                            };
+                        }
+
                         stats[type] =  select.StringSegment?.ToString();
                         continue;
                     }
 
                     if (me.Name.Value == "avg")
                     {
-                        stats[AggregationType.Average] = null;
+                        stats[AggregationType.Average] = select.StringSegment?.ToString();
                         continue;
                     }
 

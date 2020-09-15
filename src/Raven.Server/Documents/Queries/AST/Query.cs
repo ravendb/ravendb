@@ -567,9 +567,9 @@ namespace Raven.Server.Documents.Queries.AST
         public string Name;
 
         public int NumberOfValues => _values.Count;
-        private List<double> _values;
+        private readonly List<double> _values;
 
-        private List<double> _count;
+        private readonly List<double> _count;
 
         private readonly double _percentileFactor;
 
@@ -588,7 +588,8 @@ namespace Raven.Server.Documents.Queries.AST
         {
             if (percentile < 0 || percentile > 100)
                 throw new ArgumentOutOfRangeException(
-                    $"Invalid argument passed to 'Percentile' aggregation method: {percentile}. Argument must be a number between 0 and 100");
+                    $"Invalid argument passed to '{nameof(AggregationType.Percentile)}' aggregation method: '{percentile}'. " +
+                    "Argument must be a number between 0 and 100");
 
             _percentileFactor = percentile / 100;
             _rankedValues = new List<List<double>>();
@@ -777,6 +778,8 @@ namespace Raven.Server.Documents.Queries.AST
                         break;
                     case AggregationType.Count:
                         break;
+                    case AggregationType.Percentile:
+                        throw new InvalidOperationException($"Cannot use aggregation method '{nameof(AggregationType.Percentile)}' on rolled-up time series");
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
@@ -837,6 +840,8 @@ namespace Raven.Server.Documents.Queries.AST
                         break;
                     case AggregationType.Count:
                         break;
+                    case AggregationType.Percentile:
+                        throw new InvalidOperationException($"Cannot use aggregation method '{nameof(AggregationType.Percentile)}' on rolled-up time series");
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
