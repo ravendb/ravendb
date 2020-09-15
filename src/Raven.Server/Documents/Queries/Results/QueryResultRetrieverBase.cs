@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Results.TimeSeries;
 using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;

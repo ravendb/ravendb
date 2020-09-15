@@ -27,6 +27,7 @@ namespace Raven.Server.Documents.TimeSeries
         public LazyStringValue Tag;
         public ulong Status;
         public SingleResultType Type;
+
         public DynamicJsonValue ToTimeSeriesEntryJson(double scale = 1)
         {
             var values = new DynamicJsonArray();

@@ -18,7 +18,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using BlittableJsonTextWriterExtensions = Raven.Server.Json.BlittableJsonTextWriterExtensions;
 
-namespace Raven.Server.Documents.Queries.Results
+namespace Raven.Server.Documents.Queries.Results.TimeSeries
 {
     public class TimeSeriesRetriever
     {
@@ -115,13 +115,9 @@ namespace Raven.Server.Documents.Queries.Results
                 return GetRawValues();
             }
 
-            var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
             resultType = ResultType.Aggregated;
-
-            var aggregationTypes = InitializeAggregationStats(timeSeriesFunction, out var percentile);
-            individualValuesOnly |= percentile.HasValue;
-
-            var aggregationHolder = new AggregationHolder(_context, aggregationTypes, interpolationType, percentile);
+            var aggregationHolder = GetAggregationHolder(timeSeriesFunction);
+            individualValuesOnly |= aggregationHolder.HasPercentile;
 
             return GetAggregatedValues();
 
@@ -1131,28 +1127,37 @@ namespace Raven.Server.Documents.Queries.Results
             return GetFieldFromDocument(fe, document);
         }
 
+        private AggregationHolder GetAggregationHolder(TimeSeriesFunction timeSeriesFunction)
+        {
+            var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
+
+            if (timeSeriesFunction.Select == null)
+            {
+                return new AggregationHolder(_context, AllAggregationTypes(), interpolationType);
+            }
+
+            var types = InitializeAggregationStats(timeSeriesFunction, out var percentile);
+
+            return new AggregationHolder(_context, types, interpolationType, percentile);
+        }
+
         private Dictionary<AggregationType, string> InitializeAggregationStats(TimeSeriesFunction timeSeriesFunction, out double? percentile)
         {
             percentile = null;
-
-            if (timeSeriesFunction.Select == null)
-                return AllAggregationTypes();
-
-            var stats = new Dictionary<AggregationType, string>
+            var types = new Dictionary<AggregationType, string>
             {
                 [AggregationType.Count] = null // we always want to have 'Count' in the result
             };
 
-            for (int i = 0; i < timeSeriesFunction.Select.Count; i++)
+            foreach (var @select in timeSeriesFunction.Select)
             {
-                var select = timeSeriesFunction.Select[i];
-                if (select.QueryExpression is MethodExpression me)
+                if (@select.QueryExpression is MethodExpression me)
                 {
                     if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                     {
-                        if (me.Arguments.Count > 0)
+                        if (type == AggregationType.Percentile)
                         {
-                            if (type != AggregationType.Percentile)
+                            if (me.Arguments.Count != 1)
                                 throw new ArgumentException("Wrong number of arguments passed to method " + type);
 
                             if (!(me.Arguments[0] is ValueExpression ve))
@@ -1164,27 +1169,34 @@ namespace Raven.Server.Documents.Queries.Results
                                 double d => d,
                                 LazyNumberValue lnv => lnv,
                                 _ => throw new ArgumentException($"Invalid argument passed to method '{nameof(AggregationType.Percentile)}' : '{ve}'. " +
-                                                                 "Expected argument of type 'long', 'double', or 'LazyNumberValue' but got : " + ve.GetValue(_queryParameters).GetType())
+                                                                 "Expected argument of type 'long', 'double', or 'LazyNumberValue' but got : " +
+                                                                 ve.GetValue(_queryParameters).GetType())
                             };
                         }
+                        else if (type == AggregationType.Slope)
+                        {
+                            if (timeSeriesFunction.GroupBy.TimePeriod == null && timeSeriesFunction.GroupBy.HasGroupByTag == false)
+                                throw new InvalidOperationException(
+                                    $"Cannot use aggregation method '{nameof(AggregationType.Slope)}' without having a '{nameof(ITimeSeriesQueryable.GroupBy)}' clause ");
+                        }
 
-                        stats[type] =  select.StringSegment?.ToString();
+                        types[type] = @select.StringSegment?.ToString();
                         continue;
                     }
 
                     if (me.Name.Value == "avg")
                     {
-                        stats[AggregationType.Average] = select.StringSegment?.ToString();
+                        types[AggregationType.Average] = @select.StringSegment?.ToString();
                         continue;
                     }
 
                     throw new ArgumentException("Unknown method in timeseries query: " + me);
                 }
 
-                throw new ArgumentException("Unknown method in timeseries query: " + select.QueryExpression);
+                throw new ArgumentException("Unknown method in timeseries query: " + @select.QueryExpression);
             }
 
-            return stats;
+            return types;
         }
 
         private DateTime? GetDateValue(QueryExpression qe, DeclaredFunction func, object[] args)
