@@ -152,7 +152,7 @@ namespace Raven.Client.Document
                         {
                             queue.CompleteAdding();
                         }
-                    }, TaskCreationOptions.LongRunning)).ConfigureAwait(false);
+                    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default)).ConfigureAwait(false);
 
                     await response.AssertNotFailingResponse().ConfigureAwait(false);
 
