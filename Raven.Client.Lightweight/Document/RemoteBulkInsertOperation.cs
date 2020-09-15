@@ -68,7 +68,7 @@ namespace Raven.Client.Document
         private readonly Stopwatch _timing = Stopwatch.StartNew();
         private const int BigDocumentSize = 64 * 1024;
 
-        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes, 
+        public RemoteBulkInsertOperation(BulkInsertOptions options, AsyncServerClient client, IDatabaseChanges changes,
             Task<int> previousTask = null, Guid? existingOperationId = null)
         {
             this.options = options;
@@ -228,13 +228,13 @@ namespace Raven.Client.Document
             switch(options.Format)
             {
                 case BulkInsertFormat.Bson: requestUrl.Append("&format=bson"); break;
-                case BulkInsertFormat.Json: requestUrl.Append("&format=json"); break;                    
+                case BulkInsertFormat.Json: requestUrl.Append("&format=json"); break;
             }
 
             switch(options.Compression)
             {
                 case BulkInsertCompression.None: requestUrl.Append("&compression=none"); break;
-                case BulkInsertCompression.GZip: requestUrl.Append("&compression=gzip"); break;                
+                case BulkInsertCompression.GZip: requestUrl.Append("&compression=gzip"); break;
         }
 
             requestUrl.Append("&operationId=" + OperationId);
@@ -435,7 +435,7 @@ namespace Raven.Client.Document
                        bufferedStream.Position / 1024d,
                        Total,
                        size / 1024d,
-                       _timing.Elapsed.TotalSeconds);   
+                       _timing.Elapsed.TotalSeconds);
                 }
             }
             catch (Exception e)
@@ -488,7 +488,7 @@ namespace Raven.Client.Document
             Total += localBatch.Count;
             localCount += localBatch.Count;
             size += bytesWrittenToServer;
-            
+
             if (previousTask == null)
             {
                 ReportInternal("Wrote {0:#,#} [{3:#,#;;0} kb] (total {2:#,#;;0}) documents to server gzipped to {1:#,#;;0} kb in {4:#,#.#;;0} sec.",
@@ -502,41 +502,41 @@ namespace Raven.Client.Document
 
         private static long WriteToBuffer(BulkInsertOptions options, Stream stream, ICollection<RavenJObject> batch)
         {
-            switch ( options.Compression )
+            switch (options.Compression)
             {
                 case BulkInsertCompression.GZip:
+                {
+                    using (var gzip = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
                     {
-                        using (var gzip = new GZipStream(stream, CompressionMode.Compress, leaveOpen: true))
-                        {
-                            return WriteBatchToBuffer(options, gzip, batch);
-                        }
+                        return WriteBatchToBuffer(options, gzip, batch);
                     }
+                }
                 case BulkInsertCompression.None:
-        {
-                        return WriteBatchToBuffer(options, stream, batch);
-                    }
+                {
+                    return WriteBatchToBuffer(options, stream, batch);
+                }
                 default: throw new NotSupportedException(string.Format("The compression algorithm '{0}' is not supported", options.Compression.ToString()));
             }
         }
 
         private static long WriteBatchToBuffer(BulkInsertOptions options, Stream stream, ICollection<RavenJObject> batch)
-            {
+        {
             using (var countingStream = new CountingStream(stream))
             {
-                switch(options.Format )
+                switch (options.Format)
                 {
                     case BulkInsertFormat.Bson:
-                        {
-                            WriteBsonBatchToBuffer(options, countingStream, batch);
-                            break;
-                        }
+                    {
+                        WriteBsonBatchToBuffer(options, countingStream, batch);
+                        break;
+                    }
                     case BulkInsertFormat.Json:
-                        {
-                            WriteJsonBatchToBuffer(options, countingStream, batch);
-                            break;
-                        }
+                    {
+                        WriteJsonBatchToBuffer(options, countingStream, batch);
+                        break;
+                    }
                     default: throw new NotSupportedException(string.Format("The format '{0}' is not supported", options.Format.ToString()));
-                }                
+                }
 
                 countingStream.Flush();
                 return countingStream.NumberOfWrittenBytes;
@@ -545,29 +545,28 @@ namespace Raven.Client.Document
 
         private static void WriteBsonBatchToBuffer(BulkInsertOptions options, CountingStream stream, ICollection<RavenJObject> batch)
         {
-                var binaryWriter = new BinaryWriter(stream);
+            var binaryWriter = new BinaryWriter(stream);
             binaryWriter.Write(batch.Count);
             binaryWriter.Flush();
 
-                var bsonWriter = new BsonWriter(binaryWriter)
-                                 {
-                                     DateTimeKindHandling = DateTimeKind.Unspecified
-                                 };
+            var bsonWriter = new BsonWriter(binaryWriter)
+            {
+                DateTimeKindHandling = DateTimeKind.Unspecified
+            };
 
             foreach (var doc in batch)
-                {
-                    doc.WriteTo(bsonWriter);
-                }
+            {
+                doc.WriteTo(bsonWriter);
+            }
 
-                bsonWriter.Flush();
-            
+            bsonWriter.Flush();
         }
 
         private static void WriteJsonBatchToBuffer(BulkInsertOptions options, CountingStream stream, ICollection<RavenJObject> batch)
         {
             var binaryWriter = new BinaryWriter(stream);
             binaryWriter.Write(batch.Count);
-                binaryWriter.Flush();
+            binaryWriter.Flush();
 
             var jsonWriter = new JsonTextWriter(new StreamWriter(stream))
             {
@@ -578,8 +577,8 @@ namespace Raven.Client.Document
             {
                 doc.WriteTo(jsonWriter);
             }
+
             jsonWriter.Flush();
-           
         }
 
         private void ReportInternal(string format, params object[] args)
