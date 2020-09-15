@@ -56,8 +56,9 @@ namespace Sparrow.Json.Parsing
             var count = 0;
             var controlCount = 0;
 
-            foreach (var value in str)
+            for (int i = 0; i < str.Length; i++)
             {
+                var value = str[i];
                 // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
                 // 8  => '\b' => 0000 1000
                 // 9  => '\t' => 0000 1001
