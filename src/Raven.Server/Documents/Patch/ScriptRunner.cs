@@ -1045,7 +1045,7 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext("cmpxchg");
 
-                if (args.Length != 1 || args[0].IsString() == false)
+                if (args.Length != 1 && args.Length != 2 || args[0].IsString() == false)
                     throw new InvalidOperationException("cmpxchg(key) must be called with a single string argument");
 
                 return CmpXchangeInternal(CompareExchangeKey.GetStorageKey(_database.Name, args[0].AsString()));

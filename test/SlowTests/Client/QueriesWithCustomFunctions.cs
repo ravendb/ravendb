@@ -2324,6 +2324,34 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
         }
 
         [Fact]
+        public async Task SingleProjectionQueryCompareExchange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("users/1", "Karmel", 0));
+                var result = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("users/1"));
+                Assert.Equal("Karmel", result.Value);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Jerry", LastName = "Garcia" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = from u in session.Query<User>()
+                        select RavenQuery.CmpXchg<string>("users/1");
+
+                    var queryResult = query.ToList();
+                    Assert.Equal("from 'Users' select cmpxchg(\"users/1\") as cmpxchg", query.ToString());
+                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal("Karmel", queryResult[0]);
+                }
+            }
+        }
+
+        [Fact]
         public async Task QueryCompareExchangeInnerValue()
         {
             using (var store = GetDocumentStore())

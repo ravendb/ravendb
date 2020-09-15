@@ -1312,6 +1312,24 @@ namespace Raven.Server.Documents.Queries
                         return counterField;
                     }
 
+                    if (string.Equals("cmpxchg", methodName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (HasFacet)
+                            ThrowFacetQueryMustContainsOnlyFacetInSelect(me, parameters);
+
+                        if (HasSuggest)
+                            ThrowSuggestionQueryMustContainsOnlySuggestInSelect(me, parameters);
+
+                        if (me.Arguments.Count == 0 || me.Arguments.Count > 1)
+                            ThrowInvalidNumberOfArgumentsForCompareExchange(methodName, parameters, me.Arguments.Count);
+
+                        var methodField = SelectField.CreateMethodCall(methodName, alias, ConvertSelectArguments(parameters, alias, me, methodName));
+
+                        HasCmpXchgSelect = true;
+
+                        return methodField;
+                    }
+
                     if (IsGroupBy == false)
                         ThrowUnknownMethodInSelect(methodName, QueryText, parameters);
 
@@ -1829,6 +1847,12 @@ namespace Raven.Server.Documents.Queries
         {
             throw new InvalidQueryException($"There is no overload of method '{methodName}' that takes {argsCount} arguments. " +
                                             $"Supported overloads are : {methodName}(name), {methodName}(doc, name).", QueryText, parameters);
+        }
+
+        private void ThrowInvalidNumberOfArgumentsForCompareExchange(string methodName, BlittableJsonReaderObject parameters, int argsCount)
+        {
+            throw new InvalidQueryException($"There is no overload of method '{methodName}' that takes {argsCount} arguments. " +
+                                            $"Supported overloads are : {methodName}(name).", QueryText, parameters);
         }
 
         private void ThrowCounterInvalidArgument(string methodName, QueryExpression expression, BlittableJsonReaderObject parameters)

@@ -2330,10 +2330,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void SelectCall(Expression body, LambdaExpression lambdaExpression)
         {
-            if (body is MethodCallExpression call && LinqPathProvider.IsTimeSeriesCall(call))
+            if (body is MethodCallExpression call)
             {
-                HandleSelectTimeSeries(call);
-                return;
+                if (LinqPathProvider.IsTimeSeriesCall(call))
+                {
+                    HandleSelectTimeSeries(call);
+                    return;
+                }
+
+                if (LinqPathProvider.IsCompareExchangeCall(call))
+                {
+                    AddToFieldsToFetch(ToJs(call), "cmpxchg");
+                    return;
+                }
             }
 
             var expressionInfo = GetMember(body);
@@ -3327,7 +3336,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                    field.StartsWith($"{FromAlias}.") == false &&
                    field.StartsWith("id(") == false &&
                    field.StartsWith("counter(") == false &&
-                   field.StartsWith("counterRaw(") == false;
+                   field.StartsWith("counterRaw(") == false &&
+                   field.StartsWith("cmpxchg(") == false;
         }
 
         private void AddFromAliasToFieldToFetch(ref string field, ref string alias, bool quote = false)
