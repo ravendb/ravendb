@@ -146,7 +146,7 @@ namespace Raven.Client.Document
                             if (cancellationToken.IsCancellationRequested)
                                 source.TrySetResult(null);
                             else
-                            source.TrySetException(e);
+                                source.TrySetException(e);
                         }
                         finally
                         {
