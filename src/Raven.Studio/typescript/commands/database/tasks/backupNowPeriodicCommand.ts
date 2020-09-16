@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
-class backupNowCommand extends commandBase {
+class backupNowPeriodicCommand extends commandBase {
     constructor(private db: database, private taskId: number, private isFullBackup: boolean, private taskName: string) {
         super();
     }
@@ -23,5 +23,5 @@ class backupNowCommand extends commandBase {
     }
 }
 
-export = backupNowCommand; 
+export = backupNowPeriodicCommand; 
 

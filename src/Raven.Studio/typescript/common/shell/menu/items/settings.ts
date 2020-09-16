@@ -163,7 +163,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Backup Task',
             nav: false,
             dynamicHash: appUrls.editExternalReplicationTaskUrl,
-            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+            itemRouteToHighlight: 'databases/tasks/backups'
         }),
         new leafMenuItem({
             route: 'databases/tasks/editSubscriptionTask',
@@ -188,6 +188,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             dynamicHash: appUrls.editSqlEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/backups',
+            moduleId: 'viewmodels/database/tasks/backups',
+            title: 'Backups',
+            nav: true,
+            css: 'icon-backups',
+            dynamicHash: appUrls.backups
         }),
         new leafMenuItem({
             route: 'databases/tasks/import*details',

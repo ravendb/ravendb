@@ -1,5 +1,5 @@
 <div>
-    <h3>Destination</h3>
+    <h3 class="margin-bottom margin-bottom-xs">Destination</h3>
     <div class="panel" data-bind="with: localSettings">
         <div class="padding">
             <div class="flex-horizontal">
@@ -129,7 +129,7 @@
                         </div>
                         <div class="row margin-bottom" data-bind="validationElement: bucketName">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Bucket name <i class="required"></i> <small><i id="bucket-info" class="icon-info text-info"></i></small>
+                                Bucket name <i class="required"></i> <small><i class="icon-info text-info bucket-info"></i></small>
                             </label>
                             <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
                                 <input data-bind="textInput: bucketName" type="text" class="form-control" />
@@ -217,7 +217,7 @@
                     <div data-bind="if: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: storageContainer">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Storage container <i class="required"></i> <small><i id="storage-container-info" class="icon-info text-info"></i></small>
+                                Storage container <i class="required"></i> <small><i class="storage-container-info icon-info text-info"></i></small>
                             </label>
                             <div class="col-xs-12 col-sm-6 col-lg-8">
                                 <input data-bind="textInput: storageContainer" type="text" class="form-control" />
@@ -281,7 +281,7 @@
                     <div data-bind="if: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: bucket">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Bucket <i class="required"></i> <small><i id="bucket-gcs-info" class="icon-info text-info"></i></small>
+                                Bucket <i class="required"></i> <small><i class="bucket-gcs-info icon-info text-info"></i></small>
                             </label>
                             <div class="col-xs-12 col-sm-6 col-lg-8">
                                 <input data-bind="textInput: bucket" type="text" class="form-control" />
@@ -353,7 +353,7 @@
                     <div data-bind="if: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: vaultName">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Vault name <i class="required"></i> <small><i id="vault-info" class="icon-info text-info"></i></small>
+                                Vault name <i class="required"></i> <small><i class="vault-info icon-info text-info"></i></small>
                             </label>
                             <div class="col-xs-12 col-sm-6 col-lg-8">
                                 <input data-bind="textInput: vaultName" type="text" class="form-control" />
@@ -435,7 +435,7 @@
                     <div data-bind="if: !hasConfigurationScript()">
                         <div class="row margin-bottom" data-bind="validationElement: url">
                             <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                                Host <i class="required"></i> <small><i id="ftp-host-info" class="icon-info text-info"></i></small>
+                                Host <i class="required"></i> <small><i class="ftp-host-info icon-info text-info"></i></small>
                             </label>
                             <div class="col-xs-12 col-sm-6 col-lg-8">
                                 <input data-bind="textInput: url" type="text" class="form-control" />

@@ -4,7 +4,7 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
-import backupNowCommand = require("commands/database/tasks/backupNowCommand");
+import backupNowPeriodicCommand = require("commands/database/tasks/backupNowPeriodicCommand");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import backupNow = require("viewmodels/database/tasks/backupNow");
 import generalUtils = require("common/generalUtils");
@@ -260,7 +260,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
                 if (confirmResult.can) {
                     this.backupNowInProgress(true);
 
-                    const task = new backupNowCommand(this.activeDatabase(), this.taskId, confirmResult.isFullBackup, this.taskName());
+                    const task = new backupNowPeriodicCommand(this.activeDatabase(), this.taskId, confirmResult.isFullBackup, this.taskName());
                     task.execute()
                         .done((backupNowResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
                             this.refreshBackupInfo(true);

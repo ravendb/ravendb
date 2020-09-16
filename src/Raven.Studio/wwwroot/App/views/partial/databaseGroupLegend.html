@@ -3,28 +3,46 @@
         <div class="col-sm-4">
             <h5>TASK TYPE</h5>
             <div class="row">
-                <div class="col-xs-12"><i class="task-rect task-external-replication"></i> <span>External Replication</span></div>
-                <div class="col-xs-12"><i class="task-rect task-pull-replication-hub"></i> <span>Replication Hub</span></div>
-                <div class="col-xs-12"><i class="task-rect task-pull-replication-sink"></i> <span>Replication Sink</span></div>
-                <div class="col-xs-12"><i class="task-rect task-ravendb-etl"></i> <span>RavenDB ETL</span></div>
-                <div class="col-xs-12"><i class="task-rect task-sql-etl"></i> <span>SQL ETL</span></div>
-                <div class="col-xs-12"><i class="task-rect task-periodic-backup"></i> <span>Backup</span></div> <!-- todo: change class name to just backup ..-->
-                <div class="col-xs-12"><i class="task-rect task-subscriptions"></i> <span>Subscription</span></div>
+                <div class="col-xs-12" data-bind="visible: !backupsOnly">
+                    <i class="task-rect task-external-replication"></i><span>External Replication</span>
+                </div>
+                <div class="col-xs-12" data-bind="visible: !backupsOnly">
+                    <i class="task-rect task-pull-replication-hub"></i><span>Replication Hub</span>
+                </div>
+                <div class="col-xs-12" data-bind="visible: !backupsOnly">
+                    <i class="task-rect task-pull-replication-sink"></i><span>Replication Sink</span>
+                </div>
+                <div class="col-xs-12" data-bind="visible: !backupsOnly">
+                    <i class="task-rect task-ravendb-etl"></i><span>RavenDB ETL</span>
+                </div>
+                <div class="col-xs-12" data-bind="visible: !backupsOnly">
+                    <i class="task-rect task-sql-etl"></i><span>SQL ETL</span>
+                </div>
+                <div class="col-xs-12">
+                    <i class="task-rect task-periodic-backup"></i><span>Periodic Backup</span>
+                </div>
+                <div class="col-xs-12" data-bind="visible: !backupsOnly">
+                    <i class="task-rect task-subscriptions"></i><span>Subscription</span>
+                </div>
+                <div class="col-xs-12 margin-top margin-top-sm" data-bind="visible: backupsOnly">
+                    <h4 title="Navigate to Ongoing Tasks View to see all the database tasks">
+                        <a target="_blank" data-bind="attr: { href: $root.ongoingTasksUrl }">View all Ongoing Tasks</a>
+                    </h4>
+                </div>
             </div>
         </div>
         <div class="col-sm-4">
             <h5>NODE TYPE</h5>
-
-            <div><i class="icon-dbgroup-member"></i> <span>Member</span></div>
-            <div><i class="icon-dbgroup-promotable"></i> <span>Promotable</span></div>
-            <div><i class="icon-dbgroup-rehab"></i> <span>Rehab</span></div>
+            <div><i class="icon-dbgroup-member"></i><span>Member</span></div>
+            <div><i class="icon-dbgroup-promotable"></i><span>Promotable</span></div>
+            <div><i class="icon-dbgroup-rehab"></i><span>Rehab</span></div>
         </div>
         <div class="col-sm-4">
             <h5>CONNECTION STATUS</h5>
-            <div><i class="icon-arrow"></i> <span>Connection</span></div>
-            <div><i class="icon-arrow-dashed"></i> <span>Partial Connection (ETL)</span></div>
-            <div><i class="icon-arrow-dashed text-warning"></i> <span>Disabled Connection</span></div>
-            <div><i class="icon-arrow-dashed text-danger"></i> <span>Broken Connection</span></div>
+            <div><i class="icon-arrow"></i><span>Connection</span></div>
+            <div><i class="icon-arrow-dashed"></i><span>Partial Connection (ETL)</span></div>
+            <div><i class="icon-arrow-dashed text-warning"></i><span>Disabled Connection</span></div>
+            <div><i class="icon-arrow-dashed text-danger"></i><span>Broken Connection</span></div>
         </div>
     </div>
 </div>

@@ -1,8 +1,6 @@
 ﻿import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import savePeriodicBackupConfigurationCommand = require("commands/database/tasks/savePeriodicBackupConfigurationCommand");
-import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/getPeriodicBackupConfigurationCommand");
 import getPeriodicBackupConfigCommand = require("commands/database/tasks/getPeriodicBackupConfigCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
@@ -13,10 +11,15 @@ import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleM
 import cronEditor = require("viewmodels/common/cronEditor");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import manualBackupConfiguration = require("models/database/tasks/periodicBackup/manualBackupConfiguration");
+import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
+
+type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfiguration;
 
 class editPeriodicBackupTask extends viewModelBase {
 
-    configuration = ko.observable<periodicBackupConfiguration>();
+    titleForView: KnockoutComputed<string>;
+    configuration = ko.observable<backupConfigurationClass>();
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();
@@ -29,6 +32,8 @@ class editPeriodicBackupTask extends viewModelBase {
         super();
         
         this.bindToCurrentInstance("testCredentials");
+        
+        this.titleForView = ko.pureComputed(() => this.configuration().getTitleForView(this.isAddingNewBackupTask()));
     }
 
     activate(args: any) { 
@@ -43,7 +48,6 @@ class editPeriodicBackupTask extends viewModelBase {
             if (args.taskId) {
                 // 1. Editing an existing task
                 this.isAddingNewBackupTask(false);
-
                 new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
                     .execute()
                     .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
@@ -59,20 +63,22 @@ class editPeriodicBackupTask extends viewModelBase {
 
                         router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
                     });
+            } else if (args.manual) {
+                    // 2. Create a one-time manual backup
+                    this.configuration(manualBackupConfiguration.empty(dbName, this.serverConfiguration(), this.activeDatabase().isEncrypted()));
+                    deferred.resolve();
             } else {
-                // 2. Creating a new task
-                this.isAddingNewBackupTask(true);
-
-                this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
-                deferred.resolve();
+                    // 3. Add a new periodic backup task
+                    this.isAddingNewBackupTask(true);
+                    this.configuration(periodicBackupConfiguration.empty(dbName, this.serverConfiguration(), this.activeDatabase().isEncrypted(), false));
+                    deferred.resolve();
             }
 
             return deferred
                 .then(() => {
                     this.dirtyFlag = this.configuration().dirtyFlag;
-
-                    this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
-                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
+                    this.fullBackupCronEditor(new cronEditor(this.configuration().getFullBackupFrequency()));
+                    this.fullBackupCronEditor(new cronEditor(this.configuration().getIncrementalBackupFrequency()));
                 });
         };
 
@@ -112,54 +118,58 @@ class editPeriodicBackupTask extends viewModelBase {
             placement: "right"
         });
         
-        document.getElementById("taskName").focus();
+        if (this.configuration() instanceof periodicBackupConfiguration) {
+            document.getElementById("taskName").focus();
+        }
     }
 
     attached() {
         super.attached();
         
-        popoverUtils.longWithHover($("#backup-info"),
+        popoverUtils.longWithHover($(".backup-info"),
             {
                 content: backupCommonContent.generalBackupInfo
             });
 
-        popoverUtils.longWithHover($("#backup-age-info"),
+        popoverUtils.longWithHover($(".backup-age-info"),
             {
                 content: backupCommonContent.backupAgeInfo
             });
 
-        popoverUtils.longWithHover($("#bucket-info"),
+        popoverUtils.longWithHover($(".bucket-info"),
             {
                 content: backupCommonContent.textForPopover("Bucket")
             });
 
-        popoverUtils.longWithHover($("#bucket-gcs-info"),
+        popoverUtils.longWithHover($(".bucket-gcs-info"),
             {
                 content: backupCommonContent.textForPopoverGCS("Bucket")
             });
 
-        popoverUtils.longWithHover($("#storage-container-info"),
+        popoverUtils.longWithHover($(".storage-container-info"),
             {
                 content: backupCommonContent.textForPopover("Storage container")
             });
 
-        popoverUtils.longWithHover($("#vault-info"),
+        popoverUtils.longWithHover($(".vault-info"),
             {
                 content: backupCommonContent.textForPopover("Vault")
             });
 
-        popoverUtils.longWithHover($("#ftp-host-info"),
+        popoverUtils.longWithHover($(".ftp-host-info"),
             {
                 content: backupCommonContent.ftpHostInfo
             });
     }
 
-    saveBackupSettings() {
+    onSubmit() {
         this.configuration().encryptionSettings().setKeyUsedBeforeSave();
         
         if (!this.validate()) {
              return;
         }
+        
+        eventsCollector.default.reportEvent("Backup", this.configuration().backupOperation);
 
         const dto = this.configuration().toDto();
         
@@ -167,14 +177,10 @@ class editPeriodicBackupTask extends viewModelBase {
             dto.LocalSettings.FolderPath = this.serverConfiguration().LocalRootPath + dto.LocalSettings.FolderPath;
         }
 
-        eventsCollector.default.reportEvent("periodic-backup", "save");
-        
-        new savePeriodicBackupConfigurationCommand(this.activeDatabase(), dto)
-            .execute()
-            .done(() => {
-                this.dirtyFlag().reset();
-                this.goToOngoingTasksView();
-            });
+        this.configuration().submit(this.activeDatabase(), dto).done(() => {
+            this.dirtyFlag().reset();
+            this.goToBackupsView();
+        });
     }
 
     testCredentials(bs: backupSettings) {
@@ -188,23 +194,25 @@ class editPeriodicBackupTask extends viewModelBase {
         new testPeriodicBackupCredentialsCommand(this.activeDatabase(), bs.connectionType, bs.toDto())
             .execute()
             .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
-                bs.testConnectionResult(result);        
+                bs.testConnectionResult(result);
             })
             .always(() => bs.isTestingCredentials(false));
     }
 
     cancelOperation() {
-        this.goToOngoingTasksView();
+        this.goToBackupsView();
     }
 
-    private goToOngoingTasksView() {
-        router.navigate(appUrl.forOngoingTasks(this.activeDatabase()));
+    private goToBackupsView() {
+        router.navigate(appUrl.forBackups(this.activeDatabase()));
     }
 
     private validate(): boolean {
         let valid = true;
 
-        if (!this.isValid(this.configuration().validationGroup))
+        const groupTocheck = this.configuration().validationGroup;
+        
+        if (!this.isValid(groupTocheck))
             valid = false;
         
         if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))
