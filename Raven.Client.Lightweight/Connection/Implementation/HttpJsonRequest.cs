@@ -33,6 +33,7 @@ using Raven.Json.Linq;
 using Raven.Abstractions;
 using Raven.Client.Extensions;
 using Raven.Client.Metrics;
+using Raven.Client.Util;
 
 namespace Raven.Client.Connection.Implementation
 {
@@ -906,7 +907,8 @@ namespace Raven.Client.Connection.Implementation
         private class PushContent : HttpContent
         {
             private readonly Action<Stream, TaskCompletionSource<object>> action;
-            private readonly TaskCompletionSource<object> tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            private readonly TaskCompletionSource<object> tcs = TaskCompletionSourceFactory.Create<object>();
 
             public PushContent(Action<Stream, TaskCompletionSource<object>> action)
             {
