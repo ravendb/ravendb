@@ -162,7 +162,7 @@ class editServerWideBackup extends viewModelBase {
             return;
         }
 
-        const dto = this.configuration().toDto();    
+        const dto = this.configuration().toDto();
 
         if (this.serverConfiguration().LocalRootPath) {
             dto.LocalSettings.FolderPath = this.serverConfiguration().LocalRootPath + dto.LocalSettings.FolderPath;
@@ -206,6 +206,9 @@ class editServerWideBackup extends viewModelBase {
         let valid = true;
 
         if (!this.isValid(this.configuration().validationGroup))
+            valid = false;
+        
+        if (!this.isValid(this.configuration().serverWideValidationGroup))
             valid = false;
 
         if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))

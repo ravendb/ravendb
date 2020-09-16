@@ -12,6 +12,7 @@ class serverWideBackupConfiguration extends periodicBackupConfiguration {
     databasesToExclude = ko.observableArray<string>();
 
     serverWideDirtyFlag: () => DirtyFlag;
+    serverWideValidationGroup: KnockoutValidationGroup;
 
     constructor(databaseName: KnockoutObservable<string>,
                 dto: Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration,
@@ -21,9 +22,14 @@ class serverWideBackupConfiguration extends periodicBackupConfiguration {
 
         super(databaseName, dto, serverLimits, encryptedDatabase, isServerWide);
 
-        this.databasesToExclude(dto.ExcludedDatabases);
-        this.excludeDatabases(dto.ExcludedDatabases.length > 0);
+        this.databasesToExclude(dto.ExcludedDatabases || []);
+        this.excludeDatabases(dto.ExcludedDatabases && dto.ExcludedDatabases.length > 0);
+        
+        this.initObservablesServerWide();
+        this.initValidationServerWide();
+    }
 
+    private initObservablesServerWide() {
         this.canAddDatabase = ko.pureComputed(() => {
             const databaseToAdd = this.inputDatabaseToExclude();
             return databaseToAdd && !this.databasesToExclude().find(x => x === databaseToAdd);
@@ -31,9 +37,24 @@ class serverWideBackupConfiguration extends periodicBackupConfiguration {
         
         this.serverWideDirtyFlag = new ko.DirtyFlag([
             this.excludeDatabases,
-            this.inputDatabaseToExclude,
+            this.databasesToExclude,
             this.dirtyFlag()
         ], false, jsonUtil.newLineNormalizingHashFunction);
+    }
+
+    private initValidationServerWide() {
+        this.databasesToExclude.extend({
+            validation: [
+                {
+                    validator: () => !this.excludeDatabases() || this.databasesToExclude().length,
+                    message: "No databases added"
+                }
+            ]
+        });
+
+        this.serverWideValidationGroup = ko.validatedObservable({
+            databasesToExclude: this.databasesToExclude
+        });
     }
 
     createDatabaseNameAutocompleter() {
