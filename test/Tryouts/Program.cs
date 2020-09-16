@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastTests.Client;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
@@ -22,13 +23,15 @@ namespace Tryouts
             Console.WriteLine(Process.GetCurrentProcess().Id);
             for (int i = 0; i < 123; i++)
             {
+                var sp = Stopwatch.StartNew();
                 Console.WriteLine($"Starting to run {i}");
+
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenDB_13940(testOutputHelper))
+                    using (var test = new RavenD_15608(testOutputHelper))
                     {
-                        test.CorruptedSingleTransactionPage_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet();
+                        await test.ArtificalDocumentsMatchIndexEntries();
                     }
                 }
                 catch (Exception e)
@@ -36,7 +39,11 @@ namespace Tryouts
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(e);
                     Console.ForegroundColor = ConsoleColor.White;
-                   // Console.ReadLine();
+                    // Console.ReadLine();
+                }
+                finally
+                {
+                    Console.WriteLine($"test ran for {sp.ElapsedMilliseconds:#,#}ms");
                 }
             }
         }
