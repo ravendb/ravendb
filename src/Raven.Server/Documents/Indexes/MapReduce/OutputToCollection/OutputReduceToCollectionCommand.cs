@@ -88,10 +88,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             OutputReduceToCollectionCommand command = null;
             foreach (var reduceKeyHashToDelete in _reduceKeyHashesToDelete)
             {
-                if (command == null)
-                    command = CreateCommand();
+                command ??= CreateCommand();
 
-                command.DeleteReduce(reduceKeyHashToDelete);
+                if (command.DeleteReduce(reduceKeyHashToDelete) == false)
+                    continue;
 
                 batchSize++;
 
@@ -109,9 +109,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
 
                 foreach (var output in kvp.Value)
                 {
-                    if (command == null)
-                        command = CreateCommand();
-
+                    command ??= CreateCommand();
                     command.AddReduce(reduceKeyHash, output);
 
                     batchSize++;
@@ -209,7 +207,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
         private readonly string _outputReduceToCollection;
         private readonly long? _reduceOutputIndex;
         private readonly OutputReferencesPattern _patternForReduceOutputReferences;
-        private readonly List<string> _reduceKeyHashesToDelete = new List<string>();
+        private readonly HashSet<string> _reduceKeyHashesToDelete = new HashSet<string>();
         private readonly OutputReduceToCollectionReferencesCommand _outputToCollectionReferences;
 
         private readonly Dictionary<string, List<(BlittableJsonReaderObject Json, string ReferenceDocId)>> _reduceDocuments =
@@ -267,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
                     // apply this optimization only if we don't have hash collisions
                     if (_reduceDocuments.TryGetValue(reduceKeyHash, out var newReduceDocuments) &&
                         newReduceDocuments.Count == 1 &&
-                        DocumentsBinaryEqual(currentDocument.Data, newReduceDocuments[0].Json)) 
+                        DocumentsBinaryEqual(currentDocument.Data, newReduceDocuments[0].Json))
                     {
                         // same document, nothing to do
                         _reduceDocuments.Remove(reduceKeyHash);
@@ -374,9 +372,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.OutputToCollection
             outputs.Add(output);
         }
 
-        public void DeleteReduce(string reduceKeyHash)
+        public bool DeleteReduce(string reduceKeyHash)
         {
-            _reduceKeyHashesToDelete.Add(reduceKeyHash);
+            return _reduceKeyHashesToDelete.Add(reduceKeyHash);
         }
 
         public static bool IsOutputDocumentPrefix(string prefix)
