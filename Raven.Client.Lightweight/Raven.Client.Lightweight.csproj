@@ -412,6 +412,7 @@
     <Compile Include="Util\ObjectReferenceEqualityComparer.cs" />
     <Compile Include="Util\NoSynchronizationContext.cs" />
     <Compile Include="Util\SimpleCache.cs" />
+    <Compile Include="Util\TaskCompletionSourceFactory.cs" />
     <Compile Include="Util\Types.cs" />
     <Compile Include="WhereEqualsParams.cs" />
   </ItemGroup>
