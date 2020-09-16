@@ -57,13 +57,14 @@ class ongoingTasks extends viewModelBase {
     existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();    
     selectedTaskType = ko.observable<TasksNamesInUI | "All tasks">();
     
-    taskNameToCount: KnockoutComputed<dictionary<number>>;    
+    taskNameToCount: KnockoutComputed<dictionary<number>>;
     
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
 
     canNavigateToServerWideBackupTasks: KnockoutComputed<boolean>;
     serverWideBackupUrl: string;
+    backupsOnly = false;
     
     constructor() {
         super();

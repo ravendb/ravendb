@@ -237,13 +237,13 @@
                     </div>
                 </div>
 
-                <!-- Backup -->
+                <!-- Periodic Backup -->
 
                 <div data-bind="if: showBackupSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item periodic-backup no-text-transform">
-                            <i class="icon-backup"></i>
-                            <span>Backup</span><span data-bind="text: ' (' + backupTasks().length + ')'"></span>
+                            <i class="icon-backups"></i>
+                            <span>Periodic Backup</span><span data-bind="text: ' (' + backupTasks().length + ')'"></span>
                         </h5><hr>
                         <h5 class="tasks-list-item no-text-transform" title="Navigate to the Server-Wide Backup View" data-bind="visible: $root.canNavigateToServerWideBackupTasks">
                             <a target="_blank" data-bind="attr: { href: $root.serverWideBackupUrl }">&nbsp;Go to Server-Wide Backup View</a>
@@ -310,8 +310,8 @@
                                     <div class="flex-noshrink">
                                         <button class="btn backup-now" data-bind="click: backupNow, enable: isBackupNowEnabled(), visible: isBackupNowVisible(),
                                              css: { 'btn-default': !neverBackedUp(), 'btn-info': backupNowInProgress, 'btn-spinner': backupNowInProgress, 'btn-warning': !backupNowInProgress() && neverBackedUp() },
-                                             attr: { 'title':  disabledBackupNowReason() || 'Click to backup the database now' }">
-                                            <i class="icon-backup"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
+                                             attr: { 'title':  disabledBackupNowReason() || 'Click to trigger the backup task now' }">
+                                            <i class="icon-backups"></i><span data-bind="text: backupNowInProgress() ? 'Show backup progress' : 'Backup now'"></span>
                                         </button>
                                         <button class="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info"><i class="icon-refresh"></i></button>
                                     </div>

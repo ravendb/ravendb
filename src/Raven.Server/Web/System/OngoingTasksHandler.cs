@@ -532,7 +532,7 @@ namespace Raven.Server.Web.System
 
                     var t = Database.Operations.AddOperation(
                         null,
-                        $"Database backup: {Database.Name}",
+                        $"Manual backup for database: {Database.Name}",
                         Documents.Operations.Operations.OperationType.DatabaseBackup,
                         onProgress =>
                         {

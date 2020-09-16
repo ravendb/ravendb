@@ -67,6 +67,7 @@ class databases extends viewModelBase {
         database.createEnvironmentColorComputed("label", source);
    
     databaseToCompact: string;
+    popupRestoreDialog: boolean;
     
     constructor() {
         super();
@@ -106,6 +107,11 @@ class databases extends viewModelBase {
         // When coming here from Storage Report View
         if (args && args.compact) {
             this.databaseToCompact = args.compact;
+        }
+
+        // When coming here from Backups View, user wants to restore a database
+        if (args && args.restore) {
+            this.popupRestoreDialog = true;
         }
         
         // we can't use createNotifications here, as it is called after *database changes API* is connected, but user
@@ -162,6 +168,11 @@ class databases extends viewModelBase {
         if (this.databaseToCompact) {
             const dbInfo = this.databases().getByName(this.databaseToCompact);
             this.compactDatabase(dbInfo);
+        }
+        
+        if (this.popupRestoreDialog) {
+            this.newDatabaseFromBackup();
+            this.popupRestoreDialog = false;
         }
     }
     

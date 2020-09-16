@@ -114,42 +114,42 @@ class editServerWideBackup extends viewModelBase {
     attached() {
         super.attached();
 
-        popoverUtils.longWithHover($("#backup-info"),
+        popoverUtils.longWithHover($(".backup-info"),
             {
                 content: backupCommonContent.generalBackupInfo
             });
 
-        popoverUtils.longWithHover($("#backup-age-info"),
+        popoverUtils.longWithHover($(".backup-age-info"),
             {
                 content: backupCommonContent.backupAgeInfo
             });
 
-        popoverUtils.longWithHover($("#bucket-info"),
+        popoverUtils.longWithHover($(".bucket-info"),
             {
                 content: backupCommonContent.textForPopover("Bucket") 
             });
 
-        popoverUtils.longWithHover($("#bucket-gcs-info"),
+        popoverUtils.longWithHover($(".bucket-gcs-info"),
             {
                 content: backupCommonContent.textForPopoverGCS("Bucket")
             });
 
-        popoverUtils.longWithHover($("#storage-container-info"),
+        popoverUtils.longWithHover($(".storage-container-info"),
             {
                 content: backupCommonContent.textForPopover("Storage container") 
             });
 
-        popoverUtils.longWithHover($("#vault-info"),
+        popoverUtils.longWithHover($(".vault-info"),
             {
                 content: backupCommonContent.textForPopover("Vault") 
             });
 
-        popoverUtils.longWithHover($("#ftp-host-info"),
+        popoverUtils.longWithHover($(".ftp-host-info"),
             {
                 content: backupCommonContent.ftpHostInfo
             });
 
-        popoverUtils.longWithHover($("#serverwide-snapshot-encryption-info"),
+        popoverUtils.longWithHover($(".serverwide-snapshot-encryption-info"),
             {
                 content: backupCommonContent.serverwideSnapshotEncryptionInfo
             });

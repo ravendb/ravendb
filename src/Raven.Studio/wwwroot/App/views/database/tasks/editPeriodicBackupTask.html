@@ -1,7 +1,7 @@
 <form class="content-margin edit-backup" data-bind="with: configuration" autocomplete="off">
     <div class="toolbar" data-bind="with: $root">
-        <button data-bind="click: saveBackupSettings, enable: $root.dirtyFlag().isDirty" type="submit" class="btn btn-primary">
-            <i class="icon-save"></i> <span>Save</span>
+        <button data-bind="click: onSubmit, enable: dirtyFlag().isDirty" type="submit" class="btn btn-primary">
+            <i class="icon-save"></i><span data-bind="text: configuration().backupOperation === 'manual' ? 'Backup Now' : 'Save'"></span>
         </button>
         <button data-bind="click: cancelOperation" class="btn btn-default">
             <i class="icon-cancel"></i><span>Cancel</span>
@@ -9,15 +9,15 @@
     </div>
     <div class="panel">
         <div class="padding">
-            <h3 data-bind="text: $parent.isAddingNewBackupTask() ? `New Backup` : `Edit Backup`"></h3>
-            <div class="row margin-bottom" data-bind="validationElement: name">
+            <strong><h3 data-bind="text: $root.titleForView" class="margin-bottom"></h3></strong>
+            <div class="row margin-bottom" data-bind="validationElement: name, if: backupOperation === 'periodic'">
                 <label class="control-label col-sm-4 col-lg-2">Task Name</label>
                 <div class="col-sm-4">
                     <input data-bind="textInput: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the Backup Task" />
                 </div>
             </div>
             <div class="row margin-bottom" data-bind="validationElement: backupType">
-                <label class="control-label col-sm-4 col-lg-2">Backup Type <i class="required"></i> <small><i id="backup-info" class="icon-info text-info"></i></small></label>
+                <label class="control-label col-sm-4 col-lg-2">Backup Type <i class="required"></i> <small><i class="backup-info icon-info text-info"></i></small></label>
                 <div class="col-sm-4" data-bind="validationOptions: { insertMessages: false }">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
@@ -45,89 +45,33 @@
                     </div>
                 </div>
             </div>
-            <div class="row margin-bottom">
-                <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
-                    <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
-                        <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
-                        <label for="toggle3">Choose your preferred mentor node manually</label>
-                    </div>
+            <div class="row" data-bind="if: backupOperation === 'manual'">
+                <div class="col-sm-offset-4 col-lg-offset-2 col-lg-4" data-bind="validationElement: hasDestination">
+                    <div class="help-block" data-bind="validationMessage: hasDestination"></div>
                 </div>
             </div>
-            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
+            <div data-bind="if: backupOperation === 'periodic'">
                 <div class="row margin-bottom">
-                    <label class="control-label col-sm-4 col-lg-2">Preferred mentor</label>
-                    <div class="col-sm-4">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred mentor'"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
-                                <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
-                            </ul>
-                            <span class="help-block" data-bind="validationMessage: mentorNode"></span>
+                    <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
+                        <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
+                            <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
+                            <label for="toggle3">Choose your preferred mentor node manually</label>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-    <h3>Schedule</h3>
-    <div class="panel">
-        <div class="padding">
-            <div class="row margin-bottom" data-bind="validationElement: fullBackupFrequency">
-                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Full</label>
-                <div class="col-xs-6 col-sm-4">
-                    <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
-                        <input id="fullBackupToggle" type="checkbox" data-bind="checked: fullBackupEnabled">
-                        <label for="fullBackupToggle">Enable full backup</label>
-                    </div>
-                    <div data-bind="compose: $root.fullBackupCronEditor, visible: fullBackupEnabled"></div>
-                </div>
-            </div>
-            <div class="row margin-bottom" data-bind="validationElement: incrementalBackupFrequency">
-                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Incremental</label>
-                <div class="col-xs-6 col-sm-4">
-                    <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
-                        <input id="incrementalBackupToggle" type="checkbox" data-bind="checked: incrementalBackupEnabled">
-                        <label for="incrementalBackupToggle">Enable incremental backup</label>
-                    </div>
-                    <div data-bind="validationElement: incrementalBackupEnabled">
-                        <div class="help-block" data-bind="validationMessage: incrementalBackupEnabled"></div>
-                    </div>
-                    <div data-bind="compose: $root.incrementalBackupCronEditor, visible: incrementalBackupEnabled"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <h3>Retention Policy</h3>
-    <div class="panel" data-bind="with: retentionPolicy">
-        <div class="padding">
-            <div class="toggle">
-                <input id="limit-backups-by-age" type="checkbox" data-bind="checked: retentionPolicyEnabled">
-                <label for="limit-backups-by-age">Limit # of backups by age</label>
-            </div>
-            <div class="row collapse" data-bind="collapse: retentionPolicyEnabled">
-                <div class="col-sm-8 col-lg-6 margin-top margin-bottom">
-                    <div class="row" data-bind="validationElement: minimumBackupAgeToKeep">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Minimum retention time <small><i id="backup-age-info" class="icon-info text-info"></i></small>
-                        </label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8">
-                            <input type="text" class="form-control" data-bind="durationPicker: minimumBackupAgeToKeep, durationPickerOptions: { showDays: true }" />
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-sm-offset-4">
-                            <span data-bind="validationElement: minimumBackupAgeToKeep">
-                                <span class="help-block" data-bind="validationMessage: minimumBackupAgeToKeep"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="row" data-bind="if: !minimumBackupAgeToKeep.error()">
-                        <div class="col-sm-offset-2">
-                            <div class="bg-info padding padding-sm small margin-top">
-                                <i class="icon-info"></i><span data-bind="html: humaneRetentionDescription"></span>
+                <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
+                    <div class="row margin-bottom">
+                        <label class="control-label col-sm-4 col-lg-2">Preferred mentor</label>
+                        <div class="col-sm-4">
+                            <div class="dropdown btn-block">
+                                <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                    <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred mentor'"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                    <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
+                                </ul>
+                                <span class="help-block" data-bind="validationMessage: mentorNode"></span>
                             </div>
                         </div>
                     </div>
@@ -135,7 +79,74 @@
             </div>
         </div>
     </div>
-    <h3>Encryption</h3>
+    <div data-bind="if: backupOperation === 'periodic'">
+        <h3 class="margin-bottom margin-bottom-xs">Schedule</h3>
+        <div class="panel">
+            <div class="padding">
+                <div class="row margin-bottom" data-bind="validationElement: fullBackupFrequency">
+                    <label class="control-label col-xs-12 col-sm-4 col-lg-2">Full</label>
+                    <div class="col-xs-6 col-sm-4">
+                        <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+                            <input id="fullBackupToggle" type="checkbox" data-bind="checked: fullBackupEnabled">
+                            <label for="fullBackupToggle">Enable full backup</label>
+                        </div>
+                        <div data-bind="compose: $root.fullBackupCronEditor, visible: fullBackupEnabled"></div>
+                    </div>
+                </div>
+                <div class="row margin-bottom" data-bind="validationElement: incrementalBackupFrequency">
+                    <label class="control-label col-xs-12 col-sm-4 col-lg-2">Incremental</label>
+                    <div class="col-xs-6 col-sm-4">
+                        <div class="toggle" data-bind="validationOptions: { insertMessages: false }">
+                            <input id="incrementalBackupToggle" type="checkbox" data-bind="checked: incrementalBackupEnabled">
+                            <label for="incrementalBackupToggle">Enable incremental backup</label>
+                        </div>
+                        <div data-bind="validationElement: incrementalBackupEnabled">
+                            <div class="help-block" data-bind="validationMessage: incrementalBackupEnabled"></div>
+                        </div>
+                        <div data-bind="compose: $root.incrementalBackupCronEditor, visible: incrementalBackupEnabled"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div data-bind="if: backupOperation === 'periodic'">
+        <h3 class="margin-bottom margin-bottom-xs">Retention Policy</h3>
+        <div class="panel" data-bind="with: retentionPolicy">
+            <div class="padding">
+                <div class="toggle">
+                    <input id="limit-backups-by-age" type="checkbox" data-bind="checked: retentionPolicyEnabled">
+                    <label for="limit-backups-by-age">Limit # of backups by age</label>
+                </div>
+                <div class="row collapse" data-bind="collapse: retentionPolicyEnabled">
+                    <div class="col-sm-8 col-lg-6 margin-top margin-bottom">
+                        <div class="row" data-bind="validationElement: minimumBackupAgeToKeep">
+                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                                Minimum retention time <small><i class="backup-age-info icon-info text-info"></i></small>
+                            </label>
+                            <div class="col-xs-12 col-sm-6 col-lg-8">
+                                <input type="text" class="form-control" data-bind="durationPicker: minimumBackupAgeToKeep, durationPickerOptions: { showDays: true }" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-offset-4">
+                                <span data-bind="validationElement: minimumBackupAgeToKeep">
+                                    <span class="help-block" data-bind="validationMessage: minimumBackupAgeToKeep"></span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row" data-bind="if: !minimumBackupAgeToKeep.error()">
+                            <div class="col-sm-offset-2">
+                                <div class="bg-info padding padding-sm small margin-top">
+                                    <i class="icon-info"></i><span data-bind="html: humaneRetentionDescription"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3 class="margin-bottom margin-bottom-xs">Encryption</h3>
     <div class="panel" data-bind="with: encryptionSettings">
         <div class="padding">
             <div class="flex-horizontal" data-bind="validationElement: enabled">
@@ -214,7 +225,6 @@
         </div>
         <div class="padding bg-danger small" data-bind="visible: !Success">
             Connection test failed: <span data-bind="text: $parent.fullErrorDetailsVisible() ? Error : $parent.shortErrorText()"></span>
-
             <div>
                 <a href="#" data-bind="click: $parent.fullErrorDetailsVisible.toggle.bind($parent.fullErrorDetailsVisible), text: $parent.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
             </div>

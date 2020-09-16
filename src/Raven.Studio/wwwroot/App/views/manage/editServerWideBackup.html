@@ -17,7 +17,7 @@
                 </div>
             </div>
             <div class="row margin-bottom" data-bind="validationElement: backupType">
-                <label class="control-label col-sm-4 col-lg-2">Backup Type <i class="required"></i> <small><i id="backup-info" class="icon-info text-info"></i></small></label>
+                <label class="control-label col-sm-4 col-lg-2">Backup Type <i class="required"></i> <small><i class="backup-info icon-info text-info"></i></small></label>
                 <div class="col-sm-4" data-bind="validationOptions: { insertMessages: false }">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
@@ -91,7 +91,7 @@
             </div>
         </div>
     </div>
-    <h3>Schedule</h3>
+    <h3 class="margin-bottom margin-bottom-xs">Schedule</h3>
     <div class="panel">
         <div class="padding">
             <div class="row margin-bottom" data-bind="validationElement: fullBackupFrequency">
@@ -119,7 +119,7 @@
             </div>
         </div>
     </div>
-    <h3>Retention Policy</h3>
+    <h3 class="margin-bottom margin-bottom-xs">Retention Policy</h3>
     <div class="panel" data-bind="with: retentionPolicy">
         <div class="padding">
             <div class="toggle">
@@ -130,7 +130,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top margin-bottom">
                     <div class="row" data-bind="validationElement: minimumBackupAgeToKeep">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Minimum retention time <small><i id="backup-age-info" class="icon-info text-info"></i></small>
+                            Minimum retention time <small><i class="backup-age-info icon-info text-info"></i></small>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8">
                             <input type="text" class="form-control" data-bind="durationPicker: minimumBackupAgeToKeep, durationPickerOptions: { showDays: true }" />
@@ -154,7 +154,7 @@
             </div>
         </div>
     </div>
-    <h3>Encryption</h3>
+    <h3 class="margin-bottom margin-bottom-xs">Encryption</h3>
     <div class="panel" data-bind="with: encryptionSettings" data-bind="validationElement: enabled">
         <div class="padding">
             <div class="flex-horizontal" data-bind="validationElement: enabled">
@@ -163,7 +163,7 @@
                     <label for="toggle-encryption">Encrypt backup</label>
                 </div>
                 <span class="help-block" data-bind="validationMessage: enabled"></span>
-                <small data-bind="visible: $root.configuration().backupType() === 'Snapshot' && enabled()"><i id="serverwide-snapshot-encryption-info" class="icon-info text-info"></i></small>
+                <small data-bind="visible: $root.configuration().backupType() === 'Snapshot' && enabled()"><i class="serverwide-snapshot-encryption-info icon-info text-info"></i></small>
             </div>
             <div data-bind="collapse: needExplicitConsent">
                 <div class="flex-horizontal" data-bind="validationElement: allowUnencryptedBackupForEncryptedDatabase">
