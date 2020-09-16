@@ -43,7 +43,7 @@
                 <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="collapse: excludeDatabases">
                     <div class="flex-horizontal">
                         <div class="flex-grow">
-                            <div class="dropdown btn-block flex-grow">
+                            <div class="dropdown btn-block flex-grow" data-bind="validationElement: databasesToExclude">
                                 <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database to exclude" data-toggle="dropdown" autocomplete="off"
                                        data-bind="textInput: inputDatabaseToExclude, attr: { id: 'databaseNameInput' }" />
                                 <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
@@ -55,6 +55,7 @@
                                         </a>
                                     </li>
                                 </ul>
+                                <span class="help-block" data-bind="validationMessage: databasesToExclude"></span>
                             </div>
                         </div>
                         <div>
@@ -63,7 +64,7 @@
                             </button>
                         </div>
                     </div>
-                    <div data-bind="visible: databasesToExclude().length" class="margin-top">
+                    <div data-bind="visible: databasesToExclude() && databasesToExclude().length" class="margin-top">
                         <label><strong>Excluded Databases:</strong></label>
                         <ul class="well collection-list" data-bind="foreach: databasesToExclude">
                             <li>

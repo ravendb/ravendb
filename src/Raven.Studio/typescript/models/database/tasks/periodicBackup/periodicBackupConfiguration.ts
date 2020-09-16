@@ -141,7 +141,7 @@ class periodicBackupConfiguration {
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
-    initValidation() {
+    private initValidation() {
         this.backupType.extend({
             required: true
         });
