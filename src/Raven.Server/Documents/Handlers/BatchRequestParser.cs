@@ -457,7 +457,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.From = null;
                                 break;
                             case JsonParserToken.String:
-                                commandData.From = DateTime.Parse(GetStringPropertyValue(state));
+                                commandData.From = DateTime.Parse(GetStringPropertyValue(state)).ToUniversalTime();
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -473,7 +473,7 @@ namespace Raven.Server.Documents.Handlers
                                 commandData.To = null;
                                 break;
                             case JsonParserToken.String:
-                                commandData.To = DateTime.Parse(GetStringPropertyValue(state));
+                                commandData.To = DateTime.Parse(GetStringPropertyValue(state)).ToUniversalTime();
                                 break;
                             default:
                                 ThrowUnexpectedToken(JsonParserToken.String, state);
