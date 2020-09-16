@@ -521,7 +521,7 @@ namespace Raven.Client.Document
 
             if (previousTask != null && waitedForPreviousTask == false)
             {
-                Total += previousTask.GetAwaiter().GetResult();
+                Total += previousTask.ConfigureAwait(false).GetAwaiter().GetResult();
                 waitedForPreviousTask = true;
             }
 
