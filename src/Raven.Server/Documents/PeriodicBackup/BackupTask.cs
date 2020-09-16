@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
             finally
             {
-                if (operationCanceled == false && _isOneTimeBackup == false)
+                if (operationCanceled == false)
                 {
                     // whether we succeeded or not,
                     // in periodic backup we need to update the last backup time to avoid
@@ -250,11 +250,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     runningBackupStatus.NodeTag = _database.ServerStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
-                    runningBackupStatus.Version = ++_previousBackupStatus.Version;
 
-                    // save the backup status
-                    AddInfo("Saving backup status");
-                    SaveBackupStatus(runningBackupStatus, _database, _logger);
+                    if (_isOneTimeBackup == false)
+                    {
+                        runningBackupStatus.Version = ++_previousBackupStatus.Version;
+                        // save the backup status
+                        AddInfo("Saving backup status");
+                        SaveBackupStatus(runningBackupStatus, _database, _logger);
+                    }
                 }
             }
         }

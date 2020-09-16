@@ -46,8 +46,6 @@ namespace Raven.Server.Web.System
                 return Task.CompletedTask;
 
             var taskId = GetLongQueryString("taskId", required: true);
-            if (taskId == 0)
-                throw new ArgumentException("Task ID cannot be 0");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
