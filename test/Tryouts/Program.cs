@@ -29,7 +29,7 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenD_15608(testOutputHelper))
+                    using (var test = new RavenDB_15608(testOutputHelper))
                     {
                         await test.ArtificalDocumentsMatchIndexEntries();
                     }
