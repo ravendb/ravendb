@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
@@ -1988,14 +1989,45 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(backupResult.Subscriptions.Processed);
                 Assert.Equal(1, backupResult.Documents.ReadCount);
                 Assert.NotEmpty(backupResult.Messages);
-                if (backupType == BackupType.Backup)
+
+                // check the backup status of one time backup
+                var client = store.GetRequestExecutor().HttpClient;
+                // one time backup always save the status under task id 0
+                var response = await client.GetAsync(store.Urls.First() + $"/periodic-backup/status?name={store.Database}&taskId=0");
+                string result = response.Content.ReadAsStringAsync().Result;
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
-                    Assert.False(backupResult.SnapshotBackup.Processed);
-                    Assert.True(backupResult.Documents.LastEtag > 0, "backupResult.Documents.LastEtag > 0");
-                }
-                else
-                {
-                    Assert.True(backupResult.SnapshotBackup.Processed);
+                    using var bjro = ctx.ReadForMemory(result, "test");
+                    bjro.TryGet("Status", out BlittableJsonReaderObject statusBjro);
+                    var status = JsonDeserializationClient.PeriodicBackupStatus(statusBjro);
+                    Assert.NotNull(status.LocalBackup);
+                    Assert.False(status.LocalBackup.TempFolderUsed);
+                    Assert.True(status.IsFull);
+                    Assert.NotNull(status.UploadToAzure);
+                    Assert.True(status.UploadToAzure.Skipped);
+                    Assert.NotNull(status.UploadToFtp);
+                    Assert.True(status.UploadToFtp.Skipped);
+                    Assert.NotNull(status.UploadToGlacier);
+                    Assert.True(status.UploadToGlacier.Skipped);
+                    Assert.NotNull(status.UploadToGoogleCloud);
+                    Assert.True(status.UploadToGoogleCloud.Skipped);
+                    Assert.NotNull(status.UploadToS3);
+                    Assert.True(status.UploadToS3.Skipped);
+
+                    Assert.Equal("A", status.NodeTag);
+                    Assert.True(status.DurationInMs > 0, "status.DurationInMs > 0");
+
+                    if (backupType == BackupType.Backup)
+                    {
+                        Assert.False(backupResult.SnapshotBackup.Processed);
+                        Assert.True(backupResult.Documents.LastEtag > 0, "backupResult.Documents.LastEtag > 0");
+                        Assert.Equal(BackupType.Backup, status.BackupType);
+                    }
+                    else
+                    {
+                        Assert.True(backupResult.SnapshotBackup.Processed);
+                        Assert.Equal(BackupType.Snapshot, status.BackupType);
+                    }
                 }
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
