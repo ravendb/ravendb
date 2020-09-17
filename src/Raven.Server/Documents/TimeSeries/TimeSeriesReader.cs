@@ -521,8 +521,14 @@ namespace Raven.Server.Documents.TimeSeries
 
                         // prev start overlap with the first aggregation frame
                         // need to adjust to avoid counting same points twice
+
                         var x = (int)policy.AggregationTime.TimesInInterval(stats.Start, previous.Start) + 1;
                         previous.Start = stats.Start.Add(x * policy.AggregationTime);
+
+                        var end = stats.End;
+                        if (end.Add(policy.AggregationTime) < previous.Start)
+                            previous.Start = stats.Start.Add((x - 1) * policy.AggregationTime);
+
                         return true;
                     }
                     return false; // we prefer the higher resolution and it can't have points newer then prev
