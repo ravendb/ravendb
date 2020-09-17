@@ -2003,6 +2003,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Assert.NotNull(status.LocalBackup);
                     Assert.False(status.LocalBackup.TempFolderUsed);
                     Assert.True(status.IsFull);
+                    Assert.False(status.IsEncrypted);
                     Assert.NotNull(status.UploadToAzure);
                     Assert.True(status.UploadToAzure.Skipped);
                     Assert.NotNull(status.UploadToFtp);
