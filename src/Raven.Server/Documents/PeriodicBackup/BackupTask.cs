@@ -154,6 +154,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
                 runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
                 runningBackupStatus.IsFull = _isFullBackup;
+                runningBackupStatus.IsEncrypted = _isBackupEncrypted;
 
                 try
                 {

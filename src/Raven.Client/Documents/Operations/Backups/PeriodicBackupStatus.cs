@@ -49,6 +49,8 @@ namespace Raven.Client.Documents.Operations.Backups
         public Error Error { get; set; }
 
         public long? LastOperationId { get; set; }
+        
+        public bool IsEncrypted { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -81,6 +83,7 @@ namespace Raven.Client.Documents.Operations.Backups
             json[nameof(Error)] = Error?.ToJson();
             json[nameof(LastOperationId)] = LastOperationId;
             json[nameof(LastDatabaseChangeVector)] = LastDatabaseChangeVector;
+            json[nameof(IsEncrypted)] = IsEncrypted;
         }
 
         public static string Prefix => "periodic-backups/";
