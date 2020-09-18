@@ -686,6 +686,7 @@ select out()
                 var database = await GetDocumentDatabaseInstanceFor(store);
 
                 var now = DateTime.UtcNow;
+
                 var baseline = now.AddDays(-90);
                 var total = TimeSpan.FromDays(90).TotalMinutes / 30;
 
@@ -1570,6 +1571,118 @@ select out()
 
                 var rawAndRoll = GetSum(store, now);
                 Assert.Equal(raw, rawAndRoll);
+            }
+        }
+
+        [Fact]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupDat31()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = new DateTime(2020, 7, 31);
+                database.Time.UtcDateTime = () => now.AddMilliseconds(1);
+                var baseline = now.AddDays(-90);
+                var total = TimeSpan.FromDays(90).TotalMinutes / 30;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i * 30), 1, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+
+                var noPolicy = GetSum(store, now);
+
+                var p1 = new TimeSeriesPolicy("ByHour", TimeValue.FromHours(1), TimeValue.FromDays(7));
+                var p2 = new TimeSeriesPolicy("ByMonth", TimeValue.FromMonths(1), TimeValue.FromYears(5));
+                var p3 = new TimeSeriesPolicy("ByDay", TimeValue.FromDays(1), TimeValue.FromMonths(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                 p1,
+                                 p2,
+                                 p3
+                            },
+                        },
+                    },
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                var raw = GetSum(store, now);
+                Assert.Equal(noPolicy, raw);
+            }
+        }
+
+        [Fact]
+        public async Task QueryFromMultipleTimeSeries_ShouldReturnSameResult_ForRawAndRollupfor29InFeb()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var database = await GetDocumentDatabaseInstanceFor(store);
+
+                var now = new DateTime(2020, 3, 29);
+                database.Time.UtcDateTime = () => now.AddMilliseconds(1);
+                var baseline = now.AddDays(-90);
+                var total = TimeSpan.FromDays(90).TotalMinutes / 30;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Karmel" }, "users/karmel");
+                    for (int i = 0; i <= total; i++)
+                    {
+                        session.TimeSeriesFor("users/karmel", "Heartrate")
+                            .Append(baseline.AddMinutes(i * 30), 1, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+
+                var noPolicy = GetSum(store, now);
+
+                var p1 = new TimeSeriesPolicy("ByHour", TimeValue.FromHours(1), TimeValue.FromDays(7));
+                var p2 = new TimeSeriesPolicy("ByMonth", TimeValue.FromMonths(1), TimeValue.FromYears(5));
+                var p3 = new TimeSeriesPolicy("ByDay", TimeValue.FromDays(1), TimeValue.FromMonths(1));
+
+                var config = new TimeSeriesConfiguration
+                {
+                    Collections = new Dictionary<string, TimeSeriesCollectionConfiguration>
+                    {
+                        ["Users"] = new TimeSeriesCollectionConfiguration
+                        {
+                            Policies = new List<TimeSeriesPolicy>
+                            {
+                                 p1,
+                                 p2,
+                                 p3
+                            },
+                        },
+                    },
+                };
+
+                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                var raw = GetSum(store, now);
+                Assert.Equal(noPolicy, raw);
             }
         }
 

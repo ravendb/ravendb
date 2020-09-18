@@ -16,6 +16,8 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
@@ -434,7 +436,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
+                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration);
                         break;
                     case nameof(DeleteServerWideBackupConfigurationCommand):
                         UpdateValue<string>(context, type, cmd, index, skipNotifyValueChanged: true);
@@ -672,7 +674,8 @@ namespace Raven.Server.ServerWide
             return e is RachisException ||
                    e is SubscriptionException ||
                    e is DatabaseDoesNotExistException ||
-                   e is AuthorizationException;
+                   e is AuthorizationException ||
+                   e is CompareExchangeKeyTooBigException;
         }
 
         private void ClusterStateCleanUp(ClusterOperationContext context, BlittableJsonReaderObject cmd, long index)
@@ -3273,7 +3276,7 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
         }
 
-        private void UpdateDatabasesWithNewServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration, long index)
+        private void UpdateDatabasesWithNewServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration)
         {
             if (serverWideBackupConfiguration == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration is null for command type: {type}");
@@ -3287,7 +3290,9 @@ namespace Raven.Server.ServerWide
 
             const string dbKey = "db/";
             var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName)>();
-            long? oldTaskId = null;
+            (long? TaskId, string name) old = default;
+            
+            var allServerWideBackupNames = GetSeverWideBackupNames(context);
 
             using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
             {
@@ -3303,24 +3308,27 @@ namespace Raven.Server.ServerWide
 
                     if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray backups))
                     {
+                        var isBackupToEditFound = false;
                         foreach (BlittableJsonReaderObject backup in backups)
                         {
-                            if (IsServerWideBackupWithTaskName(backup, periodicBackupConfiguration.Name))
+                            //Even though we rebuild the whole configurations list just one should be modified
+                            //In addition the same configuration should be modified in all databases 
+                            if (isBackupToEditFound || IsServerWideBackupToEdit(backup, periodicBackupConfiguration.Name, allServerWideBackupNames) == false)
                             {
-                                if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
-                                    oldTaskId = taskId;
-
+                                newBackups.Add(backup);
                                 continue;
                             }
 
-                            newBackups.Add(backup);
+                            isBackupToEditFound = true;
+
+                            if (backup.TryGet(nameof(PeriodicBackupConfiguration.TaskId), out long taskId))
+                                periodicBackupConfiguration.TaskId = taskId;
                         }
                     }
 
 
                     if (serverWideBackupConfiguration.IsExcluded(databaseName) == false)
                     {
-                        periodicBackupConfiguration.TaskId = oldTaskId ?? index;
                         newBackups.Add(periodicBackupConfiguration.ToJson());
                     }
 
@@ -3337,7 +3345,49 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            ApplyDatabaseRecordUpdates(toUpdate, type, oldTaskId ?? index, index, items, context);
+            ApplyDatabaseRecordUpdates(toUpdate, type, old.TaskId ?? serverWideBackupConfiguration.TaskId, serverWideBackupConfiguration.TaskId, items, context);
+        }
+
+        private static bool IsServerWideBackupToEdit(BlittableJsonReaderObject backup, 
+            string periodicBackupConfigName, 
+            HashSet<string> severWideBackupNames)
+        {
+            if (backup.TryGet(nameof(PeriodicBackupConfiguration.Name), out string backupName) == false || backupName == null) 
+                return false;
+
+            if (backupName.StartsWith(ServerWideBackupConfiguration.NamePrefix) == false) 
+                return false;
+            
+            if (backupName.Equals(periodicBackupConfigName, StringComparison.OrdinalIgnoreCase))
+            {
+                //server-wide backup to update when name is not modified
+                return true;
+            } 
+            if (severWideBackupNames.Contains(backupName) == false) 
+            {
+                //server-wide backup to update when modify name
+                return true;
+            }
+            return false;
+        }
+
+        private static unsafe HashSet<string> GetSeverWideBackupNames(ClusterOperationContext context)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            using (Slice.From(context.Allocator, ServerWideBackupConfigurationsKey, out Slice valueNameLowered))
+            {
+                var severWideBackupNames = new HashSet<string>();
+                if (items.ReadByKey(valueNameLowered, out var tvr))
+                {
+                    var ptr = tvr.Read(2, out int size);
+                    using var previousValue = new BlittableJsonReaderObject(ptr, size, context);
+                    foreach (var backupName in previousValue.GetPropertyNames())
+                    {
+                        severWideBackupNames.Add(PutServerWideBackupConfigurationCommand.GetTaskNameForDatabase(backupName));
+                    }
+                } 
+                return severWideBackupNames;
+            }
         }
 
         private void DeleteServerWideBackupConfigurationFromAllDatabases(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index)

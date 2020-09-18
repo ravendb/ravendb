@@ -31,24 +31,55 @@ namespace Raven.Server.ServerWide.Commands
         public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue, long index)
         {
             if (string.IsNullOrWhiteSpace(Value.Name))
-            {
                 Value.Name = GenerateTaskName(previousValue);
-            }
 
             if (Value.ExcludedDatabases != null &&
                 Value.ExcludedDatabases.Any(string.IsNullOrWhiteSpace))
                 throw new RachisApplyException($"{nameof(ServerWideBackupConfiguration.ExcludedDatabases)} cannot contain null or empty database names");
 
+            var prevTaskId = Value.TaskId;
             Value.TaskId = index;
 
+            string oldName = null;
             if (previousValue != null)
             {
-                previousValue.Modifications = new DynamicJsonValue
-                {
-                    [Value.Name] = Value.ToJson()
-                };
+                previousValue.Modifications ??= new DynamicJsonValue();
 
-                return context.ReadObject(previousValue, Name);
+                if (previousValue.TryGet(Value.Name, out object _) == false)
+                {
+                    if (prevTaskId != 0)
+                    {
+                        foreach (var propertyName in previousValue.GetPropertyNames())
+                        {
+                            var property = (BlittableJsonReaderObject)previousValue[propertyName];
+                            if(property.TryGet(nameof(ServerWideBackupConfiguration.TaskId), out long taskId) == false)
+                                throw new RachisInvalidOperationException(
+                                    $"Current {nameof(ServerWideBackupConfiguration)} has no {nameof(ServerWideBackupConfiguration.TaskId)} " +
+                                    $"or the {nameof(ServerWideBackupConfiguration.TaskId)} is not of the correct type. " +
+                                    $"Should not happen\n {previousValue}");
+
+                            if (taskId != prevTaskId)
+                                continue;
+
+                            oldName = propertyName;
+                            break;
+                        }
+                        
+                        if(oldName == null)
+                            throw new RachisInvalidOperationException(
+                                $"Can't find {nameof(ServerWideBackupConfiguration)} with {nameof(ServerWideBackupConfiguration.Name)} {Value.Name} or with {nameof(ServerWideBackupConfiguration.TaskId)} {prevTaskId}. " +
+                                $"If you try to create new {nameof(ServerWideBackupConfiguration)} set the {nameof(ServerWideBackupConfiguration.TaskId)} to 0." +
+                                $"If you try to update exist {nameof(ServerWideBackupConfiguration)} and change its name, request the configuration again from the server to get the current {nameof(ServerWideBackupConfiguration.TaskId)} and send the {nameof(PutServerWideBackupConfigurationCommand)} again");
+                    }
+                }
+
+                var modifications = new DynamicJsonValue(previousValue);
+                if (oldName != null && oldName.Equals(Value.Name) == false)
+                    modifications.Remove(oldName);
+
+                modifications[Value.Name] = Value.ToJson();
+                var blittableJsonReaderObject = context.ReadObject(previousValue, Name);
+                return blittableJsonReaderObject;
             }
 
             var djv = new DynamicJsonValue
