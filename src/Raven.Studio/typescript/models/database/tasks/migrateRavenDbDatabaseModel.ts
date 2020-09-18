@@ -176,7 +176,7 @@ class migrateRavenDbDatabaseModel {
             const productVersion = this.productVersion();
 
             if (!serverMajorVersion || !buildVersionInt) {
-                return null;
+                return "N/A";
             }
 
             let majorVersion: string;
@@ -198,7 +198,7 @@ class migrateRavenDbDatabaseModel {
                     majorVersion = productVersion;
                     break;
                 default:
-                    return null;
+                    return "N/A";
             }
 
             return `${majorVersion} (build: ${buildVersion})`;
