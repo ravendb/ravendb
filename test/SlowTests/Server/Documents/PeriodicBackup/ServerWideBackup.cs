@@ -784,5 +784,93 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Equal($"{serverWideConfiguration.AzureSettings.RemoteFolderName}/{databaseName}", backupConfiguration.AzureSettings.RemoteFolderName);
             Assert.Equal($"{serverWideConfiguration.FtpSettings.Url}/{databaseName}", backupConfiguration.FtpSettings.Url);
         }
+        
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(10)]
+        public async Task ServerWideBackup_WhenEditingName_ShouldNotCreateNewOne(int additionalBackupCount)
+        {
+            const string firstName = "FirstName";
+            const string changedName = "changedName";
+            
+            using var store = GetDocumentStore();
+            
+            var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+            {
+                FullBackupFrequency = "0 2 * * 0",
+                LocalSettings = new LocalSettings {FolderPath = "test/folder"},
+                Name = firstName
+            }));
+
+            for (var i = 0; i < additionalBackupCount; i++)
+            {
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "0 2 * * 0",
+                    LocalSettings = new LocalSettings {FolderPath = $"test/folder{i}"},
+                    Name = "NameServerWide" + i
+                }));
+                
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings {FolderPath = $"test/folder{i}"},
+                    IncrementalBackupFrequency = "0 2 * * 0",
+                    Name = "Name" + i
+                }));
+            }
+            
+            var recordBeforeEditing = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+            var configuration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+            configuration.Name = changedName;
+            await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(configuration));
+
+            var newBackup = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(firstName));
+            Assert.Null(newBackup);
+            var oldBackup = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(changedName));
+            Assert.NotNull(oldBackup);
+                
+            var recordAfterEditing = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+            Assert.True(recordBeforeEditing.PeriodicBackups.Count == recordAfterEditing.PeriodicBackups.Count, GatherAdditionalInformationOnFailing());
+            var beforeEditingConfig = recordBeforeEditing.PeriodicBackups.FirstOrDefault(b => b.Name.EndsWith(firstName));
+            Assert.True(beforeEditingConfig != null, GatherAdditionalInformationOnFailing());
+            var afterEditingConfig = recordAfterEditing.PeriodicBackups.First(b => b.Name.EndsWith(changedName));
+            Assert.True(afterEditingConfig != null, GatherAdditionalInformationOnFailing());
+            Assert.Equal(beforeEditingConfig.TaskId, afterEditingConfig.TaskId);
+
+            string GatherAdditionalInformationOnFailing()
+            {
+                return $"Periodic backups before editing: {string.Join("; ", recordBeforeEditing.PeriodicBackups.Select(b => b.Name))}{Environment.NewLine}" +
+                       $"Periodic backups after editing: {string.Join("; ", recordAfterEditing.PeriodicBackups.Select(b => b.Name))}";
+            }
+        }
+
+        [Fact]
+        public async Task ServerWideBackup_WhenEditingNameWithOldTaskId_ShouldThrow()
+        {
+            const string firstName = "FirstName";
+            const string changedName = "changedName";
+            
+            using var store = GetDocumentStore();
+            
+            var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+            {
+                FullBackupFrequency = "0 2 * * 0",
+                LocalSettings = new LocalSettings {FolderPath = "test/folder"},
+                Name = firstName
+            }));
+            
+            var configuration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result.Name));
+            configuration.FullBackupFrequency = "0 3 * * 0";
+            await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(configuration));
+            configuration.Name = changedName;
+
+            await Assert.ThrowsAnyAsync<RavenException>(async () =>
+            {
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(configuration));
+            });
+        }
     }
 }

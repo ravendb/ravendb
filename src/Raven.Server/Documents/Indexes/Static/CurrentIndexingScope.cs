@@ -97,6 +97,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 // we intentionally don't dispose of the scope here, this is being tracked by the references
                 // and will be disposed there.
+
                 Slice.From(QueryContext.Documents.Allocator, id, out var idSlice);
                 var references = GetReferencesForItem(idSlice);
 
@@ -165,28 +166,28 @@ namespace Raven.Server.Documents.Indexes.Static
         private bool TryGetKeySlice(LazyStringValue keyLazy, string keyString, out Slice keySlice)
         {
             keySlice = default;
+
+            // we intentionally don't dispose of the scope here, this is being tracked by the references
+            // and will be disposed there.
+
+            // making sure that we normalize the case of the key so we'll be able to find
+            // it in case insensitive manner
+            // In addition, special characters need to be escaped
+
             if (keyLazy != null)
             {
                 if (keyLazy.Length == 0)
                     return false;
 
-                // we intentionally don't dispose of the scope here, this is being tracked by the references
-                // and will be disposed there.
-                Slice.External(QueryContext.Documents.Allocator, keyLazy, out keySlice);
+                DocumentIdWorker.GetSliceFromId(QueryContext.Documents, keyLazy, out keySlice);
             }
             else
             {
                 if (keyString.Length == 0)
                     return false;
 
-                // we intentionally don't dispose of the scope here, this is being tracked by the references
-                // and will be disposed there.
-                Slice.From(QueryContext.Documents.Allocator, keyString, out keySlice);
+                DocumentIdWorker.GetSliceFromId(QueryContext.Documents, keyString, out keySlice);
             }
-
-            // making sure that we normalize the case of the key so we'll be able to find
-            // it in case insensitive manner
-            QueryContext.Documents.Allocator.ToLowerCase(ref keySlice.Content);
 
             return true;
         }

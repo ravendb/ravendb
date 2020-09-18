@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Text;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow;
@@ -451,6 +452,23 @@ namespace Raven.Server.Documents.Queries.Parser
                             case 'b':
                                 sb.Remove(i, 1);
                                 sb[i] = '\b';
+                                break;
+                            case 'A':
+                            case 'a':
+                                sb.Remove(i, 1);
+                                sb[i] = '\a';
+                                break;
+                            case 'V':
+                            case 'v':
+                                sb.Remove(i, 1);
+                                sb[i] = '\v';
+                                break;
+                            case 'U':
+                            case 'u':
+                                if (int.TryParse(sb.ToString(i + 2, 4), NumberStyles.AllowHexSpecifier, null, out var c) == false)
+                                    goto Fail;
+                                sb.Remove(i, 5);
+                                sb[i] = (char)c;
                                 break;
                             default:
                                 goto Fail;

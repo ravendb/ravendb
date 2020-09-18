@@ -58,7 +58,7 @@ namespace SlowTests.Issues
             DoNotReuseServer();
 
             var store = GetDocumentStore();
-            var ex = Assert.Throws<RavenException>(() => store.Operations.Send(new PutCompareExchangeValueOperation<string>(new string('a', 513), "a", 0)));
+            var ex = Assert.Throws<CompareExchangeKeyTooBigException>(() => store.Operations.Send(new PutCompareExchangeValueOperation<string>(new string('a', 513), "a", 0)));
 
             Assert.Contains($" key cannot exceed {AddOrUpdateCompareExchangeCommand.MaxNumberOfCompareExchangeKeyBytes} bytes", ex.Message);
         }
