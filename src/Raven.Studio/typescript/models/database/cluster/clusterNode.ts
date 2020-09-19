@@ -84,7 +84,7 @@ class clusterNode {
         const licenseStatus = license.licenseStatus();
         const utilizedMemory = this.utilizedCores() * licenseStatus.Ratio;
         const installedMemoryInGb = this.installedMemoryInGb();
-        return this.formatNumber(Math.min(installedMemoryInGb, utilizedMemory));
+        return this.formatNumber(utilizedMemory ? Math.min(installedMemoryInGb, utilizedMemory) : installedMemoryInGb);
     });
 
     cssCores = ko.pureComputed(() => {
