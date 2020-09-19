@@ -342,7 +342,7 @@ class genUtils {
     
     /***  String Methods ***/
 
-    static trimMessage(message: any) {
+    static trimMessage(message: any, limit: number = 256) {
         if (!message) {
             return message;
         }
@@ -355,11 +355,11 @@ class genUtils {
             return message.substr(0, lineBreakIdx);
         }
 
-        if (message.length < 256) {
+        if (message.length < limit) {
             return message;
         }
 
-        return message.substr(0, 256) + "...";
+        return message.substr(0, limit) + "...";
     }
 
     static sortedAlphaNumericIndex<T>(items: T[], newItem: T, extractor: (item: T) => string): number {

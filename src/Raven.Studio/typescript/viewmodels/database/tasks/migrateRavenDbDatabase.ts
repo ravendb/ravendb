@@ -108,7 +108,7 @@ class migrateRavenDbDatabase extends viewModelBase {
             .fail((response: JQueryXHR) => {
                 if (url === this.model.serverUrl()) {
                     const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
-                    const message = generalUtils.trimMessage(messageAndOptionalException.message);
+                    const message = generalUtils.trimMessage(messageAndOptionalException.message, 1024);
                     this.model.serverMajorVersion.setError(message);
                     this.model.databaseNames([]);
                     this.model.fileSystemNames([]);
