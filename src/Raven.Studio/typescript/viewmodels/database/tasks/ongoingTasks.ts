@@ -351,28 +351,30 @@ class ongoingTasks extends viewModelBase {
         }
 
         this.existingTaskTypes(this.tasksTypesOrderForUI.filter(x => _.includes(taskTypes, x))
-            .map((taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType) => {
-                switch (taskType) {
-                    case "RavenEtl":
-                        return "RavenDB ETL" as TasksNamesInUI;
-                    case "Replication":
-                        return "External Replication" as TasksNamesInUI;
-                    case "SqlEtl":
-                        return "SQL ETL" as TasksNamesInUI;
-                    case "PullReplicationAsHub":
-                        return "Replication Hub" as TasksNamesInUI;
-                    case "PullReplicationAsSink":
-                        return "Replication Sink" as TasksNamesInUI;
-                    default:
-                        return taskType;
-                }
-        }));
+            .map(ongoingTasks.mapTaskType));
         
         this.existingNodes(_.uniq(result
             .OngoingTasksList
             .map(x => x.ResponsibleNode.NodeTag)
             .filter(x => x))
             .sort());
+    }
+    
+    private static mapTaskType(taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): TasksNamesInUI {
+        switch (taskType) {
+            case "RavenEtl":
+                return "RavenDB ETL" as TasksNamesInUI;
+            case "Replication":
+                return "External Replication" as TasksNamesInUI;
+            case "SqlEtl":
+                return "SQL ETL" as TasksNamesInUI;
+            case "PullReplicationAsHub":
+                return "Replication Hub" as TasksNamesInUI;
+            case "PullReplicationAsSink":
+                return "Replication Sink" as TasksNamesInUI;
+            default:
+                return taskType;
+        }
     }
      
     private mergePullReplicationHubs(incomingDefinitions: Array<Raven.Client.Documents.Operations.Replication.PullReplicationDefinition>,
@@ -460,7 +462,9 @@ class ongoingTasks extends viewModelBase {
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
         
-        this.confirmationMessage("Delete Task", "You're deleting task of type: " + model.taskType(), {
+        const taskType = ongoingTasks.mapTaskType(model.taskType());
+        
+        this.confirmationMessage("Delete Task", "You're deleting " + taskType + ": " + model.taskName(), {
             buttons: ["Cancel", "Delete"]
         })
             .done(result => {
