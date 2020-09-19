@@ -215,9 +215,10 @@
                                    data-bind="tooltipText: '<div><strong>Expiration Date</strong></div>' + expirationDateFullDate()">
                                 <span data-bind="text: expirationDateInterval"></span>
                             </span>
-                            <i class="icon-danger text-warning" data-toggle="tooltip" data-animation="true" data-html="true" 
-                               data-bind="visible: !$root.documentExpirationEnabled()"
-                               data-original-title="Document expiration is turned off. <Br />This document won't be deleted on specified point in time."></i>
+                            <span data-toggle="tooltip" data-animation="true" data-html="true" data-placement="bottom"
+                                  data-bind="visible: !$root.documentExpirationEnabled(), tooltipText: 'Document expiration is turned off. <Br />This document won\'t be deleted on specified point in time.'">
+                                <i class="icon-danger text-warning"></i>
+                            </span>
                         </dd>
                     </div>
                     <div data-bind="if: refreshDateInterval">
@@ -227,9 +228,10 @@
                                    data-bind="tooltipText: '<div><strong>Refresh Date</strong></div>' + refreshDateFullDate()">
                                 <span data-bind="text: refreshDateInterval"></span>
                             </span>
-                            <i class="icon-danger text-warning" data-toggle="tooltip" data-animation="true" data-html="true"
-                               data-bind="visible: !$root.documentRefreshEnabled()"
-                               data-original-title="Document refresh is turned off. <Br />This document won't be refreshed on specified point in time."></i>
+                            <span data-toggle="tooltip" data-animation="true" data-html="true" data-placement="bottom"
+                                  data-bind="visible: !$root.documentRefreshEnabled(), tooltipText: 'Document refresh is turned off. <Br />This document won\'t be refreshed on specified point in time.'">
+                                <i class="icon-danger text-warning"></i>
+                            </span>
                         </dd>
                     </div>
                     <dt>Size:</dt>
