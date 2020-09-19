@@ -362,6 +362,24 @@ class genUtils {
         return message.substr(0, 256) + "...";
     }
 
+    static sortedAlphaNumericIndex<T>(items: T[], newItem: T, extractor: (item: T) => string): number {
+        if (!items.length) {
+            return 0;
+        }
+        
+        const newItemValue = extractor(newItem);
+        
+        for (let i = 0; i < items.length; i++) {
+            const currentValue = extractor(items[i]);
+            const cmp = genUtils.sortAlphaNumeric(currentValue, newItemValue);
+            if (cmp >= 0) {
+                return i;
+            } 
+        }
+        
+        return items.length;
+    }
+    
     static sortAlphaNumeric(a: string, b: string, mode: sortMode = "asc"): number {
         const result = genUtils.sortAlphaNumericInternal(a, b);
         if (result === 0)

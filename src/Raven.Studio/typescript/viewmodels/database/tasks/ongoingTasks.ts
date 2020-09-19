@@ -1,6 +1,5 @@
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import router = require("plugins/router");
 import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import databaseInfo = require("models/resources/info/databaseInfo");
@@ -23,6 +22,7 @@ import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListMode
 import etlScriptDefinitionCache = require("models/database/stats/etlScriptDefinitionCache");
 import ongoingTaskReplicationSinkListModel = require("models/database/tasks/ongoingTaskReplicationSinkListModel");
 import accessManager = require("common/shell/accessManager");
+import generalUtils = require("common/generalUtils");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
 
@@ -417,7 +417,7 @@ class ongoingTasks extends viewModelBase {
                 existingItem.update(item);
             } else {
                 const newItem = ctr(item);
-                const insertIdx = _.sortedIndexBy(container(), newItem, x => x.taskName().toLocaleLowerCase());
+                const insertIdx = generalUtils.sortedAlphaNumericIndex(container(), newItem, x => x.taskName().toLocaleLowerCase());
                 container.splice(insertIdx, 0, newItem);
             }
         });
