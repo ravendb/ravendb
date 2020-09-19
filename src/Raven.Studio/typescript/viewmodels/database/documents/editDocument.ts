@@ -723,14 +723,15 @@ class editDocument extends viewModelBase {
 
         // Clear data..
         this.document().__metadata.clearFlags();
-
-        this.connectedDocuments.gridController().reset(true);
+        
         this.metadata().changeVector(undefined);
 
         this.userSpecifiedId(docId);
 
         this.setActiveTab();
         this.adjustCollapseState();
+        
+        this.connectedDocuments.gridController().reset(true);
     }
 
     saveDocument() {
