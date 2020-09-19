@@ -9,6 +9,8 @@ import eventsCollector = require("common/eventsCollector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import copyToClipboard = require("common/copyToClipboard");
 import app = require("durandal/app");
+import generalUtils = require("common/generalUtils");
+import recentError = require("common/notifications/models/recentError");
 
 type termsForField = {
     name: string;
@@ -17,6 +19,7 @@ type termsForField = {
     type: fieldType;
     hasMoreTerms: KnockoutObservable<boolean>;
     loadInProgress: KnockoutObservable<boolean>;
+    loadError: KnockoutObservable<string>;
 }
 
 type fieldType = "static" | "dynamic";
@@ -74,7 +77,8 @@ class indexTerms extends viewModelBase {
             hasMoreTerms: ko.observable<boolean>(true),
             terms: ko.observableArray<string>(),
             type: type,
-            loadInProgress: ko.observable<boolean>(false)
+            loadInProgress: ko.observable<boolean>(false),
+            loadError: ko.observable<string>()
         }
     }
 
@@ -103,6 +107,12 @@ class indexTerms extends viewModelBase {
                 if (loadedTerms.length > 0) {
                     termsForField.fromValue = loadedTerms[loadedTerms.length - 1];
                 }
+            })
+            .fail((response: JQueryXHR) => {
+                termsForField.hasMoreTerms(false);
+
+                const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
+                termsForField.loadError(generalUtils.trimMessage(messageAndOptionalException.message));
             });
     }
     
