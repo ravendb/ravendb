@@ -51,7 +51,7 @@
             <div class="btn-bar toolbar">
                 <div class="pull-left-sm">
                     <button type="submit" class="btn btn-primary save-btn" 
-                            data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode(), attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}">
+                            data-bind="enable: isSaveEnabled, css: { 'btn-spinner': isSaving }, visible: !inReadOnlyMode() && !inDiffMode(), attr: { 'title': isSaveEnabled ? 'Save your changes' : ''}">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
@@ -59,7 +59,7 @@
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
-                    <button type="button" data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode()" class="delete-btn btn btn-danger">
+                    <button type="button" data-bind="click: deleteDocument, enable: !isCreatingNewDocument(), visible: !inReadOnlyMode() && !inDiffMode()" class="delete-btn btn btn-danger">
                         <i class="icon-trash"></i>
                         <span>Delete</span>
                     </button>
