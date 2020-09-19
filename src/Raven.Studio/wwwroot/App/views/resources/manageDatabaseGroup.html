@@ -8,7 +8,7 @@
                 <div class="flex-separator">
                 </div>
                 <div data-bind="visible: inSortableMode">
-                    <button class="btn btn-primary" data-bind="click: saveNewOrder">
+                    <button class="btn btn-primary" data-bind="click: saveNewOrder, enable: dirtyFlag().isDirty()">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>

@@ -17,6 +17,7 @@ import eventsCollector = require("common/eventsCollector");
 import messagePublisher = require("common/messagePublisher");
 import generalUtils = require("common/generalUtils");
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
+import jsonUtil = require("common/jsonUtil");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -44,12 +45,19 @@ class manageDatabaseGroup extends viewModelBase {
     
     anyNodeHasError: KnockoutComputed<boolean>;
 
+    dirtyFlag: () => DirtyFlag;
+
     constructor() {
         super();
 
         this.bindToCurrentInstance("addNode", "deleteNodeFromGroup", "showErrorDetails");
 
         this.initObservables();
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.fixOrder,
+            this.nodes
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     private initObservables() {
@@ -149,6 +157,8 @@ class manageDatabaseGroup extends viewModelBase {
                     this.nodes(nodes);
                 }
             });
+        
+        this.dirtyFlag().reset();
     }
 
     cancelReorder() {
