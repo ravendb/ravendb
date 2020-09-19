@@ -391,18 +391,23 @@ class shell extends viewModelBase {
                 .done(settings => {
                     const shouldTraceUsageMetrics = settings.sendUsageStats.getValue();
                     if (_.isUndefined(shouldTraceUsageMetrics)) {
-                        // ask user about GA
-                        this.displayUsageStatsInfo(true);
-        
-                        this.trackingTask.done((accepted: boolean) => {
-                            this.displayUsageStatsInfo(false);
-        
-                            if (accepted) {
-                                this.configureAnalytics(true, buildVersionResult);
-                            }
-                            
-                            settings.sendUsageStats.setValue(accepted);
-                        });
+                        // using location.hash instead of shell activation data - which is not available in shell activate method
+                        const suppressTraceUsage = window.location.hash ? window.location.hash.includes("disableAnalytics=true") : false; 
+                        
+                        if (!suppressTraceUsage) {
+                            // ask user about GA
+                            this.displayUsageStatsInfo(true);
+
+                            this.trackingTask.done((accepted: boolean) => {
+                                this.displayUsageStatsInfo(false);
+
+                                if (accepted) {
+                                    this.configureAnalytics(true, buildVersionResult);
+                                }
+
+                                settings.sendUsageStats.setValue(accepted);
+                            });
+                        }
                     } else {
                         this.configureAnalytics(shouldTraceUsageMetrics, buildVersionResult);
                     }
