@@ -80,6 +80,12 @@ interface IndexErrorPerDocument {
     Timestamp: string;
 }
 
+interface revisionTimeSeriesDto {
+    Count: number;
+    Start: string;
+    End: string;
+}
+
 interface documentMetadataDto {
     '@collection'?: string;
     'Raven-Clr-Type'?: string;
@@ -92,6 +98,7 @@ interface documentMetadataDto {
     '@change-vector'?: string;
     '@counters'?: Array<string>;
     '@counters-snapshot'?: dictionary<number>;
+    '@timeseries-snapshot'?: dictionary<revisionTimeSeriesDto>;
     '@timeseries': Array<string>;
     '@expires'?: string;
     '@refresh'?: string;
