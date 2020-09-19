@@ -810,7 +810,7 @@ namespace FastTests
                     Console.WriteLine($"Using certificate with serial: {clientCert.SerialNumber}");
 
                 var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
-                var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true";
+                var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true&disableAnalytics=true";
 
                 OpenBrowser(documentsPage);// start the server
 
