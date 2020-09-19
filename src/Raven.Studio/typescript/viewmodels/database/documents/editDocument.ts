@@ -1213,6 +1213,11 @@ class normalCrudActions implements editDocumentCrudActions {
         
         this.timeSeriesCount = ko.pureComputed(() => {
             const doc = this.document();
+
+            if (doc && doc.__metadata && doc.__metadata.revisionTimeSeries().length) {
+                return doc.__metadata.revisionTimeSeries().length;
+            }
+            
             if (!doc || !doc.__metadata || !doc.__metadata.timeSeries()) {
                 return 0;
             }
