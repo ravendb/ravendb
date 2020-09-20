@@ -127,7 +127,7 @@
                             <div class="flex-grow"><h3>Test Subscription</h3></div>
                             <div><button class="close" data-bind="click: toggleTestArea" title="Close the test area"><i class="icon-cancel"></i></button></div>
                         </div>
-                        <div class="flex-horizontal">
+                        <div class="flex-horizontal margin-bottom margin-bottom-sm">
                             <div class="flex-grow flex-vertical">
                                 <div class="input-group">
                                     <div class="input-group-addon">Results limit</div>
@@ -135,21 +135,32 @@
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.globalToggleDisable }, disbale: spinners.globalToggleDisable" title="Run test with current settings">
+                                <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.globalToggleDisable }, disable: spinners.globalToggleDisable" title="Run test with current settings">
                                     <i class="icon-rocket"></i><span>Run Test</span>
-                                </button> 
+                                </button>
                             </div>
                         </div>
-                    </div>
-                    <div class="clearfix">
-                        <div class="pull-right">
-                            <div class="btn-group dropdown-right open">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
-                                    <i class="icon-table"></i><span>Display</span>
-                                    <span class="caret"></span>
-                                </button>
-                                <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
-                                    <div data-bind="compose: $root.columnsSelector"></div>
+                        <div class="flex-horizontal">
+                            <div class="flex-grow flex-vertical">
+                                <div class="input-group">
+                                    <div class="input-group-addon">Time limit</div>
+                                    <div class="input-group flex-grow">
+                                        <input type="number" min="1" class="form-control" placeholder="Set timeout for operation (Default: 15)" title="Set timeout for operation" data-bind="textInput: testTimeLimit" />
+                                        <div class="input-group-addon">
+                                            seconds
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="btn-group dropdown-right open">
+                                    <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                        <i class="icon-table"></i><span>Display</span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                        <div data-bind="compose: $root.columnsSelector"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

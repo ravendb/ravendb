@@ -45,6 +45,7 @@ class editSubscriptionTask extends viewModelBase {
     
     enableTestArea = ko.observable<boolean>(false);
     testResultsLimit = ko.observable<number>(10);
+    testTimeLimit = ko.observable<number>();
 
     private gridController = ko.observable<virtualGridController<any>>();
     columnsSelector = new columnsSelector<documentObject>();
@@ -256,10 +257,11 @@ class editSubscriptionTask extends viewModelBase {
     private fetchTestDocuments(start: number, take: number): JQueryPromise<pagedResult<documentObject>> {
         const dto = this.editedSubscription().toDto();
         const resultsLimit = this.testResultsLimit() || 1;
+        const timeLimit = this.testTimeLimit() || 15;
 
         this.spinners.globalToggleDisable(true);
 
-        return new testSubscriptionTaskCommand(this.activeDatabase(), dto, resultsLimit)
+        return new testSubscriptionTaskCommand(this.activeDatabase(), dto, resultsLimit, timeLimit)
             .execute()
             .done(result => {
                 this.resultsCount(result.items.length);
