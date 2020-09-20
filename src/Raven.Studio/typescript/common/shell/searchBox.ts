@@ -56,6 +56,8 @@ class searchBox {
         this.$searchInput.click((e) => {
             e.stopPropagation();
             this.show();
+            
+            this.highlightFirst();
         });
         
         this.$searchInput.keydown(e => {
@@ -87,11 +89,22 @@ class searchBox {
                 new getDocumentsMetadataByIDPrefixCommand(query, 10, activeDatabaseTracker.default.database())
                     .execute()
                     .done((results: Array<metadataAwareDto>) => {
-                        this.matchedDocumentIds(results.map(x => x['@metadata']['@id']));
+                        const mappedResults = results.map(x => x['@metadata']['@id']);
+                        this.matchedDocumentIds(mappedResults);
+
+                        this.highlightFirst();
                     })
                     .always(() => this.spinners.startsWith(false));
             }
         });
+    }
+    
+    private highlightFirst() {
+        if (this.matchedDocumentIds().length) {
+            this.highlightedItem({ index: 0, listing: "matchedDocument" });
+        } else if (this.recentDocumentsList().length) {
+            this.highlightedItem({ index: 0, listing: "recentDocument" });
+        }
     }
     
     private changeHighlightedItem(direction: "up" | "down", items: Array<{ listName: "matchedDocument" | "recentDocument", list: Array<any>}>) {
