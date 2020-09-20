@@ -135,6 +135,7 @@ class periodicBackupConfiguration {
             this.incrementalBackupEnabled,
             this.manualChooseMentor,
             this.mentorNode,
+            this.snapshot().compressionLevel,
             this.retentionPolicy().dirtyFlag().isDirty,
             this.encryptionSettings().dirtyFlag().isDirty,
             anyBackupTypeIsDirty
