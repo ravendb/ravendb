@@ -159,8 +159,8 @@
                             <div class="flex-grow"></div>
                             <div class="flex-horizontal">
                                 <div class="actions">
-                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data)"><i class="icon-edit"></i></button>
-                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance)">
+                                    <button class="btn btn-default" data-bind="click: _.partial($root.enterEditCertificateMode, $data), visible: $root.canEdit($data)"><i class="icon-edit"></i></button>
+                                    <button class="btn btn-danger" data-bind="click: _.partial($root.deleteCertificate, $data), visible: $root.canDelete(SecurityClearance, $data)">
                                         <i class="icon-trash"></i>
                                     </button>
                                 </div>
