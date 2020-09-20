@@ -470,13 +470,27 @@ class certificates extends viewModelBase {
         copyToClipboard.copy(thumbprint, "Thumbprint was copied to clipboard.");
     }
     
-    canDelete(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
+    canEdit(model: unifiedCertificateDefinition) {
+        return ko.pureComputed(() => {
+            if (_.includes(model.Thumbprints, this.serverCertificateThumbprint())) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+    
+    canDelete(securityClearance: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, model: unifiedCertificateDefinition) {
         return ko.pureComputed(() => {
             if (!this.accessManager.canDeleteClusterAdminCertificate() && securityClearance === "ClusterAdmin") {
                 return false;
             }
             
             if (!this.accessManager.canDeleteClusterNodeCertificate() && securityClearance === "ClusterNode") {
+                return false;
+            }
+            
+            if (_.includes(model.Thumbprints, this.serverCertificateThumbprint())) {
                 return false;
             }
             
