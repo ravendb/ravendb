@@ -49,7 +49,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.RequestExecutor.Cache, new List<GetRequest>
+                    var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -103,7 +103,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.RequestExecutor.Cache, new List<GetRequest>
+                    var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -150,7 +150,7 @@ namespace SlowTests.Tests.MultiGet
 
                 using (var commands = store.Commands())
                 {
-                    var command = new MultiGetCommand(commands.RequestExecutor.Cache, new List<GetRequest>
+                    var command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
@@ -169,7 +169,7 @@ namespace SlowTests.Tests.MultiGet
                     Assert.True(command.Result[0].Headers.ContainsKey("ETag"));
                     Assert.True(command.Result[1].Headers.ContainsKey("ETag"));
 
-                    command = new MultiGetCommand(commands.RequestExecutor.Cache, new List<GetRequest>
+                    command = new MultiGetCommand(commands.RequestExecutor, new List<GetRequest>
                     {
                         new GetRequest
                         {
