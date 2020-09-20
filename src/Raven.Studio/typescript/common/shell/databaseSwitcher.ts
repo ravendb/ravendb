@@ -16,7 +16,6 @@ class databaseSwitcher {
     private $selectDatabase: JQuery;
     private $filter: JQuery;
 
-    private databases: KnockoutComputed<database[]>;
     private databasesManager = databasesManager.default;
 
     highlightedItem = ko.observable<string>(null);
@@ -54,6 +53,8 @@ class databaseSwitcher {
         this.$selectDatabaseContainer.on('click', (e) => {
             e.stopPropagation();
             this.show();
+            
+            this.autoHighlight();
         });
 
         this.$selectDatabase.on('click', (e) => {
@@ -61,13 +62,15 @@ class databaseSwitcher {
                 this.hide();
             } else {
                 this.show();
+                
+                this.autoHighlight();
             }
 
             e.stopPropagation();
         });
 
         this.filter.subscribe(() => {
-            this.highlightedItem(null);
+            setTimeout(() => this.autoHighlight(), 1);
         });
         
         const self = this;
@@ -89,6 +92,25 @@ class databaseSwitcher {
 
             return true;
         });
+    }
+
+    /**
+     * Highlight active database (if on list) or first item
+     */
+    private autoHighlight() {
+        const currentDatabase = this.databasesManager.activeDatabaseTracker.database();
+        
+        const filteredDatabases = this.filteredDatabases();
+        
+        const matchedDatabase = currentDatabase ? filteredDatabases.find(x => x.name === currentDatabase.name) : null; 
+        
+        if (matchedDatabase) {
+            this.highlightedItem(matchedDatabase.name);
+        } else if (filteredDatabases.length) {
+            this.highlightedItem(filteredDatabases[0].name);
+        } else {
+            this.highlightedItem(null);
+        }
     }
     
     private changeHighlightedItem(direction: "up" | "down") {
