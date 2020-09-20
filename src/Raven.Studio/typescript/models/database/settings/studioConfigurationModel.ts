@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
+import jsonUtil = require("common/jsonUtil");
+
 interface globalStudioConfigurationOptions extends Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration {
     SendUsageStats: boolean;
     CollapseDocsWhenOpening: boolean;
@@ -15,6 +17,7 @@ class studioConfigurationModel {
     replicationFactor = ko.observable<number>(null);
     collapseDocsWhenOpening = ko.observable<boolean>();
 
+    dirtyFlag: () => DirtyFlag;
     validationGroup: KnockoutValidationGroup;
     
     constructor(dto: globalStudioConfigurationOptions) {
@@ -25,6 +28,13 @@ class studioConfigurationModel {
         this.sendUsageStats(dto.SendUsageStats);
         this.replicationFactor(dto.ReplicationFactor);
         this.collapseDocsWhenOpening(dto.CollapseDocsWhenOpening);
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.environment,
+            this.sendUsageStats,
+            this.replicationFactor,
+            this.collapseDocsWhenOpening
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
     private initValidation() {

@@ -26,6 +26,9 @@ class clientConfiguration extends viewModelBase {
             .execute()
             .done((dto) => {
                 this.model = new clientConfigurationModel(dto);
+                this.dirtyFlag = new ko.DirtyFlag([
+                    this.model.dirtyFlag().isDirty
+                ], false);
             });
     }
     

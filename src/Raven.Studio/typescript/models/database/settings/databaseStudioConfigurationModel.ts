@@ -1,11 +1,14 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
+import jsonUtil = require("common/jsonUtil");
+
 class databaseStudioConfigurationModel {
 
     static readonly environments = ["None", "Development", "Testing", "Production"] as Array<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>;
     
     environment = ko.observable<Raven.Client.Documents.Operations.Configuration.StudioConfiguration.StudioEnvironment>();
     disabled = ko.observable<boolean>();
-    
+
+    dirtyFlag: () => DirtyFlag;
     validationGroup: KnockoutValidationGroup;
     
     constructor(dto: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) {
@@ -13,6 +16,10 @@ class databaseStudioConfigurationModel {
         
         this.environment(dto ? dto.Environment : "None");
         this.disabled(dto ? dto.Disabled : false);
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.environment
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
     private initValidation() {
