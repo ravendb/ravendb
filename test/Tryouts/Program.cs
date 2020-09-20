@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Blittable;
 using SlowTests.Issues;
+using SlowTests.MailingList;
 using SlowTests.Server.Documents.ETL.Raven;
 using Tests.Infrastructure;
 
@@ -24,19 +25,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenDB_11379(testOutputHelper))
+                    using (var test = new AllDocsSubscription(testOutputHelper))
                     {
-                        test.Should_remove_attachment(@"
-
-var doc = loadToUsers(this);
-
-var attachments = this['@metadata']['@attachments'];
-
-for (var i = 0; i < attachments.length; i++) {
-    if (attachments[i].Name.endsWith('.png'))
-        doc.addAttachment(loadAttachment(attachments[i].Name));
-}
-", false, "photo.png", "photo.png");
+                        await test.CanUseAllDocsSubscription();
                     }
                 }
                 catch (Exception e)

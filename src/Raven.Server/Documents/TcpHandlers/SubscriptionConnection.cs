@@ -455,7 +455,8 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             void RegisterNotification(DocumentChange notification)
             {
-                if (notification.CollectionName.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase))
+                if (Client.Constants.Documents.Collections.AllDocumentsCollection.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase) || 
+                    notification.CollectionName.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase))
                 {
                     try
                     {
