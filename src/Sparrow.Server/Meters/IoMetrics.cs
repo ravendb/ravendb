@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 namespace Sparrow.Server.Meters
 {
@@ -43,12 +44,15 @@ namespace Sparrow.Server.Meters
             {
                 if (_closedFiles.TryDequeue(out filename) == false)
                     return;
-                _fileMetrics.TryRemove(filename, out value);
+                _fileMetrics.TryRemove(filename, out _);
             }
         }
 
         public IoMeterBuffer.DurationMeasurement MeterIoRate(string fileName, MeterType type, long size)
         {
+            if (BufferSize == 0)
+                return default;
+
             var fileIoMetrics = _fileMetrics.GetOrAdd(fileName, fn => new FileIoMetrics(fn, BufferSize, SummaryBufferSize));
 
             IoMeterBuffer buffer;

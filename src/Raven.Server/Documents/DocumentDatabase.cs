@@ -139,7 +139,10 @@ namespace Raven.Server.Documents
 
                 ClusterTransactionWaiter = new ClusterTransactionWaiter(this);
                 QueryMetadataCache = new QueryMetadataCache();
-                IoChanges = new IoChangesNotifications();
+                IoChanges = new IoChangesNotifications
+                {
+                    DisableIoMetrics = configuration.Storage.EnableIoMetrics == false
+                };
                 Changes = new DocumentsChanges();
                 TombstoneCleaner = new TombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this, addToInitLog);
