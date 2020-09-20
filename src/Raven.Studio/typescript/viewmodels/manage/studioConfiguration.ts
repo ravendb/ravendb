@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import studioConfigurationModel = require("models/database/settings/studioConfigurationModel");
 import studioSettings = require("common/settings/studioSettings");
 import globalSettings = require("common/settings/globalSettings");
+import jsonUtil = require("common/jsonUtil");
 
 class studioConfiguration extends viewModelBase {
 
@@ -25,6 +26,10 @@ class studioConfiguration extends viewModelBase {
                     SendUsageStats: settings.sendUsageStats.getValue(),
                     CollapseDocsWhenOpening: settings.collapseDocsWhenOpening.getValue()
                 });
+
+                this.dirtyFlag = new ko.DirtyFlag([
+                    this.model.dirtyFlag().isDirty
+                ], false, jsonUtil.newLineNormalizingHashFunction);
             });
     }
 
@@ -46,6 +51,7 @@ class studioConfiguration extends viewModelBase {
                 settings.collapseDocsWhenOpening.setValue(model.collapseDocsWhenOpening());
                 
                 settings.save()
+                    .done(() => this.model.dirtyFlag().reset())
                     .always(() => this.spinners.save(false));
             })
     }

@@ -2,7 +2,7 @@
     <form class="flex-form" data-bind="submit: saveConfiguration" novalidate>
         <div class="content-margin">
             <div class="toolbar no-margin">
-                <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
+                <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
                     <i class="icon-save"></i><span>Save</span>
                 </button>
             </div>

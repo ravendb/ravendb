@@ -4,6 +4,7 @@ import databaseStudioConfigurationModel = require("models/database/settings/data
 import eventsCollector = require("common/eventsCollector");
 import saveStudioConfigurationCommand = require("commands/resources/saveStudioConfigurationCommand");
 import appUrl = require("common/appUrl");
+import jsonUtil = require("common/jsonUtil");
 
 class studioConfiguration extends viewModelBase {
 
@@ -23,6 +24,9 @@ class studioConfiguration extends viewModelBase {
             .execute()
             .done((settings: Raven.Client.Documents.Operations.Configuration.StudioConfiguration) => {
                 this.model = settings ? new databaseStudioConfigurationModel(settings) : databaseStudioConfigurationModel.empty();
+                this.dirtyFlag = new ko.DirtyFlag([
+                    this.model.dirtyFlag().isDirty
+                ], false, jsonUtil.newLineNormalizingHashFunction);
             });
     }
 
@@ -37,6 +41,9 @@ class studioConfiguration extends viewModelBase {
 
         new saveStudioConfigurationCommand(this.model.toRemoteDto(), this.activeDatabase())
             .execute()
+            .done(() => {
+                this.model.dirtyFlag().reset();
+            })
             .always(() => this.spinners.save(false));
     }
 }
