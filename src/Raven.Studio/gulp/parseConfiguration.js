@@ -128,7 +128,7 @@ function findGroupName(input) {
 }
 
 var CONFIGURATION_ENTRY_REGEX = /\[ConfigurationEntry\(\"?([^"]+)\"?[^)]*\)\]/;
-var VALUE_ENTRY_REGEX = /public\s(static\s)?(virtual\s)?([\w\]\[]+\s)?(\w+)/;
+var VALUE_ENTRY_REGEX = /public\s(static\s)?(virtual\s)?([?\w\]\[]+\s)?(\w+)/;
 
 function extractSettings(contents) {
     // line format: [ConfigurationEntry("Databases/ConcurrentResourceLoadTimeoutInSec")]

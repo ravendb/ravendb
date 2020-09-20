@@ -5,7 +5,7 @@ import configuration = require("configuration");
 class configurationItem {
 
     static readonly ServerWideIndexingConfigurationOptions = [        
-        configuration.indexing.size,
+        configuration.indexing.globalScratchSpaceLimit,
         configuration.indexing.cleanupInterval,
         configuration.indexing.maxTimeToWaitAfterFlushAndSyncWhenExceedingScratchSpaceLimit
     ];
