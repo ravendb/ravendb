@@ -367,7 +367,7 @@ namespace Raven.Embedded
         public void OpenStudioInBrowser()
         {
             var serverUrl = AsyncHelpers.RunSync(() => GetServerUriAsync());
-            var url = serverUrl.AbsoluteUri;
+            var url = serverUrl.AbsoluteUri + "studio/index.html?disableAnalytics=true";
 
             if (PlatformDetails.RunningOnPosix == false)
             {
