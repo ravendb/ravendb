@@ -260,9 +260,11 @@
 </div>
 
 <script type="text/html" id="timing-item-template">
-    <i data-bind="attr: { 'class': 'item-rect ' +  $root.timingsGraph.getColorClass(name) }"></i>
-    <span class="name" data-bind="text: name"></span>
-    <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
+    <div class="timing-legend-item">
+        <i data-bind="attr: { 'class': 'item-rect ' + $root.timingsGraph.getColorClass(name) }"></i>
+        <span class="name" data-bind="text: name"></span>
+        <span class="duration" data-bind="text: duration.toLocaleString() + ' ms'"></span>
+    </div>
     <div data-bind="foreach: children">
         <div class="legend-item" data-bind="template: { name: 'timing-item-template' }, visible: visible">
         </div>

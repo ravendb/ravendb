@@ -19,6 +19,10 @@ class timingsChart {
     private data: Raven.Client.Documents.Queries.Timings.QueryTimings;
     rootNode = ko.observable<graphNode>();
     
+    vis: d3.Selection<any>;
+    levelName: d3.Selection<any>;
+    levelDuration: d3.Selection<any>;
+    
     constructor(private selector: string) {
         this.useLogScale.subscribe(() => this.draw(this.data));
     }
@@ -37,7 +41,7 @@ class timingsChart {
         
         const legendWidth = 270;
         
-        const vis = d3.select(this.selector)
+        this.vis = d3.select(this.selector)
             .append("svg:svg")
             .attr("width", width)
             .attr("height", height)
@@ -65,7 +69,7 @@ class timingsChart {
         
         // Bounding circle underneath the sunburst, to make it easier to detect
         // when the mouse leaves the parent g.
-        vis
+        this.vis
             .append("svg:circle")
             .attr("r", radius)
             .style("opacity", 0);
@@ -74,17 +78,17 @@ class timingsChart {
             .nodes(json)
             .filter(x => x.name !== timingsChart.fakeFill);
 
-        const levelName = vis
+        this.levelName = this.vis
             .append("svg:text")
             .attr("class", "levelName")
             .attr("y", -50)
             .text("Total");
 
-        const levelDuration = vis.append("svg:text")
+        this.levelDuration = this.vis.append("svg:text")
             .attr("class", "duration")
             .attr("y", -8);
         
-        const path = vis
+        const path = this.vis
             .data([json])
             .selectAll("path")
             .data(nodes)
@@ -95,13 +99,13 @@ class timingsChart {
             .attr("fill-rule", "evenodd")
             .attr("class", d => this.getColorClass(d.name))
             .style("opacity", 1)
-            .on("mouseover", d => this.mouseover(vis, d, levelName, levelDuration));
+            .on("mouseover", d => this.mouseover(d));
 
         // Add the mouseleave handler to the bounding circle.
-        vis
-            .on("mouseleave", () => this.mouseleave(vis, levelName, levelDuration));
+        this.vis
+            .on("mouseleave", () => this.mouseleave());
         
-        levelDuration
+        this.levelDuration
             .text(this.totalSize.toLocaleString() + " ms");
     }
     
@@ -109,55 +113,51 @@ class timingsChart {
         return _.camelCase(item);
     }
     
-    private mouseover(vis: d3.Selection<any>, d: graphNode, levelName: d3.Selection<any>, levelDuration: d3.Selection<any>) {
+    private mouseover(d: graphNode) {
         // Fade all but the current sequence, and show it in the breadcrumb trail.
-        const percentage = (100 * d.duration / this.totalSize);
-        let percentageString = percentage.toPrecision(3) + "%";
         
-        if (percentage < 0.1) {
-            percentageString = "< 0.1%";
-        }
-        
-        levelName
+        this.levelName
             .text(d.name);
         
-        levelDuration
+        this.levelDuration
             .text(d.duration.toLocaleString() + " ms");
         
         const sequenceArray = this.getAncestors(d);
         
         // Fade all the segments.
-        vis
+        this.vis
             .selectAll("path")
             .style("opacity", 0.3);
         
-        vis
+        this.vis
             .selectAll("path")
+            .transition()
+            .duration(0)
             .filter(n => sequenceArray.indexOf(n) >= 0)
             .style("opacity", 1);
     }
     
-    private mouseleave(vis: d3.Selection<any>, levelName: d3.Selection<any>, levelDuration: d3.Selection<any>) {
+    private mouseleave() {
         // Restore everything to full opacity when moving off the visualization.
         
-        levelName
+        this.levelName
             .text("Total");
         
-        levelDuration
+        this.levelDuration
             .text(this.totalSize.toLocaleString() + " ms");
         
         const self = this;
         
-        vis.selectAll("path").on("mouseover", null);
+        this.vis.selectAll("path").on("mouseover", null);
 
         // Transition each segment to full opacity and then reactivate it.
-        vis
+        this.vis
             .selectAll("path")
             .transition()
             .duration(200)
             .style("opacity", 1)
             .each("end", function() {
-                d3.select(this).on("mouseover", d => self.mouseover(vis, d, levelName, levelDuration));
+                d3.select(this).on("mouseover", d => self.mouseover(d));
             });
     }
     
@@ -198,6 +198,16 @@ class timingsChart {
         }
         return path;
     } 
+    
+    syncLegend() {
+        const $query = $(".query");
+        $query
+            .on("mouseenter", ".timing-legend-item", (event: JQueryEventObject) => {
+                const node = ko.dataFor(event.currentTarget) as graphNode;
+                this.mouseover(node);
+            })
+            .on("mouseleave", ".timing-legend-item", () => this.mouseleave());
+    }
 }
 
 export = timingsChart;

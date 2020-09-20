@@ -633,6 +633,8 @@ class query extends viewModelBase {
         });
         
         this.queryHasFocus(true);
+        
+        this.timingsGraph.syncLegend();
     }
     
     private getQueriedIndexInfo() {
