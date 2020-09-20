@@ -13,14 +13,16 @@ namespace Raven.Client.Documents.Commands.MultiGet
 {
     public class MultiGetCommand : RavenCommand<List<GetResponse>>
     {
+        private readonly RequestExecutor _requestExecutor;
         private readonly HttpCache _cache;
         private readonly List<GetRequest> _commands;
 
         private string _baseUrl;
 
-        public MultiGetCommand(HttpCache cache, List<GetRequest> commands)
+        public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)
         {
-            _cache = cache;
+            _requestExecutor = requestExecutor;
+            _cache = _requestExecutor.Cache;
             _commands = commands;
             ResponseType = RavenCommandResponseType.Raw;
         }
@@ -28,6 +30,38 @@ namespace Raven.Client.Documents.Commands.MultiGet
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             _baseUrl = $"{node.Url}/databases/{node.Database}";
+            url = $"{_baseUrl}/multi_get";
+
+            var aggressiveCacheOptions = _requestExecutor.AggressiveCaching.Value;
+            if (aggressiveCacheOptions?.Mode == AggressiveCacheMode.TrackChanges)
+            {
+                Result = new List<GetResponse>();
+                foreach (var command in _commands)
+                {
+                    if(command.SkipAggressiveCache) break;
+                    var cacheKey = GetCacheKey(command, out string _);
+                    using (var cachedItem = _cache.Get(ctx, cacheKey, out _, out var cached))
+                    {
+                        if (cached == null || 
+                            cachedItem.Age > aggressiveCacheOptions.Duration ||
+                            cachedItem.MightHaveBeenModified)
+                            break;
+                        
+                         Result.Add(new GetResponse
+                         {
+                             Result = cached,
+                             StatusCode = HttpStatusCode.NotModified,
+                         });
+                    }
+                }
+
+                if (Result.Count == _commands.Count)
+                {
+                    return null;// aggressively cached
+                }
+                // not all of it is cached, might as well read it all
+                Result = null; 
+            }
 
             var request = new HttpRequestMessage
             {
@@ -45,7 +79,6 @@ namespace Raven.Client.Documents.Commands.MultiGet
                         {
                             if (first == false)
                                 writer.WriteComma();
-
                             first = false;
                             var cacheKey = GetCacheKey(command, out string _);
                             using (_cache.Get(ctx, cacheKey, out string cachedChangeVector, out var _))
@@ -103,7 +136,6 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 })
             };
 
-            url = $"{_baseUrl}/multi_get";
 
             return request;
         }
