@@ -31,6 +31,20 @@
                     <span class="help-block" data-bind="validationMessage: backupType"></span>
                 </div>
             </div>
+            <div class="row margin-bottom" data-bind="visible: isSnapshot, with: snapshot">
+                <label class="control-label col-sm-4 col-lg-2">Compression</label>
+                <div class="col-sm-4">
+                    <div class="dropdown btn-block">
+                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                            <span data-bind="text: compressionLevel"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" data-bind="foreach: compressionLevelOptions">
+                            <li><a href="#" data-bind="text: $data, click: $parent.useCompression.bind($parent, $data)"></a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
             <div class="row margin-bottom">
                 <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4">
                     <div class="toggle" data-placement="left" data-toggle="tooltip" title="Select databases to exclude from the server-wide backup" data-animation="true">
