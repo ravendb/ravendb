@@ -28,6 +28,25 @@ namespace Sparrow.Json
         private Sorter<BlittableJsonDocumentBuilder.PropertyTag, PropertySorter> _sorter;
 
 
+        private static readonly PerCoreContainer<CachedSort[]> _perCorePropertiesCache = new PerCoreContainer<CachedSort[]>();
+
+        public void Renew()
+        {
+            if(_perCorePropertiesCache.TryPull(out _cachedSorts) == false)
+                _cachedSorts = new CachedSort[CachedSortsSize]; // size is fixed and used in GetPropertiesHashedIndex
+        }
+
+        public void Reset()
+        {
+            if (_cachedSorts == null) return;
+            foreach (CachedSort sort in _cachedSorts)
+            {
+                sort?.Clear();
+            }
+            _perCorePropertiesCache.Push(_cachedSorts);
+            _cachedSorts = null;
+        }
+
         private struct PropertySorter : IComparer<BlittableJsonDocumentBuilder.PropertyTag>
         {
             private readonly CachedProperties properties;
@@ -111,12 +130,18 @@ namespace Sparrow.Json
             {
                 return string.Join(", ", Sorting.Select(x => x.Property.Comparer));
             }
+
+            public void Clear()
+            {
+                FinalCount = 0;
+                Sorting.Clear();
+            }
         }
 
         private const int CachedSortsSize = 512;
         public static int CachedPropertiesSize = 512;
 
-        private readonly CachedSort[] _cachedSorts = new CachedSort[CachedSortsSize]; // size is fixed and used in GetPropertiesHashedIndex
+        private CachedSort[] _cachedSorts;
 
         private readonly FastList<PropertyName> _docPropNames = new FastList<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
