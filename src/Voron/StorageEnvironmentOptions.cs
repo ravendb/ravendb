@@ -225,21 +225,20 @@ namespace Voron
             ShouldUseKeyPrefix = name => false;
 
             var shouldForceEnvVar = Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager");
-            
-            bool result;
-            if (bool.TryParse(shouldForceEnvVar, out result))
+
+            if (bool.TryParse(shouldForceEnvVar, out bool result))
                 ForceUsing32BitsPager = result;
 
 
-            bool shouldConfigPagersRunInlimitedMemoryEnvironment = PlatformDetails.Is32Bits || ForceUsing32BitsPager;
-            MaxLogFileSize = ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);            
+            bool shouldConfigPagersRunInLimitedMemoryEnvironment = PlatformDetails.Is32Bits || ForceUsing32BitsPager;
+            MaxLogFileSize = ((shouldConfigPagersRunInLimitedMemoryEnvironment ? 4 : 256) * Constants.Size.Megabyte);            
 
             InitialLogFileSize = 64 * Constants.Size.Kilobyte;
 
-            MaxScratchBufferSize = ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 32 : 256) * Constants.Size.Megabyte);
+            MaxScratchBufferSize = ((shouldConfigPagersRunInLimitedMemoryEnvironment ? 32 : 256) * Constants.Size.Megabyte);
 
             MaxNumberOfPagesInJournalBeforeFlush =
-                ((shouldConfigPagersRunInlimitedMemoryEnvironment ? 4 : 32) * Constants.Size.Megabyte) / Constants.Storage.PageSize;
+                ((shouldConfigPagersRunInLimitedMemoryEnvironment ? 4 : 32) * Constants.Size.Megabyte) / Constants.Storage.PageSize;
 
             IdleFlushTimeout = 5000; // 5 seconds
 
@@ -247,7 +246,9 @@ namespace Voron
 
             IncrementalBackupEnabled = false;
 
-            IoMetrics = new IoMetrics(256, 256, ioChangesNotifications);
+            IoMetrics = ioChangesNotifications?.DisableIoMetrics == true ? 
+                new IoMetrics(0, 0) : // disabled
+                new IoMetrics(256, 256, ioChangesNotifications);
 
             _log = LoggingSource.Instance.GetLogger<StorageEnvironmentOptions>(tempPath.FullPath);
 
@@ -261,7 +262,7 @@ namespace Voron
             
 
             PrefetchSegmentSize = 4 * Constants.Size.Megabyte;
-            PrefetchResetThreshold = shouldConfigPagersRunInlimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
+            PrefetchResetThreshold = shouldConfigPagersRunInLimitedMemoryEnvironment?256*(long)Constants.Size.Megabyte: 8 * (long)Constants.Size.Gigabyte;
             SyncJournalsCountThreshold = 2;
 
             ScratchSpaceUsage = new ScratchSpaceUsageMonitor();

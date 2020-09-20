@@ -64,7 +64,10 @@ namespace Raven.Server.Documents
                     encryptionKey = documentDatabase.MasterKey.ToArray(); 
 
                 using (await _serverStore.DatabasesLandlord.UnloadAndLockDatabase(_database, "it is being compacted"))
-                using (var src = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
+                using (var src = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications
+                    {
+                        DisableIoMetrics = true
+                    },
                 new CatastrophicFailureNotification((endId, path, exception, stacktrace) => throw new InvalidOperationException($"Failed to compact database {_database} ({path}), StackTrace='{stacktrace}'", exception))))
                 {
                     InitializeOptions(src, configuration, documentDatabase, encryptionKey);
@@ -96,7 +99,10 @@ namespace Raven.Server.Documents
                         .Select(name => new CollectionName(name).GetTableName(CollectionTableType.Documents))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                    using (var dst = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications(),
+                    using (var dst = DocumentsStorage.GetStorageEnvironmentOptionsFromConfiguration(configuration, new IoChangesNotifications
+                        {
+                            DisableIoMetrics = true
+                        },
                         new CatastrophicFailureNotification((envId, path, exception, stacktrace) => throw new InvalidOperationException($"Failed to compact database {_database} ({path}). StackTrace='{stacktrace}'", exception))))
                     {
                         InitializeOptions(dst, configuration, documentDatabase, encryptionKey);

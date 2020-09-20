@@ -23,6 +23,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.EnablePrefetching", ConfigurationEntryScope.ServerWideOnly)]
         public bool EnablePrefetching { get; set; }
 
+        [Description("Enable metrics collections for each I/O operation made by RavenDB")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Storage.IO.Metrics.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+        public bool EnableIoMetrics { get; set; }
+
         [Description("How long transaction mode (Danger/Lazy) last before returning to Safe mode. Value in Minutes. Default one day. Zero for infinite time")]
         [DefaultValue(1440)]
         [TimeUnit(TimeUnit.Minutes)]
