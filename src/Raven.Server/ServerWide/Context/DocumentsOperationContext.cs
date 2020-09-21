@@ -24,9 +24,9 @@ namespace Raven.Server.ServerWide.Context
             }
         }
 
-        protected internal override void Reset(bool forceResetLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
+        protected internal override void Reset(bool forceResetLongLivedAllocator = false)
         {
-            base.Reset(forceResetLongLivedAllocator, releaseAllocatedStringValues);
+            base.Reset(forceResetLongLivedAllocator);
 
             // make sure that we don't remember an old value here from a previous
             // tx. This can be an issue if we resort to context stealing from 

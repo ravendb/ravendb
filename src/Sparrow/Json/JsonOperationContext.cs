@@ -43,12 +43,9 @@ namespace Sparrow.Json
         private PathCache _activeAllocatePathCaches;
         private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
+        private static readonly PerCoreContainer<FastList<LazyStringValue>> _perCoreLazyStringValuesList = new PerCoreContainer<FastList<LazyStringValue>>();
         private int _numberOfAllocatedStringsValues;
-        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
-
-        private int _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval;
-        private DateTime _lastAllocatedStringValueTime = DateTime.UtcNow;
-        private static readonly TimeSpan _allocatedStringValuesCheckInterval = TimeSpan.FromMinutes(1);
+        private FastList<LazyStringValue> _allocateStringValues;
 
         /// <summary>
         /// This flag means that this should be disposed, usually because we exceeded the maximum
@@ -65,9 +62,7 @@ namespace Sparrow.Json
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
-                _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = Math.Max(_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval, _numberOfAllocatedStringsValues);
-
-                lazyStringValue.Renew(str, ptr, size);
+                lazyStringValue.Renew(str, ptr, size, this);
                 return lazyStringValue;
             }
 
@@ -76,8 +71,6 @@ namespace Sparrow.Json
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
-
-                _lastAllocatedStringValueTime = DateTime.UtcNow;
             }
 
             return allocateStringValue;
@@ -117,7 +110,11 @@ namespace Sparrow.Json
                 TryDispose(_documentBuilder);
                 TryDispose(_arenaAllocator);
                 TryDispose(_arenaAllocatorForLongLivedValues);
-                TryExecute(_allocateStringValues.Clear);
+                if (_allocateStringValues != null)
+                {
+                    _perCoreLazyStringValuesList.Push(_allocateStringValues);
+                    _allocateStringValues = null;
+                }
 
                 if (exceptions != null)
                     throw new AggregateException("Failed to dispose context", exceptions);
@@ -156,6 +153,8 @@ namespace Sparrow.Json
             LowMemoryFlag = lowMemoryFlag;
             if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
                 _activeAllocatePathCaches = new PathCache();
+            if(_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
+                _allocateStringValues = new FastList<LazyStringValue>(256);
 
 #if MEM_GUARD_STACK
             DebugStuff.ElectricFencedMemory.IncrementContext();
@@ -922,6 +921,8 @@ namespace Sparrow.Json
 
             if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
                 _activeAllocatePathCaches = new PathCache();
+            if(_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
+                _allocateStringValues = new FastList<LazyStringValue>(256);
 
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
@@ -932,7 +933,7 @@ namespace Sparrow.Json
             CachedProperties.Renew();
         }
 
-        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
+        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
         {
             if (_tempBuffer != null && _tempBuffer.Address != null)
             {
@@ -972,21 +973,10 @@ namespace Sparrow.Json
             for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
                 _allocateStringValues[i].Reset();
 
+            _perCoreLazyStringValuesList.Push(_allocateStringValues);
+            _allocateStringValues = null;
+            
             _numberOfAllocatedStringsValues = 0;
-
-            if (releaseAllocatedStringValues && _allocateStringValues.Count > 0)
-            {
-                var now = DateTime.UtcNow;
-                if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCheckInterval)
-                {
-                    _lastAllocatedStringValueTime = now;
-                    var halfOfAllocatedStringValues = _allocateStringValues.Count / 2;
-                    if (_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval <= halfOfAllocatedStringValues)
-                        _allocateStringValues.Trim(halfOfAllocatedStringValues);
-
-                    _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = 0;
-                }
-            }
 
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();
