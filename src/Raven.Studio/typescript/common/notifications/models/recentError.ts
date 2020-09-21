@@ -11,6 +11,7 @@ class recentError extends abstractNotification {
     httpStatus = ko.observable<string>();
     
     shortMessage: KnockoutComputed<string>;
+    longerMessage: KnockoutComputed<string>;
 
     constructor(dto: recentErrorDto) {
         super(null, dto);
@@ -29,7 +30,8 @@ class recentError extends abstractNotification {
     }
 
     private initObservables() {
-        this.shortMessage = ko.pureComputed(() => generalUtils.trimMessage(this.message()));
+        this.shortMessage = ko.pureComputed(() => generalUtils.trimMessage(this.message(), 256));
+        this.longerMessage = ko.pureComputed(() => generalUtils.trimMessage(this.message(), 1024));
         this.hasDetails = ko.pureComputed(() => !!this.details() || this.shortMessage() !== this.message());
     }
 
@@ -40,7 +42,7 @@ class recentError extends abstractNotification {
             if (parsedDetails && parsedDetails.Message) {
                 return {
                     message: parsedDetails.Message,
-                    error: parsedDetails.Error,
+                    error: parsedDetails.Error
                 };
             }
         } catch (e) {
