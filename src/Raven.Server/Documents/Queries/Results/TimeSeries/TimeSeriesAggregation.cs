@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 
@@ -25,6 +24,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private readonly List<double> _values;
 
         private readonly List<double> _count;
+
+        private IEnumerable<double> _finalValues;
 
         // slope data
         private readonly List<double> _first; 
@@ -52,6 +53,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _count.Clear();
             _values.Clear();
 
+            _finalValues = null;
             _rankedValues?.Clear();
             _first?.Clear();
         }
@@ -351,6 +353,9 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         public IEnumerable<double> GetFinalValues(DateTime? from, DateTime? to, double? scale = null)
         {
+            if (_finalValues != null)
+                return _finalValues;
+
             switch (Aggregation)
             {
                 case AggregationType.Min:
@@ -373,8 +378,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         _values[i] = _values[i] / _count[i];
                     }
                     break;
-                case AggregationType.Percentile:  
-                    return GetPercentile(scale ?? 1);
+                case AggregationType.Percentile:
+                    return _finalValues = GetPercentile(scale ?? 1);
                 case AggregationType.Slope:
                     Debug.Assert(_values.Count == _first.Count, "Invalid aggregation data");
                     Debug.Assert(from.HasValue && to.HasValue, "Missing from/to");
@@ -390,10 +395,10 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                     throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
             }
 
-            if (scale.HasValue)
-                return _values.Select(x => x * scale.Value);
+            if (scale.HasValue == false) 
+                return _finalValues = _values;
 
-            return _values;
+            return _finalValues = _values.Select(x => x * scale.Value);
         }
 
         private IEnumerable<double> GetPercentile(double scale)
