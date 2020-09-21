@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -15,7 +14,6 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -80,26 +78,31 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, certificate, DocumentConventions.DefaultForServer);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(IEnumerator<Document> docs, string collection)
+        protected override IExtractEnumerator<RavenEtlItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToRavenEtlItems(docs, collection);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(IEnumerator<Tombstone> tombstones, string collection, EtlItemType type)
+        protected override IExtractEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
         {
-            return new TombstonesToRavenEtlItems(tombstones, collection, type);
+            return new TombstonesToRavenEtlItems(tombstones, collection);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertCountersEnumerator(IEnumerator<CounterGroupDetail> counters, string collection)
+        protected override IExtractEnumerator<RavenEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
         {
-            return new CountersToRavenEtlItems(counters, collection);
+            return new AttachmentTombstonesToRavenEtlItems(context, tombstones, collections);
+        }
+
+        protected override IExtractEnumerator<RavenEtlItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
+        {
+            return new CountersToRavenEtlItems(context, counters, collection);
         }
         
-        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesEnumerator(IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        protected override IExtractEnumerator<RavenEtlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             return new TimeSeriesToRavenEtlItems(timeSeries, collection);
         }
-        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        protected override IExtractEnumerator<RavenEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
             return new TimeSeriesDeletedRangeToRavenEtlItems(timeSeries, collection);
         }

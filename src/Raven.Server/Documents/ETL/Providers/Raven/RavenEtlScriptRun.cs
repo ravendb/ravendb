@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         
         private Dictionary<JsValue, (string Name, IEnumerable<SingleResult> Value)> _loadedTimeSeriesByJsReference;
 
-        private List<ICommandData> _fullDocuments;
+        private Dictionary<string, List<ICommandData>> _fullDocuments;
 
         public RavenEtlScriptRun(EtlStatsScope stats)
         {
@@ -55,10 +55,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             List<CounterOperation> counterOperations = null, 
             List<TimeSeriesOperation> timeSeriesOperations = null)
         {
-            if (_fullDocuments == null)
-                _fullDocuments = new List<ICommandData>();
+            _fullDocuments ??= new Dictionary<string, List<ICommandData>>();
 
-            _fullDocuments.Add(new PutCommandDataWithBlittableJson(id, null, doc));
+            if (_fullDocuments.ContainsKey(id))
+                return;
+
+            var commands = _fullDocuments[id] = new List<ICommandData>();
+
+            commands.Add(new PutCommandDataWithBlittableJson(id, null, doc));
 
             _stats.IncrementBatchSize(doc.Size);
 
@@ -66,7 +70,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var attachment in attachments)
                 {
-                    _fullDocuments.Add(new PutAttachmentCommandData(id, attachment.Name, attachment.Stream, attachment.ContentType, null));
+                    commands.Add(new PutAttachmentCommandData(id, attachment.Name, attachment.Stream, attachment.ContentType, null));
 
                     _stats.IncrementBatchSize(attachment.Stream.Length);
                 }
@@ -74,7 +78,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (counterOperations?.Count > 0)
             {
-                _fullDocuments.Add(new CountersBatchCommandData(id, counterOperations)
+                commands.Add(new CountersBatchCommandData(id, counterOperations)
                 {
                     FromEtl = true
                 });
@@ -84,7 +88,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var operation in timeSeriesOperations)
                 {
-                    _fullDocuments.Add(new TimeSeriesBatchCommandData(id, operation.Name, operation.Appends, operation.Deletes)
+                    commands.Add(new TimeSeriesBatchCommandData(id, operation.Name, operation.Appends, operation.Deletes)
                     {
                         FromEtl = true
                     });    
@@ -272,7 +276,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var command in _fullDocuments)
                 {
-                    commands.Add(command);
+                    commands.AddRange(command.Value);
                 }
             }
 

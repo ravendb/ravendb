@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
 {
-    public class TombstonesToSqlItems : IEnumerator<ToSqlItem>
+    public class TombstonesToSqlItems : IExtractEnumerator<ToSqlItem>
     {
         private readonly IEnumerator<Tombstone> _tombstones;
         private readonly string _collection;
@@ -12,6 +12,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
         {
             _tombstones = tombstones;
             _collection = collection;
+        }
+
+        public bool Filter()
+        {
+            return _tombstones.Current.Type != Tombstone.TombstoneType.Document;
         }
 
         public bool MoveNext()
