@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         };
 
         public string IndexName { get; set; }
+
         public DynamicQueryMatchType MatchType { get; set; }
 
         public DynamicQueryMatchResult(string match, DynamicQueryMatchType matchType)
@@ -29,6 +30,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public long LastMappedEtag { get; set; }
 
         public long NumberOfMappedFields { get; set; }
+
+        public bool IsComplete()
+        {
+            return MatchType == DynamicQueryMatchType.Complete ||
+                   MatchType == DynamicQueryMatchType.CompleteButIdle;
+        }
     }
 
     public enum DynamicQueryMatchType
@@ -80,7 +87,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 string reason = null;
                 bool hasBetterMatch = false;
-                if (result.MatchType != bestComplete.MatchType)
+                if (BetterMatchAvailable(out var bothMatch))
                 {
                     hasBetterMatch = result.MatchType > bestComplete.MatchType;
                     reason = "A better match was available";
@@ -89,6 +96,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     hasBetterMatch = result.LastMappedEtag > bestComplete.LastMappedEtag;
                     reason = "Wasn't the most up to date index matching this query";
+                }
+                else if (bothMatch && result.MatchType != bestComplete.MatchType)
+                {
+                    // both indexes have reached the same etag but one of them is idle
+                    hasBetterMatch = result.MatchType > bestComplete.MatchType;
+                    reason = "The index is idle. The preference is for active indexes - making a complete match but marking the index as idle";
                 }
                 else if (result.NumberOfMappedFields != bestComplete.NumberOfMappedFields)
                 {
@@ -106,6 +119,23 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (hasBetterMatch)
                     bestComplete = result;
+
+                bool BetterMatchAvailable(out bool bothComplete)
+                {
+                    bothComplete = false;
+                    if (result.MatchType == bestComplete.MatchType)
+                        return false;
+
+                    if (result.IsComplete() && bestComplete.IsComplete())
+                    {
+                        // both indexes are a perfect match for the query
+                        // we'll choose the most up to date one and wake it up if needed
+                        bothComplete = true;
+                        return false;
+                    }
+
+                    return true;
+                }
             }
 
             return bestComplete;
@@ -219,7 +249,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (currentBestState == DynamicQueryMatchType.Complete && state == IndexState.Idle)
             {
                 currentBestState = DynamicQueryMatchType.CompleteButIdle;
-                explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is idle. The preference is for active indexes - making a complete match but marking the index is idle"));
             }
 
             if (currentBestState != DynamicQueryMatchType.Failure && query.IsGroupBy)

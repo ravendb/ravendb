@@ -74,11 +74,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     if (facetsByName == null)
                         facetsByName = new Dictionary<string, Dictionary<string, FacetValues>>();
 
-                    HandleFacets(returnedReaders, result, facetsByName, facetQuery.Legacy);
+                    HandleFacets(returnedReaders, result, facetsByName, facetQuery.Legacy, token);
                     continue;
                 }
 
-                HandleRangeFacets(returnedReaders, result, facetQuery.Legacy);
+                HandleRangeFacets(returnedReaders, result, facetQuery.Legacy, token);
             }
 
             UpdateFacetResults(results, query, facetsByName);
@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private void HandleRangeFacets(
             List<ReaderFacetInfo> returnedReaders,
             KeyValuePair<string, FacetedQueryParser.FacetResult> result,
-            bool legacy)
+            bool legacy, CancellationToken token)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
             var facetValues = new Dictionary<string, FacetValues>();
@@ -131,6 +131,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     foreach (var range in ranges)
                     {
+                        token.ThrowIfCancellationRequested();
+
                         if (range.IsMatch(kvp.Key) == false)
                             continue;
 
@@ -166,7 +168,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             List<ReaderFacetInfo> returnedReaders,
             KeyValuePair<string, FacetedQueryParser.FacetResult> result,
             Dictionary<string, Dictionary<string, FacetValues>> facetsByName,
-            bool legacy)
+            bool legacy, CancellationToken token)
         {
             var needToApplyAggregation = result.Value.Aggregations.Count > 0;
 
@@ -179,6 +181,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var kvp in termsForField)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var intersectedDocuments = GetIntersectedDocuments(new ArraySegment<int>(kvp.Value), readerFacetInfo.Results, needToApplyAggregation);
                     var intersectCount = intersectedDocuments.Count;
                     if (intersectCount == 0)

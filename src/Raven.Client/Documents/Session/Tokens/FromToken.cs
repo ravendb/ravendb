@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -33,10 +34,9 @@ namespace Raven.Client.Documents.Session.Tokens
 
             if (IsDynamic)
             {
-                writer
-                    .Append("from '")
-                    .Append(CollectionName.Replace("'", "\\'"))
-                    .Append("'");
+                writer.Append("from '");
+                StringExtensions.EscapeString(writer, CollectionName);
+                writer.Append("'");
                 }
             else
             {

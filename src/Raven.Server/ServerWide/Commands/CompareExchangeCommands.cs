@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Text;
+using Raven.Client.Exceptions;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
@@ -369,9 +370,9 @@ namespace Raven.Server.ServerWide.Commands
 
         private static void ThrowCompareExchangeKeyTooBig(string str)
         {
-            throw new ArgumentException(
-                $"Compare Exchange key cannot exceed {MaxNumberOfCompareExchangeKeyBytes} bytes, but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'.",
-                nameof(str));
-        }
+            throw new CompareExchangeKeyTooBigException(
+                $"Compare Exchange key cannot exceed {MaxNumberOfCompareExchangeKeyBytes} bytes, " +
+                $"but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'. Parameter '{nameof(str)}'");
+    }
     }
 }

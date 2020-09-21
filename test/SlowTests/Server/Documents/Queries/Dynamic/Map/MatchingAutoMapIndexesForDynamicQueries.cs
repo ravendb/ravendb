@@ -492,6 +492,97 @@ include highlight(Name, 18, 2)
             }
         }
 
+        [Fact]
+        public void Choose_the_most_up_to_date_index_including_an_idle_one()
+        {
+            Initialize();
+
+            var definition1 = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+            });
+            AddIndex(definition1);
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
+            using (var tx = context.OpenWriteTransaction())
+            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+            {
+                ["Name"] = "Grisha",
+                ["Company"] = "Hibernating Rhinos",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Users"
+                }
+            }))
+            {
+                _documentDatabase.DocumentsStorage.Put(context, "users/1", null, doc);
+                tx.Commit();
+            }
+
+            var index = GetIndex(definition1.Name);
+            WaitForIndexMap(index, 1);
+            var explanations = new List<DynamicQueryToIndexMatcher.Explanation>();
+            VerifyIndex("FROM Users where Name = 'Grisha'", definition1.Name, DynamicQueryMatchType.Complete);
+            Assert.Empty(explanations);
+
+            _documentDatabase.IndexStore.StopIndexing();
+
+            var definition2 = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+                new AutoIndexField
+                {
+                    Name = "Company",
+                    Storage = FieldStorage.No,
+                },
+            });
+
+            AddIndex(definition2);
+            index.SetState(IndexState.Idle);
+
+            VerifyIndex("FROM Users where Name = 'Grisha'", definition1.Name, DynamicQueryMatchType.CompleteButIdle);
+            Assert.Equal(1, explanations.Count);
+            Assert.Equal(definition2.Name, explanations[0].Index);
+            Assert.Equal("Wasn't the most up to date index matching this query", explanations[0].Reason);
+
+            _documentDatabase.IndexStore.StartIndexing();
+            var index2 = GetIndex(definition2.Name);
+            WaitForIndexMap(index2, 1);
+            index.SetState(IndexState.Idle);
+
+            explanations.Clear();
+            VerifyIndex("FROM Users where Name = 'Grisha'", definition2.Name, DynamicQueryMatchType.Complete);
+            Assert.Equal(1, explanations.Count);
+            Assert.Equal(definition1.Name, explanations[0].Index);
+            Assert.Equal("The index is idle. The preference is for active indexes - making a complete match but marking the index as idle", explanations[0].Reason);
+
+            index.SetState(IndexState.Normal);
+            index2.SetState(IndexState.Idle);
+            explanations.Clear();
+            VerifyIndex("FROM Users where Name = 'Grisha'", definition1.Name, DynamicQueryMatchType.Complete);
+            Assert.Equal(1, explanations.Count);
+            Assert.Equal(definition2.Name, explanations[0].Index);
+            Assert.Equal("The index is idle. The preference is for active indexes - making a complete match but marking the index as idle", explanations[0].Reason);
+
+            void VerifyIndex(string query, string expectedIndexName, DynamicQueryMatchType matchType)
+            {
+                var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(query));
+
+                var result = _sut.Match(dynamicQuery, explanations);
+
+                Assert.Equal(expectedIndexName, result.IndexName);
+                Assert.Equal(matchType, result.MatchType);
+            }
+        }
+
         private void AddIndex(AutoMapIndexDefinition definition)
         {
             AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition, Guid.NewGuid().ToString()));
