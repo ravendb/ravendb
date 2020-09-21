@@ -46,5 +46,16 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("License.SkipLeasingErrorsLogging", ConfigurationEntryScope.ServerWideOnly)]
         public bool SkipLeasingErrorsLogging { get; set; }
+        
+        
+        [Description("EXPERT ONLY. Disable automatic updating of the license")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("License.DisableAutoLicenceUpdate", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableAutoLicenceUpdate { get; set; }
+        
+        [Description("EXPERT ONLY. Disable checking the support options for the license")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("License.DisableLicenseSupportMode", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableLicenseSupportMode { get; set; }
     }
 }
