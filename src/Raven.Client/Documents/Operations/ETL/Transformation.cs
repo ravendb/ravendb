@@ -186,11 +186,11 @@ namespace Raven.Client.Documents.Operations.ETL
                 }
                 
                 CollectionToLoadBehaviorFunction = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                foreach (Match counterBehaviorFunction in timeSeriesBehaviors)
+                foreach (Match timeSeriesBehaviorFunction in timeSeriesBehaviors)
                 {
-                    var functionName = counterBehaviorFunction.Groups["func_name"].Value;
-                    var collection = counterBehaviorFunction.Groups["collection"].Value;
-                    var args = counterBehaviorFunction.Groups["param"].Captures;
+                    var functionName = timeSeriesBehaviorFunction.Groups["func_name"].Value;
+                    var collection = timeSeriesBehaviorFunction.Groups["collection"].Value;
+                    var args = timeSeriesBehaviorFunction.Groups["param"].Captures;
 
                     if (args.Count > LoadTimeSeriesOfCollectionBehavior.ParamsCount)
                     {

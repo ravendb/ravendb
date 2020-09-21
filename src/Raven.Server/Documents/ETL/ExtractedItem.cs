@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.ETL
 
         public bool IsDelete { get; protected set; }
 
-        public string Collection { get; protected set; }
+        public string Collection { get; set; }
 
         public LazyStringValue CollectionFromMetadata { get; }
 

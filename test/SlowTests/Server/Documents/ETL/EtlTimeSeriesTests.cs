@@ -1690,7 +1690,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
                     using var session = dest.OpenAsyncSession();
                     var result = await session.TimeSeriesFor(documentId, timeSeriesName).GetAsync(DateTime.MinValue, DateTime.MaxValue);
                     return result?.Count() ?? 0;
-                }, progress, 5000, interval: 1000);
+                }, progress, 15000, interval: 1000);
             }
         }
         

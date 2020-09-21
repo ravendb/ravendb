@@ -26,6 +26,8 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public Dictionary<EtlItemType, int> NumberOfTransformedItems => _stats.NumberOfTransformedItems;
 
+        public Dictionary<EtlItemType, int> NumberOfTransformedTombstones => _stats.NumberOfTransformedTombstones;
+
         public Dictionary<EtlItemType, long> LastTransformedEtags => _stats.LastTransformedEtags;
 
         public Dictionary<EtlItemType, long> LastFilteredOutEtags => _stats.LastFilteredOutEtags;

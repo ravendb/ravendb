@@ -1197,6 +1197,27 @@ namespace Raven.Server.Documents
             }
         }
 
+        public IEnumerable<Tombstone> GetAttachmentTombstonesFrom(
+            DocumentsOperationContext context,
+            long etag,
+            long start,
+            long take)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, AttachmentsStorage.AttachmentsTombstones);
+
+            if (table == null)
+                yield break;
+
+            // ReSharper disable once LoopCanBeConvertedToQuery
+            foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
+            {
+                if (take-- <= 0)
+                    yield break;
+
+                yield return TableValueToTombstone(context, ref result.Reader);
+            }
+        }
+
         public IEnumerable<Tombstone> GetTombstonesFrom(
             DocumentsOperationContext context,
             string collection,

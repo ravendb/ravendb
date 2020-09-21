@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
@@ -30,7 +31,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
     {
         private readonly Transformation _transformation;
         private readonly ScriptInput _script;
-        private readonly List<ICommandData> _commands = new List<ICommandData>();
         private PropertyDescriptor _addAttachmentMethod;
         private PropertyDescriptor _addCounterMethod;
         private PropertyDescriptor _addTimeSeriesMethod;
@@ -232,13 +232,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public override List<ICommandData> GetTransformedResults()
         {
-            return _commands;
+            return _currentRun?.GetCommands() ?? Enumerable.Empty<ICommandData>().ToList();
         }
 
         public override void Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)
         {
             Current = item;
-            _currentRun = new RavenEtlScriptRun(stats);
+            _currentRun ??= new RavenEtlScriptRun(stats);
 
             if (item.IsDelete == false)
             {
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         {
                             var attachments = GetAttachmentsFor(item);
                             var counterOperations = GetCounterOperationsFor(item);
-                            var timeSeriesOperations = ShouldLoadTimeSeriesWithDoc(item, state)? GetTimeSeriesOperationsFor(item) : null;
+                            var timeSeriesOperations = ShouldLoadTimeSeriesWithDoc(item, state) ? GetTimeSeriesOperationsFor(item) : null;
                             _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, attachments, counterOperations, timeSeriesOperations);
                         }
                         break;
@@ -343,8 +343,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         throw new InvalidOperationException($"Dead Etl item can be of type {EtlItemType.Document} or {EtlItemType.TimeSeries} but got {item.Type}");
                 }
             }
-
-            _commands.AddRange(_currentRun.GetCommands());
         }
 
         private bool ShouldLoadTimeSeriesWithDoc(RavenEtlItem item, EtlProcessState state)
@@ -463,10 +461,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 //Through replication the Etl source database can have time-series without its document.
                 //This is a rare situation and we will skip Etl this time-series and will mark the document so when it will be Etl we will send all its time-series with it
-                (state.SkippedTimeSeriesDocs??=new HashSet<string>()).Add(docId);
+                (state.SkippedTimeSeriesDocs ??= new HashSet<string>()).Add(docId);
                 return;
             }
-            if (doc.Etag > segmentEntry.Etag && doc.Etag > stats.GetLastTransformedOrFilteredEtag(EtlItemType.Document))
+
+            var timeSeriesEntries = segmentEntry.Segment.YieldAllValues(Context, segmentEntry.Start, false);
+            if (loadBehaviorFunction != null && FilterSingleTimeSeriesSegmentByLoadBehaviorScript(ref timeSeriesEntries, docId, segmentEntry, loadBehaviorFunction))
+                return;
+
+            if (doc.Etag > segmentEntry.Etag)
             {
                 //There is a chance that the document didn't Etl yet so we push it with the time-series to be sure
                 doc = Database.DocumentsStorage.Get(Context, docId);
@@ -483,9 +486,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     _currentRun.PutFullDocument(docId, doc.Data);
                 }
             }
-            var timeSeriesEntries = segmentEntry.Segment.YieldAllValues(Context, segmentEntry.Start, false);
-            if (loadBehaviorFunction != null && FilterSingleTimeSeriesSegmentByLoadBehaviorScript(ref timeSeriesEntries, docId, segmentEntry, loadBehaviorFunction))
-                return;
 
             var timeSeriesName = Database.DocumentsStorage.TimeSeriesStorage.GetTimeSeriesNameOriginalCasing(Context, docId, segmentEntry.Name);
             
@@ -530,33 +530,33 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (toLoad.Value.begin > segmentEntry.Start)
             {
                 timeSeriesEntries = SkipUntilFrom(timeSeriesEntries, toLoad.Value.begin);
-
-                static IEnumerable<SingleResult> SkipUntilFrom(IEnumerable<SingleResult> origin, DateTime from)
-                {
-                    using var enumerator = origin.GetEnumerator();
-                    while (enumerator.MoveNext())
-                    {
-                        if (enumerator.Current.Timestamp >= @from)
-                            yield return enumerator.Current;
-                    }
-                }
             }
 
             if (toLoad.Value.end < lastTimestamp)
             {
                 timeSeriesEntries = BreakOnTo(timeSeriesEntries, toLoad.Value.end);
-
-                static IEnumerable<SingleResult> BreakOnTo(IEnumerable<SingleResult> origin, DateTime to)
-                {
-                    using var enumerator = origin.GetEnumerator();
-                    while (enumerator.MoveNext() && enumerator.Current.Timestamp <= to)
-                    {
-                        yield return enumerator.Current;
-                    }
-                }
             }
 
             return false;
+        }
+
+        private static IEnumerable<SingleResult> SkipUntilFrom(IEnumerable<SingleResult> origin, DateTime from)
+        {
+            using var enumerator = origin.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.Current.Timestamp >= @from)
+                    yield return enumerator.Current;
+            }
+        }
+
+        private static IEnumerable<SingleResult> BreakOnTo(IEnumerable<SingleResult> origin, DateTime to)
+        {
+            using var enumerator = origin.GetEnumerator();
+            while (enumerator.MoveNext() && enumerator.Current.Timestamp <= to)
+            {
+                yield return enumerator.Current;
+            }
         }
 
         private bool ShouldFilterByScriptAndGetParams(string docId, string timeSeriesName, string function, out (DateTime From, DateTime To)? toLoad)
