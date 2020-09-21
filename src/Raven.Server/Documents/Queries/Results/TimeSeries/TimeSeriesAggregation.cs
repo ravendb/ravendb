@@ -384,7 +384,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                     Debug.Assert(_values.Count == _first.Count, "Invalid aggregation data");
                     Debug.Assert(from.HasValue && to.HasValue, "Missing from/to");
 
-                    var deltaX = (to.Value.Ticks - from.Value.Ticks) / 10_000; // offset in milliseconds
+                    var deltaX = (to.Value.Ticks - from.Value.Ticks) / 10_000; // distance in milliseconds
                     for (int i = 0; i < _values.Count; i++)
                     {
                         var deltaY = _values[i] - _first[i]; // last - first
