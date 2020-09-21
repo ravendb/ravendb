@@ -329,44 +329,52 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                         if (!(c is MethodCallExpression selectCall))
                             throw new InvalidOperationException("Invalid Select argument " + c);
 
-                        if (selectCall.Arguments.Count == 0)
-                        {
-                            AddSelectField(selectCall.Method.Name);
-                            continue;
-                        }
-                        
-                        Debug.Assert(selectCall.Arguments.Count == 1 && selectCall.Method.Name.Equals(nameof(AggregationType.Percentile)), 
-                            "wrong number of arguments passed to method " + selectCall.Method.Name);
-
-                        object value;
-                        if (selectCall.Arguments[0] is ConstantExpression constant)
-                            value = constant.Value;
-                        else
-                            LinqPathProvider.GetValueFromExpressionWithoutConversion(selectCall.Arguments[0], out value);
-
-                        if (!(value is double d))
-                            throw new InvalidOperationException("Invalid Select argument " + c);
-
-                        AddSelectField(selectCall.Method.Name, d);
+                        AddSelectMethod(selectCall);
                     }
-
                     break;
                 case ExpressionType.MemberInit:
-                    // todo aviv
                     var initExp = (MemberInitExpression)body;
                     foreach (var c in initExp.Bindings)
                     {
+                        if (c is MemberAssignment ma && ma.Expression is MethodCallExpression mce)
+                        {
+                            AddSelectMethod(mce);
+                            continue;
+                        }
+
                         AddSelectField(c.Member.Name);
                     }
                     break;
                 case ExpressionType.Call:
-                    // todo aviv
                     var call = (MethodCallExpression)body;
-                    AddSelectField(call.Method.Name);
+                    AddSelectMethod(call);
                     break;
                 default:
                     throw new InvalidOperationException("Invalid Select expression " + expression);
             }
+        }
+
+        private void AddSelectMethod(MethodCallExpression call)
+        {
+            if (call.Arguments.Count == 0)
+            {
+                AddSelectField(call.Method.Name);
+                return;
+            }
+
+            Debug.Assert(call.Arguments.Count == 1 && call.Method.Name.Equals(nameof(AggregationType.Percentile)),
+                "wrong number of arguments passed to method " + call.Method.Name);
+
+            object value;
+            if (call.Arguments[0] is ConstantExpression constant)
+                value = constant.Value;
+            else
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(call.Arguments[0], out value);
+
+            if (!(value is double d))
+                throw new InvalidOperationException("Invalid Select argument " + call.Arguments[0]);
+
+            AddSelectField(call.Method.Name, d);
         }
 
         private void Offset(Expression expression)
