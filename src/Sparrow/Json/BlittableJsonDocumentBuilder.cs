@@ -12,29 +12,19 @@ namespace Sparrow.Json
     {
         private class GlobalPoolItem
         {
-            public struct ResetBehavior : IResetSupport<GlobalPoolItem>
+            public void Reset()
             {
-                [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Reset(GlobalPoolItem value)
-                {
-                    value.PropertyCache.Reset();
-                    value.PositionsCache.Reset();
-                    value.TokensCache.Reset();
-                }
+                PropertyCache.Reset();
+                PositionsCache.Reset();
+                TokensCache.Reset();
             }
 
             public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
             public readonly ListCache<int> PositionsCache = new ListCache<int>();
             public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>();
-
-            public void Reset()
-            {
-                ResetBehavior behavior;
-                behavior.Reset(this);
-            }
         }
 
-        private static readonly ObjectPool<GlobalPoolItem, GlobalPoolItem.ResetBehavior> GlobalCache = new ObjectPool<GlobalPoolItem,GlobalPoolItem.ResetBehavior>( () => new GlobalPoolItem() );
+        private static readonly PerCoreContainer<GlobalPoolItem> GlobalCache = new PerCoreContainer<GlobalPoolItem>();
 
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
 
@@ -98,7 +88,8 @@ namespace Sparrow.Json
             _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
 
-            _cacheItem = GlobalCache.Allocate();
+            if(GlobalCache.TryPull(out _cacheItem) == false)
+                _cacheItem = new GlobalPoolItem();
             _propertiesCache = _cacheItem.PropertyCache;
             _positionsCache = _cacheItem.PositionsCache;
             _tokensCache = _cacheItem.TokensCache;            
@@ -168,7 +159,8 @@ namespace Sparrow.Json
                 return;
 
             _writer.Dispose();
-            GlobalCache.Free(_cacheItem);
+            _cacheItem.Reset();
+            GlobalCache.Push(_cacheItem);
         }
 
         private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy

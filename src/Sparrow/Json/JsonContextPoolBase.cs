@@ -157,7 +157,7 @@ namespace Sparrow.Json
                     return;
                 }
 
-                Context.Reset(releaseAllocatedStringValues: true);
+                Context.Reset();
                 // These contexts are reused, so we don't want to use LowerOrDie here.
                 Context.InUse.Lower();
                 Context.InPoolSince = DateTime.UtcNow;
