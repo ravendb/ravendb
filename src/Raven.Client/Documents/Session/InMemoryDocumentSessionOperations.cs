@@ -1005,10 +1005,17 @@ more responsive application.
         {
             using (DocumentsByEntity.PrepareEntitiesPuts())
             {
+                var shouldIgnoreEntityChanges = Conventions.ShouldIgnoreEntityChanges;
                 foreach (var entity in DocumentsByEntity)
                 {
                     if (entity.Value.IgnoreChanges)
                         continue;
+
+                    if (shouldIgnoreEntityChanges != null)
+                    {
+                        if(shouldIgnoreEntityChanges(this, entity.Value.Entity, entity.Value.Id))
+                            continue;
+                    }
 
                     if (IsDeleted(entity.Value.Id))
                         continue;
