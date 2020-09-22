@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,7 +50,7 @@ namespace SlowTests.Issues
             var controlgroupDbName = GetDatabaseName() + "controlgroup";
             var baseBackupPath = NewDataPath(suffix: "BackupFolder");
 
-            using var store = new DocumentStore { Database = dbName, Urls = new []{server.WebUrl} }.Initialize();
+            using var store = new DocumentStore { Database = dbName, Urls = new[] { server.WebUrl } }.Initialize();
             store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
             store.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(controlgroupDbName)));
             await using var keepControlGroupAlive = new RepeatableAsyncAction(async token =>
@@ -59,7 +58,7 @@ namespace SlowTests.Issues
                 await store.Maintenance.ForDatabase(controlgroupDbName).SendAsync(new GetStatisticsOperation(), token);
                 await Task.Delay(TimeSpan.FromSeconds(maxIdleTimeInSec), token);
             }).Run();
-                
+
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Name = "EGOR" }, "su");
@@ -76,12 +75,12 @@ namespace SlowTests.Issues
             GetPeriodicBackupStatusOperation periodicBackupStatusOperation = null;
             PeriodicBackupStatus status = null;
             PeriodicBackupStatus controlGroupStatus = null;
-            
+
             for (int i = 0; i < rounds; i++)
             {
                 // let db get idle
-                await WaitForValueAsync(async () => server.ServerStore.IdleDatabases.Count > 0, true, 180 * 1000, 3000);
-                    
+                WaitForValue(() => server.ServerStore.IdleDatabases.Count > 0, true, 180 * 1000, 3000);
+
                 Assert.True(1 == server.ServerStore.IdleDatabases.Count, $"IdleDatabasesCount({server.ServerStore.IdleDatabases.Count}), Round({i})");
                 Assert.True(server.ServerStore.IdleDatabases.ContainsKey(store.Database), $"Round({i})");
 
@@ -114,9 +113,9 @@ namespace SlowTests.Issues
                     Assert.True(status.LastFullBackup.HasValue);
                     lastBackup = status.LastFullBackup.Value;
                 }
-                var nextBackup =  backupParser.GetNextOccurrence(lastBackup);
+                var nextBackup = backupParser.GetNextOccurrence(lastBackup);
                 await Task.Delay(nextBackup - DateTime.UtcNow);
-                
+
                 status = await AssertWaitForNextBackup(store.Database, status);
                 controlGroupStatus = await AssertWaitForNextBackup(controlgroupDbName, controlGroupStatus);
                 async Task<PeriodicBackupStatus> AssertWaitForNextBackup(string db, PeriodicBackupStatus prevStatus)
@@ -131,13 +130,13 @@ namespace SlowTests.Issues
                         Assert.True(nextStatus.LocalBackup?.Exception == null, nextStatus.LocalBackup?.Exception);
 
                         return prevStatus == null || nextStatus.LastOperationId.HasValue && nextStatus.LastOperationId > prevStatus.LastOperationId;
-                    }, true),$"Round {i}");
+                    }, true), $"Round {i}");
                     return nextStatus;
-                }    
-                
+                }
+
                 var backupsDir = Directory.GetDirectories(baseBackupPath);
                 Assert.Equal(2, backupsDir.Length);
-                    
+
                 AssertBackupDirCount(controlgroupDbName, controlGroupStatus);
                 AssertBackupDirCount(store.Database, status);
                 void AssertBackupDirCount(string db, PeriodicBackupStatus periodicBackupStatus)
@@ -159,12 +158,13 @@ namespace SlowTests.Issues
             sb.AppendLine($"Dirs:{Environment.NewLine}{string.Join(", ", dirs)}");
             return sb.ToString();
         }
-        
+
         public class RepeatableAsyncAction : IAsyncDisposable
         {
             private readonly Func<CancellationToken, Task> _action;
             private readonly CancellationTokenSource _source = new CancellationTokenSource();
             private Task _task;
+
             public RepeatableAsyncAction(Func<CancellationToken, Task> action) => _action = action;
 
             public RepeatableAsyncAction Run()
