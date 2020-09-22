@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
@@ -60,10 +61,10 @@ namespace Raven.Client.Documents.Commands
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
                 return Task.FromResult(ResponseDisposeHandling.Automatic);
-
-            var result = base.ProcessResponse(context, cache, response, url);
+            
+            var result = AsyncHelpers.RunSync(() => base.ProcessResponse(context, cache, response, url));
             Result.ChangeVector = response.Headers.ETag.Tag;
-            return result;
+            return Task.FromResult(result);
         }
 
         /// <summary>
