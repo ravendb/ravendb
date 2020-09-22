@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.Documents.ETL.Stats;
 
 namespace Raven.Server.Documents.ETL
 {
     public class ExtractedItemsEnumerator<T> : IEnumerator<T>, IEnumerable<T> where T : ExtractedItem
     {
-        private readonly List<IExtractEnumerator<T>> _workEnumerators = new List<IExtractEnumerator<T>>();
-        private T _currentItem;
+        private readonly List<IEnumerator<T>> _workEnumerators = new List<IEnumerator<T>>();
+        private T _item;
         private readonly EtlStatsScope _extractionStats;
 
         public ExtractedItemsEnumerator(EtlStatsScope stats)
@@ -17,7 +16,7 @@ namespace Raven.Server.Documents.ETL
             _extractionStats = stats.For(EtlOperations.Extract, start: false);
         }
 
-        public void AddEnumerator(IExtractEnumerator<T> enumerator)
+        public void AddEnumerator(IEnumerator<T> enumerator)
         {
             if (enumerator == null)
                 return;
@@ -36,40 +35,23 @@ namespace Raven.Server.Documents.ETL
             if (_workEnumerators.Count == 0)
                 return false;
 
-            var fetch = true;
             using (_extractionStats.Start())
             {
-                while (fetch)
+                var enumerator = _workEnumerators[0];
+                for (var index = 1; index < _workEnumerators.Count; index++)
                 {
-                    if (_workEnumerators.Count == 0)
-                        return false;
-
-                    fetch = false;
-                    var enumerator = _workEnumerators[0];
-                    for (var index = 1; index < _workEnumerators.Count; index++)
+                    if (_workEnumerators[index].Current.Etag < enumerator.Current.Etag)
                     {
-                        if (_workEnumerators[index].Current.Etag < enumerator.Current.Etag)
-                        {
-                            enumerator = _workEnumerators[index];
-                        }
+                        enumerator = _workEnumerators[index];
                     }
-
-                    _currentItem = enumerator.Current;
-
-                    if (enumerator.Filter())
-                    {
-                        _extractionStats.RecordChangeVector(_currentItem.ChangeVector);
-                        _extractionStats.RecordLastFilteredOutEtag(_currentItem.Etag, _currentItem.Type);
-                        fetch = true;
-                    }
-
-                    if (enumerator.MoveNext()) 
-                        continue;
-
-                    _workEnumerators.Remove(enumerator);
                 }
 
-                _extractionStats.RecordExtractedItem(_currentItem.Type);
+                _item = enumerator.Current;
+
+                if (enumerator.MoveNext() == false)
+                    _workEnumerators.Remove(enumerator);
+
+                _extractionStats.RecordExtractedItem(_item.Type);
                 return true;
             }
         }
@@ -79,7 +61,7 @@ namespace Raven.Server.Documents.ETL
             throw new NotImplementedException();
         }
 
-        public T Current => _currentItem;
+        public T Current => _item;
 
         object IEnumerator.Current => Current;
 
@@ -96,7 +78,7 @@ namespace Raven.Server.Documents.ETL
         {
             while (MoveNext())
             {
-                yield return _currentItem;
+                yield return _item;
             } 
         }
 

@@ -31,32 +31,32 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         public override EtlType EtlType => EtlType.Sql;
         
-        protected override IExtractEnumerator<ToSqlItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToSqlItems(docs, collection);
         }
 
-        protected override IExtractEnumerator<ToSqlItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
             return new TombstonesToSqlItems(tombstones, collection);
         }
 
-        protected override IExtractEnumerator<ToSqlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        protected override IEnumerator<ToSqlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
         {
             throw new NotSupportedException("Attachment tombstones aren't supported by SQL ETL");
         }
 
-        protected override IExtractEnumerator<ToSqlItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
         {
             throw new NotSupportedException("Counters aren't supported by SQL ETL");
         }
 
-        protected override IExtractEnumerator<ToSqlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }
 
-        protected override IExtractEnumerator<ToSqlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        protected override IEnumerator<ToSqlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
             throw new NotSupportedException("Time series aren't supported by SQL ETL");
         }

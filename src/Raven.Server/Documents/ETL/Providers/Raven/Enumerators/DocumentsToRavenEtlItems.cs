@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
-    public class DocumentsToRavenEtlItems : IExtractEnumerator<RavenEtlItem>
+    public class DocumentsToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly IEnumerator<Document> _docs;
         private readonly string _collection;
@@ -13,8 +13,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             _docs = docs;
             _collection = collection;
         }
-
-        public bool Filter() => false;
 
         public bool MoveNext()
         {

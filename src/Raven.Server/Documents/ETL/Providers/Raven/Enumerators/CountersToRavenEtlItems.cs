@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
-    public class CountersToRavenEtlItems : IExtractEnumerator<RavenEtlItem>
+    public class CountersToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly DocumentsOperationContext _context;
         private readonly IEnumerator<CounterGroupDetail> _counters;
@@ -18,13 +18,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             _collection = collection;
         }
 
-        public bool Filter()
+        private bool Filter(RavenEtlItem item)
         {
-            var doc = _context.DocumentDatabase.DocumentsStorage.Get(_context, Current.DocumentId, DocumentFields.Default);
+            var doc = _context.DocumentDatabase.DocumentsStorage.Get(_context, item.DocumentId, DocumentFields.Default);
 
             // counter has lower etag than its document - we skip it to avoid
             // sending a counter of document that can not exist on the destination side
-            return doc == null || Current.Etag <= doc.Etag;
+            return doc == null || item.Etag <= doc.Etag;
         }
 
         public bool MoveNext()
@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
                 return false;
 
             Current = new RavenEtlItem(_counters.Current, _collection);
+            Current.Filtered = Filter(Current);
 
             return true;
         }

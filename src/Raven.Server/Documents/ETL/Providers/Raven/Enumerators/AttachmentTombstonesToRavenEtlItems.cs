@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
-    public class AttachmentTombstonesToRavenEtlItems : IExtractEnumerator<RavenEtlItem>
+    public class AttachmentTombstonesToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly DocumentsOperationContext _context;
         private readonly IEnumerator<Tombstone> _tombstones;
@@ -18,16 +18,16 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             _collections = collections ?? throw new ArgumentNullException(nameof(collections));
         }
 
-        public bool Filter()
+        private bool Filter(RavenEtlItem item)
         {
             var tombstone = _tombstones.Current;
             if (tombstone.Type != Tombstone.TombstoneType.Attachment)
                 TombstonesToRavenEtlItems.ThrowInvalidTombstoneType(Tombstone.TombstoneType.Attachment, tombstone.Type);
 
-            if (FilterAttachment(_context, Current))
+            if (FilterAttachment(_context, item))
                 return true;
 
-            return _collections.Contains(Current.Collection) == false;
+            return _collections.Contains(item.Collection) == false;
         }
 
         public static bool FilterAttachment(DocumentsOperationContext context, RavenEtlItem item)
@@ -48,6 +48,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
                 return false;
 
             Current = new RavenEtlItem(_tombstones.Current, "__undefined", EtlItemType.Document);
+            Current.Filtered = Filter(Current);
 
             return true;
         }
