@@ -11,20 +11,20 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Net;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Hosting;
-using Raven.Server.Routing;
 using System.Linq;
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
+using Raven.Client.Extensions;
 using Raven.Server.Commercial;
+using Raven.Server.Routing;
 using Sparrow.Collections;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Raven.Client.Extensions;
 
 namespace Raven.Server.Web.System
 {
@@ -183,9 +183,9 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Moved;
                 return Task.CompletedTask;
             }
-            string serverRelativeFileName = 
+            string serverRelativeFileName =
                 RouteMatch.Url.Substring(
-                    RouteMatch.MatchLength, 
+                    RouteMatch.MatchLength,
                     RouteMatch.Url.Length - RouteMatch.MatchLength
             );
             return GetStudioFileInternal(serverRelativeFileName);
@@ -218,7 +218,7 @@ namespace Raven.Server.Web.System
         public Task GetSetupFile()
         {
             var serverRelativeFileName = RouteMatch.Url.Substring(
-                    RouteMatch.MatchLength, 
+                    RouteMatch.MatchLength,
                     RouteMatch.Url.Length - RouteMatch.MatchLength
                 );
             // if user asks for entry point but we are already configured redirect to studio
@@ -256,7 +256,7 @@ namespace Raven.Server.Web.System
         public Task GetStudioFile()
         {
             string serverRelativeFileName = RouteMatch.Url.Substring(
-                    RouteMatch.MatchLength, 
+                    RouteMatch.MatchLength,
                     RouteMatch.Url.Length - RouteMatch.MatchLength
                 );
             return GetStudioFileInternal(serverRelativeFileName);
@@ -314,7 +314,7 @@ namespace Raven.Server.Web.System
         private async Task LoadFilesIntoCache()
         {
             // we might need to load files to cache, but need to do so concurrently
-            var tcs = new TaskCompletionSource<object>(TaskContinuationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             try
             {
                 var runningTask = Interlocked.CompareExchange(ref _loadingFileToCache, tcs.Task, null) ?? tcs.Task;
@@ -341,7 +341,7 @@ namespace Raven.Server.Web.System
             }
             finally
             {
-                tcs.TrySetCanceled();// if we 
+                tcs.TrySetCanceled();// if we
             }
         }
 
@@ -352,7 +352,7 @@ namespace Raven.Server.Web.System
             // Avoid fragmenting the queue more than necessary
             var dispatch = EntriesToCompress.Count;
 
-            // Notice that this is not always consistent. However, it is 
+            // Notice that this is not always consistent. However, it is
             // eventually consistent.
             Interlocked.Add(ref _pendingEntriesToCompress, -dispatch);
 
@@ -466,7 +466,7 @@ namespace Raven.Server.Web.System
                         if (ShouldSkipCache(info))
                             continue;
 
-                        StaticContentCache.TryAdd(file.Substring(wwwRootBasePath.Length + 1).Replace('\\', '/'), 
+                        StaticContentCache.TryAdd(file.Substring(wwwRootBasePath.Length + 1).Replace('\\', '/'),
                             new Lazy<CachedStaticFile>(() =>
                            {
                                var serverRelativeFileName = file.Substring(wwwRootBasePath.Length);
@@ -495,7 +495,6 @@ namespace Raven.Server.Web.System
                 if (_fileWatcher != null)
                     StartFileSystemWatcher(_fileWatcher, (_, __) => ClearCache(), (_, __) => ClearCache());
 
-
                 break;
             }
         }
@@ -514,7 +513,6 @@ namespace Raven.Server.Web.System
             // from a dev hitting Ctrl+S in the IDE and F5 in the browser :-)
             Interlocked.CompareExchange(ref _loadingFileToCache, null, tmp);
         }
-
 
         private static readonly string[] FileSystemLookupPaths = {
             "src/Raven.Studio/wwwroot",
@@ -649,7 +647,7 @@ namespace Raven.Server.Web.System
 
         private static void ZipFileChangedEventHandler(object sender, FileSystemEventArgs e)
         {
-            // Do not change the order of these instructions. We want to avoid 
+            // Do not change the order of these instructions. We want to avoid
             // polluting the ETags in the new cache with old ones.
             UpdateZipFileLastChange();
             StaticContentCache.Clear();
@@ -679,9 +677,9 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
-            catch (Exception)
+            catch
             {
-                // Suppressing this exception is reasonable: there are many 
+                // Suppressing this exception is reasonable: there are many
                 // reasons for which the file may not be available right now.
                 // The watcher will let us know whenever we can try again.
             }

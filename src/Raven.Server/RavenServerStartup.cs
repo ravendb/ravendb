@@ -50,8 +50,7 @@ namespace Raven.Server
         {
             app.UseWebSockets(new WebSocketOptions
             {
-                KeepAliveInterval = TimeSpan.FromHours(24),
-                ReceiveBufferSize = 4096
+                KeepAliveInterval = TimeSpan.FromHours(24)
             });
 
             _router = app.ApplicationServices.GetService<RequestRouter>();

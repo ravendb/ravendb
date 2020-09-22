@@ -25,7 +25,7 @@
 
     <NoWarn>CS0419,CS1591,CS1572,CS1573,CS1574,CS1723</NoWarn>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1' OR '$(TargetFramework)' == 'netcoreapp2.2' OR '$(TargetFramework)' == 'netcoreapp3.1'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1' OR '$(TargetFramework)' == 'netcoreapp2.2' OR '$(TargetFramework)' == 'netcoreapp3.1' OR '$(TargetFramework)' == 'net5.0'">
     <DefineConstants>$(DefineConstants);NETCOREAPP</DefineConstants>
   </PropertyGroup>
   <ItemGroup>

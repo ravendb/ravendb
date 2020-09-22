@@ -60,7 +60,7 @@ namespace Raven.Server.Smuggler
         {
             var hasMediaTypeHeader = MediaTypeHeaderValue.TryParse(section.ContentType, out MediaTypeHeaderValue mediaType);
             // UTF-7 is insecure and should not be honored. UTF-8 will succeed for most cases.
-            if (!hasMediaTypeHeader || Encoding.UTF7.Equals(mediaType.Encoding))
+            if (!hasMediaTypeHeader || Encoding.UTF8.Equals(mediaType.Encoding))
             {
                 return Encoding.UTF8;
             }

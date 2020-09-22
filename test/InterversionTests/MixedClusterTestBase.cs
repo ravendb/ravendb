@@ -36,9 +36,7 @@ namespace InterversionTests
 
             if (options.CustomSettings == null)
                 options.CustomSettings = new Dictionary<string, string>();
-            var key = RavenConfiguration.GetKey(x => x.Http.UseLibuv);
-            if (options.CustomSettings.ContainsKey(key) == false)
-                options.CustomSettings[key] = "true";
+
             return base.GetNewServer(options, caller);
         }
 

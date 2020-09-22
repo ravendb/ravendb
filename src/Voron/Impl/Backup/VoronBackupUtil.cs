@@ -10,11 +10,10 @@ namespace Voron.Impl.Backup
     {
         internal static void CopyHeaders(CompressionLevel compression, ZipArchive package, DataCopier copier, StorageEnvironmentOptions storageEnvironmentOptions, string basePath)
         {
+            var header = stackalloc FileHeader[1];
             var success = false;
             foreach (var headerFileName in HeaderAccessor.HeaderFileNames)
             {
-                var header = stackalloc FileHeader[1];
-
                 if (!storageEnvironmentOptions.ReadHeader(headerFileName, header))
                     continue;
 

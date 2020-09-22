@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build
+﻿FROM mcr.microsoft.com/dotnet/core/sdk:5.0 AS build
 WORKDIR /app
 
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
@@ -20,4 +20,4 @@ RUN dotnet build ./tools/TypingsGenerator/TypingsGenerator.csproj \
     && cd src/Raven.Studio \
     && npm install && npm run gulp restore && npm run gulp compile
 
-ENTRYPOINT [ "dotnet", "./src/Raven.Server/bin/Debug/netcoreapp3.1/Raven.Server.dll" ]
+ENTRYPOINT [ "dotnet", "./src/Raven.Server/bin/Debug/net5.0/Raven.Server.dll" ]
