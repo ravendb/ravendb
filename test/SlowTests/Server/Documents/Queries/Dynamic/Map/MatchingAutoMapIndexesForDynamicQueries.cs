@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using FastTests;
 using Raven.Client;
@@ -490,6 +491,70 @@ include highlight(Name, 18, 2)
                 Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
                 Assert.Equal(expectedIndexName, result.IndexName);
             }
+        }
+
+        [Fact]
+        public void AutoIndex_WhenCreateSecondIndexForTwoProperty_ShouldUseOnlyIfItIsMoreUpdatedThenTheFirstIndex()
+        {
+            Initialize();
+
+            var narrowIndexDefinition = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+            });
+            AddIndex(narrowIndexDefinition);
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
+            using (var tx = context.OpenWriteTransaction())
+            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+            {
+                ["Name"] = "Grisha",
+                ["Company"] = "Hibernating Rhinos",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Users"
+                }
+            }))
+            {
+                _documentDatabase.DocumentsStorage.Put(context, "users/1", null, doc);
+                tx.Commit();
+            }
+
+            var narrowIndex = GetIndex(narrowIndexDefinition.Name);
+            WaitForIndexMap(narrowIndex, 1);
+
+            _documentDatabase.IndexStore.StopIndexing();
+
+            var extendedIndexDefinition = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+                new AutoIndexField
+                {
+                    Name = "Company",
+                    Storage = FieldStorage.No,
+                },
+            });
+
+            AddIndex(extendedIndexDefinition);
+            
+            _documentDatabase.IndexStore.RunIdleOperations();
+            Assert.Equal(2, _documentDatabase.IndexStore.GetIndexes().Count());
+            
+            _documentDatabase.IndexStore.StartIndexing();
+            
+            var extendedIndex = GetIndex(extendedIndexDefinition.Name);
+            WaitForIndexMap(extendedIndex, 1);
+            
+            _documentDatabase.IndexStore.RunIdleOperations();
+            Assert.Equal(2, _documentDatabase.IndexStore.GetIndexes().Count());
         }
 
         [Fact]
