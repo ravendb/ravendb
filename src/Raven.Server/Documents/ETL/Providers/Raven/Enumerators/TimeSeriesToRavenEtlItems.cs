@@ -4,7 +4,7 @@ using Raven.Server.Documents.TimeSeries;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
-    public class TimeSeriesToRavenEtlItems : IExtractEnumerator<RavenEtlItem>
+    public class TimeSeriesToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly IEnumerator<TimeSeriesSegmentEntry> _timeSeries;
         private readonly string _collection;
@@ -14,8 +14,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             _timeSeries = timeSeries;
             _collection = collection;
         }
-
-        public bool Filter() => false;
 
         public bool MoveNext()
         {

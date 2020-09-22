@@ -61,7 +61,7 @@ function loadCountersOfOrdersBehavior(doc, counter)
                     AddEtl(src, dest, collection, script: script);
                 }
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 50);
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 2);
 
                 etlDone.Wait(TimeSpan.FromSeconds(60));
 

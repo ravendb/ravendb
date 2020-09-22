@@ -78,31 +78,31 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return RequestExecutor.Create(configuration.Connection.TopologyDiscoveryUrls, configuration.Connection.Database, certificate, DocumentConventions.DefaultForServer);
         }
 
-        protected override IExtractEnumerator<RavenEtlItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection)
         {
             return new DocumentsToRavenEtlItems(docs, collection);
         }
 
-        protected override IExtractEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
-            return new TombstonesToRavenEtlItems(context, tombstones, collection);
+            return new TombstonesToRavenEtlItems(context, tombstones, collection, trackAttachments);
         }
 
-        protected override IExtractEnumerator<RavenEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        protected override IEnumerator<RavenEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
         {
             return new AttachmentTombstonesToRavenEtlItems(context, tombstones, collections);
         }
 
-        protected override IExtractEnumerator<RavenEtlItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection)
         {
             return new CountersToRavenEtlItems(context, counters, collection);
         }
         
-        protected override IExtractEnumerator<RavenEtlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection)
         {
             return new TimeSeriesToRavenEtlItems(timeSeries, collection);
         }
-        protected override IExtractEnumerator<RavenEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection)
         {
             return new TimeSeriesDeletedRangeToRavenEtlItems(timeSeries, collection);
         }

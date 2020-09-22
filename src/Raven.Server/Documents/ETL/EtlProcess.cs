@@ -17,7 +17,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven;
-using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -153,17 +152,17 @@ namespace Raven.Server.Documents.ETL
 
         protected CancellationToken CancellationToken => _cts.Token;
 
-        protected abstract IExtractEnumerator<TExtracted> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertDocsEnumerator(DocumentsOperationContext context, IEnumerator<Document> docs, string collection);
 
-        protected abstract IExtractEnumerator<TExtracted> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments);
 
-        protected abstract IExtractEnumerator<TExtracted> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections);
+        protected abstract IEnumerator<TExtracted> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections);
 
-        protected abstract IExtractEnumerator<TExtracted> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertCountersEnumerator(DocumentsOperationContext context, IEnumerator<CounterGroupDetail> counters, string collection);
         
-        protected abstract IExtractEnumerator<TExtracted> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertTimeSeriesEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesSegmentEntry> timeSeries, string collection);
         
-        protected abstract IExtractEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection);
+        protected abstract IEnumerator<TExtracted> ConvertTimeSeriesDeletedRangeEnumerator(DocumentsOperationContext context, IEnumerator<TimeSeriesDeletedRangeItem> timeSeries, string collection);
 
         protected abstract bool ShouldTrackAttachmentTombstones();
         
@@ -206,7 +205,7 @@ namespace Raven.Server.Documents.ETL
 
                 var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
                 scope.EnsureDispose(tombstones);
-                merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, null));
+                merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, null, trackAttachments: ShouldTrackAttachmentTombstones()));
             }
             else
             {
@@ -218,7 +217,7 @@ namespace Raven.Server.Documents.ETL
 
                     var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, collection, fromEtag, 0, long.MaxValue).GetEnumerator();
                     scope.EnsureDispose(tombstones);
-                    merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, collection));
+                    merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, collection, trackAttachments: false));
                 }
 
                 if (ShouldTrackAttachmentTombstones())
@@ -298,6 +297,13 @@ namespace Raven.Server.Documents.ETL
 
                 foreach (var item in items)
                 {
+                    if (item.Filtered)
+                    {
+                        stats.RecordChangeVector(item.ChangeVector);
+                        stats.RecordLastFilteredOutEtag(item.Etag, item.Type);
+                        continue;
+                    }
+
                     stats.RecordLastExtractedEtag(item.Etag, item.Type);
 
                     if (AlreadyLoadedByDifferentNode(item, state))

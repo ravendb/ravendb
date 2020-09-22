@@ -1,10 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
 {
-    public class TombstonesToSqlItems : IExtractEnumerator<ToSqlItem>
+    public class TombstonesToSqlItems : IEnumerator<ToSqlItem>
     {
         private readonly IEnumerator<Tombstone> _tombstones;
         private readonly string _collection;
@@ -15,7 +14,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
             _collection = collection;
         }
 
-        public bool Filter()
+        private bool Filter()
         {
             return _tombstones.Current.Type != Tombstone.TombstoneType.Document;
         }
@@ -25,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
             if (_tombstones.MoveNext() == false)
                 return false;
 
-            Current = new ToSqlItem(_tombstones.Current, _collection);
+            Current = new ToSqlItem(_tombstones.Current, _collection) {Filtered = Filter()};
 
             return true;
         }

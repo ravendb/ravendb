@@ -5,22 +5,25 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
-    public class TombstonesToRavenEtlItems : IExtractEnumerator<RavenEtlItem>
+    public class TombstonesToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly DocumentsOperationContext _context;
         private readonly IEnumerator<Tombstone> _tombstones;
         private readonly string _collection;
+        private readonly bool _trackAttachments;
         private readonly bool _allDocs;
 
-        public TombstonesToRavenEtlItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+        public TombstonesToRavenEtlItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
             _context = context;
             _tombstones = tombstones;
             _collection = collection;
+
+            _trackAttachments = trackAttachments;
             _allDocs = _collection == null;
         }
 
-        public bool Filter()
+        private bool Filter(RavenEtlItem item)
         {
             var tombstone = _tombstones.Current;
 
@@ -35,7 +38,10 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             switch (tombstone.Type)
             {
                 case Tombstone.TombstoneType.Attachment:
-                    return AttachmentTombstonesToRavenEtlItems.FilterAttachment(_context, Current);
+                    if (_trackAttachments == false)
+                        return true;
+
+                    return AttachmentTombstonesToRavenEtlItems.FilterAttachment(_context, item);
                 case Tombstone.TombstoneType.Document:
                     return false;
                 case Tombstone.TombstoneType.Revision:
@@ -58,6 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
                 return false;
             
             Current = new RavenEtlItem(_tombstones.Current, _collection, EtlItemType.Document);
+            Current.Filtered = Filter(Current);
 
             return true;
         }

@@ -123,7 +123,7 @@ for (var i = 0; i < attachments.length; i++) {
 
                 AddEtl(src, dest, new string[0], script: null, applyToAllDocuments: true);
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs);
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses >= 2 * numberOfDocs);
 
                 Assert.True(etlDone.Wait(TimeSpan.FromMinutes(1)));
                 
@@ -149,7 +149,7 @@ for (var i = 0; i < attachments.length; i++) {
                     }
                 }
                 WaitForUserToContinueTheTest(dest);
-                var etlDone2 = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 3);
+                var etlDone2 = WaitForEtl(src, (n, s) => s.LoadSuccesses >= numberOfDocs * 4);
                 Assert.True(etlDone2.Wait(TimeSpan.FromMinutes(1)));
 
                 etlDone.Reset();

@@ -8,9 +8,10 @@ namespace Raven.Server.Documents.ETL
 {
     public abstract class ExtractedItem
     {
+        public bool Filtered;
+
         protected ExtractedItem()
         {
-            
         }
 
         protected ExtractedItem(Document document, string collection, EtlItemType type)
