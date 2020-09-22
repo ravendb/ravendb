@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Diagnostics.Tools.Dump;
-using Microsoft.Diagnostics.Tools.GCDump;
 using Raven.Debug.StackTrace;
 using Raven.Debug.Utils;
 
@@ -190,7 +189,7 @@ namespace Raven.Debug
 
                     try
                     {
-                        await GCHeapDumper.Collect(token, cmd, pid, output, timeout, verbose).ConfigureAwait(false);
+                        //await GCHeapDumper.Collect(token, cmd, pid, output, timeout, verbose).ConfigureAwait(false); // TODO [ppekrol]
                         return 0;
                     }
                     catch (Exception e)
