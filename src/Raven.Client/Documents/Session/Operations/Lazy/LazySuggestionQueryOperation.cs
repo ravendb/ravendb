@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         {
             return new GetRequest
             {
-                SkipAggressiveCache = _indexQuery.DisableCaching || _indexQuery.WaitForNonStaleResults,
+                CanCacheAggressively = _indexQuery.DisableCaching == false && _indexQuery.WaitForNonStaleResults == false,
                 Url = "/queries",
                 Method = HttpMethod.Post,
                 Query = $"?queryHash={_indexQuery.GetQueryHash(ctx)}",

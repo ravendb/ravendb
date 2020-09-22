@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 Result = new List<GetResponse>();
                 foreach (var command in _commands)
                 {
-                    if(command.SkipAggressiveCache) break;
+                    if(command.CanCacheAggressively == false) break;
                     var cacheKey = GetCacheKey(command, out string _);
                     using (var cachedItem = _cache.Get(ctx, cacheKey, out _, out var cached))
                     {

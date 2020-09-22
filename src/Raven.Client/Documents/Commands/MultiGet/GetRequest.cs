@@ -22,8 +22,6 @@ namespace Raven.Client.Documents.Commands.MultiGet
         /// </summary>
         public string Query { get; set; }
         
-        public bool SkipAggressiveCache { get; set; }
-        
         public HttpMethod Method { get; set; }
 
         /// <summary>
@@ -41,6 +39,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 return Url + "?" + Query;
             }
         }
+
+        public bool CanCacheAggressively { get; set; } = true;
 
         public IContent Content { get; set; }
 
