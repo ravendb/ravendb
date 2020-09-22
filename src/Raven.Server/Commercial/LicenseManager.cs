@@ -492,7 +492,7 @@ namespace Raven.Server.Commercial
             Func<HttpResponseMessage, Task> onFailure = null,
             Func<LeasedLicense, License> onSuccess = null)
         {
-            if (_serverStore.Configuration.Licensing.DisableAutoLicenceUpdate)
+            if (_serverStore.Configuration.Licensing.DisableAutoUpdate)
             {
                 if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                 {
@@ -1388,7 +1388,7 @@ namespace Raven.Server.Commercial
                 throw new InvalidOperationException("License doesn't exist");
             }
 
-            if (_serverStore.Configuration.Licensing.DisableLicenseSupportMode)
+            if (_serverStore.Configuration.Licensing.DisableLicenseSupportCheck)
             {
                 if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
                 {

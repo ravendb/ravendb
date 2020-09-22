@@ -50,12 +50,12 @@ namespace Raven.Server.Config.Categories
         
         [Description("EXPERT ONLY. Disable automatic updating of the license")]
         [DefaultValue(false)]
-        [ConfigurationEntry("License.DisableAutoLicenceUpdate", ConfigurationEntryScope.ServerWideOnly)]
-        public bool DisableAutoLicenceUpdate { get; set; }
+        [ConfigurationEntry("License.DisableAutoUpdate", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableAutoUpdate { get; set; }
         
         [Description("EXPERT ONLY. Disable checking the support options for the license")]
         [DefaultValue(false)]
-        [ConfigurationEntry("License.DisableLicenseSupportMode", ConfigurationEntryScope.ServerWideOnly)]
-        public bool DisableLicenseSupportMode { get; set; }
+        [ConfigurationEntry("License.DisableLicenseSupportCheck", ConfigurationEntryScope.ServerWideOnly)]
+        public bool DisableLicenseSupportCheck { get; set; }
     }
 }
