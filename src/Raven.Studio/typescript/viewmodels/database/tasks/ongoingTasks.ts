@@ -24,8 +24,6 @@ import ongoingTaskReplicationSinkListModel = require("models/database/tasks/ongo
 import accessManager = require("common/shell/accessManager");
 import generalUtils = require("common/generalUtils");
 
-type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
-
 class ongoingTasks extends viewModelBase {
     
     private clusterManager = clusterTopologyManager.default;
@@ -351,7 +349,7 @@ class ongoingTasks extends viewModelBase {
         }
 
         this.existingTaskTypes(this.tasksTypesOrderForUI.filter(x => _.includes(taskTypes, x))
-            .map(ongoingTasks.mapTaskType));
+            .map(ongoingTaskModel.mapTaskType));
         
         this.existingNodes(_.uniq(result
             .OngoingTasksList
@@ -360,22 +358,7 @@ class ongoingTasks extends viewModelBase {
             .sort());
     }
     
-    private static mapTaskType(taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): TasksNamesInUI {
-        switch (taskType) {
-            case "RavenEtl":
-                return "RavenDB ETL" as TasksNamesInUI;
-            case "Replication":
-                return "External Replication" as TasksNamesInUI;
-            case "SqlEtl":
-                return "SQL ETL" as TasksNamesInUI;
-            case "PullReplicationAsHub":
-                return "Replication Hub" as TasksNamesInUI;
-            case "PullReplicationAsSink":
-                return "Replication Sink" as TasksNamesInUI;
-            default:
-                return taskType;
-        }
-    }
+   
      
     private mergePullReplicationHubs(incomingDefinitions: Array<Raven.Client.Documents.Operations.Replication.PullReplicationDefinition>,
                                      incomingData: Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub>,
@@ -462,7 +445,7 @@ class ongoingTasks extends viewModelBase {
     confirmRemoveOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
         
-        const taskType = ongoingTasks.mapTaskType(model.taskType());
+        const taskType = ongoingTaskModel.mapTaskType(model.taskType());
         
         this.confirmationMessage("Delete Task", "You're deleting " + taskType + ": " + model.taskName(), {
             buttons: ["Cancel", "Delete"]

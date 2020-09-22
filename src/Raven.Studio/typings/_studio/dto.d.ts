@@ -732,3 +732,5 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
     Appends: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.AppendOperation[];
     Deletes: Raven.Client.Documents.Operations.TimeSeries.TimeSeriesOperation.DeleteOperation[];
 }
+
+type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
