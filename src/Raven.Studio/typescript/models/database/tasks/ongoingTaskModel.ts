@@ -21,6 +21,23 @@ abstract class ongoingTaskModel {
         return (preferredMentor && currentNode) ? preferredMentor !== currentNode : false;
     });
 
+    static mapTaskType(taskType: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType): TasksNamesInUI {
+        switch (taskType) {
+            case "RavenEtl":
+                return "RavenDB ETL" as TasksNamesInUI;
+            case "Replication":
+                return "External Replication" as TasksNamesInUI;
+            case "SqlEtl":
+                return "SQL ETL" as TasksNamesInUI;
+            case "PullReplicationAsHub":
+                return "Replication Hub" as TasksNamesInUI;
+            case "PullReplicationAsSink":
+                return "Replication Sink" as TasksNamesInUI;
+            default:
+                return taskType;
+        }
+    }
+
     protected initializeObservables() {
         
         this.badgeClass = ko.pureComputed(() => {

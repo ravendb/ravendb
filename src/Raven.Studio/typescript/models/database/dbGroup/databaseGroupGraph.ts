@@ -3,7 +3,7 @@ import d3 = require("d3");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import cola = require("cola");
 import ongoingTaskBackupListModel = require("models/database/tasks/ongoingTaskBackupListModel");
-
+import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 
 abstract class layoutable {
     x: number;
@@ -585,7 +585,7 @@ class databaseGroupGraph {
 
         selection
             .select(".task-desc")
-            .text(x => x.type);
+            .text(x => ongoingTaskModel.mapTaskType(x.type));
 
         selection
             .select(".task-name")
