@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.Enumerators
 {

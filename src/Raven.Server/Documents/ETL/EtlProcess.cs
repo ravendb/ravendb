@@ -17,6 +17,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven;
+using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -97,12 +98,6 @@ namespace Raven.Server.Documents.ETL
                 return new EtlProcessState();
             }
         }
-    }
-
-    public interface IExtractEnumerator<out T> : IEnumerator<T> where T : ExtractedItem
-    {
-        // we must filter after the extract to maintain the etag order
-        public bool Filter();
     }
 
     public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString> : EtlProcess, ILowMemoryHandler where TExtracted : ExtractedItem
@@ -206,7 +201,9 @@ namespace Raven.Server.Documents.ETL
                 scope.EnsureDispose(docs);
                 merged.AddEnumerator(ConvertDocsEnumerator(context, docs, null));
 
-                // this will get tombstones for docs, attachments & revisions
+                // when collection isn't specified this will get the tombstones for docs, attachments & revisions in a single enumerator
+                // otherwise we will handle attachment and documents in a dedicated enumerator
+
                 var tombstones = Database.DocumentsStorage.GetTombstonesFrom(context, fromEtag, 0, long.MaxValue).GetEnumerator();
                 scope.EnsureDispose(tombstones);
                 merged.AddEnumerator(ConvertTombstonesEnumerator(context, tombstones, null));
