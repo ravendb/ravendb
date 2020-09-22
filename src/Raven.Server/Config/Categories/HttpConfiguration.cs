@@ -65,11 +65,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Http.StaticFilesResponseCompressionLevel", ConfigurationEntryScope.ServerWideOnly)]
         public CompressionLevel StaticFilesResponseCompressionLevel { get; set; }
 
-        [Description("EXPERT. Switches Kestrel to use Libuv")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Http.UseLibuv", ConfigurationEntryScope.ServerWideOnly)]
-        public bool UseLibuv { get; set; }
-
         [Description("Sets HTTP protocols that should be supported by the server")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [ConfigurationEntry("Http.Protocols", ConfigurationEntryScope.ServerWideOnly)]

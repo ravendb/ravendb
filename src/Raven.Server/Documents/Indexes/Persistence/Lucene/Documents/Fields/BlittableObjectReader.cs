@@ -68,7 +68,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             {
                 read = _reader.InnerReader.ReadBlock(_readBuffer, 0, _readBuffer.Length);
                 _sb.Append(_readBuffer, 0, read);
-
             } while (read == _readBuffer.Length);
 
             return _sb.ToString();
@@ -183,9 +182,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
                 return InnerReader.ReadToEndAsync();
             }
 
+#pragma warning disable CS0672 // Member overrides obsolete member
+
             public override object InitializeLifetimeService()
+#pragma warning restore CS0672 // Member overrides obsolete member
             {
+#pragma warning disable SYSLIB0010 // Type or member is obsolete
                 return InnerReader.InitializeLifetimeService();
+#pragma warning restore SYSLIB0010 // Type or member is obsolete
             }
 
             public override bool Equals(object obj)

@@ -68,8 +68,8 @@ function less() {
 
 function z_generate_typings(cb) {
     const possibleTypingsGenPaths = [
-        '../../tools/TypingsGenerator/bin/Debug/netcoreapp3.1/TypingsGenerator.dll',
-        '../../tools/TypingsGenerator/bin/Release/netcoreapp3.1/TypingsGenerator.dll' ];
+        '../../tools/TypingsGenerator/bin/Debug/net5.0/TypingsGenerator.dll',
+        '../../tools/TypingsGenerator/bin/Release/net5.0/TypingsGenerator.dll' ];
 
     const dllPath = fsUtils.getLastRecentlyModifiedFile(possibleTypingsGenPaths);
     if (!dllPath) {

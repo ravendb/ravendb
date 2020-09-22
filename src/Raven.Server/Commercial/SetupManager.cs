@@ -1921,9 +1921,6 @@ namespace Raven.Server.Commercial
                         .ConfigureServices(collection => { collection.AddSingleton(typeof(IStartup), responder); })
                         .UseShutdownTimeout(TimeSpan.FromMilliseconds(150));
 
-                    if (configuration.Http.UseLibuv)
-                        webHostBuilder = webHostBuilder.UseLibuv();
-
                     webHost = webHostBuilder.Build();
 
                     await webHost.StartAsync(token);

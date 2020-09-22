@@ -229,9 +229,6 @@ namespace Raven.Server
                         services.Configure<FormOptions>(options => { options.MultipartBodyLengthLimit = long.MaxValue; });
                     });
 
-                if (Configuration.Http.UseLibuv)
-                    webHostBuilder = webHostBuilder.UseLibuv();
-
                 _webHost = webHostBuilder.Build();
             }
             catch (Exception e)
@@ -263,7 +260,7 @@ namespace Raven.Server
                             // of firewall, ssl issues, etc.
                             .Wait(250);
                     }
-                    catch (Exception)
+                    catch
                     {
                         // the .Wait() can throw as well, so we'll ignore any
                         // errors here, it all goes to the log anyway
@@ -412,7 +409,7 @@ namespace Raven.Server
                     // of firewall, ssl issues, etc.
                     .Wait(250);
             }
-            catch (Exception)
+            catch
             {
                 // the .Wait() can throw as well, so we'll ignore any
                 // errors here, it all goes to the log anyway
@@ -784,9 +781,6 @@ namespace Raven.Server
                     .UseUrls(serverUrlsToRedirect)
                     .UseStartup<RedirectServerStartup>()
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1));
-
-                if (Configuration.Http.UseLibuv)
-                    webHostBuilder = webHostBuilder.UseLibuv();
 
                 _redirectingWebHost = webHostBuilder.Build();
 
@@ -2630,11 +2624,11 @@ namespace Raven.Server
                 return _forTestingPurposes;
 
             return _forTestingPurposes = new TestingStuff();
-    }
+        }
 
         internal class TestingStuff
         {
             internal bool ThrowExceptionInListenToNewTcpConnection = false;
-}
+        }
     }
 }

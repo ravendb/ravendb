@@ -2,7 +2,8 @@
   <PropertyGroup>
     <Description>Voron - Low level storage engine</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
+    <RuntimeFrameworkVersion></RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron</AssemblyName>
     <PackageId>Voron</PackageId>

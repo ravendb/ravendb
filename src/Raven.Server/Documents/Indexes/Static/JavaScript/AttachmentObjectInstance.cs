@@ -44,8 +44,10 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     encoding = Encoding.Unicode;
                 else if (string.Equals(encodingAsString, nameof(Encoding.UTF32), StringComparison.OrdinalIgnoreCase))
                     encoding = Encoding.UTF32;
+#pragma warning disable SYSLIB0001 // Type or member is obsolete
                 else if (string.Equals(encodingAsString, nameof(Encoding.UTF7), StringComparison.OrdinalIgnoreCase))
                     encoding = Encoding.UTF7;
+#pragma warning restore SYSLIB0001 // Type or member is obsolete
                 else
                     throw new InvalidOperationException($"Encoding parameter must be of type string and convertible to one of the .NET supported encodings, but was '{encodingAsString}'.");
             }

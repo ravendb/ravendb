@@ -22,7 +22,7 @@ namespace Raven.Server.Utils
         }
 
         private static readonly ObjectPool<HashSet<object>,VisitedResetBehavior> VisitedHashsets = 
-            new ObjectPool<HashSet<object>, VisitedResetBehavior>(() => new HashSet<object>(ReferenceEqualityComparer.Default));
+            new ObjectPool<HashSet<object>, VisitedResetBehavior>(() => new HashSet<object>(Sparrow.Utils.ReferenceEqualityComparer.Default));
 
         //detect if an object is a blittable or has any blittable objects somewhere in its object hierarchy
         public static bool ContainsBlittableObject(this object obj)

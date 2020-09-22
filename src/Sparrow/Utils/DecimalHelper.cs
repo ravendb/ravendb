@@ -23,7 +23,7 @@ namespace Sparrow.Utils
             var value = Expression.Parameter(typeof(decimal).MakeByRefType(), "value");
             
             var digits = Expression.RightShift(
-                Expression.And(Expression.Field(value, "flags"), Expression.Constant(~Int32.MinValue, typeof(int))),
+                Expression.And(Expression.Field(value, "_flags"), Expression.Constant(~Int32.MinValue, typeof(int))),
                 Expression.Constant(16, typeof(int)));
             
             var hasDecimal = Expression.NotEqual(digits, Expression.Constant(0));

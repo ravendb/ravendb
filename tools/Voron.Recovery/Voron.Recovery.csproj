@@ -2,8 +2,8 @@
   <PropertyGroup>
     <Description>Voron Recovery Tool</Description>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RuntimeFrameworkVersion>3.1.8</RuntimeFrameworkVersion>
+    <TargetFramework>net5.0</TargetFramework>
+    <RuntimeFrameworkVersion></RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron.Recovery</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -16,9 +16,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
-    <PackageReference Include="System.Collections.Immutable" Version="1.7.1" />
-    <PackageReference Include="System.Reflection.Metadata" Version="1.8.1" />
-    <PackageReference Include="System.Security.Cryptography.Cng" Version="4.7.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="5.0.0-rc.1.20451.14" />
+    <PackageReference Include="System.Reflection.Metadata" Version="5.0.0-rc.1.20451.14" />
+    <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0-rc.1.20451.14" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
   </ItemGroup>

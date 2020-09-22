@@ -24,7 +24,7 @@ namespace EmbeddedTests.TestDriver
         {
             var prefix = PosixHelper.RunningOnPosix ? "file://" : "file:///";
 
-            var testAssemblyLocation = typeof(RavenTestDriver).Assembly.CodeBase;
+            var testAssemblyLocation = typeof(RavenTestDriver).Assembly.Location;
             if (testAssemblyLocation.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 testAssemblyLocation = testAssemblyLocation.Substring(prefix.Length);
 
@@ -33,13 +33,13 @@ namespace EmbeddedTests.TestDriver
                 throw new InvalidOperationException($"Could not find '{testDllFile.FullName}'.");
 
 #if DEBUG
-            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/netcoreapp3.1";
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Debug/net5.0";
             if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                serverDirectory = @"../../../../../src/Raven.Server/bin/Debug/netcoreapp3.1";
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Debug/net5.0";
 #else
-            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Release/netcoreapp3.1";
+            var serverDirectory = @"../../../../../src/Raven.Server/bin/x64/Release/net5.0";
             if (Directory.Exists(serverDirectory) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                serverDirectory = @"../../../../../src/Raven.Server/bin/Release/netcoreapp3.1";
+                serverDirectory = @"../../../../../src/Raven.Server/bin/Release/net5.0";
 #endif
 
             var path = Path.Combine(testDllFile.DirectoryName, serverDirectory);
