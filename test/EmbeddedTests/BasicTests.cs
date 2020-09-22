@@ -173,8 +173,6 @@ namespace EmbeddedTests
             return (serverDirectory, dataDirectory);
         }
 
-
-
         private class Person
         {
             public string Id { get; set; }

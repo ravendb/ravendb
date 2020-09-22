@@ -24,7 +24,7 @@ namespace EmbeddedTests.TestDriver
         {
             var prefix = PosixHelper.RunningOnPosix ? "file://" : "file:///";
 
-            var testAssemblyLocation = typeof(RavenTestDriver).Assembly.Location;
+            var testAssemblyLocation = typeof(RavenTestDriver).Assembly.CodeBase;
             if (testAssemblyLocation.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 testAssemblyLocation = testAssemblyLocation.Substring(prefix.Length);
 
