@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
         {
             var tombstone = _tombstones.Current;
             if (tombstone.Type != Tombstone.TombstoneType.Attachment)
-                throw new InvalidOperationException();
+                TombstonesToRavenEtlItems.ThrowInvalidTombstoneType(Tombstone.TombstoneType.Attachment, tombstone.Type);
 
             var documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(_context, tombstone.LowerId).DocId;
             var document = _context.DocumentDatabase.DocumentsStorage.Get(_context, documentId);

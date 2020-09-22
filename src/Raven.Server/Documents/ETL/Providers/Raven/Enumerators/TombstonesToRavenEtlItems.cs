@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             if (_allDocs == false)
             {
                 if (tombstone.Type != Tombstone.TombstoneType.Document)
-                    throw new InvalidOperationException();
+                    ThrowInvalidTombstoneType(Tombstone.TombstoneType.Document, tombstone.Type);
 
                 return false;
             }
@@ -39,8 +39,13 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
                     return true;
 
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(tombstone.Type),$"Unknown type '{tombstone.Type}'");
             }
+        }
+
+        public static void ThrowInvalidTombstoneType(Tombstone.TombstoneType expectedType, Tombstone.TombstoneType actualType)
+        {
+            throw new InvalidOperationException($"When collection is specified, tombstone must be of type '{expectedType}', but got '{actualType}'");
         }
 
         public bool MoveNext()
