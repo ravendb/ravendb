@@ -58,11 +58,10 @@ namespace Raven.Server.Config
                 if (value == null)
                     continue;
 
-                var hasAccess = authenticationStatus == RavenServer.AuthenticationStatus.ClusterAdmin;
                 ServerValues[key] = new ConfigurationEntrySingleValue
                 {
-                    Value = hasAccess && Metadata.IsSecured == false ? value : null,
-                    HasAccess = hasAccess,
+                    Value = Metadata.IsSecured == false ? value : null,
+                    HasAccess = authenticationStatus == RavenServer.AuthenticationStatus.ClusterAdmin,
                     HasValue = true,
                 };
             }
