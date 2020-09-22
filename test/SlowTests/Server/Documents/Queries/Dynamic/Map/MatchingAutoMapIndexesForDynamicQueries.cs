@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -10,6 +12,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -490,6 +493,79 @@ include highlight(Name, 18, 2)
                 Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
                 Assert.Equal(expectedIndexName, result.IndexName);
             }
+        }
+
+        [Fact]
+        public async Task AutoIndex_WhenCreateSecondIndexForTwoProperty_ShouldUseOnlyIfItIsMoreUpdatedThenTheFirstIndex()
+        {
+            Initialize();
+            var narrowIndexDefinition = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+            });
+            AddIndex(narrowIndexDefinition);
+
+            using (var context = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
+            using (var tx = context.OpenWriteTransaction())
+            using (var doc = CreateDocument(context, "users/1", new DynamicJsonValue
+            {
+                ["Name"] = "Grisha",
+                ["Company"] = "Hibernating Rhinos",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Users"
+                }
+            }))
+            {
+                _documentDatabase.DocumentsStorage.Put(context, "users/1", null, doc);
+                tx.Commit();
+            }
+
+            var narrowIndex = GetIndex(narrowIndexDefinition.Name);
+            WaitForIndexMap(narrowIndex, 1);
+
+            _documentDatabase.IndexStore.StopIndexing();
+
+            var extendedIndexDefinition = new AutoMapIndexDefinition("Users", new[]
+            {
+                new AutoIndexField
+                {
+                    Name = "Name",
+                    Storage = FieldStorage.No,
+                },
+                new AutoIndexField
+                {
+                    Name = "Company",
+                    Storage = FieldStorage.No,
+                },
+            });
+
+            AddIndex(extendedIndexDefinition);
+            
+            _documentDatabase.IndexStore.RunIdleOperations();
+            Assert.Equal(2, _documentDatabase.IndexStore.GetIndexes().Count());
+            
+            _documentDatabase.IndexStore.StartIndexing();
+            
+            var extendedIndex = GetIndex(extendedIndexDefinition.Name);
+            WaitForIndexMap(extendedIndex, 1);
+
+            {
+                //Database records needs to change between `RunIdleOperations` calls to apply auto indexes modifications
+                var addDatabaseCommand = new AddDatabaseCommand(Guid.NewGuid().ToString())
+                {
+                    Record = _documentDatabase.ReadDatabaseRecord(), 
+                    Name = _documentDatabase.Name
+                };
+                await _documentDatabase.ServerStore.SendToLeaderAsync(addDatabaseCommand);
+            }
+            
+            _documentDatabase.IndexStore.RunIdleOperations();
+            Assert.Equal(1, _documentDatabase.IndexStore.GetIndexes().Count());
         }
 
         [Fact]
