@@ -397,8 +397,7 @@ namespace Raven.Server.Documents.ETL
 
                     stats.RecordLastLoadedEtag(stats.LastTransformedEtags.Values.Max());
 
-                    Statistics.LoadSuccess(stats.NumberOfTransformedItems.Sum(x => x.Value) + 
-                                           stats.NumberOfTransformedTombstones.Sum(x => x.Value));
+                    Statistics.LoadSuccess(count);
 
                     stats.RecordLoadSuccess(count);
 

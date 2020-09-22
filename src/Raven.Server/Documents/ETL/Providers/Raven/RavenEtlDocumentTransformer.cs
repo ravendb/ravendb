@@ -359,20 +359,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 var collection = item.Collection ?? item.CollectionFromMetadata;
                 var documentId = item.DocumentId;
 
-                if (item.IsAttachmentTombstone)
-                {
-                    documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(Context, item.AttachmentTombstoneId).DocId;
-
-                    Debug.Assert(collection == null);
-
-                    var document = Database.DocumentsStorage.Get(Context, documentId);
-
-                    if (document == null)
-                        return true; // document was deleted, no need to send DELETE of attachment tombstone
-
-                    collection = Database.DocumentsStorage.ExtractCollectionName(Context, document.Data).Name;
-                }
-
                 Debug.Assert(collection != null);
 
                 if (_script.TryGetDeleteDocumentBehaviorFunctionFor(collection, out var function) ||
