@@ -1604,9 +1604,13 @@ namespace Raven.Server.Documents.Indexes
 
                     if (result.MatchType == DynamicQueryMatchType.Complete || result.MatchType == DynamicQueryMatchType.CompleteButIdle)
                     {
-                        indexesToRemove.Add(index.Name);
-                        indexesToExtend.Remove(index.Name);
-                        break;
+                        var lastMappedEtagFor = index.GetLastMappedEtagFor(collection);
+                        if(result.LastMappedEtag >= lastMappedEtagFor)
+                        {
+                            indexesToRemove.Add(index.Name);
+                            indexesToExtend.Remove(index.Name);
+                            break;
+                        }
                     }
 
                     if (result.MatchType == DynamicQueryMatchType.Partial)
