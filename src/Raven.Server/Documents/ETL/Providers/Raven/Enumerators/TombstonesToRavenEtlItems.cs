@@ -1,17 +1,20 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
 {
     public class TombstonesToRavenEtlItems : IExtractEnumerator<RavenEtlItem>
     {
+        private readonly DocumentsOperationContext _context;
         private readonly IEnumerator<Tombstone> _tombstones;
         private readonly string _collection;
         private readonly bool _allDocs;
 
-        public TombstonesToRavenEtlItems(IEnumerator<Tombstone> tombstones, string collection)
+        public TombstonesToRavenEtlItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
         {
+            _context = context;
             _tombstones = tombstones;
             _collection = collection;
             _allDocs = _collection == null;
@@ -32,6 +35,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             switch (tombstone.Type)
             {
                 case Tombstone.TombstoneType.Attachment:
+                    return AttachmentTombstonesToRavenEtlItems.FilterAttachment(_context, Current);
                 case Tombstone.TombstoneType.Document:
                     return false;
                 case Tombstone.TombstoneType.Revision:

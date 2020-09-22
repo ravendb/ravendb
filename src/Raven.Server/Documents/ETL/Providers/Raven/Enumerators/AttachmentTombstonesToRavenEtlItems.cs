@@ -24,16 +24,22 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             if (tombstone.Type != Tombstone.TombstoneType.Attachment)
                 TombstonesToRavenEtlItems.ThrowInvalidTombstoneType(Tombstone.TombstoneType.Attachment, tombstone.Type);
 
-            var documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(_context, tombstone.LowerId).DocId;
-            var document = _context.DocumentDatabase.DocumentsStorage.Get(_context, documentId);
-            if (document == null)
+            if (FilterAttachment(_context, Current))
                 return true;
 
-            // document could be deleted, no need to send DELETE of tombstone, we can filter it out
-            var collection = _context.DocumentDatabase.DocumentsStorage.ExtractCollectionName(_context, document.Data).Name;
-            Current.Collection = collection;
+            return _collections.Contains(Current.Collection) == false;
+        }
 
-            return _collections.Contains(collection) == false;
+        public static bool FilterAttachment(DocumentsOperationContext context, RavenEtlItem item)
+        {
+            var documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(context, item.AttachmentTombstoneId).DocId;
+            var document = context.DocumentDatabase.DocumentsStorage.Get(context, documentId);
+            if (document == null)
+                return true; // document could be deleted, no need to send DELETE of tombstone, we can filter it out
+            
+            var collection = context.DocumentDatabase.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
+            item.Collection = collection;
+            return false;
         }
 
         public bool MoveNext()
