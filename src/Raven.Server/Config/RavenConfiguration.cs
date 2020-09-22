@@ -10,14 +10,18 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using Microsoft.Extensions.Configuration;
+
+#if !RVN
 using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.Configuration.Memory;
 using Raven.Client.Documents.Conventions;
+#endif
+
+using Raven.Client.Extensions;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Voron.Util.Settings;
@@ -26,6 +30,7 @@ namespace Raven.Server.Config
 {
     public class RavenConfiguration
     {
+#if !RVN
         internal static readonly RavenConfiguration Default = new RavenConfiguration("__default", ResourceType.Server);
 
         private readonly string _customConfigPath;
@@ -33,9 +38,11 @@ namespace Raven.Server.Config
         private readonly IConfigurationBuilder _configBuilder;
 
         public bool Initialized { get; private set; }
+#endif
 
         public CoreConfiguration Core { get; }
 
+#if !RVN
         public HttpConfiguration Http { get; }
 
         public EtlConfiguration Etl { get; }
@@ -253,6 +260,7 @@ namespace Raven.Server.Config
         {
             return AllConfigurationEntries.Value.Any(x => x.IsMatch(key));
         }
+#endif
 
         public static string GetKey<T>(Expression<Func<RavenConfiguration, T>> getKey)
         {
@@ -274,6 +282,7 @@ namespace Raven.Server.Config
             return prop.GetCustomAttributes<DefaultValueAttribute>().FirstOrDefault()?.Value;
         }
 
+#if !RVN
         public static object GetValue<T>(Expression<Func<RavenConfiguration, T>> getKey, RavenConfiguration serverConfiguration, Dictionary<string, string> settings)
         {
             TimeUnitAttribute timeUnit = null;
@@ -507,12 +516,12 @@ namespace Raven.Server.Config
         public bool DoesKeyExistInSettings(string keyName, bool serverWide = false)
         {
             IConfiguration cfg = serverWide ? ServerWideSettings : Settings;
-            
+
             if (cfg == null || keyName == null)
                 return false;
 
             return cfg.AsEnumerable().Any(x => string.Equals(x.Key, keyName, StringComparison.OrdinalIgnoreCase));
         }
-
+#endif
     }
 }

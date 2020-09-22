@@ -177,6 +177,7 @@ namespace Raven.Server.Config.Categories
 
         public bool AuthenticationEnabled => IsCertificateConfigured;
 
+#if !RVN
         internal static void Validate(RavenConfiguration configuration)
         {
             foreach (var sUrl in configuration.Core.ServerUrls)
@@ -238,6 +239,7 @@ namespace Raven.Server.Config.Categories
 
             return addresses;
         }
+#endif
     }
 
     [Flags]

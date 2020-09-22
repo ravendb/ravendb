@@ -14,7 +14,9 @@ namespace Raven.Server.Utils
 {
     public class Pipes
     {
+#if !RVN
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<Pipes>("Server");
+#endif
 
         public const string AdminConsolePipePrefix = "raven-control-pipe-";
 
@@ -22,6 +24,7 @@ namespace Raven.Server.Utils
 
         private static readonly string PipesDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
 
+#if !RVN
         public static NamedPipeServerStream OpenAdminConsolePipe()
         {
             var pipeName = GetPipeName(AdminConsolePipePrefix);
@@ -38,6 +41,7 @@ namespace Raven.Server.Utils
                 return GetPipeName(namePrefix, currentProcess.Id);
             }
         }
+#endif
 
         public static string GetPipeName(string namePrefix, int pid)
         {
@@ -48,6 +52,7 @@ namespace Raven.Server.Utils
             return name;
         }
 
+#if !RVN
         public static void CleanupOldPipeFiles()
         {
             if (PlatformDetails.RunningOnPosix)
@@ -61,7 +66,7 @@ namespace Raven.Server.Utils
             var pipe = adminConsolePipe;
 
             // We start the server pipe only when running as a server
-            // so we won't generate one per server in our test environment 
+            // so we won't generate one per server in our test environment
             if (pipe == null)
                 return;
 
@@ -198,5 +203,6 @@ namespace Raven.Server.Utils
                     Logger.Info("Error connecting to log stream pipe", e);
             }
         }
+#endif
     }
 }

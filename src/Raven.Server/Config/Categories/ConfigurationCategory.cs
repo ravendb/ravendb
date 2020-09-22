@@ -6,9 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
@@ -26,7 +24,7 @@ namespace Raven.Server.Config.Categories
 
         public class SettingValue
         {
-            public SettingValue(string current, bool keyExistsInDatabaseRecord, string server,  bool keyExistsInServerSettings)
+            public SettingValue(string current, bool keyExistsInDatabaseRecord, string server, bool keyExistsInServerSettings)
             {
                 CurrentValue = current;
                 ServerValue = server;
@@ -65,7 +63,7 @@ namespace Raven.Server.Config.Categories
             // then the key in the IConfiguration object is in the following format: "Security.Certificate:Path"
             // as opposed to: "Security.Certificate.Path" when it is Not nested.
             // Need to look for these variations.
-            
+
             var sb = new StringBuilder(keyName);
 
             var lastPeriod = keyName.LastIndexOf('.');
@@ -83,7 +81,7 @@ namespace Raven.Server.Config.Categories
 
             return null;
         }
-        
+
         public virtual void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             string GetConfigurationValue(IConfigurationRoot cfg, HashSet<string> cfgNames, string keyName, out bool keyExistsInConfiguration)
@@ -136,9 +134,9 @@ namespace Raven.Server.Config.Categories
                     }
 
                     previousAttribute = entry;
-                    
+
                     var settingValue = getSetting(entry.Key);
-                    
+
                     if (type != ResourceType.Server && entry.Scope == ConfigurationEntryScope.ServerWideOnly && settingValue.CurrentValue != null)
                         throw new InvalidOperationException($"Configuration '{entry.Key}' can only be set at server level.");
 
@@ -388,7 +386,7 @@ namespace Raven.Server.Config.Categories
                 {
                     timeUnit = property.GetCustomAttribute<TimeUnitAttribute>();
                     Debug.Assert(timeUnit != null);
-        }
+                }
                 else if (property.PropertyType == typeof(Size) ||
                          property.PropertyType == typeof(Size?))
                 {
@@ -446,6 +444,6 @@ namespace Raven.Server.Config.Categories
             public TimeUnitAttribute TimeUnitAttribute;
 
             public SizeUnitAttribute SizeUnitAttribute;
+        }
     }
-}
 }

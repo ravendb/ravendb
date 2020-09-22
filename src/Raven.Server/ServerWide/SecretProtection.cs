@@ -3,7 +3,6 @@ using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Reflection.Emit;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -22,7 +21,6 @@ using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Utils;
 using Sparrow.Server;
 using Sparrow.Server.Platform.Posix;
 
@@ -31,7 +29,7 @@ namespace Raven.Server.ServerWide
     public unsafe class SecretProtection
     {
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Secrets!");
-        
+
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<SecretProtection>("Server");
         private readonly Lazy<byte[]> _serverMasterKey;
         private readonly SecurityConfiguration _config;
@@ -141,10 +139,10 @@ namespace Raven.Server.ServerWide
                                     var err = Marshal.GetLastWin32Error();
                                     Syscall.ThrowLastError(err, $"Failed to write {buffer.Length} bytes into {filepath}, only wrote {len}");
                                 }
-                               
+
                                 len -= (int)writeAmount;
                             }
-                            
+
                             if (Syscall.FSync(fd) != 0)
                             {
                                 var err = Marshal.GetLastWin32Error();
@@ -187,9 +185,9 @@ namespace Raven.Server.ServerWide
 
                     //DPAPI doesn't do AEAD, so we encrypt the data as usual, then encrypt the temp key we use with DPAPI
                     var protectedKey = ProtectedData.Protect(tempKey, dpapiEntropy, DataProtectionScope.CurrentUser);
-                    
+
                     Sodium.sodium_memzero(pTempKey, (UIntPtr)tempKey.Length);
-                    
+
                     var ms = new MemoryStream();
                     var bw = new BinaryWriter(ms);
                     bw.Write(protectedKey.Length);
@@ -208,7 +206,7 @@ namespace Raven.Server.ServerWide
 
         private static byte[] EncryptProtectedData(byte[] secret, byte[] key)
         {
-            var protectedData = new byte[secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes() 
+            var protectedData = new byte[secret.Length + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_abytes()
                  + (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes()];
 
             fixed (byte* pContext = EncryptionContext)
@@ -220,9 +218,9 @@ namespace Raven.Server.ServerWide
                 Sodium.randombytes_buf(pEntropy, Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
 
                 var actualKey = stackalloc byte[key.Length];
-                if (Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection, pContext, pKey) != 0)
                     throw new InvalidOperationException("Could not derive key for secret encryption");
-                
+
                 ulong cLen;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
                     pProtectedData,
@@ -253,20 +251,20 @@ namespace Raven.Server.ServerWide
                 var key = br.ReadBytes(keyLen);
                 if (key.Length != keyLen)
                     throw new InvalidOperationException("Wrong size for key buffer: " + key.Length);
-                
+
                 var entrophyLen = br.ReadInt32();
                 if (entrophyLen != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
                     throw new InvalidOperationException("Wrong size for nonce len: " + entrophyLen);
-              
+
                 var entropy = br.ReadBytes(entrophyLen);
                 if (entropy.Length != (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes())
-                    throw new InvalidOperationException("Wrong size for nonce buffer: " + entropy.Length );
-              
+                    throw new InvalidOperationException("Wrong size for nonce buffer: " + entropy.Length);
+
                 var dataLen = br.ReadInt32();
                 var data = br.ReadBytes(dataLen);
                 if (data.Length != dataLen)
-                    throw new InvalidOperationException("Wrong size for data buffer: " + entropy.Length  + " but expected " + dataLen);
-              
+                    throw new InvalidOperationException("Wrong size for data buffer: " + entropy.Length + " but expected " + dataLen);
+
                 var plainKey = ProtectedData.Unprotect(key, entropy, DataProtectionScope.CurrentUser);
                 try
                 {
@@ -292,13 +290,13 @@ namespace Raven.Server.ServerWide
             fixed (byte* pUnprotectedData = unprotectedData)
             fixed (byte* pKey = key)
             {
-                var actualSecretLen = secret.Length -(int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
+                var actualSecretLen = secret.Length - (int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes();
                 var pEntropy = pSecret + actualSecretLen;
-                
+
                 var actualKey = stackalloc byte[key.Length];
-                if (Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection,pContext, pKey) != 0)
+                if (Sodium.crypto_kdf_derive_from_key(actualKey, (UIntPtr)key.Length, (ulong)SodiumSubKeyId.SecretProtection, pContext, pKey) != 0)
                     throw new InvalidOperationException("Could not derive key for secret decryption");
-            
+
                 ulong mLen;
                 var rc = Sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
                     pUnprotectedData,
@@ -321,6 +319,7 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
+#if !RVN
         public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
             Process process;
@@ -356,12 +355,12 @@ namespace Raven.Server.ServerWide
                 {
                     return readErrors.Result;
                 }
-                catch 
+                catch
                 {
                     return "Unable to get stderr";
                 }
             }
-            
+
             if (process.WaitForExit((int)_config.CertificateExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
             {
                 process.Kill();
@@ -377,7 +376,6 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException(
                     $"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}",
                     e);
-
             }
 
             if (Logger.IsOperationsEnabled)
@@ -400,17 +398,16 @@ namespace Raven.Server.ServerWide
             try
             {
                 // may need to send this over the cluster, so use exportable here
-                loadedCertificate = new X509Certificate2(rawData, (string)null,X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+                loadedCertificate = new X509Certificate2(rawData, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
                 ValidateExpiration(executable, loadedCertificate, serverStore);
-                ValidatePrivateKey(executable, null, rawData, out  privateKey);
+                ValidatePrivateKey(executable, null, rawData, out privateKey);
                 ValidateKeyUsages(executable, loadedCertificate);
-
             }
             catch (Exception e)
-            {         
+            {
                 throw new InvalidOperationException($"Got invalid certificate via {executable} {args}", e);
             }
-        
+
             return new RavenServer.CertificateHolder
             {
                 Certificate = loadedCertificate,
@@ -490,6 +487,7 @@ namespace Raven.Server.ServerWide
                     $"Unable to execute {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
             }
         }
+#endif
 
         private byte[] LoadMasterKeyWithExecutable()
         {
@@ -524,18 +522,18 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                   return readErrors.Result;
+                    return readErrors.Result;
                 }
                 catch
                 {
                     return "Unable to get stdout";
                 }
             }
-            
+
             if (process.WaitForExit((int)_config.MasterKeyExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
             {
                 process.Kill();
-               
+
                 throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
             }
             try
@@ -563,7 +561,7 @@ namespace Raven.Server.ServerWide
             var rawData = ms.ToArray();
 
             var expectedKeySize = (int)Sodium.crypto_aead_xchacha20poly1305_ietf_keybytes();
-            if (rawData.Length  != expectedKeySize)
+            if (rawData.Length != expectedKeySize)
             {
                 throw new InvalidOperationException(
                     $"Got wrong master key after executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the size of the key must be {expectedKeySize * 8} bits, but was {rawData.Length * 8} bits.");
@@ -572,6 +570,7 @@ namespace Raven.Server.ServerWide
             return rawData;
         }
 
+#if !RVN
         public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
         {
             ValidateExpiration(source, loadedCertificate, serverStore);
@@ -579,9 +578,8 @@ namespace Raven.Server.ServerWide
             ValidatePrivateKey(source, password, rawBytes, out var privateKey);
 
             ValidateKeyUsages(source, loadedCertificate);
-            
-            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
 
+            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password);
 
             return new RavenServer.CertificateHolder
             {
@@ -593,10 +591,10 @@ namespace Raven.Server.ServerWide
 
         public static void AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(X509Certificate2 loadedCertificate, byte[] rawBytes, string password)
         {
-            // we have to add all the certs in the pfx file provides to the CA store for the current user 
+            // we have to add all the certs in the pfx file provides to the CA store for the current user
             // to avoid a remote call on any incoming connection by the SslStream infrastructure
             // see: https://github.com/dotnet/corefx/issues/26061
-            
+
             var collection = new X509Certificate2Collection();
 
             if (string.IsNullOrEmpty(password))
@@ -605,7 +603,7 @@ namespace Raven.Server.ServerWide
                 collection.Import(rawBytes, password, X509KeyStorageFlags.MachineKeySet);
 
             var storeName = PlatformDetails.RunningOnMacOsx ? StoreName.My : StoreName.CertificateAuthority;
-            using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser, 
+            using (var userIntermediateStore = new X509Store(storeName, StoreLocation.CurrentUser,
                 System.Security.Cryptography.X509Certificates.OpenFlags.ReadWrite))
             {
                 foreach (var cert in collection)
@@ -617,25 +615,25 @@ namespace Raven.Server.ServerWide
                     if (results.Count == 0)
                         userIntermediateStore.Add(cert);
                 }
-                
+
                 // We had a problem where we didn't cleanup the user store in Linux (~/.dotnet/corefx/cryptography/x509stores/ca)
                 // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
                 // trying to match one of these certs to validate the chain.
 
                 if (loadedCertificate.SubjectName.Name == null)
                     return;
-                
-                var cnValue = loadedCertificate.SubjectName.Name.StartsWith("CN=", StringComparison.OrdinalIgnoreCase) 
-                    ? loadedCertificate.SubjectName.Name.Substring(3) 
+
+                var cnValue = loadedCertificate.SubjectName.Name.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)
+                    ? loadedCertificate.SubjectName.Name.Substring(3)
                     : loadedCertificate.SubjectName.Name;
-                
+
                 var utcNow = DateTime.UtcNow;
                 var existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, cnValue, false);
                 foreach (var c in existingCerts)
                 {
                     if (c.NotAfter.ToUniversalTime() > utcNow && c.NotBefore.ToUniversalTime() < utcNow)
                         continue;
-                    
+
                     // Remove all expired certs which have the same subject name as our own
                     var chain = new X509Chain();
                     chain.Build(c);
@@ -687,6 +685,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Could not load certificate file {path}", e);
             }
         }
+#endif
 
         public byte[] LoadMasterKeyFromPath()
         {
@@ -705,7 +704,7 @@ namespace Raven.Server.ServerWide
                     File.WriteAllBytes(_config.MasterKeyPath, key);
                 }
 
-                if (key.Length  != expectedKeySize )
+                if (key.Length != expectedKeySize)
                 {
                     throw new InvalidOperationException(
                         $"The size of the key must be {expectedKeySize * 8} bits, but was {key.Length * 8} bits.");
@@ -720,12 +719,12 @@ namespace Raven.Server.ServerWide
             }
         }
 
+#if !RVN
         private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! Thumbprint: {loadedCertificate.Thumbprint}, Expired on: {loadedCertificate.NotAfter}");
-                
 
             if (serverStore.LicenseManager.LicenseStatus.Type == LicenseType.Developer)
             {
@@ -858,7 +857,6 @@ namespace Raven.Server.ServerWide
 
                 IList certBags = new ArrayList();
 
-
                 if (info.ContentType.Equals(PkcsObjectIdentifiers.Data))
                 {
                     byte[] octs = ((Asn1OctetString)info.Content).GetOctets();
@@ -914,7 +912,6 @@ namespace Raven.Server.ServerWide
                         }
                     }
                 }
-
 
                 foreach (SafeBag b in certBags)
                 {
@@ -1271,5 +1268,7 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
+
+#endif
     }
 }

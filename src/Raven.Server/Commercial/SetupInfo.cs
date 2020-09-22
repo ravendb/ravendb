@@ -54,8 +54,8 @@ namespace Raven.Server.Commercial
             public int Port { get; set; }
             public int TcpPort { get; set; }
             public string ExternalIpAddress { get; set; }
-            public int ExternalPort { get; set; }  
-            public int ExternalTcpPort { get; set; }  
+            public int ExternalPort { get; set; }
+            public int ExternalTcpPort { get; set; }
             public List<string> Addresses { get; set; }
 
             public DynamicJsonValue ToJson()
@@ -203,7 +203,7 @@ namespace Raven.Server.Commercial
         {
             Ips = new List<string>();
         }
-        
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -230,7 +230,7 @@ namespace Raven.Server.Commercial
             };
         }
     }
-    
+
     public class UserDomainsWithIps
     {
         public string[] Emails { get; set; }
@@ -276,15 +276,6 @@ namespace Raven.Server.Commercial
                 [nameof(Status)] = Status
             };
         }
-    }
-
-    public enum SetupMode
-    {
-        None,
-        Initial,
-        LetsEncrypt,
-        Secured,
-        Unsecured
     }
 
     public enum SetupStage
@@ -379,7 +370,7 @@ namespace Raven.Server.Commercial
                 return new DynamicJsonValue
                 {
                     [nameof(Tag)] = Tag
-                }; 
+                };
             }
         }
     }
