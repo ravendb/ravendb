@@ -94,7 +94,7 @@ namespace SlowTests.Issues
                     company = session.Load<Company>("companies/1");
 
                     Assert.Null(company);
-                    Assert.False(session.Advanced.IsLoaded("companies/1"));
+                    Assert.True(session.Advanced.IsLoaded("companies/1"));
                     Assert.Equal(3, session.Advanced.NumberOfRequests);
                 }
             }
