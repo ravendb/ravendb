@@ -44,9 +44,14 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
+        
+        [DefaultValue(true)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Metrics", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public virtual bool Metrics { get; protected set; }
 
         [ReadOnlyPath]
-        public virtual PathSetting StoragePath => _indexStoragePath ?? (_indexStoragePath = _root.ResourceType == ResourceType.Server ? null : _root.Core.DataDirectory.Combine("Indexes"));
+        public virtual PathSetting StoragePath => _indexStoragePath ??= _root.ResourceType == ResourceType.Server ? null : _root.Core.DataDirectory.Combine("Indexes");
 
         [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Reset)]

@@ -13,7 +13,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
         protected override Gauge32 GetData(DocumentDatabase database)
         {
             var index = GetIndex(database);
-            return new Gauge32((int)index.MapsPerSec.OneMinuteRate);
+            return new Gauge32((int)(index.MapsPerSec?.OneMinuteRate ?? 0));
         }
     }
 }
