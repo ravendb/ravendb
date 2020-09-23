@@ -57,14 +57,14 @@ namespace Raven.Client.Documents.Commands
             Result = JsonDeserializationClient.ConditionalGetResult(response);
         }
 
-        public override Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
+        public override async Task<ResponseDisposeHandling> ProcessResponse(JsonOperationContext context, HttpCache cache, HttpResponseMessage response, string url)
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
-                return Task.FromResult(ResponseDisposeHandling.Automatic);
+                return ResponseDisposeHandling.Automatic;
             
-            var result = AsyncHelpers.RunSync(() => base.ProcessResponse(context, cache, response, url));
+            var result = await base.ProcessResponse(context, cache, response, url).ConfigureAwait(false);
             Result.ChangeVector = response.Headers.ETag.Tag;
-            return Task.FromResult(result);
+            return result;
         }
 
         /// <summary>
