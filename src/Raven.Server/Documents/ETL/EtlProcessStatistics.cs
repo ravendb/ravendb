@@ -43,6 +43,8 @@ namespace Raven.Server.Documents.ETL
 
         public int LoadSuccesses { get; private set; }
 
+        public int LoadSuccessesInCurrentBatch { get; private set; }
+
         public AlertRaised LastAlert { get; set; }
 
         public EtlErrorsDetails TransformationErrorsInCurrentBatch { get; }
@@ -63,6 +65,7 @@ namespace Raven.Server.Documents.ETL
             TransformationErrorsInCurrentBatch.Errors.Clear();
             LastLoadErrorsInCurrentBatch.Errors.Clear();
             LastSlowSqlWarningsInCurrentBatch.Statements.Clear();
+            LoadSuccessesInCurrentBatch = 0;
 
             return _alertsGuard;
         }
@@ -132,6 +135,7 @@ namespace Raven.Server.Documents.ETL
         {
             WasLatestLoadSuccessful = true;
             LoadSuccesses += items;
+            LoadSuccessesInCurrentBatch += items;
         }
 
         private void CreateAlertIfAnyTransformationErrors(string preMessage = null)
@@ -199,6 +203,7 @@ namespace Raven.Server.Documents.ETL
             TransformationSuccesses = 0;
             TransformationErrors = 0;
             LoadSuccesses = 0;
+            LoadSuccessesInCurrentBatch = 0;
             LoadErrors = 0;
             LastChangeVector = null;
             LastAlert = null;
