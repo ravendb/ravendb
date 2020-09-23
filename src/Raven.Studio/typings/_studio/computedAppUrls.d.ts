@@ -31,7 +31,7 @@ interface computedAppUrls {
     migrateRavenDbDatabaseUrl: KnockoutComputed<string>;
     migrateDatabaseUrl: KnockoutComputed<string>;
     sampleDataUrl: KnockoutComputed<string>;
-    backups: KnockoutComputed<string>;
+    backupsUrl: KnockoutComputed<string>;
     ongoingTasksUrl: KnockoutComputed<string>;
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
     editReplicationHubTaskUrl: KnockoutComputed<string>;

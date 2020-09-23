@@ -565,7 +565,7 @@ class storageReport extends viewModelBase {
     }
 
     compactDatabase() {
-        router.navigate(appUrl.forDatabases(this.activeDatabase().name));
+        router.navigate(appUrl.forDatabases("compact", this.activeDatabase().name));
     }
 }
 
