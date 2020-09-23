@@ -561,6 +561,52 @@ namespace FastTests.Client
             }
         }
 
+        [Fact]
+        public async Task Load_WhenDocumentNotFound_ShouldTrack()
+        {
+            using var store = GetDocumentStore();
+            const string notExistId1 = "notExistId1";
+            const string notExistId2 = "notExistId2";
+            var user = new User();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await session.LoadAsync<User>(notExistId1);
+            
+                Assert.True(session.Advanced.IsLoaded(notExistId1));
+                
+                _ = await session.LoadAsync<User>(notExistId1);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+            }
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await session.LoadAsync<User>(new []{notExistId1, notExistId2});
+
+                Assert.True(session.Advanced.IsLoaded(notExistId1));
+                Assert.True(session.Advanced.IsLoaded(notExistId2));
+                
+                _ = await session.LoadAsync<User>(new []{notExistId1, notExistId2});
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+            }
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                _ = await session.LoadAsync<User>(new []{user.Id, notExistId1});
+
+                Assert.True(session.Advanced.IsLoaded(user.Id));
+                Assert.True(session.Advanced.IsLoaded(notExistId1));
+                
+                _ = await session.LoadAsync<User>(notExistId1);
+                Assert.Equal(1, session.Advanced.NumberOfRequests);
+            }
+        }
+        
         class Poc
         {
             public string Name { get; set; }

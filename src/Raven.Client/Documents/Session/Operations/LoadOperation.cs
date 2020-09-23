@@ -160,12 +160,15 @@ namespace Raven.Client.Documents.Session.Operations
         {
             _resultsSet = true;
 
-            if (result == null)
-                return;
-
             if (_session.NoTracking)
             {
                 _results = result;
+                return;
+            }
+            
+            if (result == null)
+            {
+                _session.RegisterMissing(_ids);
                 return;
             }
 
@@ -179,6 +182,12 @@ namespace Raven.Client.Documents.Session.Operations
             foreach (var document in GetDocumentsFromResult(result))
                 _session.DocumentsById.Add(document);
 
+            foreach (var id in _ids)
+            {
+                if(_session.DocumentsById.TryGetValue(id, out _) == false)
+                    _session.RegisterMissing(id);
+            }
+            
             _session.RegisterMissingIncludes(result.Results, result.Includes, _includes);
         }
 
