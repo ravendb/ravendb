@@ -6,7 +6,6 @@
     <PackageId>Sparrow</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Remove="Properties\AssemblyInfo.Linux.cs" />

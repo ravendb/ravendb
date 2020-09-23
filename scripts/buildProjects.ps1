@@ -44,14 +44,14 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
 
 function BuildClient ( $srcDir ) {
     write-host "Building Client"
-    & dotnet build /p:SourceLinkCreate=true --no-incremental `
+    & dotnet build /p:SourceLinkCreate=true /p:GenerateDocumentationFile=true --no-incremental `
         --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
 function BuildTestDriver ( $srcDir ) {
     write-host "Building TestDriver"
-    & dotnet build /p:SourceLinkCreate=true --no-incremental `
+    & dotnet build /p:SourceLinkCreate=true /p:GenerateDocumentationFile=true --no-incremental `
         --configuration "Release" $srcDir;
     CheckLastExitCode
 }
@@ -62,7 +62,7 @@ function BuildTypingsGenerator ( $srcDir ) {
 }
 
 function BuildSparrow ( $srcDir ) {
-    & dotnet build /p:SourceLinkCreate=true --configuration "Release" $srcDir;
+    & dotnet build /p:SourceLinkCreate=true /p:GenerateDocumentationFile=true --configuration "Release" $srcDir;
     CheckLastExitCode
 }
 
@@ -147,7 +147,7 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
 
 function BuildEmbedded ( $srcDir, $outDir, $framework) {
     write-host "Building Embedded..."
-    & dotnet build --no-incremental `
+    & dotnet build /p:GenerateDocumentationFile=true --no-incremental `
         --output $outDir `
         --framework $framework `
         --configuration "Release" $srcDir;

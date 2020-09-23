@@ -1930,13 +1930,8 @@ namespace Raven.Server.Commercial
                     string linuxMsg = null;
                     if (PlatformDetails.RunningOnPosix && (port == 80 || port == 443))
                     {
-                        const string extension = ".dll";
-                        var ravenPath = typeof(RavenServer).Assembly.Location;
-                        if (ravenPath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-                            ravenPath = ravenPath.Substring(0, ravenPath.Length - extension.Length);
-
                         linuxMsg = $"It can happen if port '{port}' is not allowed for the non-root RavenDB process." +
-                                   $"Try using setcap to allow it: sudo setcap CAP_NET_BIND_SERVICE=+eip {ravenPath}";
+                                   $"Try using setcap to allow it: sudo setcap CAP_NET_BIND_SERVICE=+eip {Path.Combine(AppContext.BaseDirectory, "Raven.Server")}";
                     }
 
                     var also = linuxMsg == null ? string.Empty : "also";

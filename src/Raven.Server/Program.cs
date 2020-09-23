@@ -241,15 +241,10 @@ namespace Raven.Server
                             }
                             else if (e is SocketException && PlatformDetails.RunningOnPosix)
                             {
-                                const string extension = ".dll";
-                                var ravenPath = typeof(RavenServer).Assembly.Location;
-                                if (ravenPath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
-                                    ravenPath = ravenPath.Substring(0, ravenPath.Length - extension.Length);
-
                                 message =
                                     $"{Environment.NewLine}In Linux low-level port (below 1024) will need a special permission, " +
                                     $"if this is your case please run{Environment.NewLine}" +
-                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {ravenPath}";
+                                    $"sudo setcap CAP_NET_BIND_SERVICE=+eip {Path.Combine(AppContext.BaseDirectory, "Raven.Server")}";
                             }
                             else if (e.InnerException is LicenseExpiredException)
                             {

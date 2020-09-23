@@ -1,5 +1,5 @@
 function CreateNugetPackage ( $srcDir, $targetFilename, $versionSuffix ) {
-    dotnet pack --output $targetFilename `
+    dotnet pack /p:GenerateDocumentationFile=true --output $targetFilename `
         --configuration "Release" `
         --version-suffix $versionSuffix `
         $srcDir
@@ -57,10 +57,10 @@ function BuildEmbeddedNuget ($projectDir, $outDir, $serverSrcDir, $studioZipPath
     $embeddedCsproj = Join-Path -Path $EMBEDDED_SRC_DIR -ChildPath "Raven.Embedded.csproj";
     
     BuildEmbedded $embeddedCsproj $EMBEDDED_LIB_OUT_DIR_NETSTANDARD $NETSTANDARD_TARGET
-    Remove-Item $(Join-Path $EMBEDDED_LIB_OUT_DIR_NETSTANDARD -ChildPath "*") -Exclude "Raven.Embedded.dll"
+    Remove-Item $(Join-Path $EMBEDDED_LIB_OUT_DIR_NETSTANDARD -ChildPath "*") -Exclude "Raven.Embedded.dll","Raven.Embedded.xml"
     
     BuildEmbedded $embeddedCsproj $EMBEDDED_LIB_OUT_DIR_NET461 $NET461_TARGET
-    Remove-Item $(Join-Path $EMBEDDED_LIB_OUT_DIR_NET461 -ChildPath "*") -Exclude "Raven.Embedded.dll"
+    Remove-Item $(Join-Path $EMBEDDED_LIB_OUT_DIR_NET461 -ChildPath "*") -Exclude "Raven.Embedded.dll","Raven.Embedded.xml"
 
     BuildServer $SERVER_SRC_DIR $EMBEDDED_SERVER_OUT_DIR $null $Debug
     $tempServerDir = Join-Path $EMBEDDED_SERVER_OUT_DIR -ChildPath "Server"
