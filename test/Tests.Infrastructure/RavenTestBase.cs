@@ -1405,5 +1405,22 @@ namespace FastTests
                 }
             }
         }
+
+        protected void WriteDocDirectlyFromStorageToTestOutput(string storeDatabase, string docId)
+        {
+            WriteDocDirectlyFromStorageToTestOutputAsync(storeDatabase, docId).GetAwaiter().GetResult();
+        }
+        protected async Task WriteDocDirectlyFromStorageToTestOutputAsync(string storeDatabase, string docId)
+        {
+            //This function is only to investigate RavenDB-15366 issue
+
+            var db = await GetDatabase(storeDatabase);
+            using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var doc = db.DocumentsStorage.Get(context, docId);
+                Output?.WriteLine(doc.Data.ToString());
+            }
+        }
     }
 }

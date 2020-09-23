@@ -774,6 +774,7 @@ from 'Users' as user select output(user)", queryAsString);
 
                 var now = DateTime.Now;
 
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
                 using (var session = store.OpenSession())
                 {
                     // explicitly specify id & type
@@ -781,6 +782,7 @@ from 'Users' as user select output(user)", queryAsString);
                     session.Advanced.Patch<User, DateTime>(_docId, u => u.LastLogin, now);
                     session.SaveChanges();
                 }
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
 
                 using (var session = store.OpenSession())
                 {
@@ -1088,6 +1090,7 @@ from 'Users' as user select output(user)", queryAsString);
                     session.SaveChanges();
                 }
 
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
                 using (var session = store.OpenSession())
                 {
                     //push
@@ -1095,6 +1098,7 @@ from 'Users' as user select output(user)", queryAsString);
                     session.Advanced.Patch<User, Stuff>(_docId, u => u.Stuff, roles => roles.Add(new Stuff { Key = 75 }));
                     session.SaveChanges();
                 }
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
 
                 using (var session = store.OpenSession())
                 {

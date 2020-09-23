@@ -218,6 +218,7 @@ namespace FastTests.Client
                     session.SaveChanges();
                 }
 
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
                 using (var session = store.OpenSession())
                 {
                     //push
@@ -225,6 +226,7 @@ namespace FastTests.Client
                     session.Advanced.Patch<User, Stuff>(_docId, u => u.Stuff, roles => roles.Add(new Stuff { Key = 75 }));
                     session.SaveChanges();
                 }
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
 
                 using (var session = store.OpenSession())
                 {
@@ -235,7 +237,7 @@ namespace FastTests.Client
                     //concat
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(101, 102, 103));
                     session.Advanced.Patch(loaded, u => u.Stuff, roles => roles.Add(new Stuff { Key = 102 }, new Stuff { Phone = "123456" }));
-                    session.SaveChanges();
+                    SaveChangesWithTryCatch(session, loaded);
                 }
 
                 using (var session = store.OpenSession())
@@ -248,7 +250,7 @@ namespace FastTests.Client
                     Assert.Equal(loaded.Stuff[3].Phone, "123456");
 
                     session.Advanced.Patch(loaded, u => u.Numbers, roles => roles.Add(new[] { 201, 202, 203 }));
-                    session.SaveChanges();
+                    SaveChangesWithTryCatch(session, loaded);
                 }
 
                 using (var session = store.OpenSession())
@@ -671,6 +673,7 @@ namespace FastTests.Client
                     await session.StoreAsync(user);
                     await session.SaveChangesAsync();
                 }
+                await WriteDocDirectlyFromStorageToTestOutputAsync(store.Database, _docId);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -679,6 +682,7 @@ namespace FastTests.Client
                     session.Advanced.Patch<User, Stuff>(_docId, u => u.Stuff, roles => roles.Add(new Stuff { Key = 75 }));
                     await session.SaveChangesAsync();
                 }
+                await WriteDocDirectlyFromStorageToTestOutputAsync(store.Database, _docId);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -765,12 +769,15 @@ namespace FastTests.Client
                     await session.SaveChangesAsync();
                 }
 
+                await WriteDocDirectlyFromStorageToTestOutputAsync(store.Database, _docId);
+
                 using (var session = store.OpenAsyncSession())
                 {
                     // explicitly specify id & type
                     session.Advanced.Increment<User, int>(_docId, u => u.Numbers[0], 1);
                     await session.SaveChangesAsync();
                 }
+                await WriteDocDirectlyFromStorageToTestOutputAsync(store.Database, _docId);
 
                 using (var session = store.OpenAsyncSession())
                 {

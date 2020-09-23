@@ -237,12 +237,14 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
                 using (var session = store.OpenSession())
                 {
                     // explicitly specify id & type
                     session.Advanced.Patch<User, ulong>(_docId, u => u.Ulong, 123);
                     session.SaveChanges();
                 }
+                WriteDocDirectlyFromStorageToTestOutput(store.Database, _docId);
 
                 using (var session = store.OpenSession())
                 {
