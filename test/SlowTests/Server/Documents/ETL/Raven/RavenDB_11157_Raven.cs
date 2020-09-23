@@ -574,6 +574,10 @@ if (hasCounter('down')) {
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
+                AddEtl(src, dest, "Users", script: null);
+
+                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccessesInCurrentBatch > 0);
+
                 using (var session = src.OpenSession())
                 {
                     session.Store(new User(), "users/1");
@@ -583,9 +587,9 @@ if (hasCounter('down')) {
                     session.SaveChanges();
                 }
 
-                AddEtl(src, dest, "Users", script: null);
+                etlDone.Wait(TimeSpan.FromMinutes(1));
 
-                var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 1);
+                etlDone.Reset();
 
                 for (int i = 0; i < 3; i++)
                 {
