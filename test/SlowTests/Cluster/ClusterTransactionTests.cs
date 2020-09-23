@@ -682,7 +682,7 @@ namespace SlowTests.Cluster
                 var task2 = Task.Run(async () => await AddUser(store, email, userId));
                 var task3 = Task.Run(async () =>
                 {
-                    using (var session = store.OpenAsyncSession())
+                    using (var session = store.OpenAsyncSession(new SessionOptions{NoTracking = true}))
                     {
                         while (true)
                         {
