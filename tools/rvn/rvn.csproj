@@ -40,7 +40,29 @@
     <Compile Include="..\..\src\Raven.Server\Utils\Pipes.cs" Link="Server\Utils\Pipes.cs" />
     <Compile Include="..\..\src\Raven.Server\Utils\UrlUtil.cs" Link="Server\Utils\UrlUtil.cs" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' AND ('$(PlatformTarget)' == '' OR '$(PlatformTarget)' == 'x64')">
+    <None Include="..\..\libs\libsodium\libsodium.win.x64.dll" Link="libsodium.win.x64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\librvnpal\librvnpal.win.x64.dll" Link="librvnpal.win.x64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT' AND ('$(PlatformTarget)' == '' OR '$(PlatformTarget)' == 'x86')">
+    <None Include="..\..\libs\libsodium\libsodium.win.x86.dll" Link="libsodium.win.x86.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\librvnpal\librvnpal.win.x86.dll" Link="librvnpal.win.x86.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))'">
     <None Include="..\..\libs\libsodium\libsodium.linux.x64.so" Link="libsodium.linux.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -48,15 +70,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libsodium\libsodium.arm.64.so" Link="libsodium.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libsodium\libsodium.win.x64.dll" Link="libsodium.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libsodium\libsodium.win.x86.dll" Link="libsodium.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libsodium\libsodium.mac.x64.dylib" Link="libsodium.mac.x64.dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
@@ -68,15 +81,6 @@
     <None Include="..\..\libs\librvnpal\librvnpal.arm.64.so" Link="librvnpal.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x64.dll" Link="librvnpal.win.x64.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.win.x86.dll" Link="librvnpal.win.x86.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.mac.x64.dylib" Link="librvnpal.mac.x64.dylib">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -86,10 +90,12 @@
     <None Include="..\..\libs\libzstd\libzstd.arm.64.so" Link="libzstd.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x64.dll" Link="libzstd.win.x64.dll">
+  </ItemGroup>
+  <ItemGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))'">
+    <None Include="..\..\libs\libsodium\libsodium.mac.x64.dylib" Link="libsodium.mac.x64.dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libzstd\libzstd.win.x86.dll" Link="libzstd.win.x86.dll">
+    <None Include="..\..\libs\librvnpal\librvnpal.mac.x64.dylib" Link="librvnpal.mac.x64.dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libzstd\libzstd.mac.x64.dylib" Link="libzstd.mac.x64.dylib">

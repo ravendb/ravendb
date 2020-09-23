@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Metadata;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static (string Path, AssemblyName AssemblyName, MetadataReference Reference)[] DiscoverManagedDlls()
         {
-            var path = Path.GetDirectoryName(typeof(IndexCompiler).Assembly.Location);
+            var path = AppContext.BaseDirectory;
             var results = new List<(string, AssemblyName, MetadataReference)>();
 
             foreach (var dll in Directory.GetFiles(path, "*.dll"))
@@ -98,20 +99,28 @@ namespace Raven.Server.Documents.Indexes.Static
 
         internal static readonly MetadataReference[] References =
         {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(ExpressionType).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(IndexCompiler).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(BoostedValue).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(Lucene.Net.Documents.Document).Assembly.Location),
-            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
-            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
-            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
-            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("netstandard")).Location),
-            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Collections")).Location),
-            MetadataReference.CreateFromFile(typeof(Regex).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(Uri).Assembly.Location)
+            CreateMetadataReferenceFromAssembly(typeof(object).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(ExpressionType).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(Enumerable).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(IndexCompiler).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(BoostedValue).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(Lucene.Net.Documents.Document).Assembly),
+            CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("System.Runtime"))),
+            CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("Microsoft.CSharp"))),
+            CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("mscorlib"))),
+            CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("netstandard"))),
+            CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("System.Collections"))),
+            CreateMetadataReferenceFromAssembly(typeof(Regex).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(Uri).Assembly)
         };
+
+        private unsafe static MetadataReference CreateMetadataReferenceFromAssembly(Assembly assembly)
+        {
+            assembly.TryGetRawMetadata(out var blob, out var length);
+            var moduleMetadata = ModuleMetadata.CreateFromMetadata((IntPtr)blob, length);
+            var assemblyMetadata = AssemblyMetadata.Create(moduleMetadata);
+            return assemblyMetadata.GetReference();
+        }
 
         public static AbstractStaticIndexBase Compile(IndexDefinition definition)
         {
@@ -350,14 +359,17 @@ namespace Raven.Server.Documents.Indexes.Static
                     @class = @class
                         .WithBaseClass<StaticIndexBase>();
                     break;
+
                 case IndexSourceType.TimeSeries:
                     @class = @class
                         .WithBaseClass<StaticTimeSeriesIndexBase>();
                     break;
+
                 case IndexSourceType.Counters:
                     @class = @class
                         .WithBaseClass<StaticCountersIndexBase>();
                     break;
+
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
@@ -408,10 +420,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     {
                         case IndexSourceType.Documents:
                             return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+
                         case IndexSourceType.TimeSeries:
                             return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+
                         case IndexSourceType.Counters:
                             return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.QuerySyntax, SelectManyRewriter.QuerySyntax), queryExpression, ref members);
+
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
                     }
@@ -424,10 +439,13 @@ namespace Raven.Server.Documents.Indexes.Static
                     {
                         case IndexSourceType.Documents:
                             return HandleSyntaxInMap(fieldNamesValidator, new MapFunctionProcessor(CollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+
                         case IndexSourceType.TimeSeries:
                             return HandleSyntaxInTimeSeriesMap(fieldNamesValidator, new MapFunctionProcessor(TimeSeriesCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+
                         case IndexSourceType.Counters:
                             return HandleSyntaxInCountersMap(fieldNamesValidator, new MapFunctionProcessor(CountersCollectionNameRetriever.MethodSyntax, SelectManyRewriter.MethodSyntax), invocationExpression, ref members);
+
                         default:
                             throw new NotSupportedException($"Not supported source type '{type}'.");
                     }
@@ -467,6 +485,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             MethodsInGroupByValidator.QuerySyntaxValidator,
                             queryExpression, out groupByFields);
                         break;
+
                     case InvocationExpressionSyntax invocationExpression:
                         result = HandleSyntaxInReduce(
                             new ReduceFunctionProcessor(
@@ -476,6 +495,7 @@ namespace Raven.Server.Documents.Indexes.Static
                             MethodsInGroupByValidator.MethodSyntaxValidator,
                             invocationExpression, out groupByFields);
                         break;
+
                     default:
                         throw new InvalidOperationException("Not supported expression type.");
                 }
