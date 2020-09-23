@@ -90,9 +90,7 @@ class manualBackupConfiguration extends backupConfiguration {
         return new backupNowManualCommand(db, cfg)
             .execute()
             .done((manualBackupResult: Raven.Client.Documents.Operations.Backups.StartBackupOperationResult) => {
-                if (manualBackupResult && manualBackupResult.OperationId) {
-                    notificationCenter.instance.openDetailsForOperationById(db, manualBackupResult.OperationId);
-                }
+                notificationCenter.instance.openDetailsForOperationById(db, manualBackupResult.OperationId);
             });
     }
 }

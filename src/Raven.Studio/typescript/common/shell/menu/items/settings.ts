@@ -162,7 +162,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/editPeriodicBackupTask',
             title: 'Backup Task',
             nav: false,
-            dynamicHash: appUrls.editExternalReplicationTaskUrl,
+            dynamicHash: appUrls.backupsUrl,
             itemRouteToHighlight: 'databases/tasks/backups'
         }),
         new leafMenuItem({
@@ -195,7 +195,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Backups',
             nav: true,
             css: 'icon-backups',
-            dynamicHash: appUrls.backups
+            dynamicHash: appUrls.backupsUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/import*details',

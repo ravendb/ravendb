@@ -1,5 +1,4 @@
 /// <reference path="../../typings/tsd.d.ts"/>
-
 import database = require("models/resources/database");
 import activeDatabase = require("common/shell/activeDatabaseTracker");
 import router = require("plugins/router");
@@ -54,7 +53,7 @@ class appUrl {
         migrateRavenDbDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateRavenDbDatabase(appUrl.currentDatabase())),
         migrateDatabaseUrl: ko.pureComputed(() => appUrl.forMigrateDatabase(appUrl.currentDatabase())),
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
-        backups: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
+        backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
@@ -185,12 +184,16 @@ class appUrl {
         return "#admin/settings/editServerWideBackup" + backupNamePart;
     }
 
-    static forDatabases(databaseToCompact?: string, restore?: boolean): string {
-        const paramPart = databaseToCompact || restore ? "?" : "";
-        const compactPart = databaseToCompact ? "compact=" + encodeURIComponent(databaseToCompact) : "";
-        const andPart = databaseToCompact && restore ? "&" : "";
-        const restorePart = restore ? "restore=true" : "";
-        return "#databases" + paramPart + compactPart + andPart + restorePart;
+    static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string): string {
+        let actionPart = "";
+        
+        if (databasesUrlAction === "compact" && databaseToCompact) {
+            actionPart = "?compact=" + encodeURIComponent(databaseToCompact);
+        } else if (databasesUrlAction === "restore") {
+            actionPart = "?restore=true";
+        }
+        
+        return "#databases" + actionPart;
     }
 
     static forAbout(): string {

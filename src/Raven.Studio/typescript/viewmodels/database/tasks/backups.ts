@@ -276,7 +276,7 @@ class backups extends viewModelBase {
     }
 
     navigateToRestoreDatabase() {
-        const url = appUrl.forDatabases(null, true);
+        const url = appUrl.forDatabases("restore");
         router.navigate(url);
     }
 }

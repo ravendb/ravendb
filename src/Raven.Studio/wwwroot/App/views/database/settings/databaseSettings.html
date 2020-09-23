@@ -30,7 +30,7 @@
             </span>
         </div>
     </div>
-    <div class="flex-horizontal flex-stretch-items absolute-fill content-margin entries-grid" data-bind="visible: viewMode() === 'editMode'">
+    <div class="flex-horizontal flex-stretch-items content-margin entries-grid" data-bind="visible: viewMode() === 'editMode'">
         <div class="flex-vertical">
             <div class="categories-list-container flex-vertical flex-grow" style="position:relative;">
                 <virtual-grid class="resizable virtual-grid" params="controller: categoriesGridController"></virtual-grid>
@@ -53,7 +53,7 @@
             </div>
         </div>
     </div>
-    <div class="flex-horizontal flex-stretch-items absolute-fill content-margin entries-grid" data-bind="visible: viewMode() === 'summaryMode'">
+    <div class="flex-horizontal flex-stretch-items content-margin entries-grid" data-bind="visible: viewMode() === 'summaryMode'">
         <div class="flex-grow flex-vertical slidein-style">
             <div class="summary-list-container flex-vertical flex-grow" style="position:relative;">
                 <virtual-grid class="resizable virtual-grid" 
