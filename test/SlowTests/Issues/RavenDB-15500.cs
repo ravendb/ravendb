@@ -18,7 +18,9 @@ namespace SlowTests.Issues
         {
             public decimal Average;
             public string Name;
+#pragma warning disable 649
             public decimal? Specific;
+#pragma warning restore 649
         }
 
         private class AverageIndex : AbstractIndexCreationTask<TestDocument, AverageIndex.Result>
@@ -26,7 +28,7 @@ namespace SlowTests.Issues
             public AverageIndex()
             {
                 Map = documents => from document in documents
-                    select new {document.Name, Average = document.Specific ?? document.Average};
+                                   select new { document.Name, Average = document.Specific ?? document.Average };
 
                 StoreAllFields(FieldStorage.Yes);
             }
@@ -50,7 +52,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession())
                 {
-                    session.Store(new TestDocument {Name = "Document 1", Average = average});
+                    session.Store(new TestDocument { Name = "Document 1", Average = average });
                     session.SaveChanges();
                 }
 
