@@ -24,9 +24,12 @@ namespace Raven.Client.Documents.Session
 
             if (Advanced.IsLoaded(id))
             {
-                var e = Load<T>(id);
-                var cv = Advanced.GetChangeVectorFor(e);
-                return (e, cv);
+                var entity = Load<T>(id);
+                if (entity == null)
+                    return default;
+                
+                var cv = Advanced.GetChangeVectorFor(entity);
+                return (entity, cv);
             }
 
             if (string.IsNullOrEmpty(changeVector))
@@ -41,6 +44,7 @@ namespace Raven.Client.Documents.Session
                 case HttpStatusCode.NotModified:
                     return (default, changeVector); // value not changed
                 case HttpStatusCode.NotFound:
+                    RegisterMissing(id);
                     return default; // value is missing
             }
 
