@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Routing;
@@ -154,7 +155,7 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse(typeAsString, out OngoingTaskType type) == false)
                 throw new ArgumentException($"{typeAsString} is unknown task type.");
             
-            Func<BlittableJsonReaderObject, IDynamicJson> converter;
+            Func<BlittableJsonReaderObject, IDynamicJsonValueConvertible> converter;
             switch (type)
             {
                 case OngoingTaskType.Backup:
@@ -186,6 +187,9 @@ namespace Raven.Server.Web.System
                 foreach (var blittable in blittables)
                 {
                     var backup = JsonDeserializationServer.ServerWideBackupConfigurationForStudio(blittable);
+                    backup.BackupDestinations = backup.GetFullBackupDestinations();
+                    backup.IsEncrypted = backup.BackupEncryptionSettings != null &&
+                                         backup.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
                     result.Backups.Add(backup);
                 }
 
@@ -281,7 +285,7 @@ namespace Raven.Server.Web.System
         }
 
         private void GetTaskConfigurations<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter)
-            where T : IDynamicJson
+            where T : IDynamicJsonValueConvertible
         {
             var taskName = GetStringQueryString("name", required: false);
 
@@ -304,8 +308,8 @@ namespace Raven.Server.Web.System
         }
     }
 
-    public class ServerWideTasksResult<T> : IDynamicJson
-        where T : IDynamicJson
+    public class ServerWideTasksResult<T> : IDynamicJsonValueConvertible
+        where T : IDynamicJsonValueConvertible
     {
         public List<T> Results;
 

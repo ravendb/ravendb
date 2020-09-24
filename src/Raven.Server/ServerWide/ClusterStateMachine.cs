@@ -1526,6 +1526,9 @@ namespace Raven.Server.ServerWide
                     if (configurationBlittable.TryGet(nameof(ServerWideExternalReplication.TopologyDiscoveryUrls), out BlittableJsonReaderArray topologyDiscoveryUrlsBlittableArray) == false)
                         continue;
 
+                    if (IsExcluded(configurationBlittable, addDatabaseCommand.Name))
+                        continue;
+
                     var topologyDiscoveryUrls = topologyDiscoveryUrlsBlittableArray.Select(x => x.ToString()).ToArray();
 
                     var externalReplication = JsonDeserializationCluster.ExternalReplication(configurationBlittable);
@@ -1540,7 +1543,7 @@ namespace Raven.Server.ServerWide
 
         private static bool IsExcluded(BlittableJsonReaderObject configurationBlittable, string databaseName)
         {
-            if (configurationBlittable.TryGet(nameof(ServerWideBackupConfiguration.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases) == false)
+            if (configurationBlittable.TryGet(nameof(IServerWideTask.ExcludedDatabases), out BlittableJsonReaderArray excludedDatabases) == false)
                 return false;
 
             foreach (object excludedDatabase in excludedDatabases)
@@ -3513,32 +3516,55 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    externalReplication.TaskId = oldTaskId ?? index;
-                    updatedExternalReplications.Add(externalReplication.ToJson());
+                    var hasConnectionStrings = oldDatabaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings);
 
-                    if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings))
+                    if (serverWideExternalReplication.IsExcluded(databaseName) == false)
                     {
-                        if (ravenConnectionStrings.Modifications == null)
-                            ravenConnectionStrings.Modifications = new DynamicJsonValue();
+                        externalReplication.TaskId = oldTaskId ?? index;
+                        updatedExternalReplications.Add(externalReplication.ToJson());
 
-                        ravenConnectionStrings.Modifications = new DynamicJsonValue
+                        if (hasConnectionStrings)
                         {
-                            [ravenConnectionString.Name] = ravenConnectionString.ToJson()
-                        };
+                            ravenConnectionStrings.Modifications ??= new DynamicJsonValue();
+                            ravenConnectionStrings.Modifications = new DynamicJsonValue
+                            {
+                                [ravenConnectionString.Name] = ravenConnectionString.ToJson()
+                            };
 
-                        ravenConnectionStrings = context.ReadObject(ravenConnectionStrings, nameof(DatabaseRecord.RavenConnectionStrings));
+                            ravenConnectionStrings = context.ReadObject(ravenConnectionStrings, nameof(DatabaseRecord.RavenConnectionStrings));
+                        }
+                        else
+                        {
+                            var djv = new DynamicJsonValue
+                            {
+                                [ravenConnectionString.Name] = ravenConnectionString.ToJson()
+                            };
+
+                            ravenConnectionStrings = context.ReadObject(djv, nameof(DatabaseRecord.RavenConnectionStrings));
+                        }
+                    }
+                    else if (hasConnectionStrings)
+                    {
+                        // we need to remove the connection string that we previously created
+                        var propertyIndex = ravenConnectionStrings.GetPropertyIndex(ravenConnectionString.Name);
+                        if (propertyIndex != -1)
+                        {
+                            ravenConnectionStrings.Modifications ??= new DynamicJsonValue();
+                            ravenConnectionStrings.Modifications.Removals = new HashSet<int>
+                            {
+                                propertyIndex
+                            };
+
+                            ravenConnectionStrings = context.ReadObject(ravenConnectionStrings, nameof(DatabaseRecord.RavenConnectionStrings));
+                        }
                     }
                     else
                     {
-                        var djv = new DynamicJsonValue
-                        {
-                            [ravenConnectionString.Name] = ravenConnectionString.ToJson()
-                        };
-
-                        ravenConnectionStrings = context.ReadObject(djv, nameof(DatabaseRecord.RavenConnectionStrings));
+                        ravenConnectionStrings = context.ReadObject(new DynamicJsonValue(), nameof(DatabaseRecord.RavenConnectionStrings));
                     }
 
                     using (oldDatabaseRecord)
+                    using (ravenConnectionStrings)
                     {
                         oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                         {
@@ -3620,9 +3646,7 @@ namespace Raven.Server.ServerWide
                                 var propertyIndex = ravenConnectionStrings.GetPropertyIndex(connectionStringName);
                                 if (propertyIndex != -1)
                                 {
-                                    if (ravenConnectionStrings.Modifications == null)
-                                        ravenConnectionStrings.Modifications = new DynamicJsonValue();
-
+                                    ravenConnectionStrings.Modifications ??= new DynamicJsonValue();
                                     ravenConnectionStrings.Modifications.Removals = new HashSet<int>
                                     {
                                         propertyIndex
