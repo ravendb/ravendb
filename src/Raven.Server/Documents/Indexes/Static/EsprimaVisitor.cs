@@ -266,6 +266,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public virtual void VisitExpression(Expression expression)
         {
+            if (expression == null)
+                return;
             switch (expression.Type)
             {
                 case Nodes.AssignmentExpression:
