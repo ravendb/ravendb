@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
             resultType = ResultType.Aggregated;
             var aggregationHolder = GetAggregationHolder(timeSeriesFunction);
-            individualValuesOnly |= aggregationHolder.HasPercentile;
+            individualValuesOnly |= aggregationHolder.HasPercentileAggregation;
 
             return GetAggregatedValues();
 

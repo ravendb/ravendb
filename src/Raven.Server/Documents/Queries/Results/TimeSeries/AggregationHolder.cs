@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         public static readonly object NullBucket = new object();
 
         // local pool, for current query
-        private readonly ObjectPool<TimeSeriesAggregation[], TimeSeriesAggregationReset> _pool;
+        private readonly ObjectPool<ITimeSeriesAggregation[], TimeSeriesAggregationReset> _pool;
         private readonly int _poolSize = 32;
 
         private readonly DocumentsOperationContext _context;
@@ -25,15 +25,14 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private readonly AggregationType[] _types;
         private readonly string[] _names;
-
-        private Dictionary<object, TimeSeriesAggregation[]> _current;
-        private Dictionary<object, PreviousAggregation> _previous;
-
         private double? _percentile;
+
+        private Dictionary<object, ITimeSeriesAggregation[]> _current;
+        private Dictionary<object, PreviousAggregation> _previous;
 
         public bool HasValues => _current?.Count > 0;
 
-        public bool HasPercentile => _percentile.HasValue;
+        public bool HasPercentileAggregation => _percentile.HasValue;
 
         public AggregationHolder(DocumentsOperationContext context, Dictionary<AggregationType, string> types, InterpolationType interpolationType, double? percentile = null)
         {
@@ -48,38 +47,45 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             if (_interpolationType != InterpolationType.None)
                 _poolSize *= 2;
 
-            _pool = new ObjectPool<TimeSeriesAggregation[], TimeSeriesAggregationReset>(TimeSeriesAggregationFactory, _poolSize);
+            _pool = new ObjectPool<ITimeSeriesAggregation[], TimeSeriesAggregationReset>(TimeSeriesAggregationFactory, _poolSize);
         }
 
-        private TimeSeriesAggregation[] TimeSeriesAggregationFactory()
+        private ITimeSeriesAggregation[] TimeSeriesAggregationFactory()
         {
-            var bucket = new TimeSeriesAggregation[_types.Length];
+            var bucket = new ITimeSeriesAggregation[_types.Length];
             for (int i = 0; i < _types.Length; i++)
             {
                 var type = _types[i];
                 var name = _names?[i];
 
-                if (type == AggregationType.Percentile)
+                switch (type)
                 {
-                    Debug.Assert(_percentile.HasValue, $"Invalid {nameof(AggregationType.Percentile)} aggregation method. 'percentile' argument has no value");
-
-                    bucket[i] = new TimeSeriesAggregation(type, name, _percentile.Value);
-                    continue;
+                    case AggregationType.Average:
+                        bucket[i] = new AverageAggregation(name);
+                        continue;
+                    case AggregationType.Percentile:
+                        Debug.Assert(_percentile.HasValue, $"Invalid {nameof(AggregationType.Percentile)} aggregation method. 'percentile' argument has no value");
+                        bucket[i] = new PercentileAggregation(name, _percentile.Value);
+                        continue;
+                    case AggregationType.Slope:
+                        bucket[i] = new SlopeAggregation(name);
+                        continue;
+                    default:
+                        bucket[i] = new TimeSeriesAggregation(type, name);
+                        break;
                 }
-
-                bucket[i] = new TimeSeriesAggregation(type, name);
             }
 
             return bucket;
         }
 
-        public TimeSeriesAggregation[] this[object bucket]
+        public ITimeSeriesAggregation[] this[object bucket]
         {
             get
             {
                 var key = Clone(bucket);
 
-                _current ??= new Dictionary<object, TimeSeriesAggregation[]>();
+                _current ??= new Dictionary<object, ITimeSeriesAggregation[]>();
                 if (_current.TryGetValue(key, out var value))
                     return value;
 
@@ -119,7 +125,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _current = null;
         }
 
-        private DynamicJsonValue ToJson(double? scale, DateTime? from, DateTime? to, object key, TimeSeriesAggregation[] value)
+        private DynamicJsonValue ToJson(double? scale, DateTime? from, DateTime? to, object key, ITimeSeriesAggregation[] value)
         {
             if (from == DateTime.MinValue)
                 from = null;
@@ -141,7 +147,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             return result;
         }
 
-        private IEnumerable<(object Key, PreviousAggregation Previous, TimeSeriesAggregation[] Current)> GetGapsPerBucket(DateTime to)
+        private IEnumerable<(object Key, PreviousAggregation Previous, ITimeSeriesAggregation[] Current)> GetGapsPerBucket(DateTime to)
         {
             if (_current == null || _previous == null)
                 yield break;
@@ -174,7 +180,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             return key;
         }
 
-        private void UpdatePrevious(object key, RangeGroup range, TimeSeriesAggregation[] values)
+        private void UpdatePrevious(object key, RangeGroup range, ITimeSeriesAggregation[] values)
         {
             _previous ??= new Dictionary<object, PreviousAggregation>();
             if (_previous.TryGetValue(key, out var result) == false)
@@ -195,51 +201,30 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             if (value == null || value == NullBucket)
                 return NullBucket;
 
-            if (value is LazyStringValue lsv)
-                return lsv.ToString();
-
-            if (value is string s)
-                return s;
-
-            if (value is ValueType)
-                return value;
-
-            if (value is LazyCompressedStringValue lcsv)
-                return lcsv.ToString();
-
-            if (value is LazyNumberValue lnv)
-                return lnv.ToDouble(CultureInfo.InvariantCulture);
-
-            if (value is DateTime time)
-                return time.ToString("O");
-
-            if (value is DateTimeOffset offset)
-                return offset.ToString("O");
-
-            if (value is TimeSpan span)
-                return span.ToString("c");
-
-            if (value is BlittableJsonReaderObject json)
+            return value switch
             {
-                return json.CloneOnTheSameContext();
-            }
-
-            if (value is BlittableJsonReaderArray arr)
-            {
-                return arr.Clone(_context);
-            }
-
-            if (value is Document doc)
-                return doc;
-
-            throw new NotSupportedException($"Unable to group by type: {value.GetType()}");
+                LazyStringValue lsv => lsv.ToString(),
+                string s => s,
+                DateTime time => time.ToString("O"),
+                DateTimeOffset offset => offset.ToString("O"),
+                TimeSpan span => span.ToString("c"),
+                ValueType _ => value,
+                LazyCompressedStringValue lcsv => lcsv.ToString(),
+                LazyNumberValue lnv => lnv.ToDouble(CultureInfo.InvariantCulture),
+                BlittableJsonReaderObject json => json.CloneOnTheSameContext(),
+                BlittableJsonReaderArray arr => arr.Clone(_context),
+                Document doc => doc,
+                _ => throw new NotSupportedException($"Unable to group by type: {value.GetType()}")
+            };
         }
+
+
 
         public class PreviousAggregation
         {
             public RangeGroup Range;
 
-            public TimeSeriesAggregation[] Data;
+            public ITimeSeriesAggregation[] Data;
         }
 
         private IEnumerable<DynamicJsonValue> FillMissingGaps(RangeGroup range, double? scale)
@@ -350,13 +335,13 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        private struct TimeSeriesAggregationReset : IResetSupport<TimeSeriesAggregation[]>
+        private struct TimeSeriesAggregationReset : IResetSupport<ITimeSeriesAggregation[]>
         {
-            public void Reset(TimeSeriesAggregation[] values)
+            public void Reset(ITimeSeriesAggregation[] values)
             {
                 for (var index = 0; index < values.Length; index++)
                 {
-                    values[index].Init();
+                    values[index].Clear();
                 }
             }
         }
