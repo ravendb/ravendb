@@ -190,14 +190,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
         {
+            var includeThreads = GetBoolValueQueryString("includeThreads", required: false) ?? true;
+            var includeMappings = GetBoolValueQueryString("includeMappings", required: false) ?? true;
+
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var djv = MemoryStatsInternal();
-
-                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    context.Write(write, djv);
+                    WriteMemoryStats(writer, context, includeThreads, includeMappings);
                 }
+
                 return Task.CompletedTask;
             }
         }
@@ -216,9 +218,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private static DynamicJsonValue MemoryStatsInternal()
+        private static void WriteMemoryStats(BlittableJsonTextWriter writer, JsonOperationContext context, bool includeThreads, bool includeMappings)
         {
+            writer.WriteStartObject();
+
             var memInfo = MemoryInformation.GetMemoryInformationUsingOneTimeSmapsReader();
+            long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
+            long totalUnmanagedAllocations = NativeMemory.TotalAllocatedMemory;
+            var encryptionBuffers = EncryptionBuffersPool.Instance.GetStats();
+            var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
             var memoryUsageRecords = MemoryInformation.GetMemoryUsageRecords();
 
             long totalMapping = 0;
@@ -243,60 +251,51 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
             }
 
-            var prefixLength = LongestCommonPrefixLength(new List<string>(fileMappingSizesByDir.Keys));
-
-            var fileMappings = new DynamicJsonArray();
-            foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x => x.Value))
+            var djv = new DynamicJsonValue
             {
-                if (fileMappingByDir.TryGetValue(sizes.Key, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value))
-                {
-                    var details = new DynamicJsonValue();
+                [nameof(MemoryInfo.PhysicalMemory)] = memInfo.TotalPhysicalMemory.ToString(),
+                [nameof(MemoryInfo.WorkingSet)] = memInfo.WorkingSet.ToString(),
+                [nameof(MemoryInfo.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
+                [nameof(MemoryInfo.UnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
+                [nameof(MemoryInfo.EncryptionBuffers)] = Size.Humane(encryptionBuffers.TotalSize),
+                [nameof(MemoryInfo.MemoryMapped)] = Size.Humane(totalMapping),
+                [nameof(MemoryInfo.ScratchDirtyMemory)] = memInfo.TotalScratchDirtyMemory.ToString(),
+                [nameof(MemoryInfo.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
+                [nameof(MemoryInfo.DirtyMemory)] = Size.Humane(dirtyMemoryState.TotalDirtyInBytes),
+                [nameof(MemoryInfo.AvailableMemory)] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
+                [nameof(MemoryInfo.AvailableMemoryForProcessing)] = memInfo.AvailableMemoryForProcessing.ToString(),
+                [nameof(MemoryInfo.HighMemLastOneMinute)] = memoryUsageRecords.High.LastOneMinute.ToString(),
+                [nameof(MemoryInfo.LowMemLastOneMinute)] = memoryUsageRecords.Low.LastOneMinute.ToString(),
+                [nameof(MemoryInfo.HighMemLastFiveMinute)] = memoryUsageRecords.High.LastFiveMinutes.ToString(),
+                [nameof(MemoryInfo.LowMemLastFiveMinute)] = memoryUsageRecords.Low.LastFiveMinutes.ToString(),
+                [nameof(MemoryInfo.HighMemSinceStartup)] = memoryUsageRecords.High.SinceStartup.ToString(),
+                [nameof(MemoryInfo.LowMemSinceStartup)] = memoryUsageRecords.Low.SinceStartup.ToString(),
+            };
 
-                    var dir = new DynamicJsonValue
-                    {
-                        [nameof(MemoryInfoMappingItem.Directory)] = sizes.Key.Substring(prefixLength),
-                        [nameof(MemoryInfoMappingItem.TotalDirectorySize)] = sizes.Value,
-                        [nameof(MemoryInfoMappingItem.HumaneTotalDirectorySize)] = Size.Humane(sizes.Value),
-                        [nameof(MemoryInfoMappingItem.Details)] = details
-                    };
-                    foreach (var file in value.OrderBy(x => x.Key))
-                    {
-                        long totalMapped = 0;
-                        var dja = new DynamicJsonArray();
-                        var dic = new Dictionary<long, long>();
-                        foreach (var mapping in file.Value)
-                        {
-                            totalMapped += mapping.Value;
-                            dic.TryGetValue(mapping.Value, out long prev);
-                            dic[mapping.Value] = prev + 1;
-                        }
+            writer.WritePropertyName(nameof(MemoryInformation));
+            context.Write(writer, djv);
 
-                        foreach (var maps in dic)
-                        {
-                            dja.Add(new DynamicJsonValue
-                            {
-                                [nameof(MemoryInfoMappingDetails.Size)] = maps.Key,
-                                [nameof(MemoryInfoMappingDetails.Count)] = maps.Value
-                            });
-                        }
+            writer.WriteComma();
+            writer.WritePropertyName("Threads");
+            writer.WriteStartArray();
+            WriteThreads(includeThreads, writer, context);
+            writer.WriteEndArray();
 
-                        var fileSize = GetFileSize(file.Key);
-                        details[Path.GetFileName(file.Key)] = new DynamicJsonValue
-                        {
-                            [nameof(MemoryInfoMappingFileInfo.FileSize)] = fileSize,
-                            [nameof(MemoryInfoMappingFileInfo.HumaneFileSize)] = Size.Humane(fileSize),
-                            [nameof(MemoryInfoMappingFileInfo.TotalMapped)] = totalMapped,
-                            [nameof(MemoryInfoMappingFileInfo.HumaneTotalMapped)] = Size.Humane(totalMapped),
-                            [nameof(MemoryInfoMappingFileInfo.Mappings)] = dja
-                        };
-                    }
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(MemoryInfo.Mappings));
+            writer.WriteStartArray();
+            WriteMappings(includeMappings, writer, context, fileMappingSizesByDir, fileMappingByDir);
+            writer.WriteEndArray();
 
-                    fileMappings.Add(dir);
-                }
-            }
+            writer.WriteEndObject();
+        }
 
-            long totalUnmanagedAllocations = NativeMemory.TotalAllocatedMemory;
-            var threads = new DynamicJsonArray();
+        private static void WriteThreads(bool includeThreads, BlittableJsonTextWriter writer, JsonOperationContext context)
+        {
+            if (includeThreads == false)
+                return;
+
+            var isFirst = true;
             foreach (var stats in NativeMemory.AllThreadStats
                 .Where(x => x.IsThreadAlive())
                 .GroupBy(x => x.Name)
@@ -327,48 +326,72 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     groupStats["Ids"] = ids;
                 }
 
-                threads.Add(groupStats);
+                if (isFirst == false)
+                    writer.WriteComma();
+
+                isFirst = false;
+
+                context.Write(writer, groupStats);
             }
+        }
 
-            long managedMemoryInBytes = AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
-            long workingSetInBytes = memInfo.WorkingSet.GetValue(SizeUnit.Bytes);
-            var dirtyMemoryState = MemoryInformation.GetDirtyMemoryState();
-            var encryptionBuffers = EncryptionBuffersPool.Instance.GetStats();
+        private static void WriteMappings(bool includeMappings, BlittableJsonTextWriter writer, JsonOperationContext context,
+            Dictionary<string, long> fileMappingSizesByDir, Dictionary<string, Dictionary<string, ConcurrentDictionary<IntPtr, long>>> fileMappingByDir)
+        {
+            if (includeMappings == false)
+                return;
 
-            var djv = new DynamicJsonValue
+            bool isFirst = true;
+            var prefixLength = LongestCommonPrefixLength(new List<string>(fileMappingSizesByDir.Keys));
+            foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x => x.Value))
             {
-                [nameof(MemoryInfo.WorkingSet)] = workingSetInBytes,
-                [nameof(MemoryInfo.TotalUnmanagedAllocations)] = totalUnmanagedAllocations,
-                [nameof(MemoryInfo.ManagedAllocations)] = managedMemoryInBytes,
-                [nameof(MemoryInfo.TotalMemoryMapped)] = totalMapping,
-                [nameof(MemoryInfo.TotalScratchDirtyMemory)] = Size.Humane(memInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.PhysicalMem)] = Size.Humane(memInfo.TotalPhysicalMemory.GetValue(SizeUnit.Bytes)),
-                [nameof(DirtyMemoryState.IsHighDirty)] = dirtyMemoryState.IsHighDirty,
-                ["DirtyMemory"] = Size.Humane(dirtyMemoryState.TotalDirtyInBytes),
-                [nameof(MemoryInfo.AvailableMemory)] = Size.Humane(memInfo.AvailableMemory.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.AvailableMemoryForProcessing)] = Size.Humane(memInfo.AvailableMemoryForProcessing.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.HighMemLastOneMinute)] = Size.Humane(memoryUsageRecords.High.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.LowMemLastOneMinute)] = Size.Humane(memoryUsageRecords.Low.LastOneMinute.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.HighMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.High.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.LowMemLastFiveMinute)] = Size.Humane(memoryUsageRecords.Low.LastFiveMinutes.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.HighMemSinceStartup)] = Size.Humane(memoryUsageRecords.High.SinceStartup.GetValue(SizeUnit.Bytes)),
-                [nameof(MemoryInfo.LowMemSinceStartup)] = Size.Humane(memoryUsageRecords.Low.SinceStartup.GetValue(SizeUnit.Bytes)),
+                if (fileMappingByDir.TryGetValue(sizes.Key, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value) == false)
+                    continue;
 
-                [nameof(MemoryInfo.Humane)] = new DynamicJsonValue
+                var details = new DynamicJsonValue();
+
+                var dir = new DynamicJsonValue
                 {
-                    [nameof(MemoryInfoHumane.WorkingSet)] = Size.Humane(workingSetInBytes),
-                    [nameof(MemoryInfoHumane.TotalUnmanagedAllocations)] = Size.Humane(totalUnmanagedAllocations),
-                    ["EncryptionBuffers"] = Size.Humane(encryptionBuffers.TotalSize),
-                    [nameof(MemoryInfoHumane.ManagedAllocations)] = Size.Humane(managedMemoryInBytes),
-                    [nameof(MemoryInfoHumane.TotalMemoryMapped)] = Size.Humane(totalMapping)
-                },
+                    [nameof(MemoryInfoMappingItem.Directory)] = sizes.Key.Substring(prefixLength),
+                    [nameof(MemoryInfoMappingItem.TotalDirectorySize)] = sizes.Value,
+                    [nameof(MemoryInfoMappingItem.HumaneTotalDirectorySize)] = Size.Humane(sizes.Value),
+                    [nameof(MemoryInfoMappingItem.Details)] = details
+                };
+                foreach (var file in value.OrderBy(x => x.Key))
+                {
+                    long totalMapped = 0;
+                    var dja = new DynamicJsonArray();
+                    var dic = new Dictionary<long, long>();
+                    foreach (var mapping in file.Value)
+                    {
+                        totalMapped += mapping.Value;
+                        dic.TryGetValue(mapping.Value, out long prev);
+                        dic[mapping.Value] = prev + 1;
+                    }
 
-                ["Threads"] = threads,
+                    foreach (var maps in dic)
+                    {
+                        dja.Add(new DynamicJsonValue {[nameof(MemoryInfoMappingDetails.Size)] = maps.Key, [nameof(MemoryInfoMappingDetails.Count)] = maps.Value});
+                    }
 
-                [nameof(MemoryInfo.Mappings)] = fileMappings
-            };
+                    var fileSize = GetFileSize(file.Key);
+                    details[Path.GetFileName(file.Key)] = new DynamicJsonValue
+                    {
+                        [nameof(MemoryInfoMappingFileInfo.FileSize)] = fileSize,
+                        [nameof(MemoryInfoMappingFileInfo.HumaneFileSize)] = Size.Humane(fileSize),
+                        [nameof(MemoryInfoMappingFileInfo.TotalMapped)] = totalMapped,
+                        [nameof(MemoryInfoMappingFileInfo.HumaneTotalMapped)] = Size.Humane(totalMapped),
+                        [nameof(MemoryInfoMappingFileInfo.Mappings)] = dja
+                    };
+                }
 
-            return djv;
+                if (isFirst == false)
+                    writer.WriteComma();
+
+                isFirst = false;
+
+                context.Write(writer, dir);
+            }
         }
 
         private static long GetFileSize(string file)
@@ -433,32 +456,24 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         internal class MemoryInfo
         {
-            public long WorkingSet { get; set; }
-            public long TotalUnmanagedAllocations { get; set; }
-            public long ManagedAllocations { get; set; }
-            public long TotalMemoryMapped { get; set; }
-            public long TotalScratchDirtyMemory { get; set; }
-            public string PhysicalMem { get; set; }
-            public string AvailableMemoryForProcessing { get; set; }
+            public string PhysicalMemory { get; set; }
+            public string WorkingSet { get; set; }
+            public string ManagedAllocations { get; set; }
+            public string UnmanagedAllocations { get; set; }
+            public string EncryptionBuffers { get; set; }
+            public string MemoryMapped { get; set; }
+            public string ScratchDirtyMemory { get; set; }
+            public bool IsHighDirty { get; set; }
+            public string DirtyMemory { get; set; }
             public string AvailableMemory { get; set; }
+            public string AvailableMemoryForProcessing { get; set; }
             public string HighMemLastOneMinute { get; set; }
             public string LowMemLastOneMinute { get; set; }
             public string HighMemLastFiveMinute { get; set; }
             public string LowMemLastFiveMinute { get; set; }
             public string HighMemSinceStartup { get; set; }
             public string LowMemSinceStartup { get; set; }
-            public MemoryInfoHumane Humane { get; set; }
             public MemoryInfoMappingItem[] Mappings { get; set; }
-            //TODO: threads
-
-        }
-
-        internal class MemoryInfoHumane
-        {
-            public string WorkingSet { get; set; }
-            public string TotalUnmanagedAllocations { get; set; }
-            public string ManagedAllocations { get; set; }
-            public string TotalMemoryMapped { get; set; }
         }
 
         internal class MemoryInfoMappingItem
@@ -484,5 +499,4 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public long Count { get; set; }
         }
     }
-
 }
