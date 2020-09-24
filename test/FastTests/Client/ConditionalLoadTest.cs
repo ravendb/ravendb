@@ -99,8 +99,14 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenSession())
                 {
-                    Assert.Equal(default, newestSession.Advanced.ConditionalLoad<User>("users/2", cv));
                     Assert.Throws<InvalidOperationException>(() => newestSession.Advanced.ConditionalLoad<User>("users/2", null));
+                    Assert.Equal(default, newestSession.Advanced.ConditionalLoad<User>("users/2", cv));
+                    
+                    Assert.True(newestSession.Advanced.IsLoaded("users/2"));
+                    
+                    var expected = newestSession.Advanced.NumberOfRequests;
+                    _ = newestSession.Load<User>("users/2");
+                    Assert.Equal(expected, newestSession.Advanced.NumberOfRequests);
                 }
             }
         }
@@ -192,8 +198,13 @@ namespace FastTests.Client
 
                 using (var newestSession = store.OpenAsyncSession())
                 {
-                    Assert.Equal(default, await newestSession.Advanced.ConditionalLoadAsync<User>("users/2", cv));
                     await Assert.ThrowsAsync<InvalidOperationException>(async () => await newestSession.Advanced.ConditionalLoadAsync<User>("users/2", null));
+                    Assert.Equal(default, await newestSession.Advanced.ConditionalLoadAsync<User>("users/2", cv));
+                    
+                    Assert.True(newestSession.Advanced.IsLoaded("users/2"));
+                    var expected = newestSession.Advanced.NumberOfRequests;
+                    _ = await newestSession.LoadAsync<User>("users/2");
+                    Assert.Equal(expected, newestSession.Advanced.NumberOfRequests);
                 }
             }
         }

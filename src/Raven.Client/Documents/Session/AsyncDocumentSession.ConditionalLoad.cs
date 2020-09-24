@@ -19,9 +19,12 @@ namespace Raven.Client.Documents.Session
 
                 if (Advanced.IsLoaded(id))
                 {
-                    var e = await LoadAsync<T>(id, token).ConfigureAwait(false);
-                    var cv = Advanced.GetChangeVectorFor(e);
-                    return (e, cv);
+                    var entity = await LoadAsync<T>(id, token).ConfigureAwait(false);
+                    if (entity == null)
+                        return default;
+                    
+                    var cv = Advanced.GetChangeVectorFor(entity);
+                    return (entity, cv);
                 }
 
                 if (string.IsNullOrEmpty(changeVector))
@@ -36,6 +39,7 @@ namespace Raven.Client.Documents.Session
                     case HttpStatusCode.NotModified:
                         return (default, changeVector); // value not changed
                     case HttpStatusCode.NotFound:
+                        RegisterMissing(id);
                         return default; // value is missing
                 }
 
