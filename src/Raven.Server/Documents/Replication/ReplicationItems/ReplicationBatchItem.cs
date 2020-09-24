@@ -41,7 +41,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.Type = Type;
             item.ChangeVector = ChangeVector;
             item.LastModifiedTicks = LastModifiedTicks;
-
+            item.Etag = Etag;
+            item.TransactionMarker = TransactionMarker;
             return item;
         }
 

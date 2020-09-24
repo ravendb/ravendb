@@ -27,12 +27,12 @@ namespace Raven.Server.Documents.Replication
         private long _lastEtag;
 
         private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
-        private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>();
+        private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
-        private readonly OutgoingReplicationHandler _parent;
+        internal readonly OutgoingReplicationHandler _parent;
         private OutgoingReplicationStatsScope _statsInstance;
-        private readonly ReplicationStats _stats = new ReplicationStats();
+        internal readonly ReplicationStats _stats = new ReplicationStats();
         public bool MissingAttachmentsInLastBatch { get; private set; }
 
         public ReplicationDocumentSender(Stream stream, OutgoingReplicationHandler parent, Logger log)
@@ -154,17 +154,17 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats)
+        internal static IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentDatabase database, DocumentsOperationContext ctx, long etag, ReplicationStats stats, bool caseInsensitiveCounters)
         {
-            var docs = _parent._database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
-            var tombs = _parent._database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
-            var conflicts = _parent._database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
-            var revisionsStorage = _parent._database.DocumentsStorage.RevisionsStorage;
+            var docs = database.DocumentsStorage.GetDocumentsFrom(ctx, etag + 1);
+            var tombs = database.DocumentsStorage.GetTombstonesFrom(ctx, etag + 1);
+            var conflicts = database.DocumentsStorage.ConflictsStorage.GetConflictsFrom(ctx, etag + 1).Select(DocumentReplicationItem.From);
+            var revisionsStorage = database.DocumentsStorage.RevisionsStorage;
             var revisions = revisionsStorage.GetRevisionsFrom(ctx, etag + 1, long.MaxValue).Select(DocumentReplicationItem.From);
-            var attachments = _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
-            var counters = _parent._database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, caseInsensitiveNames: _parent.SupportedFeatures.Replication.CaseInsensitiveCounters);
-            var timeSeries = _parent._database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);
-            var deletedTimeSeriesRanges = _parent._database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(ctx, etag + 1);
+            var attachments = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsFrom(ctx, etag + 1);
+            var counters = database.DocumentsStorage.CountersStorage.GetCountersFrom(ctx, etag + 1, caseInsensitiveCounters);
+            var timeSeries = database.DocumentsStorage.TimeSeriesStorage.GetSegmentsFrom(ctx, etag + 1);
+            var deletedTimeSeriesRanges = database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(ctx, etag + 1);
 
             using (var docsIt = docs.GetEnumerator())
             using (var tombsIt = tombs.GetEnumerator())
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Replication
 
                     using (_stats.Storage.Start())
                     {
-                        foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
+                        foreach (var item in GetReplicationItems(_parent._database, documentsContext, _lastEtag, _stats, _parent.SupportedFeatures.Replication.CaseInsensitiveCounters))
                         {
                             _parent.CancellationToken.ThrowIfCancellationRequested();
 
@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Replication
                                 docItem.Flags.Contain(DocumentFlags.HasAttachments))
                             {
                                 var type = (docItem.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
-                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, docItem.Id))
+                                foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, docItem.Id, docItem.ChangeVector))
                                 {
                                     // we need to filter attachments that are been sent in the same batch as the document
                                     if (attachment.Etag >= prevLastEtag)
@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.Replication
             _stats.TimeSeriesRead = _stats.Storage.For(ReplicationOperation.Outgoing.TimeSeriesRead, start: false);
         }
 
-        private class ReplicationStats
+        internal class ReplicationStats
         {
             public OutgoingReplicationStatsScope Network;
             public OutgoingReplicationStatsScope Storage;
