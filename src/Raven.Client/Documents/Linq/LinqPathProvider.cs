@@ -108,7 +108,8 @@ namespace Raven.Client.Documents.Linq
                     return CreateCounterResult(callExpression);
                 }
 
-                throw new InvalidOperationException("Cannot understand how to translate " + callExpression);
+                throw new NotSupportedException(
+                    $"Cannot understand how to translate method '{callExpression.Method.Name}' of '{callExpression.Method.DeclaringType}' type. {callExpression}");
             }
 
             var memberExpression = GetMemberExpression(expression);

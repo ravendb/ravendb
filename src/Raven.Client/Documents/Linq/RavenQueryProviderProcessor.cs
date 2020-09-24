@@ -2350,6 +2350,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void SelectMemberInit(MemberInitExpression memberInitExpression, LambdaExpression lambdaExpression)
         {
+            if (memberInitExpression.NewExpression.Arguments.Any())
+                throw new NotSupportedException($"Using constructor with parameters in projection is not supported. {memberInitExpression}");
+            
             _newExpressionType = memberInitExpression.NewExpression.Type;
 
             if (_declareBuilder != null)
@@ -2443,6 +2446,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 return;
             }
 
+            if (newExpression.Members == null)
+                //SelectNewExpression is used only for anonymous types and in this situation there are Members as well
+                throw new NotSupportedException($"Using constructor with parameters in projection is not supported. {newExpression}");
+                
             for (int index = 0; index < newExpression.Arguments.Count; index++)
             {
                 if (newExpression.Arguments[index] is ConstantExpression constant)
