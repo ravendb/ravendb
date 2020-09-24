@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(TimeSeriesKeysSlice);
             tx.CreateTree(DeletedRangesKey);
 
-            Stats = new TimeSeriesStats(tx);
+            Stats = new TimeSeriesStats(this, tx);
             Rollups = new TimeSeriesRollups(documentDatabase.Name);
             _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
         }
