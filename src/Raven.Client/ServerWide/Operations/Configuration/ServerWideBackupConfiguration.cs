@@ -5,19 +5,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
-    public class ServerWideBackupConfiguration : PeriodicBackupConfiguration, IDynamicJson
+    public class ServerWideBackupConfiguration : PeriodicBackupConfiguration, IServerWideTask
     {
         internal static string NamePrefix = "Server Wide Backup";
 
         public string[] ExcludedDatabases { get; set; }
-
-        internal bool IsExcluded(string databaseName)
-        {
-            if (ExcludedDatabases == null)
-                return false;
-
-            return ExcludedDatabases.Contains(databaseName, StringComparer.OrdinalIgnoreCase);
-        }
 
         public override DynamicJsonValue ToJson()
         {
