@@ -285,6 +285,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         public NextBackup NextBackup { get; set; }
         public RetentionPolicy RetentionPolicy { get; set; }
         public bool IsEncrypted { get; set; }
+        public string LastExecutingNodeTag { get; set; }
 
         public OngoingTaskBackup()
         {
@@ -302,6 +303,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(NextBackup)] = NextBackup?.ToJson();
             json[nameof(RetentionPolicy)] = RetentionPolicy?.ToJson();
             json[nameof(IsEncrypted)] = IsEncrypted;
+            json[nameof(LastExecutingNodeTag)] = LastExecutingNodeTag;
             return json;
         }
     }

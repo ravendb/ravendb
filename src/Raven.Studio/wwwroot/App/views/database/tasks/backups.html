@@ -124,6 +124,10 @@
                                             <div class="property-name">Destinations:</div>
                                             <div class="property-value"><span data-bind="text: backupDestinationsHumanized, attr: { class: textClass() }"></span></div>
                                         </div>
+                                        <div class="property-item">
+                                            <div class="property-name">Last executed on node:</div>
+                                            <div class="property-value text-details" data-bind="text: lastExecutingNode"></div>
+                                        </div>
                                         <div class="property-item" data-bind="visible: lastFullBackupHumanized">
                                             <div class="property-name" data-bind="text: 'Last ' + fullBackupTypeName() + (fullBackupTypeName() === 'Snapshot' ? ':' : ' Backup:')"></div>
                                             <div class="property-value text-details" data-bind="text: lastFullBackupHumanized"></div>

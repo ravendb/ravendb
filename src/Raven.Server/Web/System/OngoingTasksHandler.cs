@@ -638,6 +638,7 @@ namespace Raven.Server.Web.System
                 TaskName = backupConfiguration.Name,
                 TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                 MentorNode = backupConfiguration.MentorNode,
+                LastExecutingNodeTag = backupStatus.NodeTag,
                 LastFullBackup = backupStatus.LastFullBackup,
                 LastIncrementalBackup = backupStatus.LastIncrementalBackup,
                 OnGoingBackup = onGoingBackup,
