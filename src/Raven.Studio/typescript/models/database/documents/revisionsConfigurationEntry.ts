@@ -4,6 +4,7 @@ import generalUtils = require("common/generalUtils");
 class revisionsConfigurationEntry {
 
     static readonly DefaultConfiguration = "DefaultConfiguration";
+    static readonly ConflictsConfiguration = "ConflictsConfiguration";
 
     disabled = ko.observable<boolean>();
     purgeOnDelete = ko.observable<boolean>();
@@ -16,7 +17,10 @@ class revisionsConfigurationEntry {
     minimumRevisionAgeToKeep = ko.observable<number>();
 
     isDefault: KnockoutComputed<boolean>;
+    isConflicts: KnockoutComputed<boolean>;
+    canChangeName: KnockoutObservable<boolean>;
     humaneRetentionDescription: KnockoutComputed<string>;
+    name: KnockoutComputed<string>;
 
     validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         collection: this.collection,
@@ -36,6 +40,14 @@ class revisionsConfigurationEntry {
         this.disabled(dto.Disabled);
         this.purgeOnDelete(dto.PurgeOnDelete);
         this.isDefault = ko.pureComputed<boolean>(() => this.collection() === revisionsConfigurationEntry.DefaultConfiguration);
+        this.isConflicts = ko.pureComputed<boolean>(() => this.collection() === revisionsConfigurationEntry.ConflictsConfiguration);
+        
+        this.canChangeName = ko.pureComputed<boolean>(() => {
+            const isDefault = this.isDefault();
+            const isConflicts = this.isConflicts();
+            
+            return !isDefault && !isConflicts;
+        });
 
         this.initObservables();
         this.initValidation();
@@ -59,6 +71,17 @@ class revisionsConfigurationEntry {
 
         this.limitRevisionsByAge.subscribe(() => {
             this.minimumRevisionAgeToKeep.clearError();
+        });
+        
+        this.name = ko.pureComputed(() => {
+            if (this.isDefault()) {
+                return "Default";
+            } 
+            if (this.isConflicts()) {
+                return "Conflicts";
+            }
+            
+            return this.collection();
         });
     }
 
