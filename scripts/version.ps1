@@ -257,6 +257,29 @@ function GetCurrentVersionPrefix($projectDir) {
     $match.Matches.Groups[1].Value
 }
 
+function Validate-ExecutableVersion($assemblyPath, $versionInfo) {
+    # $versionInfo = @{ 
+    #     Version = $version;
+    #     VersionPrefix = $versionPrefix;
+    #     VersionSuffix = $versionSuffix;
+    #     BuildNumber = $buildNumber;
+    #     BuiltAt = $builtAt;
+    #     BuiltAtString = $builtAtString;
+    #     BuildType = $buildType;
+    # }
+    
+    Assert-AssemblyFileVersion `
+        -ExpectedFileVersion "$($versionInfo.VersionPrefix).$($versionInfo.BuildNumber)" `
+        -AssemblyPath $assemblyPath
+
+    Assert-AssemblyProductVersion `
+        -ExpectedProductVersion $versionInfo.Version `
+        -AssemblyPath $assemblyPath
+
+    write-host "Version valid for $assemblyPath"
+
+}
+
 function Validate-AssemblyVersion($assemblyPath, $versionInfo) {
     # $versionInfo = @{ 
     #     Version = $version;
