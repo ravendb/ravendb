@@ -215,13 +215,11 @@ Foreach ($target in $targets) {
     #ValidateRuntimeConfig $target $specOutDirs.Server
 
     if ($target.Name -eq "windows-x64") {
-        #Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Raven.Server.exe" ) $versionObj
-        #Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Sparrow.dll" ) $versionObj
-        #Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Voron.dll" ) $versionObj
-        #Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Rvn -ChildPath "rvn.exe" ) $versionObj
-        #Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Migrator -ChildPath "Raven.Migrator.exe" ) $versionObj
-        #Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Drtools -ChildPath "Voron.Recovery.exe" ) $versionObj
-        #Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Debug -ChildPath "Raven.Debug.exe" ) $versionObj
+        Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Server -ChildPath "Raven.Server.exe" ) $versionObj
+        Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Rvn -ChildPath "rvn.exe" ) $versionObj
+        Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Migrator -ChildPath "Raven.Migrator.exe" ) $versionObj
+        Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Drtools -ChildPath "Voron.Recovery.exe" ) $versionObj
+        Validate-ExecutableVersion $(Join-Path -Path $specOutDirs.Debug -ChildPath "Raven.Debug.exe" ) $versionObj
         
         Validate-AssemblyVersion $(Join-Path -Path $specOutDirs.Client -ChildPath "netstandard2.0/Raven.Client.dll" ) $versionObj
         Validate-AssemblyVersion $(Join-Path -Path $TESTDRIVER_OUT_DIR -ChildPath "netstandard2.0/Raven.TestDriver.dll" ) $versionObj
