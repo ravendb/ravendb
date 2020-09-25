@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     VisitConditionalExpression(expression.As<ConditionalExpression>());
                     break;
                 case Nodes.FunctionExpression:
-                    VisitFunctionExpression(expression.As<IFunction>());
+                    VisitFunctionExpression(expression.As<FunctionExpression>());
                     break;
                 case Nodes.Identifier:
                     VisitIdentifier(expression.As<Identifier>());
@@ -744,7 +744,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     break;
                 case PropertyKind.Set:
                 case PropertyKind.Get:
-                    VisitFunctionExpression(property.Value.As<IFunction>());
+                    VisitFunctionExpression(property.Value.As<FunctionExpression>());
                     break;
                 case PropertyKind.Constructor:
                     break;
