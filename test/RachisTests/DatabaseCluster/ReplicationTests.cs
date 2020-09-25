@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 using System.Threading.Tasks;
-using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -135,7 +133,6 @@ namespace RachisTests.DatabaseCluster
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(60),
                     certificate: clientCertificate));
-
             }
         }
 
@@ -412,7 +409,6 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-
         [Fact]
         public async Task CanAddAndModifySingleWatcher()
         {
@@ -458,7 +454,6 @@ namespace RachisTests.DatabaseCluster
                     u => u.Name.Equals("Karmel"),
                     TimeSpan.FromSeconds(clusterSize + 5)));
 
-
                 doc = new DatabaseRecord(external1);
                 var res = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc));
                 watcherUrls = res.NodesAddedTo.ToArray();
@@ -473,7 +468,7 @@ namespace RachisTests.DatabaseCluster
                 };
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
                 await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
-                WaitForDocument(new[] {leader.WebUrl}, watcher.Database);
+                WaitForDocument(new[] { leader.WebUrl }, watcher.Database);
             }
 
             var handler = await InstantiateOutgoingTaskHandler(databaseName, leader);
@@ -515,13 +510,13 @@ namespace RachisTests.DatabaseCluster
                 await watcherNode.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await watcherNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(external2);
                 watcherUrls = res.NodesAddedTo.ToArray();
-                
+
                 //modify watcher
                 watcher.Name = "MyExternalReplication2";
                 watcher.Database = external2;
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
                 await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
-                WaitForDocument(new[] {leader.WebUrl}, watcher.Database);
+                WaitForDocument(new[] { leader.WebUrl }, watcher.Database);
             }
 
             tasks = handler.GetOngoingTasksInternal().OngoingTasksList;
@@ -560,7 +555,6 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(0, tasks.Count);
             }
         }
-
 
         [Theory]
         [InlineData(false)]
@@ -869,11 +863,11 @@ namespace RachisTests.DatabaseCluster
                     var server = Servers.Single(s => s.WebUrl == responsibale);
                     var handler = await InstantiateOutgoingTaskHandler(srcDB, server);
                     Assert.True(WaitForValue(
-                        () => handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication).As<OngoingTaskReplication>().DestinationUrl !=
+                        () => ((OngoingTaskReplication)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication)).DestinationUrl !=
                               null,
                         true));
 
-                    var watcherTaskUrl = handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication).As<OngoingTaskReplication>()
+                    var watcherTaskUrl = ((OngoingTaskReplication)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskReplication))
                         .DestinationUrl;
 
                     // fail the node to to where the data is sent
@@ -918,7 +912,6 @@ namespace RachisTests.DatabaseCluster
                 Database = dstDB,
             }.Initialize())
             {
-                
                 dstLeader.ServerStore.InitializationCompleted.Reset(true);
                 dstLeader.ServerStore.Initialized = false;
 
@@ -930,7 +923,7 @@ namespace RachisTests.DatabaseCluster
                         var wait = Task.Delay(TimeSpan.FromSeconds(30));
                         var exec = Task.Run(() =>
                         {
-                            using (var requestExecutor = RequestExecutor.Create(new[] {dstLeader.WebUrl}, dstDB, null, DocumentConventions.DefaultForServer))
+                            using (var requestExecutor = RequestExecutor.Create(new[] { dstLeader.WebUrl }, dstDB, null, DocumentConventions.DefaultForServer))
                             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                             {
                                 var cmd = new GetTcpInfoCommand("external-replication", db.Name, db.DbId.ToString(), db.ReadLastEtag());
@@ -983,7 +976,7 @@ namespace RachisTests.DatabaseCluster
                         var wait = Task.Delay(TimeSpan.FromSeconds(30));
                         var exec = Task.Run(() =>
                         {
-                            using (var requestExecutor = RequestExecutor.Create(new[] {dstLeader.WebUrl}, dstDB, null,
+                            using (var requestExecutor = RequestExecutor.Create(new[] { dstLeader.WebUrl }, dstDB, null,
                                 DocumentConventions.DefaultForServer))
                             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                             {
@@ -1070,7 +1063,7 @@ namespace RachisTests.DatabaseCluster
                     session.Store(new User(), "foo/bar");
                     session.SaveChanges();
                 }
-                
+
                 using (var controller = new ReplicationController(database))
                 {
                     var databaseWatcher1 = new ExternalReplication(dst.Database, $"ConnectionString-{src.Identifier}_1");
@@ -1084,7 +1077,6 @@ namespace RachisTests.DatabaseCluster
                     await AddWatcherToReplicationTopology(src, databaseWatcher2, src.Urls);
 
                     await Task.Delay(TimeSpan.FromSeconds(5));
-
                 }
                 EnsureReplicating(src, dst);
             }
@@ -1098,13 +1090,13 @@ namespace RachisTests.DatabaseCluster
             {
                 Server = cluster.Leader,
                 ReplicationFactor = 1,
-                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology {Members = new List<string> {cluster.Leader.ServerStore.NodeTag}}
+                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology { Members = new List<string> { cluster.Leader.ServerStore.NodeTag } }
             }))
             {
                 var database = await cluster.Leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 using (var controller = new ReplicationController(database))
                 {
-                    using (var session = store.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                    using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
                         session.Store(new User(), "users/1");
                         session.Store(new User(), "users/2");
@@ -1115,21 +1107,21 @@ namespace RachisTests.DatabaseCluster
                     cluster.Leader.ServerStore.Observer.Suspended = true;
                     await store.Maintenance.Server.SendAsync(new AddDatabaseNodeOperation(store.Database));
 
-                    using (var session = store.OpenSession(new SessionOptions {TransactionMode = TransactionMode.ClusterWide}))
+                    using (var session = store.OpenSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
                         session.Store(new User(), "users/3");
                         session.SaveChanges();
                     }
                     controller.ReplicateOnce();
-                    Assert.False(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/3", null,
+                    Assert.False(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/3", null,
                         TimeSpan.FromSeconds(10)));
                 }
 
-                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/3", null,
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/3", null,
                     TimeSpan.FromSeconds(10)));
-                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/2", null,
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/2", null,
                     TimeSpan.FromSeconds(10)));
-                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology {Members = new List<string> {"A", "B"}}, store.Database, "users/1", null,
+                Assert.True(await WaitForDocumentInClusterAsync<User>(new DatabaseTopology { Members = new List<string> { "A", "B" } }, store.Database, "users/1", null,
                     TimeSpan.FromSeconds(10)));
             }
         }
