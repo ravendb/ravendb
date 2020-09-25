@@ -61,7 +61,6 @@ class manageDatabaseGroup extends viewModelBase {
     }
 
     private initObservables() {
-        
         this.anyNodeHasError = ko.pureComputed(() => {
             if (clusterTopologyManager.default.votingInProgress()) {
                 return true;
@@ -173,6 +172,7 @@ class manageDatabaseGroup extends viewModelBase {
             .execute()
             .done(() => {
                 this.disableNodesSort();
+                this.dirtyFlag().reset();
             });
     }
     
@@ -194,7 +194,10 @@ class manageDatabaseGroup extends viewModelBase {
     
     private refresh() {
         if (!this.inSortableMode()) {
-            $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
+            $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks())
+                .always(() => {
+                    this.dirtyFlag().reset();
+                });
         }
     }
     
