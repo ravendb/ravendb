@@ -52,16 +52,14 @@
                     <div class="panel panel-info panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
-                <div data-bind="foreach: perCollectionConfigurations">
+                <div data-bind="with: conflictsConfiguration">
                     <div class="panel panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
-                <div class="row" data-bind="visible: perCollectionConfigurations().length == 0 && !defaultConfiguration()">
-                    <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                        <i class="icon-xl icon-empty-set text-muted"></i>
-                        <h2 class="text-center text-muted">No configuration has been created.</h2>    
+                <div data-bind="foreach: perCollectionConfigurations">
+                    <div class="panel panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
-                </div>
+                </div>  
             </div>
         </div>
         <div class="col-sm-12 col-lg-4">
@@ -85,9 +83,9 @@
             <div data-bind="with: currentlyEditedItem">
                 <div class="panel padding edit-panel">
                     <div class="flex-horizontal">
-                        <div data-bind="text: isDefault() ? 'Default collection' : 'Collection'"></div>
+                        <div data-bind="text: isDefault() ? 'Default collection' : (isConflicts() ? 'Conflicts' : 'Collection')"></div>
 
-                        <div class="dropdown btn-group flex-grow" data-bind="validationElement: collection, visible: !isDefault()">
+                        <div class="dropdown btn-group flex-grow" data-bind="validationElement: collection, visible: canChangeName">
                             <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" data-bind="textInput: collection, attr: { id: 'collectionNameInput' }" />
                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                             <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'collectionNameInput', foreach: $root.createCollectionNameAutocompleter($data)">
@@ -146,14 +144,17 @@
             <input type="checkbox" class="styled" data-bind="checked: $root.selectedItems, checkedValue: $data">
             <label></label>
         </div>
-        <div class="name">
-            <h3 data-bind="text: isDefault() ? 'Default' : collection(), attr: { title: collection() }"></h3>
+        <div class="name flex-horizontal">
+            <h3 data-bind="attr: { title: name }" class="flex-grow">
+                <span data-bind="text: name"></span>
+            </h3>
+            <i class="icon-info text-info conflicts-collection-info" data-placement="bottom" data-bind="visible: isConflicts"></i>
         </div>
         <div class="flex-grow">
             <ul class="properties">
                 <li data-bind="visible: purgeOnDelete"><i class="icon-empty-set"></i><span>Purge on delete</span></li>
                 <li data-bind="visible: limitRevisions"><i class="icon-documents"></i><span>Minimum revisions to keep: <span data-bind="text: minimumRevisionsToKeep"></span></span></li>
-                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Minimum retention time: <span data-bind="text: $root.formatedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
+                <li data-bind="visible: limitRevisionsByAge"><i class="icon-clock"></i><span>Minimum retention time: <span data-bind="text: $root.formattedDurationObservable(minimumRevisionAgeToKeep)"></span></span></li>
             </ul>
         </div>
         <div class="actions-container">
@@ -165,7 +166,7 @@
                     <i class="icon-play"></i><span>Enable</span>
                 </button>
                 <button class="btn btn-default" data-bind="click: $root.editItem" title="Edit revisions configuration"><i class="icon-edit"></i></button>
-                <button class="btn btn-danger" data-bind="click: $root.deleteItem" title="Delete revisions configuration"><i class="icon-trash"></i></button>
+                <button class="btn btn-danger" data-bind="click: $root.deleteItem, style: { visibility: isConflicts() ? 'hidden' : 'visible' }" title="Delete revisions configuration"><i class="icon-trash"></i></button>
             </div>
         </div>
     </div>

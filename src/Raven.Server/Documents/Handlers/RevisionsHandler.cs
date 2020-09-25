@@ -61,6 +61,33 @@ namespace Raven.Server.Documents.Handlers
             }
             return Task.CompletedTask;
         }
+        
+        [RavenAction("/databases/*/revisions/conflicts/config", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetConflictRevisionsConfig()
+        {
+            using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                RevisionsCollectionConfiguration revisionsForConflictsConfig;
+                using (var rawRecord = Server.ServerStore.Cluster.ReadRawDatabaseRecord(context, Database.Name))
+                {
+                    revisionsForConflictsConfig = rawRecord?.RevisionsForConflicts;
+                }
+
+                if (revisionsForConflictsConfig != null)
+                {
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, revisionsForConflictsConfig.ToJson());
+                    }
+                }
+                else
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                }
+            }
+            return Task.CompletedTask;
+        }
 
         [RavenAction("/databases/*/admin/revisions/conflicts/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigConflictedRevisions()

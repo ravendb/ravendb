@@ -636,8 +636,8 @@ class editIndex extends viewModelBase {
     private setFormattedText(textToFormat: KnockoutObservable<string>) {
         new formatIndexCommand(this.activeDatabase(), textToFormat())
             .execute()
-            .done((formatedText) => {
-                textToFormat(formatedText.Expression);
+            .done((formattedText) => {
+                textToFormat(formattedText.Expression);
             });
     }
 

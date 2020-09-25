@@ -3,11 +3,13 @@ import revisionsConfigurationEntry = require("models/database/documents/revision
 import appUrl = require("common/appUrl");
 import database = require("models/resources/database");
 import saveRevisionsConfigurationCommand = require("commands/database/documents/saveRevisionsConfigurationCommand");
+import saveRevisionsForConflictsConfigurationCommand = require("commands/database/documents/saveRevisionsForConflictsConfigurationCommand");
 import eventsCollector = require("common/eventsCollector");
 import generalUtils = require("common/generalUtils");
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getRevisionsConfigurationCommand = require("commands/database/documents/getRevisionsConfigurationCommand");
+import getRevisionsForConflictsConfigurationCommand = require("commands/database/documents/getRevisionsForConflictsConfigurationCommand");
 import enforceRevisionsConfigurationCommand = require("commands/database/settings/enforceRevisionsConfigurationCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -15,6 +17,9 @@ class revisions extends viewModelBase {
 
     defaultConfiguration = ko.observable<revisionsConfigurationEntry>();
     perCollectionConfigurations = ko.observableArray<revisionsConfigurationEntry>([]);
+
+    conflictsConfiguration = ko.observable<revisionsConfigurationEntry>();
+    
     isSaveEnabled: KnockoutComputed<boolean>;
     collections = collectionsTracker.default.collections;
     selectionState: KnockoutComputed<checkbox>;
@@ -67,13 +72,14 @@ class revisions extends viewModelBase {
     canActivate(args: any): boolean | JQueryPromise<canActivateResultDto> {
         return $.when<any>(super.canActivate(args))
             .then(() => {
-                const deferred = $.Deferred<canActivateResultDto>();
-
-                this.fetchRevisionsConfiguration(this.activeDatabase())
-                    .done(() => deferred.resolve({ can: true }))
-                    .fail(() => deferred.resolve({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
-
-                return deferred;
+                const db = this.activeDatabase();
+                
+                const revisionsTask = this.fetchRevisionsConfiguration(db);
+                const conflictsTask = this.fetchRevisionsForConflictsConfiguration(db);
+                
+                return $.when<any>(revisionsTask, conflictsTask)
+                    .then(() => ({ can: true }))
+                    .fail(() => ({ redirect: appUrl.forDatabaseRecord(this.activeDatabase()) }));
             });
     }
 
@@ -81,12 +87,20 @@ class revisions extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("1UZ5WL");
 
-        this.dirtyFlag = new ko.DirtyFlag([this.perCollectionConfigurations, this.defaultConfiguration]);
+        this.dirtyFlag = new ko.DirtyFlag([this.perCollectionConfigurations, this.defaultConfiguration, this.conflictsConfiguration]);
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             const dirty = this.dirtyFlag().isDirty();
             const saving = this.spinners.save();
             return dirty && !saving;
         });
+    }
+    
+    private fetchRevisionsForConflictsConfiguration(db: database): JQueryPromise<Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration> {
+        return new getRevisionsForConflictsConfigurationCommand(db)
+            .execute()
+            .done((config: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration) => {
+                this.onRevisionsForConflictsConfigurationLoaded(config);
+            });
     }
 
     private fetchRevisionsConfiguration(db: database): JQueryPromise<Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration> {
@@ -112,6 +126,22 @@ class revisions extends viewModelBase {
         } else {
             this.defaultConfiguration(null);
             this.perCollectionConfigurations([]);
+        }
+    }
+
+    onRevisionsForConflictsConfigurationLoaded(data: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration) {
+        if (data) {
+            this.conflictsConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.ConflictsConfiguration, data));
+            
+            this.dirtyFlag().reset();
+        } else {
+            const dto: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration = {
+                Disabled: false,
+                PurgeOnDelete: false,
+                MinimumRevisionsToKeep: undefined,
+                MinimumRevisionAgeToKeep: "45.00:00:00"
+            };
+            this.conflictsConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.ConflictsConfiguration, dto));
         }
     }
 
@@ -175,7 +205,7 @@ class revisions extends viewModelBase {
         this.exitEditMode();
     }
 
-    toDto(): Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration {
+    toRevisionsDto(): Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration {
         const perCollectionConfigurations = this.perCollectionConfigurations();
 
         const collectionsDto = {} as { [key: string]: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration; }
@@ -207,10 +237,19 @@ class revisions extends viewModelBase {
 
         eventsCollector.default.reportEvent("revisions", "save");
 
-        const dto = this.toDto();
+        const db = this.activeDatabase();
+        
+        const revisionsForConflictsDto = this.conflictsConfiguration().toDto();
+        const conflictsTask = new saveRevisionsForConflictsConfigurationCommand(db, revisionsForConflictsDto)
+            .execute();
 
-        new saveRevisionsConfigurationCommand(this.activeDatabase(), dto)
-            .execute()
+        const revisionsDto = this.toRevisionsDto();
+        const revisionsTask = new saveRevisionsConfigurationCommand(db, revisionsDto)
+            .execute();
+        
+        const saveTasks = [conflictsTask, revisionsTask];
+        
+        $.when<any>(...saveTasks)
             .done(() => {
                 this.dirtyFlag().reset();
                 messagePublisher.reportSuccess(`Revisions configuration has been saved`);
@@ -226,6 +265,11 @@ class revisions extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
+        $(".conflicts-collection-info").tooltip({
+            title: "Revisions configuration for conflicted documents. By default revision for each conflicting item is created. Revision is also created after conflict resolution.",
+            container: "body"
+        });
+        
         this.setupDisableReasons();
     }
 
@@ -284,7 +328,7 @@ class revisions extends viewModelBase {
         }
     }
 
-    formatedDurationObservable(observable: KnockoutObservable<number>) {
+    formattedDurationObservable(observable: KnockoutObservable<number>) {
         return ko.pureComputed(() => generalUtils.formatTimeSpan(observable() * 1000));
     }
 

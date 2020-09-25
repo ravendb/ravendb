@@ -180,6 +180,23 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private RevisionsCollectionConfiguration _revisionsForConflictsConfiguration;
+
+        public RevisionsCollectionConfiguration RevisionsForConflicts
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.RevisionsForConflicts;
+
+                if (_revisionsForConflictsConfiguration == null && _record.TryGet(nameof(DatabaseRecord.RevisionsForConflicts), out BlittableJsonReaderObject config) &&
+                    config != null)
+                    _revisionsForConflictsConfiguration = JsonDeserializationCluster.RevisionsCollectionConfiguration(config);
+
+                return _revisionsForConflictsConfiguration;
+            }
+        }  
+
         private DocumentsCompressionConfiguration _documentsCompressionConfiguration;
 
         public DocumentsCompressionConfiguration DocumentsCompressionConfiguration
