@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
@@ -322,7 +321,9 @@ exit 0";
             // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (PlatformNotSupportedException)
             {
@@ -355,4 +356,3 @@ exit 0";
         }
     }
 }
-

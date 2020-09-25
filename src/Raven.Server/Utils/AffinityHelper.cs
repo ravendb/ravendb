@@ -170,7 +170,9 @@ namespace Raven.Server.Utils
             if (PlatformDetails.RunningOnPosix == false)
             {
                 // windows
+#pragma warning disable CA1416 // Validate platform compatibility
                 pooledThread.CurrentProcessThread.ProcessorAffinity = new IntPtr(affinity);
+#pragma warning restore CA1416 // Validate platform compatibility
                 return;
             }
 

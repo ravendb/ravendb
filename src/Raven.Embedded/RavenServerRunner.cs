@@ -7,7 +7,7 @@ using Sparrow.Utils;
 
 namespace Raven.Embedded
 {
-    internal class RavenServerRunner
+    internal static class RavenServerRunner
     {
         public static Process Run(ServerOptions options)
         {
@@ -109,7 +109,7 @@ namespace Raven.Embedded
 
             if (File.Exists(exec))
                 return (exec, null);
-            
+
             var serverDllPath = Path.Combine(options.ServerDirectory, "Raven.Server.dll");
             var serverDllFound = File.Exists(serverDllPath);
 

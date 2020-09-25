@@ -35,7 +35,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     tsf.Append(baseline.AddHours(4), 90); // 04 : 00 - 05:00
                     tsf.Append(baseline.AddHours(5), 100); // 05 : 00 - 06:00
 
-                    // gaps to fill : 02:00 - 03:00, 03:00 - 04:00 
+                    // gaps to fill : 02:00 - 03:00, 03:00 - 04:00
 
                     session.SaveChanges();
                 }
@@ -45,7 +45,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1h
     with interpolation(linear)
     select max())
@@ -126,7 +126,7 @@ select timeseries(
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1 minute
     with interpolation(linear)
     select max())
@@ -156,8 +156,6 @@ select timeseries(
         {
             using (var store = GetDocumentStore())
             {
-                var neighbor = "da";
-
                 var baseline = RavenTestHelper.UtcToday;
                 string id = "people/1";
 
@@ -172,7 +170,7 @@ select timeseries(
                     tsf.Append(baseline.AddHours(4), 90); // 04 : 00 - 05:00
                     tsf.Append(baseline.AddHours(5), 100); // 05 : 00 - 06:00
 
-                    // gaps to fill : 02:00 - 03:00, 03:00 - 04:00 
+                    // gaps to fill : 02:00 - 03:00, 03:00 - 04:00
 
                     session.SaveChanges();
                 }
@@ -182,7 +180,7 @@ select timeseries(
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1h
     with interpolation(nearest)
     select max())
@@ -210,14 +208,14 @@ select timeseries(
                     Assert.Equal(baseline.AddHours(3), aggResult.To);
 
                     // should be the same as last range
-                    Assert.Equal(60, aggResult.Max[0]); 
+                    Assert.Equal(60, aggResult.Max[0]);
 
                     aggResult = result.Results[3];
                     Assert.Equal(baseline.AddHours(3), aggResult.From);
                     Assert.Equal(baseline.AddHours(4), aggResult.To);
 
                     // should be the same as next range
-                    Assert.Equal(90, aggResult.Max[0]); 
+                    Assert.Equal(90, aggResult.Max[0]);
 
                     aggResult = result.Results[4];
                     Assert.Equal(baseline.AddHours(4), aggResult.From);
@@ -253,7 +251,6 @@ select timeseries(
                             continue;
 
                         tsf.Append(baseline.AddMinutes(i), i * 2.5);
-
                     }
 
                     session.SaveChanges();
@@ -264,7 +261,7 @@ select timeseries(
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1 minute
     with interpolation(nearest)
     select max())
@@ -347,7 +344,7 @@ select timeseries(
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1 month
     with interpolation(linear)
     select max())
@@ -368,7 +365,7 @@ select timeseries(
 
                         if (tsAggregation.From.Month.In(10, 11, 12))
                         {
-                            // y = yA + (yB - yA) * ((x - xa) / (xb - xa)) 
+                            // y = yA + (yB - yA) * ((x - xa) / (xb - xa))
                             var x = tsAggregation.From.Ticks;
                             var xa = result.Results[i - 1].From.Ticks;
                             var xb = result.Results[i + 1].From.Ticks;
@@ -414,7 +411,7 @@ select timeseries(
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1 month
     with interpolation(nearest)
     select max())
@@ -465,7 +462,7 @@ select timeseries(
                     {
                         if (i % 3 == 0)
                             continue;
-                        tsf.Append(baseline.AddMinutes(i), new []{ i * 3d, i * 6.5 });
+                        tsf.Append(baseline.AddMinutes(i), new[] { i * 3d, i * 6.5 });
                     }
 
                     session.SaveChanges();
@@ -480,7 +477,7 @@ select timeseries(
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1 minute
     with interpolation(linear)
     select max())
@@ -520,11 +517,11 @@ select timeseries(
 
                     var tsf = session.TimeSeriesFor(id, "HeartRate");
 
-                    tsf.Append(baseline, 0); 
-                    tsf.Append(baseline.AddDays(1), 1); 
-                    tsf.Append(baseline.AddDays(30), new []{ 30d, 60 });
+                    tsf.Append(baseline, 0);
+                    tsf.Append(baseline.AddDays(1), 1);
+                    tsf.Append(baseline.AddDays(30), new[] { 30d, 60 });
                     tsf.Append(baseline.AddDays(60), new[] { 60d, 120, 180 });
-                    tsf.Append(baseline.AddDays(90), 90); 
+                    tsf.Append(baseline.AddDays(90), 90);
 
                     session.SaveChanges();
                 }
@@ -535,7 +532,7 @@ select timeseries(
 from People
 where id() = $id
 select timeseries(
-    from HeartRate between $start and $end 
+    from HeartRate between $start and $end
     group by 1 day
     with interpolation(linear)
     select max())
@@ -594,7 +591,6 @@ select timeseries(
                 }
                 using (var session = store.OpenSession())
                 {
-
                     var query = session.Query<Person>()
                         .Where(p => p.Id == id)
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
@@ -665,7 +661,6 @@ select timeseries(
                             continue;
 
                         tsf.Append(baseline.AddMinutes(i), i * 2.5);
-
                     }
 
                     session.SaveChanges();
@@ -851,7 +846,6 @@ select timeseries(
                     Assert.Equal(baseline.AddHours(3), tsAgg.From);
                     Assert.Equal(baseline.AddHours(4), tsAgg.To);
                     Assert.Equal(23, tsAgg.Max[0]);
-
                 }
             }
         }

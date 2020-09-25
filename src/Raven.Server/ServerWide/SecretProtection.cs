@@ -184,7 +184,9 @@ namespace Raven.Server.ServerWide
                     var dpapiEntropy = Sodium.GenerateRandomBuffer((int)Sodium.crypto_aead_xchacha20poly1305_ietf_npubbytes());
 
                     //DPAPI doesn't do AEAD, so we encrypt the data as usual, then encrypt the temp key we use with DPAPI
+#pragma warning disable CA1416 // Validate platform compatibility
                     var protectedKey = ProtectedData.Protect(tempKey, dpapiEntropy, DataProtectionScope.CurrentUser);
+#pragma warning restore CA1416 // Validate platform compatibility
 
                     Sodium.sodium_memzero(pTempKey, (UIntPtr)tempKey.Length);
 
@@ -265,7 +267,9 @@ namespace Raven.Server.ServerWide
                 if (data.Length != dataLen)
                     throw new InvalidOperationException("Wrong size for data buffer: " + entropy.Length + " but expected " + dataLen);
 
+#pragma warning disable CA1416 // Validate platform compatibility
                 var plainKey = ProtectedData.Unprotect(key, entropy, DataProtectionScope.CurrentUser);
+#pragma warning restore CA1416 // Validate platform compatibility
                 try
                 {
                     return DecryptProtectedData(data, plainKey);
@@ -320,6 +324,7 @@ namespace Raven.Server.ServerWide
         }
 
 #if !RVN
+
         public RavenServer.CertificateHolder LoadCertificateWithExecutable(string executable, string args, ServerStore serverStore)
         {
             Process process;
@@ -487,6 +492,7 @@ namespace Raven.Server.ServerWide
                     $"Unable to execute {executable} {args}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
             }
         }
+
 #endif
 
         private byte[] LoadMasterKeyWithExecutable()
@@ -571,6 +577,7 @@ namespace Raven.Server.ServerWide
         }
 
 #if !RVN
+
         public static RavenServer.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, ServerStore serverStore)
         {
             ValidateExpiration(source, loadedCertificate, serverStore);
@@ -685,6 +692,7 @@ namespace Raven.Server.ServerWide
                 throw new InvalidOperationException($"Could not load certificate file {path}", e);
             }
         }
+
 #endif
 
         public byte[] LoadMasterKeyFromPath()
@@ -720,6 +728,7 @@ namespace Raven.Server.ServerWide
         }
 
 #if !RVN
+
         private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate, ServerStore serverStore)
         {
             if (loadedCertificate.NotAfter < DateTime.UtcNow)

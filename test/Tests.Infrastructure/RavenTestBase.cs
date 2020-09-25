@@ -106,7 +106,9 @@ namespace FastTests
                 // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
                 try
                 {
+#pragma warning disable CA1416 // Validate platform compatibility
                     ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+#pragma warning restore CA1416 // Validate platform compatibility
                 }
                 catch (PlatformNotSupportedException)
                 {
@@ -634,26 +636,26 @@ namespace FastTests
         protected async Task<T> AssertWaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable
         {
             var ret = await WaitForGreaterThanAsync(act, val, timeout, interval);
-            if(ret.CompareTo(val) > 0 == false)
+            if (ret.CompareTo(val) > 0 == false)
                 throw new TimeoutException($"Timeout {TimeSpan.FromMilliseconds(timeout):g}. Value should be greater then {val}. Current value {ret}");
             return ret;
         }
-        
-        protected async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100)  where T : IComparable =>
+
+        protected async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
             await WaitForPredicateAsync(a => a.CompareTo(val) > 0, act, timeout, interval);
-        
+
         protected async Task AssertWaitForTrueAsync(Func<Task<bool>> act, int timeout = 15000, int interval = 100)
         {
             Assert.True(await WaitForValueAsync(act, true, timeout, interval));
         }
-        
+
         protected async Task<T> AssertWaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             var ret = await WaitForValueAsync(act, expectedVal, timeout, interval);
             Assert.Equal(expectedVal, ret);
             return ret;
         }
-        
+
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) =>
              await WaitForPredicateAsync(a => (a == null && expectedVal == null) || (a != null && a.Equals(expectedVal)), act, timeout, interval);
 
@@ -663,7 +665,7 @@ namespace FastTests
             Assert.NotNull(ret);
             return ret;
         }
-        
+
         protected async Task<T> AssertWaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             var ret = await WaitForNotDefaultAsync(act, timeout, interval);
@@ -676,17 +678,17 @@ namespace FastTests
             var result = await WaitForNullAsync(act, timeout, interval);
             Assert.Null(result);
         }
-        
-        protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T: class =>
+
+        protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
             await WaitForPredicateAsync(a => a != null, act, timeout, interval);
-        
+
         protected async Task<T> WaitForNotDefaultAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) =>
             await WaitForPredicateAsync(a => !EqualityComparer<T>.Default.Equals(a, default), act, timeout, interval);
-        
-        protected async Task<T> WaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T: class =>
+
+        protected async Task<T> WaitForNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
             await WaitForPredicateAsync(a => a == null, act, timeout, interval);
-        
-        private static async Task<T>WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
+
+        private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
@@ -708,7 +710,7 @@ namespace FastTests
                     }
                 }
                 await Task.Delay(interval);
-            } 
+            }
         }
 
         protected static async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000)
@@ -1021,7 +1023,9 @@ namespace FastTests
             // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (PlatformNotSupportedException)
             {
@@ -1433,7 +1437,7 @@ namespace FastTests
                 session.SaveChanges();
             }
         }
-        
+
         protected void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
         {
             //This try catch is only to investigate RavenDB-15366 issue
@@ -1456,6 +1460,7 @@ namespace FastTests
                 }
             }
         }
+
         protected async Task SaveChangesWithTryCatchAsync<T>(IAsyncDocumentSession session, T loaded) where T : class
         {
             //This try catch is only to investigate RavenDB-15366 issue

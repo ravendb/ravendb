@@ -24,7 +24,9 @@ namespace EmbeddedTests.TestDriver
         {
             var prefix = PosixHelper.RunningOnPosix ? "file://" : "file:///";
 
+#pragma warning disable SYSLIB0012 // Type or member is obsolete
             var testAssemblyLocation = typeof(RavenTestDriver).Assembly.CodeBase;
+#pragma warning restore SYSLIB0012 // Type or member is obsolete
             if (testAssemblyLocation.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                 testAssemblyLocation = testAssemblyLocation.Substring(prefix.Length);
 

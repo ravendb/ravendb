@@ -135,7 +135,9 @@ namespace Voron.Impl.Paging
                 {
                     try
                     {
+#pragma warning disable CA1416 // Validate platform compatibility
                         currentProcess.MaxWorkingSet = new IntPtr(nextWorkingSetSize);
+#pragma warning restore CA1416 // Validate platform compatibility
                     }
                     catch (Exception e)
                     {
@@ -148,7 +150,9 @@ namespace Voron.Impl.Paging
 
                 try
                 {
+#pragma warning disable CA1416 // Validate platform compatibility
                     currentProcess.MinWorkingSet = new IntPtr(nextWorkingSetSize);
+#pragma warning restore CA1416 // Validate platform compatibility
                 }
                 catch (Exception e)
                 {

@@ -120,7 +120,7 @@ namespace StressTests.Voron
                     }
                 }
 
-                throw ex;
+                throw;
             }
         }
     }
