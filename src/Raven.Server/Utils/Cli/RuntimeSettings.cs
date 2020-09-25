@@ -14,7 +14,7 @@ namespace Raven.Server.Utils.Cli
 
         private static (bool HasValue, bool Value) TryGetRetainVMSettingValue()
         {
-            // REMARK: Whenever CoreCLR includes this we can get rid of this method. 
+            // REMARK: Whenever CoreCLR includes this we can get rid of this method.
             var runtimeConfigurationPath = Path.Combine(AppContext.BaseDirectory, "Raven.Server.runtimeconfig.json");
 
             // Try read runtime configuration from file
@@ -24,7 +24,6 @@ namespace Raven.Server.Utils.Cli
                 using (FileStream f = File.OpenRead(runtimeConfigurationPath))
                 using (BlittableJsonReaderObject @object = context.Read(f, "n"))
                 {
-      
                     if (@object.TryGet("runtimeOptions", out BlittableJsonReaderObject runtime) &&
                         runtime.TryGet("configProperties", out BlittableJsonReaderObject properties) &&
                         properties.TryGet("System.GC.RetainVM", out bool value))
@@ -65,6 +64,7 @@ namespace Raven.Server.Utils.Cli
                 serverGcConcurrentMode = "concurrent";
             }
 
+            /*
             var retaining = "not retaining";
             (bool HasValue, bool Value) retainVmSettingValue = TryGetRetainVMSettingValue();
             if (retainVmSettingValue.HasValue && retainVmSettingValue.Value)
@@ -73,6 +73,8 @@ namespace Raven.Server.Utils.Cli
             }
 
             return $"Using GC in { serverGcMode } {serverGcConcurrentMode} mode {retaining} memory from the OS.";
+            */
+            return $"Using GC in { serverGcMode } {serverGcConcurrentMode} mode.";
         }
 
         public override void Print()
@@ -100,6 +102,9 @@ namespace Raven.Server.Utils.Cli
                 paragraph.Add(new ConsoleText { Message = " concurrent", ForegroundColor = ConsoleColor.Green });
             }
 
+            paragraph.Add(new ConsoleText { Message = " mode.", ForegroundColor = ConsoleColor.Gray });
+
+            /*
             paragraph.Add(new ConsoleText { Message = " mode ", ForegroundColor = ConsoleColor.Gray });
 
             (bool HasValue, bool Value) retainVmSettingValue = TryGetRetainVMSettingValue();
@@ -113,6 +118,7 @@ namespace Raven.Server.Utils.Cli
             }
 
             paragraph.Add(new ConsoleText { Message = " memory from the OS.", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
+            */
 
             ConsoleWriteWithColor(paragraph.ToArray());
         }
