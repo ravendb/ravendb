@@ -18,7 +18,7 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
     
     if ($target) {
         $commandArgs += $( "--runtime", "$($target.Runtime)" )
-		$commandArgs += $( "--self-contained", "true" )
+        $commandArgs += $( "--self-contained", "true" )
     }
 
     $commandArgs += "$srcDir"
@@ -32,10 +32,10 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
     }
 
     $commandArgs += '/p:SourceLinkCreate=true'
-	
-	if ($target) {
-		$commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
-	}
+    
+    if ($target) {
+        $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
+    }
 
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
@@ -138,7 +138,7 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
     }
 
     $commandArgs += '/p:SourceLinkCreate=true'
-	$commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=true'
+    $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=true'
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
     Invoke-Expression -Command "$command $commandArgs"
