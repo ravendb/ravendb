@@ -64,6 +64,7 @@ namespace Raven.Server.Utils.Cli
                 serverGcConcurrentMode = "concurrent";
             }
 
+            // https://github.com/dotnet/runtime/issues/42720
             /*
             var retaining = "not retaining";
             (bool HasValue, bool Value) retainVmSettingValue = TryGetRetainVMSettingValue();
@@ -102,8 +103,9 @@ namespace Raven.Server.Utils.Cli
                 paragraph.Add(new ConsoleText { Message = " concurrent", ForegroundColor = ConsoleColor.Green });
             }
 
-            paragraph.Add(new ConsoleText { Message = " mode.", ForegroundColor = ConsoleColor.Gray });
+            paragraph.Add(new ConsoleText { Message = " mode.", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
 
+            // https://github.com/dotnet/runtime/issues/42720
             /*
             paragraph.Add(new ConsoleText { Message = " mode ", ForegroundColor = ConsoleColor.Gray });
 
