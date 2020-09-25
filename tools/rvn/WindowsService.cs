@@ -1,5 +1,4 @@
-﻿using DasMulli.Win32.ServiceUtils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -8,6 +7,7 @@ using System.Linq;
 using System.ServiceProcess;
 using System.Text.RegularExpressions;
 using System.Threading;
+using DasMulli.Win32.ServiceUtils;
 
 namespace rvn
 {
@@ -142,7 +142,9 @@ namespace rvn
                     return;
                 }
 
+#pragma warning disable CA1416 // Validate platform compatibility
                 if ((serviceController.Status == ServiceControllerStatus.Stopped || serviceController.Status == ServiceControllerStatus.StopPending) == false)
+#pragma warning restore CA1416 // Validate platform compatibility
                 {
                     try
                     {
@@ -186,14 +188,15 @@ namespace rvn
                 if (serviceController == null)
                     return;
 
+#pragma warning disable CA1416 // Validate platform compatibility
                 if (!(serviceController.Status == ServiceControllerStatus.Stopped || serviceController.Status == ServiceControllerStatus.StopPending))
                 {
                     Console.WriteLine($"Service {ServiceFullName} is being stopped.");
                     serviceController.Stop();
                 }
 
-                serviceController.WaitForStatus(
-                    ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60));
+                serviceController.WaitForStatus(ServiceControllerStatus.Stopped, TimeSpan.FromSeconds(60));
+#pragma warning restore CA1416 // Validate platform compatibility
 
                 Console.WriteLine($"Service {ServiceFullName} stopped.");
             }
@@ -203,6 +206,7 @@ namespace rvn
                 if (serviceController == null)
                     return;
 
+#pragma warning disable CA1416 // Validate platform compatibility
                 if (!(serviceController.Status == ServiceControllerStatus.Running | serviceController.Status == ServiceControllerStatus.StartPending))
                 {
                     Console.WriteLine($"Service {ServiceFullName} is starting.");
@@ -210,6 +214,7 @@ namespace rvn
                 }
 
                 serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromSeconds(60));
+#pragma warning restore CA1416 // Validate platform compatibility
 
                 Console.WriteLine($"Service {ServiceFullName} started.");
             }
@@ -267,7 +272,9 @@ namespace rvn
             private ServiceController GetServiceController()
             {
                 var serviceName = NormalizeServiceName(_serviceName);
+#pragma warning disable CA1416 // Validate platform compatibility
                 return ServiceController.GetServices().FirstOrDefault(x => x.ServiceName == serviceName);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
         }
     }

@@ -96,7 +96,9 @@ namespace SlowTests.Authentication
             // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (PlatformNotSupportedException)
             {
@@ -189,7 +191,9 @@ namespace SlowTests.Authentication
             // sometimes when using `dotnet xunit` we get platform not supported from ProtectedData
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 ProtectedData.Protect(Encoding.UTF8.GetBytes("Is supported?"), null, DataProtectionScope.CurrentUser);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (PlatformNotSupportedException)
             {

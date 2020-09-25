@@ -154,7 +154,6 @@ namespace Raven.Server.Commercial
 
         private async Task<(TResult Result, string Response)> SendAsync<TResult>(HttpMethod method, Uri uri, object message, CancellationToken token) where TResult : class
         {
-
             var response = await SendAsyncInternal(method, uri, message, token);
 
             if (response.Content.Headers.ContentType.MediaType == "application/problem+json")
@@ -248,7 +247,6 @@ namespace Raven.Server.Commercial
                     catch (Exception e)
                     {
                         throw new InvalidOperationException($"Let's Encrypt client failed to send the request (with retries): {request}. Problem: {problemJson}", e);
-
                     }
                 }
 
@@ -258,7 +256,6 @@ namespace Raven.Server.Commercial
                 }
                 hasNonce = true; // we only allow it once
             } while (true);
-
         }
 
         public async Task<Dictionary<string, string>> NewOrder(string[] hostnames, CancellationToken token = default(CancellationToken))
@@ -310,7 +307,6 @@ namespace Raven.Server.Commercial
             {
                 var challenge = _challenges[index];
 
-
                 AuthorizationChallengeResponse result;
                 string responseText;
                 try
@@ -337,11 +333,12 @@ namespace Raven.Server.Commercial
                         // post-as-get (https://community.letsencrypt.org/t/acme-v2-scheduled-deprecation-of-unauthenticated-resource-gets/74380)
                         (err, errorText) = await SendAsync<AuthorizationChallengeResponse>(HttpMethod.Post, challenge.Url, string.Empty, token);
                     }
-                    catch (Exception)
+                    catch
                     {
                         // if we failed here, throw the original error
                         // since err isn't set
                     }
+
                     if (err == null)
                         throw;
 
@@ -404,11 +401,11 @@ namespace Raven.Server.Commercial
                     newRsaCsp.ImportParameters(parameters);
                     blob = newRsaCsp.ExportCspBlob(true);
                     break;
+
                 case RSACryptoServiceProvider rsaCsp:
                     blob = rsaCsp.ExportCspBlob(true);
                     break;
             }
-
 
             _cache.CachedCerts[_currentOrder.Identifiers[0].Value] = new CertificateCache
             {
@@ -459,7 +456,6 @@ namespace Raven.Server.Commercial
             return true;
         }
 
-
         public string GetTermsOfServiceUri(CancellationToken token = default(CancellationToken))
         {
             return _directory.Meta.TermsOfService;
@@ -472,7 +468,6 @@ namespace Raven.Server.Commercial
                 _cache.CachedCerts.Remove(host);
             }
         }
-
 
         private class RegistrationCache
         {
@@ -514,7 +509,6 @@ namespace Raven.Server.Commercial
         {
             [JsonProperty("keyAuthorization")]
             public string KeyAuthorization { get; set; }
-
         }
 
         private class AuthorizationChallenge
@@ -621,6 +615,18 @@ namespace Raven.Server.Commercial
                 Response = response;
             }
 
+            public LetsEncryptException()
+            {
+            }
+
+            public LetsEncryptException(string message) : base(message)
+            {
+            }
+
+            public LetsEncryptException(string message, Exception innerException) : base(message, innerException)
+            {
+            }
+
             public Problem Problem { get; }
 
             public HttpResponseMessage Response { get; }
@@ -659,10 +665,8 @@ namespace Raven.Server.Commercial
             [JsonProperty("jwk")]
             public Jwk Key { get; set; }
 
-
             [JsonProperty("kid")]
             public string KeyId { get; set; }
-
 
             [JsonProperty("nonce")]
             public string Nonce { get; set; }
@@ -715,7 +719,6 @@ namespace Raven.Server.Commercial
 
             [JsonProperty("value")]
             public string Value { get; set; }
-
         }
 
         private class Account : IHasLocation
@@ -795,10 +798,12 @@ namespace Raven.Server.Commercial
                             // From: https://tools.ietf.org/html/rfc8555#section-6.3
                             encodedPayload = string.Empty;
                             break;
+
                         case "{}":
                             // From: https://tools.ietf.org/html/rfc8555#section-7.5.1
                             encodedPayload = Base64UrlEncoded("{}");
                             break;
+
                         default:
                             throw new ArgumentException(nameof(payload));
                     }

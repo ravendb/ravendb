@@ -135,8 +135,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     RedirectStandardInput = true,
                     UseShellExecute = false
                 };
+
                 if (PlatformDetails.RunningOnPosix == false)
+                {
+#pragma warning disable CA1416 // Validate platform compatibility
                     startup.LoadUserProfile = false;
+#pragma warning restore CA1416 // Validate platform compatibility
+                }
 
                 var process = new Process
                 {

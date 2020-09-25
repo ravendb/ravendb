@@ -52,6 +52,7 @@ namespace Raven.Server.Commercial
 
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 var currentVersionSubKey = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
                 if (currentVersionSubKey == null)
                     return osInfo;
@@ -87,6 +88,7 @@ namespace Raven.Server.Commercial
                 }
 
                 return osInfo;
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (Exception e)
             {
