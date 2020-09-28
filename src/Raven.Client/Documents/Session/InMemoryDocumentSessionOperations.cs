@@ -1375,6 +1375,14 @@ more responsive application.
 
             _knownMissingIds.Add(id);
         }
+        
+        public void RegisterMissing(IEnumerable<string> ids)
+        {
+            if (NoTracking)
+                return;
+
+            _knownMissingIds.UnionWith(ids);
+        }
 
         internal void RegisterIncludes(BlittableJsonReaderObject includes)
         {

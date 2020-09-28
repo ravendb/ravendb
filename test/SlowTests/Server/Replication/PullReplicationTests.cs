@@ -1,16 +1,13 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
-using Raven.Server;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -54,7 +51,6 @@ namespace SlowTests.Server.Replication
             }
         }
 
-
         [Fact]
         public async Task CollectPullReplicationOngoingTaskInfo()
         {
@@ -73,7 +69,6 @@ namespace SlowTests.Server.Replication
 
                 var timeout = 3000;
                 Assert.True(WaitForDocument(sink, "foo/bar", timeout), sink.Identifier);
-
 
                 var sinkResult = (OngoingTaskPullReplicationAsSink)await sink.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(pullTasks[0].TaskId, OngoingTaskType.PullReplicationAsSink));
 
@@ -170,7 +165,6 @@ namespace SlowTests.Server.Replication
                 var pullTasks = await SetupPullReplicationAsync(definitionName1, sink, hub);
                 Assert.True(WaitForDocument(sink, "hub1/1", timeout), sink.Identifier);
 
-
                 var pull = new PullReplicationAsSink(hub2.Database, $"ConnectionString2-{sink.Database}", definitionName2)
                 {
                     TaskId = pullTasks[0].TaskId
@@ -253,7 +247,6 @@ namespace SlowTests.Server.Replication
                 }
                 var pullTasks = await SetupPullReplicationAsync(definitionName, sink, hub);
                 Assert.True(WaitForDocument(sink, "hub/1", timeout), sink.Identifier);
-
 
                 var pull = new PullReplicationAsSink(hub.Database, $"ConnectionString-{sink.Database}", definitionName)
                 {
@@ -409,14 +402,13 @@ namespace SlowTests.Server.Replication
                 var server = Servers.Single(s => s.WebUrl == minionUrl);
                 var handler = await InstantiateOutgoingTaskHandler(minionDB, server);
                 Assert.True(WaitForValue(
-                    () => handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink).As<OngoingTaskPullReplicationAsSink>().DestinationUrl !=
+                    () => ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl !=
                           null,
                     true));
 
-                var watcherTaskUrl = handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink).As<OngoingTaskPullReplicationAsSink>()
-                    .DestinationUrl;
+                var watcherTaskUrl = ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl;
 
-                // dispose the hub node, from which we are currently pulling 
+                // dispose the hub node, from which we are currently pulling
                 DisposeServerAndWaitForFinishOfDisposal(Servers.Single(s => s.WebUrl == watcherTaskUrl));
 
                 using (var session = hubStore.OpenSession())
@@ -479,7 +471,6 @@ namespace SlowTests.Server.Replication
                 var name = $"pull-replication {GetDatabaseName()}";
                 await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
 
-
                 // add pull replication with invalid discovery url to test the failover on database topology discovery
                 var pullReplication = new PullReplicationAsSink(hubDB, $"ConnectionString-{hubDB}", name)
                 {
@@ -500,8 +491,7 @@ namespace SlowTests.Server.Replication
                 var server = Servers.Single(s => s.WebUrl == minionUrl);
                 var handler = await InstantiateOutgoingTaskHandler(minionDB, server);
                 Assert.True(WaitForValue(
-                    () => handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink).As<OngoingTaskPullReplicationAsSink>().DestinationUrl !=
-                          null,
+                    () => ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
                     true));
 
                 // dispose the minion node.
