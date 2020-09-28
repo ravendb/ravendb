@@ -9,7 +9,6 @@ using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Includes;
-using Raven.Server.Documents.Indexes.Static.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -18,7 +17,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Sparrow.Platform;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -183,7 +181,15 @@ namespace Raven.Server.Documents.TcpHandlers
             var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                foreach (var revisionTuple in GetRevisionsEnumerator(_db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)))
+                IEnumerable<(Document previous, Document current)> revisions = _collection switch
+                {
+                    Constants.Documents.Collections.AllDocumentsCollection =>
+                        _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
+                    _ =>
+                        _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)
+                };
+                
+                foreach (var revisionTuple in GetRevisionsEnumerator(revisions))
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
