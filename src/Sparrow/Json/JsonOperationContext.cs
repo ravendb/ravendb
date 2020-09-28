@@ -39,28 +39,13 @@ namespace Sparrow.Json
 
         private readonly Dictionary<StringSegment, LazyStringValue> _fieldNames = new Dictionary<StringSegment, LazyStringValue>(StringSegmentEqualityStructComparer.BoxedInstance);
 
-        private readonly struct PathCacheHolder
-        {
-            public PathCacheHolder(Dictionary<StringSegment, object> path, Dictionary<int, object> byIndex)
-            {
-                Path = path;
-                ByIndex = byIndex;
-            }
-
-            public readonly Dictionary<StringSegment, object> Path;
-            public readonly Dictionary<int, object> ByIndex;
-        }
-
-        private int _numberOfAllocatedPathCaches = -1;
-        private readonly PathCacheHolder[] _allocatePathCaches = new PathCacheHolder[512];
+        private static readonly PerCoreContainer<PathCache> _perCorePathCache = new PerCoreContainer<PathCache>();
+        private PathCache _activeAllocatePathCaches;
         private readonly Stack<MemoryStream> _cachedMemoryStreams = new Stack<MemoryStream>();
 
+        private static readonly PerCoreContainer<FastList<LazyStringValue>> _perCoreLazyStringValuesList = new PerCoreContainer<FastList<LazyStringValue>>();
         private int _numberOfAllocatedStringsValues;
-        private readonly FastList<LazyStringValue> _allocateStringValues = new FastList<LazyStringValue>(256);
-
-        private int _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval;
-        private DateTime _lastAllocatedStringValueTime = DateTime.UtcNow;
-        private static readonly TimeSpan _allocatedStringValuesCheckInterval = TimeSpan.FromMinutes(1);
+        private FastList<LazyStringValue> _allocateStringValues;
 
         /// <summary>
         /// This flag means that this should be disposed, usually because we exceeded the maximum
@@ -68,38 +53,7 @@ namespace Sparrow.Json
         /// </summary>
         public bool DoNotReuse;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void AcquirePathCache(out Dictionary<StringSegment, object> pathCache, out Dictionary<int, object> pathCacheByIndex)
-        {
-            // PERF: Avoids allocating gigabytes in FastDictionary instances on high traffic RW operations like indexing.
-            if (_numberOfAllocatedPathCaches >= 0)
-            {
-                var cache = _allocatePathCaches[_numberOfAllocatedPathCaches--];
-                Debug.Assert(cache.Path != null);
-                Debug.Assert(cache.ByIndex != null);
-
-                pathCache = cache.Path;
-                pathCacheByIndex = cache.ByIndex;
-
-                return;
-            }
-
-            pathCache = new Dictionary<StringSegment, object>(StringSegmentEqualityStructComparer.BoxedInstance);
-            pathCacheByIndex = new Dictionary<int, object>(NumericEqualityComparer.BoxedInstanceInt32);
-        }
-
-        public void ReleasePathCache(Dictionary<StringSegment, object> pathCache, Dictionary<int, object> pathCacheByIndex)
-        {
-            if (_numberOfAllocatedPathCaches < _allocatePathCaches.Length - 1 && pathCache.Count < 256)
-            {
-                pathCache.Clear();
-                pathCacheByIndex.Clear();
-
-                _allocatePathCaches[++_numberOfAllocatedPathCaches] = new PathCacheHolder(pathCache, pathCacheByIndex);
-            }
-        }
-
-        public unsafe LazyStringValue Empty => _empty ?? (_empty = GetLazyString(string.Empty));
+        public LazyStringValue Empty => _empty ??= GetLazyString(string.Empty);
         private LazyStringValue _empty;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -108,9 +62,7 @@ namespace Sparrow.Json
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
-                _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = Math.Max(_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval, _numberOfAllocatedStringsValues);
-
-                lazyStringValue.Renew(str, ptr, size);
+                lazyStringValue.Renew(str, ptr, size, this);
                 return lazyStringValue;
             }
 
@@ -119,8 +71,6 @@ namespace Sparrow.Json
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
-
-                _lastAllocatedStringValueTime = DateTime.UtcNow;
             }
 
             return allocateStringValue;
@@ -160,7 +110,11 @@ namespace Sparrow.Json
                 TryDispose(_documentBuilder);
                 TryDispose(_arenaAllocator);
                 TryDispose(_arenaAllocatorForLongLivedValues);
-                TryExecute(_allocateStringValues.Clear);
+                if (_allocateStringValues != null)
+                {
+                    _perCoreLazyStringValuesList.Push(_allocateStringValues);
+                    _allocateStringValues = null;
+                }
 
                 if (exceptions != null)
                     throw new AggregateException("Failed to dispose context", exceptions);
@@ -192,10 +146,15 @@ namespace Sparrow.Json
             _arenaAllocator = new ArenaMemoryAllocator(lowMemoryFlag, initialSize);
             _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(lowMemoryFlag, longLivedSize);
             CachedProperties = new CachedProperties(this);
+            CachedProperties.Renew();
             _jsonParserState = new JsonParserState();
             _objectJsonParser = new ObjectJsonParser(_jsonParserState, this);
             _documentBuilder = new BlittableJsonDocumentBuilder(this, _jsonParserState, _objectJsonParser);
             LowMemoryFlag = lowMemoryFlag;
+            if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
+                _activeAllocatePathCaches = new PathCache();
+            if(_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
+                _allocateStringValues = new FastList<LazyStringValue>(256);
 
 #if MEM_GUARD_STACK
             DebugStuff.ElectricFencedMemory.IncrementContext();
@@ -960,15 +919,21 @@ namespace Sparrow.Json
             if (Disposed)
                 ThrowObjectDisposed();
 
+            if (_perCorePathCache.TryPull(out _activeAllocatePathCaches) == false)
+                _activeAllocatePathCaches = new PathCache();
+            if(_perCoreLazyStringValuesList.TryPull(out _allocateStringValues) == false)
+                _allocateStringValues = new FastList<LazyStringValue>(256);
+
             _arenaAllocator.RenewArena();
             if (_arenaAllocatorForLongLivedValues == null)
             {
                 _arenaAllocatorForLongLivedValues = new ArenaMemoryAllocator(LowMemoryFlag, _longLivedSize);
                 CachedProperties = new CachedProperties(this);
             }
+            CachedProperties.Renew();
         }
 
-        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false, bool releaseAllocatedStringValues = false)
+        protected internal virtual unsafe void Reset(bool forceReleaseLongLivedAllocator = false)
         {
             if (_tempBuffer != null && _tempBuffer.Address != null)
             {
@@ -980,6 +945,8 @@ namespace Sparrow.Json
 
             // We don't reset _arenaAllocatorForLongLivedValues. It's used as a cache buffer for long lived strings like field names.
             // When a context is re-used, the buffer containing those field names was not reset and the strings are still valid and alive.
+
+            CachedProperties?.Reset();
 
             var allocatorForLongLivedValues = _arenaAllocatorForLongLivedValues;
             if (allocatorForLongLivedValues != null &&
@@ -993,6 +960,7 @@ namespace Sparrow.Json
                 }
 
                 _arenaAllocatorForLongLivedValues = null;
+                CachedProperties = null;
                 // at this point, the long lived section is far too large, this is something that can happen
                 // if we have dynamic properties. A back of the envelope calculation gives us roughly 32K
                 // property names before this kicks in, which is a true abuse of the system. In this case,
@@ -1000,27 +968,15 @@ namespace Sparrow.Json
                 allocatorForLongLivedValues.Dispose();
 
                 _fieldNames.Clear();
-                CachedProperties = null; // need to release this so can be collected
             }
 
             for (var i = 0; i < _numberOfAllocatedStringsValues; i++)
                 _allocateStringValues[i].Reset();
 
+            _perCoreLazyStringValuesList.Push(_allocateStringValues);
+            _allocateStringValues = null;
+            
             _numberOfAllocatedStringsValues = 0;
-
-            if (releaseAllocatedStringValues && _allocateStringValues.Count > 0)
-            {
-                var now = DateTime.UtcNow;
-                if (now - _lastAllocatedStringValueTime >= _allocatedStringValuesCheckInterval)
-                {
-                    _lastAllocatedStringValueTime = now;
-                    var halfOfAllocatedStringValues = _allocateStringValues.Count / 2;
-                    if (_highestNumberOfReusedAllocatedStringsValuesInCurrentInterval <= halfOfAllocatedStringValues)
-                        _allocateStringValues.Trim(halfOfAllocatedStringValues);
-
-                    _highestNumberOfReusedAllocatedStringsValuesInCurrentInterval = 0;
-                }
-            }
 
             _objectJsonParser.Reset(null);
             _arenaAllocator.ResetArena();
@@ -1040,27 +996,23 @@ namespace Sparrow.Json
                 _pooledArrays = null;
             }
 
-            ClearUnreturnedPathCache();
+            if (_activeAllocatePathCaches != null)
+            {
+                _activeAllocatePathCaches.ClearUnreturnedPathCache();
+                _perCorePathCache.Push(_activeAllocatePathCaches);
+                _activeAllocatePathCaches = null;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void ClearUnreturnedPathCache()
+        public void AcquirePathCache(out Dictionary<StringSegment, object> pathCache, out Dictionary<int, object> pathCacheByIndex)
         {
-            for (var i = _numberOfAllocatedPathCaches + 1; i < _allocatePathCaches.Length - 1; i++)
-            {
-                var cache = _allocatePathCaches[i];
+            _activeAllocatePathCaches.AcquirePathCache(out pathCache, out pathCacheByIndex);
+        }
 
-                //never allocated, no reason to continue seeking
-                if (cache.Path == null)
-                    break;
-
-                //idly there shouldn't be unreleased path cache but we do have placed where we don't dispose of blittable object readers
-                //and rely on the context.Reset to clear unwanted memory, but it didn't take care of the path cache.
-
-                //Clear references for allocated cache paths so the GC can collect them.
-                cache.ByIndex.Clear();
-                cache.Path.Clear();
-            }
+        public void ReleasePathCache(Dictionary<StringSegment, object> pathCache, Dictionary<int, object> pathCacheByIndex)
+        {
+            _activeAllocatePathCaches.ReleasePathCache(pathCache, pathCacheByIndex);
         }
 
         public void Write(Stream stream, BlittableJsonReaderObject json)

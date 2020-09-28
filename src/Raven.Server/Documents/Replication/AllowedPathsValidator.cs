@@ -8,7 +8,7 @@ using Voron;
 namespace Raven.Server.Documents.Replication
 {
     public class AllowedPathsValidator : IDisposable
-    {    
+    {
         private readonly JsonOperationContext _allowedPathsContext;
         private readonly List<LazyStringValue> _allowedPaths;
         private readonly List<LazyStringValue> _allowedPathsPrefixes;
@@ -17,9 +17,9 @@ namespace Raven.Server.Documents.Replication
         private unsafe LazyStringValue GetDocumentId(Slice key)
         {
             var sepIdx = key.Content.IndexOf(SpecialChars.RecordSeparator);
-            if(_tmpLazyStringInstance == null)
+            if (_tmpLazyStringInstance == null)
                 _tmpLazyStringInstance = new LazyStringValue(null, null, 0, _allowedPathsContext);
-            _tmpLazyStringInstance.Renew(null, key.Content.Ptr, sepIdx);
+            _tmpLazyStringInstance.Renew(null, key.Content.Ptr, sepIdx, _allowedPathsContext);
             return _tmpLazyStringInstance;
         }
 
@@ -32,12 +32,12 @@ namespace Raven.Server.Documents.Replication
                 CounterReplicationItem c => "Counter for " + c.Id,
                 DocumentReplicationItem d => "Document " + d.Id,
                 RevisionTombstoneReplicationItem r => "Revision for: " + r.Id,
-                TimeSeriesDeletedRangeItem td => "Time Series deletion range for: " +  GetDocumentId(td.Key),
+                TimeSeriesDeletedRangeItem td => "Time Series deletion range for: " + GetDocumentId(td.Key),
                 TimeSeriesReplicationItem t => "Time Series for: " + GetDocumentId(t.Key),
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
             };
         }
-        
+
         public bool ShouldAllow(ReplicationBatchItem item)
         {
             return item switch
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Replication
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
             };
         }
-        
+
         private bool AllowId(LazyStringValue id)
         {
             foreach (LazyStringValue path in _allowedPaths)
@@ -71,6 +71,7 @@ namespace Raven.Server.Documents.Replication
 
             return false;
         }
+
         public AllowedPathsValidator(string[] allowedPaths)
         {
             {
@@ -93,7 +94,6 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
             }
-            
         }
 
         public void Dispose()

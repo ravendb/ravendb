@@ -518,7 +518,10 @@ namespace Raven.Server.ServerWide
             var path = Configuration.Core.DataDirectory.Combine("System");
             var storeAlertForLateRaise = new List<AlertRaised>();
 
-            IoChanges = new IoChangesNotifications();
+            IoChanges = new IoChangesNotifications
+            {
+                DisableIoMetrics = Configuration.Storage.EnableIoMetrics == false
+            };
 
             StorageEnvironmentOptions options;
             if (Configuration.Core.RunInMemory)

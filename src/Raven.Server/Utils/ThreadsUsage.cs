@@ -23,7 +23,10 @@ namespace Raven.Server.Utils
             {
                 foreach (var thread in GetProcessThreads(process))
                 {
-                    _threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
+                    using (thread)
+                    {
+                        _threadTimesInfo[thread.Id] = thread.TotalProcessorTime.Ticks;
+                    }
                 }
 
                 _processTimes = CpuHelper.GetProcessTimes(process);
@@ -40,7 +43,6 @@ namespace Raven.Server.Utils
 
             using (var process = Process.GetCurrentProcess())
             {
-                var processThreads = GetProcessThreads(process);
                 var previousProcessTimes = _processTimes;
                 _processTimes = CpuHelper.GetProcessTimes(process);
                 var processorTimeDiff = _processTimes.TotalProcessorTimeTicks - previousProcessTimes.TotalProcessorTimeTicks;
@@ -56,62 +58,65 @@ namespace Raven.Server.Utils
 
                 var threadTimesInfo = new Dictionary<int, long>();
                 double totalCpuUsage = 0;
-                foreach (var thread in processThreads)
+                foreach (var thread in GetProcessThreads(process))
                 {
-                    try
+                    using (thread)
                     {
-                        var threadTotalProcessorTime = thread.TotalProcessorTime;
-                        var threadCpuUsage = GetThreadCpuUsage(thread.Id, threadTotalProcessorTime, processorTimeDiff, cpuUsage, activeCores);
-                        threadTimesInfo[thread.Id] = threadTotalProcessorTime.Ticks;
-                        if (threadCpuUsage == null)
+                        try
                         {
-                            // no previous info about the TotalProcessorTime for this thread
-                            continue;
+                            var threadTotalProcessorTime = thread.TotalProcessorTime;
+                            var threadCpuUsage = GetThreadCpuUsage(thread.Id, threadTotalProcessorTime, processorTimeDiff, cpuUsage, activeCores);
+                            threadTimesInfo[thread.Id] = threadTotalProcessorTime.Ticks;
+                            if (threadCpuUsage == null)
+                            {
+                                // no previous info about the TotalProcessorTime for this thread
+                                continue;
+                            }
+
+                            totalCpuUsage += threadCpuUsage.Value;
+
+                            int? managedThreadId = null;
+                            string threadName = null;
+                            if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadStats))
+                            {
+                                threadName = threadStats.Name ?? "Thread Pool Thread";
+                                managedThreadId = threadStats.ManagedThreadId;
+                            }
+
+                            var threadState = GetThreadInfoOrDefault<ThreadState?>(() => thread.ThreadState);
+                            threadsInfo.List.Add(new ThreadInfo
+                            {
+                                Id = thread.Id,
+                                CpuUsage = threadCpuUsage.Value,
+                                Name = threadName ?? "Unmanaged Thread",
+                                ManagedThreadId = managedThreadId,
+                                StartingTime = GetThreadInfoOrDefault<DateTime?>(() => thread.StartTime.ToUniversalTime()),
+                                Duration = threadTotalProcessorTime.TotalMilliseconds,
+                                TotalProcessorTime = threadTotalProcessorTime,
+                                PrivilegedProcessorTime = thread.PrivilegedProcessorTime,
+                                UserProcessorTime = thread.UserProcessorTime,
+                                State = threadState,
+                                Priority = GetThreadInfoOrDefault<ThreadPriorityLevel?>(() => thread.PriorityLevel),
+                                WaitReason = GetThreadInfoOrDefault(() => threadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null)
+                            });
                         }
-
-                        totalCpuUsage += threadCpuUsage.Value;
-
-                        int? managedThreadId = null;
-                        string threadName = null;
-                        if (threadAllocations.TryGetValue((ulong)thread.Id, out var threadStats))
+                        catch (InvalidOperationException)
                         {
-                            threadName = threadStats.Name ?? "Thread Pool Thread";
-                            managedThreadId = threadStats.ManagedThreadId;
+                            // thread has exited
                         }
-
-                        var threadState = GetThreadInfoOrDefault<ThreadState?>(() => thread.ThreadState);
-                        threadsInfo.List.Add(new ThreadInfo
+                        catch (Win32Exception e) when (e.HResult == 0x5)
                         {
-                            Id = thread.Id,
-                            CpuUsage = threadCpuUsage.Value,
-                            Name = threadName ?? "Unmanaged Thread",
-                            ManagedThreadId = managedThreadId,
-                            StartingTime = GetThreadInfoOrDefault<DateTime?>(() => thread.StartTime.ToUniversalTime()),
-                            Duration = threadTotalProcessorTime.TotalMilliseconds,
-                            TotalProcessorTime = threadTotalProcessorTime,
-                            PrivilegedProcessorTime = thread.PrivilegedProcessorTime,
-                            UserProcessorTime = thread.UserProcessorTime,
-                            State = threadState,
-                            Priority = GetThreadInfoOrDefault<ThreadPriorityLevel?>(() => thread.PriorityLevel),
-                            WaitReason = GetThreadInfoOrDefault(() => threadState == ThreadState.Wait ? thread.WaitReason : (ThreadWaitReason?)null)
-                        });
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // thread has exited
-                    }
-                    catch (Win32Exception e) when (e.HResult == 0x5)
-                    {
-                        // thread has exited
-                    }
-                    catch (NotSupportedException)
-                    {
-                        // nothing to do
-                    }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info("Failed to get thread info", e);
+                            // thread has exited
+                        }
+                        catch (NotSupportedException)
+                        {
+                            // nothing to do
+                        }
+                        catch (Exception e)
+                        {
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info("Failed to get thread info", e);
+                        }
                     }
                 }
 

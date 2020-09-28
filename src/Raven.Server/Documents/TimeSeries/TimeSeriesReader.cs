@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
 
             var lazyStringLen = BlittableJsonReaderBase.ReadVariableSizeInt(_tagPointer.Pointer, 0, out var offset);
-            _tag.Renew(null, _tagPointer.Pointer + offset, lazyStringLen);
+            _tag.Renew(null, _tagPointer.Pointer + offset, lazyStringLen, _context);
             return _tag;
         }
 

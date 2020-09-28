@@ -304,6 +304,9 @@ namespace Raven.Server.Utils
                             CurrentProcessThread = pt;
                             break;
                         }
+
+                        // Need to dispose this explicitly, otherwise it blocks the finalizer
+                        pt.Dispose();
                     }
 
                     if (CurrentProcessThread == null)
