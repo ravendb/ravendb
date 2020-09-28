@@ -492,6 +492,15 @@ namespace Raven.Server.Commercial
             Func<HttpResponseMessage, Task> onFailure = null,
             Func<LeasedLicense, License> onSuccess = null)
         {
+            if (_serverStore.Configuration.Licensing.DisableAutoUpdate)
+            {
+                if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
+                {
+                    // ReSharper disable once MethodHasAsyncOverload
+                    Logger.Info("Skipping updating of the license because 'Licensing.DisableAutoLicenceUpdate' was set to true");
+                }
+                return null;
+            }
             var leaseLicenseInfo = GetLeaseLicenseInfo(currentLicense);
             var response = await ApiHttpClient.Instance.PostAsync("/api/v2/license/lease",
                     new StringContent(JsonConvert.SerializeObject(leaseLicenseInfo), Encoding.UTF8, "application/json"))
@@ -1377,6 +1386,15 @@ namespace Raven.Server.Commercial
             if (license == null)
             {
                 throw new InvalidOperationException("License doesn't exist");
+            }
+
+            if (_serverStore.Configuration.Licensing.DisableLicenseSupportCheck)
+            {
+                if (_skipLeasingErrorsLogging == false && Logger.IsInfoEnabled)
+                {
+                    Logger.Info("Skipping checking the license support options because 'Licensing.DisableLicenseSupportMode' is set to true");
+                }
+                return GetDefaultLicenseSupportInfo();
             }
 
             var leaseLicenseInfo = GetLeaseLicenseInfo(license);
