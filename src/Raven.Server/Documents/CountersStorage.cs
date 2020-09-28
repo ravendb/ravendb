@@ -1862,7 +1862,7 @@ namespace Raven.Server.Documents
             return putResult.ChangeVector;
         }
 
-        internal static BlittableJsonReaderObject ApplyCounterUpdatesToMetadata(DocumentsOperationContext context, BlittableJsonReaderObject data, string docId,
+        internal static BlittableJsonReaderObject ApplyCounterUpdatesToMetadata(JsonOperationContext context, BlittableJsonReaderObject data, string docId,
             SortedSet<string> countersToAdd, HashSet<string> countersToRemove, ref DocumentFlags flags)
         {
             if ((countersToRemove == null || countersToRemove.Count == 0) && countersToAdd.Count == 0)
