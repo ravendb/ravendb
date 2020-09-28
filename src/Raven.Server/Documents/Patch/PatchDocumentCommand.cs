@@ -125,7 +125,17 @@ namespace Raven.Server.Documents.Patch
                     // we will to access this value, and the original document data may be changed by
                     // the actions of the script, so we translate (which will create a clone) then use
                     // that clone later
-                    using (var scriptResult = run.Run(context, context, "execute", id, new[] { documentInstance, args }))
+
+                    JsonOperationContext patchContext = context;
+
+                    if (_debugMode && _externalContext != null)
+                    {
+                        // when running in debug mode let's use the external context so we'll be able to read blittables added to DebugActions
+
+                        patchContext = _externalContext;
+                    }
+
+                    using (var scriptResult = run.Run(patchContext, context, "execute", id, new[] { documentInstance, args }))
                     {
                         var result = new PatchResult
                         {
