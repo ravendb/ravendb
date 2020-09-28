@@ -537,7 +537,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
-            if (configuration.Metrics)
+            if (configuration.EnableMetrics)
             {
                 ReducesPerSec = new MeterMetric();
                 MapsPerSec = new MeterMetric();
