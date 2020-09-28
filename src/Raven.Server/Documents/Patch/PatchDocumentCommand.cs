@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Patch
                                 {
                                     Debug.Assert(originalDocument != null);
 
-                                    var newData = CountersStorage.ApplyCounterUpdatesToMetadata(context, result.ModifiedDocument, docId,
+                                    var newData = CountersStorage.ApplyCounterUpdatesToMetadata(_externalContext ?? context, result.ModifiedDocument, docId,
                                         countersToAdd, countersToRemove, ref originalDocument.Flags);
                                     if (newData != null)
                                     {
