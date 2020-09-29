@@ -43,7 +43,16 @@ class editReplicationHubTask extends viewModelBase {
         saveReplicationAccess: ko.observable<boolean>(false),
         generateCertificate: ko.observable<boolean>(false)
     };
+
+    allReplicationAccessItems = ko.observableArray<replicationAccessHubModel>([]);
+    visibleReplicationAccessItems: KnockoutComputed<Array<replicationAccessHubModel>>;
     
+    filterText = ko.observable<string>();
+    
+    readonly accessItemsBatch = 10;
+    batchCounter = ko.observable<number>(0);
+    showLoadMore: KnockoutComputed<boolean>;
+
     constructor() {
         super();
         
@@ -52,7 +61,7 @@ class editReplicationHubTask extends viewModelBase {
                                    "cancelHubTaskOperation", "cancelReplicationAccessOperation",
                                    "addNewReplicationAccess", "editReplicationAccessItem", 
                                    "cloneReplicationAccessItem","deleteReplicationAccessItem",
-                                   "saveReplicationHubTask", "saveReplicationAccessItem");
+                                   "saveReplicationHubTask", "saveReplicationAccessItem", "loadMoreAccessItems");
     }
 
     activate(args: any) {
@@ -113,7 +122,7 @@ class editReplicationHubTask extends viewModelBase {
             return new replicationAccessHubModel(x.Name, certificate, h2sPaths, s2hPaths, this.editedHubTask().withFiltering(), false);
         });
 
-        this.editedHubTask().replicationAccessItems(accessItems);
+        this.allReplicationAccessItems(accessItems);
     }
     
     attached() {
@@ -139,6 +148,29 @@ class editReplicationHubTask extends viewModelBase {
     }
 
     private initObservables() {
+        this.visibleReplicationAccessItems = ko.pureComputed(() => {
+            let itemsToShow = this.allReplicationAccessItems();
+
+            const filter = this.filterText();
+            if (filter) {
+                const upperFilter = filter.toUpperCase();
+                itemsToShow = itemsToShow.filter(x => x.replicationAccessName().toLowerCase().includes(upperFilter) ||
+                                                      x.certificate().thumbprint().includes(upperFilter));
+            }
+
+            const numberOfItemsToShow = this.batchCounter() * this.accessItemsBatch;
+            return itemsToShow.slice(0, numberOfItemsToShow);
+        });
+        
+        this.showLoadMore = ko.pureComputed(() => {
+            const visibleAccessItemsCount = this.visibleReplicationAccessItems().length;
+            const allAccessItemsCount = this.allReplicationAccessItems().length;
+
+            return visibleAccessItemsCount > 0 &&
+                   visibleAccessItemsCount < allAccessItemsCount &&
+                   visibleAccessItemsCount >= this.accessItemsBatch;
+        });
+        
         const model = this.editedHubTask();
         
         this.dirtyFlag = new ko.DirtyFlag([
@@ -456,6 +488,10 @@ class editReplicationHubTask extends viewModelBase {
     
     removeCertificate() {
         this.editedReplicationAccessItem().certificate(null);
+    }
+    
+    loadMoreAccessItems() {
+        this.batchCounter(this.batchCounter() + 1);
     }
 }
 

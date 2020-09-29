@@ -22,8 +22,6 @@ class ongoingTaskReplicationHubEditModel {
     replicationMode: KnockoutComputed<Raven.Client.Documents.Operations.Replication.PullReplicationMode>;
    
     withFiltering = ko.observable<boolean>();
-   
-    replicationAccessItems = ko.observableArray<replicationAccessHubModel>([]);
     
     validationGroupForSave: KnockoutValidationGroup;
     validationGroupForExport: KnockoutValidationGroup;
