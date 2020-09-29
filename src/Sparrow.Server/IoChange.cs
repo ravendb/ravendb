@@ -13,6 +13,7 @@ namespace Sparrow.Server
     public class IoChangesNotifications
     {
         public event Action<IoChange> OnIoChange;
+        public bool DisableIoMetrics;
 
         public void RaiseNotifications(string fileName, IoMeterBuffer.MeterItem meterItem)
         {

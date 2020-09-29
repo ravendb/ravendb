@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
@@ -25,17 +26,12 @@ namespace Sparrow.Json
         private readonly long _maxNumberOfContextsToKeepInGlobalStack;
         private long _numberOfContextsDisposedInGlobalStack;
 
-        private readonly T[][] _perCoreContexts;
+        private readonly PerCoreContainer<T> _perCoreCache = new PerCoreContainer<T>();
         private readonly CountingConcurrentStack<T> _globalStack = new CountingConcurrentStack<T>();
         private readonly Timer _cleanupTimer;
 
         protected JsonContextPoolBase()
         {
-            _perCoreContexts = new T[Environment.ProcessorCount][];
-            for (int i = 0; i < _perCoreContexts.Length; i++)
-            {
-                _perCoreContexts[i] = new T[64];
-            }
             _cleanupTimer = new Timer(Cleanup, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
             LowMemoryNotification.Instance?.RegisterLowMemoryHandler(this);
             _maxContextSizeToKeepInBytes = long.MaxValue;
@@ -78,23 +74,12 @@ namespace Sparrow.Json
         public IDisposable AllocateOperationContext(out T context)
         {
             _cts.Token.ThrowIfCancellationRequested();
-            var coreItems = _perCoreContexts[CurrentProcessorIdHelper.GetCurrentProcessorId() % _perCoreContexts.Length];
 
-            for (int i = 0; i < coreItems.Length; i++)
+            while (_perCoreCache.TryPull(out context))
             {
-                context = coreItems[i];
-                if (context == null)
-                    continue;
-
-                if (Interlocked.CompareExchange(ref coreItems[i], null, context) != context)
-                    continue;
-
-                if (context.InUse.Raise() == false)
-                {
-                    // This what ensures that we work correctly with races from other threads
-                    // if there is a context switch at the wrong time
-                    continue;
-                }
+                if (context.InUse.Raise() == false) continue;
+                // This what ensures that we work correctly with races from other threads
+                // if there is a context switch at the wrong time
                 context.Renew();
                 return new ReturnRequestContext
                 {
@@ -172,7 +157,7 @@ namespace Sparrow.Json
                     return;
                 }
 
-                Context.Reset(releaseAllocatedStringValues: true);
+                Context.Reset();
                 // These contexts are reused, so we don't want to use LowerOrDie here.
                 Context.InUse.Lower();
                 Context.InPoolSince = DateTime.UtcNow;
@@ -206,24 +191,18 @@ namespace Sparrow.Json
                 {
                     _lastPerCoreCleanup = currentTime;
 
-                    foreach (var current in _perCoreContexts)
+                    foreach (var current in _perCoreCache)
                     {
-                        for (var index = 0; index < current.Length; index++)
-                        {
-                            var context = current[index];
-                            if (context == null)
-                                continue;
+                        var context = current.Item;
+                        var timeInPool = currentTime - context.InPoolSince;
+                        if (timeInPool <= idleTime)
+                            continue;
 
-                            var timeInPool = currentTime - context.InPoolSince;
-                            if (timeInPool <= idleTime)
-                                continue;
+                        if (context.InUse.Raise() == false)
+                            continue;
 
-                            if (context.InUse.Raise() == false)
-                                continue;
-
-                            Interlocked.CompareExchange(ref current[index], null, context);
-                            context.Dispose();
-                        }
+                        _perCoreCache.Remove(current.Item, current.Pos);
+                        context.Dispose();
                     }
 
                     return;
@@ -278,16 +257,8 @@ namespace Sparrow.Json
 
         private void Push(T context)
         {
-            int currentProcessorId = CurrentProcessorIdHelper.GetCurrentProcessorId() % _perCoreContexts.Length;
-            var core = _perCoreContexts[currentProcessorId];
-
-            for (int i = 0; i < core.Length; i++)
-            {
-                if (core[i] != null)
-                    continue;
-                if (Interlocked.CompareExchange(ref core[i], context, null) == null)
-                    return;
-            }
+            if (_perCoreCache.Push(context))
+                return;
 
             if (LowMemoryFlag.IsRaised())
             {
@@ -323,13 +294,9 @@ namespace Sparrow.Json
 
                 ClearStack(_globalStack);
 
-                foreach (var coreContext in _perCoreContexts)
+                foreach (var context in _perCoreCache.EnumerateAndClear())
                 {
-                    for (int i = 0; i < coreContext.Length; i++)
-                    {
-                        coreContext[i]?.Dispose();
-                        coreContext[i] = null;
-                    }
+                    context.Dispose();
                 }
             }
 
@@ -360,17 +327,10 @@ namespace Sparrow.Json
 
             ClearStack(_globalStack);
 
-            foreach (var coreContext in _perCoreContexts)
+            foreach (var context in _perCoreCache.EnumerateAndClear())
             {
-                for (int i = 0; i < coreContext.Length; i++)
-                {
-                    var context = coreContext[i];
-                    if (context != null && context.InUse.Raise())
-                    {
-                        context.Dispose();
-                        Interlocked.CompareExchange(ref coreContext[i], null, context);
-                    }
-                }
+                if (context.InUse.Raise())
+                    context.Dispose();
             }
 
             static void ClearStack(CountingConcurrentStack<T> stack)

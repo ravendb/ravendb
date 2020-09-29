@@ -128,7 +128,7 @@ namespace Sparrow.Server.Meters
             public void Dispose()
             {
                 End = DateTime.UtcNow;
-                Parent.Mark(ref this);
+                Parent?.Mark(ref this);
             }
 
             public void IncrementFileSize(long fileSize)

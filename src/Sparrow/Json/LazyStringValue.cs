@@ -61,7 +61,7 @@ namespace Sparrow.Json
     public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable, IConvertible, IEnumerable<char>
     {
-        internal readonly JsonOperationContext _context;
+        internal JsonOperationContext _context;
         private string _string;
 
         private string MaterializeStringValue => ToString();
@@ -1079,11 +1079,11 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
-            Renew(null, null, 0);
+            Renew(null, null, 0, null);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Renew(string str, byte* buffer, int size)
+        public void Renew(string str, byte* buffer, int size, JsonOperationContext context)
         {
             Debug.Assert(size >= 0);
 
@@ -1097,6 +1097,7 @@ namespace Sparrow.Json
             IsDisposed = false;
             AllocatedMemoryData = null;
             _hashCode = default;
+            _context = context;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

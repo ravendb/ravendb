@@ -166,8 +166,8 @@ namespace Raven.Server.Documents.Indexes
 
         protected readonly bool HandleAllDocs;
 
-        protected internal MeterMetric MapsPerSec = new MeterMetric();
-        protected internal MeterMetric ReducesPerSec = new MeterMetric();
+        protected internal MeterMetric MapsPerSec;
+        protected internal MeterMetric ReducesPerSec;
 
         protected internal IndexingConfiguration Configuration;
 
@@ -537,6 +537,12 @@ namespace Raven.Server.Documents.Indexes
 
         protected void Initialize(DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
         {
+            if (configuration.Metrics)
+            {
+                ReducesPerSec = new MeterMetric();
+                MapsPerSec = new MeterMetric();
+            }
+
             _logger = LoggingSource.Instance.GetLogger<Index>(documentDatabase.Name);
             using (DrainRunningQueries())
             {
@@ -2405,8 +2411,8 @@ namespace Raven.Server.Documents.Indexes
                     stats.State = State;
                     stats.Status = Status;
 
-                    stats.MappedPerSecondRate = MapsPerSec.OneMinuteRate;
-                    stats.ReducedPerSecondRate = ReducesPerSec.OneMinuteRate;
+                    stats.MappedPerSecondRate = MapsPerSec?.OneMinuteRate ?? 0;
+                    stats.ReducedPerSecondRate = ReducesPerSec?.OneMinuteRate ?? 0;
 
                     stats.LastBatchStats = _lastStats?.ToIndexingPerformanceLiveStats();
                     stats.LastQueryingTime = _lastQueryingTime;
