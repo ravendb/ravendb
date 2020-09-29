@@ -708,8 +708,7 @@ namespace Raven.Server.ServerWide
                 NotificationCenter.Add(alertRaised);
             }
             
-            if (PlatformDetails.RunningOnLinux && PlatformDetails.RunningOnDocker == false)
-                CheckSwapAndRaiseNotification();
+            CheckSwapOrPageFileAndRaiseNotification();
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
@@ -728,15 +727,33 @@ namespace Raven.Server.ServerWide
             InitializationCompleted.Set();
         }
 
-        private void CheckSwapAndRaiseNotification()
+        private void CheckSwapOrPageFileAndRaiseNotification()
         {
-            var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
-            if (swapSize < Configuration.PerformanceHints.MinSwapSize)
-                NotificationCenter.Add(AlertRaised.Create(null, 
-                    "Low swap size",
-                    $"The current swap size is {swapSize} and it is lower then the threshold defined {Configuration.PerformanceHints.MinSwapSize}", 
-                    AlertType.LowSwapSize,
-                    NotificationSeverity.Warning));
+            if (PlatformDetails.RunningOnLinux)
+            {
+                if (PlatformDetails.RunningOnDocker) 
+                    return;
+
+                var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
+                if (swapSize < Configuration.PerformanceHints.MinSwapSize)
+                    NotificationCenter.Add(AlertRaised.Create(null,
+                        "Low swap size",
+                        $"The current swap size is {swapSize} and it is lower then the threshold defined {Configuration.PerformanceHints.MinSwapSize}",
+                        AlertType.LowSwapSize,
+                        NotificationSeverity.Warning));
+                return;
+            }
+
+            if(PlatformDetails.RunningOnPosix == false)
+            {
+                var memoryInfo = MemoryInformation.GetMemoryInfo();
+                if(memoryInfo.TotalCommittableMemory - memoryInfo.TotalPhysicalMemory <= Sparrow.Size.Zero)
+                    NotificationCenter.Add(AlertRaised.Create(null,
+                        "No PageFile available",
+                        "Your system has no PageFile. There should be a PageFile for RavenDb to work properly",
+                        AlertType.LowSwapSize,
+                        NotificationSeverity.Warning));
+            }
         }
 
         private void BeforeAppendToRaftLog(TransactionOperationContext ctx, CommandBase cmd)
