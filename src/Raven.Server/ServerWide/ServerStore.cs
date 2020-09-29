@@ -708,7 +708,7 @@ namespace Raven.Server.ServerWide
                 NotificationCenter.Add(alertRaised);
             }
             
-            if (PlatformDetails.RunningOnDocker == false)
+            if (PlatformDetails.RunningOnLinux && PlatformDetails.RunningOnDocker == false)
                 CheckSwapAndRaiseNotification();
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
