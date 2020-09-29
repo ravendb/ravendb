@@ -87,6 +87,154 @@ namespace SlowTests.Issues
             }
         }
 
+        [Fact]
+        public async Task ItemsShouldPreserveTheOrderInStorageAfterReplicatingToDestinationsWithRevisionsConfig()
+        {
+            var reasonableWaitTime = Debugger.IsAttached ? (int)TimeSpan.FromMinutes(15).TotalMilliseconds : (int)TimeSpan.FromSeconds(15).TotalMilliseconds;
+
+            using (var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string> { [RavenConfiguration.GetKey(x => x.Replication.MaxItemsCount)] = 1.ToString() },
+                RegisterForDisposal = false
+            }))
+            {
+                using (var source = GetDocumentStore(new Options { Server = server }))
+                {
+                    await SetupRevisionsForTest(server, source, source.Database);
+
+                    var id = "user/0";
+                    using (var session = source.OpenSession())
+                    {
+                        session.Store(new User { Name = "EGR_0" }, id);
+                        session.SaveChanges();
+                    }
+
+                    using (var session = source.OpenSession())
+                    {
+                        using var stream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
+                        session.Advanced.Attachments.Store(id, 0.ToString(), stream, "image/png");
+                        session.SaveChanges();
+
+                    }
+
+                    using (var session = source.OpenAsyncSession())
+                    {
+                        var u = await session.LoadAsync<User>(id);
+                        u.Name = "RGE" + u.Name.Substring(3);
+                        await session.SaveChangesAsync();
+                    }
+
+                    List<ReplicationBatchItem> firstReplicationOrder = new List<ReplicationBatchItem>();
+                    List<ReplicationBatchItem> secondReplicationOrder = new List<ReplicationBatchItem>();
+                    var etag = 0l;
+
+                    using var d = server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
+                    using (var firstDestination = GetDocumentStore(new Options { ModifyDatabaseName = s => GetDatabaseName() + "_destination", Server = server }))
+                    {
+                        await SetupRevisionsForTest(server, firstDestination, firstDestination.Database);
+
+                        var stats = source.Maintenance.Send(new GetStatisticsOperation());
+
+                        var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(source.Database);
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            Assert.NotNull(database);
+
+                            firstReplicationOrder.AddRange(ReplicationDocumentSender.GetReplicationItems(database, context, etag, new ReplicationDocumentSender.ReplicationStats() { DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()), AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()) }).Select(item => ConvertForTest(ctx, item)));
+                            etag = firstReplicationOrder.Select(x => x.Etag).Max();
+                        }
+
+                        // Replication from source to firstDestination
+                        await SetupReplicationAsync(source, firstDestination);
+                        Assert.True(WaitForValue(() => AssertReplication(firstDestination, firstDestination.Database, stats), true, reasonableWaitTime, 333));
+
+                        using (var session = source.OpenAsyncSession())
+                        {
+                            var u = await session.LoadAsync<User>(id);
+                            u.Age = 30;
+                            await session.SaveChangesAsync();
+                        }
+
+                        stats = source.Maintenance.Send(new GetStatisticsOperation());
+                        Assert.True(WaitForValue(() => AssertReplication(firstDestination, firstDestination.Database, stats), true, reasonableWaitTime, 333));
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            firstReplicationOrder.AddRange(ReplicationDocumentSender.GetReplicationItems(database, context, etag, new ReplicationDocumentSender.ReplicationStats() { DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()), AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()) }).Select(item => ConvertForTest(ctx, item)));
+                        }
+
+                        var database2 = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(firstDestination.Database);
+                        Assert.NotNull(database2);
+
+                        // record the replicated items order
+                        using (database2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            secondReplicationOrder.AddRange(ReplicationDocumentSender.GetReplicationItems(database2, context, 0, new ReplicationDocumentSender.ReplicationStats() { DocumentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()), AttachmentRead = new OutgoingReplicationStatsScope(new OutgoingReplicationRunStats()) }).Select(item => ConvertForTest(ctx, item)));
+                        }
+
+                        // remove the 1st doc sent, because of its change in the middle of the 1st replication, so it was sent twice
+                        Assert.True(firstReplicationOrder.Remove(firstReplicationOrder.First(y => y.Type == ReplicationBatchItem.ReplicationItemType.Document && y.Flags.Contain(DocumentFlags.Revision) == false)));
+                        Assert.Equal(firstReplicationOrder.Count, secondReplicationOrder.Count);
+
+                        for (int i = 0; i < secondReplicationOrder.Count; i++)
+                        {
+                            var item = firstReplicationOrder[i];
+                            var item2 = secondReplicationOrder[i];
+
+                            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment && item2.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                            {
+                                Assert.Equal(item.Id.ToString(), item2.Id.ToString());
+                                Assert.Equal(item.ChangeVector, item2.ChangeVector);
+                                Assert.Equal(item.Type, item2.Type);
+                            }
+                            else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document && item2.Type == ReplicationBatchItem.ReplicationItemType.Document)
+                            {
+                                Assert.Equal(item.Id, item2.Id);
+                                Assert.Equal(item.ChangeVector, item2.ChangeVector);
+                                Assert.Equal(item.Flags | DocumentFlags.FromReplication, item2.Flags);
+                                var type1 = item.Flags.Contain(DocumentFlags.Revision) ? " (Revision)" : "";
+                                var type2 = item.Flags.Contain(DocumentFlags.Revision) ? " (Revision)" : "";
+                                Assert.Equal(type1, type2);
+                            }
+                            else
+                            {
+                                string msg;
+                                if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+                                {
+                                    Assert.True(item2.Type == ReplicationBatchItem.ReplicationItemType.Document);
+                                    msg = "item is ReplicationItemType.Attachment AND item2 is ReplicationItemType.Document";
+                                }
+                                else if (item.Type == ReplicationBatchItem.ReplicationItemType.Document)
+                                {
+                                    Assert.True(item2.Type == ReplicationBatchItem.ReplicationItemType.Attachment);
+                                    msg = "item is ReplicationItemType.Document AND item2 is ReplicationItemType.Attachment";
+                                }
+                                else
+                                {
+                                    msg = "item and item2 got invalid type.";
+                                }
+                                Assert.True(false, $"Expected to get exact order of replication on destination as on source but got: {msg}");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static bool AssertReplication(DocumentStore destinationStore, string database, DatabaseStatistics sourceStats)
+        {
+            var destinationStats = destinationStore.Maintenance.ForDatabase(database).Send(new GetStatisticsOperation());
+            if (destinationStats.CountOfAttachments == sourceStats.CountOfAttachments
+                && destinationStats.CountOfDocuments == sourceStats.CountOfDocuments
+                && destinationStats.CountOfRevisionDocuments == sourceStats.CountOfRevisionDocuments
+                && destinationStats.CountOfUniqueAttachments == sourceStats.CountOfUniqueAttachments)
+                return true;
+
+            return false;
+        }
+
         private static async Task SetupRevisionsForTest(RavenServer server, DocumentStore store, string database)
         {
             var configuration = new RevisionsConfiguration
@@ -105,6 +253,50 @@ namespace SlowTests.Issues
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 await documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(index, server.ServerStore.Engine.OperationTimeout);
             }
+        }
+
+        private ReplicationBatchItem ConvertForTest(TransactionOperationContext context, ReplicationBatchItem item)
+        {
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
+            {
+                item.Stream.Position = 0;
+                var stream = new MemoryStream();
+                item.Stream.CopyTo(stream);
+                stream.Position = 0;
+                item.Stream.Position = 0;
+
+                return new ReplicationBatchItem
+                {
+                    Base64Hash = item.Base64Hash.Clone(context.Allocator),
+                    ContentType = context.GetLazyString(item.ContentType),
+                    Name = context.GetLazyString(item.Name),
+                    Id = context.GetLazyString(item.Id),
+                    Stream = stream,
+                    Type = item.Type,
+                    ChangeVector = item.ChangeVector,
+                    LastModifiedTicks = item.LastModifiedTicks,
+                    TransactionMarker = item.TransactionMarker,
+                    Etag = item.Etag
+                };
+            }
+
+            if (item.Type == ReplicationBatchItem.ReplicationItemType.Document)
+            {
+                return new ReplicationBatchItem
+                {
+                    Id = context.GetLazyString(item.Id),
+                    Data = item.Data?.Clone(context),
+                    Collection = context.GetLazyString(item.Collection),
+                    Flags = item.Flags,
+                    Type = item.Type,
+                    ChangeVector = item.ChangeVector,
+                    LastModifiedTicks = item.LastModifiedTicks,
+                    TransactionMarker = item.TransactionMarker,
+                    Etag = item.Etag
+                };
+            }
+
+            throw new InvalidOperationException($"This test should receive only the following types: ReplicationItemType.Document, ReplicationItemType.Attachment.");
         }
     }
 }

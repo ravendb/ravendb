@@ -608,6 +608,13 @@ namespace Raven.Server.Documents
             return tree.StreamExist(base64Hash);
         }
 
+        public bool AttachmentMetadataExists(DocumentsOperationContext context, Slice keySlice)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            return table.SeekOnePrimaryKeyPrefix(keySlice, out _);
+        }
+
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
@@ -771,6 +778,32 @@ namespace Raven.Server.Documents
 
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return scope;
+        }
+
+        public static AttachmentType GetAttachmentTypeByKey(Slice keySlice)
+        {
+            var index = 0;
+            var found = false;
+            for (int i = 0; i < keySlice.Size; i++)
+            {
+                if (Convert.ToChar(keySlice[i]) == SpecialChars.RecordSeparator)
+                {
+                    index = i;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found == false)
+                throw new InvalidOperationException($"Could not parse {nameof(keySlice)}");
+
+            var b = keySlice[index + 1];
+            var c = Convert.ToChar(b);
+            if (c == 'r')
+                return AttachmentType.Revision;
+
+            Debug.Assert(c == 'd');
+            return AttachmentType.Document;
         }
 
         private enum KeyType

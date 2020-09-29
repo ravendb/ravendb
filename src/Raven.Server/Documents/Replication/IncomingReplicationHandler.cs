@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -1285,10 +1286,25 @@ namespace Raven.Server.Documents.Replication
                             context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(item.ChangeVector, context.LastDatabaseChangeVector);
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
+                                ReplicationAttachmentStream attachmentStream;
+                                if (AttachmentsStorage.GetAttachmentTypeByKey(item.Key) == AttachmentType.Revision
+                                    && database.DocumentsStorage.AttachmentsStorage.AttachmentMetadataExists(context, item.Key))
+                                {
+                                    // the revision attachment was already created by previously added document, skipping this item and marking the attachment stream as handled
+                                    if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out attachmentStream))
+                                    {
+                                        // the stream should have been written when the revision was added by the document
+                                        Debug.Assert(database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, item.Base64Hash));
+                                        handledAttachmentStreams.Add(item.Base64Hash);
+                                    }
+
+                                    continue;
+                                }
+
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
                                     item.ContentType, item.Base64Hash, item.ChangeVector);
 
-                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out var attachmentStream))
+                                if (_replicationInfo.ReplicatedAttachmentStreams.TryGetValue(item.Base64Hash, out attachmentStream))
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, item.Base64Hash) == false)
                                     {
