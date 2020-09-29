@@ -36,6 +36,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
                 if (response == null)
                     return;
 
+                Result = JsonDeserializationClient.GetServerWideExternalReplicationsResponse(response).Results;
             }
         }
     }

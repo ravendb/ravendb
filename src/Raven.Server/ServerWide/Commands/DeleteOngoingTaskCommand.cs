@@ -1,5 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -70,6 +72,10 @@ namespace Raven.Server.ServerWide.Commands
                     var replicationTask = record.ExternalReplications?.Find(x => x.TaskId == TaskId);
                     if (replicationTask != null)
                     {
+                        if (replicationTask.Name != null &&
+                            replicationTask.Name.StartsWith(ServerWideExternalReplication.NamePrefix, StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidOperationException($"Can't delete task id: {TaskId}, name: '{replicationTask.Name}', " +
+                                                                $"because it is a server-wide external replication task. Please use a dedicated operation.");
                         record.ExternalReplications.Remove(replicationTask);
                     }
                     break;
