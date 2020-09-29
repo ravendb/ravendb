@@ -455,7 +455,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(PutServerWideBackupConfigurationCommand):
                         var serverWideBackupConfiguration = UpdateValue<ServerWideBackupConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        UpdateDatabasesWithNewServerWideBackupConfiguration(context, type, serverWideBackupConfiguration);
+                        UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration);
                         break;
                     case nameof(DeleteServerWideBackupConfigurationCommand):
                         UpdateValue<string>(context, type, cmd, index, skipNotifyValueChanged: true);
@@ -3355,7 +3355,7 @@ namespace Raven.Server.ServerWide
             ApplyDatabaseRecordUpdates(toUpdate, type, index, index, items, context);
         }
 
-        private void UpdateDatabasesWithNewServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration)
+        private void UpdateDatabasesWithServerWideBackupConfiguration(ClusterOperationContext context, string type, ServerWideBackupConfiguration serverWideBackupConfiguration)
         {
             if (serverWideBackupConfiguration == null)
                 throw new RachisInvalidOperationException($"Server-wide backup configuration is null for command type: {type}");
@@ -3437,12 +3437,13 @@ namespace Raven.Server.ServerWide
 
             if (backupName.Equals(periodicBackupConfigName, StringComparison.OrdinalIgnoreCase))
             {
-                //server-wide backup to update when name is not modified
+                // server-wide backup to update when the name isn't modified
                 return true;
             }
+
             if (severWideBackupNames.Contains(backupName) == false)
             {
-                //server-wide backup to update when modify name
+                // server-wide backup to update when the name was modified
                 return true;
             }
 
@@ -3500,7 +3501,7 @@ namespace Raven.Server.ServerWide
                     var ravenConnectionString = PutServerWideExternalReplicationCommand.UpdateExternalReplicationTemplateForDatabase(externalReplication, databaseName, topologyDiscoveryUrls);
 
                     var updatedExternalReplications = new DynamicJsonArray();
-                    if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.PeriodicBackups), out BlittableJsonReaderArray externalReplications))
+                    if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications))
                     {
                         foreach (BlittableJsonReaderObject externalReplicationBlittable in externalReplications)
                         {
@@ -3512,7 +3513,7 @@ namespace Raven.Server.ServerWide
                                 continue;
                             }
 
-                            updatedExternalReplications.Add(externalReplication);
+                            updatedExternalReplications.Add(externalReplicationBlittable);
                         }
                     }
 
@@ -3628,7 +3629,7 @@ namespace Raven.Server.ServerWide
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) == false)
                                 continue;
 
-                            var updatedExternalReplication = new DynamicJsonArray();
+                            var updatedExternalReplications = new DynamicJsonArray();
                             foreach (BlittableJsonReaderObject externalReplication in externalReplications)
                             {
                                 if (IsServerWideTaskWithName(externalReplication, nameof(PeriodicBackupConfiguration.Name), databaseRecordTaskName))
@@ -3637,7 +3638,7 @@ namespace Raven.Server.ServerWide
                                     continue;
                                 }
 
-                                updatedExternalReplication.Add(externalReplication);
+                                updatedExternalReplications.Add(externalReplication);
                             }
 
                             if (oldDatabaseRecord.TryGet(nameof(DatabaseRecord.RavenConnectionStrings), out BlittableJsonReaderObject ravenConnectionStrings))
@@ -3662,7 +3663,7 @@ namespace Raven.Server.ServerWide
 
                             oldDatabaseRecord.Modifications = new DynamicJsonValue(oldDatabaseRecord)
                             {
-                                [nameof(DatabaseRecord.ExternalReplications)] = externalReplications,
+                                [nameof(DatabaseRecord.ExternalReplications)] = updatedExternalReplications,
                                 [nameof(DatabaseRecord.RavenConnectionStrings)] = ravenConnectionStrings
                             };
                             break;
@@ -3700,7 +3701,7 @@ namespace Raven.Server.ServerWide
             {
                 case OngoingTaskType.Backup:
                     var serverWideBackupConfiguration = JsonDeserializationCluster.ServerWideBackupConfiguration(task);
-                    UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration, index);
+                    UpdateDatabasesWithServerWideBackupConfiguration(context, type, serverWideBackupConfiguration);
                     break;
                 case OngoingTaskType.Replication:
                     var serverWideExternalReplication = JsonDeserializationCluster.ServerWideExternalReplication(task);

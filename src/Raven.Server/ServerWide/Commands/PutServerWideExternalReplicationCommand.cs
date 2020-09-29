@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -29,17 +30,17 @@ namespace Raven.Server.ServerWide.Commands
         public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue, long index)
         {
             if (string.IsNullOrWhiteSpace(Value.Name))
-            {
                 Value.Name = GenerateTaskName(previousValue);
-            }
+
+            if (Value.ExcludedDatabases != null &&
+                Value.ExcludedDatabases.Any(string.IsNullOrWhiteSpace))
+                throw new RachisApplyException($"{nameof(ServerWideExternalReplication.ExcludedDatabases)} cannot contain null or empty database names");
 
             Value.TaskId = index;
 
             if (previousValue != null)
             {
-                if (previousValue.Modifications == null)
-                    previousValue.Modifications = new DynamicJsonValue();
-
+                previousValue.Modifications ??= new DynamicJsonValue();
                 previousValue.Modifications = new DynamicJsonValue
                 {
                     [Value.Name] = Value.ToJson()
