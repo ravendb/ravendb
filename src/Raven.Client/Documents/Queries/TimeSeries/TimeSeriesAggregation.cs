@@ -145,7 +145,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     public class TimeSeriesRangeAggregation : IPostJsonDeserialization, ITimeSeriesQueryStreamEntry
     {
         public long[] Count;
-        public double[] Max, Min, Last, First, Average, Sum, Percentile, Slope;
+        public double[] Max, Min, Last, First, Average, Sum, Percentile, Slope, StandardDeviation;
         public DateTime To, From;
 
         public object Key { get; private set; }
@@ -295,6 +295,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         Average = 6,
 
         Percentile = 7,
-        Slope = 8
+        Slope = 8,
+        StandardDeviation = 9
     }
 }

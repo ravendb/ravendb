@@ -44,6 +44,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private double? _scale;
 
+        private bool _individualValuesOnly;
+
         private static Dictionary<AggregationType, string> AllAggregationTypes() => new Dictionary<AggregationType, string>
         {
             [AggregationType.First] = null,
@@ -90,7 +92,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             var groupByTimePeriod = timeSeriesFunction.GroupBy.TimePeriod?.GetValue(_queryParameters)?.ToString();
             var groupByTag = timeSeriesFunction.GroupBy.HasGroupByTag;
             var filterByTag = timeSeriesFunction.Where != null;
-            var individualValuesOnly = groupByTag || filterByTag;
+            _individualValuesOnly = groupByTag || filterByTag;
 
             RangeGroup rangeSpec;
             if (groupByTimePeriod != null)
@@ -117,7 +119,6 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
             resultType = ResultType.Aggregated;
             var aggregationHolder = GetAggregationHolder(timeSeriesFunction);
-            individualValuesOnly |= aggregationHolder.HasPercentileAggregation;
 
             return GetAggregatedValues();
 
@@ -229,7 +230,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         // if the range it cover needs to be broken up to multiple ranges.
                         // For example, if the segment covers 3 days, but we have group by 1 hour,
                         // we still have to deal with the individual values
-                        if (it.Segment.End > rangeSpec.End || individualValuesOnly)
+                        if (it.Segment.End > rangeSpec.End || _individualValuesOnly)
                         {
                             foreach (var value in AggregateIndividualItems(it.Segment.Values))
                             {
@@ -1130,18 +1131,14 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private AggregationHolder GetAggregationHolder(TimeSeriesFunction timeSeriesFunction)
         {
             var interpolationType = GetInterpolationType(timeSeriesFunction.GroupBy.With);
-
             if (timeSeriesFunction.Select == null)
-            {
                 return new AggregationHolder(_context, AllAggregationTypes(), interpolationType);
-            }
 
-            var types = InitializeAggregationStats(timeSeriesFunction, out var percentile);
-
+            var types = GetAggregationTypesFromSelectExpressions(timeSeriesFunction, out var percentile);
             return new AggregationHolder(_context, types, interpolationType, percentile);
         }
 
-        private Dictionary<AggregationType, string> InitializeAggregationStats(TimeSeriesFunction timeSeriesFunction, out double? percentile)
+        private Dictionary<AggregationType, string> GetAggregationTypesFromSelectExpressions(TimeSeriesFunction timeSeriesFunction, out double? percentile)
         {
             percentile = null;
             var types = new Dictionary<AggregationType, string>
@@ -1149,14 +1146,18 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 [AggregationType.Count] = null // we always want to have 'Count' in the result
             };
 
-            foreach (var @select in timeSeriesFunction.Select)
+            foreach (var select in timeSeriesFunction.Select)
             {
-                if (@select.QueryExpression is MethodExpression me)
+                if (!(select.QueryExpression is MethodExpression me)) 
+                    throw new ArgumentException("Unknown method in timeseries query: " + select.QueryExpression);
+
+                var name = select.StringSegment?.ToString();
+
+                if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
                 {
-                    if (Enum.TryParse(me.Name.Value, ignoreCase: true, out AggregationType type))
+                    switch (type)
                     {
-                        if (type == AggregationType.Percentile)
-                        {
+                        case AggregationType.Percentile:
                             if (me.Arguments.Count != 1)
                                 throw new ArgumentException("Wrong number of arguments passed to method " + type);
 
@@ -1172,28 +1173,36 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                                                                  "Expected argument of type 'long', 'double', or 'LazyNumberValue' but got : " +
                                                                  ve.GetValue(_queryParameters).GetType())
                             };
-                        }
-                        else if (type == AggregationType.Slope)
-                        {
-                            if (timeSeriesFunction.GroupBy.TimePeriod == null && timeSeriesFunction.GroupBy.HasGroupByTag == false)
-                                throw new InvalidOperationException(
-                                    $"Cannot use aggregation method '{nameof(AggregationType.Slope)}' without having a '{nameof(ITimeSeriesQueryable.GroupBy)}' clause ");
-                        }
 
-                        types[type] = @select.StringSegment?.ToString();
-                        continue;
+                            _individualValuesOnly = true;
+                            break;
+                        case AggregationType.Slope when timeSeriesFunction.GroupBy.TimePeriod == null && 
+                                                        timeSeriesFunction.GroupBy.HasGroupByTag == false:
+                            throw new InvalidOperationException(
+                                $"Cannot use aggregation method '{nameof(AggregationType.Slope)}' without having a '{nameof(ITimeSeriesQueryable.GroupBy)}' clause ");
+                        case AggregationType.StandardDeviation:
+                            _individualValuesOnly = true;
+                            break;
                     }
 
-                    if (me.Name.Value == "avg")
-                    {
-                        types[AggregationType.Average] = @select.StringSegment?.ToString();
-                        continue;
-                    }
-
-                    throw new ArgumentException("Unknown method in timeseries query: " + me);
+                    types[type] = name;
+                    continue;
                 }
 
-                throw new ArgumentException("Unknown method in timeseries query: " + @select.QueryExpression);
+                if (me.Name.Value == "avg")
+                {
+                    types[AggregationType.Average] = name;
+                    continue;
+                }
+
+                if (me.Name.Value == "stddev")
+                {
+                    types[AggregationType.StandardDeviation] = name;
+                    _individualValuesOnly = true;
+                    continue;
+                }
+
+                throw new ArgumentException("Unknown method in timeseries query: " + me);
             }
 
             return types;

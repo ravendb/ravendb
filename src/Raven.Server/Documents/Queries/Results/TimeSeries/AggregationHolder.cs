@@ -32,8 +32,6 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         public bool HasValues => _current?.Count > 0;
 
-        public bool HasPercentileAggregation => _percentile.HasValue;
-
         public AggregationHolder(DocumentsOperationContext context, Dictionary<AggregationType, string> types, InterpolationType interpolationType, double? percentile = null)
         {
             _context = context;
@@ -69,6 +67,9 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         continue;
                     case AggregationType.Slope:
                         bucket[i] = new SlopeAggregation(name);
+                        continue;
+                    case AggregationType.StandardDeviation:
+                        bucket[i] = new StandardDeviationAggregation(name);
                         continue;
                     default:
                         bucket[i] = new TimeSeriesAggregation(type, name);
@@ -217,8 +218,6 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 _ => throw new NotSupportedException($"Unable to group by type: {value.GetType()}")
             };
         }
-
-
 
         public class PreviousAggregation
         {
