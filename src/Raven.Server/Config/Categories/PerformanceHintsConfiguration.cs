@@ -3,6 +3,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
 using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
@@ -10,8 +11,15 @@ namespace Raven.Server.Config.Categories
     {
         public PerformanceHintsConfiguration()
         {
-            MinSwapSize = MemoryInformation.TotalPhysicalMemory;
+            if (PlatformDetails.RunningOnLinux)
+            {
+                var threshold = new Size(8, SizeUnit.Gigabytes);
+                MinSwapSize = MemoryInformation.TotalPhysicalMemory < threshold 
+                    ? new Size(1, SizeUnit.Gigabytes) 
+                    : Size.Min(MemoryInformation.TotalPhysicalMemory / 2, threshold);
+            }
         }
+        
         [Description("The size of a document after which it will get into the huge documents collection")]
         [DefaultValue(5)]
         [SizeUnit(SizeUnit.Megabytes)]

@@ -549,14 +549,14 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
         
-        [Fact]
+        [LinuxFact]
         public void WhenActualSwapSmallerThenMinSwapConfigured_ShouldRaiseNotification()
         {
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();
-            var minSwapConfig = (memoryInfoResult.TotalPhysicalMemory + new Sparrow.Size(1, SizeUnit.Megabytes)).GetValue(SizeUnit.Megabytes).ToString();
+            var minSwapConfig = memoryInfoResult.TotalSwapSize + new Sparrow.Size(1, SizeUnit.Megabytes);
             var customSettings = new Dictionary<string, string>
             {
-                [RavenConfiguration.GetKey(x => x.Memory.MinSwapSize)] = minSwapConfig
+                [RavenConfiguration.GetKey(x => x.PerformanceHints.MinSwapSize)] = minSwapConfig.GetValue(SizeUnit.Megabytes).ToString()
             };
 
             UseNewLocalServer(customSettings);
