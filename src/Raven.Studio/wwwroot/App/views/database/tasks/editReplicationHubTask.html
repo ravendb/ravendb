@@ -17,9 +17,9 @@
                             </div>
                             <div class="form-group margin-bottom margin-bottom-xs">
                                 <label class="control-label">&nbsp;</label>
-                                <div class="toggle" 
-                                     data-placement="right" 
-                                     data-toggle="tooltip" 
+                                <div class="toggle"
+                                     data-placement="right"
+                                     data-toggle="tooltip"
                                      title="Set a delay time for the task"
                                      data-animation="true">
                                     <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayReplication" />
@@ -95,7 +95,7 @@
                         </div>
                         <div class="flex-horizontal pull-right" data-bind="css: { 'disabled-area': $root.editedReplicationAccessItem }">
                             <div>
-                                <button class="btn btn-default" data-bind="click: $root.cancelHubTaskOperation" 
+                                <button class="btn btn-default" data-bind="click: $root.cancelHubTaskOperation"
                                         title="Return to Ongoing Tasks View">
                                     <i class="icon-cancel"></i><span>Cancel</span>
                                 </button>
@@ -118,21 +118,24 @@
                 </div>
                 <div data-bind="if: $root.canDefineCertificates">
                     <div class="flex-horizontal">
-                        <h3 class="margin-top margin-top-lg" 
+                        <h3 class="margin-top margin-top-lg"
                             data-bind="text: withFiltering() ? 'Filtered Replication Access' : 'Replication Access'">
                         </h3>
-                        <div class="flex-separator"></div>
-                        <div class="toggle margin-top" data-bind="if: replicationAccessItems().length">
+                        <div class="margin-top margin-left margin-right margin-right-sm flex-grow" title="Filter the replication access items by Name or Thumbprint" data-bind="visible: $root.allReplicationAccessItems().length">
+                            <input class="form-control" data-bind="textInput: $root.filterText, attr: { placeholder: 'Filter items (total: ' + $root.allReplicationAccessItems().length + ')'}" />
+                        </div>
+                        <div class="flex-separator" data-bind="visible: !$root.allReplicationAccessItems().length"></div>
+                        <div class="toggle margin-top" data-bind="visible: $root.visibleReplicationAccessItems().length">
                             <input id="details" type="checkbox" data-bind="checked: $root.showAccessDetails" />
                             <label for="details">View Details</label>
                         </div>
                         <div class="margin-top">
                             <button class="btn btn-info" data-bind="click: $root.addNewReplicationAccess, disable: $root.isNewTask">
-                                <i class="icon-plus"></i><span>Add Replication Access</span>
+                                <i class="icon-plus"></i><span>Add Access</span>
                             </button>
                         </div>
                     </div>
-                    <div data-bind="if: !replicationAccessItems().length && !$root.editedReplicationAccessItem()">
+                    <div data-bind="if: !$root.allReplicationAccessItems().length && !$root.editedReplicationAccessItem()">
                         <h3 class="text-center text-muted margin-top margin-top-lg" data-bind="visible: !$root.isNewTask()">
                             No Replication Access has been yet defined.
                         </h3>
@@ -141,71 +144,87 @@
                         </h3>
                     </div>
                 </div>
-                <div class="scroll replication-access-list">
-                    <div data-bind="foreach: replicationAccessItems">
-                        <div class="panel panel-hover padding"
+                <div class="scroll replication-access-list flex-vertical">
+                    <div data-bind="foreach: $root.visibleReplicationAccessItems">
+                        <div class="panel panel-hover"
                              data-bind="css: { active: $root.editedReplicationAccessItem() && $data.certificate() === $root.editedReplicationAccessItem().certificate() }">
-                            <div class="form-group margin-bottom margin-bottom-xs">
-                                <label class="control-label">Access Name</label>
-                                <div class="form-control-static" data-bind="text: replicationAccessName"></div>
+                            <div data-bind="if: !$root.showAccessDetails()">
+                                <div class="row padding padding-xs">
+                                    <div class="col-lg-5 margin-left margin-left-sm no-padding-right" data-bind="attr: { title: replicationAccessName }">
+                                        <label class="control-label">Name:</label>
+                                        <span class="form-control-static margin-left margin-left-sm" data-bind="text: replicationAccessName"></span>
+                                    </div>
+                                    <div class="col-lg-4">
+                                        <span><i data-bind="attr: { class: certificate().expirationIcon }"></i></span>
+                                        <label class="control-label">Expiration:</label>
+                                        <small class="form-control-static margin-left margin-left-sm" data-bind="text: certificate().expirationText()"></small>
+                                    </div>
+                                    <div class="col-lg-2 pull-right">
+                                        <div class="margin-top margin-top-xs" data-bind="template: { name: 'access-item-buttons' }"></div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group margin-bottom margin-bottom-xs">
-                                <label class="control-label">Certificate</label>
-                                <div class="panel certificate-item">
-                                    <div class="padding padding-sm flex-horizontal" data-bind="visible: $root.showAccessDetails">
-                                        <div title="Certificate thumbprint">
-                                            <i class="icon-certificate"></i><span data-bind="text: certificate().thumbprint()"></span>
+                            <div data-bind="if: $root.showAccessDetails">
+                                <div class="padding">
+                                    <div class="form-group margin-bottom margin-bottom-xs">
+                                        <label class="control-label">Access Name</label>
+                                        <div class="form-control-static" data-bind="text: replicationAccessName"></div>
+                                    </div>
+                                    <div class="form-group margin-bottom margin-bottom-xs">
+                                        <label class="control-label">Certificate</label>
+                                        <div class="panel certificate-item">
+                                            <div class="padding padding-sm flex-horizontal" data-bind="visible: $root.showAccessDetails">
+                                                <div title="Certificate thumbprint">
+                                                    <i class="icon-certificate"></i><span data-bind="text: certificate().thumbprint()"></span>
+                                                </div>
+                                            </div>
+                                            <div class="panel-addon padding padding-sm">
+                                                <div class="flex-horizontal">
+                                                    <span class="notBefore" data-bind="visible: $root.showAccessDetails">
+                                                        <span class="margin-right margin-right-sm"><i class="icon-clock"></i><span>Valid From</span></span>
+                                                        <strong data-bind="text: certificate().validFromText()"></strong>
+                                                    </span>
+                                                    <span class="expiration" data-bind="css: { 'margin-left': $root.showAccessDetails }">
+                                                        <span class="margin-right margin-right-sm"><i data-bind="attr: { class: certificate().expirationIcon }"></i><span>Expiration</span></span>
+                                                        <strong data-bind="attr: { class: certificate().expirationClass }, text: certificate().expirationText()"></strong>
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="panel-addon padding padding-sm"> 
-                                        <div class="flex-horizontal">
-                                            <span class="notBefore" data-bind="visible: $root.showAccessDetails">
-                                                <span class="margin-right margin-right-sm"><i class="icon-clock"></i><span>Valid From</span></span>
-                                                <strong data-bind="text: certificate().validFromText()"></strong>
-                                            </span>
-                                            <span class="expiration" data-bind="css: { 'margin-left': $root.showAccessDetails }">
-                                                <span class="margin-right margin-right-sm"><i data-bind="attr: { class: certificate().expirationIcon }"></i><span>Expiration</span></span>
-                                                <strong data-bind="attr: { class: certificate().expirationClass }, text: certificate().expirationText()"></strong>
-                                            </span>
+                                    <div data-bind="if: $parent.withFiltering" class="margin-bottom">
+                                        <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: !$root.showAccessDetails()">
+                                            <label class="control-label">Filtering Replication</label>
+                                            <div class="margin-top margin-top-xs">
+                                                <div><small data-bind="text: filteringReplicationText"></small></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: $root.showAccessDetails">
+                                            <label class="control-label">Hub to Sink Filtering</label>
+                                            <div data-bind="foreach: hubToSinkPrefixes" class="margin-top margin-top-xs">
+                                                <div><small data-bind="text: $data.path"></small></div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group" data-bind="visible: $root.showAccessDetails">
+                                            <label class="control-label">Sink to Hub Filtering</label>
+                                            <div data-bind="visible: samePrefixesForBothDirections" class="margin-top margin-top-xs">
+                                                <small>Same as <i>Hub to Sink</i></small>
+                                            </div>
+                                            <div data-bind="visible: !samePrefixesForBothDirections(), foreach: sinkToHubPrefixes" class="margin-top margin-top-xs">
+                                                <div><small data-bind="text: $data.path"></small></div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                            <div data-bind="if: $parent.withFiltering" class="margin-bottom">
-                                <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: !$root.showAccessDetails()">
-                                    <label class="control-label">Filtering Replication</label>
-                                    <div class="margin-top margin-top-xs">
-                                        <div><small data-bind="text: filteringReplicationText"></small></div>
+                                    <div class="pull-right btn-group btn-group-sm replication-access-buttons">
+                                        <div data-bind="template: { name: 'access-item-buttons' }"></div>
                                     </div>
                                 </div>
-                                <div class="form-group margin-bottom margin-bottom-xs" data-bind="visible: $root.showAccessDetails">
-                                    <label class="control-label">Hub to Sink Filtering</label>
-                                    <div data-bind="foreach: hubToSinkPrefixes" class="margin-top margin-top-xs">
-                                        <div><small data-bind="text: $data.path"></small></div>
-                                    </div>
-                                </div>
-                                <div class="form-group" data-bind="visible: $root.showAccessDetails">
-                                    <label class="control-label">Sink to Hub Filtering</label>
-                                    <div data-bind="visible: samePrefixesForBothDirections" class="margin-top margin-top-xs">
-                                        <small>Same as <i>Hub to Sink</i></small>
-                                    </div>
-                                    <div data-bind="visible: !samePrefixesForBothDirections(), foreach: sinkToHubPrefixes" class="margin-top margin-top-xs">
-                                        <div><small data-bind="text: $data.path"></small></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="pull-right btn-group btn-group-sm replication-access-buttons">
-                                <button class="btn btn-sm btn-default" title="Edit this replication access" 
-                                        data-bind="click: _.partial($root.editReplicationAccessItem, $data)">
-                                    <i class="icon-edit"></i><span>Edit</span>
-                                </button>
-                                <button class="btn btn-sm btn-primary" title="Delete this replication access" 
-                                        data-bind="click: _.partial($root.deleteReplicationAccessItem, $data), disable: $root.editedReplicationAccessItem()">
-                                    <i class="icon-trash"></i>
-                                </button>
                             </div>
                         </div>
                     </div>
+                    <button class="btn btn-primary" data-bind="click: $root.loadMoreAccessItems(), visible: $root.showLoadMore">
+                        <i class="icon-plus"></i><span>Load more items</span>
+                    </button>
                 </div>
             </div>
             <div class="col-xs-12 col-lg-6" data-bind="with: $root.editedReplicationAccessItem">
@@ -314,7 +333,7 @@
                                         <div class="flex-grow">
                                             <input type="text" class="form-control" placeholder="Enter documents prefix" data-bind="textInput: inputPrefixSinkToHub().path" />
                                         </div>
-                                        <button class="btn btn-info" 
+                                        <button class="btn btn-info"
                                                 data-bind="click: addSinkToHubInputPrefixWithBlink, enable: inputPrefixSinkToHub && inputPrefixSinkToHub().path() && inputPrefixSinkToHub().path.isValid()">
                                                 <i class="icon-plus"></i><span>Add Prefix</span>
                                         </button>
@@ -400,3 +419,14 @@
         </div>
     </form>
 </div>
+
+<script type="text/html" id="access-item-buttons">
+    <button class="btn btn-sm btn-default" title="Edit this replication access"
+            data-bind="click: _.partial($root.editReplicationAccessItem, $data)">
+        <i class="icon-edit"></i><span>Edit</span>
+    </button>
+    <button class="btn btn-sm btn-primary" title="Delete this replication access"
+            data-bind="click: _.partial($root.deleteReplicationAccessItem, $data), disable: $root.editedReplicationAccessItem()">
+        <i class="icon-trash"></i>
+    </button>
+</script>
