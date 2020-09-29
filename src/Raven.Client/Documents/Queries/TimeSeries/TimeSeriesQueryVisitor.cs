@@ -657,6 +657,7 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 case nameof(ITimeSeriesGrouping.Average):
                 case nameof(ITimeSeriesGrouping.Percentile):
                 case nameof(ITimeSeriesGrouping.Slope):
+                case nameof(ITimeSeriesGrouping.StandardDeviation):
                     if (_selectFields.Length > 0)
                         _selectFields.Append(", ");
                     _selectFields.Append($"{name.ToLower()}({value})");

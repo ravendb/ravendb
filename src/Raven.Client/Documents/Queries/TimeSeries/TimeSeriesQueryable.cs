@@ -102,6 +102,8 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         double[] Slope();
 
+        double[] StandardDeviation();
+
     }
 
     public interface ITimePeriodBuilder
