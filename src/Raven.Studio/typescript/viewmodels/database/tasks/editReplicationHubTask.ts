@@ -46,10 +46,11 @@ class editReplicationHubTask extends viewModelBase {
 
     allReplicationAccessItems = ko.observableArray<replicationAccessHubModel>([]);
     visibleReplicationAccessItems: KnockoutComputed<Array<replicationAccessHubModel>>;
+    filteredReplicationAccessItems: KnockoutComputed<Array<replicationAccessHubModel>>;
     
     filterText = ko.observable<string>();
     
-    readonly accessItemsBatch = 10;
+    readonly accessItemsBatch = 50;
     batchCounter = ko.observable<number>(0);
     showLoadMore: KnockoutComputed<boolean>;
 
@@ -148,18 +149,24 @@ class editReplicationHubTask extends viewModelBase {
     }
 
     private initObservables() {
-        this.visibleReplicationAccessItems = ko.pureComputed(() => {
-            let itemsToShow = this.allReplicationAccessItems();
-
+        this.filteredReplicationAccessItems = ko.pureComputed(() => {
+            let items = this.allReplicationAccessItems();
+            
             const filter = this.filterText();
             if (filter) {
                 const upperFilter = filter.toUpperCase();
-                itemsToShow = itemsToShow.filter(x => x.replicationAccessName().toLowerCase().includes(upperFilter) ||
-                                                      x.certificate().thumbprint().includes(upperFilter));
+                items = items.filter(x => x.replicationAccessName().toLowerCase().includes(upperFilter) ||
+                                     x.certificate().thumbprint().includes(upperFilter));
             }
-
+            
+            return items;
+        });
+        
+        this.visibleReplicationAccessItems = ko.pureComputed(() => {
+            let items = this.filteredReplicationAccessItems();
+            
             const numberOfItemsToShow = this.batchCounter() * this.accessItemsBatch;
-            return itemsToShow.slice(0, numberOfItemsToShow);
+            return items.slice(0, numberOfItemsToShow);
         });
         
         this.showLoadMore = ko.pureComputed(() => {
