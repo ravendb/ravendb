@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 
@@ -8,25 +9,28 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
     public class PercentileAggregation : TimeSeriesAggregationBase, ITimeSeriesAggregation
     {
         private readonly double _percentileFactor;
-        private readonly List<List<double>> _rankedValues;
+        private readonly List<SortedDictionary<double, int>> _rankedValues;
+        private readonly List<long> _count;
 
         public PercentileAggregation(string name = null, double? percentile = null) : base(AggregationType.Percentile, name)
         {
             if (percentile.HasValue == false)
                 throw new ArgumentException(nameof(percentile));
 
-            if (percentile.Value < 0 || percentile.Value > 100)
+            if (percentile.Value <= 0 || percentile.Value > 100)
                 throw new ArgumentOutOfRangeException(
                     $"Invalid argument passed to '{nameof(AggregationType.Percentile)}' aggregation method: '{percentile}'. " +
                     "Argument must be a number between 0 and 100");
 
             _percentileFactor = percentile.Value / 100;
-            _rankedValues = new List<List<double>>();
+            _rankedValues = new List<SortedDictionary<double, int>>();
+            _count = new List<long>();
         }
 
         void ITimeSeriesAggregation.Clear()
         {
             _rankedValues.Clear();
+            _count.Clear();
             Clear();
         }
 
@@ -44,18 +48,18 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             {
                 for (int i = _rankedValues.Count; i < values.Length; i++)
                 {
-                    _rankedValues.Add(new List<double>()); 
+                    _rankedValues.Add(new SortedDictionary<double, int>()); 
+                    _count.Add(0);
                 }
             }
 
             for (int i = 0; i < values.Length; i++)
             {
                 var val = values[i];
-                var currentRankedList = _rankedValues[i];
-                var loc = currentRankedList.BinarySearch(val);
-                currentRankedList.Insert(
-                    loc >= 0 ? loc + 1 : ~loc,
-                    val);
+                var sortedDict = _rankedValues[i];
+                sortedDict.TryGetValue(val, out int valCount);
+                sortedDict[val] = valCount + 1;
+                _count[i]++;
             }
         }
 
@@ -69,11 +73,28 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         private IEnumerable<double> GetPercentile(double scale)
         {
-            foreach (var list in _rankedValues)
+            for (var i = 0; i < _rankedValues.Count; i++)
             {
-                var index = (int)Math.Ceiling(_percentileFactor * list.Count);
+                var sortedDict= _rankedValues[i];
+                var itemsCount = _count[i];
+                var rank = (int)Math.Ceiling(_percentileFactor * itemsCount);
 
-                yield return scale * list[index - 1];
+                var count = 0;
+                double? result = null;
+                foreach ((double val, int valCount) in sortedDict)
+                {
+                    count += valCount;
+                    
+                    if (rank != count && count != itemsCount) 
+                        continue;
+                    
+                    result = val;
+                    break;
+                }
+
+                Debug.Assert(result.HasValue);
+
+                yield return scale * result.Value;
             }
         }
     }
