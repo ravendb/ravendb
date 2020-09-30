@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 throw new ArgumentException(nameof(type));
         }
 
-        public void Segment(Span<StatefulTimestampValue> values, bool isRaw)
+        void ITimeSeriesAggregation.Segment(Span<StatefulTimestampValue> values, bool isRaw)
         {
             if (isRaw == false)
             {
@@ -108,14 +108,14 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         _values[i] += val.Count;
                         break;
                     case AggregationType.Percentile:
-                        throw new InvalidOperationException($"Cannot use method '{nameof(Segment)}' on aggregation type '{nameof(AggregationType.Percentile)}' ");
+                        throw new InvalidOperationException($"Cannot use method '{nameof(ITimeSeriesAggregation.Segment)}' on aggregation type '{nameof(AggregationType.Percentile)}' ");
                     default:
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
             }
         }
 
-        public void Step(Span<double> values, bool isRaw)
+        void ITimeSeriesAggregation.Step(Span<double> values, bool isRaw)
         {
             if (isRaw == false)
             {
@@ -162,6 +162,17 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                         throw new ArgumentOutOfRangeException("Unknown aggregation operation: " + Aggregation);
                 }
             }
+        }
+
+        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? from, DateTime? to, double? scale = null)
+        {
+            if (_finalValues != null)
+                return _finalValues;
+
+            if (scale.HasValue == false || Aggregation == AggregationType.Count)
+                return _finalValues = _values;
+
+            return _finalValues = _values.Select(x => x * scale.Value);
         }
 
         private void SegmentOnRollup(Span<StatefulTimestampValue> values)
@@ -218,7 +229,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             for (int i = 0; i < originalNumOfValues; i++)
             {
                 var index = i * 6;
-                var  val = values[index + (int)Aggregation];
+                var val = values[index + (int)Aggregation];
                 var first = oldCount <= i;
 
                 switch (Aggregation)
@@ -258,17 +269,6 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             {
                 _values.Add(0);
             }
-        }
-
-        public IEnumerable<double> GetFinalValues(DateTime? from, DateTime? to, double? scale = null)
-        {
-            if (_finalValues != null)
-                return _finalValues;
-
-            if (scale.HasValue == false || Aggregation == AggregationType.Count)
-                return _finalValues = _values;
-
-            return _finalValues = _values.Select(x => x * scale.Value);
         }
     }
 }
