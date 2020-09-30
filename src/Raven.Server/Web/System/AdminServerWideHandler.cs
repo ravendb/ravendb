@@ -123,7 +123,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/configuration/server-wide/backup", "DELETE", AuthorizationStatus.ClusterAdmin)]
-        public async Task DeleteServerWideExternalReplicationConfigurationCommand()
+        public async Task DeleteServerWideBackupConfigurationCommand()
         {
             // backward compatibility
             await DeleteServerWideTaskCommand(OngoingTaskType.Backup);
