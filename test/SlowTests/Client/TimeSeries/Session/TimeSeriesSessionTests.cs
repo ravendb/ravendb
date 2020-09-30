@@ -7,12 +7,11 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Client.TimeSeries.Operations;
-using SlowTests.Client.TimeSeries.Query;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
@@ -192,6 +191,98 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
+        [Fact(Skip = "RavenDB-15645")]
+        public void CanDeleteTimestamp2()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    tsf.Append(baseline.AddMinutes(1), 59d);
+                    tsf.Append(baseline.AddMinutes(2), 69d);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete(baseline.AddMinutes(2));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>($@"
+                    declare timeseries out(x) 
+                    {{
+                        from x.HeartRate between $start and $end
+                        group by 1h
+                        select last()
+                    }}
+                    from Users as u
+                    select out(u)
+                    ")
+                        .AddParameter("start", baseline.EnsureUtc())
+                        .AddParameter("end", baseline.AddMonths(2).EnsureUtc());
+
+                    var result = query.ToList();
+                    var last = result[0].Results[0].Last[0];
+                    Assert.Equal(59, last);
+                }
+            }
+        }
+        
+        [Fact]
+        public void CanDeleteTimestamp3()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                //TimeSeriesValuesSegment.DebugMode = 1;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    tsf.Append(baseline.AddMinutes(1), 59d);
+                    tsf.Append(baseline.AddMinutes(2), 69d);
+                    tsf.Append(baseline.AddMinutes(3), 79d);
+                    tsf.Append(baseline.AddMinutes(4), 89d);
+                    tsf.Append(baseline.AddMinutes(5), 99d);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete(baseline.AddMinutes(2));
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete(baseline.AddMinutes(3));
+                    session.SaveChanges();
+                }
+
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete(baseline.AddMinutes(4));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entries = session.TimeSeriesFor("users/ayende", "Heartrate").Get();
+                    Assert.Equal(59,entries[0].Values[0]);
+                    Assert.Equal(99, entries[1].Values[0]);
+                }
+            }
+        }
+
         [Fact]
         public void CanDeleteTimestamp()
         {
@@ -310,6 +401,59 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(new[] { 69d }, vals[2].Values);
                     Assert.Equal("watches/fitbit", vals[2].Tag);
                     Assert.Equal(baseline.AddMinutes(3), vals[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                }
+            }
+        }
+
+        [Fact]
+        public void UsingDifferentNumberOfValues_SmallToLargeSplit()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline.AddMinutes(1), new[] { 59d });
+                    tsf.Append(baseline.AddMinutes(4), new[] { 89d });
+                    tsf.Append(baseline.AddMinutes(5), new[] { 99d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+                    tsf.Append(baseline.AddMinutes(2), new[] { 69d });
+                    tsf.Append(baseline.AddMinutes(3), new[] { 79d, 666d });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate").Get().ToList();
+
+                    Assert.Equal(5, vals.Count);
+                    Assert.Equal(new[] { 59d }, vals[0].Values);
+                    Assert.Equal(baseline.AddMinutes(1), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(new[] { 69d }, vals[1].Values);
+                    Assert.Equal(baseline.AddMinutes(2), vals[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(new[] { 79d, 666d }, vals[2].Values);
+                    Assert.Equal(baseline.AddMinutes(3), vals[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(new[] { 89d }, vals[3].Values);
+                    Assert.Equal(baseline.AddMinutes(4), vals[3].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(new[] { 99d }, vals[4].Values);
+                    Assert.Equal(baseline.AddMinutes(5), vals[4].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
