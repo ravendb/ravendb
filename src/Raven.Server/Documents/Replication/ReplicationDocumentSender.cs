@@ -12,12 +12,11 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TcpHandlers;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Replication
@@ -53,11 +52,10 @@ namespace Raven.Server.Documents.Replication
             private readonly OutgoingReplicationStatsScope _countersRead;
             private readonly OutgoingReplicationStatsScope _timeSeriesRead;
 
-
             public MergedReplicationBatchEnumerator(
-                OutgoingReplicationStatsScope documentRead, 
-                OutgoingReplicationStatsScope attachmentRead, 
-                OutgoingReplicationStatsScope tombstoneRead, 
+                OutgoingReplicationStatsScope documentRead,
+                OutgoingReplicationStatsScope attachmentRead,
+                OutgoingReplicationStatsScope tombstoneRead,
                 OutgoingReplicationStatsScope counterRead,
                 OutgoingReplicationStatsScope timeSeriesRead
                 )
@@ -90,17 +88,22 @@ namespace Raven.Server.Documents.Replication
                 {
                     case ReplicationBatchItem.ReplicationItemType.Document:
                         return _documentRead;
+
                     case ReplicationBatchItem.ReplicationItemType.Attachment:
                         return _attachmentRead;
+
                     case ReplicationBatchItem.ReplicationItemType.CounterGroup:
                         return _countersRead;
+
                     case ReplicationBatchItem.ReplicationItemType.DocumentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.AttachmentTombstone:
                     case ReplicationBatchItem.ReplicationItemType.RevisionTombstone:
                         return _tombstoneRead;
+
                     case ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment:
                     case ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange:
                         return _timeSeriesRead;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -201,7 +204,7 @@ namespace Raven.Server.Documents.Replication
                 try
                 {
                     // we scan through the documents to send to the other side, we need to be careful about
-                    // filtering a lot of documents, because we need to let the other side know about this, and 
+                    // filtering a lot of documents, because we need to let the other side know about this, and
                     // at the same time, we need to send a heartbeat to keep the tcp connection alive
                     _lastEtag = _parent._lastSentDocumentEtag;
                     _parent.CancellationToken.ThrowIfCancellationRequested();
@@ -215,7 +218,7 @@ namespace Raven.Server.Documents.Replication
                     long prevLastEtag = _lastEtag;
 
                     using (_stats.Storage.Start())
-                    {                        
+                    {
                         foreach (var item in GetReplicationItems(documentsContext, _lastEtag, _stats))
                         {
                             _parent.CancellationToken.ThrowIfCancellationRequested();
@@ -242,11 +245,11 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 if (_parent.SupportedFeatures.Replication.CountersBatch == false)
-                                {                                    
+                                {
                                     AssertNotCounterForLegacyReplication(item);
                                 }
 
-                                if (_parent.SupportedFeatures.Replication.ClusterTransaction == false )
+                                if (_parent.SupportedFeatures.Replication.ClusterTransaction == false)
                                 {
                                     AssertNotClusterTransactionDocumentForLegacyReplication(item);
                                 }
@@ -281,7 +284,7 @@ namespace Raven.Server.Documents.Replication
                                 item is DocumentReplicationItem docItem &&
                                 docItem.Flags.Contain(DocumentFlags.HasAttachments))
                             {
-                                var type = (docItem.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision: AttachmentType.Document;
+                                var type = (docItem.Flags & DocumentFlags.Revision) == DocumentFlags.Revision ? AttachmentType.Revision : AttachmentType.Document;
                                 foreach (var attachment in _parent._database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(documentsContext, type, docItem.Id))
                                 {
                                     // we need to filter attachments that are been sent in the same batch as the document
@@ -310,7 +313,7 @@ namespace Raven.Server.Documents.Replication
                             numberOfItemsSent++;
                         }
                     }
-                    
+
                     if (_log.IsInfoEnabled)
                     {
                         if (skippedReplicationItemsInfo.SkippedItems > 0)
@@ -322,7 +325,7 @@ namespace Raven.Server.Documents.Replication
                         var msg = $"Found {_orderedReplicaItems.Count:#,#;;0} documents " +
                                   $"and {_replicaAttachmentStreams.Count} attachment's streams " +
                                   $"to replicate to {_parent.Node.FromString()}, ";
-                                 
+
                         var encryptionSize = documentsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
                         if (encryptionSize > 0)
                         {
@@ -337,7 +340,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         var hasModification = _lastEtag != _parent._lastSentDocumentEtag;
 
-                        // ensure that the other server is aware that we skipped 
+                        // ensure that the other server is aware that we skipped
                         // on (potentially a lot of) documents to send, and we update
                         // the last etag they have from us on the other side
                         _parent._lastSentDocumentEtag = _lastEtag;
@@ -374,7 +377,6 @@ namespace Raven.Server.Documents.Replication
                     }
 
                     MissingAttachmentsInLastBatch = false;
-                    
 
                     return true;
                 }
@@ -435,7 +437,7 @@ namespace Raven.Server.Documents.Replication
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Document &&
                 item is DocumentReplicationItem doc &&
                 doc.Flags.HasFlag(DocumentFlags.FromClusterTransaction))
-            {                
+            {
                 // the other side doesn't support cluster transactions, stopping replication
                 var message = $"{_parent.Node.FromString()} found a document {doc.Id} with flag `FromClusterTransaction` to replicate to {_parent.Destination.FromString()}, " +
                               "while we are in legacy mode (downgraded our replication version to match the destination). " +
@@ -629,52 +631,7 @@ namespace Raven.Server.Documents.Replication
             _parent._lastSentDocumentEtag = _lastEtag;
 
             _parent._lastDocumentSentTime = DateTime.UtcNow;
-
         }
-
-/*        private void WriteItemToServer(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
-        {
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
-            {
-                WriteAttachmentTombstoneToServer(context, item);
-                stats.RecordAttachmentTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment)
-            {
-                WriteTimeSeriesSegmentToServer(context, item);
-                stats.RecordTimeSeriesOutput(item.Segment.NumberOfBytes);
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
-            {
-                WriteRevisionTombstoneToServer(context, item);
-                stats.RecordRevisionTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
-            {
-                WriteDocumentToServer(context, item);
-                stats.RecordDocumentTombstoneOutput();
-                return;
-            }
-
-            if (item.Type == ReplicationBatchItem.ReplicationItemType.CounterGroup)
-            {
-                item.Values.TryGet(CountersStorage.Values, out BlittableJsonReaderObject counters);
-                stats.RecordCountersOutput(counters?.Count ?? 0);
-                WriteCountersToServer(context, item);
-                return;
-            }
-
-            WriteDocumentToServer(context, item);
-            stats.RecordDocumentOutput(item.Data?.Size ?? 0);
-        }*/
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnsureValidStats(OutgoingReplicationStatsScope stats)
