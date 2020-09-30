@@ -336,10 +336,12 @@ namespace Raven.Server
             }
 
             if (exception is LowMemoryException ||
+                exception is HighDirtyMemoryException || 
                 exception is OutOfMemoryException ||
                 exception is VoronUnrecoverableErrorException ||
-                exception is DiskFullException ||
-                exception is HighDirtyMemoryException)
+                exception is VoronErrorException ||
+                exception is QuotaException ||
+                exception is DiskFullException)
             {
                 response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
                 return;
@@ -347,7 +349,6 @@ namespace Raven.Server
 
             if (exception is DocumentConflictException ||
                 exception is ConflictException ||
-                exception is ConcurrencyException ||
                 exception is RachisConcurrencyException)
             {
                 response.StatusCode = (int)HttpStatusCode.Conflict;
