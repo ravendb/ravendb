@@ -312,6 +312,16 @@ namespace Raven.Server.Documents.TimeSeries
             throw new ArgumentOutOfRangeException("Delta can't be negative");
         }
 
+        private static void ThrowInvalidFirstDelta()
+        {
+            throw new ArgumentOutOfRangeException("First value must be with zero delta");
+        }
+
+        private static void ThrowInvalidNewDelta()
+        {
+            throw new ArgumentOutOfRangeException("New timestamp must be greater then the previous");
+        }
+
         [Pure]
         public BitsBuffer GetBitsBuffer(SegmentHeader* header)
         {
@@ -323,12 +333,18 @@ namespace Raven.Server.Documents.TimeSeries
         {
             if (tempHeader->NumberOfEntries == 0)
             {
+                if (deltaFromStart != 0)
+                    ThrowInvalidFirstDelta();
+
                 bitsBuffer.AddValue((ulong)deltaFromStart, BitsForFirstTimestamp);
                 tempHeader->PreviousDelta = DefaultDelta;
                 return;
             }
 
             int delta = deltaFromStart - tempHeader->PreviousTimestamp;
+            if (delta <= 0)
+                ThrowInvalidNewDelta();
+
             int deltaOfDelta = delta - tempHeader->PreviousDelta;
             if (deltaOfDelta == 0)
             {
@@ -357,6 +373,7 @@ namespace Raven.Server.Documents.TimeSeries
             }
             tempHeader->PreviousDelta = delta;
         }
+
 
         private static void AddValue(ref StatefulTimestampValue prev, ref BitsBuffer bitsBuffer, double dblVal, ulong status)
         {
