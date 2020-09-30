@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _count = new List<double>();
         }
 
-        public void Segment(Span<StatefulTimestampValue> values, bool isRaw)
+        void ITimeSeriesAggregation.Segment(Span<StatefulTimestampValue> values, bool isRaw)
         {
             if (isRaw == false)
             {
@@ -49,16 +49,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        private void InitValuesIfNeeded(int upTo)
-        {
-            for (int i = _values.Count; i < upTo; i++)
-            {
-                _count.Add(0);
-                _values.Add(0);
-            }
-        }
-
-        public void Step(Span<double> values, bool isRaw)
+        void ITimeSeriesAggregation.Step(Span<double> values, bool isRaw)
         {
             if (isRaw == false)
             {
@@ -89,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        public IEnumerable<double> GetFinalValues(DateTime? @from, DateTime? to, double? scale = null)
+        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? @from, DateTime? to, double? scale = null)
         {
             if (_finalValues != null)
                 return _finalValues;
@@ -112,6 +103,15 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         {
             _count.Clear();
             Clear();
+        }
+
+        private void InitValuesIfNeeded(int upTo)
+        {
+            for (int i = _values.Count; i < upTo; i++)
+            {
+                _count.Add(0);
+                _values.Add(0);
+            }
         }
     }
 }

@@ -15,82 +15,15 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _first = new List<double>();
         }
 
-        public void Segment(Span<StatefulTimestampValue> values, bool isRaw)
+        void ITimeSeriesAggregation.Step(Span<double> values, bool isRaw)
         {
-            var oldCount = _values.Count;
             if (isRaw == false)
             {
-                Debug.Assert(values.Length % 6 == 0);
-                var originalNumOfValues = values.Length / 6;
-
-                InitValuesIfNeeded(originalNumOfValues);
-
-                for (int i = 0; i < originalNumOfValues; i++)
-                {
-                    var index = i * 6;
-
-                    var val = values[index + (int)AggregationType.Last];
-                    _values[i] += val.Last;
-
-                    if (i >= oldCount) 
-                        continue;
-                    
-                    val = values[index + (int)AggregationType.First];
-                    _first[i] = val.First;
-                }
-
+                StepOnRollup(values);
                 return;
             }
 
-            InitValuesIfNeeded(values.Length);
-
-            for (int i = 0; i < values.Length; i++)
-            {
-                var val = values[i];
-
-                if (i < oldCount)
-                {
-                    _first[i] = val.First;
-                }
-
-                _values[i] = val.Last;
-            }
-        }
-
-        private void InitValuesIfNeeded(int upTo)
-        {
-            for (int i = _values.Count; i < upTo; i++)
-            {
-                _first.Add(0);
-                _values.Add(0);
-            }
-        }
-
-        public void Step(Span<double> values, bool isRaw)
-        {
             var oldCount = _values.Count;
-            if (isRaw == false)
-            {
-                Debug.Assert(values.Length % 6 == 0);
-                var originalNumOfValues = values.Length / 6;
-
-                InitValuesIfNeeded(originalNumOfValues);
-
-                for (int i = 0; i < originalNumOfValues; i++)
-                {
-                    var index = i * 6;
-                    if (oldCount <= i)
-                    {
-                        var val = values[index + (int)AggregationType.First];
-                        _first[i] = val;
-                    }
-
-                    _values[i] = values[index + (int)AggregationType.Last];
-                }
-
-                return;
-            }
-
             InitValuesIfNeeded(values.Length);
 
             for (int i = 0; i < values.Length; i++)
@@ -106,7 +39,31 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        public IEnumerable<double> GetFinalValues(DateTime? @from, DateTime? to, double? scale = null)
+        void ITimeSeriesAggregation.Segment(Span<StatefulTimestampValue> values, bool isRaw)
+        {
+            if (isRaw == false)
+            {
+                SegmentOnRollup(values);
+                return;
+            }
+
+            var oldCount = _values.Count;
+            InitValuesIfNeeded(values.Length);
+
+            for (int i = 0; i < values.Length; i++)
+            {
+                var val = values[i];
+
+                if (i < oldCount)
+                {
+                    _first[i] = val.First;
+                }
+
+                _values[i] = val.Last;
+            }
+        }
+
+        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? @from, DateTime? to, double? scale = null)
         {
             if (_finalValues != null)
                 return _finalValues;
@@ -130,6 +87,58 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         {
             _first.Clear();
             Clear();
+        }
+
+        private void InitValuesIfNeeded(int upTo)
+        {
+            for (int i = _values.Count; i < upTo; i++)
+            {
+                _first.Add(0);
+                _values.Add(0);
+            }
+        }
+
+        private void StepOnRollup(Span<double> values)
+        {
+            Debug.Assert(values.Length % 6 == 0);
+
+            var originalNumOfValues = values.Length / 6;
+            var oldCount = _values.Count;
+            InitValuesIfNeeded(originalNumOfValues);
+
+            for (int i = 0; i < originalNumOfValues; i++)
+            {
+                var index = i * 6;
+                if (oldCount <= i)
+                {
+                    var val = values[index + (int)AggregationType.First];
+                    _first[i] = val;
+                }
+
+                _values[i] = values[index + (int)AggregationType.Last];
+            }
+        }
+
+        private void SegmentOnRollup(Span<StatefulTimestampValue> values)
+        {
+            Debug.Assert(values.Length % 6 == 0);
+            var originalNumOfValues = values.Length / 6;
+            var oldCount = _values.Count;
+            InitValuesIfNeeded(originalNumOfValues);
+
+            for (int i = 0; i < originalNumOfValues; i++)
+            {
+                var index = i * 6;
+
+                var val = values[index + (int)AggregationType.Last];
+                _values[i] += val.Last;
+
+                if (i >= oldCount)
+                    continue;
+
+                val = values[index + (int)AggregationType.First];
+                _first[i] = val.First;
+            }
         }
     }
 }

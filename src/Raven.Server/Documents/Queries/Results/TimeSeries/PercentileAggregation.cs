@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
         private readonly List<SortedDictionary<double, int>> _rankedValues;
         private readonly List<long> _count;
 
+        public new int NumberOfValues => _count.Count;
+
         public PercentileAggregation(string name = null, double? percentile = null) : base(AggregationType.Percentile, name)
         {
             if (percentile.HasValue == false)
@@ -27,13 +29,6 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _count = new List<long>();
         }
 
-        void ITimeSeriesAggregation.Clear()
-        {
-            _rankedValues.Clear();
-            _count.Clear();
-            Clear();
-        }
-
         void ITimeSeriesAggregation.Segment(Span<StatefulTimestampValue> values, bool isRaw)
         {
             throw new InvalidOperationException($"Cannot use method '{nameof(ITimeSeriesAggregation.Segment)}' on aggregation type '{nameof(AggregationType.Percentile)}' ");
@@ -44,21 +39,16 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             if (isRaw == false)
                 throw new InvalidOperationException($"Cannot use aggregation method '{nameof(AggregationType.Percentile)}' on rolled-up time series");
 
-            if (_rankedValues.Count < values.Length)
-            {
-                for (int i = _rankedValues.Count; i < values.Length; i++)
-                {
-                    _rankedValues.Add(new SortedDictionary<double, int>()); 
-                    _count.Add(0);
-                }
-            }
+            InitValuesIfNeeded(values.Length);
 
             for (int i = 0; i < values.Length; i++)
             {
                 var val = values[i];
                 var sortedDict = _rankedValues[i];
+                
                 sortedDict.TryGetValue(val, out int valCount);
                 sortedDict[val] = valCount + 1;
+
                 _count[i]++;
             }
         }
@@ -69,6 +59,22 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 return _finalValues;
 
             return _finalValues = GetPercentile(scale ?? 1);
+        }
+
+        void ITimeSeriesAggregation.Clear()
+        {
+            _rankedValues.Clear();
+            _count.Clear();
+            Clear();
+        }
+
+        private void InitValuesIfNeeded(int upTo)
+        {
+            for (int i = _rankedValues.Count; i < upTo; i++)
+            {
+                _rankedValues.Add(new SortedDictionary<double, int>());
+                _count.Add(0);
+            }
         }
 
         private IEnumerable<double> GetPercentile(double scale)
