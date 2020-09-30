@@ -509,7 +509,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Equal(ts1Minutes, minutes);
                 }
 
-                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/BigMeasures");
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"Users/BigMeasures");
                 var alert = database.NotificationCenter.GetStoredMessage(key);
                 Assert.Equal("Rollup 'ByMinute' for time-series 'BigMeasures' in document 'users/KARMEL' failed.", alert);
             }
@@ -564,7 +564,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.RunRollups();
+                await WaitForPolicyRunner(database);
 
                 using (var session = store.OpenSession())
                 {
@@ -578,7 +578,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                     Assert.Null(session.TimeSeriesRollupFor<BigMeasure>("users/karmel", p1.Name).Get()?.ToList());
                 }
 
-                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"users/karmel/BigMeasures");
+                var key = AlertRaised.GetKey(AlertType.RollupExceedNumberOfValues, $"Users/BigMeasures");
                 var alert = database.NotificationCenter.GetStoredMessage(key);
                 Assert.NotNull(alert);
 
@@ -598,9 +598,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromHours(1));
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-                await database.TimeSeriesPolicyRunner.RunRollups();
+                await WaitForPolicyRunner(database);
                 using (var session = store.OpenSession())
                 {
                     Assert.Null(session.TimeSeriesFor<SmallMeasure>("users/karmel").Get()?.ToList());
@@ -720,7 +718,7 @@ namespace SlowTests.Client.TimeSeries.Policies
                 }
 
                 var database = await GetDocumentDatabaseInstanceFor(store);
-                await database.TimeSeriesPolicyRunner.DoRetention();
+                await WaitForPolicyRunner(database);
 
                 using (var session = store.OpenSession())
                 {
@@ -1008,16 +1006,16 @@ namespace SlowTests.Client.TimeSeries.Policies
 
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate").Get().ToList();
                     Assert.Equal(100, ts.Count);
 
-                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts1 = session.TimeSeriesFor("users/karmel", p1.GetTimeSeriesName("Heartrate")).Get().ToList();
                     Assert.Equal(20, ts1.Count);
 
-                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts2 = session.TimeSeriesFor("users/karmel", p2.GetTimeSeriesName("Heartrate")).Get().ToList();
                     Assert.Equal(10, ts2.Count);
 
-                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get(DateTime.MinValue, DateTime.MaxValue).ToList();
+                    var ts3 = session.TimeSeriesFor("users/karmel", p3.GetTimeSeriesName("Heartrate")).Get().ToList();
                     Assert.Equal(5, ts3.Count);
                 }
             }

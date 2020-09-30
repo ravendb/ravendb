@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.TimeSeries
             try
             {
                 var states = new List<TimeSeriesRollups.RollupState>();
-                var scanned = 0L;
+                var start = 0L;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     while (true)
@@ -287,8 +287,7 @@ namespace Raven.Server.Documents.TimeSeries
                         Stopwatch duration;
                         using (context.OpenReadTransaction())
                         {
-                            _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollups(context, now, 1024, scanned, states, out duration);
-                            scanned += states.Count;
+                            _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollups(context, now, 1024, start, states, out duration);
                             if (states.Count == 0)
                                 return total;
                         }
@@ -300,7 +299,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                         var command = new TimeSeriesRollups.RollupTimeSeriesCommand(Configuration, now, states, isFirstInTopology);
                         await _database.TxMerger.Enqueue(command);
-
+                        
                         if (command.RolledUp > 0)
                         {
                             total += command.RolledUp;
@@ -308,6 +307,8 @@ namespace Raven.Server.Documents.TimeSeries
                             if (Logger.IsInfoEnabled)
                                 Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
                         }
+
+                        start = states.Last().NextRollup.Ticks + 1;
                     }
                 }
             }
@@ -348,18 +349,17 @@ namespace Raven.Server.Documents.TimeSeries
                     if (config.Disabled)
                         continue;
                 
-
                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var collectionName = _database.DocumentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
                         if (collectionName == null)
                             continue;
-
-                        await ApplyRetention(context, collectionName, config.RawPolicy, now);
+                        
+                        await ApplyRetention(context, config, collectionName, config.RawPolicy, now);
 
                         foreach (var policy in config.Policies)
                         {
-                            await ApplyRetention(context, collectionName, policy, now.Add(-policy.AggregationTime));
+                            await ApplyRetention(context, config, collectionName, policy, now.Add(-policy.AggregationTime));
                         }
                     }
                 }
@@ -379,7 +379,12 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
-        private async Task ApplyRetention(DocumentsOperationContext context, CollectionName collectionName, TimeSeriesPolicy policy, DateTime now)
+        private async Task ApplyRetention(
+            DocumentsOperationContext context, 
+            TimeSeriesCollectionConfiguration config,
+            CollectionName collectionName, 
+            TimeSeriesPolicy policy, 
+            DateTime now)
         {
             var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
             if (policy.RetentionTime == TimeValue.MaxValue)
@@ -400,6 +405,9 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     foreach (var item in tss.Stats.GetTimeSeriesByPolicyFromStartDate(context, collectionName, policy.Name, to, TimeSeriesRollups.TimeSeriesRetentionCommand.BatchSize))
                     {
+                        if (RequiredForNextPolicy(context, config, policy, item, to)) 
+                            continue;
+
                         if (tss.Rollups.HasPendingRollupFrom(context, item, to) == false)
                             list.Add(item);
                     }
@@ -422,6 +430,29 @@ namespace Raven.Server.Documents.TimeSeries
                     await _database.TxMerger.Enqueue(cmd);
                 }
             }
+        }
+
+        private static bool RequiredForNextPolicy(DocumentsOperationContext context, TimeSeriesCollectionConfiguration config, TimeSeriesPolicy policy, Slice item, DateTime to)
+        {
+            var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
+            var next = config.GetNextPolicy(policy);
+            if (ReferenceEquals(next, TimeSeriesPolicy.AfterAllPolices) == false)
+            {
+                TimeSeriesRollups.SplitKey(item, out var docId, out var name);
+                var raw = name.Split(TimeSeriesConfiguration.TimeSeriesRollupSeparator)[0];
+                var currentStats = tss.Stats.GetStats(context, docId, policy.GetTimeSeriesName(raw));
+                var nextStats = tss.Stats.GetStats(context, docId, next.GetTimeSeriesName(raw));
+
+                var nextEnd = nextStats.End.Add(next.AggregationTime).AddMilliseconds(-1);
+                
+                if (nextEnd > currentStats.End)
+                    return false;
+
+                if (nextEnd < to)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

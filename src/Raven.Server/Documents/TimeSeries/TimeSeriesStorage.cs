@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(DeletedRangesKey);
 
             Stats = new TimeSeriesStats(this, tx);
-            Rollups = new TimeSeriesRollups(documentDatabase.Name);
+            Rollups = new TimeSeriesRollups(_documentDatabase);
             _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
         }
 
@@ -1923,7 +1923,7 @@ namespace Raven.Server.Documents.TimeSeries
             return fst.NumberOfEntries;
         }
 
-        private static void AssertNoNanValue(SingleResult toAppend)
+        public static void AssertNoNanValue(SingleResult toAppend)
         {
             foreach (var val in toAppend.Values.Span)
             {

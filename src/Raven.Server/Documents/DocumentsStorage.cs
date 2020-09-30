@@ -2220,6 +2220,16 @@ namespace Raven.Server.Documents
             return name;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ByteStringContext.InternalScope GetEtagAsSlice(DocumentsOperationContext context, long etag, out Slice slice)
+        {
+            var scope = context.Allocator.Allocate(sizeof(long), out var keyMem);
+            var swapped = Bits.SwapBytes(etag);
+            Memory.Copy(keyMem.Ptr, (byte*)&swapped, sizeof(long));
+            slice = new Slice(SliceOptions.Key, keyMem);
+            return scope;
+        }
+
         private static void ThrowNoActiveTransactionException()
         {
             throw new InvalidOperationException("This method requires active transaction, and no active transactions in the current context...");

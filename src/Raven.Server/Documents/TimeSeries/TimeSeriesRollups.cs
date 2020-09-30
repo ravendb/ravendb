@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.TimeSeries
 {
     public class TimeSeriesRollups
     {
+        private readonly DocumentDatabase _database;
         private static readonly TableSchema RollupSchema;
         public static readonly Slice TimeSeriesRollupTable;
         private static readonly Slice RollupKey;
@@ -82,9 +83,10 @@ namespace Raven.Server.Documents.TimeSeries
 
         private readonly Logger _logger;
 
-        public TimeSeriesRollups(string database)
+        public TimeSeriesRollups(DocumentDatabase database)
         {
-            _logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(database);
+            _database = database;
+            _logger = LoggingSource.Instance.GetLogger<TimeSeriesPolicyRunner>(database.Name);
         }
 
         public unsafe void MarkForPolicy(DocumentsOperationContext context, TimeSeriesSliceHolder slicerHolder, TimeSeriesPolicy nextPolicy, DateTime timestamp)
@@ -177,7 +179,7 @@ namespace Raven.Server.Documents.TimeSeries
             return existingRollup <= t.Ticks;
         }
 
-        internal void PrepareRollups(DocumentsOperationContext context, DateTime currentTime, long take, long skip, List<RollupState> states, out Stopwatch duration)
+        internal void PrepareRollups(DocumentsOperationContext context, DateTime currentTime, long take, long start, List<RollupState> states, out Stopwatch duration)
         {
             duration = Stopwatch.StartNew();
 
@@ -187,36 +189,39 @@ namespace Raven.Server.Documents.TimeSeries
 
             var currentTicks = currentTime.Ticks;
 
-            foreach (var item in table.SeekForwardFrom(RollupSchema.Indexes[NextRollupIndex], Slices.BeforeAllKeys, skip))
+            using (DocumentsStorage.GetEtagAsSlice(context, start, out var startSlice))
             {
-                if (take <= 0)
-                    return;
-
-                var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollupColumns.NextRollup, ref item.Result.Reader);
-                if (rollUpTime > currentTicks)
-                    return;
-
-                DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, ref item.Result.Reader, out var key);
-                SplitKey(key, out var docId, out var name);
-                name = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
-
-                var state = new RollupState
+                foreach (var item in table.SeekForwardFrom(RollupSchema.Indexes[NextRollupIndex], startSlice, 0))
                 {
-                    Key = key,
-                    DocId = docId,
-                    Name = name,
-                    Collection = DocumentsStorage.TableValueToId(context, (int)RollupColumns.Collection, ref item.Result.Reader),
-                    NextRollup = new DateTime(rollUpTime),
-                    RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, ref item.Result.Reader),
-                    Etag = DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref item.Result.Reader),
-                    ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, ref item.Result.Reader)
-                };
+                    if (take <= 0)
+                        return;
+                    
+                    var rollUpTime = DocumentsStorage.TableValueToEtag((int)RollupColumns.NextRollup, ref item.Result.Reader);
+                    if (rollUpTime > currentTicks)
+                        return;
 
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{state} is prepared.");
+                    DocumentsStorage.TableValueToSlice(context, (int)RollupColumns.Key, ref item.Result.Reader, out var key);
+                    SplitKey(key, out var docId, out var name);
+                    name = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetOriginalName(context, docId, name);
 
-                states.Add(state);
-                take--;
+                    var state = new RollupState
+                    {
+                        Key = key,
+                        DocId = docId,
+                        Name = name,
+                        Collection = DocumentsStorage.TableValueToId(context, (int)RollupColumns.Collection, ref item.Result.Reader),
+                        NextRollup = new DateTime(rollUpTime),
+                        RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, ref item.Result.Reader),
+                        Etag = DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref item.Result.Reader),
+                        ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, ref item.Result.Reader)
+                    };
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"{state} is prepared.");
+
+                    states.Add(state);
+                    take--;
+                }
             }
         }
 
@@ -401,6 +406,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _isFirstInTopology = isFirstInTopology;
                 _logger = LoggingSource.Instance.GetLogger<TimeSeriesRollups>(nameof(RollupTimeSeriesCommand));
             }
+
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
                 var storage = context.DocumentDatabase.DocumentsStorage;
@@ -438,6 +444,25 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"{item} failed", e);
+
+                        if (table.VerifyKeyExists(item.Key) == false)
+                        {
+                            // we should re-add it, in case we already removed this rollup
+                            using (var slicer = new TimeSeriesSliceHolder(context, item.DocId, item.Name, item.Collection))
+                            using (Slice.From(context.Allocator, item.ChangeVector, ByteStringType.Immutable, out var cv))
+                            using (Slice.From(context.Allocator, item.RollupPolicy, ByteStringType.Immutable, out var policySlice))
+                            using (table.Allocate(out var tvb))
+                            {
+                                tvb.Add(slicer.StatsKey);
+                                tvb.Add(slicer.CollectionSlice);
+                                tvb.Add(Bits.SwapBytes(item.NextRollup.Ticks));
+                                tvb.Add(policySlice);
+                                tvb.Add(item.Etag);
+                                tvb.Add(cv);
+
+                                table.Set(tvb);
+                            }
+                        }
                     }
                     catch (RollupExceedNumberOfValuesException e)
                     {
@@ -459,7 +484,7 @@ namespace Raven.Server.Documents.TimeSeries
                             _logger.Info(msg, e);
 
                         var alert = AlertRaised.Create(context.DocumentDatabase.Name, "Failed to perform rollup because the time-series has more than 5 values", msg,
-                            AlertType.RollupExceedNumberOfValues, NotificationSeverity.Warning, $"{item.DocId}/{item.Name}", new ExceptionDetails(e));
+                            AlertType.RollupExceedNumberOfValues, NotificationSeverity.Warning, $"{item.Collection}/{item.Name}", new ExceptionDetails(e));
 
                         context.DocumentDatabase.NotificationCenter.Add(alert);
                     }
@@ -864,14 +889,16 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (aggStates.Any)
             {
-                results.Add(new SingleResult
+                var result = new SingleResult
                 {
                     Timestamp = rangeSpec.Start,
                     Values = new Memory<double>(aggStates.Values.ToArray()),
                     Status = TimeSeriesValuesSegment.Live,
                     Type = SingleResultType.RolledUp
                     // TODO: Tag = ""
-                });
+                };
+                TimeSeriesStorage.AssertNoNanValue(result);
+                results.Add(result);
             }
 
             return results;
@@ -883,14 +910,16 @@ namespace Raven.Server.Documents.TimeSeries
 
                 if (aggStates.Any)
                 {
-                    results.Add(new SingleResult
+                    var result = new SingleResult
                     {
                         Timestamp = rangeSpec.Start,
                         Values = new Memory<double>(aggStates.Values.ToArray()),
                         Status = TimeSeriesValuesSegment.Live,
                         Type = SingleResultType.RolledUp
                         // TODO: Tag = ""
-                    });
+                    };
+                    TimeSeriesStorage.AssertNoNanValue(result);
+                    results.Add(result);
                 }
 
                 rangeSpec.MoveToNextRange(ts);
