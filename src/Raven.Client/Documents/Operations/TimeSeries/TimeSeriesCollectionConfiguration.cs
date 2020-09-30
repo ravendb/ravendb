@@ -153,6 +153,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
             return null;
         }
 
+        internal TimeSeriesPolicy GetNextPolicy(TimeSeriesPolicy policy)
+        {
+            GetPolicyByName(policy.Name, out var index);
+            return GetNextPolicy(index);
+        }
+
         internal TimeValue MaxRetention
         {
             get
@@ -193,9 +199,6 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         internal TimeSeriesPolicy GetNextPolicy(int policyIndex)
         {
-            if (Policies.Count == 0)
-                return null;
-
             if (policyIndex == Policies.Count)
                 return TimeSeriesPolicy.AfterAllPolices;
 

@@ -1159,6 +1159,21 @@ namespace FastTests
             }
         }
 
+        public static async Task WaitForPolicyRunner(DocumentDatabase database)
+        {
+            var loops = 10;
+            await database.TimeSeriesPolicyRunner.HandleChanges();
+            for (int i = 0; i < loops; i++)
+            {
+                var rolled = await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                if (rolled == 0)
+                    return;
+            }
+
+            Assert.True(false, $"We still have pending rollups left.");
+        }
+
         protected void CreateSimpleData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
