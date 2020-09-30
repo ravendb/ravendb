@@ -274,6 +274,7 @@ namespace Raven.Server.Documents.TimeSeries
             try
             {
                 var states = new List<TimeSeriesRollups.RollupState>();
+                var scanned = 0L;
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     while (true)
@@ -286,7 +287,8 @@ namespace Raven.Server.Documents.TimeSeries
                         Stopwatch duration;
                         using (context.OpenReadTransaction())
                         {
-                            _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollups(context, now, 1024, states, out duration);
+                            _database.DocumentsStorage.TimeSeriesStorage.Rollups.PrepareRollups(context, now, 1024, scanned, states, out duration);
+                            scanned += states.Count;
                             if (states.Count == 0)
                                 return total;
                         }
@@ -298,16 +300,16 @@ namespace Raven.Server.Documents.TimeSeries
 
                         var command = new TimeSeriesRollups.RollupTimeSeriesCommand(Configuration, now, states, isFirstInTopology);
                         await _database.TxMerger.Enqueue(command);
-                        if (command.RolledUp == 0)
-                            break;
-                        total += command.RolledUp;
 
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                        if (command.RolledUp > 0)
+                        {
+                            total += command.RolledUp;
+
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Successfully aggregated {command.RolledUp:#,#;;0} time-series within {duration.ElapsedMilliseconds:#,#;;0} ms.");
+                        }
                     }
                 }
-
-                return total;
             }
             catch (OperationCanceledException)
             {
