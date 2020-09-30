@@ -37,7 +37,7 @@
   <ItemGroup>
     <None Include="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT' AND ('$(PlatformTarget)' == '' OR '$(PlatformTarget)' == 'x64')">
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows64)' == 'true'">
     <None Include="..\..\libs\libsodium\libsodium.win.x64.dll" Link="libsodium.win.x64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -48,7 +48,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT' AND ('$(PlatformTarget)' == '' OR '$(PlatformTarget)' == 'x86')">
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsWindows32)' == 'true'">
     <None Include="..\..\libs\libsodium\libsodium.win.x86.dll" Link="libsodium.win.x86.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -59,36 +59,40 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <ItemGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))'">
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinux64)' == 'true'">
     <None Include="..\..\libs\libsodium\libsodium.linux.x64.so" Link="libsodium.linux.x64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libsodium\libsodium.arm.32.so" Link="libsodium.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\libsodium\libsodium.arm.64.so" Link="libsodium.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\librvnpal\librvnpal.linux.x64.so" Link="librvnpal.linux.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.arm.32.so" Link="librvnpal.arm.32.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="..\..\libs\librvnpal\librvnpal.arm.64.so" Link="librvnpal.arm.64.so">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Include="..\..\libs\libzstd\libzstd.linux.x64.so" Link="libzstd.linux.x64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\..\libs\libzstd\libzstd.arm.32.so" Link="libzstd.arm.32.so">
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm64)' == 'true'">
+    <None Include="..\..\libs\libsodium\libsodium.arm.64.so" Link="libsodium.arm.64.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\librvnpal\librvnpal.arm.64.so" Link="librvnpal.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\..\libs\libzstd\libzstd.arm.64.so" Link="libzstd.arm.64.so">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <ItemGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))'">
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsLinuxArm32)' == 'true'">
+    <None Include="..\..\libs\libsodium\libsodium.arm.32.so" Link="libsodium.arm.32.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\librvnpal\librvnpal.arm.32.so" Link="librvnpal.arm.32.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\libs\libzstd\libzstd.arm.32.so" Link="libzstd.arm.32.so">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsAnyOS)' == 'true' OR '$(IsMacOS)' == 'true'">
     <None Include="..\..\libs\libsodium\libsodium.mac.x64.dylib" Link="libsodium.mac.x64.dylib">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
