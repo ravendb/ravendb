@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +11,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -72,36 +72,6 @@ namespace SlowTests.Cluster
         }
 
         [Fact]
-        public async Task ShouldThrowTimeoutException()
-        {
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
-
-            using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
-            using (var store2 = GetDocumentStore())
-            {
-                var documentDatabase = await GetDatabase(store.Database);
-                var testingStuff = documentDatabase.ForTestingPurposesOnly();
-
-                using (testingStuff.CallDuringDocumentDatabaseInternalDispose(() =>
-                {
-                    Thread.Sleep(18 * 1000);
-                }))
-                {
-                    var cts = new CancellationTokenSource();
-                    var task = BackgroundWork(store2, cts);
-
-                    await WaitForIndexCreation(store2);
-
-                    var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true)));
-                    Assert.True(e.InnerException is TimeoutException);
-
-                    cts.Cancel();
-                    task.Wait();
-                }
-            }
-        }
-
-        [Fact]
         public async Task RavenDB_14086()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +90,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        private static async Task WaitForIndexCreation(DocumentStore store)
+        internal static async Task WaitForIndexCreation(DocumentStore store)
         {
             while (store.Maintenance.Send(new GetStatisticsOperation()).CountOfIndexes == 0)
             {
@@ -128,7 +98,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        private static async Task BackgroundWork(DocumentStore store2, CancellationTokenSource cts)
+        internal static async Task BackgroundWork(DocumentStore store2, CancellationTokenSource cts)
         {
             while (cts.IsCancellationRequested == false)
             {
@@ -143,7 +113,7 @@ namespace SlowTests.Cluster
 
             public UsersIndex()
             {
-                Map = users => 
+                Map = users =>
                     from user in users
                     select new
                     {
