@@ -28,7 +28,8 @@ namespace SlowTests.Client.TimeSeries.Issues
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
-                
+                const double number = 90;
+
                 var values = new List<double>
                 {
                     43, 54, 56, 61, 62,
@@ -37,6 +38,8 @@ namespace SlowTests.Client.TimeSeries.Issues
                     85, 87, 88, 89, 93,
                     95, 96, 98, 99, 99
                 };
+
+                var expected = GetExpectedPercentile(values, number);
 
                 using (var session = store.OpenSession())
                 {
@@ -61,7 +64,6 @@ namespace SlowTests.Client.TimeSeries.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    const double number = 90;
                     var query = session.Advanced.RawQuery<TimeSeriesAggregationResult>(@"
 from People 
 select timeseries(
@@ -73,7 +75,7 @@ select timeseries(
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
 
-                    Assert.Equal(98, result.Results[0].Percentile[0]);
+                    Assert.Equal(expected, result.Results[0].Percentile[0]);
                 }
             }
         }
@@ -85,6 +87,7 @@ select timeseries(
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
+                const double number = 90;
 
                 var values = new List<double>
                 {
@@ -94,6 +97,8 @@ select timeseries(
                     85, 87, 88, 89, 93, 
                     95, 96, 98, 99, 99
                 };
+
+                double expected = GetExpectedPercentile(values, number);
 
                 using (var session = store.OpenSession())
                 {
@@ -116,7 +121,6 @@ select timeseries(
                     session.SaveChanges();
                 }
 
-                const double number = 90;
 
                 using (var session = store.OpenSession())
                 {
@@ -131,7 +135,7 @@ select timeseries(
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
 
-                    Assert.Equal(98, result.Results[0].Percentile[0]);
+                    Assert.Equal(expected, result.Results[0].Percentile[0]);
                 }
 
                 using (var session = store.OpenSession())
@@ -144,7 +148,7 @@ select timeseries(
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
 
-                    Assert.Equal(98, result.Results[0].Percentile[0]);
+                    Assert.Equal(expected, result.Results[0].Percentile[0]);
                 }
 
                 using (var session = store.OpenSession())
@@ -161,7 +165,7 @@ select timeseries(
                     var result = query.First();
                     Assert.Equal(1, result.Results.Length);
 
-                    Assert.Equal(98, result.Results[0].Percentile[0]);
+                    Assert.Equal(expected, result.Results[0].Percentile[0]);
                 }
             }
         }
@@ -222,10 +226,7 @@ select timeseries(
                         Assert.NotNull(group);
 
                         var groupValues = group.Select(g => g.Value).ToList();
-                        groupValues.Sort();
-
-                        var index = (int)Math.Ceiling((number / 100) * groupValues.Count);
-                        var expected = groupValues[index - 1];
+                        var expected = GetExpectedPercentile(groupValues, number);
 
                         Assert.Equal(expected, rangeAggregation.Percentile[0]);
                     }
@@ -268,14 +269,18 @@ select timeseries(
                         .Select(e => e.Value)
                         .ToList();
 
-                    values.Sort();
-
                     var number = new Random().NextDouble() * 100;
+                    var expectedPercentile = GetExpectedPercentile(values, number);
 
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
                             .Where(e => e.Tag == "watches/fitbit")
-                            .Select(x => new {Percentile = x.Percentile(number), Min = x.Min(), Max = x.Max()})
+                            .Select(x => new
+                            {
+                                Percentile = x.Percentile(number), 
+                                Min = x.Min(), 
+                                Max = x.Max()
+                            })
                             .ToList());
 
                     var result = query.First();
@@ -284,10 +289,77 @@ select timeseries(
                     Assert.Equal(values[0], result.Results[0].Min[0]);
                     Assert.Equal(values[^1], result.Results[0].Max[0]);
 
-                    var index = (int)Math.Ceiling((number / 100) * values.Count);
-                    var expectedPercentile = values[index - 1];
-
                     Assert.Equal(expectedPercentile, result.Results[0].Percentile[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUsePercentileInTimeSeriesQuery_WithMultipleValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc();
+                var id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { Name = "Oren", }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+                    var rand = new Random();
+
+                    for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
+                    {
+                        if (i % 7 == 0)
+                            continue;
+
+                        var value1 = rand.NextDouble() * rand.Next(1, 100);
+                        var value2 = rand.NextDouble() * rand.Next(1, 100);
+                        
+                        tsf.Append(baseline.AddMinutes(i), new []{ value1, value2 });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var number = new Random().NextDouble() * 100;
+
+                    var allEntries = session.TimeSeriesFor(id, "HeartRate").Get();
+                    var groupByHour = allEntries
+                        .GroupBy(e => new { e.Timestamp.Day, e.Timestamp.Hour })
+                        .ToList();
+
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
+                            .GroupBy(g => g.Hours(1))
+                            .Select(x => new { P = x.Percentile(number) })
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(24, result.Results.Length);
+
+                    foreach (var rangeAggregation in result.Results)
+                    {
+                        var day = rangeAggregation.From.Day;
+                        var hour = rangeAggregation.From.Hour;
+
+                        var group = groupByHour.SingleOrDefault(x => x.Key.Day == day && x.Key.Hour == hour);
+                        Assert.NotNull(group);
+
+                        var groupValues1 = group.Select(g => g.Values[0]).ToList();
+                        var expected = GetExpectedPercentile(groupValues1, number);
+
+                        Assert.Equal(expected, rangeAggregation.Percentile[0]);
+
+                        var groupValues2 = group.Select(g => g.Values[1]).ToList();
+                        expected = GetExpectedPercentile(groupValues2, number);
+
+                        Assert.Equal(expected, rangeAggregation.Percentile[1]);
+                    }
                 }
             }
         }
@@ -299,7 +371,6 @@ select timeseries(
             {
                 var baseline = DateTime.Today.EnsureUtc();
                 var id = "people/1";
-
 
                 using (var session = store.OpenSession())
                 {
@@ -326,13 +397,17 @@ select timeseries(
                         .Select(e => e.Value * 0.001)
                         .ToList();
 
-                    values.Sort();
-
                     var number = new Random().NextDouble() * 100;
+                    var expected = GetExpectedPercentile(values, number);
 
                     var query = session.Query<Person>()
                         .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
-                            .Select(x => new {Percentile = x.Percentile(number), Min = x.Min(), Max = x.Max()})
+                            .Select(x => new
+                            {
+                                Percentile = x.Percentile(number), 
+                                Min = x.Min(), 
+                                Max = x.Max()
+                            })
                             .Scale(0.001)
                             .ToList());
 
@@ -342,10 +417,10 @@ select timeseries(
                     Assert.Equal(values[0], result.Results[0].Min[0]);
                     Assert.Equal(values[^1], result.Results[0].Max[0]);
 
-                    var index = (int)Math.Ceiling((number / 100) * values.Count);
-                    var expectedPercentile = values[index - 1];
+                    var tolerance = 0.0000000000001;
+                    var diff = Math.Abs(expected - result.Results[0].Percentile[0]);
 
-                    Assert.Equal(expectedPercentile, result.Results[0].Percentile[0]);
+                    Assert.True(diff < tolerance);
                 }
             }
         }
@@ -404,9 +479,7 @@ select timeseries(
                         .Select(e => e.Value)
                         .ToList();
 
-                    values.Sort();
-                    var index = (int)Math.Ceiling((number / 100) * values.Count);
-                    var expectedPercentile = values[index - 1];
+                    var expectedPercentile = GetExpectedPercentile(values, number);
 
                     Assert.Equal(expectedPercentile, result.Results[0].Percentile[0]);
 
@@ -419,10 +492,7 @@ select timeseries(
                         .Select(e => e.Value)
                         .ToList();
 
-                    values.Sort();
-
-                    index = (int)Math.Ceiling((number / 100) * values.Count);
-                    expectedPercentile = values[index - 1];
+                    expectedPercentile = GetExpectedPercentile(values, number);
 
                     Assert.Equal(expectedPercentile, result.Results[3].Percentile[0]);
 
@@ -446,6 +516,57 @@ select timeseries(
                     expectedPercentile = result.Results[0].Percentile[0] + dy * quotient;
 
                     Assert.Equal(expectedPercentile, result.Results[2].Percentile[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanUsePercentileInTimeSeriesQuery_EdgeCases()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc();
+                var id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { Name = "Oren", }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+
+                    var rand = new Random();
+
+                    for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
+                    {
+                        var value = rand.NextDouble();
+                        tsf.Append(baseline.AddMinutes(i), value);
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var values = session.TimeSeriesFor(id, "HeartRate")
+                        .Get()
+                        .Select(e => e.Value)
+                        .ToList();
+
+                    var numbers = new[] {0.0693, 0.0694, 99.93, 99.94};
+
+                    foreach (var number in numbers)
+                    {
+                        var expectedPercentile = GetExpectedPercentile(values, number);
+
+                        var query = session.Query<Person>()
+                            .Select(p => RavenQuery.TimeSeries(p, "HeartRate", baseline, baseline.AddDays(1))
+                                .Select(x => x.Percentile(number))
+                                .ToList());
+
+                        var result = query.First();
+                        Assert.Equal(1, result.Results.Length);
+                        Assert.Equal(expectedPercentile, result.Results[0].Percentile[0]);
+                    }
                 }
             }
         }
@@ -1220,6 +1341,80 @@ select timeseries(
         }
 
         [Fact]
+        public void CanUseStdDevInTimeSeriesQuery_WithMultipleValues()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.EnsureUtc();
+                var id = "people/1";
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Person { Name = "Oren", }, id);
+
+                    var tsf = session.TimeSeriesFor(id, "HeartRate");
+                    var rand = new Random();
+
+                    for (int i = 0; i < TimeSpan.FromDays(1).TotalMinutes; i++)
+                    {
+                        if (i % 7 == 0)
+                            continue;
+
+                        var value1 = rand.NextDouble() * rand.Next(1, 100);
+                        var value2 = rand.NextDouble() * rand.Next(1, 100);
+
+                        tsf.Append(baseline.AddMinutes(i), new[] { value1, value2 });
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var number = new Random().NextDouble() * 100;
+
+                    var allEntries = session.TimeSeriesFor(id, "HeartRate").Get();
+                    var groupByHour = allEntries
+                        .GroupBy(e => new { e.Timestamp.Day, e.Timestamp.Hour })
+                        .ToList();
+
+                    var query = session.Query<Person>()
+                        .Select(p => RavenQuery.TimeSeries(p, "HeartRate")
+                            .GroupBy(g => g.Hours(1))
+                            .Select(x => x.StandardDeviation())
+                            .ToList());
+
+                    var result = query.First();
+
+                    Assert.Equal(24, result.Results.Length);
+
+                    foreach (var rangeAggregation in result.Results)
+                    {
+                        var day = rangeAggregation.From.Day;
+                        var hour = rangeAggregation.From.Hour;
+
+                        var group = groupByHour.SingleOrDefault(x => x.Key.Day == day && x.Key.Hour == hour);
+                        Assert.NotNull(group);
+
+                        var groupValues = group.Select(g => g.Values[0]).ToList();
+                        var mean = groupValues.Average();
+                        var sigma = groupValues.Sum(v => Math.Pow(v - mean, 2));
+                        var expected = Math.Sqrt(sigma / (groupValues.Count - 1));
+
+                        Assert.Equal(expected, rangeAggregation.StandardDeviation[0]);
+
+                        var groupValues2 = group.Select(g => g.Values[1]).ToList();
+                        mean = groupValues2.Average();
+                        sigma = groupValues2.Sum(v => Math.Pow(v - mean, 2));
+                        expected = Math.Sqrt(sigma / (groupValues2.Count - 1));
+                        
+                        Assert.Equal(expected, rangeAggregation.StandardDeviation[1]);
+                    }
+                }
+            }
+        }
+
+        [Fact]
         public void CanUseStdDevInTimeSeriesQuery_WithInterpolation()
         {
             using (var store = GetDocumentStore())
@@ -1385,6 +1580,41 @@ select timeseries(
                     Assert.Contains("Cannot use aggregation method 'StandardDeviation' on rolled-up time series", ex.InnerException.Message);
                 }
             }
+        }
+
+        private static double GetExpectedPercentile(List<double> values, double percentile)
+        {
+            values.Sort();
+
+            var p = percentile / 100;
+            double remainder = 0;
+            int rank;
+
+            if (p <= 1d / (values.Count + 1))
+            {
+                rank = 1;
+            }
+            else if (p >= (double)values.Count / (values.Count + 1))
+            {
+                rank = values.Count;
+            }
+            else
+            {
+                var x = p * (values.Count + 1);
+                rank = (int)Math.Floor(x);
+                remainder = x % 1;
+            }
+
+            var indexOfRank = rank - 1;
+            var f = values[indexOfRank];
+
+            if (remainder != 0)
+            {
+                var c = values[indexOfRank + 1];
+                f += remainder * (c - f);
+            }
+
+            return f;
         }
 
         private class TsResult
