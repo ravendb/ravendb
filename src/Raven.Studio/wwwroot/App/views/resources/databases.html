@@ -256,11 +256,19 @@
                         <small data-bind="text: indexesCount().toLocaleString()"></small>
                     </a>
                 </div>
+                <!--ko if: !uptime()-->
+                <div class="uptime text-muted">
+                    <small><i class="icon-recent"></i></small>                    
+                    <small>Offline</small>
+                </div>
+                <!--/ko-->
+                <!--ko if: uptime()-->
                 <div class="uptime">
                     <small><i class="icon-recent"></i></small>
                     <small class="hidden-compact">Up for</small>
                     <small data-bind="text: uptime()"></small>
                 </div>
+                <!--/ko-->
                 <div class="backup">
                     <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
                         <div class="set-size" title="Last backup time"
