@@ -128,7 +128,9 @@ namespace Raven.Client.Documents.Queries.TimeSeries
     public interface ITimeSeriesAggregationOperations
     {
         public void WithOptions(TimeSeriesAggregationOptions options);
+
         public ITimeSeriesAggregationOperations ByTag();
+
         public ITimeSeriesAggregationOperations ByTag<TEntity>(Expression<Func<TEntity, object>> selector);
     }
 }

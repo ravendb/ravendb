@@ -66,6 +66,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _valuesDictionary = new Dictionary<ValueExpression, object>();
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
         }
+
         public enum ResultType
         {
             None,
