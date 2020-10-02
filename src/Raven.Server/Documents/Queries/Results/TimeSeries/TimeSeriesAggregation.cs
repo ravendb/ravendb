@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
     }
 
-    public class TimeSeriesAggregationBase
+    public abstract class TimeSeriesAggregationBase
     {
         public AggregationType Aggregation { get; }
 
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
 
         protected IEnumerable<double> _finalValues;
 
-        public TimeSeriesAggregationBase(AggregationType type, string name)
+        protected TimeSeriesAggregationBase(AggregationType type, string name)
         {
             Aggregation = type;
             Name = name ?? Aggregation.ToString();
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? from, DateTime? to, double? scale = null)
+        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? from, DateTime? to, double? scale)
         {
             if (_finalValues != null)
                 return _finalValues;

@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             {
                 var val = values[i];
 
-                if (i < oldCount)
+                if (oldCount <= i)
                 {
                     _first[i] = val.First;
                 }
@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? @from, DateTime? to, double? scale = null)
+        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? @from, DateTime? to, double? scale)
         {
             if (_finalValues != null)
                 return _finalValues;
@@ -133,11 +133,12 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
                 var val = values[index + (int)AggregationType.Last];
                 _values[i] += val.Last;
 
-                if (i >= oldCount)
-                    continue;
+                if (oldCount <= i)
+                {
+                    val = values[index + (int)AggregationType.First];
+                    _first[i] = val.First;
+                }
 
-                val = values[index + (int)AggregationType.First];
-                _first[i] = val.First;
             }
         }
     }

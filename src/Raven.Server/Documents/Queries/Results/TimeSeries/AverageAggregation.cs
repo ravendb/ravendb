@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             }
         }
 
-        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? @from, DateTime? to, double? scale = null)
+        IEnumerable<double> ITimeSeriesAggregation.GetFinalValues(DateTime? @from, DateTime? to, double? scale)
         {
             if (_finalValues != null)
                 return _finalValues;
