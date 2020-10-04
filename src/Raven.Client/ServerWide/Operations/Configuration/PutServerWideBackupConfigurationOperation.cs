@@ -4,9 +4,9 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Configuration
 {
@@ -63,24 +63,8 @@ namespace Raven.Client.ServerWide.Operations.Configuration
         }
     }
 
-    public class ServerWideTaskResponse : IDynamicJson
-    {
-        public string Name { get; set; }
-
-        public long RaftCommandIndex { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Name)] = Name,
-                [nameof(RaftCommandIndex)] = RaftCommandIndex
-            };
-        }
-    }
-
     public class PutServerWideBackupConfigurationResponse : ServerWideTaskResponse
     {
-        // for backward compatibility
+
     }
 }

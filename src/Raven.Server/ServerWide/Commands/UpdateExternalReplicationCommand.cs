@@ -1,7 +1,7 @@
 ﻿using System;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands

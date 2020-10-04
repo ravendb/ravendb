@@ -32,6 +32,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Commercial;

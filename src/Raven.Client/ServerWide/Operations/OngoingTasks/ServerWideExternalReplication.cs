@@ -1,7 +1,7 @@
-﻿using Raven.Client.ServerWide.Operations.Configuration;
+﻿using Raven.Client.Documents.Operations.Replication;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.Replication
+namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
     public class ServerWideExternalReplication : ExternalReplication, IServerWideTask
     {
@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         internal static string RavenConnectionStringPrefix = "Server Wide Raven Connection String";
 
-        public string[] TopologyDiscoveryUrls;
+        public string[] TopologyDiscoveryUrls { get; set; }
 
         public string[] ExcludedDatabases { get; set; }
 

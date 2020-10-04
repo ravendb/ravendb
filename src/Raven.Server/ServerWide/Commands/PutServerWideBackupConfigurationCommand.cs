@@ -52,7 +52,7 @@ namespace Raven.Server.ServerWide.Commands
                         foreach (var propertyName in previousValue.GetPropertyNames())
                         {
                             var property = (BlittableJsonReaderObject)previousValue[propertyName];
-                            if(property.TryGet(nameof(ServerWideBackupConfiguration.TaskId), out long taskId) == false)
+                            if (property.TryGet(nameof(ServerWideBackupConfiguration.TaskId), out long taskId) == false)
                                 throw new RachisInvalidOperationException(
                                     $"Current {nameof(ServerWideBackupConfiguration)} has no {nameof(ServerWideBackupConfiguration.TaskId)} " +
                                     $"or the {nameof(ServerWideBackupConfiguration.TaskId)} is not of the correct type. " +
@@ -64,8 +64,8 @@ namespace Raven.Server.ServerWide.Commands
                             oldName = propertyName;
                             break;
                         }
-                        
-                        if(oldName == null)
+
+                        if (oldName == null)
                             throw new RachisInvalidOperationException(
                                 $"Can't find {nameof(ServerWideBackupConfiguration)} with {nameof(ServerWideBackupConfiguration.Name)} {Value.Name} or with {nameof(ServerWideBackupConfiguration.TaskId)} {prevTaskId}. " +
                                 $"If you try to create new {nameof(ServerWideBackupConfiguration)} set the {nameof(ServerWideBackupConfiguration.TaskId)} to 0." +

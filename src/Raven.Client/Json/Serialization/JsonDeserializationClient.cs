@@ -30,6 +30,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.Logs;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
@@ -205,7 +206,7 @@ namespace Raven.Client.Json.Serialization
 
         internal static readonly Func<BlittableJsonReaderObject, PutServerWideBackupConfigurationResponse> PutServerWideBackupConfigurationResponse = GenerateJsonDeserializationRoutine<PutServerWideBackupConfigurationResponse>();
         
-        internal static readonly Func<BlittableJsonReaderObject, ServerWideTaskResponse> PutServerWideConfigurationResponse = GenerateJsonDeserializationRoutine<ServerWideTaskResponse>();
+        internal static readonly Func<BlittableJsonReaderObject, ServerWideExternalReplicationResponse> PutServerWideConfigurationResponse = GenerateJsonDeserializationRoutine<ServerWideExternalReplicationResponse>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetServerWideBackupConfigurationsResponse> GetServerWideBackupConfigurationsResponse = GenerateJsonDeserializationRoutine<GetServerWideBackupConfigurationsResponse>();
         

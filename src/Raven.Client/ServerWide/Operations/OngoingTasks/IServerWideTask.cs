@@ -1,4 +1,4 @@
-﻿namespace Raven.Client.ServerWide.Operations.Configuration
+﻿namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
     public interface IServerWideTask
     {

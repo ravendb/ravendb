@@ -2,12 +2,11 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
-namespace Raven.Client.ServerWide.Operations.Configuration
+namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
     public class GetServerWideExternalReplicationOperation : IServerOperation<ServerWideExternalReplication>
     {

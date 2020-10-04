@@ -12,6 +12,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;

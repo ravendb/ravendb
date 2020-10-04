@@ -13,6 +13,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -740,9 +741,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(newDbName)));
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
-                Assert.Equal(0, record.PeriodicBackups.Count);
-
-                record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(0, record.PeriodicBackups.Count);
 
                 var backupConfiguration = new PeriodicBackupConfiguration

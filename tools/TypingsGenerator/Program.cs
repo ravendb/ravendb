@@ -70,7 +70,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
 using Raven.Server.ServerWide.BackgroundTasks;
-using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
@@ -416,7 +415,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(GetConnectionStringsResult));
 
             // server-wide tasks
-            scripter.AddType(typeof(ServerWideTaskConfigurations));
+            scripter.AddType(typeof(AdminStudioServerWideHandler.ServerWideTasksResult));
+            scripter.AddType(typeof(AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask));
+            scripter.AddType(typeof(AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideExternalReplicationTask));
+            scripter.AddType(typeof(ServerWideBackupConfiguration));
             scripter.AddType(typeof(PutServerWideBackupConfigurationResponse));
 
             // certificates

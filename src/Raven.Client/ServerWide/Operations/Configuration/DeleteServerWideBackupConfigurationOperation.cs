@@ -2,6 +2,7 @@
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
 using Sparrow.Json;
 

@@ -1,6 +1,5 @@
-﻿using System;
-using System.Linq;
-using Raven.Client.Documents.Operations.Backups;
+﻿using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Configuration

@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

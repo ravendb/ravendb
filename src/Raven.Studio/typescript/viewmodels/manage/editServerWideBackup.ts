@@ -44,7 +44,7 @@ class editServerWideBackup extends viewModelBase {
                
                 new getServerWideBackupCommand(args.taskName)
                     .execute()
-                    .done((backupsList: Raven.Server.Web.System.ServerWideBackupConfigurationForStudio[]) => {
+                    .done((backupsList: Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration[]) => {
                         if (backupsList.length) {
                             const backupTask = backupsList[0];
                             if (this.serverConfiguration().LocalRootPath && backupTask.LocalSettings.FolderPath && backupTask.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
