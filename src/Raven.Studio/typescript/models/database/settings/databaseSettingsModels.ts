@@ -68,7 +68,7 @@ export class serverWideOnlyEntry extends settingsEntry {
         super(data);
         this.isServerWideOnlyEntry(true);
 
-        this.effectiveValue = ko.pureComputed(() => this.hasAccess() ? this.serverOrDefaultValue() : "Unauthorized to access value");
+        this.effectiveValue = ko.pureComputed(() => this.hasAccess() ? this.serverOrDefaultValue() : "Unauthorized to access value!");
         this.effectiveValueOrigin = ko.pureComputed(() => this.hasServerValue() ? "Server" : "Default");
         
         this.pendingValueText = ko.pureComputed(() => "");

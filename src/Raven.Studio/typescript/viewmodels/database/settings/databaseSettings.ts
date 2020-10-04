@@ -8,6 +8,7 @@ import jsonUtil = require("common/jsonUtil");
 import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
 import saveDatabaseSettingsCommand = require("commands/database/settings/saveDatabaseSettingsCommand");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import saveDatabaseSettingsConfirm = require("viewmodels/database/settings/saveDatabaseSettingsConfirm");
@@ -38,6 +39,7 @@ class databaseSettings extends viewModelBase {
 
     private categoriesGridController = ko.observable<virtualGridController<categoryInfo>>();
     private summaryGridController = ko.observable<virtualGridController<models.settingsEntry>>();
+    private columnPreview = new columnPreviewPlugin<models.settingsEntry>();
 
     viewMode = ko.observable<viewModeType>("summaryMode");
     editModeHasBeenEntered = false;
@@ -246,7 +248,7 @@ class databaseSettings extends viewModelBase {
                         sortable: "string",
                         extraClass: (x) => {
                             if (!x.hasAccess()) {
-                                return "no-color";
+                                return "no-color text-password";
                             }
                             return x.effectiveValueInUseText() ? "value-has-content" : "";
                         }
@@ -282,6 +284,21 @@ class databaseSettings extends viewModelBase {
                 ]
             }
         });
+
+        this.columnPreview.install(".summary-list-container", ".js-summary-details-tooltip",
+            (details: models.settingsEntry,
+             column: textColumn<models.settingsEntry>,
+             e: JQueryEventObject, 
+             onValue: (context: any, valueToCopy?: string) => void) => {
+                if (column.header === "Origin") {
+                    // do nothing
+                } else {
+                    const value = column.getCellValue(details);
+                    if (value) {
+                        onValue(genUtils.escapeHtml(value));
+                    }
+                }
+            });
     }
     
     private fetchSummaryData(): JQueryPromise<pagedResult<models.settingsEntry>> {

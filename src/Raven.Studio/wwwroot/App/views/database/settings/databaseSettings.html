@@ -1,4 +1,5 @@
 <div id="database-settings-view" class="flex-vertical absolute-fill">
+<!--<div class="database-settings-view flex-vertical absolute-fill">-->
     <!-- ko if: isForbidden-->
     <div class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
@@ -33,7 +34,7 @@
     <div class="flex-horizontal flex-stretch-items content-margin entries-grid" data-bind="visible: viewMode() === 'editMode'">
         <div class="flex-vertical">
             <div class="categories-list-container flex-vertical flex-grow" style="position:relative;">
-                <virtual-grid class="resizable virtual-grid" params="controller: categoriesGridController"></virtual-grid>
+                <virtual-grid class="resizable" params="controller: categoriesGridController"></virtual-grid>
             </div>
         </div>
         <div class="flex-grow slidein-style">
@@ -56,7 +57,7 @@
     <div class="flex-horizontal flex-stretch-items content-margin entries-grid" data-bind="visible: viewMode() === 'summaryMode'">
         <div class="flex-grow flex-vertical slidein-style">
             <div class="summary-list-container flex-vertical flex-grow" style="position:relative;">
-                <virtual-grid class="resizable virtual-grid" 
+                <virtual-grid class="resizable"
                               params="controller: summaryGridController, emptyTemplate: 'db-settings-no-matching-entries-template'">
                 </virtual-grid>
             </div>
@@ -85,17 +86,19 @@
                 </div>
                 <div class="col-md-7 add-vertical-split">
                     <div class="form-group no-margin">
-                        <div class="margin-top margin-top-sm">
+                        <div class="margin-top margin-top-sm" data-placement="right" data-toggle="tooltip" data-animation="true" 
+                             data-bind="attr: { title: !hasAccess() ? 'Unauthorized to access value!' : '' }">
                             <small class="source-icon" data-placement="left" data-toggle="tooltip" data-animation="true"
-                                   data-bind="attr: { title: hasServerValue() ? 'This is a server-wide configuration' : 'This is the default configuration' }">
+                                   data-bind="attr: { title: !hasAccess() ? '' :
+                                                             hasServerValue() ? 'This is a server-wide configuration' : 'This is the default configuration' }">
                                 <i class="fix-icon-top" data-bind="css: { 'icon-default': !hasServerValue() }"></i>
                                 <i class="fix-icon-top" data-bind="css: { 'icon-server': hasServerValue() }"></i>
                             </small>
-                            <span data-bind="text: hasAccess() ? serverOrDefaultValue() || 'null' : 'N/A'"></span>
-                            <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" 
+                            <span data-bind="text: hasAccess() ? serverOrDefaultValue() || 'null' : '&bull;&bull;&bull;&bull;&bull;'"></span>
+                            <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true"
                                    data-bind="visible: isServerWideOnlyEntry, attr: { title: hasAccess() ?
                                    'This is a server-wide entry.<br>It can be edited only from the <strong>settings.json</strong> file located in your RavenDB executable folder.' :
-                                   'Unauthorized to access value.'}">
+                                   '' }">
                                 <small class="margin-left margin-left-sm"><i class="icon-lock fix-icon-top"></i></small>
                             </small>
                         </div>
@@ -221,3 +224,6 @@
         <a href="#" data-bind="click: useDefaultValue"><small>Set default</small></a>
     </div>
 </script>
+
+<div class="tooltip json-preview js-summary-details-tooltip" style="opacity: 0">
+</div>
