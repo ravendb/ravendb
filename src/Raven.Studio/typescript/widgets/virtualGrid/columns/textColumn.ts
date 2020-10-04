@@ -91,10 +91,16 @@ class textColumn<T> implements virtualColumn {
         const cellValue = this.getCellValue(item);
 
         if (_.isString(cellValue)) {
+            let cssClass = "token";
+            if (this.opts.extraClass && !this.opts.extraClass(item).includes("no-color")) {
+                cssClass += " string";
+            }
+            
             const rawText = this.opts.useRawValue && this.opts.useRawValue(item) ? cellValue : generalUtils.escapeHtml(cellValue);
+            
             return {
                 rawText: rawText,
-                typeCssClass: "token string"
+                typeCssClass: cssClass
             };
         }
 
