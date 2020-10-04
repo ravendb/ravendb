@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;

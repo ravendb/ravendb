@@ -10,9 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -20,9 +18,8 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Server.Rachis;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Config.Settings;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands;
 
 namespace Raven.Server.Web.System
@@ -76,7 +73,7 @@ namespace Raven.Server.Web.System
                     if (backupName == null)
                         throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
                     
-                    var putResponse = new ServerWideTaskResponse
+                    var putResponse = new PutServerWideBackupConfigurationResponse
                     {
                         Name = backupName,
                         RaftCommandIndex = newIndex 
@@ -109,7 +106,7 @@ namespace Raven.Server.Web.System
                     if (taskName == null)
                         throw new InvalidOperationException($"External replication name is null for server-wide external replication with task id: {newIndex}");
 
-                    var putResponse = new ServerWideTaskResponse
+                    var putResponse = new ServerWideExternalReplicationResponse
                     {
                         Name = taskName,
                         RaftCommandIndex = newIndex
@@ -172,41 +169,6 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/configuration/server-wide/tasks-for-studio", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task GetServerWideTasksForStudio()
-        {
-            var taskName = GetStringQueryString("name", required: false);
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var result = new ServerWideTaskConfigurations();
-
-                var blittables = ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Backup, taskName);
-                foreach (var blittable in blittables)
-                {
-                    var backup = JsonDeserializationServer.ServerWideBackupConfigurationForStudio(blittable);
-                    backup.BackupDestinations = backup.GetFullBackupDestinations();
-                    backup.IsEncrypted = backup.BackupEncryptionSettings != null &&
-                                         backup.BackupEncryptionSettings.EncryptionMode != EncryptionMode.None;
-                    result.Backups.Add(backup);
-                }
-
-                blittables = ServerStore.Cluster.GetServerWideConfigurations(context, OngoingTaskType.Replication, taskName);
-                foreach (var blittable in blittables)
-                {
-                    var externalReplication = JsonDeserializationCluster.ServerWideExternalReplication(blittable);
-                    result.ExternalReplications.Add(externalReplication);
-                }
-
-                context.Write(writer, result.ToJson());
-                writer.Flush();
-
-                return Task.CompletedTask;
-            }
-        }
-
         [RavenAction("/admin/configuration/server-wide/state", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task ToggleServerWideTaskState()
         {
@@ -243,17 +205,6 @@ namespace Raven.Server.Web.System
             }
         }
         
-        [RavenAction("/admin/backup-data-directory", "GET", AuthorizationStatus.ClusterAdmin)]
-        public async Task FullBackupDataDirectory()
-        {
-            var path = GetStringQueryString("path", required: true);
-            var requestTimeoutInMs = GetIntValueQueryString("requestTimeoutInMs", required: false) ?? 5 * 1000; 
-            var getNodesInfo = GetBoolValueQueryString("getNodesInfo", required: false) ?? false;
-
-            var pathSetting = new PathSetting(path);
-            await BackupConfigurationHelper.GetFullBackupDataDirectory(pathSetting, databaseName: null, requestTimeoutInMs, getNodesInfo, ServerStore, ResponseBodyStream());
-        }
-
         private async Task DeleteServerWideTaskCommand(OngoingTaskType taskType)
         {
             var name = GetStringQueryString("name", required: true);
@@ -324,51 +275,6 @@ namespace Raven.Server.Web.System
             {
                 [nameof(Results)] = new DynamicJsonArray(Results.Select(x => x.ToJson()))
             };
-        }
-    }
-
-    public class ServerWideTaskConfigurations : IDynamicJson
-    {
-        public List<ServerWideBackupConfigurationForStudio> Backups;
-
-        public List<ServerWideExternalReplication> ExternalReplications;
-
-        public ServerWideTaskConfigurations()
-        {
-            Backups = new List<ServerWideBackupConfigurationForStudio>();
-            ExternalReplications = new List<ServerWideExternalReplication>();
-        }
-        
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Backups)] = new DynamicJsonArray(Backups.Select(x => x.ToJson())),
-                [nameof(ExternalReplications)] = new DynamicJsonArray(ExternalReplications.Select(x => x.ToJson()))
-            };
-        }
-    }
-    
-    public class ServerWideBackupConfigurationForStudio : ServerWideBackupConfiguration
-    {
-        public OngoingTaskState TaskState { get; set; }
-
-        public List<string> BackupDestinations { get; set; }
-
-        public bool IsEncrypted { get; set; }
-        
-        public ServerWideBackupConfigurationForStudio()
-        {
-            BackupDestinations = new List<string>();
-        }
-        
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(TaskState)] = TaskState;
-            json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
-            json[nameof(IsEncrypted)] = IsEncrypted;
-            return json;
         }
     }
 }

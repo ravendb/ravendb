@@ -1,7 +1,7 @@
 ﻿using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 
 namespace Raven.Client.Documents.Operations
 {

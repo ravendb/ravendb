@@ -1,16 +1,15 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.ServerWide.Operations.Configuration
+namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
-    public class PutServerWideExternalReplicationOperation : IServerOperation<ServerWideTaskResponse>
+    public class PutServerWideExternalReplicationOperation : IServerOperation<ServerWideExternalReplicationResponse>
     {
         private readonly ServerWideExternalReplication _configuration;
 
@@ -19,12 +18,12 @@ namespace Raven.Client.ServerWide.Operations.Configuration
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         }
 
-        public RavenCommand<ServerWideTaskResponse> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ServerWideExternalReplicationResponse> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new PutServerWideExternalReplicationCommand(context, _configuration);
         }
 
-        private class PutServerWideExternalReplicationCommand : RavenCommand<ServerWideTaskResponse>, IRaftCommand
+        private class PutServerWideExternalReplicationCommand : RavenCommand<ServerWideExternalReplicationResponse>, IRaftCommand
         {
             private readonly BlittableJsonReaderObject _configuration;
 

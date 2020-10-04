@@ -6,7 +6,7 @@ class deleteServerWideTaskCommand extends commandBase {
         super();
     }
     
-    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideTaskResponse> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.OngoingTasks.ServerWideTaskResponse> {
         const args = {
             type: this.type,
             name: this.name

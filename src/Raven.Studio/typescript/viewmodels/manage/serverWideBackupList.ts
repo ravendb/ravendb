@@ -38,7 +38,7 @@ class serverWideBackupList extends viewModelBase {
         return this.fetchServerWideBackupTasks();
     }
 
-    private fetchServerWideBackupTasks(): JQueryPromise<Raven.Server.Web.System.ServerWideTaskConfigurations> { 
+    private fetchServerWideBackupTasks(): JQueryPromise<Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult> { 
         return new getAllServerWideTasksCommand() 
             .execute()
             .done((info) => {
@@ -50,25 +50,25 @@ class serverWideBackupList extends viewModelBase {
         item.toggleDetails();       
     }
     
-    private processTasksResult(result: Raven.Server.Web.System.ServerWideTaskConfigurations) {
+    private processTasksResult(result: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult) {
         const oldTasks = [            
             ...this.serverWideBackupTasks(),
            ] as Array<{ taskId: number }>;
         
         const oldTaskIds = oldTasks.map(x => x.taskId);
-        const newTaskIds = result.Backups.map(x => x.TaskId);
+        const newTaskIds = result.Tasks.map(x => x.TaskId);
         const toDeleteIds = _.without(oldTaskIds, ...newTaskIds);
         
         this.mergeTasks(this.serverWideBackupTasks,
-            result.Backups, 
+            result.Tasks, 
             toDeleteIds,
-            (dto: Raven.Server.Web.System.ServerWideBackupConfigurationForStudio) => new ongoingTaskServerWideBackupListModel(dto));
+            (dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask) => new ongoingTaskServerWideBackupListModel(dto));
     }
       
     private mergeTasks<T extends ongoingTaskListModel>(container: KnockoutObservableArray<ongoingTaskServerWideBackupListModel>,
-                                                       incomingData: Array<Raven.Server.Web.System.ServerWideBackupConfigurationForStudio>,
+        incomingData: Array<Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideTask>,
                                                        toDelete: Array<number>,
-                                                       ctr: (dto:  Raven.Server.Web.System.ServerWideBackupConfigurationForStudio) => ongoingTaskServerWideBackupListModel) {
+        ctr: (dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideTask) => ongoingTaskServerWideBackupListModel) {
         // remove old tasks
         container()
             .filter(x => _.includes(toDelete, x.taskId))
@@ -79,7 +79,7 @@ class serverWideBackupList extends viewModelBase {
             const existingItem = container().find(x => x.taskId === item.TaskId);
             if (existingItem) {
                 existingItem.update(item);
-            } else {                
+            } else {
                 const newItem = ctr(item);
                 const insertIdx = _.sortedIndexBy(container(), newItem, x => x.taskName().toLocaleLowerCase());
                 container.splice(insertIdx, 0, newItem);
