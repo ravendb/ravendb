@@ -91,9 +91,11 @@
                                 <i class="fix-icon-top" data-bind="css: { 'icon-default': !hasServerValue() }"></i>
                                 <i class="fix-icon-top" data-bind="css: { 'icon-server': hasServerValue() }"></i>
                             </small>
-                            <span data-bind="text: serverOrDefaultValue() || 'null'"></span>
-                            <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" data-bind="visible: isServerWideOnlyEntry"
-                                   title="This is a server-wide entry.<br>It can be edited only from the <strong>settings.json</strong> file located in your RavenDB executable folder.">
+                            <span data-bind="text: hasAccess() ? serverOrDefaultValue() || 'null' : 'N/A'"></span>
+                            <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true" 
+                                   data-bind="visible: isServerWideOnlyEntry, attr: { title: hasAccess() ?
+                                   'This is a server-wide entry.<br>It can be edited only from the <strong>settings.json</strong> file located in your RavenDB executable folder.' :
+                                   'Unauthorized to access value.'}">
                                 <small class="margin-left margin-left-sm"><i class="icon-lock fix-icon-top"></i></small>
                             </small>
                         </div>

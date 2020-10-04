@@ -21,6 +21,7 @@ export abstract class settingsEntry {
     
     rawValue = ko.observable<string>();
     hasPendingContent = ko.observable<boolean>(false);
+    hasAccess = ko.observable<boolean>(true);
     
     // These 2 are needed for Summary view
     pendingValueText: KnockoutComputed<string>;
@@ -67,11 +68,17 @@ export class serverWideOnlyEntry extends settingsEntry {
         super(data);
         this.isServerWideOnlyEntry(true);
 
-        this.effectiveValue = ko.pureComputed(() => this.serverOrDefaultValue());
+        this.effectiveValue = ko.pureComputed(() => this.hasAccess() ? this.serverOrDefaultValue() : "Unauthorized to access value");
         this.effectiveValueOrigin = ko.pureComputed(() => this.hasServerValue() ? "Server" : "Default");
         
         this.pendingValueText = ko.pureComputed(() => "");
         this.effectiveValueInUseText = ko.pureComputed(() => this.effectiveValue());
+
+        const serverValuesHasContent = !_.isEmpty(this.data.ServerValues);
+        if (serverValuesHasContent) {
+            const keyContent = this.data.ServerValues[this.keyName()];
+            this.hasAccess(keyContent.HasAccess);
+        }
     }
 
     getTemplateType() {

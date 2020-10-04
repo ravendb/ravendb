@@ -224,7 +224,12 @@ class databaseSettings extends viewModelBase {
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueInUseText(), "Effective Value in Use", "30%", {
                         sortable: "string",
-                        extraClass: (x) => x.effectiveValueInUseText() ? "value-has-content" : ""
+                        extraClass: (x) => {
+                          if (!x.hasAccess()) {
+                              return "no-color";
+                          }
+                          return x.effectiveValueInUseText() ? "value-has-content" : "";
+                        }
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.pendingValueText() , "Pending Value", "30%", {
                         sortable: "string",
@@ -239,7 +244,12 @@ class databaseSettings extends viewModelBase {
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValue(), "Effective Value", "40%", {
                         sortable: "string",
-                        extraClass: (x) => x.effectiveValue() ? "value-has-content" : ""
+                        extraClass: (x) => {
+                            if (!x.hasAccess()) {
+                                return "no-color";
+                            }
+                            return x.effectiveValueInUseText() ? "value-has-content" : "";
+                        }
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueOrigin(), "Origin", "20%", {
                         sortable: "string",
