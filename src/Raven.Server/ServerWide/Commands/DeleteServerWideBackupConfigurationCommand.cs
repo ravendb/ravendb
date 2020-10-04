@@ -13,10 +13,10 @@ namespace Raven.Server.ServerWide.Commands
             // for deserialization
         }
 
-        [Obsolete]
+        [Obsolete("This command is obsolete, please use `DeleteServerWideTaskCommand` instead", true)]
         public DeleteServerWideBackupConfigurationCommand(string configurationName, string uniqueRequestId) : base(uniqueRequestId)
         {
-            throw new InvalidOperationException($"This command is obsolete, please use `{nameof(DeleteServerWideTaskCommand)}` instead");        }
+        }
 
         public override object ValueToJson()
         {
