@@ -770,6 +770,295 @@ namespace SlowTests.Client.Subscriptions
             }
         }
 
+        [Theory]
+        [InlineData("from Users, People where Name = \"a\"")]
+        [InlineData("from Users, People as doc where doc.Name = \"a\"")]
+        [InlineData("from (Users, People) where Name = \"a\"")]
+        [InlineData("from (Users, People) as item where item.Name = \"a\"")]
+        public async Task CanCreateComplexSubscriptionOnMultipleCollections(string query)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var allId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+                {
+                    Query = query
+                });
+
+                using (var allSubscription = store.Subscriptions.GetSubscriptionWorker(allId))
+                {
+                    var allDocs = new CountdownEvent(10);
+
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new User()
+                            {
+                                Name = "a"
+                            }, "User/");
+                        session.SaveChanges();
+                    }
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new Person()
+                            {
+                                Name = "a"
+                            }, "Person/");
+
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new Person()
+                            {
+                                Name = "b"
+                            }, "Person/");
+                        session.SaveChanges();
+                    }
+
+                    var users = 0;
+                    var people = 0;
+                    var t = allSubscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            var type = item.Result.GetType();
+                            if (type == typeof(User))
+                                users++;
+                            else if (type == typeof(Person))
+                                people++;
+                            else
+                                Assert.True(false, $"Expected get {typeof(User).FullName}, {typeof(Person).FullName} but got {item.Result.GetType().FullName}");
+                        }
+
+                        allDocs.Signal(x.NumberOfItemsInBatch);
+                    });
+
+                    Assert.True(allDocs.Wait(_reasonableWaitTime));
+                    Assert.Equal(5, users);
+                    Assert.Equal(5, people);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("from (Users, People) where Name = \"a\" AND AddressId =\"b\"")]
+        [InlineData("from (Users, People) as item where item.Name = \"a\" AND item.AddressId =\"b\"")]
+        [InlineData("from Users, People where Name = \"a\" AND AddressId =\"b\"")]
+        [InlineData("from Users, People as item where item.Name = \"a\" AND item.AddressId =\"b\"")]
+        public async Task CanCreateComplexSubscriptionOnMultipleCollectionsWithAnd(string query)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var allId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+                {
+                    Query = query
+                });
+
+                using (var allSubscription = store.Subscriptions.GetSubscriptionWorker(allId))
+                {
+                    var allDocs = new CountdownEvent(12);
+
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 2; i++)
+                            session.Store(new User()
+                            {
+                                Name = "a"
+                            }, "User/");
+
+                        for (int i = 0; i < 6; i++)
+                            session.Store(new User()
+                            {
+                                Name = "a",
+                                AddressId = "b"
+                            }, "User/");
+                        session.SaveChanges();
+                    }
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 3; i++)
+                            session.Store(new Person()
+                            {
+                                Name = "a"
+                            }, "Person/");
+
+                        for (int i = 0; i < 2; i++)
+                            session.Store(new Person()
+                            {
+                                Name = "b"
+                            }, "Person/");
+
+                        for (int i = 0; i < 6; i++)
+                            session.Store(new Person()
+                            {
+                                Name = "a",
+                                AddressId = "b"
+                            }, "Person/");
+                        session.SaveChanges();
+                    }
+
+                    var users = 0;
+                    var people = 0;
+                    var t = allSubscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            var type = item.Result.GetType();
+                            if (type == typeof(User))
+                                users++;
+                            else if (type == typeof(Person))
+                                people++;
+                            else
+                                Assert.True(false, $"Expected get {typeof(User).FullName}, {typeof(Person).FullName} but got {item.Result.GetType().FullName}");
+                        }
+
+                        allDocs.Signal(x.NumberOfItemsInBatch);
+                    });
+
+                    Assert.True(allDocs.Wait(_reasonableWaitTime));
+                    Assert.Equal(6, users);
+                    Assert.Equal(6, people);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SubscriptionOnMultipleCollectionsWillReturnResultsWhenAnyOfTheCollectionsChange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var allId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+                {
+                    Query = "from (Users, People, PersonWithAddresses, GeekPeople) as doc"
+                });
+
+                using (var allSubscription = store.Subscriptions.GetSubscriptionWorker(allId))
+                {
+                    var docsBeforeUpdate = new CountdownEvent(20);
+                    var usersCDE = new CountdownEvent(6);
+                    var peopleCDE = new CountdownEvent(6);
+                    var geekPeopleCDE = new CountdownEvent(6);
+                    var personWithAddressesCDE = new CountdownEvent(6);
+                    var allDocs = new CountdownEvent(24);
+
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new User()
+                            {
+                                Name = "a"
+                            }, "User/");
+
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new PersonWithAddress()
+                            {
+                                Name = "a"
+                            }, "PersonWithAddress/");
+
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new GeekPerson()
+                            {
+                                Name = "a"
+                            }, "GeekPerson/");
+
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new Person()
+                            {
+                                Name = "a"
+                            }, "Person/");
+                        session.SaveChanges();
+                    }
+
+                    var users = 0;
+                    var people = 0;
+                    var geekPeople = 0;
+                    var personWithAddresses = 0;
+                    var t = allSubscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            var type = item.Result.GetType();
+                            if (type == typeof(User))
+                            {
+                                users++;
+                                usersCDE.Signal(1);
+                            }
+                            else if (type == typeof(Person))
+                            {
+                                people++;
+                                peopleCDE.Signal(1);
+                            }
+                            else if (type == typeof(GeekPerson))
+                            {
+                                geekPeople++;
+                                geekPeopleCDE.Signal(1);
+                            }
+                            else if (type == typeof(PersonWithAddress))
+                            {
+                                personWithAddresses++;
+                                personWithAddressesCDE.Signal(1);
+                            }
+                            else
+                                Assert.True(false, $"Expected get {typeof(User).FullName}, {typeof(Person).FullName}, {typeof(GeekPerson).FullName}, {typeof(PersonWithAddress).FullName} but got {item.Result.GetType().FullName}");
+                        }
+                        if (docsBeforeUpdate.IsSet == false)
+                            docsBeforeUpdate.Signal(x.NumberOfItemsInBatch);
+                        allDocs.Signal(x.NumberOfItemsInBatch);
+                    });
+
+                    Assert.True(docsBeforeUpdate.Wait(_reasonableWaitTime));
+                    Assert.Equal(5, users);
+                    Assert.Equal(5, people);
+                    Assert.Equal(5, geekPeople);
+                    Assert.Equal(5, personWithAddresses);
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User()
+                        {
+                            Name = "a"
+                        }, "User/");
+                        session.SaveChanges();
+                    }
+                    Assert.True(usersCDE.Wait(_reasonableWaitTime));
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new PersonWithAddress()
+                        {
+                            Name = "a"
+                        }, "PersonWithAddress/");
+                        session.SaveChanges();
+                    }
+                    Assert.True(personWithAddressesCDE.Wait(_reasonableWaitTime));
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new GeekPerson()
+                        {
+                            Name = "a"
+                        }, "GeekPerson/");
+                        session.SaveChanges();
+                    }
+                    Assert.True(geekPeopleCDE.Wait(_reasonableWaitTime));
+
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new Person()
+                        {
+                            Name = "a"
+                        }, "Person/");
+                        session.SaveChanges();
+                    }
+                    Assert.True(peopleCDE.Wait(_reasonableWaitTime));
+
+                    Assert.True(allDocs.Wait(_reasonableWaitTime));
+                    Assert.Equal(6, users);
+                    Assert.Equal(6, people);
+                    Assert.Equal(6, geekPeople);
+                    Assert.Equal(6, personWithAddresses);
+                }
+            }
+        }
+
         public class Dog
         {
             public int Name { get; set; }

@@ -455,8 +455,8 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             void RegisterNotification(DocumentChange notification)
             {
-                if (Client.Constants.Documents.Collections.AllDocumentsCollection.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase) || 
-                    notification.CollectionName.Equals(Subscription.Collection, StringComparison.OrdinalIgnoreCase))
+                if (Client.Constants.Documents.Collections.AllDocumentsCollection.Equals(Subscription.Collections.First(), StringComparison.OrdinalIgnoreCase) ||
+                    Subscription.Collections.Any(c => c.Equals(notification.CollectionName, StringComparison.OrdinalIgnoreCase)))
                 {
                     try
                     {
@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 _startEtag = GetStartEtagForSubscription(SubscriptionState);
                 _filterAndProjectionScript = SetupFilterAndProjectionScript();
                 var useRevisions = Subscription.Revisions;
-                _documentsFetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint, Subscription.Collection, useRevisions, SubscriptionState, _filterAndProjectionScript);
+                _documentsFetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase, _options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint, Subscription.Collections, useRevisions, SubscriptionState, _filterAndProjectionScript);
 
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -588,8 +588,8 @@ namespace Raven.Server.Documents.TcpHandlers
                                 using (docsContext.OpenReadTransaction())
                                 {
                                     var globalEtag = useRevisions ?
-                                        TcpConnection.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetLastRevisionEtag(docsContext, Subscription.Collection) :
-                                        TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext.Transaction.InnerTransaction, Subscription.Collection);
+                                        Subscription.Collections.Max(x => TcpConnection.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetLastRevisionEtag(docsContext, x)) :
+                                        Subscription.Collections.Max(x => TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext.Transaction.InnerTransaction, x));
 
                                     if (globalEtag > _startEtag)
                                         continue;
@@ -709,7 +709,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
-                        _startEtag = result.Doc.Etag;
+                        if (result.Doc.Etag > _startEtag)
+                            _startEtag = result.Doc.Etag;
                         _lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
                             ? result.Doc.ChangeVector
                             : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVectorForNextBatchStartingPoint);
@@ -990,7 +991,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public struct ParsedSubscription
         {
-            public string Collection;
+            public string[] Collections;
             public string Script;
             public string[] Functions;
             public bool Revisions;
@@ -1096,12 +1097,23 @@ namespace Raven.Server.Documents.TcpHandlers
                 }
             }
 
-            var collectionName = q.From.From.FieldValue;
+            string[] collections = q.From.From == null
+                ? q.FromClauses.Select(x =>
+                {
+                    if (x.From.FieldValue.Equals(Client.Constants.Documents.Collections.AllDocumentsCollection, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException(
+                            $"Cannot use {nameof(Client.Constants.Documents.Collections.AllDocumentsCollection)} as part of query on multiple collections.");
+
+                    return x.From.FieldValue;
+                }).ToArray()
+                : new[] {q.From.From.FieldValue};
+
+
             if (q.Where == null && q.Select == null && q.SelectFunctionBody.FunctionText == null)
             {
                 return new ParsedSubscription
                 {
-                    Collection = collectionName,
+                    Collections = collections,
                     Revisions = revisions,
                     Includes = includes?.ToArray(),
                     CounterIncludes = counterIncludes?.ToArray()
@@ -1110,15 +1122,31 @@ namespace Raven.Server.Documents.TcpHandlers
 
             var writer = new StringWriter();
 
-            if (q.From.Alias != null)
+            if (q.From.From == null)
             {
-                writer.Write("var ");
-                writer.Write(q.From.Alias);
-                writer.WriteLine(" = this;");
+                if (q.MultipleCollectionsAlias != null)
+                {
+                    writer.Write("var ");
+                    writer.Write(q.MultipleCollectionsAlias);
+                    writer.WriteLine(" = this;");
+                }
+                else if (q.Select != null || q.SelectFunctionBody.FunctionText != null || q.Load != null)
+                {
+                    throw new InvalidOperationException("Cannot specify a select or load clauses without an alias on the query");
+                }
             }
-            else if (q.Select != null || q.SelectFunctionBody.FunctionText != null || q.Load != null)
+            else
             {
-                throw new InvalidOperationException("Cannot specify a select or load clauses without an alias on the query");
+                if (q.From.Alias != null)
+                {
+                    writer.Write("var ");
+                    writer.Write(q.From.Alias);
+                    writer.WriteLine(" = this;");
+                }
+                else if (q.Select != null || q.SelectFunctionBody.FunctionText != null || q.Load != null)
+                {
+                    throw new InvalidOperationException("Cannot specify a select or load clauses without an alias on the query");
+                }
             }
             if (q.Load != null)
             {
@@ -1182,7 +1210,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
             return new ParsedSubscription
             {
-                Collection = collectionName,
+                Collections = collections,
                 Revisions = revisions,
                 Script = script,
                 Functions = q.DeclaredFunctions?.Values?.Select(x => x.FunctionText).ToArray() ?? Array.Empty<string>(),

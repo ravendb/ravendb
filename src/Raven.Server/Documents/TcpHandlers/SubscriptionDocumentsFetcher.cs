@@ -27,14 +27,14 @@ namespace Raven.Server.Documents.TcpHandlers
         private readonly int _maxBatchSize;
         private readonly long _subscriptionId;
         private readonly EndPoint _remoteEndpoint;
-        private readonly string _collection;
+        private readonly string[] _collections;
         private readonly bool _revisions;
         private readonly SubscriptionState _subscription;
         private readonly SubscriptionPatchDocument _patch;
         // make sure that we don't use too much memory for subscription batch
         private readonly Size _maximumAllowedMemory;
 
-        public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string collection,
+        public SubscriptionDocumentsFetcher(DocumentDatabase db, int maxBatchSize, long subscriptionId, EndPoint remoteEndpoint, string[] collections,
             bool revisions,
             SubscriptionState subscription,
             SubscriptionPatchDocument patch)
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _maxBatchSize = maxBatchSize;
             _subscriptionId = subscriptionId;
             _remoteEndpoint = remoteEndpoint;
-            _collection = collection;
+            _collections = collections;
             _revisions = revisions;
             _subscription = subscription;
             _patch = patch;
@@ -56,18 +56,11 @@ namespace Raven.Server.Documents.TcpHandlers
             IncludeDocumentsCommand includesCmd,
             long startEtag)
         {
-            if (string.IsNullOrEmpty(_collection))
-                throw new ArgumentException("The collection name must be specified");
+            if (_collections.Length == 0)
+                throw new ArgumentException("No collections provided");
 
             if (_revisions)
-            {
-                if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
-                    _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(_collection).Disabled)
-                    throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
-
                 return GetRevisionsToSend(docsContext, includesCmd, startEtag);
-            }
-
 
             return GetDocumentsToSend(docsContext, includesCmd, startEtag);
         }
@@ -81,76 +74,84 @@ namespace Raven.Server.Documents.TcpHandlers
 
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                IEnumerable<Document> documents = _collection switch
+                foreach (var collection in _collections)
                 {
-                    Constants.Documents.Collections.AllDocumentsCollection => 
-                        _db.DocumentsStorage.GetDocumentsFrom(docsContext, startEtag +1, 0, long.MaxValue),
-                    _ =>
-                    _db.DocumentsStorage.GetDocumentsFrom(
-                        docsContext,
-                        _collection,
-                        startEtag + 1,
-                        0,
-                        long.MaxValue)
-                };
-                foreach (var doc in documents)
-                {
-                    using (doc.Data)
+                    if (string.IsNullOrEmpty(collection))
+                        throw new ArgumentException("The collection name must be specified");
+
+                    IEnumerable<Document> documents = collection switch
                     {
-                        size += doc.Data.Size;
-                        if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
+                        Constants.Documents.Collections.AllDocumentsCollection =>
+                            _db.DocumentsStorage.GetDocumentsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
+                        _ =>
+                            _db.DocumentsStorage.GetDocumentsFrom(
+                                docsContext,
+                                collection,
+                                startEtag + 1,
+                                0,
+                                long.MaxValue)
+                    };
+                    foreach (var doc in documents)
+                    {
+                        using (doc.Data)
                         {
-                            if (exception != null)
+                            size += doc.Data.Size;
+                            if (ShouldSendDocument(_subscription, run, _patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) ==
+                                false)
                             {
-                                yield return (doc, exception);
-                            }
-                            else
-                            {
-                                doc.Data = null;
-                                yield return (doc, null);
-                            }
-                            doc.Data = null;
-                        }
-                        else
-                        {
-                            if (includesCmd != null && run != null)
-                                includesCmd.AddRange(run.Includes, doc.Id);
-
-                            using (transformResult)
-                            {
-                                if (transformResult == null)
+                                if (exception != null)
                                 {
-                                    yield return (doc, null);
-
+                                    yield return (doc, exception);
                                 }
                                 else
                                 {
-                                    var projection = new Document
-                                    {
-                                        Id = doc.Id,
-                                        Etag = doc.Etag,
-                                        Data = transformResult,
-                                        LowerId = doc.LowerId,
-                                        ChangeVector = doc.ChangeVector,
-                                        LastModified = doc.LastModified,
-                                        Flags = doc.Flags,
-                                        StorageId = doc.StorageId,
-                                        NonPersistentFlags = doc.NonPersistentFlags,
-                                        TransactionMarker = doc.TransactionMarker
-                                        
-                                    };
+                                    doc.Data = null;
+                                    yield return (doc, null);
+                                }
 
-                                    yield return (projection, null);
+                                doc.Data = null;
+                            }
+                            else
+                            {
+                                if (includesCmd != null && run != null)
+                                    includesCmd.AddRange(run.Includes, doc.Id);
+
+                                using (transformResult)
+                                {
+                                    if (transformResult == null)
+                                    {
+                                        yield return (doc, null);
+
+                                    }
+                                    else
+                                    {
+                                        var projection = new Document
+                                        {
+                                            Id = doc.Id,
+                                            Etag = doc.Etag,
+                                            Data = transformResult,
+                                            LowerId = doc.LowerId,
+                                            ChangeVector = doc.ChangeVector,
+                                            LastModified = doc.LastModified,
+                                            Flags = doc.Flags,
+                                            StorageId = doc.StorageId,
+                                            NonPersistentFlags = doc.NonPersistentFlags,
+                                            TransactionMarker = doc.TransactionMarker
+                                        };
+
+                                        yield return (projection, null);
+                                    }
                                 }
                             }
                         }
+
+                        if (++numberOfDocs >= _maxBatchSize)
+                            yield break;
+
+                        if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) >=
+                            _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
+                            yield break;
                     }
-
-                    if (++numberOfDocs >= _maxBatchSize)
-                        yield break;
-
-                    if (size + docsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
-                        yield break;
                 }
             }
         }
@@ -178,80 +179,95 @@ namespace Raven.Server.Documents.TcpHandlers
             int numberOfDocs = 0;
             Size size = new Size(0, SizeUnit.Megabytes);
 
-            var collectionName = new CollectionName(_collection);
             using (_db.Scripts.GetScriptRunner(_patch, true, out var run))
             {
-                IEnumerable<(Document previous, Document current)> revisions = _collection switch
+                foreach (var collection in _collections)
                 {
-                    Constants.Documents.Collections.AllDocumentsCollection =>
-                        _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
-                    _ =>
-                        _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)
-                };
-                
-                foreach (var revisionTuple in GetRevisionsEnumerator(revisions))
-                {
-                    var item = (revisionTuple.current ?? revisionTuple.previous);
-                    Debug.Assert(item != null);
-                    size.Add(item.Data.Size, SizeUnit.Bytes);
-                    if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
-                    {
-                        if (includesCmd != null && run != null)
-                            includesCmd.AddRange(run.Includes, item.Id);
+                    if (string.IsNullOrEmpty(collection))
+                        throw new ArgumentException("The collection name must be specified");
 
-                        if (exception != null)
-                        {
-                            yield return (item, exception);
-                        }
-                        else
-                        {
-                            // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
-                            yield return (new Document
-                            {
-                                Data = null,
-                                ChangeVector = item.ChangeVector,
-                                Etag = item.Etag,
-                                LastModified = item.LastModified,                                
-                                Flags = item.Flags,
-                                StorageId = item.StorageId,
-                                NonPersistentFlags = item.NonPersistentFlags,
-                                TransactionMarker = item.TransactionMarker
-                            }, null);
-                        }
-                    }
-                    else
+                    if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
+                        _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(collection).Disabled)
+                        throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
+
+                    var collectionName = new CollectionName(collection);
+
+                    IEnumerable<(Document previous, Document current)> revisions = collection switch
                     {
-                        using (transformResult)
+                        Constants.Documents.Collections.AllDocumentsCollection =>
+                            _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, startEtag + 1, 0, long.MaxValue),
+                        _ =>
+                            _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, long.MaxValue)
+                    };
+
+                    foreach (var revisionTuple in GetRevisionsEnumerator(revisions))
+                    {
+                        var item = (revisionTuple.current ?? revisionTuple.previous);
+                        Debug.Assert(item != null);
+                        size.Add(item.Data.Size, SizeUnit.Bytes);
+                        if (ShouldSendDocumentWithRevisions(_subscription, run, _patch, docsContext, item, revisionTuple, out var transformResult, out var exception) ==
+                            false)
                         {
-                            if (transformResult == null)
+                            if (includesCmd != null && run != null)
+                                includesCmd.AddRange(run.Includes, item.Id);
+
+                            if (exception != null)
                             {
-                                yield return (revisionTuple.current, null);
+                                yield return (item, exception);
                             }
                             else
                             {
-                                var projection = new Document
+                                // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                                yield return (new Document
                                 {
-                                    Id = item.Id,
-                                    Etag = item.Etag,
-                                    Data = transformResult,
-                                    LowerId = item.LowerId,
+                                    Data = null,
                                     ChangeVector = item.ChangeVector,
+                                    Etag = item.Etag,
                                     LastModified = item.LastModified,
                                     Flags = item.Flags,
                                     StorageId = item.StorageId,
                                     NonPersistentFlags = item.NonPersistentFlags,
                                     TransactionMarker = item.TransactionMarker
-                                };
-
-                                yield return (projection, null);
+                                }, null);
                             }
                         }
-                    }
-                    if (++numberOfDocs >= _maxBatchSize)
-                        yield break;
+                        else
+                        {
+                            using (transformResult)
+                            {
+                                if (transformResult == null)
+                                {
+                                    yield return (revisionTuple.current, null);
+                                }
+                                else
+                                {
+                                    var projection = new Document
+                                    {
+                                        Id = item.Id,
+                                        Etag = item.Etag,
+                                        Data = transformResult,
+                                        LowerId = item.LowerId,
+                                        ChangeVector = item.ChangeVector,
+                                        LastModified = item.LastModified,
+                                        Flags = item.Flags,
+                                        StorageId = item.StorageId,
+                                        NonPersistentFlags = item.NonPersistentFlags,
+                                        TransactionMarker = item.TransactionMarker
+                                    };
 
-                    if (size.GetValue(SizeUnit.Bytes) + docsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) >= _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
-                        yield break;
+                                    yield return (projection, null);
+                                }
+                            }
+                        }
+
+                        if (++numberOfDocs >= _maxBatchSize)
+                            yield break;
+
+                        if (size.GetValue(SizeUnit.Bytes) +
+                            docsContext.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes) >=
+                            _maximumAllowedMemory.GetValue(SizeUnit.Bytes))
+                            yield break;
+                    }
                 }
             }
         }

@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.Queries.AST
         public GraphQuery GraphQuery;
         public QueryExpression Where;
         public FromClause From;
+        public StringSegment? MultipleCollectionsAlias;
+        public List<FromClause> FromClauses;
         public List<(QueryExpression Expression, StringSegment? Alias)> Select;
         public List<(QueryExpression Expression, StringSegment? Alias)> Load;
         public List<QueryExpression> Include;

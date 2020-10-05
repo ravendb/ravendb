@@ -38,8 +38,10 @@ namespace Raven.Server.Documents.Handlers
                     patch = new SubscriptionPatchDocument(sub.Script, sub.Functions);
                 }
 
-                if (sub.Collection == null)
-                    throw new ArgumentException("Collection must be specified");
+                if (sub.Collections.Length == 0)
+                    throw new ArgumentException("No collections provided");
+                if (sub.Collections.Any(string.IsNullOrEmpty))
+                    throw new ArgumentException($"All items in {nameof(sub.Collections)} must be specified");
 
                 const int maxPageSize = 1024;
                 var pageSize = GetIntValueQueryString("pageSize") ?? 1;
@@ -51,9 +53,8 @@ namespace Raven.Server.Documents.Handlers
                     ChangeVectorForNextBatchStartingPoint = tryout.ChangeVector,
                     Query = tryout.Query
                 };
-
                 var fetcher = new SubscriptionDocumentsFetcher(Database, int.MaxValue, -0x42,
-                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collection, sub.Revisions, state, patch);
+                    new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort), sub.Collections, sub.Revisions, state, patch);
 
                 var includeCmd = new IncludeDocumentsCommand(Database.DocumentsStorage, context, sub.Includes, isProjection: patch != null);
 
@@ -70,7 +71,7 @@ namespace Raven.Server.Documents.Handlers
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                             using (context.OpenReadTransaction())
                             {
-                                state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, sub.Collection);
+                                state.ChangeVectorForNextBatchStartingPoint = sub.Collections.Max(x => Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, x));
                             }
                             break;
                     }
@@ -491,7 +492,7 @@ namespace Raven.Server.Documents.Handlers
                         options.ChangeVector = null;
                         break;
                     case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
-                        options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, sub.Collection);
+                        options.ChangeVector = sub.Collections.Max(x => Database.DocumentsStorage.GetLastDocumentChangeVector(context.Transaction.InnerTransaction, context, x));
                         break;
                 }
             }

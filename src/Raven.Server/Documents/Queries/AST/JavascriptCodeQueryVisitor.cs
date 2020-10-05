@@ -19,8 +19,17 @@ namespace Raven.Server.Documents.Queries.AST
             _sb = sb;
 
             _knownAliases.Add("this");
-            if (q.From.Alias != null)
-                _knownAliases.Add(q.From.Alias.Value.Value);
+            if (q.From.From == null)
+            {
+                // multiple collection alias
+                if (q.MultipleCollectionsAlias != null)
+                    _knownAliases.Add(q.MultipleCollectionsAlias.Value.Value);
+            }
+            else
+            {
+                if (q.From.Alias != null)
+                    _knownAliases.Add(q.From.Alias.Value.Value);
+            }
             if (q.Load != null)
             {
                 foreach (var t in q.Load)

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -15,9 +16,9 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Server;
 using Sparrow.Json;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -1074,6 +1075,86 @@ namespace FastTests.Client.Subscriptions
                 Assert.NotNull(newState);
                 Assert.Equal(query, newState.Query);
                 Assert.Equal(oldId, newState.SubscriptionId);
+            }
+        }
+
+        [Theory]
+        [InlineData("from Users, People")]
+        [InlineData("from Users, People as item")]
+        [InlineData("from (Users, People)")]
+        [InlineData("from (Users, People) as item")]
+        public async Task CanCreateSubscriptionOnMultipleCollections(string query)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var allId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+                {
+                      Query = query
+                });
+
+                using (var allSubscription = store.Subscriptions.GetSubscriptionWorker(allId))
+                {
+                    var allDocs = new CountdownEvent(10);
+
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new User()
+                            {
+                                Name = "a"
+                            }, "User/");
+                        session.SaveChanges();
+                    }
+                    using (var session = store.OpenSession())
+                    {
+                        for (int i = 0; i < 5; i++)
+                            session.Store(new Person()
+                            {
+                                Name = "a"
+                            }, "Person/");
+                        session.SaveChanges();
+                    }
+
+                    var users = 0;
+                    var people = 0;
+                    var t = allSubscription.Run(x =>
+                    {
+                        foreach (var item in x.Items)
+                        {
+                            var type = item.Result.GetType();
+                            if (type == typeof(User))
+                                users++;
+                            else if (type == typeof(Person))
+                                people++;
+                            else
+                                Assert.True(false, $"Expected get {typeof(User).FullName}, {typeof(Person).FullName} but got {item.Result.GetType().FullName}");
+                        }
+
+                        allDocs.Signal(x.NumberOfItemsInBatch);
+                    });
+
+                    Assert.True(allDocs.Wait(_reasonableWaitTime));
+                    Assert.Equal(5, users);
+                    Assert.Equal(5, people);
+                }
+            }
+        }
+
+        [Fact]
+        public void SubscriptionOnMultipleCollectionsExceptions()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var argumentError = Assert.Throws<RavenException>(() => store.Subscriptions.Create(new SubscriptionCreationOptions { Query = "from Users, People, @all_docs, Items" }));
+                Assert.StartsWith("System.InvalidOperationException: Cannot use AllDocumentsCollection as part of query on multiple collections.", argumentError.Message);
+                argumentError = Assert.Throws<RavenException>(() => store.Subscriptions.Create(new SubscriptionCreationOptions { Query = "from Users as item, People" }));
+                Assert.StartsWith("Raven.Server.Documents.Queries.Parser.QueryParser+ParseException: 1:20 Invalid syntax. Usage of alias in the from clause of query on multiple collections is restricted. Correct syntax for query on multiple collections with alias is: 'from Users, People as item' but got: People", argumentError.Message);
+                argumentError = Assert.Throws<RavenException>(() => store.Subscriptions.Create(new SubscriptionCreationOptions { Query = "from Users, People as item, Items" }));
+                Assert.StartsWith("Raven.Server.Documents.Queries.Parser.QueryParser+ParseException: 1:28 Invalid syntax. Usage of alias in the from clause of query on multiple collections is restricted. Correct syntax for query on multiple collections with alias is: 'from Users, People as item' but got: Items", argumentError.Message);
+                argumentError = Assert.Throws<RavenException>(() => store.Subscriptions.Create(new SubscriptionCreationOptions { Query = "from (Users as item, People as doc)" }));
+                Assert.StartsWith("Raven.Server.Documents.Queries.Parser.QueryParser+ParseException: 1:20 Invalid syntax. Usage of alias in the from clause of query on multiple collections is restricted. Correct syntax for query on multiple collections with alias is: 'from (Users, People) as item' but got: ,", argumentError.Message);
+                argumentError = Assert.Throws<RavenException>(() => store.Subscriptions.Create(new SubscriptionCreationOptions { Query = "from (Users as item, Items, People as doc)" }));
+                Assert.StartsWith("Raven.Server.Documents.Queries.Parser.QueryParser+ParseException: 1:20 Invalid syntax. Usage of alias in the from clause of query on multiple collections is restricted. Correct syntax for query on multiple collections with alias is: 'from (Users, People) as item' but got: ,", argumentError.Message);
             }
         }
 

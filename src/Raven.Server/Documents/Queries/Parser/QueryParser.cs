@@ -101,10 +101,41 @@ namespace Raven.Server.Documents.Queries.Parser
                     return false;
                 }
 
-                if (!TryParseFromClause(out var fromClause, out message))
+                if (!TryParseFromClause(out var fromClauses, out message))
                     return false;
 
-                query.From = fromClause;
+                if (fromClauses.Count > 1)
+                {
+                    if (fromClauses[^1].Alias != null)
+                    {
+                        var last = fromClauses[^1];
+                        query.MultipleCollectionsAlias = new StringSegment(last.Alias.Value.Buffer);
+                        last.Alias = null;
+                        fromClauses[^1] = last;
+                    }
+                    else
+                    {
+                        Alias(false, out query.MultipleCollectionsAlias);
+                    }
+
+                    // multiple collections
+                    query.FromClauses = fromClauses;
+                }
+                else if (fromClauses.Count == 1)
+                {
+                    query.From = fromClauses.First();
+                }
+                else
+                {
+                    message = "Unable to parse FROM clause";
+                    return false;
+                }
+
+                if (Scanner.AtEndOfInput())
+                {
+                    // query is a simple from
+                    return true;
+                }
 
                 if (Scanner.TryScanMultiWordsToken("GROUP", "BY"))
                     query.GroupBy = GroupBy();
@@ -1718,16 +1749,87 @@ namespace Raven.Server.Documents.Queries.Parser
             return new MethodExpression(func.Name, args);
         }
 
-        private bool TryParseFromClause(out FromClause fromClause, out string message)
+        private bool TryParseFromClause(out List<FromClause> fromClauses, out string message)
         {
-            fromClause = default;
+            fromClauses = new List<FromClause>();
             if (Scanner.TryScan("FROM") == false)
             {
                 message = "Expected FROM clause";
                 return false;
             }
 
-            return TryParseExpressionAfterFromKeyword(out fromClause, out message);
+            if (Scanner.TryScan("("))
+            {
+                var first = true;
+                while (true)
+                {
+                    // multiple collections
+                    if (TryParseExpressionAfterFromKeyword(out var fromClause, out message) == false)
+                    {
+                        if (first)
+                            return false;
+
+                        if (Scanner.TryScan(","))
+                        {
+                            // another expression
+                            continue;
+                        }
+
+                        if (Scanner.TryScan(")"))
+                        {
+                            break;
+                        }
+
+                        return false;
+                    }
+
+                    if (fromClause.Alias != null)
+                    {
+                        message = "Invalid syntax. Usage of alias in the from clause of query on multiple collections is restricted. Correct syntax for query on multiple collections with alias is: 'from (Users, People) as item'";
+                        return false;
+                    }
+
+                    first = false;
+                    fromClauses.Add(fromClause);
+                }
+
+                return true;
+            }
+            else
+            {
+                var first = true;
+                var last = false;
+                while (true)
+                {
+                    if (TryParseExpressionAfterFromKeyword(out var fromClause, out message) == false)
+                    {
+                        if (first)
+                            return false;
+
+                        if (Scanner.TryScan(","))
+                        {
+                            if (last)
+                            {
+                                message = "Invalid syntax. Usage of alias in the from clause of query on multiple collections is restricted. Correct syntax for query on multiple collections with alias is: 'from Users, People as item'";
+                                return false;
+                            }
+
+                            // another expression
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    if (fromClause.Alias != null)
+                        last = true;
+
+                    first = false;
+                    fromClauses.Add(fromClause);
+                }
+
+                return true;
+            }
         }
 
         private bool TryParseExpressionAfterFromKeyword(out FromClause fromClause, out string message)
