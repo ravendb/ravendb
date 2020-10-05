@@ -21,7 +21,9 @@ export abstract class settingsEntry {
     
     rawValue = ko.observable<string>();
     hasPendingContent = ko.observable<boolean>(false);
+    
     hasAccess = ko.observable<boolean>(true);
+    static passwordBullets = "&bull;&bull;&bull;&bull;&bull;";
     
     // These 2 are needed for Summary view
     pendingValueText: KnockoutComputed<string>;
@@ -63,12 +65,11 @@ export abstract class settingsEntry {
 }
 
 export class serverWideOnlyEntry extends settingsEntry {
-
     constructor(data: Raven.Server.Config.ConfigurationEntryDatabaseValue) {
         super(data);
         this.isServerWideOnlyEntry(true);
 
-        this.effectiveValue = ko.pureComputed(() => this.hasAccess() ? this.serverOrDefaultValue() : "Unauthorized to access value!");
+        this.effectiveValue = ko.pureComputed(() => this.hasAccess() ? this.serverOrDefaultValue() : settingsEntry.passwordBullets);
         this.effectiveValueOrigin = ko.pureComputed(() => this.hasServerValue() ? "Server" : "Default");
         
         this.pendingValueText = ko.pureComputed(() => "");
@@ -161,6 +162,10 @@ export abstract class databaseEntry<T> extends settingsEntry {
         }
 
         this.effectiveValue = ko.pureComputed(() => {
+            if (!this.hasAccess()) {
+                return settingsEntry.passwordBullets;
+            }
+            
             if (this.override()) {
                 return this.getCustomizedValueAsString();
             }
@@ -183,6 +188,10 @@ export abstract class databaseEntry<T> extends settingsEntry {
         });
 
         this.effectiveValueInUseText = ko.pureComputed(() => {
+            if (!this.hasAccess()) {
+                return settingsEntry.passwordBullets;
+            }
+            
             if (!this.hasPendingContent()) {
                 return this.effectiveValue();
             }

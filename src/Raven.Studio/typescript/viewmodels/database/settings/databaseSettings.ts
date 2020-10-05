@@ -226,11 +226,12 @@ class databaseSettings extends viewModelBase {
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueInUseText(), "Effective Value in Use", "30%", {
                         sortable: "string",
+                        useRawValue: (x) => !x.hasAccess(),
                         extraClass: (x) => {
-                          if (!x.hasAccess()) {
-                              return "no-color";
-                          }
-                          return x.effectiveValueInUseText() ? "value-has-content" : "";
+                            if (x.hasAccess()) {
+                                return x.effectiveValueInUseText() ? "value-has-content" : "";
+                            }
+                            return "no-color";
                         }
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.pendingValueText() , "Pending Value", "30%", {
@@ -246,11 +247,12 @@ class databaseSettings extends viewModelBase {
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValue(), "Effective Value", "40%", {
                         sortable: "string",
+                        useRawValue: (x) => !x.hasAccess(),
                         extraClass: (x) => {
-                            if (!x.hasAccess()) {
-                                return "no-color text-password";
+                            if (x.hasAccess()) {
+                                return x.effectiveValueInUseText() ? "value-has-content" : "";
                             }
-                            return x.effectiveValueInUseText() ? "value-has-content" : "";
+                            return "no-color";
                         }
                     }),
                     new textColumn<models.settingsEntry>(summaryGrid, x => x.effectiveValueOrigin(), "Origin", "20%", {
@@ -288,13 +290,14 @@ class databaseSettings extends viewModelBase {
         this.columnPreview.install(".summary-list-container", ".js-summary-details-tooltip",
             (details: models.settingsEntry,
              column: textColumn<models.settingsEntry>,
-             e: JQueryEventObject, 
+             e: JQueryEventObject,
              onValue: (context: any, valueToCopy?: string) => void) => {
-                if (column.header === "Origin") {
-                    // do nothing
-                } else {
-                    const value = column.getCellValue(details);
+                if (column.header !== "Origin") {
+                    let value = column.getCellValue(details);
                     if (value) {
+                        if (column.header.includes("Effective Value") && !details.hasAccess()) {
+                            value = "Unauthorized to access value!";
+                        }
                         onValue(genUtils.escapeHtml(value));
                     }
                 }
