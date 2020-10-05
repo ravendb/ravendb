@@ -584,26 +584,37 @@ namespace FastTests
             throw new TimeoutException("The indexes stayed stale for more than " + timeout.Value + ", stats at " + file);
         }
 
-        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, TimeSpan? timeout = null)
+        public static IndexErrors[] WaitForIndexingErrors(IDocumentStore store, string[] indexNames = null, TimeSpan? timeout = null)
         {
-            timeout = timeout ?? (Debugger.IsAttached
+            timeout ??= (Debugger.IsAttached
                           ? TimeSpan.FromMinutes(15)
                           : TimeSpan.FromMinutes(1));
+
+            var toWait = new HashSet<string>(indexNames ?? Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
 
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
             {
-                var indexes = store.Maintenance.Send(new GetIndexErrorsOperation());
+                var indexes = store.Maintenance.Send(new GetIndexErrorsOperation(indexNames));
                 foreach (var index in indexes)
                 {
-                    if (index.Errors.Any())
-                        return indexes;
+                    if (index.Errors.Length > 0)
+                    {
+                        toWait.Remove(index.Name);
+
+                        if (toWait.Count == 0)
+                            return indexes;
+                    }
                 }
 
                 Thread.Sleep(32);
             }
 
-            throw new TimeoutException("Got no index error for more than " + timeout.Value);
+            var msg = $"Got no index error for more than {timeout.Value}.";
+            if (toWait.Count != 0)
+                msg += $" Still waiting for following indexes: {string.Join(",", toWait)}";
+
+            throw new TimeoutException(msg);
         }
 
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
