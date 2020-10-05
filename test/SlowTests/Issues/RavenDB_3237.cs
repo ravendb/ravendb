@@ -4,7 +4,9 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using FastTests;
+using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
@@ -32,14 +34,17 @@ namespace SlowTests.Issues
                         .Operations
                         .Send(new PatchOperation("keys/1", null, new PatchRequest { Script = "var a = 1;" }));
 
-                    dynamic doc = commands.Get("keys/1");
+                    var doc = commands.Get("keys/1");
 
                     Assert.NotNull(doc);
 
-                    dynamic test = (DynamicArray)doc.Test;
+                    AssertDynamic(doc, d =>
+                    {
+                        dynamic test = (DynamicArray)d.Test;
 
-                    Assert.Equal(1, test.Length);
-                    Assert.Equal(7, test[0]);
+                        Assert.Equal(1, test.Length);
+                        Assert.Equal(7, test[0]);
+                    });
                 }
             }
         }
@@ -58,20 +63,23 @@ namespace SlowTests.Issues
                         .Operations
                         .Send(new PatchOperation("keys/1", null, new PatchRequest { Script = "this.Test.push(4);" }));
 
-                    dynamic doc = commands.Get("keys/1");
+                    var doc = commands.Get("keys/1");
 
                     Assert.NotNull(doc);
 
-                    dynamic test = (DynamicArray)doc.Test;
+                    AssertDynamic(doc, d =>
+                    {
+                        dynamic test = (DynamicArray)d.Test;
 
-                    Assert.Equal(2, test.Length);
-                    Assert.Equal(3, test[0]);
-                    Assert.Equal(4, test[1]);
+                        Assert.Equal(2, test.Length);
+                        Assert.Equal(3, test[0]);
+                        Assert.Equal(4, test[1]);
 
-                    dynamic test2 = (DynamicArray)doc.Test2;
+                        dynamic test2 = (DynamicArray)d.Test2;
 
-                    Assert.Equal(1, test2.Length);
-                    Assert.Equal(7, test2[0]);
+                        Assert.Equal(1, test2.Length);
+                        Assert.Equal(7, test2[0]);
+                    });
                 }
             }
         }
@@ -90,21 +98,37 @@ namespace SlowTests.Issues
                         .Operations
                         .Send(new PatchOperation("keys/1", null, new PatchRequest { Script = "this.Test.push(4);" }));
 
-                    dynamic doc = commands.Get("keys/1");
+                    var doc = commands.Get("keys/1");
 
                     Assert.NotNull(doc);
 
-                    dynamic test = (DynamicArray)doc.Test;
+                    AssertDynamic(doc, d =>
+                    {
+                        dynamic test = (DynamicArray)d.Test;
 
-                    Assert.Equal(2, test.Length);
-                    Assert.Equal(3, test[0]);
-                    Assert.Equal(4, test[1]);
+                        Assert.Equal(2, test.Length);
+                        Assert.Equal(3, test[0]);
+                        Assert.Equal(4, test[1]);
 
-                    dynamic test2 = (DynamicArray)doc.Test2;
+                        dynamic test2 = (DynamicArray)d.Test2;
 
-                    Assert.Equal(1, test2.Length);
-                    Assert.Equal("7", test2[0]);
+                        Assert.Equal(1, test2.Length);
+                        Assert.Equal("7", test2[0]);
+                    });
                 }
+            }
+        }
+
+        private void AssertDynamic(DynamicBlittableJson json, Action<dynamic> assert)
+        {
+            try
+            {
+                dynamic doc = json;
+                assert(doc);
+            }
+            catch (RuntimeBinderException e)
+            {
+                throw new InvalidOperationException("Failed to assert: " + json.BlittableJson.ToString(), e);
             }
         }
     }

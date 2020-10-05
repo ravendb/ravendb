@@ -515,11 +515,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue documentId)
+        public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue documentId, string changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (DocumentIdWorker.GetLower(context.Allocator, documentId, out var lowerDocumentIdSlice))
-            using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, Slices.Empty, out Slice prefixSlice))
+            using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
+            using (GetAttachmentPrefix(context, lowerDocumentIdSlice, type, type == AttachmentType.Document ? Slices.Empty : changeVectorSlice, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
@@ -623,6 +624,13 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             return tree.StreamExist(base64Hash);
+        }
+
+        public bool AttachmentMetadataExists(DocumentsOperationContext context, Slice keySlice)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
+            return table.SeekOnePrimaryKeyPrefix(keySlice, out _);
         }
 
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector)
@@ -788,6 +796,32 @@ namespace Raven.Server.Documents
 
             keySlice = new Slice(SliceOptions.Key, keyMem);
             return scope;
+        }
+
+        public static AttachmentType GetAttachmentTypeByKey(Slice keySlice)
+        {
+            var index = 0;
+            var found = false;
+            for (int i = 0; i < keySlice.Size; i++)
+            {
+                if (Convert.ToChar(keySlice[i]) == SpecialChars.RecordSeparator)
+                {
+                    index = i;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (found == false)
+                throw new InvalidOperationException($"Could not parse {nameof(keySlice)}");
+
+            var b = keySlice[index + 1];
+            var c = Convert.ToChar(b);
+            if (c == 'r')
+                return AttachmentType.Revision;
+
+            Debug.Assert(c == 'd');
+            return AttachmentType.Document;
         }
 
         private enum KeyType
