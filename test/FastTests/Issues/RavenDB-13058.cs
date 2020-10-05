@@ -23,14 +23,16 @@ namespace FastTests.Issues
         }
 
         private static bool IsValid(User u) => true;
+
         private static bool IsValid2(User u, bool flag) => true;
+
         private class IndexWithCustomMethod : AbstractIndexCreationTask<User>
         {
             public IndexWithCustomMethod()
             {
                 Map = users => from u in users
-                    where IsValid(u)
-                    select new { u.Name };
+                               where IsValid(u)
+                               select new { u.Name };
 
                 AdditionalSources = new Dictionary<string, string>()
                 {
@@ -39,7 +41,7 @@ namespace FastTests.Issues
                         @"
                         namespace FastTests.Issues
                         {
-                            public class RavenDB_13058 
+                            public class RavenDB_13058
                             {
                                 public class User
                                 {
@@ -60,8 +62,8 @@ namespace FastTests.Issues
             public IndexWithArrowFunctionStaticParameter()
             {
                 Map = users => from u in users
-                    where IsValid(u)
-                    select new { u.Name };
+                               where IsValid(u)
+                               select new { u.Name };
 
                 AdditionalSources = new Dictionary<string, string>()
                 {
@@ -70,14 +72,14 @@ namespace FastTests.Issues
                         @"
                         namespace FastTests.Issues
                         {
-                            public class RavenDB_13058 
+                            public class RavenDB_13058
                             {
                                 public class User
                                 {
                                     public string Name { get; set; }
                                 }
 
-                                public static bool IsValid(User u) => u.Name != ""ayende""; 
+                                public static bool IsValid(User u) => u.Name != ""ayende"";
                             }
                         }
                         "
@@ -86,13 +88,13 @@ namespace FastTests.Issues
             }
         }
 
-        private class IndexWithInvalidParameterCount: AbstractIndexCreationTask<User>
+        private class IndexWithInvalidParameterCount : AbstractIndexCreationTask<User>
         {
             public IndexWithInvalidParameterCount()
             {
                 Map = users => from u in users
-                    where IsValid(u)
-                    select new { u.Name };
+                               where IsValid(u)
+                               select new { u.Name };
 
                 AdditionalSources = new Dictionary<string, string>()
                 {
@@ -101,14 +103,14 @@ namespace FastTests.Issues
                         @"
                         namespace FastTests.Issues
                         {
-                            public class RavenDB_13058 
+                            public class RavenDB_13058
                             {
                                 public class User
                                 {
                                     public string Name { get; set; }
                                 }
 
-                                public static bool IsValid(User u, User u2) => u.Name != ""ayende""; 
+                                public static bool IsValid(User u, User u2) => u.Name != ""ayende"";
                             }
                         }
                         "
@@ -117,13 +119,13 @@ namespace FastTests.Issues
             }
         }
 
-        private class IndexWithInvalidReturnType: AbstractIndexCreationTask<User>
+        private class IndexWithInvalidReturnType : AbstractIndexCreationTask<User>
         {
             public IndexWithInvalidReturnType()
             {
                 Map = users => from u in users
-                    where IsValid(u)
-                    select new { u.Name };
+                               where IsValid(u)
+                               select new { u.Name };
 
                 AdditionalSources = new Dictionary<string, string>()
                 {
@@ -132,14 +134,14 @@ namespace FastTests.Issues
                         @"
                         namespace FastTests.Issues
                         {
-                            public class RavenDB_13058 
+                            public class RavenDB_13058
                             {
                                 public class User
                                 {
                                     public string Name { get; set; }
                                 }
 
-                                public static User IsValid(User u) => u; 
+                                public static User IsValid(User u) => u;
                             }
                         }
                         "
@@ -147,13 +149,14 @@ namespace FastTests.Issues
                 };
             }
         }
+
         private class IndexWithArrowFunctionDynamicParameter : AbstractIndexCreationTask<User>
         {
             public IndexWithArrowFunctionDynamicParameter()
             {
                 Map = users => from u in users
-                    where IsValid(u)
-                    select new { u.Name };
+                               where IsValid(u)
+                               select new { u.Name };
 
                 AdditionalSources = new Dictionary<string, string>()
                 {
@@ -162,14 +165,14 @@ namespace FastTests.Issues
                         @"
                         namespace FastTests.Issues
                         {
-                            public class RavenDB_13058 
+                            public class RavenDB_13058
                             {
                                 public class User
                                 {
                                     public string Name { get; set; }
                                 }
 
-                                public static bool IsValid(dynamic u) => u.Name != ""ayende""; 
+                                public static bool IsValid(dynamic u) => u.Name != ""ayende"";
                             }
                         }
                         "
@@ -177,14 +180,14 @@ namespace FastTests.Issues
                 };
             }
         }
-        
+
         private class IndexWithArrowFunctionDynamicAndStaticParameter : AbstractIndexCreationTask<User>
         {
             public IndexWithArrowFunctionDynamicAndStaticParameter()
             {
                 Map = users => from u in users
-                    where IsValid2(u, u.Flag)
-                    select new { u.Name };
+                               where IsValid2(u, u.Flag)
+                               select new { u.Name };
 
                 AdditionalSources = new Dictionary<string, string>()
                 {
@@ -193,7 +196,7 @@ namespace FastTests.Issues
                         @"
                         namespace FastTests.Issues
                         {
-                            public class RavenDB_13058 
+                            public class RavenDB_13058
                             {
                                 public class User
                                 {
@@ -201,7 +204,7 @@ namespace FastTests.Issues
                                     public bool Flag { get; set; }
                                 }
 
-                                public static bool IsValid2(dynamic u, bool flag) => u.Name != ""ayende"" && flag; 
+                                public static bool IsValid2(dynamic u, bool flag) => u.Name != ""ayende"" && flag;
                             }
                         }
                         "
@@ -218,7 +221,7 @@ namespace FastTests.Issues
                 new IndexWithCustomMethod().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{ Name = "AAABBB" });
+                    session.Store(new User { Name = "AAABBB" });
                     session.SaveChanges();
                 }
 
@@ -239,7 +242,7 @@ namespace FastTests.Issues
                 new IndexWithInvalidReturnType().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{ Name = "AAABBB" });
+                    session.Store(new User { Name = "AAABBB" });
                     session.SaveChanges();
                 }
 
@@ -265,7 +268,7 @@ namespace FastTests.Issues
                 new IndexWithArrowFunctionStaticParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{ Name = "AAABBB" });
+                    session.Store(new User { Name = "AAABBB" });
                     session.SaveChanges();
                 }
 
@@ -286,7 +289,7 @@ namespace FastTests.Issues
                 new IndexWithArrowFunctionDynamicParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{ Name = "AAABBB" });
+                    session.Store(new User { Name = "AAABBB" });
                     session.SaveChanges();
                 }
 
@@ -307,7 +310,7 @@ namespace FastTests.Issues
                 new IndexWithArrowFunctionDynamicAndStaticParameter().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new User{ Name = "AAABBB", Flag = true});
+                    session.Store(new User { Name = "AAABBB", Flag = true });
                     session.SaveChanges();
                 }
 
