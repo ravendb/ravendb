@@ -1625,7 +1625,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
 
-            var iterator = table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, start);
+            var iterator = table?.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice], etag, start);
 
             return GetCurrentAndPreviousRevisionsFrom(context, iterator, table, take);
         }
@@ -1684,7 +1684,7 @@ namespace Raven.Server.Documents.Revisions
             var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
             var table = context.Transaction.InnerTransaction.OpenTable(RevisionsSchema, tableName);
 
-            var iterator = table.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0);
+            var iterator = table?.SeekForwardFrom(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice], etag, 0);
 
             return GetCurrentAndPreviousRevisionsFrom(context, iterator, table, take);
         }
@@ -1692,6 +1692,9 @@ namespace Raven.Server.Documents.Revisions
         private IEnumerable<(Document previous, Document current)> GetCurrentAndPreviousRevisionsFrom(DocumentsOperationContext context, IEnumerable<Table.TableValueHolder> iterator, Table table, long take)
         {
             if (table == null)
+                yield break;
+
+            if (iterator == null)
                 yield break;
 
             var docsSchemaIndex = RevisionsSchema.Indexes[IdAndEtagSlice];
