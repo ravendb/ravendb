@@ -1,5 +1,4 @@
 <div id="database-settings-view" class="flex-vertical absolute-fill">
-<!--<div class="database-settings-view flex-vertical absolute-fill">-->
     <!-- ko if: isForbidden-->
     <div class="text-center">
         <h4 class="page-header text-info">You are not authorized to view this page!</h4>
@@ -94,7 +93,7 @@
                                 <i class="fix-icon-top" data-bind="css: { 'icon-default': !hasServerValue() }"></i>
                                 <i class="fix-icon-top" data-bind="css: { 'icon-server': hasServerValue() }"></i>
                             </small>
-                            <span data-bind="text: hasAccess() ? serverOrDefaultValue() || 'null' : '&bull;&bull;&bull;&bull;&bull;'"></span>
+                            <span data-bind="html: hasAccess() ? serverOrDefaultValue() || 'null' : effectiveValue()"></span>
                             <small data-placement="right" data-toggle="tooltip" data-animation="true" data-html="true"
                                    data-bind="visible: isServerWideOnlyEntry, attr: { title: hasAccess() ?
                                    'This is a server-wide entry.<br>It can be edited only from the <strong>settings.json</strong> file located in your RavenDB executable folder.' :
