@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Security.Cryptography;
@@ -34,6 +33,7 @@ using Sparrow.Utils;
 using Tests.Infrastructure.Utils;
 using Xunit;
 using Xunit.Abstractions;
+using XunitLogger;
 
 namespace FastTests
 {
@@ -421,7 +421,7 @@ namespace FastTests
             }
         }
 
-        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool? runInMemory = null, string customConfigPath = null, [CallerMemberName]string caller = null)
+        public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool? runInMemory = null, string customConfigPath = null, [CallerMemberName] string caller = null)
         {
             if (_localServer != _globalServer && _globalServer != null)
                 _localServer?.Dispose();
@@ -546,7 +546,7 @@ namespace FastTests
 
         private static readonly ConcurrentDictionary<RavenServer, string> LeakedServers = new ConcurrentDictionary<RavenServer, string>();
 
-        protected virtual RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName]string caller = null)
+        protected virtual RavenServer GetNewServer(ServerCreationOptions options = null, [CallerMemberName] string caller = null)
         {
             if (options == null)
             {
@@ -702,31 +702,27 @@ namespace FastTests
 
             Dispose(exceptionAggregator);
 
-            if (shouldSaveDebugPackage && _globalServer != null && _globalServer.Disposed == false)
-                exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(_globalServer, Context));
+            DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _globalServer, exceptionAggregator, Context);
 
             if (_localServer != null && _localServer != _globalServer)
             {
+                DownloadAndSaveDebugPackage(shouldSaveDebugPackage, _localServer, exceptionAggregator, Context);
+
                 exceptionAggregator.Execute(() =>
                 {
                     _localServer.Dispose();
                     _localServer = null;
                 });
-
-                if (shouldSaveDebugPackage)
-                    exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(_localServer, Context));
             }
 
-            var firstServerForDisposal = ServersForDisposal.FirstOrDefault();
-            if (shouldSaveDebugPackage && firstServerForDisposal != null)
-                exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(firstServerForDisposal, Context));
-
-            foreach (var server in ServersForDisposal)
+            for (int i = 0; i < ServersForDisposal.Count; i++)
             {
-                exceptionAggregator.Execute(() =>
-                {
-                    server.Dispose();
-                });
+                var serverForDisposal = ServersForDisposal[i];
+
+                if (i == 0)
+                    DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator, Context);
+
+                exceptionAggregator.Execute(() => serverForDisposal.Dispose());
             }
 
             ServersForDisposal = null;
@@ -734,6 +730,17 @@ namespace FastTests
             RavenTestHelper.DeletePaths(_localPathsToDelete, exceptionAggregator);
 
             exceptionAggregator.ThrowIfNeeded();
+
+            static void DownloadAndSaveDebugPackage(bool shouldSaveDebugPackage, RavenServer server, ExceptionAggregator exceptionAggregator, Context context)
+            {
+                if (shouldSaveDebugPackage == false)
+                    return;
+
+                if (server == null || server.Disposed)
+                    return;
+
+                exceptionAggregator.Execute(() => DebugPackageHandler.DownloadAndSave(server, context));
+            }
         }
 
         public Task InitializeAsync()
