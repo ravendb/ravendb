@@ -14,6 +14,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
@@ -219,6 +221,48 @@ namespace Raven.Server.Web.System
             return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
         }
 
+        private static Dictionary<string, string> HandleNestedSettings(Dictionary<string, string> settingsRecord)
+        {
+            Dictionary<string, string> flattenedSettings = new Dictionary<string, string>();
+            
+            foreach (var settingsEntry in settingsRecord)
+            {
+                var key = settingsEntry.Key;
+                var value = settingsEntry.Value;
+               
+                try
+                {
+                    JObject jsonObject = JObject.Parse(value);
+                    IEnumerable<JToken> jTokens = jsonObject.Descendants().Where(p => p.Count() == 0);
+                    Dictionary<string, string> results = jTokens.Aggregate(new Dictionary<string, string>(), (properties, jToken) =>
+                    {
+                        properties.Add(jToken.Path, jToken.ToString());
+                        return properties;
+                    });
+
+                    foreach (var entry in results)
+                    {
+                        var newKey = $"{settingsEntry.Key}.{entry.Key}";
+                        var newValue = entry.Value;
+                        flattenedSettings.Add(newKey, newValue);
+                    }
+
+                }
+                catch (JsonReaderException jex)
+                {
+                    // value is not a json object, just use original value
+                    flattenedSettings.Add(key, value);
+                }
+                catch (Exception ex)
+                {
+                    // some other exception
+                    throw new InvalidOperationException($"Cannot parse the Settings entry in the Database Record");
+                }
+            }
+
+            return flattenedSettings;
+        }
+
         [RavenAction("/admin/databases", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
@@ -232,7 +276,13 @@ namespace Raven.Server.Web.System
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
                 var json = context.ReadForDisk(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
-               
+                
+                if (databaseRecord.Settings != null && databaseRecord.Settings.Count > 0)
+                {
+                    // for issue RavenDB-15482
+                    databaseRecord.Settings = HandleNestedSettings(databaseRecord.Settings);
+                }
+                
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
                     var clientCert = GetCurrentCertificate();
