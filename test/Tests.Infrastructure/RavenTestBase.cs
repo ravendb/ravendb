@@ -1375,7 +1375,7 @@ namespace FastTests
                 session.SaveChanges();
             }
         }
-        
+
         protected void SaveChangesWithTryCatch<T>(IDocumentSession session, T loaded) where T : class
         {
             //This try catch is only to investigate RavenDB-15366 issue
@@ -1398,6 +1398,7 @@ namespace FastTests
                 }
             }
         }
+
         protected async Task SaveChangesWithTryCatchAsync<T>(IAsyncDocumentSession session, T loaded) where T : class
         {
             //This try catch is only to investigate RavenDB-15366 issue
@@ -1421,11 +1422,12 @@ namespace FastTests
             }
         }
 
-        protected void WriteDocDirectlyFromStorageToTestOutput(string storeDatabase, string docId)
+        protected void WriteDocDirectlyFromStorageToTestOutput(string storeDatabase, string docId, [CallerMemberName] string caller = null)
         {
-            WriteDocDirectlyFromStorageToTestOutputAsync(storeDatabase, docId).GetAwaiter().GetResult();
+            AsyncHelpers.RunSync(() => WriteDocDirectlyFromStorageToTestOutputAsync(storeDatabase, docId));
         }
-        protected async Task WriteDocDirectlyFromStorageToTestOutputAsync(string storeDatabase, string docId)
+
+        protected async Task WriteDocDirectlyFromStorageToTestOutputAsync(string storeDatabase, string docId, [CallerMemberName] string caller = null)
         {
             //This function is only to investigate RavenDB-15366 issue
 
@@ -1434,7 +1436,13 @@ namespace FastTests
             using (context.OpenReadTransaction())
             {
                 var doc = db.DocumentsStorage.Get(context, docId);
-                Output?.WriteLine(doc.Data.ToString());
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"Test: '{caller}'. Document: '{docId}'. Data:");
+                sb.AppendLine(doc.Data.ToString());
+
+                Output?.WriteLine(sb.ToString());
+                Console.WriteLine(sb.ToString());
             }
         }
     }
