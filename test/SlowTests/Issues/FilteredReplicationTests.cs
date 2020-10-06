@@ -19,6 +19,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -460,9 +461,7 @@ namespace SlowTests.Issues
                 HubName = "push"
             }));
 
-            WaitForUserToContinueTheTest(storeA, clientCert: certificates.ServerCertificate.Value);
-
-            WaitForDocument(storeB, "users/ayende");
+            Assert.True(WaitForDocument(storeB, "users/ayende"));
             using (var s = storeB.OpenAsyncSession())
             {
                 Assert.Null(await s.LoadAsync<object>("users/pheobe"));
@@ -716,6 +715,8 @@ namespace SlowTests.Issues
             Assert.True(WaitForDocument<Propagation>(hubStore, "common", x => x.FromSink2 == true));
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.FromSink2 == true));
 
+            WaitForUserToContinueTheTest(hubStore, clientCert: adminCert);
+
             using (var s = hubStore.OpenAsyncSession())
             {
                 var common = await s.LoadAsync<Propagation>("common");
@@ -769,7 +770,376 @@ namespace SlowTests.Issues
             }
         }
 
-        
+        [Fact]
+        public async Task Sinks_should_not_update_hubs_change_vector2()
+        {
+            var certificates = SetupServerAuthentication();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+            using var sinkStore1 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "both",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                WithFiltering = true
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
+            {
+                Name = "Arava",
+                AllowedSinkToHubPaths = new[]
+                {
+                    "*",
+                },
+                AllowedHubToSinkPaths = new[]
+                {
+                    "*"
+                },
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+            }));
+
+            await SetupSink(sinkStore1);
+
+            EnsureReplicating(hubStore, sinkStore1);
+            EnsureReplicating(sinkStore1,hubStore);
+            
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                await s.StoreAsync(new Propagation
+                {
+                    FromHub = true
+                }, "common");
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument(sinkStore1, "common"));
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                var common = await s.LoadAsync<Propagation>("common");
+                common.FromSink1 = true;
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument<Propagation>(hubStore, "common", x => x.FromSink1 == true));
+
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                var common = await s.LoadAsync<Propagation>("common");
+                common.Completed = true;
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument<Propagation>(sinkStore1, "common", x => x.Completed == true));
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                s.TimeSeriesFor("common", "test").Append(DateTime.Today, 12);
+                await s.SaveChangesAsync();
+            }
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                s.CountersFor("common").Increment("test");
+                await s.SaveChangesAsync();
+            }
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                await using (var ms = new MemoryStream(new byte[]{1,2,3,4,5}))
+                {
+                    s.Advanced.Attachments.Store("common", "test", ms);
+                    await s.SaveChangesAsync();
+                }
+            }
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                var common = await s.LoadAsync<Propagation>("common");
+                common.FromSink2 = true;
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument<Propagation>(hubStore, "common", x => x.FromSink2 == true));
+
+
+            var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
+            var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
+
+            using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                Assert.Equal(1, hubGlobalCv.ToChangeVector().Length);
+            }
+
+            using (sink1Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                Assert.Equal(2, sink1GlobalCv.ToChangeVector().Length);
+            }
+
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                var common = await s.LoadAsync<Propagation>("common");
+                var cv = s.Advanced.GetChangeVectorFor(common);
+                var r = await s.Advanced.Revisions.GetForAsync<Propagation>("common");
+
+                Assert.Equal(2, cv.ToChangeVectorList().Count);
+                Assert.Contains("SINK", cv);
+                Assert.Equal(0, r.Count);
+            }
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                var common = await s.LoadAsync<Propagation>("common");
+                var cv = s.Advanced.GetChangeVectorFor(common);
+                var r = await s.Advanced.Revisions.GetForAsync<Propagation>("common");
+                Assert.Equal(2, cv.ToChangeVectorList().Count);
+                Assert.DoesNotContain("SINK", cv);
+                Assert.Equal(0, r.Count);
+            }
+
+            async Task SetupSink(DocumentStore sinkStore)
+            {
+                await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                }));
+                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+                {
+                    ConnectionStringName = hubStore.Database + "ConStr",
+                    Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                    CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                    HubName = "both",
+                    AllowedHubToSinkPaths = new[] {"*",},
+                    AllowedSinkToHubPaths = new[] {"*"}
+                }));
+            }
+        }
+
+        [Fact]
+        public async Task Sinks_should_not_update_hubs_change_vector3()
+        {
+            var certificates = SetupServerAuthentication();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+            using var sinkStore1 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+            using var sinkStore2 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            var fooCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+
+            var barCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate3Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "both",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                WithFiltering = true
+            }));
+
+            var access1 = new ReplicationHubAccess
+            {
+                Name = "both",
+                AllowedSinkToHubPaths = new[] {"foo"},
+                AllowedHubToSinkPaths = new[] {"foo"},
+                CertificateBase64 = Convert.ToBase64String(fooCert.Export(X509ContentType.Cert)),
+            };
+
+            var access2 = new ReplicationHubAccess
+            {
+                Name = "both",
+                AllowedSinkToHubPaths = new[] {"bar"},
+                AllowedHubToSinkPaths = new[] {"bar"},
+                CertificateBase64 = Convert.ToBase64String(barCert.Export(X509ContentType.Cert)),
+            };
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", access1));
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", access2));
+
+            await SetupSink(sinkStore1, access1, fooCert);
+            await SetupSink(sinkStore2, access2, barCert);
+
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                await s.StoreAsync(new Propagation
+                {
+                    FromHub = true
+                }, "foo");
+                await s.StoreAsync(new Propagation
+                {
+                    FromHub = true
+                }, "bar");
+                await s.SaveChangesAsync();
+            }
+
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                var baseline = DateTime.Today;
+                for (int i = 0; i < 150; i++)
+                {
+                    s.TimeSeriesFor("foo","test").Append(baseline.AddHours(i), 1);
+                    s.TimeSeriesFor("bar","test").Append(baseline.AddHours(i), 1);
+                }
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument(sinkStore1, "foo"));
+            Assert.True(WaitForDocument(sinkStore2, "bar"));
+
+            await sinkStore1.TimeSeries.SetPolicyAsync<Propagation>("By3Hours", TimeValue.FromHours(3), TimeValue.FromDays(3));
+            await sinkStore2.TimeSeries.SetPolicyAsync<Propagation>("By3Hours", TimeValue.FromHours(3), TimeValue.FromDays(3));
+
+            var hubDb = await GetDocumentDatabaseInstanceFor(hubStore);
+            var sink1Db = await GetDocumentDatabaseInstanceFor(sinkStore1);
+            var sink2Db = await GetDocumentDatabaseInstanceFor(sinkStore2);
+
+            await DoRollup(sink1Db);
+            await DoRollup(sink2Db);
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                var common = await s.LoadAsync<Propagation>("foo");
+                common.FromSink1 = true;
+                await s.SaveChangesAsync();
+            }
+
+            using (var s = sinkStore2.OpenAsyncSession())
+            {
+                var common = await s.LoadAsync<Propagation>("bar");
+                common.FromSink2 = true;
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument<Propagation>(hubStore, "foo", x => x.FromSink1 == true));
+            Assert.True(WaitForDocument<Propagation>(hubStore, "bar", x => x.FromSink2 == true));
+
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                var foo = await s.LoadAsync<Propagation>("foo");
+                foo.Completed = true;
+                var bar = await s.LoadAsync<Propagation>("bar");
+                bar.Completed = true;
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument<Propagation>(sinkStore2, "bar", x => x.Completed == true));
+            Assert.True(WaitForDocument<Propagation>(sinkStore1, "foo", x => x.Completed == true));
+
+            using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var hubGlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                Assert.Equal(1, hubGlobalCv.ToChangeVector().Length);
+            }
+
+            using (sink1Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var sink1GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                Assert.Equal(2, sink1GlobalCv.ToChangeVector().Length);
+            }
+
+            using (sink2Db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var sink2GlobalCv = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                Assert.Equal(2, sink2GlobalCv.ToChangeVector().Length);
+            }
+
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                await AssertOnHub(s, "foo");
+                await AssertOnHub(s, "bar");
+            }
+
+            using (var s = sinkStore1.OpenAsyncSession())
+            {
+                await AssertOnSink(s, "foo");
+            }
+
+            using (var s = sinkStore2.OpenAsyncSession())
+            {
+                await AssertOnSink(s, "bar");
+            }
+
+            async Task SetupSink(DocumentStore sinkStore, ReplicationHubAccess access, X509Certificate2 cert)
+            {
+                await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                {
+                    Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+                }));
+                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+                {
+                    ConnectionStringName = hubStore.Database + "ConStr",
+                    Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                    CertificateWithPrivateKey = Convert.ToBase64String(cert.Export(X509ContentType.Pfx)),
+                    HubName = access.Name,
+                    AllowedHubToSinkPaths = access.AllowedHubToSinkPaths,
+                    AllowedSinkToHubPaths = access.AllowedSinkToHubPaths
+                }));
+            }
+
+            async Task DoRollup(DocumentDatabase database)
+            {
+                await database.TimeSeriesPolicyRunner.HandleChanges();
+                await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+            }
+        }
+
+        private static async Task AssertOnSink(IAsyncDocumentSession s, string id)
+        {
+            var doc = await s.LoadAsync<Propagation>(id);
+            var cv = s.Advanced.GetChangeVectorFor(doc);
+            var r = await s.Advanced.Revisions.GetForAsync<Propagation>(id);
+            Assert.Equal(2, cv.ToChangeVectorList().Count);
+            Assert.DoesNotContain("SINK", cv);
+            Assert.Equal(0, r.Count);
+        }
+
+        private static async Task AssertOnHub(IAsyncDocumentSession s, string id)
+        {
+            var doc = await s.LoadAsync<Propagation>(id);
+            var cv = s.Advanced.GetChangeVectorFor(doc);
+            var r = await s.Advanced.Revisions.GetForAsync<Propagation>(id);
+
+            Assert.Equal(2, cv.ToChangeVectorList().Count);
+            Assert.Contains("SINK", cv);
+            Assert.Equal(0, r.Count);
+        }
+
         [Fact]
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts()
         {

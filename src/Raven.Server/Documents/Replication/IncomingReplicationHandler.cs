@@ -1369,6 +1369,9 @@ namespace Raven.Server.Documents.Replication
                             Etag = entry.Etag,
                             NodeTag = ChangeVectorExtensions.SinkTag
                         });
+
+                        context.DbIdsToIgnore ??= new HashSet<string>();
+                        context.DbIdsToIgnore.Add(entry.DbId);
                     }
                 }
 

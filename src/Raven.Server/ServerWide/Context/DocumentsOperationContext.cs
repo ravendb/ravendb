@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Sparrow.Threading;
 using Voron;
 
@@ -10,9 +11,32 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly DocumentDatabase _documentDatabase;
 
-        internal string LastDatabaseChangeVector;
+        internal string LastDatabaseChangeVector
+        {
+            get => _lastDatabaseChangeVector;
+            set
+            {
+                if (DbIdsToIgnore == null || DbIdsToIgnore.Count == 0 || string.IsNullOrEmpty(value))
+                {
+                    _lastDatabaseChangeVector = value;
+                    return;
+                }
+                
+                var list = value.ToChangeVectorList();
+                if (list.RemoveAll(x => DbIdsToIgnore.Contains(x.DbId)) > 0)
+                {
+                    _lastDatabaseChangeVector = list.SerializeVector();
+                    return;
+                }
+
+                _lastDatabaseChangeVector = value;
+            }
+        }
+
+        private string _lastDatabaseChangeVector;
         internal Dictionary<string, long> LastReplicationEtagFrom;
         private bool _skipChangeVectorValidation;
+        internal HashSet<string> DbIdsToIgnore;
 
         internal bool SkipChangeVectorValidation
         {
@@ -32,8 +56,9 @@ namespace Raven.Server.ServerWide.Context
             // tx. This can be an issue if we resort to context stealing from 
             // other threads, so we are going the safe route and ensuring that 
             // we always create a new instance
-            LastDatabaseChangeVector = null;
+            _lastDatabaseChangeVector = null;
             LastReplicationEtagFrom = null;
+            DbIdsToIgnore = null;
             _skipChangeVectorValidation = false;
         }
 
