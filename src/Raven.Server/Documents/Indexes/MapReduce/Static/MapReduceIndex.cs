@@ -107,21 +107,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                                 $"as this index is mapping all documents " +
                                                 $"and this will result in an infinite loop.");
 
-            switch (definition.SourceType)
+            foreach (var referencedCollection in index.ReferencedCollections)
             {
-                case IndexSourceType.Documents:
-                    foreach (var referencedCollection in index.ReferencedCollections)
-                    {
-                        foreach (var collectionName in referencedCollection.Value)
-                        {
-                            collections.Add(collectionName.Name);
-                        }
-                    }
-                    break;
-                case IndexSourceType.TimeSeries:
-                    break;
-                default:
-                    throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
+                foreach (var collectionName in referencedCollection.Value)
+                {
+                    collections.Add(collectionName.Name);
+                }
             }
 
             if (collections.Contains(outputReduceToCollection))
