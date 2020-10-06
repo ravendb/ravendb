@@ -13,7 +13,7 @@ class getServerWideBackupLocationCommand extends commandBase {
             getNodesInfo: true
         };
 
-        const url = endpoints.databases.ongoingTasks.adminBackupDataDirectory + this.urlEncodeArgs(args);
+        const url = endpoints.global.adminStudioServerWide.adminServerWideBackupDataDirectory + this.urlEncodeArgs(args);
 
         return this.query<Raven.Server.Web.Studio.DataDirectoryResult>(url, null)
             .fail((response: JQueryXHR) => this.reportError("Failed to calculate the full backup path", response.responseText, response.statusText));
