@@ -51,6 +51,7 @@ namespace Raven.Client.Http
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithoutCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
 
+        private static readonly GetStatisticsOperation BackwardCompatibilityFailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
         private static readonly DatabaseHealthCheckOperation FailureCheckOperation = new DatabaseHealthCheckOperation();
 
         private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
@@ -1732,9 +1733,18 @@ namespace Raven.Client.Http
             }
         }
 
-        protected virtual Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
+        protected virtual async Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
         {
-            return ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
+            try
+            {
+                await ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null,
+                    token: CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ClientVersionMismatchException)
+            {
+                await ExecuteAsync(serverNode, nodeIndex, context, BackwardCompatibilityFailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false,
+                    sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+            }
         }
 
         private static async Task<Exception> ReadExceptionFromServer(JsonOperationContext context, HttpRequestMessage request, HttpResponseMessage response, Exception e)

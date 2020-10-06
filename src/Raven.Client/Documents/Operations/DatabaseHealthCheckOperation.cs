@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class DatabaseHealthCheckOperation : IMaintenanceOperation
+    internal class DatabaseHealthCheckOperation : IMaintenanceOperation
     {
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations
         {
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/is-loaded";
+                url = $"{node.Url}/databases/{node.Database}/healthcheck";
                 return new HttpRequestMessage { Method = HttpMethod.Get };
             }
         }
