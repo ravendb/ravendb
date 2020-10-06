@@ -51,7 +51,13 @@ namespace Raven.Server.Documents.Handlers
 
             return Task.CompletedTask;
         }
-
+        
+        [RavenAction("/databases/*/is-loaded", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        public Task IsLoaded()
+        {
+            return Task.CompletedTask;
+        }
+        
         private void FillDatabaseStatistics(DatabaseStatistics stats, DocumentsOperationContext context)
         {
             using (context.OpenReadTransaction())
