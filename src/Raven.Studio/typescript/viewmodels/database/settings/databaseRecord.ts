@@ -150,7 +150,9 @@ class databaseRecord extends viewModelBase {
         this.confirm()
             .then(result => {
                 if (result.can) {
-                    const dto = JSON.parse(this.documentText());
+                    let dto = JSON.parse(this.documentText());
+                    dto = this.handleNestedSettings(dto);
+                    
                     new saveDatabaseSettingsCommand(this.activeDatabase(), dto, dto.Etag)
                         .execute()
                         .done(() => {
@@ -159,6 +161,39 @@ class databaseRecord extends viewModelBase {
                         });
                 }
             });
+    }
+    
+    private handleNestedSettings(dto: any) {
+        const settings = dto.Settings;
+        
+        if (!settings) {
+            return dto;
+        }
+        
+        const settingsKeys = Object.keys(settings);
+        if (settingsKeys.length === 0) {
+            return dto;
+        }
+
+        let flattenedSettings = {};
+        
+        for (const settingsKey in settings) {
+            const settingsValue = settings[settingsKey];
+
+            if (typeof settingsValue === "object") {
+                // flatten the inner object
+                for (const innerKey in settingsValue) {
+                    const innerValue = settingsValue[innerKey];
+                    (<any>flattenedSettings)[`${settingsKey}.${innerKey}`] = innerValue;
+                }
+            } else {
+                // value is not a json object, just use original value
+                (<any>flattenedSettings)[settingsKey] = settingsValue;
+            }
+        }
+        
+        dto.Settings = flattenedSettings;
+        return dto;
     }
 
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
