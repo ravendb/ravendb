@@ -1677,7 +1677,7 @@ select out()
             }
         }
 
-        internal static async Task VerifyFullPolicyExecution(DocumentStore store, TimeSeriesCollectionConfiguration configuration)
+        internal static async Task VerifyFullPolicyExecution(DocumentStore store, TimeSeriesCollectionConfiguration configuration, string rawName = "Heartrate")
         {
             var raw = configuration.RawPolicy;
             configuration.ValidateAndInitialize();
@@ -1686,7 +1686,7 @@ select out()
             {
                 using (var session = store.OpenSession())
                 {
-                    var ts = session.TimeSeriesFor("users/karmel", "Heartrate")
+                    var ts = session.TimeSeriesFor("users/karmel", rawName)
                         .Get(DateTime.MinValue, DateTime.MaxValue)?
                         .Where(entry => entry.IsRollup == false)
                         .ToList();
@@ -1697,7 +1697,7 @@ select out()
 
                     foreach (var policy in configuration.Policies)
                     {
-                        ts = session.TimeSeriesFor("users/karmel", policy.GetTimeSeriesName("Heartrate"))
+                        ts = session.TimeSeriesFor("users/karmel", policy.GetTimeSeriesName(rawName))
                             .Get()?
                             .ToList();
 
