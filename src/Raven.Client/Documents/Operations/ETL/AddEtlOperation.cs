@@ -22,18 +22,16 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public RavenCommand<AddEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new AddEtlCommand(conventions, _configuration);
+            return new AddEtlCommand(_configuration);
         }
 
         private class AddEtlCommand : RavenCommand<AddEtlOperationResult>, IRaftCommand
         {
-            private readonly DocumentConventions _conventions;
             private readonly EtlConfiguration<T> _configuration;
 
-            public AddEtlCommand(DocumentConventions conventions, EtlConfiguration<T> configuration)
+            public AddEtlCommand(EtlConfiguration<T> configuration)
             {
-                _conventions = conventions;
-                _configuration = configuration;
+                _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration)); ;
             }
 
             public override bool IsReadRequest => false;

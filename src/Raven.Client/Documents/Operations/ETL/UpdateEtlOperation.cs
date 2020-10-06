@@ -24,20 +24,18 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public RavenCommand<UpdateEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdateEtlCommand(conventions, _taskId, _configuration);
+            return new UpdateEtlCommand(_taskId, _configuration);
         }
 
         private class UpdateEtlCommand : RavenCommand<UpdateEtlOperationResult>, IRaftCommand
         {
-            private readonly DocumentConventions _conventions;
             private readonly long _taskId;
             private readonly EtlConfiguration<T> _configuration;
 
-            public UpdateEtlCommand(DocumentConventions conventions, long taskId, EtlConfiguration<T> configuration)
+            public UpdateEtlCommand(long taskId, EtlConfiguration<T> configuration)
             {
-                _conventions = conventions;
                 _taskId = taskId;
-                _configuration = configuration;
+                _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
             public override bool IsReadRequest => false;

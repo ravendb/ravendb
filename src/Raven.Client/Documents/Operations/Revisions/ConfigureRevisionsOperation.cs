@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations.Revisions
 
             public ConfigureRevisionsCommand(RevisionsConfiguration configuration)
             {
-                _configuration = configuration;
+                _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
             public override bool IsReadRequest => false;

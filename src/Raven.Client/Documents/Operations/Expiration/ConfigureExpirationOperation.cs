@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations.Expiration
 
             public ConfigureExpirationCommand(ExpirationConfiguration configuration)
             {
-                _configuration = configuration;
+                _configuration = configuration  ?? throw new ArgumentNullException(nameof(configuration));
             }
 
             public override bool IsReadRequest => false;

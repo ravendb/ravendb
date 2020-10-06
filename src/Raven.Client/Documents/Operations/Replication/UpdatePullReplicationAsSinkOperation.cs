@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
             public UpdatePullEdgeReplication(PullReplicationAsSink pullReplication)
             {
-                _pullReplication = pullReplication;
+                _pullReplication = pullReplication ?? throw new ArgumentNullException(nameof(pullReplication));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
