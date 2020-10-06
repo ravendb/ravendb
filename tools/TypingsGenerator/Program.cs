@@ -420,6 +420,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideExternalReplicationTask));
             scripter.AddType(typeof(ServerWideBackupConfiguration));
             scripter.AddType(typeof(PutServerWideBackupConfigurationResponse));
+            scripter.AddType(typeof(ServerWideTasksResult<>));
 
             // certificates
             scripter.AddType(typeof(CertificateDefinition));

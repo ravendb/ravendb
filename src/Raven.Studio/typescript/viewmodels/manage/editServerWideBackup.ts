@@ -38,29 +38,29 @@ class editServerWideBackup extends viewModelBase {
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
 
-            if (args && args.taskName) { 
-                // 1 Editing an existing task
+            if (args && args.taskName) {
+                // 1. Editing an existing task
                 this.isAddingNewBackupTask(false);
                
                 new getServerWideBackupCommand(args.taskName)
                     .execute()
-                    .done((backupsList: Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration[]) => {
-                        if (backupsList.length) {
-                            const backupTask = backupsList[0];
+                    .done((result: Raven.Server.Web.System.ServerWideTasksResult<Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration>) => {
+                        if (result.Results.length) {
+                            const backupTask = result.Results[0];
                             if (this.serverConfiguration().LocalRootPath && backupTask.LocalSettings.FolderPath && backupTask.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
                                 backupTask.LocalSettings.FolderPath = backupTask.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                             }
 
-                            this.configuration(new serverWideBackupConfiguration(dbName, backupTask, this.serverConfiguration(), false, true)); 
+                            this.configuration(new serverWideBackupConfiguration(dbName, backupTask, this.serverConfiguration(), false, true));
                             deferred.resolve();
                         } else {
                             deferred.reject();
                             router.navigate(appUrl.forServerWideBackupList());
                         }
                     })
-                   .fail(() => {
-                         deferred.reject();
-                         router.navigate(appUrl.forServerWideBackupList()); 
+                    .fail(() => {
+                        deferred.reject();
+                        router.navigate(appUrl.forServerWideBackupList());
                     });
             
             } else {
