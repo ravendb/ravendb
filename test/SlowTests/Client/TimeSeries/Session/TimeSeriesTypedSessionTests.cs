@@ -784,6 +784,8 @@ select out()
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
 
+                await QueryFromMultipleTimeSeries.VerifyFullPolicyExecution(store, config.Collections["Users"], rawName: "StockPrices");
+
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<User>()
