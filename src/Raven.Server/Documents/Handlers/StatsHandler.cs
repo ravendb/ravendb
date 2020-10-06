@@ -52,9 +52,10 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
         
-        [RavenAction("/databases/*/is-loaded", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task IsLoaded()
+        [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser)]
+        public Task DatabaseHealthCheck()
         {
+            NoContentStatus();
             return Task.CompletedTask;
         }
         
