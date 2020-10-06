@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -20,8 +21,8 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public MultiGetCommand(HttpCache cache, List<GetRequest> commands)
         {
-            _cache = cache;
-            _commands = commands;
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             ResponseType = RavenCommandResponseType.Raw;
         }
 

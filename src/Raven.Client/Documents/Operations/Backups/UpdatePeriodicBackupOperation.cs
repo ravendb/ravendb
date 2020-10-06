@@ -21,18 +21,16 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public RavenCommand<UpdatePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdatePeriodicBackupCommand(conventions, _configuration);
+            return new UpdatePeriodicBackupCommand(_configuration);
         }
 
         private class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>, IRaftCommand
         {
-            private readonly DocumentConventions _conventions;
             private readonly PeriodicBackupConfiguration _configuration;
 
-            public UpdatePeriodicBackupCommand(DocumentConventions conventions, PeriodicBackupConfiguration configuration)
+            public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration)
             {
-                _conventions = conventions;
-                _configuration = configuration;
+                _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
             public override bool IsReadRequest => false;

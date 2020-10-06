@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -27,6 +28,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
 
             public StartTransactionsRecordingCommand(string filePath)
             {
+                EnsureIsNotNullOrEmpty(filePath, nameof(filePath));
                 _filePath = filePath;
             }
 

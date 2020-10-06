@@ -29,7 +29,7 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand<OperationIdResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new RestoreBackupCommand(conventions, _restoreConfiguration, NodeTag);
+            return new RestoreBackupCommand(_restoreConfiguration, NodeTag);
         }
 
         private class RestoreBackupCommand : RavenCommand<OperationIdResult>
@@ -37,9 +37,9 @@ namespace Raven.Client.ServerWide.Operations
             public override bool IsReadRequest => false;
             private readonly RestoreBackupConfigurationBase _restoreConfiguration;
 
-            public RestoreBackupCommand(DocumentConventions conventions, RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
+            public RestoreBackupCommand(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
             {
-                _restoreConfiguration = restoreConfiguration;
+                _restoreConfiguration = restoreConfiguration ?? throw new ArgumentNullException(nameof(restoreConfiguration));
                 SelectedNodeTag = nodeTag;
             }
 
