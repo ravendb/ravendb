@@ -124,8 +124,8 @@ namespace Raven.Server.Documents.TimeSeries
             tx.CreateTree(TimeSeriesKeysSlice);
             tx.CreateTree(DeletedRangesKey);
 
-            Stats = new TimeSeriesStats(tx);
-            Rollups = new TimeSeriesRollups(documentDatabase.Name);
+            Stats = new TimeSeriesStats(this, tx);
+            Rollups = new TimeSeriesRollups(_documentDatabase);
             _logger = LoggingSource.Instance.GetLogger<TimeSeriesStorage>(documentDatabase.Name);
         }
 
@@ -1444,7 +1444,10 @@ namespace Raven.Server.Documents.TimeSeries
                                     // we need to append the rest of the open segment and only then we can re-append this value.
                                     timeSeriesSegment.AddNewValue(currentTime, updatedValues, currentTag.AsSpan(), ref splitSegment, localStatus);
                                     while (enumerator.MoveNext(out currentTimestamp, currentValues, state, ref currentTag, out localStatus))
-                                        timeSeriesSegment.AddNewValue(currentTime, updatedValues, currentTag.AsSpan(), ref splitSegment, localStatus);
+                                    {
+                                        currentTime = originalBaseline.AddMilliseconds(currentTimestamp);
+                                        timeSeriesSegment.AddNewValue(currentTime, currentValues, currentTag.AsSpan(), ref splitSegment, localStatus);
+                                    }
 
                                     timeSeriesSegment.AppendExistingSegment(splitSegment);
                                     return true;
@@ -1976,13 +1979,13 @@ namespace Raven.Server.Documents.TimeSeries
             return fst.NumberOfEntries;
         }
 
-        private static void AssertNoNanValue(SingleResult toAppend)
+        public static void AssertNoNanValue(SingleResult toAppend)
         {
             foreach (var val in toAppend.Values.Span)
             {
                 if (double.IsNaN(val))
-                    throw new InvalidOperationException("Failed to append TimeSeries entry. TimeSeries entries cannot have 'double.NaN' as one of their values. " +
-                                                        $"Failed on Timestamp : '{toAppend.Timestamp.GetDefaultRavenFormat()}', Values : [{string.Join(',', toAppend.Values.ToArray())}]. ");
+                    throw new NanValueException("Failed to append TimeSeries entry. TimeSeries entries cannot have 'double.NaN' as one of their values. " +
+                                                $"Failed on Timestamp : '{toAppend.Timestamp.GetDefaultRavenFormat()}', Values : [{string.Join(',', toAppend.Values.ToArray())}]. ");
             }
         }
 
@@ -2161,6 +2164,21 @@ namespace Raven.Server.Documents.TimeSeries
             TransactionMarker = 4,
             From = 5,
             To = 6,
+        }
+    }
+
+    public class NanValueException : Exception
+    {
+        public NanValueException()
+        {
+        }
+
+        public NanValueException(string message) : base(message)
+        {
+        }
+
+        public NanValueException(string message, Exception innerException) : base(message, innerException)
+        {
         }
     }
 }

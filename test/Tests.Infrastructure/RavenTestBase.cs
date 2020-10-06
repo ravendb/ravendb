@@ -1236,6 +1236,21 @@ namespace FastTests
             }
         }
 
+        public static async Task WaitForPolicyRunner(DocumentDatabase database)
+        {
+            var loops = 10;
+            await database.TimeSeriesPolicyRunner.HandleChanges();
+            for (int i = 0; i < loops; i++)
+            {
+                var rolled = await database.TimeSeriesPolicyRunner.RunRollups();
+                await database.TimeSeriesPolicyRunner.DoRetention();
+                if (rolled == 0)
+                    return;
+            }
+
+            Assert.True(false, $"We still have pending rollups left.");
+        }
+
         protected void CreateSimpleData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
@@ -1484,11 +1499,12 @@ namespace FastTests
             }
         }
 
-        protected void WriteDocDirectlyFromStorageToTestOutput(string storeDatabase, string docId)
+        protected void WriteDocDirectlyFromStorageToTestOutput(string storeDatabase, string docId, [CallerMemberName] string caller = null)
         {
-            WriteDocDirectlyFromStorageToTestOutputAsync(storeDatabase, docId).GetAwaiter().GetResult();
+            AsyncHelpers.RunSync(() => WriteDocDirectlyFromStorageToTestOutputAsync(storeDatabase, docId));
         }
-        protected async Task WriteDocDirectlyFromStorageToTestOutputAsync(string storeDatabase, string docId)
+
+        protected async Task WriteDocDirectlyFromStorageToTestOutputAsync(string storeDatabase, string docId, [CallerMemberName] string caller = null)
         {
             //This function is only to investigate RavenDB-15366 issue
 
@@ -1497,7 +1513,13 @@ namespace FastTests
             using (context.OpenReadTransaction())
             {
                 var doc = db.DocumentsStorage.Get(context, docId);
-                Output?.WriteLine(doc.Data.ToString());
+
+                var sb = new StringBuilder();
+                sb.AppendLine($"Test: '{caller}'. Document: '{docId}'. Data:");
+                sb.AppendLine(doc.Data.ToString());
+
+                Output?.WriteLine(sb.ToString());
+                Console.WriteLine(sb.ToString());
             }
         }
     }

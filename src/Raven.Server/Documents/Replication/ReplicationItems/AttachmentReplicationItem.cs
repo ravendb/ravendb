@@ -110,18 +110,26 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         protected override ReplicationBatchItem CloneInternal(JsonOperationContext context)
         {
+            MemoryStream stream = null;
+            if (Stream != null)
+            {
+                stream = new MemoryStream();
+                Stream.CopyTo(stream);
+
+                stream.Position = 0;
+                Stream.Position = 0;
+            }
+
             var item = new AttachmentReplicationItem
             {
                 Base64Hash = Base64Hash,
                 ContentType = ContentType,
                 Name = Name,
                 Key = Key,
-                Stream = Stream
+                Stream = stream
             };
 
-            Stream?.SetLength(0);
             return item;
-
         }
 
         public unsafe void ReadStream(DocumentsOperationContext context, StreamsTempFile attachmentStreamsTempFile)

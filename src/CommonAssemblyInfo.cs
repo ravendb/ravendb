@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Diagnostics;
+using System.Reflection;
 using System.Resources;
 
 [assembly: AssemblyCopyright("© Hibernating Rhinos 2009 - 2020 All rights reserved.")]
@@ -9,6 +11,7 @@ using System.Resources;
 
 #if DEBUG
 [assembly: AssemblyConfiguration("Debug")]
+[assembly: DebuggerDisplay("{ToString(\"O\")}", Target = typeof(DateTime))]
 #else
 [assembly: AssemblyConfiguration("Release")]
 #endif

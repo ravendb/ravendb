@@ -791,10 +791,8 @@ select out()
                 };
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-
+                await WaitForPolicyRunner(database);
+                WaitForUserToContinueTheTest(store);
                 await VerifyFullPolicyExecution(store, config.Collections["Users"]);
 
                 var raw = GetSum(store, now);
@@ -802,10 +800,8 @@ select out()
 
                 config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromDays(5));
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                
-                await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
+
+                await WaitForPolicyRunner(database);
                 await VerifyFullPolicyExecution(store, config.Collections["Users"]);
 
                 var rawAndRoll = GetSum(store, now);
@@ -1553,10 +1549,7 @@ select out()
                 };
 
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
-                await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
-                WaitForUserToContinueTheTest(store);
+                await WaitForPolicyRunner(database);
                 await VerifyFullPolicyExecution(store, config.Collections["Users"]);
                 var raw = GetSum(store, now);
                 Assert.Equal(noPolicy, raw);
@@ -1564,9 +1557,7 @@ select out()
                 config.Collections["Users"].RawPolicy = new RawTimeSeriesPolicy(TimeValue.FromDays(5));
                 await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
                 
-                await database.TimeSeriesPolicyRunner.HandleChanges();
-                await database.TimeSeriesPolicyRunner.RunRollups();
-                await database.TimeSeriesPolicyRunner.DoRetention();
+                await WaitForPolicyRunner(database);
                 await VerifyFullPolicyExecution(store, config.Collections["Users"]);
 
                 var rawAndRoll = GetSum(store, now);

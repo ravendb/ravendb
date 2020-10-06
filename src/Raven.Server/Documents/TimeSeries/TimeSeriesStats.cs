@@ -15,6 +15,7 @@ namespace Raven.Server.Documents.TimeSeries
 {
     public class TimeSeriesStats
     {
+        private readonly TimeSeriesStorage _timeSeriesStorage;
         private static readonly Slice RawPolicySlice;
         private static readonly Slice TimeSeriesStatsKey;
         private static readonly Slice PolicyIndex;
@@ -64,8 +65,9 @@ namespace Raven.Server.Documents.TimeSeries
             });
         }
 
-        public TimeSeriesStats(Transaction tx)
+        public TimeSeriesStats(TimeSeriesStorage timeSeriesStorage, Transaction tx)
         {
+            _timeSeriesStorage = timeSeriesStorage;
             tx.CreateTree(TimeSeriesStatsKey);
         }
 
@@ -169,7 +171,6 @@ namespace Raven.Server.Documents.TimeSeries
             context.DocumentDatabase.Metrics.TimeSeries.PutsPerSec.MarkSingleThreaded(modifiedEntries);
             context.DocumentDatabase.Metrics.TimeSeries.BytesPutsPerSec.MarkSingleThreaded(segment.NumberOfBytes);
 
-            var tss = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage;
             var table = GetOrCreateTable(context.Transaction.InnerTransaction, collection);
 
             using (ReadStats(context, table, slicer, out previousCount, out start, out end, out var name))
@@ -213,7 +214,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
                 else
                 {
-                    var reader = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
+                    var reader = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
                     var last = reader.Last();
                
                     var lastValueInCurrentSegment = reader.ReadBaselineAsDateTime() == baseline;
@@ -236,14 +237,18 @@ namespace Raven.Server.Documents.TimeSeries
                 if (previousCount == 0)
                     return false; // if current and previous are zero it means that this time-series was completely deleted
 
+                var readerOfFirstValue = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, DateTime.MinValue, DateTime.MaxValue);
+                readerOfFirstValue.First();
+                var firstValueInCurrentSegment = readerOfFirstValue.ReadBaselineAsDateTime() == baseline;
+
                 var last = segment.GetLastTimestamp(baseline);
-                if (baseline <= start && last >= start)
+                if (baseline <= start && last >= start || firstValueInCurrentSegment)
                 {
                     // start was removed, need to find the next start
 
                     // this segment isn't relevant, so let's get the next one
-                    var next = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue).NextSegmentBaseline();
-                    var reader = tss.GetReader(context, slicer.DocId, slicer.Name, next, DateTime.MaxValue);
+                    var next = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue).NextSegmentBaseline();
+                    var reader = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, next, DateTime.MaxValue);
 
                     var first = reader.First();
                     if (first == default)
@@ -252,14 +257,14 @@ namespace Raven.Server.Documents.TimeSeries
                     start = first.Timestamp;
                 }
 
-                var readerOfLastValue = tss.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
+                var readerOfLastValue = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, start, DateTime.MaxValue);
                 readerOfLastValue.Last();
 
                 var lastValueInCurrentSegment = readerOfLastValue.ReadBaselineAsDateTime() == baseline;
 
                 if (baseline <= end && end <= last || lastValueInCurrentSegment)
                 {
-                    var lastEntry = tss.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).Last();
+                    var lastEntry = _timeSeriesStorage.GetReader(context, slicer.DocId, slicer.Name, start, baseline.AddMilliseconds(-1)).Last();
                     if (lastEntry == default)
                         return false;
 
