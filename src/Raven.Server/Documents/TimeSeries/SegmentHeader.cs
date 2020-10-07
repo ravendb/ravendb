@@ -26,6 +26,7 @@ namespace Raven.Server.Documents.TimeSeries
     public enum SegmentVersion : byte
     {
         V50000 = 0,
-        V50001 = 1
+        V50001 = 1,
+        Current = V50001
     }
 }
