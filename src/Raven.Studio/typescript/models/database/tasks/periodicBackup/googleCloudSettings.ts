@@ -10,7 +10,7 @@ class googleCloudSettings extends backupSettings {
         super(dto, "GoogleCloud");
 
         this.bucket(dto.BucketName);
-        this.remoteFolderName(dto.RemoteFolderName);
+        this.remoteFolderName(dto.RemoteFolderName || "");
         this.googleCredentialsJson(dto.GoogleCredentialsJson);
 
         this.initValidation();

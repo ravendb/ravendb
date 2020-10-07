@@ -21,7 +21,7 @@ class ftpSettings extends backupSettings {
     constructor(dto: Raven.Client.Documents.Operations.Backups.FtpSettings) {
         super(dto, "FTP");
 
-        this.url(dto.Url);
+        this.url(dto.Url || "");
         this.port(dto.Port);
         this.userName(dto.UserName);
         this.password(dto.Password);
