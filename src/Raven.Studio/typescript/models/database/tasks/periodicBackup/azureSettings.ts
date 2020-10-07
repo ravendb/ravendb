@@ -12,7 +12,7 @@ class azureSettings extends backupSettings {
         super(dto, "Azure");
 
         this.storageContainer(dto.StorageContainer);
-        this.remoteFolderName(dto.RemoteFolderName);
+        this.remoteFolderName(dto.RemoteFolderName || "");
         this.accountName(dto.AccountName);
         this.accountKey(dto.AccountKey);
         this.sasToken(dto.SasToken);

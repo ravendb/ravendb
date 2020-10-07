@@ -51,7 +51,7 @@ abstract class amazonSettings extends backupSettings {
         this.awsAccessKey(dto.AwsAccessKey);
         this.awsSecretKey(dto.AwsSecretKey);
         this.awsRegionName(dto.AwsRegionName);
-        this.remoteFolderName(dto.RemoteFolderName);
+        this.remoteFolderName(dto.RemoteFolderName || "");
 
         const lowerCaseRegionName = !dto.AwsRegionName ? "" : dto.AwsRegionName.toLowerCase();
         const region = this.availableAwsRegionEndpoints.find(x => x.value === lowerCaseRegionName);
