@@ -18,6 +18,14 @@ namespace Raven.Server.Documents.TimeSeries
         [FieldOffset(13)]
         public byte NumberOfValues;
         [FieldOffset(14)]
-        public fixed byte Reserved[2];
+        public SegmentVersion Version;
+        [FieldOffset(15)]
+        public fixed byte Reserved[1];
+    }
+
+    public enum SegmentVersion : byte
+    {
+        V50000 = 0,
+        V50001 = 1
     }
 }
