@@ -53,6 +53,8 @@ namespace Raven.Client.Http
 
         private static readonly GetStatisticsOperation BackwardCompatibilityFailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
         private static readonly DatabaseHealthCheckOperation FailureCheckOperation = new DatabaseHealthCheckOperation();
+        private ConcurrentSet<string> _useOldFHealthCheck;
+        
 
         private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
@@ -1737,13 +1739,27 @@ namespace Raven.Client.Http
         {
             try
             {
-                await ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null,
-                    token: CancellationToken.None).ConfigureAwait(false);
+                if (_useOldFHealthCheck == null || _useOldFHealthCheck.Contains(serverNode.Url) == false)
+                {
+                    await ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null,
+                        token: CancellationToken.None).ConfigureAwait(false);
+                }
+                else
+                {
+                    await ExecuteOldHealthCheck().ConfigureAwait(false);
+                }
             }
-            catch (ClientVersionMismatchException)
+            catch (ClientVersionMismatchException e) when (e.Message.Contains("RouteNotFoundException")) 
             {
-                await ExecuteAsync(serverNode, nodeIndex, context, BackwardCompatibilityFailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false,
-                    sessionInfo: null, token: CancellationToken.None).ConfigureAwait(false);
+                _useOldFHealthCheck ??= new ConcurrentSet<string>();
+                _useOldFHealthCheck.Add(serverNode.Url);
+                await ExecuteOldHealthCheck().ConfigureAwait(false);
+            }
+
+            Task ExecuteOldHealthCheck()
+            {
+                return ExecuteAsync(serverNode, nodeIndex, context, BackwardCompatibilityFailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false,
+                    sessionInfo: null, token: CancellationToken.None);
             }
         }
 
