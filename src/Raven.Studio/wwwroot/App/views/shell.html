@@ -1,4 +1,4 @@
-<div class="layout-container" data-bind="css: { 'collapse-menu': collapseMenu(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications() }">
+<div class="layout-container" data-bind="css: { 'collapse-menu': collapseMenu() || smallScreen(), 'pin-notifications': notificationCenter.pinNotifications(), 'show-notifications': notificationCenter.showNotifications(), 'show-search': searchBox.showSearchSmallScreen() }">
     <div class="browser-alert" data-bind="visible: browserAlert">
         <div class="browser-message">
             <i class="icon-unsupported-browser icon-xl"></i>
@@ -29,14 +29,14 @@
     </aside>
     <nav class="navbar">
         <div class="navbar-header">
-            <a class="navbar-brand hidden-xs" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
+            <a class="navbar-brand" data-bind="attr: { href: appUrls.serverDashboard }"><i class="icon-logo"></i></a>
         </div>
         <div id="navbar">
             <div class="server-environment" data-bind="if: serverEnvironment, visible: serverEnvironment">
                 <small class="on-base-background">Server environment</small>
                 <div><strong data-bind="text: serverEnvironment, attr: { class: 'text-uppercase ' + serverEnvironmentClass() }"></strong></div>
             </div>
-            <div class="inputs-container hidden-xs hidden-sm">
+            <div class="inputs-container">
                 <div class="database-switcher-container" data-bind="with: databaseSwitcher">
                     <div class="form-control btn-toggle database-switcher">
                         <span class="database on-base-background" data-bind="text: $root.activeDatabase() ? $root.activeDatabase().name:''"></span>
@@ -161,21 +161,24 @@
                 </div>
             </div>
             <ul class="nav navbar-nav navbar-right">
+                <li data-bind="visible: $root.activeDatabase">
+                    <a href="#" class="visible-xs-inline-block visible-sm-inline-block" data-bind="{ click: $root.searchBox.showSearchSmallScreen.toggle.bind($root.searchBox.showSearchSmallScreen), css: { 'active': $root.searchBox.showSearchSmallScreen() } }">
+                        <span class="icon-search "></span>
+                    </a>
+                </li>
                 <li>
                     <a href="#" title="Change theme" class="theme-change" data-bind="click: $data.constructor.chooseTheme">
                         <i class="icon-theme"></i>
                     </a>
                 </li>
                 <li><a href="#" title="Send feedback" class="feedback-link" data-bind="click: $data.constructor.openFeedbackForm"><i class="icon-feedback"></i></a></li>
-                <li><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help" style="display:none"></a></li>
-                <li><a href="#" class="icon-search btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target=".inputs-container" data-class="show-inputs"></a></li>
+                <li style="display:none"><a target="_blank" title="Help" data-bind="attr: { href: currentHelpLink }" class="icon-help"></a></li>
                 <li data-bind="with: notificationCenter">
                     <a title="Notifications center" href="#" id="notification-toggle" class="btn-toggle" data-bind="{ click: showNotifications.toggle.bind(showNotifications), css: { 'active': showNotifications() } }">
                         <span class="icon-notifications"></span>
                         <span class="notification-counter show" data-bind="text: totalItemsCount(), attr: { 'data-count': totalItemsCount() }, css: { 'show': alertCountAnimation() }"></span>
                     </a>
                 </li>
-                <li><a href="#" class="icon-menu btn-toggle visible-xs-inline-block visible-sm-inline-block" data-target="#main-menu" data-class="show-menu"></a></li>
             </ul>
         </div><!--/.nav-collapse -->
     </nav>

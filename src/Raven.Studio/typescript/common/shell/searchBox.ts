@@ -13,6 +13,7 @@ import router = require("plugins/router");
 class searchBox {
 
     searchQuery = ko.observable<string>();
+    showSearchSmallScreen = ko.observable<boolean>(false);
 
     recentDocumentsList = ko.pureComputed(() => {
         const currentDb = activeDatabaseTracker.default.database();

@@ -1,28 +1,18 @@
-#databaseItem {
-    .name {
-        display: flex;
-        width: 270px;
-
-        i {
-            margin-right: @gutter/4;
-        }
-
-        a, span {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-    }
-
+.database-item {
     .member {
+        display: flex;
+        flex-wrap: wrap;
+
         a {
             color: @text-color;
             margin: 0 @gutter/4;
+            white-space: nowrap;
 
             &:hover {
                 color: @text-emphasis;
             }
         }
+
         div {
             margin: 0 @gutter/4;
         }
@@ -50,7 +40,7 @@
         }
 
         .backup {
-            min-width: @gutter*4;
+            min-width: @gutter*5;
         }
 
         .encryption, .storage, .documents, .indexes, .uptime, .backup, .indexing-errors, .indexing-paused, .indexing-disabled, .alerts, .performance-hints, .clients-rejection {
@@ -68,9 +58,14 @@
             }
         }
 
-        .database-properties {
+        .database-properties, .database-properties-right {
             display: flex;
             flex-wrap: wrap;
+            flex-grow: 1;
+        }
+
+        .database-properties-right {
+            justify-content: flex-end;
         }
     }
 }
@@ -87,20 +82,36 @@
         cursor: default;
     }
 
-    .databasesToolbar-toggleCompactView {
-        display: inline-block;
-        margin-left: 10px;
-    }
+    .databasesToolbar {
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: row-reverse;
+        margin: -@gutter-sm/2;
 
-    .databasesToolbar-actions {
-        display: inline-block;
-        margin-left: @grid-gutter-width / 2;
-    }
+        .databasesToolbar-filter {
+            display: flex;
+        }
 
-    .databasesToolbar-typeSelector {
-        .btn {
-            .badge {
-                margin-left: 5px;
+        .databasesToolbar-filter, .databasesToolbar-actions {
+            padding: @gutter-sm/2;
+            flex-grow: 1;
+        }
+
+        .databasesToolbar-toggleCompactView {
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        .databasesToolbar-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .databasesToolbar-typeSelector {
+            .btn {
+                .badge {
+                    margin-left: 5px;
+                }
             }
         }
     }
@@ -152,24 +163,58 @@
             }
         }
 
-        .info-container {
-            font-size: 19px;
+        .database-header {
             display: flex;
+            flex-wrap: wrap;
+            margin: -@gutter-sm/2;
 
-            .checkbox {
-                top: -3px;
-                flex-shrink: 0;
+            .info-container, .actions-container {
+                padding: @gutter-sm/2;
             }
 
-            .label {
-                font-size: 11px;
-                margin-right: @grid-gutter-width/2;
-                flex-shrink: 0;
-            }
-        }
+            .info-container {
+                font-size: 19px;
+                display: flex;
+                flex-grow: 1;
 
-        .actions-container {
-            flex-shrink: 0;
+                .checkbox {
+                    top: -3px;
+                    flex-shrink: 0;
+                }
+
+                .label {
+                    font-size: 11px;
+                    margin-right: @grid-gutter-width/2;
+                    flex-shrink: 0;
+                }
+
+                .name {
+                    display: flex;
+                    flex-grow: 1;
+
+                    @media(min-width: @screen-md) {
+                        width: 270px;
+                        flex-grow: 0;
+                    }
+
+                    i {
+                        margin-right: @gutter/4;
+                    }
+
+                    a, span {
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+                }
+            }
+
+            .actions-container {
+                flex-shrink: 0;
+                flex-grow: 1;
+                display: flex;
+                justify-content: flex-end;
+            }
         }
 
         .addons-container {
