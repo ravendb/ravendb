@@ -1215,7 +1215,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                             if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current))
                             {
-                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, out var newValueFetched))
+                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
                                     break;
 
                                 if (newValueFetched)
@@ -1302,16 +1302,15 @@ namespace Raven.Server.Documents.TimeSeries
             return segmentNumberOfValues == current.Values.Length;
         }
 
-        private bool TryAppendToCurrentSegment(
-            DocumentsOperationContext context,
+        private bool TryAppendToCurrentSegment(DocumentsOperationContext context,
             TimeSeriesSegmentHolder segmentHolder,
             IEnumerator<SingleResult> appendEnumerator,
+            SingleResult current,
             out bool newValueFetched)
         {
             var segment = segmentHolder.ReadOnlySegment;
             var slicer = segmentHolder.SliceHolder;
 
-            var current = appendEnumerator.Current;
             var lastTimestamp = segment.GetLastTimestamp(segmentHolder.BaselineDate);
             var nextSegmentBaseline = BaselineOfNextSegment(segmentHolder, current.Timestamp) ?? DateTime.MaxValue;
 
