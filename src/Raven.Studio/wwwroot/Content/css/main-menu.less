@@ -7,19 +7,6 @@
     flex-direction: column;
     width: var(--menu-width, @menu-width);
     border-right: 1px solid @layout-border;
-    // MOBILE
-    @media (max-width:@screen-sm-max) {
-        -webkit-transform: translateX(-100%);
-        transform: translateX(-100%);
-        z-index: @zindex-menu-xs;
-        background-color: @gray-base;
-        position: fixed;
-
-        &.show-menu {
-            -webkit-transform: translateX(0%);
-            transform: translateX(0%);
-        }
-    }
 
     a {
         cursor: pointer;

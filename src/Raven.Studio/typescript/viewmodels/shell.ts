@@ -88,6 +88,8 @@ class shell extends viewModelBase {
     searchBox = new searchBox();
     databaseSwitcher = new databaseSwitcher();
     favNodeBadge = new favNodeBadge();
+
+    smallScreen = ko.observable<boolean>(false);
     
     static instance: shell;
 
@@ -289,6 +291,19 @@ class shell extends viewModelBase {
             let items = generateMenuItems(db);
             this.mainMenu.update(items);
         };
+
+        
+        const checkScreenSize = () => {
+            if ($(window).width() < 992) {
+                this.smallScreen(true);
+            } else {
+                this.smallScreen(false);
+            }
+        }
+
+        checkScreenSize();
+
+        $(window).resize(checkScreenSize);
 
         updateMenu(activeDatabaseTracker.default.database());
         activeDatabaseTracker.default.database.subscribe(updateMenu);
