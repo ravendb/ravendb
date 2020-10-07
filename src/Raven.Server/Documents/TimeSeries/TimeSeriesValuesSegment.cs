@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.TimeSeries
             Header->NumberOfValues = (byte)numberOfValues;
             Header->SizeOfTags = 1;
             Header->PreviousTagIndex = byte.MaxValue;// invalid tag value
-            Header->Version = SegmentVersion.V50001;
+            Header->Version = SegmentVersion.Current;
         }
 
         public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag, ulong status)
