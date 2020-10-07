@@ -175,25 +175,37 @@ class databaseRecord extends viewModelBase {
             return dto;
         }
 
-        let flattenedSettings = {};
+        let flattenedSettings = { fs: {} };
         
         for (const settingsKey in settings) {
             const settingsValue = settings[settingsKey];
 
             if (typeof settingsValue === "object") {
-                // flatten the inner object
-                for (const innerKey in settingsValue) {
-                    const innerValue = settingsValue[innerKey];
-                    (<any>flattenedSettings)[`${settingsKey}.${innerKey}`] = innerValue;
-                }
+                // flatten recursively
+                this.flattenValue(settingsValue, settingsKey, "", flattenedSettings);
             } else {
                 // value is not a json object, just use original value
-                (<any>flattenedSettings)[settingsKey] = settingsValue;
+                (<any>flattenedSettings.fs)[settingsKey] = settingsValue;
             }
         }
         
-        dto.Settings = flattenedSettings;
+        dto.Settings = flattenedSettings.fs;
         return dto;
+    }
+
+    private flattenValue(value: any, key: string, allKeys: string, flattenedSettings: {fs: any}) {
+        const dot = allKeys ? "." : "";
+        allKeys = `${allKeys}${dot}${key}`;
+
+        if (typeof value !== "object") {
+            flattenedSettings.fs[allKeys] = value;
+            return;
+        }
+
+        for (const innerKey in value) {
+            const innerValue = value[innerKey];
+            this.flattenValue(innerValue, innerKey, allKeys, flattenedSettings);
+        }
     }
 
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
