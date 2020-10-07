@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -100,6 +101,7 @@ namespace Raven.Server.Documents.TimeSeries
         public int NumberOfValues => Header->NumberOfValues;
 
         public int NumberOfEntries => Header->NumberOfEntries;
+        public SegmentVersion Version => Header->Version;
 
         public int NumberOfLiveEntries => SegmentValues.NumberOfEntries;
 
@@ -114,6 +116,7 @@ namespace Raven.Server.Documents.TimeSeries
             Header->NumberOfValues = (byte)numberOfValues;
             Header->SizeOfTags = 1;
             Header->PreviousTagIndex = byte.MaxValue;// invalid tag value
+            Header->Version = SegmentVersion.V50001;
         }
 
         public bool Append(ByteStringContext allocator, int deltaFromStart, double val, Span<byte> tag, ulong status)
@@ -381,12 +384,12 @@ namespace Raven.Server.Documents.TimeSeries
 
             ulong xorWithPrevious = (ulong)(prev.PreviousValue ^ val);
 
-            prev.PreviousValue = val;
-
-            if (status == Live && double.IsNaN(dblVal) == false)
+            if (IsValid(status, val))
             {
                 if (double.IsNaN(prev.First))
                     prev.First = dblVal;
+
+                prev.PreviousValue = val;
 
                 prev.Count++;
                 prev.Sum += dblVal;
@@ -435,6 +438,7 @@ namespace Raven.Server.Documents.TimeSeries
                 bitsBuffer.AddValue((ulong)(useful - BlockSizeAdjustment), BlockSizeLengthBits);
                 ulong blockValue = xorWithPrevious >> trailingZeroes;
                 bitsBuffer.AddValue(blockValue, useful);
+
                 prev.LeadingZeroes = (byte)leadingZeroes;
                 prev.TrailingZeroes = (byte)trailingZeroes;
             }
@@ -569,6 +573,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsValid(ulong status, long value)
+        {
+            // valid = live and not NaN
+            return status == Live && (value & 0x7FFFFFFFFFFFFFFF) > 0x7FF0000000000000 == false;
+        }
+
         public struct Enumerator : IDisposable
         {
             private readonly TimeSeriesValuesSegment _parent;
@@ -593,14 +604,14 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            public bool MoveNext(out int timestamp, Span<double> values, Span<TimestampState> state, ref TagPointer tag, out ulong valueState)
+            public bool MoveNext(out int timestamp, Span<double> values, Span<TimestampState> state, ref TagPointer tag, out ulong status)
             {
                 if (values.Length != _parent.Header->NumberOfValues)
                     ThrowInvalidNumberOfValues();
 
                 if (_bitsPosition >= _bitsBuffer.NumberOfBits)
                 {
-                    valueState = ulong.MaxValue; // invalid value
+                    status = ulong.MaxValue; // invalid value
                     timestamp = default;
                     return false;
                 }
@@ -612,11 +623,11 @@ namespace Raven.Server.Documents.TimeSeries
                     tag = default;
                 }
 
-                valueState = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
+                status = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
 
                 timestamp = ReadTimestamp(_bitsBuffer);
 
-                ReadValues(MemoryMarshal.Cast<double, long>(values), state);
+                ReadValues(MemoryMarshal.Cast<double, long>(values), state, status);
 
                 var differentTag = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
                 if (differentTag == 1)
@@ -659,7 +670,7 @@ namespace Raven.Server.Documents.TimeSeries
                 };*/
             }
 
-            private void ReadValues(Span<long> values, Span<TimestampState> state)
+            private void ReadValues(Span<long> values, Span<TimestampState> state, ulong status)
             {
                 for (int i = 0; i < values.Length; i++)
                 {
@@ -689,7 +700,13 @@ namespace Raven.Server.Documents.TimeSeries
                         state[i].LeadingZeroes = (byte)leadingZeros;
                     }
 
-                    values[i] = values[i] ^ xorValue;
+                    values[i] = state[i].LastValidValue ^ xorValue;
+
+                    if (_parent.Version == SegmentVersion.V50000 || // backward comp.
+                        IsValid(status, values[i]))
+                    {
+                        state[i].LastValidValue = values[i];
+                    }
                 }
             }
 
