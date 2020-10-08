@@ -103,6 +103,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (runningBackupStatus.LastRaftIndex == null)
                     runningBackupStatus.LastRaftIndex = new LastRaftIndex();
 
+                runningBackupStatus.IsFull = _isFullBackup;
+
                 if (_logger.IsInfoEnabled)
                 {
                     var fullBackupText = "a " + (_configuration.BackupType == BackupType.Backup ? "full backup" : "snapshot");
@@ -132,6 +134,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                         UpdateOperationId(runningBackupStatus);
                         runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
+                        runningBackupStatus.LocalBackup.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
                         DatabaseSmuggler.EnsureProcessed(_backupResult);
                         AddInfo(message);
@@ -153,7 +156,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 runningBackupStatus.LocalBackup.BackupDirectory = _backupToLocalFolder ? backupDirectory.FullPath : null;
                 runningBackupStatus.LocalBackup.TempFolderUsed = _backupToLocalFolder == false;
-                runningBackupStatus.IsFull = _isFullBackup;
                 runningBackupStatus.IsEncrypted = _isBackupEncrypted;
 
                 try
