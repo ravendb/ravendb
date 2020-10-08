@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Jint;
 using Jint.Native;
@@ -242,6 +243,8 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteNumber(object parent, string propName, double d)
         {
+            var debug = Interlocked.Read(ref DebugCount) > 0;
+
             var writer = _writer;
             var boi = parent as BlittableObjectInstance;
             if (boi == null || propName == null)
@@ -310,20 +313,31 @@ namespace Raven.Server.Documents.Patch
 
             bool IsDoubleType()
             {
+                bool isDoubleType = true;
                 var roundedNumber = Math.Round(d, 0);
-
                 var digitsAfterDecimalPoint = Math.Abs(roundedNumber - d);
-                if (digitsAfterDecimalPoint < double.Epsilon)
+                try
                 {
-                    if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
-                        return false;
 
-                    return true;
+                    if (digitsAfterDecimalPoint < double.Epsilon)
+                    {
+                        if (digitsAfterDecimalPoint == 0 && Math.Abs(roundedNumber) <= long.MaxValue)
+                            isDoubleType = false;
+                    }
+
+                    return isDoubleType;
                 }
-
-                return true;
+                finally
+                {
+                    if (debug)
+                    {
+                        Console.WriteLine($"IsDoubleType: {isDoubleType}. PropName: {propName}. Value: {d}. RoundedValue: {roundedNumber}. DigitsAfterDecimalPoint: {digitsAfterDecimalPoint}. DADP < EPS: {digitsAfterDecimalPoint < double.Epsilon}. DADP == 0: {digitsAfterDecimalPoint == 0}. ABS: {Math.Abs(roundedNumber) <= long.MaxValue}");
+                    }
+                }
             }
         }
+
+        public static long DebugCount;
 
         private void WriteJsInstance(ObjectInstance obj, bool isRoot, bool filterProperties)
         {

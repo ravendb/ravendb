@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Patch;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,6 +17,14 @@ namespace FastTests.Client
     {
         public FirstClassPatch(ITestOutputHelper output) : base(output)
         {
+            Interlocked.Increment(ref JsBlittableBridge.DebugCount);
+        }
+
+        public override void Dispose()
+        {
+            Interlocked.Decrement(ref JsBlittableBridge.DebugCount);
+
+            base.Dispose();
         }
 
         private string _docId = "users/1-A";
