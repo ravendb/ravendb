@@ -59,7 +59,6 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
-
     }
 
     internal class SeriesSummary
@@ -96,7 +95,6 @@ namespace Raven.Server.Documents.TimeSeries
         internal TableValueReader _tvr;
         private double[] _values = Array.Empty<double>();
         private TimestampState[] _states = Array.Empty<TimestampState>();
-        private TimeSeriesValuesSegment.TagPointer _tagPointer;
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
         private TimeSpan? _offset;
@@ -198,7 +196,7 @@ namespace Raven.Server.Documents.TimeSeries
                     baseline = DateTime.SpecifyKind(baseline, DateTimeKind.Unspecified).Add(_offset.Value);
                 }
 
-                yield return new TimeSeriesStorage.SegmentSummary()
+                yield return new TimeSeriesStorage.SegmentSummary
                 {
                     DocumentId = _documentId,
                     Name = _name,
@@ -283,7 +281,8 @@ namespace Raven.Server.Documents.TimeSeries
                 if (_currentSegment.NumberOfLiveEntries > 0)
                 {
                     if (segmentResult.Start >= _from &&
-                        segmentResult.End <= _to)
+                        segmentResult.End <= _to &&
+                        _currentSegment.InvalidLastValue() == false) // legacy issue RavenDB-15645
                     {
                         // we can yield the whole segment in one go
                         segmentResult.Summary = _currentSegment;
@@ -345,53 +344,19 @@ namespace Raven.Server.Documents.TimeSeries
             if (shouldBreak)
                 yield break;
 
-            using (var enumerator = _currentSegment.GetEnumerator(_context.Allocator))
+            foreach (var result in _currentSegment.YieldAllValues(_context, _context.Allocator, baseline, includeDead))
             {
-                while (enumerator.MoveNext(out int ts, _values, _states, ref _tagPointer, out var status))
-                {
-                    if (includeDead == false &&
-                        status == TimeSeriesValuesSegment.Dead)
-                        continue;
-
-                    var cur = baseline.AddMilliseconds(ts);
-
-                    if (cur > _to)
+                if (result.Timestamp > _to)
                         yield break;
 
-                    if (cur < _from)
+                if (result.Timestamp < _from)
                         continue;
 
-                    var tag = SetTimestampTag();
+                result.Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp;
 
-                    var end = _values.Length;
-                    while (end >= 0 && double.IsNaN(_values[end - 1]))
-                    {
-                        end--;
+                yield return result;
                     }
-
-                    yield return new SingleResult
-                    {
-                        Timestamp = cur,
-                        Tag = tag,
-                        Status = status,
-                        Values = new Memory<double>(_values, 0, end),
-                        Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp
-                    };
                 }
-            }
-        }
-
-        private LazyStringValue SetTimestampTag()
-        {
-            if (_tagPointer.Pointer == null)
-            {
-                return null;
-            }
-
-            var lazyStringLen = BlittableJsonReaderBase.ReadVariableSizeInt(_tagPointer.Pointer, 0, out var offset);
-            _tag.Renew(null, _tagPointer.Pointer + offset, lazyStringLen, _context);
-            return _tag;
-        }
 
         public DateTime NextSegmentBaseline()
         {

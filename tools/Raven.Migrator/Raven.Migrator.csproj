@@ -15,6 +15,8 @@
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.0.0" />
     <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.11.6" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0-rc.1.20451.14" />
+    <PackageReference Include="Microsoft.Azure.DocumentDB.Core" Version="2.12.0" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
     <PackageReference Include="MongoDB.Driver" Version="2.11.2" />
     <PackageReference Include="MongoDB.Driver.GridFS" Version="2.11.2" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />

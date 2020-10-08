@@ -76,5 +76,6 @@ namespace Raven.Server.Documents.TimeSeries
     {
         public byte LeadingZeroes;
         public byte TrailingZeroes;
+        public long LastValidValue;
     }
 }
