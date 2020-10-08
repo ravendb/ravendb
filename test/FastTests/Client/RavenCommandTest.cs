@@ -12,8 +12,8 @@ namespace FastTests.Client
         public RavenCommandTest(ITestOutputHelper output) : base(output)
         {
         }
-        
-        [Fact]
+
+        [Fact(Skip = "RavenDB-14286")]
         public void WhenCommandCanBeCheckedForFastestNode_ItCanRunInParallel()
         {
             var expected = new[]
@@ -41,17 +41,16 @@ namespace FastTests.Client
                 "GetPeriodicBackupStatusCommand", "StartBackupCommand", "UpdatePeriodicBackupCommand", "GetAttachmentCommand", "PutAttachmentCommand",
                 "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand"
             }.OrderBy(t => t);
-            
+
             var commandBaseType = typeof(RavenCommand<>);
             var types = commandBaseType.Assembly.GetTypes();
 
             var results = new List<Type>();
             GetAllDerivedTypesRecursively(types.Where(t => t.IsAbstract == false).ToArray(), commandBaseType, results);
 
-            
             var actual = results.Select(r => r.Name).OrderBy(t => t);
             var didntCheck = actual.Except(expected).ToArray();
-            Assert.False(didntCheck.Any(), 
+            Assert.False(didntCheck.Any(),
                 $"The follow `{nameof(RavenCommand)}`s was not added to checked list: {string.Join(", ", didntCheck.Select(n => $"'{n}'"))}{Environment.NewLine}" +
                 $"You should check if the commands can run in `{nameof(ReadBalanceBehavior.FastestNode)}` mode (checked in RequestExecutor.ShouldExecuteOnAll) " +
                 $"and if it can so it can also run in parallel{Environment.NewLine}" +
@@ -82,7 +81,6 @@ namespace FastTests.Client
             }
         }
 
-
         private static void GetDerivedFromNonGeneric(Type[] types, Type type, List<Type> results)
         {
             var derivedTypes = types.Where(t => t != type && type.IsAssignableFrom(t)).ToList();
@@ -92,6 +90,6 @@ namespace FastTests.Client
             {
                 GetAllDerivedTypesRecursively(types, derivedType, results);
             }
-        } 
+        }
     }
 }
