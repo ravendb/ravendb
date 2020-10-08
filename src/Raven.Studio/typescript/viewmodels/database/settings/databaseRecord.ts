@@ -151,7 +151,7 @@ class databaseRecord extends viewModelBase {
             .then(result => {
                 if (result.can) {
                     let dto = JSON.parse(this.documentText());
-                    dto = this.handleNestedSettings(dto);
+                    dto.Settings = this.flattenSettings(dto.Settings, "");
                     
                     new saveDatabaseSettingsCommand(this.activeDatabase(), dto, dto.Etag)
                         .execute()
@@ -163,49 +163,18 @@ class databaseRecord extends viewModelBase {
             });
     }
     
-    private handleNestedSettings(dto: any) {
-        const settings = dto.Settings;
-        
-        if (!settings) {
-            return dto;
-        }
-        
-        const settingsKeys = Object.keys(settings);
-        if (settingsKeys.length === 0) {
-            return dto;
-        }
-
-        let flattenedSettings = { fs: {} };
-        
-        for (const settingsKey in settings) {
-            const settingsValue = settings[settingsKey];
-
-            if (typeof settingsValue === "object") {
-                // flatten recursively
-                this.flattenValue(settingsValue, settingsKey, "", flattenedSettings);
+    private flattenSettings(obj: any, parentKey: string, res = {}) {
+        for (let key in obj){
+            const propName = parentKey ? parentKey + "." + key : key;
+            const value = obj[key];
+            
+            if (typeof value === "object"){
+                this.flattenSettings(value, propName, res);
             } else {
-                // value is not a json object, just use original value
-                (<any>flattenedSettings.fs)[settingsKey] = settingsValue;
+                (<any>res)[propName] = value;
             }
         }
-        
-        dto.Settings = flattenedSettings.fs;
-        return dto;
-    }
-
-    private flattenValue(value: any, key: string, allKeys: string, flattenedSettings: {fs: any}) {
-        const dot = allKeys ? "." : "";
-        allKeys = `${allKeys}${dot}${key}`;
-
-        if (typeof value !== "object") {
-            flattenedSettings.fs[allKeys] = value;
-            return;
-        }
-
-        for (const innerKey in value) {
-            const innerValue = value[innerKey];
-            this.flattenValue(innerValue, innerKey, allKeys, flattenedSettings);
-        }
+        return res;
     }
 
     private fetchDatabaseSettings(db: database, reportFetchProgress: boolean = false): JQueryPromise<any> {
