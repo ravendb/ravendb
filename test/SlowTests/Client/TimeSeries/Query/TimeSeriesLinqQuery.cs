@@ -2429,7 +2429,7 @@ namespace SlowTests.Client.TimeSeries.Query
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.AddHours(12);
 
                 using (var session = store.OpenSession())
                 {
