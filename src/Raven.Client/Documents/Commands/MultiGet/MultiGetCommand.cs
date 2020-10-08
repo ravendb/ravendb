@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -21,9 +22,9 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
         public MultiGetCommand(RequestExecutor requestExecutor, List<GetRequest> commands)
         {
-            _requestExecutor = requestExecutor;
-            _cache = _requestExecutor.Cache;
-            _commands = commands;
+            _requestExecutor = requestExecutor ?? throw new ArgumentNullException(nameof(requestExecutor));
+            _cache = _requestExecutor.Cache ?? throw new ArgumentNullException(nameof(_requestExecutor.Cache));
+            _commands = commands ?? throw new ArgumentNullException(nameof(commands));
             ResponseType = RavenCommandResponseType.Raw;
         }
 
@@ -38,20 +39,21 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 Result = new List<GetResponse>();
                 foreach (var command in _commands)
                 {
-                    if(command.CanCacheAggressively == false) break;
+                    if (command.CanCacheAggressively == false)
+                        break;
                     var cacheKey = GetCacheKey(command, out string _);
                     using (var cachedItem = _cache.Get(ctx, cacheKey, out _, out var cached))
                     {
-                        if (cached == null || 
+                        if (cached == null ||
                             cachedItem.Age > aggressiveCacheOptions.Duration ||
                             cachedItem.MightHaveBeenModified)
                             break;
-                        
-                         Result.Add(new GetResponse
-                         {
-                             Result = cached,
-                             StatusCode = HttpStatusCode.NotModified,
-                         });
+
+                        Result.Add(new GetResponse
+                        {
+                            Result = cached,
+                            StatusCode = HttpStatusCode.NotModified,
+                        });
                     }
                 }
 
@@ -60,7 +62,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     return null;// aggressively cached
                 }
                 // not all of it is cached, might as well read it all
-                Result = null; 
+                Result = null;
             }
 
             var request = new HttpRequestMessage
@@ -135,7 +137,6 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     }
                 })
             };
-
 
             return request;
         }

@@ -191,7 +191,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact(Skip = "RavenDB-15645")]
+        [Fact]
         public void CanDeleteTimestamp2()
         {
             using (var store = GetDocumentStore())
@@ -244,8 +244,6 @@ namespace SlowTests.Client.TimeSeries.Session
             {
                 var baseline = DateTime.Today;
 
-                //TimeSeriesValuesSegment.DebugMode = 1;
-
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User { Name = "Oren" }, "users/ayende");
@@ -267,6 +265,13 @@ namespace SlowTests.Client.TimeSeries.Session
                     session.SaveChanges();
                 }
 
+                using (var session = store.OpenSession())
+                {
+                    var entries = session.TimeSeriesFor("users/ayende", "Heartrate").Get();
+                    Assert.Equal(59,entries[0].Values[0]);
+                    Assert.Equal(89,entries[1].Values[0]);
+                    Assert.Equal(99, entries[2].Values[0]);
+                }
 
                 using (var session = store.OpenSession())
                 {
@@ -279,6 +284,40 @@ namespace SlowTests.Client.TimeSeries.Session
                     var entries = session.TimeSeriesFor("users/ayende", "Heartrate").Get();
                     Assert.Equal(59,entries[0].Values[0]);
                     Assert.Equal(99, entries[1].Values[0]);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanDeleteTimestamp4()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    tsf.Append(baseline.AddMinutes(1), 59d);
+                    tsf.Append(baseline.AddMinutes(2), 69d);
+                    tsf.Append(baseline.AddMinutes(3), 79d);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Delete(baseline.AddMinutes(2));
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entries = session.TimeSeriesFor("users/ayende", "Heartrate").Get();
+                    Assert.Equal(59,entries[0].Values[0]);
+                    Assert.Equal(79,entries[1].Values[0]);
                 }
             }
         }

@@ -709,7 +709,7 @@ namespace Raven.Server.Documents.TimeSeries
                 });
             }
 
-            EnsureStatsAndDataIntegrity(context, documentId, name);
+            EnsureStatsAndDataIntegrity(context, documentId, name, segment);
 
             return true;
         }
@@ -938,7 +938,7 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Set(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
             }
 
             public void AppendDeadSegment(TimeSeriesValuesSegment newValueSegment)
@@ -964,7 +964,7 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Set(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
             }
 
             public void AppendToNewSegment(SingleResult item)
@@ -996,7 +996,7 @@ namespace Raven.Server.Documents.TimeSeries
                     Table.Insert(tvb);
                 }
 
-                EnsureStatsAndDataIntegrity(_context, _docId, _name);
+                EnsureStatsAndDataIntegrity(_context, _docId, _name, newSegment);
             }
 
             public void AddNewValue(SingleResult result, ref TimeSeriesValuesSegment segment)
@@ -1215,7 +1215,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                             if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current))
                             {
-                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, out var newValueFetched))
+                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
                                     break;
 
                                 if (newValueFetched)
@@ -1302,16 +1302,15 @@ namespace Raven.Server.Documents.TimeSeries
             return segmentNumberOfValues == current.Values.Length;
         }
 
-        private bool TryAppendToCurrentSegment(
-            DocumentsOperationContext context,
+        private bool TryAppendToCurrentSegment(DocumentsOperationContext context,
             TimeSeriesSegmentHolder segmentHolder,
             IEnumerator<SingleResult> appendEnumerator,
+            SingleResult current,
             out bool newValueFetched)
         {
             var segment = segmentHolder.ReadOnlySegment;
             var slicer = segmentHolder.SliceHolder;
 
-            var current = appendEnumerator.Current;
             var lastTimestamp = segment.GetLastTimestamp(segmentHolder.BaselineDate);
             var nextSegmentBaseline = BaselineOfNextSegment(segmentHolder, current.Timestamp) ?? DateTime.MaxValue;
 
@@ -2116,7 +2115,7 @@ namespace Raven.Server.Documents.TimeSeries
         }
         
         [Conditional("DEBUG")]
-        private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name)
+        private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name, TimeSeriesValuesSegment segment)
         {
             if (context.Transaction.InnerTransaction.IsWriteTransaction == false)
                 return;
@@ -2138,6 +2137,26 @@ namespace Raven.Server.Documents.TimeSeries
 
             Debug.Assert(first == stats.Start, $"Failed start check: {first} == {stats.Start}");
             Debug.Assert(last == stats.End, $"Failed end check: {last} == {stats.End}");
+
+            if (segment.NumberOfLiveEntries > 0)
+            {
+                foreach (var state in segment.SegmentValues.Span)
+                {
+                    Debug.Assert(double.IsNaN(state.First) == false, "First is NaN");
+                    Debug.Assert(double.IsNaN(state.Last) == false, "Last is NaN");
+                    Debug.Assert(double.IsNaN(state.Min) == false, "Min is NaN");
+                    Debug.Assert(double.IsNaN(state.Max) == false, "Max is NaN");
+                    Debug.Assert(double.IsNaN(state.Sum) == false, "Sum is NaN");
+                    Debug.Assert(double.IsNaN(state.Count) == false, "Count is NaN");
+                    Debug.Assert(state.Count > 0, "Count is Zero");
+                }
+
+                if (name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator))
+                {
+                    var noNaN = segment.YieldAllValues(context, baseline: default, includeDead: false).All(x => x.Values.ToArray().All(y => double.IsNaN(y) == false));
+                    Debug.Assert(noNaN, "Rollup has NaN");
+                }
+            }
         }
 
         internal enum TimeSeriesTable

@@ -13,21 +13,23 @@ namespace Tests.Infrastructure.Utils
 
         public static void DownloadAndSave(RavenServer ravenServer, Context testContext)
         {
-            var documentStore = InitDocumentStore(ravenServer);
-            var operationResult = documentStore.Maintenance.Server.Send(new GetClusterDebugInfoPackageOperation());
+            using (var documentStore = InitDocumentStore(ravenServer))
+            {
+                var operationResult = documentStore.Maintenance.Server.Send(new GetClusterDebugInfoPackageOperation());
 
-            SaveDebugPackage(testContext, operationResult);
+                SaveDebugPackage(testContext, operationResult);
+            }
         }
 
         private static IDocumentStore InitDocumentStore(RavenServer ravenServer)
-            => new DocumentStore {Urls = new[] {ravenServer.WebUrl}}
+            => new DocumentStore { Urls = new[] { ravenServer.WebUrl }, Certificate = ravenServer.Certificate?.Certificate }
                 .Initialize();
 
         private static void SaveDebugPackage(Context testContext, ClusterDebugInfoPackageResult operationResult)
         {
             if (Directory.Exists(DestinationDirectory) == false)
                 Directory.CreateDirectory(DestinationDirectory);
-            
+
             var fileName = GetDebugPackageName(testContext);
             var outputPath = Path.Join(DestinationDirectory, fileName);
 
@@ -48,7 +50,7 @@ namespace Tests.Infrastructure.Utils
         {
             var fullPath = Path.GetFullPath(outputPath);
             var message = $"Saved debug package for {testContext.Test.DisplayName} in {fullPath}";
-            
+
             testContext.TestOutput.WriteLine(message);
         }
     }
