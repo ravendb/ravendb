@@ -37,6 +37,7 @@ import generalUtils = require("common/generalUtils");
 import timeSeriesColumn = require("widgets/virtualGrid/columns/timeSeriesColumn");
 import timeSeriesPlotDetails = require("viewmodels/common/timeSeriesPlotDetails");
 import timeSeriesQueryResult = require("models/database/timeSeries/timeSeriesQueryResult");
+import popoverUtils = require("common/popoverUtils");
 
 type queryResultTab = "results" | "explanations" | "timings" | "graph";
 
@@ -594,6 +595,14 @@ class query extends viewModelBase {
         grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
 
         this.queryFetcher.subscribe(() => grid.reset());
+        
+        const queryTimingsLink = "https://ravendb.net/l/4FEPMK/" + this.clientVersion();
+        const queryTimingsDetails = `<a target="_blank" href="${queryTimingsLink}">Query Timings</a>`;
+        popoverUtils.longWithHover($(".query-time-info"),
+            {
+                content: `<small>View timings details by including ${queryTimingsDetails}</small>`,
+                html: true
+            });
 
         this.columnPreview.install("virtual-grid", ".js-query-tooltip", 
             (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
