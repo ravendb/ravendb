@@ -2103,6 +2103,53 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public async Task IncrementalBackupWithNoChangesShouldSet_BackupStatus_IsFull_ToFalse()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "egr"
+                    }, "users/1");
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 0 1 1 *",
+                    FullBackupFrequency = "0 0 1 1 *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                var result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                await result.WaitForCompletionAsync();
+
+                result = await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: false, backupTaskId));
+                await result.WaitForCompletionAsync();
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                PeriodicBackupStatus status = store.Maintenance.Send(operation).Status;
+
+                Assert.False(status.IsFull);
+                Assert.NotNull(status.LocalBackup);
+                Assert.Equal(0, status.LocalBackup.IncrementalBackupDurationInMs);
+                Assert.Equal(BackupType.Backup, status.BackupType);
+                Assert.True(status.DurationInMs > 0);
+                Assert.Null(status.Error);
+                Assert.False(status.IsEncrypted);
+                Assert.Equal(1, status.LastEtag);
+            }
+        }
+
         private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
