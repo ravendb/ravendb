@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var prevs = new Span<StatefulTimestampValue>((tempBuffer.Ptr + maximumSize) + sizeof(SegmentHeader), tempHeader->NumberOfValues);
                 AddTimestamp(deltaFromStart, ref tempBitsBuffer, tempHeader);
 
-                if (tempHeader->NumberOfEntries == 0 &&
+                if (NumberOfLiveEntries == 0 &&
                     status == Live)
                 {
                     for (int i = 0; i < vals.Length; i++)
@@ -463,6 +463,7 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var values = new double[NumberOfValues];
             var states = new TimestampState[NumberOfValues];
+            DateTime current = default;
 
             var tagPointer = new TagPointer();
             using (var enumerator = GetEnumerator(allocator))
@@ -472,7 +473,13 @@ namespace Raven.Server.Documents.TimeSeries
                     if (status == Dead && includeDead == false)
                         continue;
 
-                    var cur = baseline.AddMilliseconds(ts);
+                    var next = baseline.AddMilliseconds(ts);
+                    if (next == current && 
+                        Version == SegmentVersion.V50000) // fix legacy issue RavenDB-15617
+                        continue;
+
+                    current = next;
+
                     var tag = SetTimestampTag(context, tagPointer);
 
                     var length = values.Length;
@@ -483,7 +490,7 @@ namespace Raven.Server.Documents.TimeSeries
                     
                     yield return new SingleResult
                     {
-                        Timestamp = cur,
+                        Timestamp = current,
                         Tag = tag,
                         Values = new Memory<double>(values, 0, length),
                         Status = status
@@ -677,6 +684,7 @@ namespace Raven.Server.Documents.TimeSeries
                     var nonZero = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
                     if (nonZero == 0)
                     {
+                        values[i] = state[i].LastValidValue;
                         continue; // no change since last time
                     }
                     var usePreviousBlockInfo = _bitsBuffer.ReadValue(ref _bitsPosition, 1);
@@ -763,6 +771,26 @@ namespace Raven.Server.Documents.TimeSeries
         private static void ThrowValuesOutOfRange(int numberOfValues)
         {
             throw new ArgumentOutOfRangeException("TimeSeriesValuesSegment can handle up to 32 values, but had: " + numberOfValues);
+        }
+
+        // handle legacy issue RavenDB-15645
+        // if we found that the 'Last' value of the 'StatefulTimestampValue' is NaN,
+        // we will yield all values individually, instead of rely on it. 
+        public bool InvalidLastValue()
+        {
+            if (Version != SegmentVersion.V50000)
+                return false;
+
+            if (NumberOfLiveEntries == 0)
+                return false;
+
+            foreach (var value in SegmentValues.Span)
+            {
+                if (double.IsNaN(value.Last))
+                    return true;
+            }
+
+            return false;
         }
     }
 
