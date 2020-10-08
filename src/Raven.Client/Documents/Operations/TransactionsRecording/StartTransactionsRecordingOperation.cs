@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -26,6 +27,7 @@ namespace Raven.Client.Documents.Operations.TransactionsRecording
 
             public StartTransactionsRecordingCommand(string filePath)
             {
+                EnsureIsNotNullOrEmpty(filePath, nameof(filePath));
                 _filePath = filePath;
             }
 

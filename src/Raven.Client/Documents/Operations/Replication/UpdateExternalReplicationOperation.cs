@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
             public UpdateExternalReplication(ExternalReplication newWatcher)
             {
-                _newWatcher = newWatcher;
+                _newWatcher = newWatcher ?? throw new ArgumentNullException(nameof(newWatcher));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

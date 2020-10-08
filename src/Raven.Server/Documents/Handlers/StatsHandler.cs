@@ -53,6 +53,13 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
+        [RavenAction("/databases/*/healthcheck", "GET", AuthorizationStatus.ValidUser)]
+        public Task DatabaseHealthCheck()
+        {
+            NoContentStatus();
+            return Task.CompletedTask;
+        }
+        
         private void FillDatabaseStatistics(DatabaseStatistics stats, QueryOperationContext context)
         {
             using (context.OpenReadTransaction())

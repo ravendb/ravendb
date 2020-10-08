@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.TimeSeries
         }
 
         public IEnumerable<SingleResult> Values => _reader.YieldSegment(Start);
-
     }
 
     internal class SeriesSummary
@@ -77,7 +76,6 @@ namespace Raven.Server.Documents.TimeSeries
         internal TableValueReader _tvr;
         private double[] _values = Array.Empty<double>();
         private TimestampState[] _states = Array.Empty<TimestampState>();
-        private TimeSeriesValuesSegment.TagPointer _tagPointer;
         private LazyStringValue _tag;
         private TimeSeriesValuesSegment _currentSegment;
         private TimeSpan? _offset;
@@ -264,7 +262,7 @@ namespace Raven.Server.Documents.TimeSeries
                 if (_currentSegment.NumberOfLiveEntries > 0)
                 {
                     if (segmentResult.Start >= _from &&
-                        segmentResult.End <= _to && 
+                        segmentResult.End <= _to &&
                         _currentSegment.InvalidLastValue() == false) // legacy issue RavenDB-15645
                     {
                         // we can yield the whole segment in one go
@@ -327,7 +325,7 @@ namespace Raven.Server.Documents.TimeSeries
             if (shouldBreak)
                 yield break;
 
-            foreach (var result in _currentSegment.YieldAllValues(_context,_context.Allocator, baseline, includeDead))
+            foreach (var result in _currentSegment.YieldAllValues(_context, _context.Allocator, baseline, includeDead))
             {
                 if (result.Timestamp > _to)
                     yield break;

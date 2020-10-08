@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -28,7 +29,7 @@ namespace Raven.Client.Documents.Operations.Refresh
 
             public ConfigureRefreshCommand(RefreshConfiguration configuration)
             {
-                _configuration = configuration;
+                _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             }
 
             public override bool IsReadRequest => false;

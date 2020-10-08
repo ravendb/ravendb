@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -37,7 +38,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public RestoreBackupCommand(RestoreBackupConfigurationBase restoreConfiguration, string nodeTag = null)
             {
-                _restoreConfiguration = restoreConfiguration;
+                _restoreConfiguration = restoreConfiguration ?? throw new ArgumentNullException(nameof(restoreConfiguration));
                 SelectedNodeTag = nodeTag;
             }
 

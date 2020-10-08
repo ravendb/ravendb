@@ -125,7 +125,7 @@ namespace SlowTests.Issues
 
                     List<ReplicationBatchItem> firstReplicationOrder = new List<ReplicationBatchItem>();
                     List<ReplicationBatchItem> secondReplicationOrder = new List<ReplicationBatchItem>();
-                    var etag = 0l;
+                    var etag = 0L;
 
                     using var disposable1 = server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx);
                     using (var firstDestination = GetDocumentStore(new Options { ModifyDatabaseName = s => GetDatabaseName() + "_destination", Server = server }))

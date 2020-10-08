@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
@@ -51,7 +52,9 @@ namespace Raven.Client.Http
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
         private static readonly ConcurrentDictionary<string, Lazy<HttpClient>> GlobalHttpClientWithoutCompression = new ConcurrentDictionary<string, Lazy<HttpClient>>();
 
-        private static readonly GetStatisticsOperation FailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
+        private static readonly GetStatisticsOperation BackwardCompatibilityFailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
+        private static readonly DatabaseHealthCheckOperation FailureCheckOperation = new DatabaseHealthCheckOperation();
+        private ConcurrentSet<string> _useOldFailureCheckOperation;
 
         private readonly SemaphoreSlim _updateDatabaseTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
@@ -195,8 +198,9 @@ namespace Raven.Client.Http
         }
 
         public event EventHandler<BeforeRequestEventArgs> OnBeforeRequest;
+
         public event EventHandler<SucceedRequestEventArgs> OnSucceedRequest;
-        
+
         private void OnFailedRequestInvoke(string url, Exception e)
         {
             _onFailedRequest?.Invoke(this, new FailedRequestEventArgs(_databaseName, url, e));
@@ -256,6 +260,7 @@ namespace Raven.Client.Http
                 case SocketError.HostUnreachable:
                 case SocketError.ConnectionRefused:
                     return true;
+
                 default:
                     return false;
             }
@@ -554,10 +559,13 @@ namespace Raven.Client.Http
             {
                 case ReadBalanceBehavior.None:
                     return _nodeSelector.GetPreferredNode();
+
                 case ReadBalanceBehavior.RoundRobin:
                     return _nodeSelector.GetNodeBySessionId(sessionInfo?.SessionId ?? 0);
+
                 case ReadBalanceBehavior.FastestNode:
                     return _nodeSelector.GetFastestNode();
+
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -839,7 +847,7 @@ namespace Raven.Client.Http
                 var response = await SendRequestToServer(chosenNode, nodeIndex, context, command, shouldRetry, sessionInfo, request, url, token).ConfigureAwait(false);
                 if (response == null) // the fail-over mechanism took care of this
                     return;
-                
+
                 var refreshTask = RefreshIfNeeded(chosenNode, response);
                 command.StatusCode = response.StatusCode;
 
@@ -1345,6 +1353,7 @@ namespace Raven.Client.Http
                     else
                         command.SetResponseRaw(response, null, context);
                     return true;
+
                 case HttpStatusCode.Forbidden:
                     var msg = await TryGetResponseOfError(response).ConfigureAwait(false);
                     throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url + ", " +
@@ -1383,14 +1392,17 @@ namespace Raven.Client.Http
 
                     await ExecuteAsync(node, index, context, command, shouldRetry: true, sessionInfo: sessionInfo, token: token).ConfigureAwait(false);
                     return true;
+
                 case HttpStatusCode.GatewayTimeout:
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
                     return await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionInfo, shouldRetry, requestContext: null, token: token).ConfigureAwait(false);
+
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
                     break;
+
                 default:
                     command.OnResponseFailure(response);
                     await ExceptionDispatcher.Throw(context, response, AdditionalErrorInformation).ConfigureAwait(false);
@@ -1683,9 +1695,32 @@ namespace Raven.Client.Http
             }
         }
 
-        protected virtual Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
+        protected virtual async Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
         {
-            return ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null, token: CancellationToken.None);
+            try
+            {
+                if (_useOldFailureCheckOperation == null || _useOldFailureCheckOperation.Contains(serverNode.Url) == false)
+                {
+                    await ExecuteAsync(serverNode, nodeIndex, context, FailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false, sessionInfo: null,
+                        token: CancellationToken.None).ConfigureAwait(false);
+                }
+                else
+                {
+                    await ExecuteOldHealthCheck().ConfigureAwait(false);
+                }
+            }
+            catch (ClientVersionMismatchException e) when (e.Message.Contains(nameof(RouteNotFoundException)))
+            {
+                _useOldFailureCheckOperation ??= new ConcurrentSet<string>();
+                _useOldFailureCheckOperation.Add(serverNode.Url);
+                await ExecuteOldHealthCheck().ConfigureAwait(false);
+            }
+
+            Task ExecuteOldHealthCheck()
+            {
+                return ExecuteAsync(serverNode, nodeIndex, context, BackwardCompatibilityFailureCheckOperation.GetCommand(Conventions, context), shouldRetry: false,
+                    sessionInfo: null, token: CancellationToken.None);
+            }
         }
 
         private static async Task<Exception> ReadExceptionFromServer(JsonOperationContext context, HttpRequestMessage request, HttpResponseMessage response, Exception e)
@@ -1954,12 +1989,15 @@ namespace Raven.Client.Http
                 case HttpRequestMessage message:
                     hostname = message.RequestUri.DnsSafeHost;
                     break;
+
                 case string host:
                     hostname = host;
                     break;
+
                 case WebRequest request:
                     hostname = request.RequestUri.DnsSafeHost;
                     break;
+
                 default:
                     hostname = string.Empty;
                     break;
@@ -2076,6 +2114,7 @@ namespace Raven.Client.Http
                 case IndexOutOfRangeException _:
                     ExceptionDispatchInfo.Capture(e.InnerException).Throw();
                     break;
+
                 default:
                     return;
             }

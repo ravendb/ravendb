@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Operations.Counters
                     Method = HttpMethod.Get
                 };
 
-                if (_counters.Length > 0)
+                if (_counters != null && _counters.Length > 0)
                 {
                     if (_counters.Length > 1)
                     {
