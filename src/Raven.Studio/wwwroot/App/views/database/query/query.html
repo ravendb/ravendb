@@ -63,7 +63,7 @@
                 <a target="_blank" href="#" title="Show raw output" data-bind="attr: { href: rawJsonUrl }"><i class="icon-link"></i></a>
             </h2>
             <div class="clearfix">
-                <div class="results-info pull-left btn-group">
+                <div class="pull-left btn-group">
                     <div data-bind="visible: queryStats() && hasEditableIndex() && !isGraphQuery(), if: queryStats() && hasEditableIndex() && !isGraphQuery()" class="dropdown btn-group" >
                         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <span>
@@ -127,6 +127,9 @@
                             <strong data-bind="text: queryStats().DurationInMs.toLocaleString() + ' ms'"></strong>
                         </span>
                     </small>
+                    <small data-bind="visible: queryStats()">
+                        &nbsp;<i class="icon-info text-info query-time-info"></i>
+                    </small>
                 </div>
                 <div class="pull-right" role="group">
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': deleteDocumentDisableReason }, visible: currentTab() === 'results'">
@@ -185,7 +188,7 @@
                 <div class="help-block">
                     <i class="icon-warning"></i>
                     <span>Using <code>offset</code> or <code>limit</code> in RQL for fanout indexes may produce unpredictable paging. 
-                        <a href="#" target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LT8GZF/' +  $root.clientVersion() }">See details.</a>
+                        <a href="#" target="_blank" data-bind="attr: { href: 'https://ravendb.net/l/LT8GZF/' + $root.clientVersion() }">See details.</a>
                     </span>
                 </div>
             </div>
@@ -249,7 +252,6 @@
                 <i class="icon-table"></i> <span data-bind="text: documentId + ' - ' + name"></span> &nbsp; <span class="label label-primary" data-bind="click: $root.closeTimeSeriesTab"><i class="icon-cancel"></i></span>
             </button>
             <!-- /ko -->
-            
         </div>
     </div>
     <div class="hidden">
@@ -339,12 +341,12 @@
                                 <div class="col-xs-9">
                                    Name: &nbsp;<strong data-bind="text: previewItem() ? previewItem().name : ''"></strong>
                                 </div>
-                                <div class="col-xs-3">                                 
+                                <div class="col-xs-3">
                                     <span class="pull-right"> 
                                         <button title="Load saved query" class="btn btn-success btn-sm close-panel" data-bind="click: useQuery, enable: previewItem()">Load</button>
                                     </span>
                                 </div>
-                            </div>                           
+                            </div>
                         </div>
                         <div class="pre-container">
 <pre class="bg-info">
