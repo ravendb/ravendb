@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Routing;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
@@ -1749,7 +1750,7 @@ namespace Raven.Client.Http
                     await ExecuteOldHealthCheck().ConfigureAwait(false);
                 }
             }
-            catch (ClientVersionMismatchException e) when (e.Message.Contains("RouteNotFoundException")) 
+            catch (ClientVersionMismatchException e) when (e.Message.Contains(nameof(RouteNotFoundException))) 
             {
                 _useOldFHealthCheck ??= new ConcurrentSet<string>();
                 _useOldFHealthCheck.Add(serverNode.Url);
