@@ -111,7 +111,7 @@
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0-rc.1.20451.14" />
-    <PackageReference Include="Portable.BouncyCastle" Version="1.8.6.7" />
+    <PackageReference Include="Portable.BouncyCastle" Version="1.8.8" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="5.0.0-rc.1.20451.14" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="5.0.0-rc.1.20451.14" />
   </ItemGroup>
