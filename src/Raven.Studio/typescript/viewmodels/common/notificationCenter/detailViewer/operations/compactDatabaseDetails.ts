@@ -73,10 +73,12 @@ class compactDatabaseDetails extends abstractOperationDetails {
                 const messages = [] as string[];
 
                 if (result) {
-                    for (const indexResult of Object.keys(result.IndexesResults)) {
-                        const indexMessages = (result.IndexesResults[indexResult] as Raven.Client.ServerWide.Operations.CompactionResult).Messages;
-                        messages.push(...indexMessages.map(x => "[" + indexResult + "] " + x));
-                    }   
+                    if (result.IndexesResults) {
+                        for (const indexResult of Object.keys(result.IndexesResults)) {
+                            const indexMessages = (result.IndexesResults[indexResult] as Raven.Client.ServerWide.Operations.CompactionResult).Messages;
+                            messages.push(...indexMessages.map(x => "[" + indexResult + "] " + x));
+                        }
+                    }
                     
                     messages.push(...result.Messages);
                 }
@@ -115,7 +117,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
     }
     
     private scrollDown() {
-        const messages = $(".compact-messages")[0];        
+        const messages = $(".compact-messages")[0];
         if (messages) {
             messages.scrollTop = messages.scrollHeight;
         }
@@ -197,7 +199,7 @@ class compactDatabaseDetails extends abstractOperationDetails {
         const isUpdate = !_.isUndefined(incoming);
 
         if (!isUpdate) {
-            // object was just created  - only copy message -> message field
+            // object was just created - only copy message -> message field
 
             if (!existing.isCompleted()) {
                 const result = existing.progress() as Raven.Client.ServerWide.Operations.CompactionResult;
