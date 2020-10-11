@@ -8,9 +8,10 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly long _id;
 
-        public KillOperationCommand(long id)
+        public KillOperationCommand(long id, string node = null)
         {
             _id = id;
+            SelectedNodeTag = node;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
