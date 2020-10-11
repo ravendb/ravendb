@@ -1,4 +1,4 @@
-﻿﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 import accessManager = require("common/shell/accessManager");
@@ -6,18 +6,9 @@ import accessManager = require("common/shell/accessManager");
 export = getSettingsMenuItem;
 
 function getSettingsMenuItem(appUrls: computedAppUrls) {
-
     const access = accessManager.default.databaseSettingsMenu;
     
-    const items: menuItem[] = [
-        new leafMenuItem({
-            route: ['databases/record', 'databases/settings/databaseRecord'],
-            moduleId: 'viewmodels/database/settings/databaseRecord',
-            title: 'Database Record',
-            nav: access.showDatabaseRecordMenuItem,
-            css: 'icon-database-record',
-            dynamicHash: appUrls.databaseRecord
-        }),
+    const settingsItems: menuItem[] = [
         new leafMenuItem({
             route: ['databases/settings/databaseSettings'],
             moduleId: 'viewmodels/database/settings/databaseSettings',
@@ -132,104 +123,16 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.manageDatabaseGroup
         }),
         new separatorMenuItem(),
-        new separatorMenuItem('Tasks'),
+        new separatorMenuItem('Advanced'),
         new leafMenuItem({
-            route: 'databases/tasks/editExternalReplicationTask',
-            moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
-            title: 'External Replication Task',
-            nav: false,
-            dynamicHash: appUrls.editExternalReplicationTaskUrl,
-            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/editReplicationHubTask',
-            moduleId: 'viewmodels/database/tasks/editReplicationHubTask',
-            title: 'Replication Hub Task',
-            nav: false,
-            dynamicHash: appUrls.editReplicationHubTaskUrl,
-            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/editReplicationSinkTask',
-            moduleId: 'viewmodels/database/tasks/editReplicationSinkTask',
-            title: 'Replication Sink Task',
-            nav: false,
-            dynamicHash: appUrls.editReplicationSinkTaskUrl,
-            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/editPeriodicBackupTask',
-            moduleId: 'viewmodels/database/tasks/editPeriodicBackupTask',
-            title: 'Backup Task',
-            nav: false,
-            dynamicHash: appUrls.backupsUrl,
-            itemRouteToHighlight: 'databases/tasks/backups'
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/editSubscriptionTask',
-            moduleId: 'viewmodels/database/tasks/editSubscriptionTask',
-            title: 'Subscription Task',
-            nav: false,
-            dynamicHash: appUrls.editSubscriptionTaskUrl,
-            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/editRavenEtlTask',
-            moduleId: 'viewmodels/database/tasks/editRavenEtlTask',
-            title: 'RavenDB ETL Task',
-            nav: false,
-            dynamicHash: appUrls.editRavenEtlTaskUrl,
-            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/editSqlEtlTask',
-            moduleId: 'viewmodels/database/tasks/editSqlEtlTask',
-            title: 'SQL ETL Task',
-            nav: false,
-            dynamicHash: appUrls.editSqlEtlTaskUrl,
-            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/backups',
-            moduleId: 'viewmodels/database/tasks/backups',
-            title: 'Backups',
-            nav: true,
-            css: 'icon-backups',
-            dynamicHash: appUrls.backupsUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/import*details',
-            moduleId: 'viewmodels/database/tasks/importParent',
-            title: 'Import Data',
-            nav: true,
-            css: 'icon-import-database',
-            dynamicHash: appUrls.importDatabaseFromFileUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/exportDatabase',
-            moduleId: 'viewmodels/database/tasks/exportDatabase',
-            title: 'Export Database',
-            nav: true,
-            css: 'icon-export-database',
-            dynamicHash: appUrls.exportDatabaseUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/sampleData',
-            moduleId: 'viewmodels/database/tasks/createSampleData',
-            title: 'Create Sample Data',
-            nav: true,
-            css: 'icon-create-sample-data',
-            dynamicHash: appUrls.sampleDataUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/ongoingTasks',
-            moduleId: 'viewmodels/database/tasks/ongoingTasks',
-            title: 'Manage Ongoing Tasks',
-            nav: true,
-            css: 'icon-manage-ongoing-tasks',
-            dynamicHash: appUrls.ongoingTasksUrl
+            route: ['databases/record', 'databases/advanced/databaseRecord'],
+            moduleId: 'viewmodels/database/advanced/databaseRecord',
+            title: 'Database Record',
+            nav: access.showDatabaseRecordMenuItem,
+            css: 'icon-database-record',
+            dynamicHash: appUrls.databaseRecord
         })
     ];
 
-    return new intermediateMenuItem('Settings', items, 'icon-settings');
+    return new intermediateMenuItem('Settings', settingsItems, 'icon-settings');
 }

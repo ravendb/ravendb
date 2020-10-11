@@ -6,6 +6,7 @@ import getManageServerMenuItem = require("common/shell/menu/items/manageServer")
 import getDatabasesMenuItem = require("common/shell/menu/items/databases");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getStatsMenuItem = require("common/shell/menu/items/stats");
+import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 import rootItems = require("common/shell/menu/items/rootItems");
@@ -26,7 +27,6 @@ function getRouterConfiguration(): Array<DurandalRouteConfiguration> {
         }, []) as Array<DurandalRouteConfiguration>;
 }
 
-
 function convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration {
     return {
         route: leaf.route,
@@ -36,7 +36,6 @@ function convertToDurandalRoute(leaf: leafMenuItem): DurandalRouteConfiguration 
         dynamicHash: leaf.dynamicHash
     };
 }
-
 
 function getMenuItemDurandalRoutes(item: menuItem): Array<DurandalRouteConfiguration> {
     if (item.type === 'intermediate') {
@@ -51,13 +50,13 @@ function getMenuItemDurandalRoutes(item: menuItem): Array<DurandalRouteConfigura
     return [];
 }
 
-
 function generateAllMenuItems() {
     let appUrls = appUrl.forCurrentDatabase();
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
+        getTasksMenuItem(appUrls),
         getStatsMenuItem(appUrls),
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
