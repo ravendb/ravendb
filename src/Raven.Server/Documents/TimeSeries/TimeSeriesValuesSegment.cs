@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     for (int i = 0; i < vals.Length; i++)
                     {
-                        prevs[i].Min = prevs[i].First = vals[i];
+                        prevs[i].Max = prevs[i].Min = prevs[i].First = vals[i];
                     }
                 }
 
