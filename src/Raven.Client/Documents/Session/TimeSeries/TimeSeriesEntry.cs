@@ -157,13 +157,17 @@ namespace Raven.Client.Documents.Session.TimeSeries
             foreach (var memberInfo in mapping)
             {
                 var index = memberInfo.Key;
-                if (index >= values.Length)
-                    continue;
+                var value = double.NaN;
+                if (index < values.Length)
+                {
+                    if (asRollup)
+                        index *= 6;
 
-                if (asRollup)
-                    index *= 6;
+                    value = values[index];
+                }
+                
                 var member = memberInfo.Value;
-                member.SetValue(ref obj, values[index]);
+                member.SetValue(ref obj, value);
             }
 
             return obj;
