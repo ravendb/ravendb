@@ -13,7 +13,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact(Skip = "RavenDB-14286")]
+        [Fact]
         public void WhenCommandCanBeCheckedForFastestNode_ItCanRunInParallel()
         {
             var expected = new[]
@@ -39,9 +39,11 @@ namespace FastTests.Client
                 "GetConnectionStringCommand", "PutConnectionStringCommand", "RemoveConnectionStringCommand", "GetClientConfigurationCommand",
                 "DeleteCompareExchangeValueCommand", "GetCompareExchangeValueCommand", "GetCompareExchangeValuesCommand", "PutCompareExchangeValueCommand",
                 "GetPeriodicBackupStatusCommand", "StartBackupCommand", "UpdatePeriodicBackupCommand", "GetAttachmentCommand", "PutAttachmentCommand",
-                "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand"
+                "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", "ConfigureTimeSeriesValue",
+                "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
+                "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand",
             }.OrderBy(t => t);
-
+            
             var commandBaseType = typeof(RavenCommand<>);
             var types = commandBaseType.Assembly.GetTypes();
 
