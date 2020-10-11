@@ -738,7 +738,7 @@ namespace Raven.Server.ServerWide
                 if (swapSize < Configuration.PerformanceHints.MinSwapSize)
                     NotificationCenter.Add(AlertRaised.Create(null,
                         "Low swap size",
-                        $"The current swap size is {swapSize} and it is lower then the threshold defined {Configuration.PerformanceHints.MinSwapSize}",
+                        $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'",
                         AlertType.LowSwapSize,
                         NotificationSeverity.Warning));
                 return;
@@ -750,7 +750,7 @@ namespace Raven.Server.ServerWide
                 if(memoryInfo.TotalCommittableMemory - memoryInfo.TotalPhysicalMemory <= Sparrow.Size.Zero)
                     NotificationCenter.Add(AlertRaised.Create(null,
                         "No PageFile available",
-                        "Your system has no PageFile. There should be a PageFile for RavenDb to work properly",
+                        "Your system has no PageFile. It is recommended to have a PageFile in order for Server to work properly",
                         AlertType.LowSwapSize,
                         NotificationSeverity.Warning));
             }

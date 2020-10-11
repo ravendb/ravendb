@@ -47,7 +47,7 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         public TimeSetting TooLongRequestThreshold { get; set; }
         
-        [Description("The minimum swap size. If the swap size is lower a notification will arise")]
+        [Description("The minimum swap size (for linux only). If the swap size is lower a notification will arise")]
         [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [ConfigurationEntry("PerformanceHints.Memory.MinSwapSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
