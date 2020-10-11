@@ -6,7 +6,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 export = getDocumentsMenuItem;
 
 function getDocumentsMenuItem(appUrls: computedAppUrls) {
-    let documentsChildren = [
+    let documentsItems = [
         new leafMenuItem({
             title: "List of documents",
             nav: false,
@@ -15,7 +15,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-documents',
             dynamicHash: appUrls.documents
         }),
-
         new leafMenuItem({
             title: "Revisions Bin",
             nav: false,
@@ -24,9 +23,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-revisions-bin',
             dynamicHash: appUrls.revisionsBin
         }),
-
         new collectionMenuItem(),
-
         new leafMenuItem({
             title: "Patch",
             nav: true,
@@ -35,7 +32,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-patch',
             dynamicHash: appUrls.patch
         }),
-        
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
             moduleId: 'viewmodels/database/query/query',
@@ -45,7 +41,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             alias: true,
             dynamicHash: appUrls.query('')
         }),
-        
         new leafMenuItem({
             title: "Conflicts",
             nav: true,
@@ -54,8 +49,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-conflicts',
             dynamicHash: appUrls.conflicts,
             badgeData: collectionsTracker.default.conflictsCount
-        }),   
-        
+        }),
         new leafMenuItem({
             route: "databases/edit",
             title: "Edit Document",
@@ -63,7 +57,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             itemRouteToHighlight: "databases/documents"
         }),
-
         new leafMenuItem({
             route: "databases/ts/edit",
             title: "Edit Time Series",
@@ -71,7 +64,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             itemRouteToHighlight: "databases/documents"
         }),
-        
         new leafMenuItem({
             route: "databases/cmpXchg/edit",
             title: "Edit Compare Exchange Value",
@@ -79,7 +71,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             itemRouteToHighlight: "databases/cmpXchg"
         }),
-        
         new leafMenuItem({
             title: "Compare Exchange",
             nav: true,
@@ -90,7 +81,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Documents", documentsChildren, "icon-documents", {
+    return new intermediateMenuItem("Documents", documentsItems, "icon-documents", {
         dynamicHash: appUrls.documents
     });
 }

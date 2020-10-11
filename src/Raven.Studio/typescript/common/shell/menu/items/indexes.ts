@@ -4,7 +4,7 @@ import footer = require("common/shell/footer");
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
-    let indexesChildren = [
+    let indexesItems = [
         new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
             moduleId: 'viewmodels/database/query/query',
@@ -21,7 +21,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             css: 'icon-indexing',
             dynamicHash: appUrls.indexes
         }),
-        
         new leafMenuItem({
             route: 'databases/indexes/performance',
             moduleId: 'viewmodels/database/indexes/indexPerformance',
@@ -46,7 +45,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-index-errors',
             dynamicHash: appUrls.indexErrors,
-            badgeData:  ko.pureComputed(() => { return footer.default.stats() ? footer.default.stats().countOfIndexingErrors() : null; }) 
+            badgeData: ko.pureComputed(() => { return footer.default.stats() ? footer.default.stats().countOfIndexingErrors() : null; })
         }),
         new leafMenuItem({
             title: 'Edit Index',
@@ -65,7 +64,7 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Indexes", indexesChildren, 'icon-indexing', {
+    return new intermediateMenuItem("Indexes", indexesItems, 'icon-indexing', {
         dynamicHash: appUrls.indexes
     });
 }

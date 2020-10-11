@@ -305,7 +305,7 @@ class appUrl {
     }
     
     static forDatabaseRecord(db: database | databaseInfo): string {
-        return "#databases/settings/databaseRecord?" + appUrl.getEncodedDbPart(db);
+        return "#databases/advanced/databaseRecord?" + appUrl.getEncodedDbPart(db);
     }
 
     static forRevisions(db: database | databaseInfo): string {

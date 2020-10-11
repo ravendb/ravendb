@@ -8,6 +8,7 @@ import getManageServerMenuItem = require("common/shell/menu/items/manageServer")
 import getDatabasesMenuItem = require("common/shell/menu/items/databases");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getStatsMenuItem = require("common/shell/menu/items/stats");
+import getTasksMenuItem = require("common/shell/menu/items/tasks");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 import rootItems = require("common/shell/menu/items/rootItems");
@@ -22,17 +23,15 @@ function generateMenuItems(db: database) {
     return generateActiveDatabaseMenuItems();
 }
 
-
 function generateNoActiveDatabaseMenuItems() {
     const appUrls = appUrl.forCurrentDatabase();
     return [
         new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),
-        rootItems.dashboard(),       
+        rootItems.dashboard(),
         getManageServerMenuItem(),
         rootItems.about()
     ];
-    
 }
 
 function generateActiveDatabaseMenuItems() {
@@ -41,14 +40,14 @@ function generateActiveDatabaseMenuItems() {
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
         getSettingsMenuItem(appUrls),
+        getTasksMenuItem(appUrls),
         getStatsMenuItem(appUrls),
         
-        new separatorMenuItem('Server'),        
+        new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),
         rootItems.dashboard(),
-        getManageServerMenuItem(),       
-        rootItems.about(),
-        
+        getManageServerMenuItem(),
+        rootItems.about()
     ];
 }
 
