@@ -27,10 +27,9 @@ namespace Raven.Client.Documents.Smuggler
         CounterGroups = 1 << 15,
         Subscriptions = 1 << 16,
         CompareExchangeTombstones = 1 << 17,
-        
-
         TimeSeries = 1 << 18,
-        
+
+        [Obsolete("Please use DatabaseRecordItemType.IncludeHubReplicationAccessInfo instead.")]
         ReplicationHubCertificates = 1 << 19
     }
 
@@ -54,6 +53,8 @@ namespace Raven.Client.Documents.Smuggler
         SinkPullReplications = 1 << 13,
         HubPullReplications = 1 << 14,
         TimeSeries = 1 << 15,
-        DocumentsCompression = 1 << 16
+        DocumentsCompression = 1 << 16,
+        IncludeHubReplicationAccessInfo = 1 << 17,
+        IncludeSinkReplicationAccessInfo = 1 << 18
     }
 }

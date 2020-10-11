@@ -4,7 +4,6 @@
         <label data-bind="attr: { for: 'customizeDatabaseRecordTypes_' + instanceCounter }" class="margin-right margin-right-sm">Customize Configuration and Ongoing Tasks</label>
     </div>
     <div class="margin-left margin-left-lg js-customize-record" data-bind="collapse: customizeDatabaseRecordTypes">
-
         <div class="row">
             <div class="col-lg-3">
                 <div>Ongoing tasks</div>
@@ -29,27 +28,29 @@
                         <a class="js-warning-sql-etl" tabindex="0" data-bind="visible: includeSqlEtls() && !includeSqlConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
                     <div class="toggle">
-                        <input type="checkbox" data-bind="checked: includeSinkPullReplications, attr: { id: 'includeSinkPullReplications_' + instanceCounter }">
-                        <label data-bind="attr: { for: 'includeSinkPullReplications_' + instanceCounter }" class="margin-right margin-right-sm">Pull Replication Sinks</label>
-                        <a class="js-warning-pull-replication-sink" tabindex="0" data-bind="visible: includeSinkPullReplications() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
+                        <input type="checkbox" data-bind="checked: includeHubReplications, attr: { id: 'includeHubReplications_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeHubReplications_' + instanceCounter }" class="margin-right margin-right-sm">Replication Hubs</label>
+                    </div>
+                    <div class="margin-left margin-left-lg" data-bind="if: usingHttps">
+                        <div class="toggle">
+                            <input id="toggleHubAccessInfo" type="checkbox"
+                                   data-bind="checked: includeHubAccessInformation" />
+                            <label for="toggleHubAccessInfo">Include Access Information</label>
+                        </div>
                     </div>
                     <div class="toggle">
-                        <input type="checkbox" data-bind="checked: includeHubPullReplications, attr: { id: 'includeHubPullReplications_' + instanceCounter }">
-                        <label data-bind="attr: { for: 'includeHubPullReplications_' + instanceCounter }" class="margin-right margin-right-sm">Pull Replication Hubs</label>
+                        <input type="checkbox" data-bind="checked: includeSinkReplications, attr: { id: 'includeSinkReplications_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeSinkReplications_' + instanceCounter }" class="margin-right margin-right-sm">Replication Sinks</label>
+                        <a class="js-warning-pull-replication-sink" tabindex="0" data-bind="visible: includeSinkReplications() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
                     </div>
-                    <div class="bg-info padding padding-xs margin-bottom"><small><i class="icon-info"></i> Imported ongoing tasks will be disabled by default.</small></div>
-                </div>
-
-                <div>Connection Strings</div>
-                <div class="margin-left margin-left-lg">
-                    <div class="toggle">
-                        <input type="checkbox" data-bind="checked: includeRavenConnectionStrings, attr: { id: 'includeRavenConnectionStrings_' + instanceCounter }">
-                        <label data-bind="attr: { for: 'includeRavenConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">RavenDB Connection Strings</label>
+                    <div class="margin-left margin-left-lg" data-bind="if: usingHttps">
+                        <div class="toggle">
+                            <input id="toggleSinkAccessInfo" type="checkbox"
+                                   data-bind="checked: includeSinkAccessInformation" />
+                            <label for="toggleSinkAccessInfo">Include Access Information</label>
+                        </div>
                     </div>
-                    <div class="toggle">
-                        <input type="checkbox" data-bind="checked: includeSqlConnectionStrings, attr: { id: 'includeSqlConnectionStrings_' + instanceCounter }">
-                        <label data-bind="attr: { for: 'includeSqlConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">SQL Connection Strings</label>
-                    </div>
+                    <div class="bg-info padding padding-xs margin-top margin-top-sm"><small><i class="icon-info"></i> Imported ongoing tasks will be disabled by default.</small></div>
                 </div>
             </div>
             <div class="col-lg-3">
@@ -88,9 +89,19 @@
                         <label data-bind="attr: { for: 'includeSorters_' + instanceCounter }" class="margin-right margin-right-sm">Custom Sorters</label>
                     </div>
                 </div>
+                <div class="margin-top margin-top-xs">Connection Strings</div>
+                <div class="margin-left margin-left-lg">
+                    <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeRavenConnectionStrings, attr: { id: 'includeRavenConnectionStrings_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeRavenConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">RavenDB Connection Strings</label>
+                    </div>
+                    <div class="toggle">
+                        <input type="checkbox" data-bind="checked: includeSqlConnectionStrings, attr: { id: 'includeSqlConnectionStrings_' + instanceCounter }">
+                        <label data-bind="attr: { for: 'includeSqlConnectionStrings_' + instanceCounter }" class="margin-right margin-right-sm">SQL Connection Strings</label>
+                    </div>
+                </div>
             </div>
         </div>
-
         <div class="row">
             <div class="col-xs-12 col-sm-6">
                 <div data-bind="validationElement: hasIncludes">

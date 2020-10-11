@@ -404,14 +404,14 @@
 
                 <!-- Replication Hub -->
 
-                <div data-bind="if: showPullReplicationHubSection">
+                <div data-bind="if: showReplicationHubSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item pull-replication-hub no-text-transform">
                             <i class="icon-pull-replication-hub"></i>
-                            <span>Replication Hub</span><span data-bind="text: ' (' + pullReplicationHubTasks().length + ')'"></span>
+                            <span>Replication Hub</span><span data-bind="text: ' (' + replicationHubTasks().length + ')'"></span>
                         </h5><hr>
                     </div>
-                    <div data-bind="foreach: pullReplicationHubTasks">
+                    <div data-bind="foreach: replicationHubTasks">
                         <div class="panel destination-item pull-replication-hub">
                             <div data-bind="attr: { 'data-state-text': $root.pluralize(ongoingHubs().length, 'sink', 'sinks'), class: 'state state-default' }"></div>
                             <div class="padding destination-info flex-vertical">
@@ -482,14 +482,14 @@
 
                 <!-- Replication Sink -->
 
-                <div data-bind="if: showPullReplicationSinkSection">
+                <div data-bind="if: showReplicationSinkSection">
                     <div class="hr-title">
                         <h5 class="tasks-list-item pull-replication-sink no-text-transform">
                             <i class="icon-pull-replication-agent"></i>
-                            <span>Replication Sink</span><span data-bind="text: ' (' + pullReplicationSinkTasks().length + ')'"></span>
+                            <span>Replication Sink</span><span data-bind="text: ' (' + replicationSinkTasks().length + ')'"></span>
                         </h5><hr>
                     </div>
-                    <div data-bind="foreach: pullReplicationSinkTasks">
+                    <div data-bind="foreach: replicationSinkTasks">
                         <div class="panel destination-item pull-replication-sink" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding destination-info flex-vertical">

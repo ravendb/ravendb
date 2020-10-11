@@ -24,10 +24,14 @@ class smugglerDatabaseRecord {
     includeSqlEtls = ko.observable<boolean>(true);
     includeClient = ko.observable<boolean>(true);
     includeSorters = ko.observable<boolean>(true);
-    includeSinkPullReplications = ko.observable<boolean>(true);
-    includeHubPullReplications = ko.observable<boolean>(true);
+    includeHubReplications = ko.observable<boolean>(true);
+    includeSinkReplications = ko.observable<boolean>(true);
+    includeHubAccessInformation = ko.observable<boolean>();
+    includeSinkAccessInformation = ko.observable<boolean>();
 
     hasIncludes: KnockoutComputed<boolean>;
+
+    usingHttps = location.protocol === "https:";
 
     constructor() {
         this.instanceCounter = smugglerDatabaseRecord.instanceCounter++;
@@ -38,6 +42,33 @@ class smugglerDatabaseRecord {
         this.hasIncludes = ko.pureComputed(() => {
             const options = this.getDatabaseRecordTypes();
             return options.length > 0;
+        });
+
+        this.includeHubAccessInformation(this.usingHttps);
+        this.includeSinkAccessInformation(this.usingHttps);
+        
+        this.includeHubReplications.subscribe(hubReplication => {
+            if (!hubReplication) {
+                this.includeHubAccessInformation(false);
+            }
+        });
+
+        this.includeSinkReplications.subscribe(sinkReplication => {
+            if (!sinkReplication) {
+                this.includeSinkAccessInformation(false);
+            }
+        });
+
+        this.includeHubAccessInformation.subscribe(accessInfo => {
+            if (accessInfo) {
+                this.includeHubReplications(true);
+            }
+        });
+
+        this.includeSinkAccessInformation.subscribe(accessInfo => {
+            if (accessInfo) {
+                this.includeSinkReplications(true);
+            }
         });
     }
     
@@ -101,11 +132,17 @@ class smugglerDatabaseRecord {
         if (this.includeSorters()) {
             result.push("Sorters");
         }
-        if (this.includeSinkPullReplications()) {
+        if (this.includeHubReplications()) {
+            result.push("HubPullReplications");
+        }
+        if (this.includeHubAccessInformation()) {
+            result.push("IncludeHubReplicationAccessInfo");
+        }
+        if (this.includeSinkReplications()) {
             result.push("SinkPullReplications");
         }
-        if (this.includeHubPullReplications()) {
-            result.push("HubPullReplications");
+        if (this.includeSinkAccessInformation()) {
+            result.push("IncludeSinkReplicationAccessInfo");
         }
         if (this.includeDocumentsCompression()) {
             result.push("DocumentsCompression");
