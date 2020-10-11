@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using Jint;
 using Jint.Native;
 using Jint.Native.Array;
@@ -38,6 +39,7 @@ namespace Raven.Server.Documents.Patch
 
         public SpatialResult? Distance => _doc?.Distance;
         public float? IndexScore => _doc?.IndexScore;
+
         private void MarkChanged()
         {
             Changed = true;
@@ -170,6 +172,7 @@ namespace Raven.Server.Documents.Patch
                         case Client.Constants.Documents.Indexing.Fields.NullValue:
                             value = DynamicJsNull.ExplicitNull;
                             return true;
+
                         case Client.Constants.Documents.Indexing.Fields.EmptyString:
                             value = string.Empty;
                             return true;
@@ -178,11 +181,11 @@ namespace Raven.Server.Documents.Patch
 
                 if (fieldType.IsNumeric)
                 {
-                    if (long.TryParse(val, out var valueAsLong))
+                    if (long.TryParse(val, NumberStyles.Integer, CultureInfo.InvariantCulture, out var valueAsLong))
                     {
                         value = valueAsLong;
                     }
-                    else if (double.TryParse(val, out var valueAsDouble))
+                    else if (double.TryParse(val, NumberStyles.Any, CultureInfo.InvariantCulture, out var valueAsDouble))
                     {
                         value = valueAsDouble;
                     }
@@ -255,19 +258,25 @@ namespace Raven.Server.Documents.Patch
                 {
                     case BlittableJsonToken.Null:
                         return DynamicJsNull.ExplicitNull;
+
                     case BlittableJsonToken.Boolean:
                         return (bool)value ? JsBoolean.True : JsBoolean.False;
+
                     case BlittableJsonToken.Integer:
                         // TODO: in the future, add [numeric type]TryFormat, when parsing numbers to strings
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.Integer);
                         return (long)value;
+
                     case BlittableJsonToken.LazyNumber:
                         owner?.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
                         return GetJsValueForLazyNumber(owner?.Engine, (LazyNumberValue)value);
+
                     case BlittableJsonToken.String:
                         return value.ToString();
+
                     case BlittableJsonToken.CompressedString:
                         return value.ToString();
+
                     case BlittableJsonToken.StartObject:
                         Changed = true;
                         _parent.MarkChanged();
@@ -278,10 +287,13 @@ namespace Raven.Server.Documents.Patch
                         {
                             case BlittableJsonReaderArray blittableArray:
                                 return GetArrayInstanceFromBlittableArray(owner.Engine, blittableArray, owner);
+
                             case LazyStringValue asLazyStringValue:
                                 return asLazyStringValue.ToString();
+
                             case LazyCompressedStringValue asLazyCompressedStringValue:
                                 return asLazyCompressedStringValue.ToString();
+
                             default:
                                 blittable.NoCache = true;
                                 return new BlittableObjectInstance(owner.Engine,
@@ -294,6 +306,7 @@ namespace Raven.Server.Documents.Patch
                         _parent.MarkChanged();
                         var array = (BlittableJsonReaderArray)value;
                         return GetArrayInstanceFromBlittableArray(owner.Engine, array, owner);
+
                     default:
                         throw new ArgumentOutOfRangeException(type.ToString());
                 }
