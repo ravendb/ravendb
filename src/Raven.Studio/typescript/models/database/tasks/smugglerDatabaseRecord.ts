@@ -136,13 +136,13 @@ class smugglerDatabaseRecord {
             result.push("HubPullReplications");
         }
         if (this.includeHubAccessInformation()) {
-            result.push("IncludeHubReplicationAccessInfo");
+            result.push("HubReplicationAccessInfo");
         }
         if (this.includeSinkReplications()) {
             result.push("SinkPullReplications");
         }
         if (this.includeSinkAccessInformation()) {
-            result.push("IncludeSinkReplicationAccessInfo");
+            result.push("SinkReplicationAccessInfo");
         }
         if (this.includeDocumentsCompression()) {
             result.push("DocumentsCompression");
