@@ -7,7 +7,7 @@ namespace Raven.Client.ServerWide.Operations
     public class ServerWideOperation : Operation
     {
         public ServerWideOperation(RequestExecutor requestExecutor, DocumentConventions conventions, long id, string nodeTag = null)
-            : base(requestExecutor, null, conventions, id)
+            : base(requestExecutor, null, conventions, id, nodeTag)
         {
             StatusFetchMode = OperationStatusFetchMode.Polling;
             NodeTag = nodeTag;

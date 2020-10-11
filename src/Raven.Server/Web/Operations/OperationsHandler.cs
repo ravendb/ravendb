@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -24,6 +25,9 @@ namespace Raven.Server.Web.Operations
                     writer.WriteStartObject();
                     writer.WritePropertyName("Id");
                     writer.WriteInteger(nextId);
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(OperationIdResult.OperationNodeTag));
+                    writer.WriteString(Server.ServerStore.NodeTag);
                     writer.WriteEndObject();
                 }
             }
