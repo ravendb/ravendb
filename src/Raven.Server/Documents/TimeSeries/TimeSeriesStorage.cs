@@ -2040,15 +2040,32 @@ namespace Raven.Server.Documents.TimeSeries
 
             if (segment.NumberOfLiveEntries > 0)
             {
-                foreach (var state in segment.SegmentValues.Span)
+                for (var index = 0; index < segment.SegmentValues.Span.Length; index++)
                 {
+                    var state = segment.SegmentValues.Span[index];
+                    if (state.Count == 0)
+                    {
+                        // all followed dimensions must be zero as well
+                        for (; index < segment.SegmentValues.Span.Length; index++)
+                        {
+                            state = segment.SegmentValues.Span[index];
+                            Debug.Assert(state.Count == 0, "Count not zero");
+                            Debug.Assert(double.IsNaN(state.First), "First must be NaN");
+                            Debug.Assert(double.IsNaN(state.Min), "Min must be NaN");
+                            Debug.Assert(double.IsNaN(state.Max), "Max must be NaN");
+
+                            Debug.Assert(state.Last == 0, "Last not zero");
+                            Debug.Assert(state.Sum == 0, "Sum not zero");
+                        }
+                        break;
+                    }
+
                     Debug.Assert(double.IsNaN(state.First) == false, "First is NaN");
                     Debug.Assert(double.IsNaN(state.Last) == false, "Last is NaN");
                     Debug.Assert(double.IsNaN(state.Min) == false, "Min is NaN");
                     Debug.Assert(double.IsNaN(state.Max) == false, "Max is NaN");
                     Debug.Assert(double.IsNaN(state.Sum) == false, "Sum is NaN");
                     Debug.Assert(double.IsNaN(state.Count) == false, "Count is NaN");
-                    Debug.Assert(state.Count > 0, "Count is Zero");
                 }
 
                 if (name.Contains(TimeSeriesConfiguration.TimeSeriesRollupSeparator))
