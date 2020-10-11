@@ -673,7 +673,7 @@ namespace SlowTests.Client.TimeSeries.Query
 
         private static DateTime PopulateCanGroupByLoadedTag(DocumentStore store)
         {
-            var baseline = DateTime.Today;
+            var baseline = DateTime.Today.ToUniversalTime();
 
             using (var session = store.OpenSession())
             {
