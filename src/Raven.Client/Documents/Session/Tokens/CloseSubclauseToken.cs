@@ -4,6 +4,7 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public sealed class CloseSubclauseToken : QueryToken
     {
+        public string BoostParameterName { get; set; }
         private CloseSubclauseToken()
         {
         }
@@ -12,6 +13,8 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
+            if (BoostParameterName != null)
+                writer.Append(", $").Append(BoostParameterName);
             writer.Append(")");
         }
     }
