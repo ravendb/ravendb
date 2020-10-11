@@ -18,7 +18,6 @@ class importDatabaseModel {
     includeSubscriptions = ko.observable(true);
     includeDocumentsTombstones = ko.observable(true);
     includeCompareExchangeTombstones = ko.observable(true);
-    includeReplicationHubCertificates = ko.observable(true);
 
     databaseModel = new smugglerDatabaseRecord();
 
@@ -163,9 +162,6 @@ class importDatabaseModel {
         if (this.includeCompareExchangeTombstones()) {
             operateOnTypes.push("CompareExchangeTombstones");
         }
-        if (this.includeReplicationHubCertificates()) {
-            operateOnTypes.push("ReplicationHubCertificates");
-        }
 
         const recordTypes = databaseRecordTypes.length ? databaseRecordTypes.join(",") : undefined as Raven.Client.Documents.Smuggler.DatabaseRecordItemType;
         
@@ -192,7 +188,6 @@ class importDatabaseModel {
                 || this.includeCounters() 
                 || this.includeLegacyCounters()
                 || this.includeTimeSeries()
-                || this.includeReplicationHubCertificates()
                 || this.includeRevisionDocuments() 
                 || this.includeDocuments()
                 || this.includeAttachments()

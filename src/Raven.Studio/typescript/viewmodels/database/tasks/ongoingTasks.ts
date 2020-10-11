@@ -42,19 +42,19 @@ class ongoingTasks extends viewModelBase {
     sqlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
     backupTasks = ko.observableArray<ongoingTaskBackupListModel>();
     subscriptionTasks = ko.observableArray<ongoingTaskSubscriptionListModel>();
-    pullReplicationHubTasks = ko.observableArray<ongoingTaskReplicationHubDefinitionListModel>();
-    pullReplicationSinkTasks = ko.observableArray<ongoingTaskReplicationSinkListModel>();
+    replicationHubTasks = ko.observableArray<ongoingTaskReplicationHubDefinitionListModel>();
+    replicationSinkTasks = ko.observableArray<ongoingTaskReplicationSinkListModel>();
     
     showReplicationSection = this.createShowSectionComputed(this.replicationTasks, 'External Replication');
     showEtlSection = this.createShowSectionComputed(this.etlTasks, 'RavenDB ETL');
     showSqlSection = this.createShowSectionComputed(this.sqlTasks, 'SQL ETL');
     showBackupSection = this.createShowSectionComputed(this.backupTasks, 'Backup');
     showSubscriptionsSection = this.createShowSectionComputed(this.subscriptionTasks, 'Subscription');
-    showPullReplicationHubSection = this.createShowSectionComputedForPullHub(this.pullReplicationHubTasks);
-    showPullReplicationSinkSection = this.createShowSectionComputed(this.pullReplicationSinkTasks, "Replication Sink");
+    showReplicationHubSection = this.createShowSectionComputedForPullHub(this.replicationHubTasks);
+    showReplicationSinkSection = this.createShowSectionComputed(this.replicationSinkTasks, "Replication Sink");
 
     tasksTypesOrderForUI = ["Replication", "RavenEtl", "SqlEtl", "Backup", "Subscription", "PullReplicationAsHub", "PullReplicationAsSink"] as Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType>;
-    existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();    
+    existingTaskTypes = ko.observableArray<TasksNamesInUI | "All tasks">();
     selectedTaskType = ko.observable<TasksNamesInUI | "All tasks">();
     
     taskNameToCount: KnockoutComputed<dictionary<number>>;
@@ -84,8 +84,8 @@ class ongoingTasks extends viewModelBase {
                 "SQL ETL": this.sqlTasks().length,
                 "Backup": this.backupTasks().length,
                 "Subscription": this.subscriptionTasks().length,
-                "Pull Replication Hub": this.pullReplicationHubTasks().length,
-                "Pull Replication Sink": this.pullReplicationSinkTasks().length
+                "Pull Replication Hub": this.replicationHubTasks().length,
+                "Pull Replication Sink": this.replicationSinkTasks().length
             }
         });
     }
@@ -140,7 +140,7 @@ class ongoingTasks extends viewModelBase {
                         case "Raven":
                             const matchingEtlTask = this.etlTasks().find(x => x.taskName() === taskProgress.TaskName);
                             if (matchingEtlTask) {
-                                matchingEtlTask.updateProgress(taskProgress);    
+                                matchingEtlTask.updateProgress(taskProgress);
                             }
                             break;
                     }
@@ -163,7 +163,7 @@ class ongoingTasks extends viewModelBase {
     }
     
     private createShowSectionComputed(tasksContainer: KnockoutObservableArray<{ responsibleNode: KnockoutObservable<Raven.Client.ServerWide.Operations.NodeId> }>, taskType: TasksNamesInUI) {
-        return ko.pureComputed(() =>  {
+        return ko.pureComputed(() => {
             const hasAnyTask = tasksContainer().length > 0;
             const matchesSelectTaskType = this.selectedTaskType() === taskType || this.selectedTaskType() === "All tasks";
             
@@ -177,7 +177,7 @@ class ongoingTasks extends viewModelBase {
     }
 
     private createShowSectionComputedForPullHub(tasksContainer: KnockoutObservableArray<ongoingTaskReplicationHubDefinitionListModel>) {
-        return ko.pureComputed(() =>  {
+        return ko.pureComputed(() => {
             const hasAnyTask = tasksContainer().length > 0;
             const matchesSelectTaskType = this.selectedTaskType() === "Replication Hub" || this.selectedTaskType() === "All tasks";
 
@@ -249,7 +249,7 @@ class ongoingTasks extends viewModelBase {
                         this.watchedBackups.delete(task.taskId);
                     }
                 }
-            });    
+            });
         }
     }
     
@@ -290,8 +290,8 @@ class ongoingTasks extends viewModelBase {
             ...this.backupTasks(),
             ...this.etlTasks(),
             ...this.sqlTasks(),
-            ...this.pullReplicationSinkTasks(),
-            ...this.pullReplicationHubTasks(),
+            ...this.replicationSinkTasks(),
+            ...this.replicationHubTasks(),
             ...this.subscriptionTasks()] as Array<{ taskId: number }>;
 
         const oldTaskIds = oldTasks.map(x => x.taskId);
@@ -318,7 +318,7 @@ class ongoingTasks extends viewModelBase {
         const ongoingBackupTasks = groupedBackupTasks.false;
 
         if (ongoingBackupTasks) {
-            this.backupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);            
+            this.backupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);
         } else if (serverWideBackupTasks) {
             this.backupTasks(serverWideBackupTasks);
         }
@@ -335,13 +335,13 @@ class ongoingTasks extends viewModelBase {
             groupedTasks['Subscription' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
             toDeleteIds, 
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) => new ongoingTaskSubscriptionListModel(dto));
-        this.mergeTasks(this.pullReplicationSinkTasks,
+        this.mergeTasks(this.replicationSinkTasks,
             groupedTasks['PullReplicationAsSink' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => new ongoingTaskReplicationSinkListModel(dto));
         
         const hubOngoingTasks = groupedTasks['PullReplicationAsHub' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
-        this.mergePullReplicationHubs(result.PullReplications, hubOngoingTasks || [], toDeleteIds);
+        this.mergeReplicationHubs(result.PullReplications, hubOngoingTasks || [], toDeleteIds);
         
         const taskTypes = Object.keys(groupedTasks); 
         if ((hubOngoingTasks || []).length === 0 && result.PullReplications.length) {
@@ -358,14 +358,12 @@ class ongoingTasks extends viewModelBase {
             .filter(x => x))
             .sort());
     }
-    
-   
      
-    private mergePullReplicationHubs(incomingDefinitions: Array<Raven.Client.Documents.Operations.Replication.PullReplicationDefinition>,
+    private mergeReplicationHubs(incomingDefinitions: Array<Raven.Client.Documents.Operations.Replication.PullReplicationDefinition>,
                                      incomingData: Array<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub>,
                                      toDelete: Array<number>) {
         
-        const container = this.pullReplicationHubTasks;
+        const container = this.replicationHubTasks;
         
         // remove old hub tasks
         container()
