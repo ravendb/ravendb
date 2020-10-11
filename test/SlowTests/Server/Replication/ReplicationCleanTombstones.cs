@@ -468,6 +468,7 @@ namespace SlowTests.Server.Replication
                 {
                     if (storage.ReplicationLoader.GetMinimalEtagForReplication() > 1)
                         break;
+                    await Task.Delay(TimeSpan.FromMilliseconds(50));
                 }
 
                 Assert.True(storage.ReplicationLoader.GetMinimalEtagForReplication() > 1);
@@ -485,7 +486,7 @@ namespace SlowTests.Server.Replication
             }
 
             var total = 0;
-            foreach (var server in cluster.Nodes.Where(server => !server.Disposed))
+            foreach (var server in cluster.Nodes.Where(server => (server.Disposed  == false)))
             {
                 using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context2))
                 using (context2.OpenReadTransaction())
