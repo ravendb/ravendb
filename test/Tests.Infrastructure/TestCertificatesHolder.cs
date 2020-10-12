@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
@@ -23,13 +24,87 @@ namespace FastTests
 
         private string _clientCertificate3Path;
 
-        public readonly Lazy<X509Certificate2> ServerCertificate;
+        public readonly Lazy<TrackingX509Certificate2> ServerCertificate;
 
-        public readonly Lazy<X509Certificate2> ClientCertificate1;
+        public readonly Lazy<TrackingX509Certificate2> ClientCertificate1;
 
-        public readonly Lazy<X509Certificate2> ClientCertificate2;
+        public readonly Lazy<TrackingX509Certificate2> ClientCertificate2;
 
-        public readonly Lazy<X509Certificate2> ClientCertificate3;
+        public readonly Lazy<TrackingX509Certificate2> ClientCertificate3;
+
+        public sealed class TrackingX509Certificate2 : X509Certificate2
+        {
+            public TrackingX509Certificate2()
+            {
+            }
+
+            public TrackingX509Certificate2(byte[] rawData)
+                : base(rawData)
+            {
+            }
+
+            public TrackingX509Certificate2(byte[] rawData, string password)
+                : base(rawData, password)
+            {
+            }
+
+            public TrackingX509Certificate2(byte[] rawData, SecureString password)
+                : base(rawData, password)
+            {
+            }
+
+            public TrackingX509Certificate2(byte[] rawData, string password, X509KeyStorageFlags keyStorageFlags)
+                : base(rawData, password, keyStorageFlags)
+            {
+            }
+
+            public TrackingX509Certificate2(byte[] rawData, SecureString password, X509KeyStorageFlags keyStorageFlags)
+                : base(rawData, password, keyStorageFlags)
+            {
+            }
+
+            public TrackingX509Certificate2(string fileName)
+                : base(fileName)
+            {
+            }
+
+            public TrackingX509Certificate2(string fileName, string password)
+                : base(fileName, password)
+            {
+            }
+
+            public TrackingX509Certificate2(string fileName, SecureString password)
+                : base(fileName, password)
+            {
+            }
+
+            public TrackingX509Certificate2(string fileName, string password, X509KeyStorageFlags keyStorageFlags)
+                : base(fileName, password, keyStorageFlags)
+            {
+            }
+
+            public TrackingX509Certificate2(string fileName, SecureString password, X509KeyStorageFlags keyStorageFlags)
+                : base(fileName, password, keyStorageFlags)
+            {
+            }
+
+            public TrackingX509Certificate2(X509Certificate certificate)
+                : base(certificate)
+            {
+            }
+
+            public override void Reset()
+            {
+                Console.WriteLine("Certificate reset from: " + Environment.StackTrace);
+                base.Reset();
+            }
+
+            protected override void Dispose(bool d)
+            {
+                Console.WriteLine($"Certificate disposed (dispose:{d}) from: " + Environment.StackTrace);
+                base.Dispose(d);
+            }
+        }
 
         public string ServerCertificatePath
         {
@@ -82,11 +157,11 @@ namespace FastTests
             _getClientCertificate2Path = () => clientCertificate2Path;
             _getClientCertificate3Path = () => clientCertificate3Path;
 
-            ServerCertificate = new Lazy<X509Certificate2>(() =>
+            ServerCertificate = new Lazy<TrackingX509Certificate2>(() =>
             {
                 try
                 {
-                    return new X509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
@@ -133,11 +208,11 @@ namespace FastTests
                 return path;
             };
 
-            ServerCertificate = new Lazy<X509Certificate2>(() =>
+            ServerCertificate = new Lazy<TrackingX509Certificate2>(() =>
             {
                 try
                 {
-                    return new X509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
@@ -150,13 +225,13 @@ namespace FastTests
             ClientCertificate3 = CreateLazy(() => ClientCertificate3Path, 3);
         }
 
-        private Lazy<X509Certificate2> CreateLazy(Func<string> path, int index)
+        private Lazy<TrackingX509Certificate2> CreateLazy(Func<string> path, int index)
         {
-            return new Lazy<X509Certificate2>(() =>
+            return new Lazy<TrackingX509Certificate2>(() =>
             {
                 try
                 {
-                    return new X509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet);
+                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
