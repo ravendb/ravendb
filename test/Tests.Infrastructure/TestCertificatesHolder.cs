@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.Serialization;
 using System.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -25,82 +24,73 @@ namespace FastTests
 
         private string _clientCertificate3Path;
 
-        public readonly Lazy<MyX509Certificate2> ServerCertificate;
+        public readonly Lazy<TrackingX509Certificate2> ServerCertificate;
 
-        public readonly Lazy<MyX509Certificate2> ClientCertificate1;
+        public readonly Lazy<TrackingX509Certificate2> ClientCertificate1;
 
-        public readonly Lazy<MyX509Certificate2> ClientCertificate2;
+        public readonly Lazy<TrackingX509Certificate2> ClientCertificate2;
 
-        public readonly Lazy<MyX509Certificate2> ClientCertificate3;
+        public readonly Lazy<TrackingX509Certificate2> ClientCertificate3;
 
-
-        public class MyX509Certificate2 : X509Certificate2
+        public sealed class TrackingX509Certificate2 : X509Certificate2
         {
-            public MyX509Certificate2()
-                : base()
+            public TrackingX509Certificate2()
             {
             }
 
-            public MyX509Certificate2(byte[] rawData)
+            public TrackingX509Certificate2(byte[] rawData)
                 : base(rawData)
             {
             }
 
-            public MyX509Certificate2(byte[] rawData, string password)
+            public TrackingX509Certificate2(byte[] rawData, string password)
                 : base(rawData, password)
             {
             }
 
-            public MyX509Certificate2(byte[] rawData, SecureString password)
+            public TrackingX509Certificate2(byte[] rawData, SecureString password)
                 : base(rawData, password)
             {
             }
 
-            public MyX509Certificate2(byte[] rawData, string password, X509KeyStorageFlags keyStorageFlags)
+            public TrackingX509Certificate2(byte[] rawData, string password, X509KeyStorageFlags keyStorageFlags)
                 : base(rawData, password, keyStorageFlags)
             {
             }
 
-            public MyX509Certificate2(byte[] rawData, SecureString password, X509KeyStorageFlags keyStorageFlags)
+            public TrackingX509Certificate2(byte[] rawData, SecureString password, X509KeyStorageFlags keyStorageFlags)
                 : base(rawData, password, keyStorageFlags)
             {
             }
 
-            public MyX509Certificate2(string fileName)
+            public TrackingX509Certificate2(string fileName)
                 : base(fileName)
             {
             }
 
-            public MyX509Certificate2(string fileName, string password)
+            public TrackingX509Certificate2(string fileName, string password)
                 : base(fileName, password)
             {
             }
 
-            public MyX509Certificate2(string fileName, SecureString password)
+            public TrackingX509Certificate2(string fileName, SecureString password)
                 : base(fileName, password)
             {
             }
 
-
-            public MyX509Certificate2(string fileName, string password, X509KeyStorageFlags keyStorageFlags)
+            public TrackingX509Certificate2(string fileName, string password, X509KeyStorageFlags keyStorageFlags)
                 : base(fileName, password, keyStorageFlags)
             {
             }
 
-            public MyX509Certificate2(string fileName, SecureString password, X509KeyStorageFlags keyStorageFlags)
+            public TrackingX509Certificate2(string fileName, SecureString password, X509KeyStorageFlags keyStorageFlags)
                 : base(fileName, password, keyStorageFlags)
             {
             }
 
-            public MyX509Certificate2(X509Certificate certificate)
+            public TrackingX509Certificate2(X509Certificate certificate)
                 : base(certificate)
             {
-            }
-
-            protected MyX509Certificate2(SerializationInfo info, StreamingContext context)
-                : base(info, context)
-            {
-                throw new PlatformNotSupportedException();
             }
 
             public override void Reset()
@@ -167,11 +157,11 @@ namespace FastTests
             _getClientCertificate2Path = () => clientCertificate2Path;
             _getClientCertificate3Path = () => clientCertificate3Path;
 
-            ServerCertificate = new Lazy<MyX509Certificate2>(() =>
+            ServerCertificate = new Lazy<TrackingX509Certificate2>(() =>
             {
                 try
                 {
-                    return new MyX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
@@ -218,11 +208,11 @@ namespace FastTests
                 return path;
             };
 
-            ServerCertificate = new Lazy<MyX509Certificate2>(() =>
+            ServerCertificate = new Lazy<TrackingX509Certificate2>(() =>
             {
                 try
                 {
-                    return new MyX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
+                    return new TrackingX509Certificate2(ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
@@ -235,13 +225,13 @@ namespace FastTests
             ClientCertificate3 = CreateLazy(() => ClientCertificate3Path, 3);
         }
 
-        private Lazy<MyX509Certificate2> CreateLazy(Func<string> path, int index)
+        private Lazy<TrackingX509Certificate2> CreateLazy(Func<string> path, int index)
         {
-            return new Lazy<MyX509Certificate2>(() =>
+            return new Lazy<TrackingX509Certificate2>(() =>
             {
                 try
                 {
-                    return new MyX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet);
+                    return new TrackingX509Certificate2(path(), (string)null, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (CryptographicException e)
                 {
