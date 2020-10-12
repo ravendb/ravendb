@@ -903,10 +903,12 @@ namespace Raven.Server.ServerWide
                     nodesStatuses = _engine.CurrentLeader?.GetStatus();
 
                     break;
+
                 case RachisState.Candidate:
                     nodesStatuses = _engine.Candidate?.GetStatus();
 
                     break;
+
                 case RachisState.Follower:
                     var leaderTag = _engine.LeaderTag;
                     if (leaderTag != null)
@@ -1016,13 +1018,16 @@ namespace Raven.Server.ServerWide
                 case nameof(DeleteDatabaseCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Delete));
                     break;
+
                 case nameof(AddDatabaseCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Put));
                     break;
+
                 case nameof(ToggleDatabasesStateCommand):
                 case nameof(UpdateTopologyCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.Update));
                     break;
+
                 case nameof(RemoveNodeFromDatabaseCommand):
                     NotificationCenter.Add(DatabaseChanged.Create(databaseName, DatabaseChangeType.RemoveNode));
                     break;
@@ -1039,16 +1044,20 @@ namespace Raven.Server.ServerWide
                 case nameof(ConfirmReceiptServerCertificateCommand):
                     await ConfirmCertificateReceiptValueChanged(index, type);
                     break;
+
                 case nameof(InstallUpdatedServerCertificateCommand):
                     await InstallUpdatedCertificateValueChanged(index, type);
                     break;
+
                 case nameof(RecheckStatusOfServerCertificateReplacementCommand):
                 case nameof(ConfirmServerCertificateReplacedCommand):
                     ConfirmCertificateReplacedValueChanged(index, type);
                     break;
+
                 case nameof(PutClientConfigurationCommand):
                     LastClientConfigurationIndex = index;
                     break;
+
                 case nameof(PutLicenseCommand):
                     // reload license can send a notification which will open a write tx
                     LicenseManager.ReloadLicense();
@@ -1057,6 +1066,7 @@ namespace Raven.Server.ServerWide
                     // we are not waiting here on purpose
                     var t = LicenseManager.PutMyNodeInfoAsync().IgnoreUnobservedExceptions();
                     break;
+
                 case nameof(PutLicenseLimitsCommand):
                 case nameof(UpdateLicenseLimitsCommand):
                     LicenseManager.ReloadLicenseLimits();
@@ -1064,6 +1074,7 @@ namespace Raven.Server.ServerWide
                     NotifyAboutClusterTopologyAndConnectivityChanges();
 
                     break;
+
                 case nameof(PutServerWideBackupConfigurationCommand):
                     RescheduleTimerForIdleDatabases(index);
                     break;
@@ -1675,6 +1686,7 @@ namespace Raven.Server.ServerWide
                     }
                     disableEnableCommand = new ToggleSubscriptionStateCommand(taskName, disable, dbName, raftRequestId);
                     break;
+
                 default:
                     disableEnableCommand = new ToggleTaskStateCommand(taskId, type, disable, dbName, raftRequestId);
                     break;
@@ -1813,6 +1825,7 @@ namespace Raven.Server.ServerWide
 
                         command = new AddRavenEtlCommand(rvnEtl, databaseName, raftRequestId);
                         break;
+
                     case EtlType.Sql:
                         var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
                         sqlEtl.Validate(out var sqlEtlErr, validateName: false, validateConnection: false);
@@ -1823,6 +1836,7 @@ namespace Raven.Server.ServerWide
 
                         command = new AddSqlEtlCommand(sqlEtl, databaseName, raftRequestId);
                         break;
+
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -1886,6 +1900,7 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateRavenEtlCommand(id, rvnEtl, databaseName, raftRequestId);
                         break;
+
                     case EtlType.Sql:
 
                         var sqlEtl = JsonDeserializationCluster.SqlEtlConfiguration(etlConfiguration);
@@ -1897,6 +1912,7 @@ namespace Raven.Server.ServerWide
 
                         command = new UpdateSqlEtlCommand(id, sqlEtl, databaseName, raftRequestId);
                         break;
+
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");
                 }
@@ -1948,9 +1964,11 @@ namespace Raven.Server.ServerWide
                 case ConnectionStringType.Raven:
                     command = new PutRavenConnectionStringCommand(JsonDeserializationCluster.RavenConnectionString(connectionString), databaseName, raftRequestId);
                     break;
+
                 case ConnectionStringType.Sql:
                     command = new PutSqlConnectionStringCommand(JsonDeserializationCluster.SqlConnectionString(connectionString), databaseName, raftRequestId);
                     break;
+
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
             }
@@ -2320,7 +2338,7 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(addDatabaseCommand);
         }
 
-        public void EnsureNotPassive(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)
+        public async Task EnsureNotPassiveAsync(string publicServerUrl = null, string nodeTag = "A", bool skipLicenseActivation = false)
         {
             if (_engine.CurrentState != RachisState.Passive)
                 return;
@@ -2335,6 +2353,7 @@ namespace Raven.Server.ServerWide
             // create the cluster, we register those local certificates in the cluster.
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
+                long? index = null;
                 using (ctx.OpenReadTransaction())
                 {
                     foreach (var localCertKey in Cluster.GetCertificateThumbprintsFromLocalState(ctx))
@@ -2343,11 +2362,17 @@ namespace Raven.Server.ServerWide
                         using (var localCertificate = Cluster.GetLocalStateByThumbprint(ctx, localCertKey))
                         {
                             var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                            PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition, RaftIdGenerator.NewId())).Wait(ServerShutdown);
+                            var (newIndex, _) = await PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition, RaftIdGenerator.NewId()));
+                            index = newIndex;
                         }
                     }
                 }
+
+                if (index.HasValue)
+                    await Cluster.WaitForIndexNotification(index.Value);
             }
+
+            Debug.Assert(_engine.CurrentState != RachisState.Passive, "_engine.CurrentState != RachisState.Passive");
         }
 
         public bool IsLeader()

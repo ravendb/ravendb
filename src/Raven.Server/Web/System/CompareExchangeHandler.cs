@@ -125,7 +125,7 @@ namespace Raven.Server.Web.System
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -156,7 +156,7 @@ namespace Raven.Server.Web.System
             // ReSharper disable once PossibleInvalidOperationException
             var index = GetLongQueryString("index", true).Value;
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {

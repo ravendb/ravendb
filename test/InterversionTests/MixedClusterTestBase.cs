@@ -79,7 +79,7 @@ namespace InterversionTests
             string[] peers, int localPeers = 0, IDictionary<string, string> customSettings = null, X509Certificate2 certificate = null)
         {
             var leaderServer = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
-            leaderServer.ServerStore.EnsureNotPassive(leaderServer.WebUrl);
+            await leaderServer.ServerStore.EnsureNotPassiveAsync(leaderServer.WebUrl);
 
             var nodeAdded = new ManualResetEvent(false);
             var expectedMembers = 2;

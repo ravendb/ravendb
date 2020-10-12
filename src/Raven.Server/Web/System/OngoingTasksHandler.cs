@@ -669,7 +669,7 @@ namespace Raven.Server.Web.System
             var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             var (index, _) = await ServerStore.RemoveConnectionString(Database.Name, connectionStringName, type, GetRaftRequestIdFromQuery());
             await ServerStore.Cluster.WaitForIndexNotification(index);
@@ -689,18 +689,18 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/databases/*/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public Task GetConnectionStrings()
+        public async Task GetConnectionStrings()
         {
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             if (TryGetAllowedDbs(Database.Name, out var allowedDbs, true) == false)
-                return Task.CompletedTask;
+                return;
 
             var connectionStringName = GetStringQueryString("connectionStringName", false);
             var type = GetStringQueryString("type", false);
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -740,8 +740,6 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         private static (Dictionary<string, RavenConnectionString>, Dictionary<string, SqlConnectionString>)

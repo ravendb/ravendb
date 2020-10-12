@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/admin/secrets/distribute", "POST", AuthorizationStatus.Operator)]
         public async Task DistributeKeyInCluster()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             var name = GetStringQueryString("name");
             var nodes = GetStringValuesQueryString("node");

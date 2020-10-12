@@ -120,7 +120,7 @@ namespace Raven.Server.Web.System
             var mentor = GetStringQueryString("mentor", false);
             var raftRequestId = GetRaftRequestIdFromQuery();
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             ConcurrencyException ce = null;
 
@@ -253,7 +253,7 @@ namespace Raven.Server.Web.System
         {
             var raftRequestId = GetRaftRequestIdFromQuery();
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -407,6 +407,7 @@ namespace Raven.Server.Web.System
                                 var indexDefinition = index.GetIndexDefinition();
                                 databaseRecord.Indexes.Add(indexDefinition.Name, indexDefinition);
                                 break;
+
                             default:
                                 throw new NotSupportedException(index.Type.ToString());
                         }
@@ -599,6 +600,7 @@ namespace Raven.Server.Web.System
                         }
 
                         break;
+
                     case PeriodicBackupConnectionType.Azure:
                         var azureSettings = JsonDeserializationServer.AzureSettings(restorePathBlittable);
                         using (var azureRestoreUtils = new AzureRestorePoints(sortedList, context, azureSettings))
@@ -606,6 +608,7 @@ namespace Raven.Server.Web.System
                             await azureRestoreUtils.FetchRestorePoints(azureSettings.RemoteFolderName);
                         }
                         break;
+
                     case PeriodicBackupConnectionType.GoogleCloud:
                         var googleCloudSettings = JsonDeserializationServer.GoogleCloudSettings(restorePathBlittable);
                         using (var googleCloudRestoreUtils = new GoogleCloudRestorePoints(sortedList, context, googleCloudSettings))
@@ -613,6 +616,7 @@ namespace Raven.Server.Web.System
                             await googleCloudRestoreUtils.FetchRestorePoints(googleCloudSettings.RemoteFolderName);
                         }
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -636,7 +640,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
-                ServerStore.EnsureNotPassive();
+                await ServerStore.EnsureNotPassiveAsync();
 
                 RestoreType restoreType;
                 if (restoreConfiguration.TryGet("Type", out string typeAsString))
@@ -661,6 +665,7 @@ namespace Raven.Server.Web.System
                             ServerStore.NodeTag,
                             cancelToken);
                         break;
+
                     case RestoreType.S3:
                         var s3Configuration = JsonDeserializationCluster.RestoreS3BackupConfiguration(restoreConfiguration);
                         restoreBackupTask = new RestoreFromS3(
@@ -669,6 +674,7 @@ namespace Raven.Server.Web.System
                             ServerStore.NodeTag,
                             cancelToken);
                         break;
+
                     case RestoreType.Azure:
                         var azureConfiguration = JsonDeserializationCluster.RestoreAzureBackupConfiguration(restoreConfiguration);
                         restoreBackupTask = new RestoreFromAzure(
@@ -677,6 +683,7 @@ namespace Raven.Server.Web.System
                             ServerStore.NodeTag,
                             cancelToken);
                         break;
+
                     case RestoreType.GoogleCloud:
                         var googlCloudConfiguration = JsonDeserializationCluster.RestoreGoogleCloudBackupConfiguration(restoreConfiguration);
                         restoreBackupTask = new RestoreFromGoogleCloud(
@@ -707,7 +714,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             var waitOnRecordDeletion = new List<string>();
             var deletedDatabases = new List<string>();
@@ -1030,7 +1037,7 @@ namespace Raven.Server.Web.System
             if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
                 return;
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
@@ -1122,8 +1129,8 @@ namespace Raven.Server.Web.System
                                 {
                                     var index = database.IndexStore.GetIndex(indexName);
                                     var indexCompactionResult = overallResult.IndexesResults[indexName];
-                                    
-                                    // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction 
+
+                                    // we want to send progress of entire operation (indexes and documents), but we should update stats only for index compaction
                                     index.Compact(progress => onProgress(overallResult.Progress), indexCompactionResult, indexCts.Token);
                                     indexCompactionResult.Processed = true;
                                 }
@@ -1172,7 +1179,7 @@ namespace Raven.Server.Web.System
         public async Task SetUnusedDatabaseIds()
         {
             var database = GetStringQueryString("name");
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var json = context.ReadForDisk(RequestBodyStream(), "unused-databases-ids"))
@@ -1206,7 +1213,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/migrate/offline", "POST", AuthorizationStatus.Operator, DisableOnCpuCreditsExhaustion = true)]
         public async Task MigrateDatabaseOffline()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             OfflineMigrationConfiguration configuration;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

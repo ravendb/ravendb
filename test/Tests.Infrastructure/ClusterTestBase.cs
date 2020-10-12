@@ -124,7 +124,7 @@ namespace Tests.Infrastructure
 
             return null;
         }
-        
+
         protected bool WaitForDocumentDeletion(IDocumentStore store, string id, int timeout = 10000)
         {
             var sw = Stopwatch.StartNew();
@@ -174,7 +174,7 @@ namespace Tests.Infrastructure
 
             var etag2 = storage.DocumentsStorage.GenerateNextEtag();
 
-            Assert.True(etag1 + 1 == etag2,"Replication loop found :(");
+            Assert.True(etag1 + 1 == etag2, "Replication loop found :(");
         }
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
@@ -485,7 +485,7 @@ namespace Tests.Infrastructure
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
-            [CallerMemberName]string caller = null)
+            [CallerMemberName] string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
@@ -543,7 +543,7 @@ namespace Tests.Infrastructure
                 serversToPorts.Add(server, serverUrl);
                 if (i == leaderIndex)
                 {
-                    server.ServerStore.EnsureNotPassive(null, nodeTag: co.NodeTag);
+                    await server.ServerStore.EnsureNotPassiveAsync(null, nodeTag: co.NodeTag);
                     leader = server;
                 }
             }
@@ -586,7 +586,7 @@ namespace Tests.Infrastructure
             return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList, caller: caller)).Leader;
         }
 
-        protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0, [CallerMemberName]string caller = null)
+        protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0, [CallerMemberName] string caller = null)
         {
             leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
             RavenServer leader = null;
@@ -616,7 +616,7 @@ namespace Tests.Infrastructure
                 serversToPorts.Add(server, serverUrl);
                 if (i == leaderIndex)
                 {
-                    server.ServerStore.EnsureNotPassive();
+                    await server.ServerStore.EnsureNotPassiveAsync();
                     leader = server;
                 }
             }

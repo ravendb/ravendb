@@ -52,7 +52,7 @@ namespace SlowTests.Authentication
             string email;
             string rootDomain;
 
-            Server.ServerStore.EnsureNotPassive();
+            await Server.ServerStore.EnsureNotPassiveAsync();
             var license = Server.ServerStore.LoadLicense();
 
             using (var store = GetDocumentStore())
@@ -128,7 +128,7 @@ namespace SlowTests.Authentication
                     throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
                 }
 
-                // Finished the setup wizard, need to restart the server. 
+                // Finished the setup wizard, need to restart the server.
                 // Since cannot restart we'll create a new server loaded with the new certificate and settings and use the server cert to connect to it
 
                 settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Security.CertificatePassword), out string certPassword);
@@ -172,7 +172,7 @@ namespace SlowTests.Authentication
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                Server.ServerStore.EnsureNotPassive();
+                await Server.ServerStore.EnsureNotPassiveAsync();
                 Assert.Equal(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
 
                 Server.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(80);
