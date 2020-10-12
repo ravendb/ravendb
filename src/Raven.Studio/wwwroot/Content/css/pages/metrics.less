@@ -32,8 +32,11 @@ rect.pane {
         .axis {
             color: @layout-border;
         }
+        .axisText {
+            color: @on-base-background-color;
+        }
         .gaps {
-            color: @brand-primary;
+            color: fadeout(@layout-border, 30%);
         }
         .brushChartColor {
             color: @panel-bg;
@@ -132,11 +135,15 @@ rect.pane {
     .main-colors {
         .color-definitions {
             .axis {
-                color: fadeout(@layout-border, 50%);
+                color: fadeout(@text-color, 30%);
+            }
+
+            .axisText {
+                color: @on-base-background-color;
             }
 
             .gaps {
-                color: fadeout(@brand-primary, 50%);
+                color: fadeout(@layout-border, 30%);
             }
 
             .trackBackground {
@@ -160,7 +167,7 @@ rect.pane {
             }
 
             .text {
-                color: @gray-lighter;
+                color: @text-emphasis;
             }
         }
     }
