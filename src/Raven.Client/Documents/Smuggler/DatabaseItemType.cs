@@ -29,7 +29,6 @@ namespace Raven.Client.Documents.Smuggler
         CompareExchangeTombstones = 1 << 17,
         TimeSeries = 1 << 18,
 
-        // todo - remove
         ReplicationHubCertificates = 1 << 19
     }
 
@@ -53,8 +52,6 @@ namespace Raven.Client.Documents.Smuggler
         SinkPullReplications = 1 << 13,
         HubPullReplications = 1 << 14,
         TimeSeries = 1 << 15,
-        DocumentsCompression = 1 << 16,
-        HubReplicationAccessInfo = 1 << 17,
-        SinkReplicationAccessInfo = 1 << 18
+        DocumentsCompression = 1 << 16
     }
 }
