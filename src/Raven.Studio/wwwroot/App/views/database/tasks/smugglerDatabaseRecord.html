@@ -31,24 +31,10 @@
                         <input type="checkbox" data-bind="checked: includeHubReplications, attr: { id: 'includeHubReplications_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeHubReplications_' + instanceCounter }" class="margin-right margin-right-sm">Replication Hubs</label>
                     </div>
-                    <div class="margin-left margin-left-lg" data-bind="if: usingHttps">
-                        <div class="toggle">
-                            <input id="toggleHubAccessInfo" type="checkbox"
-                                   data-bind="checked: includeHubAccessInformation" />
-                            <label for="toggleHubAccessInfo">Include Access Information</label>
-                        </div>
-                    </div>
                     <div class="toggle">
                         <input type="checkbox" data-bind="checked: includeSinkReplications, attr: { id: 'includeSinkReplications_' + instanceCounter }">
                         <label data-bind="attr: { for: 'includeSinkReplications_' + instanceCounter }" class="margin-right margin-right-sm">Replication Sinks</label>
                         <a class="js-warning-pull-replication-sink" tabindex="0" data-bind="visible: includeSinkReplications() && !includeRavenConnectionStrings()"><small><i class="icon-warning text-warning"></i></small></a>
-                    </div>
-                    <div class="margin-left margin-left-lg" data-bind="if: usingHttps">
-                        <div class="toggle">
-                            <input id="toggleSinkAccessInfo" type="checkbox"
-                                   data-bind="checked: includeSinkAccessInformation" />
-                            <label for="toggleSinkAccessInfo">Include Access Information</label>
-                        </div>
                     </div>
                     <div class="bg-info padding padding-xs margin-top margin-top-sm"><small><i class="icon-info"></i> Imported ongoing tasks will be disabled by default.</small></div>
                 </div>
