@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/studio", "PUT", AuthorizationStatus.Operator)]
         public async Task PutStudioConfiguration()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
@@ -101,7 +101,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/client", "PUT", AuthorizationStatus.Operator)]
         public async Task PutClientConfiguration()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {

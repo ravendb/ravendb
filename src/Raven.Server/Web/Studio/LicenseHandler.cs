@@ -87,7 +87,7 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
-            ServerStore.EnsureNotPassive(skipLicenseActivation: true);
+            await ServerStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
             await ServerStore.LicenseManager.Activate(license, GetRaftRequestIdFromQuery());
 
             NoContentStatus();

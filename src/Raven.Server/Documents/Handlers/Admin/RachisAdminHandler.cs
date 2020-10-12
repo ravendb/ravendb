@@ -288,10 +288,10 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/admin/cluster/bootstrap", "POST", AuthorizationStatus.ClusterAdmin)]
-        public Task Bootstrap()
+        public async Task Bootstrap()
         {
-            ServerStore.EnsureNotPassive();
-            return NoContent();
+            await ServerStore.EnsureNotPassiveAsync();
+            NoContentStatus();
         }
 
         [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                                                     "Adding a node with non fixed port is forbidden. Define a fixed port for the node to enable cluster creation.");
             }
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             ServerStore.LicenseManager.AssertCanAddNode();
 
@@ -543,7 +543,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         public async Task DeleteNode()
         {
             var nodeTag = GetStringQueryString("nodeTag");
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             if (ServerStore.IsLeader())
             {

@@ -15,7 +15,7 @@ using Xunit.Abstractions;
 
 namespace LicenseTests
 {
-   public class LicenseLimitsTests : ReplicationTestBase
+    public class LicenseLimitsTests : ReplicationTestBase
     {
         static LicenseLimitsTests()
         {
@@ -34,7 +34,7 @@ namespace LicenseTests
                 RunInMemory = false
             });
 
-            server.ServerStore.EnsureNotPassive();
+            await server.ServerStore.EnsureNotPassiveAsync();
 
             await server.ServerStore.LicenseManager.ChangeLicenseLimits(server.ServerStore.NodeTag, 1, Guid.NewGuid().ToString());
             var licenseLimits = server.ServerStore.LoadLicenseLimits();
@@ -50,7 +50,7 @@ namespace LicenseTests
 
             // Bring server up
             server = GetNewServer(
-                new ServerCreationOptions {RunInMemory = false, DeletePrevious = false, DataDirectory = result.DataDirectory, CustomSettings = settings});
+                new ServerCreationOptions { RunInMemory = false, DeletePrevious = false, DataDirectory = result.DataDirectory, CustomSettings = settings });
 
             licenseLimits = server.ServerStore.LoadLicenseLimits();
             Assert.True(licenseLimits.NodeLicenseDetails.TryGetValue(server.ServerStore.NodeTag, out detailsPerNode));
@@ -68,7 +68,7 @@ namespace LicenseTests
             DoNotReuseServer();
 
             var (servers, leader) = await CreateRaftCluster(5);
-            leader.ServerStore.EnsureNotPassive();
+            await leader.ServerStore.EnsureNotPassiveAsync();
 
             foreach (var server in servers)
             {
