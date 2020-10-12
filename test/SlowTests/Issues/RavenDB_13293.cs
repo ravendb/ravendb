@@ -197,11 +197,14 @@ namespace SlowTests.Issues
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 myNodesList.AddRange(databaseResult.Topology.AllNodes);
 
-                store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
+                var result = store.Maintenance.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {
                     Maps = { "from doc in docs.Items select new { doc.Name }" },
                     Name = "MyIndex"
                 }}));
+
+                var indexResult = result[0];
+                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftIndex, TimeSpan.FromSeconds(15));
 
                 using (var commands = store.Commands())
                 {
@@ -210,9 +213,9 @@ namespace SlowTests.Issues
                         {Constants.Documents.Metadata.Collection, "Items"}
                     });
 
-                    WaitForIndexing(store);
+                    WaitForIndexingInTheCluster(store);
 
-                    var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery
+                    var operation = await store.Operations.SendAsync(new PatchByQueryOperation(new IndexQuery
                     {
                         Query = "FROM INDEX 'MyIndex' UPDATE { this.NewName = 'NewValue'; } "
                     }));
@@ -229,7 +232,7 @@ namespace SlowTests.Issues
                             Assert.Null(op);
                     }
 
-                    operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+                    await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
                     dynamic document = await commands.GetAsync("items/1");
                     Assert.Equal("NewValue", document.NewName.ToString());
                 }

@@ -552,7 +552,7 @@ namespace Raven.Server.Documents.Indexes
             return index;
         }
 
-        public async Task<Index> CreateIndex(IndexDefinition definition, string raftRequestId, string source = null)
+        public async Task<long> CreateIndexInternal(IndexDefinition definition, string raftRequestId, string source = null)
         {
             if (definition == null)
                 throw new ArgumentNullException(nameof(definition));
@@ -579,6 +579,13 @@ namespace Raven.Server.Documents.Indexes
             {
                 ThrowIndexCreationException("static", definition.Name, toe, $"the operation timed out after: {_serverStore.Engine.OperationTimeout}.");
             }
+
+            return index;
+        }
+
+        public async Task<Index> CreateIndex(IndexDefinition definition, string raftRequestId, string source = null)
+        {
+            await CreateIndexInternal(definition, raftRequestId, source);
 
             return GetIndex(definition.Name);
         }
