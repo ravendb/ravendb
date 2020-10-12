@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using FastTests.Utils;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -13,10 +15,11 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
-using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Client.Json.Serialization;
 using Raven.Server;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Rachis;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
@@ -381,10 +384,22 @@ namespace SlowTests.Server.Replication
                     session.Store(new User { Name = "Karmel" }, "marker");
                     session.SaveChanges();
 
-                    await WaitForDocumentInClusterAsync<User>((DocumentSession)session, store.Database, (u) => u.Id == "marker", TimeSpan.FromSeconds(15));
+                    Assert.True(await WaitForDocumentInClusterAsync<User>((DocumentSession)session, "marker", (u) => u.Id == "marker", TimeSpan.FromSeconds(15)));
                 }
 
                 var total = 0L;
+                foreach (var server in cluster.Nodes)
+                {
+                    var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                    using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        total += storage.DocumentsStorage.GetNumberOfTombstones(context);
+                    }
+                }
+                Assert.Equal(3, total);
+
+                total = 0L;
                 foreach (var server in cluster.Nodes)
                 {
                     var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
@@ -397,6 +412,8 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.Equal(3, total); // we didn't send the tombstone so we must not purge it
 
+                await WaitForLastReplicationEtag(cluster, store);
+
                 await DisposeServerAndWaitForFinishOfDisposalAsync(etlStorage.ServerStore.Server);
 
                 using (var session = store.OpenSession())
@@ -406,20 +423,26 @@ namespace SlowTests.Server.Replication
                 }
 
                 WaitForDocument(dest, "marker2");
+                string changeVectorMarker2;
 
                 using (var session = dest.OpenSession())
                 {
                     Assert.Null(session.Load<User>("foo/bar"));
                 }
+                using (var session = store.OpenSession())
+                {
+                    var marker = session.Load<User>("marker2");
+                    changeVectorMarker2 = session.Advanced.GetChangeVectorFor(marker);
+                }
 
                 await ActionWithLeader((l) => WaitForRaftCommandToBeAppliedInCluster(l, nameof(UpdateEtlProcessStateCommand)));
+                Assert.True(WaitForEtlState(cluster, store, changeVectorMarker2));
 
                 total = 0;
                 foreach (var server in cluster.Nodes)
                 {
                     if (server.Disposed)
                         continue;
-
                     var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     await storage.TombstoneCleaner.ExecuteCleanup();
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -430,6 +453,62 @@ namespace SlowTests.Server.Replication
                 }
                 Assert.Equal(0, total);
             }
+        }
+
+        private static async Task WaitForLastReplicationEtag((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store)
+        {
+            foreach (var server in cluster.Nodes)
+            {
+                if (server.Disposed)
+                    continue;
+                var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                var sw = Stopwatch.StartNew();
+                while (sw.ElapsedMilliseconds < 1000)
+                {
+                    if (storage.ReplicationLoader.GetMinimalEtagForReplication() > 1)
+                        break;
+                    await Task.Delay(TimeSpan.FromMilliseconds(50));
+                }
+
+                Assert.True(storage.ReplicationLoader.GetMinimalEtagForReplication() > 1);
+            }
+        }
+
+        private static bool WaitForEtlState((List<RavenServer> Nodes, RavenServer Leader) cluster, DocumentStore store, string changeVectorMarker2)
+        {
+            EtlProcess etlP = null;
+            foreach (var server in cluster.Nodes)
+            {
+                if ((server.Disposed) || (server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.EtlLoader.Processes.Length == 0))
+                    continue;
+                etlP = server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).Result.EtlLoader.Processes[0];
+            }
+
+            var total = 0;
+            foreach (var server in cluster.Nodes.Where(server => (server.Disposed == false)))
+            {
+                using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context2))
+                using (context2.OpenReadTransaction())
+                {
+                    var sw = Stopwatch.StartNew();
+                    while (sw.ElapsedMilliseconds < 10000)
+                    {
+                        var stateBlittable = server.ServerStore.Cluster.Read(context2,
+                            EtlProcessState.GenerateItemName(store.Database, etlP.ConfigurationName, etlP.TransformationName));
+                        if (stateBlittable != null)
+                        {
+                            if (JsonDeserializationClient.EtlProcessState(stateBlittable).ChangeVector == changeVectorMarker2)
+                            {
+                                total++;
+                                break;
+                            }
+                        }
+                        Thread.Sleep(100);
+                    }
+                }
+            }
+            return total == 2;
         }
 
         [Fact]
@@ -484,7 +563,7 @@ namespace SlowTests.Server.Replication
                 {
                     Assert.Equal(2, storage2.DocumentsStorage.GetNumberOfTombstones(ctx));
                 }
-                
+
                 var val = await WaitForValueAsync(() =>
                 {
                     var state = ReplicationLoader.GetExternalReplicationState(Server.ServerStore, store1.Database, results[0].TaskId);
