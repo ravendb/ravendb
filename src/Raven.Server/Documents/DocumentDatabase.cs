@@ -1428,9 +1428,21 @@ namespace Raven.Server.Documents
 
         public bool HasClientConfigurationChanged(long index)
         {
-            var actual = Hashing.Combine(_lastClientConfigurationIndex, ServerStore.LastClientConfigurationIndex);
+            return _lastClientConfigurationIndex != -1 
+                ? IsServerIndexBiggerThenClient(_lastClientConfigurationIndex & 0xFFFFFFFF, index & 0xFFFFFFFF) 
+                : IsServerIndexBiggerThenClient(ServerStore.LastClientConfigurationIndex & 0xFFFFFFFF, (index >> 4*8));
+        }
 
-            return index != actual;
+        private static bool IsServerIndexBiggerThenClient(long server, long client)
+        {
+            var diff = server - client;
+            var abs = Math.Abs(diff);
+            return diff > 0 && abs < int.MaxValue || diff < 0 && abs > int.MaxValue;
+        }
+
+        public long CombineClientConfigurationIndexes()
+        {
+            return _lastClientConfigurationIndex & 0xFFFFFFFF | (ServerStore.LastClientConfigurationIndex) << 4*8;
         }
 
         public (Size Data, Size TempBuffers) GetSizeOnDisk()
