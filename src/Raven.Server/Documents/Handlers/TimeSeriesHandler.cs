@@ -579,7 +579,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/timeseries/policy", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddTimeSeriesPolicy()
         {
-            ServerStore.EnsureNotPassive();
+           await ServerStore.EnsureNotPassiveAsync();
             var collection = GetStringQueryString("collection", required: true);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -625,7 +625,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/admin/timeseries/policy", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveTimeSeriesPolicy()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
             var collection = GetStringQueryString("collection", required: true);
             var name = GetStringQueryString("name", required: true);
 
@@ -669,7 +669,7 @@ namespace Raven.Server.Documents.Handlers
 
         public async Task ConfigTimeSeriesNames()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var json = context.ReadForDisk(RequestBodyStream(), "time-series value names"))

@@ -10,9 +10,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Jint;
-using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -70,9 +68,11 @@ namespace Raven.Server.Utils.Cli
                     case "%D":
                         msg.Append(DateTime.UtcNow.ToString("yyyy/MMM/dd"));
                         break;
+
                     case "%T":
                         msg.Append(DateTime.UtcNow.ToString("HH:mm:ss"));
                         break;
+
                     case "%M":
                         {
                             var workingSetText = PlatformDetails.RunningOnPosix == false ? "WS" : "RSS";
@@ -84,6 +84,7 @@ namespace Raven.Server.Utils.Cli
                             msg.Append($"|SD:{memoryStats.TotalScratchDirty}");
                         }
                         break;
+
                     case "%R":
                         {
                             var reqCounter = server.Metrics.Requests.RequestsPerSec;
@@ -111,6 +112,7 @@ namespace Raven.Server.Utils.Cli
         {
             // ReSharper disable once UnusedMember.Local
             None,
+
             Prompt,
             HelpPrompt,
             Shutdown,
@@ -147,6 +149,7 @@ namespace Raven.Server.Utils.Cli
         {
             // ReSharper disable once UnusedMember.Local
             None,
+
             Begin,
             AfterCommand,
             AfterArgs,
@@ -157,6 +160,7 @@ namespace Raven.Server.Utils.Cli
         {
             // ReSharper disable once UnusedMember.Local
             None,
+
             And,
             Or
         }
@@ -286,7 +290,6 @@ namespace Raven.Server.Utils.Cli
             WriteText("", TextColor, cli);
 
             return char.ToLower(k).Equals('y');
-
         }
 
         private static bool CommandOpenBrowser(List<string> args, RavenCli cli)
@@ -436,7 +439,7 @@ namespace Raven.Server.Utils.Cli
             foreach (var cmd in commandDescription)
             {
                 WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                WriteText(new string(' ', Math.Max(25 - cmd[0].Length,0)) + cmd[1], ConsoleColor.DarkYellow, cli);
+                WriteText(new string(' ', Math.Max(25 - cmd[0].Length, 0)) + cmd[1], ConsoleColor.DarkYellow, cli);
             }
             return true;
         }
@@ -455,12 +458,15 @@ namespace Raven.Server.Utils.Cli
                 case 0:
                     GC.Collect(0);
                     break;
+
                 case 1:
                     GC.Collect(1);
                     break;
+
                 case 2:
                     GC.Collect(GC.MaxGeneration);
                     break;
+
                 default:
                     WriteError("Invalid argument passed to GC. Can be 0, 1 or 2", cli);
                     return false;
@@ -485,10 +491,12 @@ namespace Raven.Server.Utils.Cli
                     cli._server.ServerStore.Engine.Timeout.Disable = false;
                     WriteText("Timer enabled", TextColor, cli);
                     break;
+
                 case "off":
                     cli._server.ServerStore.Engine.Timeout.Disable = true;
                     WriteText("Timer disabled", TextColor, cli);
                     break;
+
                 case "fire":
                     cli._server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
                     WriteText("Timer fired", TextColor, cli);
@@ -511,18 +519,21 @@ namespace Raven.Server.Utils.Cli
                     SetupLogMode(LogMode.Information, cli._server.Configuration.Logs);
                     WriteText("Logging set to ON (information)", ConsoleColor.Green, cli);
                     break;
+
                 case "off":
                 case "none":
                     LoggingSource.Instance.DisableConsoleLogging();
                     SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
                     WriteText("Logging set to OFF (none)", ConsoleColor.DarkGreen, cli);
                     break;
+
                 case "operations":
                     if (withConsole)
                         LoggingSource.Instance.EnableConsoleLogging();
                     SetupLogMode(LogMode.None, cli._server.Configuration.Logs);
                     WriteText("Logging set to ON (operations)", ConsoleColor.DarkGreen, cli);
                     break;
+
                 case "http-off":
                     WriteText("Setting HTTP logging OFF", ConsoleColor.DarkGreen, cli);
                     RavenServerStartup.SkipHttpLogging = true;
@@ -782,7 +793,7 @@ namespace Raven.Server.Utils.Cli
                 return false;
             }
 
-            cli._server.ServerStore.EnsureNotPassive();
+            cli._server.ServerStore.EnsureNotPassiveAsync().Wait();
 
             var certDef = new CertificateDefinition
             {
@@ -853,7 +864,7 @@ namespace Raven.Server.Utils.Cli
                     password = args[1];
             }
 
-            cli._server.ServerStore.EnsureNotPassive();
+            cli._server.ServerStore.EnsureNotPassiveAsync().Wait();
 
             X509Certificate2Collection cert = new X509Certificate2Collection();
             byte[] certBytes;
@@ -971,8 +982,10 @@ namespace Raven.Server.Utils.Cli
                         return false;
                     }
                     break;
+
                 case "server":
                     break;
+
                 default:
                     WriteError($"Invalid arguments '{args[0]}' passed to script", cli);
                     return false;
@@ -1198,7 +1211,7 @@ namespace Raven.Server.Utils.Cli
                 foreach (var cmd in commandExperimentalDescription)
                 {
                     WriteText("\t" + cmd[0], ConsoleColor.Yellow, cli, newLine: false);
-                    WriteText(new string(' ', Math.Max(74 - cmd[0].Length,0)) + cmd[1], ConsoleColor.DarkYellow, cli);
+                    WriteText(new string(' ', Math.Max(74 - cmd[0].Length, 0)) + cmd[1], ConsoleColor.DarkYellow, cli);
                 }
                 WriteText("", TextColor, cli);
             }
@@ -1292,16 +1305,20 @@ namespace Raven.Server.Utils.Cli
                         case "shutdown":
                         case "q":
                             return false;
+
                         case "reset":
                             return true;
+
                         case "log":
                             LoggingSource.Instance.EnableConsoleLogging();
                             SetupLogMode(LogMode.Information, _server.Configuration.Logs);
                             break;
+
                         case "logoff":
                             LoggingSource.Instance.DisableConsoleLogging();
                             SetupLogMode(LogMode.None, _server.Configuration.Logs);
                             break;
+
                         case "h":
                         case "help":
                             WriteText("Available commands: shutdown, reset, log, logoff", TextColor, this);
@@ -1401,7 +1418,6 @@ namespace Raven.Server.Utils.Cli
 
                             var k = ReadKey(this);
                             WriteText("", TextColor, this);
-
 
                             if (char.ToLower(k).Equals('y') == false)
                             {
@@ -1511,9 +1527,11 @@ namespace Raven.Server.Utils.Cli
                 case "exit":
                     cmd = Command.Shutdown;
                     break;
+
                 case "h":
                     cmd = Command.Help;
                     break;
+
                 case "cls":
                     cmd = Command.Clear;
                     break;

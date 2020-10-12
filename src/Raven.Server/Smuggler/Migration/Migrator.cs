@@ -195,7 +195,7 @@ namespace Raven.Server.Smuggler.Migration
             if (databases.Count == 0)
                 throw new InvalidOperationException("Found no databases to migrate");
 
-            _serverStore.EnsureNotPassive();
+            await _serverStore.EnsureNotPassiveAsync();
 
             foreach (var databaseToMigrate in databases)
             {

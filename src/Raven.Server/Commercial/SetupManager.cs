@@ -1258,13 +1258,13 @@ namespace Raven.Server.Commercial
 
             if (continueSetupInfo.NodeTag.Equals(firstNodeTag))
             {
-                serverStore.EnsureNotPassive(publicServerUrl, firstNodeTag);
+                await serverStore.EnsureNotPassiveAsync(publicServerUrl, firstNodeTag);
 
                 await DeleteAllExistingCertificates(serverStore);
 
                 if (setupMode == SetupMode.LetsEncrypt && license != null)
                 {
-                    serverStore.EnsureNotPassive(skipLicenseActivation: true);
+                    await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
                     await serverStore.LicenseManager.Activate(license, RaftIdGenerator.DontCareId);
                 }
 
@@ -1439,13 +1439,13 @@ namespace Raven.Server.Commercial
                                 throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                             }
 
-                            serverStore.EnsureNotPassive(publicServerUrl, setupInfo.LocalNodeTag);
+                            await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
 
                             await DeleteAllExistingCertificates(serverStore);
 
                             if (setupMode == SetupMode.LetsEncrypt)
                             {
-                                serverStore.EnsureNotPassive(skipLicenseActivation: true);
+                                await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
                                 await serverStore.LicenseManager.Activate(setupInfo.License, RaftIdGenerator.DontCareId);
                             }
 

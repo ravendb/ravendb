@@ -13,10 +13,8 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
@@ -58,7 +56,7 @@ namespace Raven.Server.Web.System
                     object result = null;
                     string responseString = null;
                     string errorMessage = null;
-                    
+
                     try
                     {
                         var response = await ApiHttpClient.Instance.PostAsync("/api/v1/dns-n-cert/" + action, content).ConfigureAwait(false);
@@ -91,7 +89,7 @@ namespace Raven.Server.Web.System
                         error = e.ToString();
                         errorMessage = DomainRegistrationServiceUnreachableError;
                     }
-                    
+
                     using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                     {
                         if (error != null)
@@ -103,14 +101,14 @@ namespace Raven.Server.Web.System
                                 Error = error,
                                 Type = typeof(RavenException).FullName
                             });
-                            
+
                             streamWriter.Flush();
                         }
                         else
                         {
                             streamWriter.Write(responseString);
                         }
-                        
+
                         streamWriter.Flush();
                     }
                 }
@@ -165,13 +163,13 @@ namespace Raven.Server.Web.System
                     }
 
                     if (error != null)
-                    {   
+                    {
                         JToken errorJToken = null;
                         if (responseString != null)
                         {
-                            JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out errorJToken); 
+                            JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out errorJToken);
                         }
-                        
+
                         using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
                             new JsonSerializer().Serialize(streamWriter, new
@@ -254,7 +252,7 @@ namespace Raven.Server.Web.System
             using (var userDomainsWithIpsJson = context.ReadForMemory(RequestBodyStream(), "setup-secured"))
             {
                 var userDomainsWithIps = JsonDeserializationServer.UserDomainsWithIps(userDomainsWithIpsJson);
-                
+
                 foreach (var domain in userDomainsWithIps.Domains)
                 {
                     foreach (var subDomain in domain.Value)
@@ -276,7 +274,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, blittable);
                 }
             }
-            
+
             return Task.CompletedTask;
         }
 
@@ -313,7 +311,7 @@ namespace Raven.Server.Web.System
                 writer.WritePropertyName(nameof(SetupParameters.IsAws));
                 writer.WriteBool(setupParameters.IsAws);
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(SetupParameters.RunningOnPosix));
                 writer.WriteBool(setupParameters.RunningOnPosix);
                 writer.WriteComma();
@@ -340,7 +338,6 @@ namespace Raven.Server.Web.System
                 // https://github.com/dotnet/corefx/issues/26476
                 // If GetAllNetworkInterfaces is not supported, we'll just return the default: 127.0.0.1
             }
-
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -414,7 +411,6 @@ namespace Raven.Server.Web.System
                     writer.WriteArray("Addresses", ips);
                     writer.WriteEndObject();
                 }
-                
 
                 writer.WriteEndArray();
                 writer.WriteEndObject();
@@ -548,17 +544,17 @@ namespace Raven.Server.Web.System
 
                 if (!string.IsNullOrEmpty(setupInfo.LocalNodeTag))
                 {
-                    ServerStore.EnsureNotPassive(nodeTag: setupInfo.LocalNodeTag);    
+                    await ServerStore.EnsureNotPassiveAsync(nodeTag: setupInfo.LocalNodeTag);
                 }
-                
+
                 if (setupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                 {
                     var res = await ServerStore.PutValueInClusterAsync(
-                        new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration {Disabled = false, Environment = setupInfo.Environment},
+                        new PutServerWideStudioConfigurationCommand(new ServerWideStudioConfiguration { Disabled = false, Environment = setupInfo.Environment },
                             RaftIdGenerator.DontCareId));
                     await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                 }
-                
+
                 var modifiedJsonObj = context.ReadObject(settingsJson, "modified-settings-json");
 
                 var indentedJson = SetupManager.IndentJsonString(modifiedJsonObj.ToString());
@@ -671,7 +667,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var continueSetupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-setup-info"))
-            {                
+            {
                 var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
                 byte[] zipBytes;
                 try
@@ -700,7 +696,6 @@ namespace Raven.Server.Web.System
                             using (var settingsJson = context.ReadForMemory(entry.Open(), "settings-json"))
                                 if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
                                     urlByTag[tag] = publicServerUrl;
-                            
                         }
                     }
 
@@ -724,10 +719,9 @@ namespace Raven.Server.Web.System
 
                             first = false;
                         }
-                        
+
                         writer.WriteEndArray();
                     }
-
                 }
                 catch (Exception e)
                 {
@@ -742,7 +736,7 @@ namespace Raven.Server.Web.System
         public async Task ContinueClusterSetup()
         {
             AssertOnlyInSetupMode();
-            
+
             var operationCancelToken = new OperationCancelToken(ServerStore.ServerShutdown);
             var operationId = GetLongQueryString("operationId", false);
 
@@ -760,7 +754,7 @@ namespace Raven.Server.Web.System
                     progress => SetupManager.ContinueClusterSetupTask(progress, continueSetupInfo, ServerStore, operationCancelToken.Token),
                     operationId.Value, token: operationCancelToken);
             }
-            
+
             NoContentStatus();
         }
 
@@ -798,14 +792,14 @@ namespace Raven.Server.Web.System
         }
 
         private static string GeneralDomainRegistrationError = "Registration error.";
-        private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later."; 
+        private static string DomainRegistrationServiceUnreachableError = $"Failed to contact {ApiHttpClient.ApiRavenDbNet}. Please try again later.";
     }
 
     public class LicenseInfo
     {
         public License License { get; set; }
     }
-    
+
     public class ConfigurationNodeInfo
     {
         public string Tag { get; set; }

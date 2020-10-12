@@ -39,7 +39,7 @@ namespace Raven.Server.Web.Authentication
         {
             // one of the first admin action is to create a certificate, so let
             // us also use that to indicate that we are the seed node
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
@@ -208,7 +208,7 @@ namespace Raven.Server.Web.Authentication
             // one of the first admin action is to create a certificate, so let
             // us also use that to indicate that we are the seed node
 
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
             {
@@ -644,7 +644,7 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/admin/certificates/edit", "POST", AuthorizationStatus.Operator)]
         public async Task Edit()
         {
-            ServerStore.EnsureNotPassive();
+            await ServerStore.EnsureNotPassiveAsync();
 
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var clientCert = feature?.Certificate;
@@ -970,7 +970,7 @@ namespace Raven.Server.Web.Authentication
             {
                 var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
 
-                ServerStore.EnsureNotPassive();
+                await ServerStore.EnsureNotPassiveAsync();
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "replace-cluster-cert"))
                 {

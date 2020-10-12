@@ -88,7 +88,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(5, record.Topology.ReplicationFactor);
 
                 //bootstrap the removed node to a single-node cluster
-                removed.ServerStore.EnsureNotPassive();
+                await removed.ServerStore.EnsureNotPassiveAsync();
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
                 Assert.Equal(1, record.Topology.Count);
                 Assert.Equal(1, record.Topology.ReplicationFactor);
@@ -212,7 +212,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.True(result);
 
                 cluster.Leader.ServerStore.Engine.HardResetToPassive(Guid.NewGuid().ToString());
-                cluster.Leader.ServerStore.EnsureNotPassive(nodeTag: tag);
+                await cluster.Leader.ServerStore.EnsureNotPassiveAsync(nodeTag: tag);
 
                 var outgoingConnections = WaitForValue(() =>
                 {
@@ -394,7 +394,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, record.Topology.ReplicationFactor);
 
                 //bootstrap the removed node to a single-node cluster
-                removed.ServerStore.EnsureNotPassive();
+                await removed.ServerStore.EnsureNotPassiveAsync();
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
                 Assert.Equal(1, record.Topology.Count);
                 Assert.Equal(1, record.Topology.ReplicationFactor);
@@ -435,7 +435,6 @@ namespace RachisTests.DatabaseCluster
                 Database = dbName
             }.Initialize())
             {
-
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.WaitForReplicationAfterSaveChanges(TimeSpan.FromSeconds(30), replicas: replicationFactor - 1);
