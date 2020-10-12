@@ -13,6 +13,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using SlowTests.Client.TimeSeries.Policies;
 using SlowTests.Client.TimeSeries.Query;
 using Sparrow;
 using Xunit;
@@ -856,6 +857,70 @@ select out()
                     Assert.NotNull(r.Sum);
                     Assert.NotNull(r.Count);
                     Assert.NotNull(r.Average);
+                }
+            }
+        }
+
+        [Fact]
+        public void UsingDifferentNumberOfValues_LargeToSmall()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.AddDays(-1);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User {Name = "Karmel"}, "users/karmel");
+                    var big = session.TimeSeriesFor<TimeSeriesConfigurationTests.BigMeasure>("users/karmel");
+                    for (int i = 0; i < 5; i++)
+                    {
+                            big.Append(baseline.AddSeconds(3 * i), new TimeSeriesConfigurationTests.BigMeasure
+                            {
+                                Measure1 = i,
+                                Measure2 = i,
+                                Measure3 = i,
+                                Measure4 = i,
+                                Measure5 = i,
+                                Measure6 = i,
+                            }, "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var big = session.TimeSeriesFor("users/karmel", "BigMeasures");
+                    for (int i = 5; i < 10; i++)
+                    {
+                        big.Append(baseline.AddHours(12).AddSeconds(3 * i), i , "watches/fitbit");
+                    }
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var big = session.TimeSeriesFor<TimeSeriesConfigurationTests.BigMeasure>("users/karmel").Get()?.ToList();
+                    for (int i = 0; i < 5; i++)
+                    {
+                        var m = big[i].Value;
+                        Assert.Equal(i, m.Measure1);
+                        Assert.Equal(i, m.Measure2);
+                        Assert.Equal(i, m.Measure3);
+                        Assert.Equal(i, m.Measure4);
+                        Assert.Equal(i, m.Measure5);
+                        Assert.Equal(i, m.Measure6);
+                    }
+
+                    for (int i = 5; i < 10; i++)
+                    {
+                        var m = big[i].Value;
+                        Assert.Equal(i, m.Measure1);
+                        Assert.Equal(double.NaN, m.Measure2);
+                        Assert.Equal(double.NaN, m.Measure3);
+                        Assert.Equal(double.NaN, m.Measure4);
+                        Assert.Equal(double.NaN, m.Measure5);
+                        Assert.Equal(double.NaN, m.Measure6);
+                    }
                 }
             }
         }
