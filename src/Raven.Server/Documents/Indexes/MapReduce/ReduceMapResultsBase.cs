@@ -46,6 +46,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly TreeReductionStats _treeReductionStats = new TreeReductionStats();
         private readonly NestedValuesReductionStats _nestedValuesReductionStats = new NestedValuesReductionStats();
 
+        internal const int NumberOfResultsPosition = 2;
+        internal const int StartOutputResultsPosition = 3;
+
+
         protected ReduceMapResultsBase(Index index, T indexDefinition, IndexStorage indexStorage, MetricCounters metrics, MapReduceIndexingContext mapReduceContext)
         {
             _index = index;
@@ -478,11 +482,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             }
                         }
 
-                        var numberOfResults = *(int*)tvr.Read(2, out int size);
+                        var numberOfResults = *(int*)tvr.Read(NumberOfResultsPosition, out int size);
 
                         for (int j = 0; j < numberOfResults; j++)
                         {
-                            _aggregationBatch.Items.Add(new BlittableJsonReaderObject(tvr.Read(3 + j, out size), size, indexContext));
+                            _aggregationBatch.Items.Add(new BlittableJsonReaderObject(tvr.Read(StartOutputResultsPosition + j, out size), size, indexContext));
                         }
                     }
                 }
