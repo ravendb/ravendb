@@ -326,6 +326,57 @@ namespace SlowTests.Client.TimeSeries.Query
         }
 
         [Fact]
+        public void MaxCanGoNegative()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "Oren",
+                        Age = 35
+                    }, "users/ayende");
+
+                    var tsf = session.TimeSeriesFor("users/ayende", "HeartRate");
+
+                    tsf.Append(baseline.AddMinutes(63), new[] { -69d }, "watches/fitbit");
+
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var query = session.Query<User>()
+                        .Where(u => u.Age > 21)
+                        .Select(u => RavenQuery.TimeSeries("Heartrate")
+                            .GroupBy(g => g.Months(1))
+                            .Select(g => new
+                            {
+                                Avg = g.Average(),
+                                Max = g.Max()
+                            })
+                            .ToList());
+
+                    var result = query.ToList();
+
+                    Assert.Equal(1, result.Count);
+                    Assert.Equal(1, result[0].Count);
+
+                    var agg = result[0].Results;
+
+                    Assert.Equal(1, agg.Length);
+                    
+                    Assert.Equal(-69, agg[0].Average[0]);
+                    Assert.Equal(-69, agg[0].Max[0]);
+                }
+            }
+        }
+
+        [Fact]
         public void CanQueryTimeSeriesAggregation_WhereTagIn()
         {
             using (var store = GetDocumentStore())
