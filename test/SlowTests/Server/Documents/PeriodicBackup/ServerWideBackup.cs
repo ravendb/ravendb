@@ -368,7 +368,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(newDbName));
                 Assert.Equal(2, record2.PeriodicBackups.Count);
 
+#pragma warning disable CS0618 // Type or member is obsolete
                 await store.Maintenance.Server.SendAsync(new DeleteServerWideBackupConfigurationOperation(result1.Name));
+#pragma warning restore CS0618 // Type or member is obsolete
                 var serverWideBackupConfiguration = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationOperation(result1.Name));
                 Assert.Null(serverWideBackupConfiguration);
                 serverWideBackups = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
