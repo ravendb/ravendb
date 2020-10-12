@@ -8,9 +8,13 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly long _id;
 
-        public KillOperationCommand(long id, string node = null)
+        public KillOperationCommand(long id)
         {
             _id = id;
+        }
+
+        public KillOperationCommand(long id, string node) : this(id)
+        {
             SelectedNodeTag = node;
         }
 
