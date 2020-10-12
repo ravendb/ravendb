@@ -2,6 +2,7 @@
 using System.Threading;
 using FastTests;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.BulkInsert;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,6 +59,8 @@ namespace SlowTests.Issues
                                 Assert.Equal(null, exp);
                                 break;
                             case 2:
+                                Assert.IsType<BulkInsertAbortedException>(exp);
+                                break;
                             case 3:
                             case 4:
                                 Assert.IsType<RavenException>(exp);

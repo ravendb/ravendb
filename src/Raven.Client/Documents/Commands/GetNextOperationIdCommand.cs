@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Commands
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             response.TryGet("Id", out long id);
-            response.TryGet(nameof(OperationIdResult.OperationNodeTag), out string nodeTag);
+            response.TryGet(nameof(NodeTag), out string nodeTag);
 
             NodeTag = nodeTag;
             Result = id;

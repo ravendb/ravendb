@@ -9,6 +9,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using FastTests;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -62,6 +63,7 @@ namespace SlowTests.Issues
             catch(BulkInsertAbortedException) { }
             catch (IOException) { }
             catch (HttpRequestException) { }
+            catch (RequestedNodeUnavailableException) {}
         }
     }
 }
