@@ -9,28 +9,31 @@ namespace Raven.Client.Documents.Operations
     public class GetStatisticsOperation : IMaintenanceOperation<DatabaseStatistics>
     {
         private readonly string _debugTag;
+        private readonly string _nodeTag;
 
         public GetStatisticsOperation()
         {
         }
 
-        internal GetStatisticsOperation(string debugTag)
+        internal GetStatisticsOperation(string debugTag, string nodeTag = null)
         {
             _debugTag = debugTag;
+            _nodeTag = nodeTag;
         }
 
         public RavenCommand<DatabaseStatistics> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetStatisticsCommand(_debugTag);
+            return new GetStatisticsCommand(_debugTag, _nodeTag);
         }
 
         private class GetStatisticsCommand : RavenCommand<DatabaseStatistics>
         {
             private readonly string _debugTag;
 
-            public GetStatisticsCommand(string debugTag)
+            public GetStatisticsCommand(string debugTag, string nodeTag)
             {
                 _debugTag = debugTag;
+                SelectedNodeTag = nodeTag;
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
