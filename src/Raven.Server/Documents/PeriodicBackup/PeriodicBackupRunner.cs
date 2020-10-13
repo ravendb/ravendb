@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             // we will always wake up the database for a full backup.
             // but for incremental we will wake the database only if there were changes made.
 
-            if (configuration.Disabled || configuration.IncrementalBackupFrequency == null && configuration.FullBackupFrequency == null)
+            if (configuration.Disabled || configuration.IncrementalBackupFrequency == null && configuration.FullBackupFrequency == null || configuration.HasBackup() == false)
                 return null;
 
             var backupStatus = GetBackupStatusFromCluster(_serverStore, context, databaseName, configuration.TaskId);
@@ -115,6 +115,26 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _logger.Operations($"Backup Task '{configuration.TaskId}' of database '{databaseName}' is never backed up yet.");
 
                 return DateTime.UtcNow;
+            }
+
+            var topology = _serverStore.LoadDatabaseTopology(_database.Name);
+            var responsibleNodeTag = _database.WhoseTaskIsIt(topology, configuration, backupStatus, keepTaskOnOriginalMemberNode: true);
+            if (responsibleNodeTag == null)
+            {
+                // cluster is down
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Could not find the responsible node for backup task '{configuration.TaskId}' of database '{databaseName}'.");
+
+                return DateTime.UtcNow;
+            }
+
+            if (responsibleNodeTag != _serverStore.NodeTag)
+            {
+                // not responsive for this backup task
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Current server '{_serverStore.NodeTag}' is not responsible node for backup task '{configuration.TaskId}' of database '{databaseName}'. Backup Task responsible node is '{responsibleNodeTag}'.");
+
+                return null;
             }
 
             var nextBackup = GetNextBackupDetails(configuration, backupStatus, _serverStore.NodeTag);
