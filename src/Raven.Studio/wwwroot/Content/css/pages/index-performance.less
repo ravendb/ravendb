@@ -12,8 +12,12 @@
         color: @layout-border;
     }
 
+    .axisText {
+        color: @on-base-background-color;
+    }
+
     .gaps {
-        color: @brand-primary;
+        color: fadeout(@layout-border, 30%);
     }
 
     .brushChartColor {
@@ -32,16 +36,16 @@
         color: @panel-bg-2;
     }
 
+    .trackNameFg {
+        color: @text-color;
+    }
+
     .faulty {
         color: @brand-danger;
     }
 
     .itemWithError {
         color: red; // use strong red color regardless theme
-    }
-
-    .trackNameFg {
-        color: @text-color;
     }
 
     .openedTrackArrow {

@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var createdIndexes = new List<string>();
+                var createdIndexes = new List<(string Name, long RaftIndex)>();
 
                 var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
                 if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
@@ -88,9 +88,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Index name must not start with '{Constants.Documents.Indexing.SideBySideIndexNamePrefix}'. Provided index name: '{indexDefinition.Name}'");
                     }
 
-                    var index = await Database.IndexStore.CreateIndex(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
+                    var index = await Database.IndexStore.CreateIndexInternal(indexDefinition, $"{raftRequestId}/{indexDefinition.Name}", source);
 
-                    createdIndexes.Add(index.Name);
+                    createdIndexes.Add((indexDefinition.Name, index));
                 }
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
@@ -106,7 +106,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                     {
                         w.WriteStartObject();
                         w.WritePropertyName(nameof(PutIndexResult.Index));
-                        w.WriteString(index);
+                        w.WriteString(index.Name);
+                        w.WriteComma();
+                        w.WritePropertyName(nameof(PutIndexResult.RaftCommandIndex));
+                        w.WriteInteger(index.RaftIndex);
                         w.WriteEndObject();
                     });
 
