@@ -204,7 +204,7 @@ namespace SlowTests.Issues
                 }}));
 
                 var indexResult = result[0];
-                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftIndex, TimeSpan.FromSeconds(15));
+                await WaitForRaftIndexToBeAppliedInCluster(indexResult.RaftCommandIndex, TimeSpan.FromSeconds(15));
 
                 using (var commands = store.Commands())
                 {

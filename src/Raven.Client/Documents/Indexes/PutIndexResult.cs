@@ -13,6 +13,6 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public string Index { get; set; }
 
-        public long RaftIndex { get; set; }
+        public long RaftCommandIndex { get; set; }
     }
 }

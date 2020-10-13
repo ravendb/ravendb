@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         w.WritePropertyName(nameof(PutIndexResult.Index));
                         w.WriteString(index.Name);
                         w.WriteComma();
-                        w.WritePropertyName(nameof(PutIndexResult.RaftIndex));
+                        w.WritePropertyName(nameof(PutIndexResult.RaftCommandIndex));
                         w.WriteInteger(index.RaftIndex);
                         w.WriteEndObject();
                     });
