@@ -674,6 +674,14 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    databaseResult.Topology,
+                    databaseName,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60),
+                    certificate: clientCertificate));
+
                 // we need to wait for database change vector to be updated
                 // which means that we need to wait for replication to do a full mesh propagation
                 Assert.True(await WaitForValueOnGroupAsync(topology, serverStore =>
