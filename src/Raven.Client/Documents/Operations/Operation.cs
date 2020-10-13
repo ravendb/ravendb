@@ -218,7 +218,7 @@ namespace Raven.Client.Documents.Operations
             }
 
             if (state == null)
-                throw new InvalidOperationException($"Could not fetch state of operation '{_id}'.");
+                throw new InvalidOperationException($"Could not fetch state of operation '{_id}' from node '{NodeTag}'.");
 
             OnNext(new OperationStatusChange
             {

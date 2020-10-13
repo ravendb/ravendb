@@ -94,7 +94,7 @@ namespace Raven.Client.Documents.Smuggler
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                var command = new ExportCommand(context, options, handleStreamResponse, operationId, tcs);
+                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
                 var requestTask = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token)
                     .ContinueWith(t =>
                     {
@@ -123,7 +123,7 @@ namespace Raven.Client.Documents.Smuggler
                     () => _store.Changes(_databaseName),
                     _requestExecutor.Conventions,
                     operationId,
-                    null,
+                    getOperationIdCommand.NodeTag,
                     additionalTask);
             }
         }
@@ -232,7 +232,7 @@ namespace Raven.Client.Documents.Smuggler
                     var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                     var cancellationTokenRegistration = token.Register(() => tcs.TrySetCanceled(token));
 
-                    var command = new ImportCommand(context, options, stream, operationId, tcs, this);
+                    var command = new ImportCommand(_requestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
                     var task = _requestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
                     var requestTask = task
@@ -261,7 +261,7 @@ namespace Raven.Client.Documents.Smuggler
                         await tcs.Task.ConfigureAwait(false);
                     }
 
-                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId, nodeTag: null, additionalTask: task);
+                    return new Operation(_requestExecutor, () => _store.Changes(_databaseName), _requestExecutor.Conventions, operationId, nodeTag: getOperationIdCommand.NodeTag, additionalTask: task);
                 }
             }
             catch (Exception e)
@@ -278,7 +278,7 @@ namespace Raven.Client.Documents.Smuggler
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
 
-            public ExportCommand(JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs)
+            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
             {
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
@@ -288,6 +288,7 @@ namespace Raven.Client.Documents.Smuggler
                 _options = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(options, context);
                 _operationId = operationId;
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
+                SelectedNodeTag = nodeTag;
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)
@@ -331,7 +332,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent)
+            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
             {
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
                 if (options == null)
@@ -342,6 +343,7 @@ namespace Raven.Client.Documents.Smuggler
                 _operationId = operationId;
                 _tcs = tcs ?? throw new ArgumentNullException(nameof(tcs));
                 _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+                SelectedNodeTag = nodeTag;
             }
 
             public override void OnResponseFailure(HttpResponseMessage response)

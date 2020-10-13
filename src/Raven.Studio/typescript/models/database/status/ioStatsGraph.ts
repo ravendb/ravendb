@@ -293,6 +293,7 @@ class ioStatsGraph {
     private scrollConfig: scrollColorConfig;
     private colors = {
         axis: undefined as string,
+        axisText: undefined as string,
         gaps: undefined as string,
         trackBackground: undefined as string,
         trackNameBg: undefined as string,
@@ -674,6 +675,8 @@ class ioStatsGraph {
 
         const context = this.brushSection.getContext("2d");
 
+        this.drawBrushGaps(context);
+
         // 2. Draw scale
         const ticks = this.getTicks(this.xBrushTimeScale);
         this.drawXaxisTimeLines(context, ticks, 0, ioStatsGraph.brushSectionHeight);
@@ -720,8 +723,7 @@ class ioStatsGraph {
                 });
             });
         });
-
-        this.drawBrushGaps(context);
+        
         this.prepareBrush();
     }
 
@@ -889,7 +891,7 @@ class ioStatsGraph {
             context.textAlign = "left";
             context.textBaseline = "top";
             context.font = "10px Lato";
-            context.fillStyle = this.colors.axis;
+            context.fillStyle = this.colors.axisText;
 
             ticks.forEach((x, i) => {
                 context.fillText(this.xTickFormat(x), ioStatsGraph.initialOffset + (i * ioStatsGraph.step) + timePaddingLeft, timePaddingTop);
@@ -956,6 +958,9 @@ class ioStatsGraph {
             // Draw tracks background 
             this.drawTracksBackground(context, xScale);
 
+            // Draw gaps   
+            this.drawGaps(context, xScale);
+
             // Draw vertical dotted time lines & time labels in main section
             if (xScale.domain().length) {
                 const ticks = this.getTicks(xScale);
@@ -998,9 +1003,6 @@ class ioStatsGraph {
             if (hasAtLeastOneIndexTrack && !this.isIndexesExpanded()) {
                 this.drawClosedIndexesTrack(context, xScale, extentFunc, visibleTimeFrame);
             }
-
-            // Draw gaps   
-            this.drawGaps(context, xScale);
 
             graphHelper.drawScroll(context,
                 { left: this.totalWidth, top: ioStatsGraph.axisHeight },

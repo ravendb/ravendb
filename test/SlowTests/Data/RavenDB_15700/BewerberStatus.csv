@@ -1,0 +1,11 @@
+﻿@id,Status
+BewerberStatus/840be386-6fba-40a6-88ae-3295c095f9c8,Unbearbeitet
+BewerberStatus/9d7aa09d-115e-4bd9-8a47-0b796fda7dfe,Abgelehnt
+BewerberStatus/5db15969-1e5d-4254-afa8-e51558c86ef3,InBearbeitung
+BewerberStatus/31fe10b5-c15a-448c-b019-3c0118e82af8,InBearbeitung
+BewerberStatus/b2f99fef-955a-4b36-a709-58070fb2a9e6,Angenommen
+BewerberStatus/cdecbe77-f673-4b43-9154-52d0cbebcf48,Angenommen
+BewerberStatus/b1231f0f-4f52-49f4-aa32-367490d01e67,InBearbeitung
+BewerberStatus/c9eeae40-b1bc-45e2-98e8-87848701d1ec,Abgelehnt
+BewerberStatus/e15eb832-282e-4d04-956a-0af2e8dd8b5a,Abgelehnt
+BewerberStatus/1,Abgelehnt

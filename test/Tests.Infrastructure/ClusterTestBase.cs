@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -763,6 +765,15 @@ namespace Tests.Infrastructure
         public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl, X509Certificate2 certificate = null)
         {
             return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl, certificate);
+        }
+
+        public static void WaitForIndexingInTheCluster(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
+        {
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(dbName ?? store.Database));
+            foreach (var nodeTag in record.Topology.AllNodes)
+            {
+                WaitForIndexing(store, dbName, timeout, allowErrors, nodeTag);
+            }
         }
 
         public override void Dispose()

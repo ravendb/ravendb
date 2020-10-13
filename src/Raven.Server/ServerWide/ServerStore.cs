@@ -712,6 +712,8 @@ namespace Raven.Server.ServerWide
                 NotificationCenter.Add(alertRaised);
             }
 
+            CheckSwapOrPageFileAndRaiseNotification();
+
             _engine = new RachisConsensus<ClusterStateMachine>(this);
             _engine.BeforeAppendToRaftLog = BeforeAppendToRaftLog;
 
@@ -727,6 +729,35 @@ namespace Raven.Server.ServerWide
 
             Initialized = true;
             InitializationCompleted.Set();
+        }
+
+        private void CheckSwapOrPageFileAndRaiseNotification()
+        {
+            if (PlatformDetails.RunningOnLinux)
+            {
+                if (PlatformDetails.RunningOnDocker) 
+                    return;
+
+                var swapSize = MemoryInformation.GetMemoryInfo().TotalSwapSize;
+                if (swapSize < Configuration.PerformanceHints.MinSwapSize)
+                    NotificationCenter.Add(AlertRaised.Create(null,
+                        "Low swap size",
+                        $"The current swap size is '{swapSize}' and it is lower then the threshold defined '{Configuration.PerformanceHints.MinSwapSize}'",
+                        AlertType.LowSwapSize,
+                        NotificationSeverity.Warning));
+                return;
+            }
+
+            if(PlatformDetails.RunningOnPosix == false)
+            {
+                var memoryInfo = MemoryInformation.GetMemoryInfo();
+                if(memoryInfo.TotalCommittableMemory - memoryInfo.TotalPhysicalMemory <= Sparrow.Size.Zero)
+                    NotificationCenter.Add(AlertRaised.Create(null,
+                        "No PageFile available",
+                        "Your system has no PageFile. It is recommended to have a PageFile in order for Server to work properly",
+                        AlertType.LowSwapSize,
+                        NotificationSeverity.Warning));
+            }
         }
 
         private void BeforeAppendToRaftLog(ClusterOperationContext ctx, CommandBase cmd)

@@ -2,12 +2,25 @@ using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Sparrow;
+using Sparrow.LowMemory;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
     [ConfigurationCategory(ConfigurationCategoryType.PerformanceHints)]
     public class PerformanceHintsConfiguration : ConfigurationCategory
     {
+        public PerformanceHintsConfiguration()
+        {
+            if (PlatformDetails.RunningOnLinux)
+            {
+                var threshold = new Size(8, SizeUnit.Gigabytes);
+                MinSwapSize = MemoryInformation.TotalPhysicalMemory < threshold 
+                    ? new Size(1, SizeUnit.Gigabytes) 
+                    : Size.Min(MemoryInformation.TotalPhysicalMemory / 2, threshold);
+            }
+        }
+        
         [Description("The size of a document after which it will get into the huge documents collection")]
         [DefaultValue(5)]
         [SizeUnit(SizeUnit.Megabytes)]
@@ -34,5 +47,11 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         public TimeSetting TooLongRequestThreshold { get; set; }
+        
+        [Description("The minimum swap size (for Linux only). If the swap size is lower a notification will arise")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [ConfigurationEntry("PerformanceHints.Memory.MinSwapSizeInMb", ConfigurationEntryScope.ServerWideOnly)]
+        public Size MinSwapSize { get; set; }
     }
 }
