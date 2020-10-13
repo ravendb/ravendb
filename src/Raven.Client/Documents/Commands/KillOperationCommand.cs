@@ -13,9 +13,9 @@ namespace Raven.Client.Documents.Commands
             _id = id;
         }
 
-        public KillOperationCommand(long id, string node) : this(id)
+        public KillOperationCommand(long id, string nodeTag) : this(id)
         {
-            SelectedNodeTag = node;
+            SelectedNodeTag = nodeTag;
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
