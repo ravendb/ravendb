@@ -1264,6 +1264,113 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public async Task SuccessfulFullBackupAfterAnErrorOneShouldClearTheErrorStatesFromBackupStatusAndLocalBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "egr"
+                    }, "users/1");
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 0 1 1 *",
+                    FullBackupFrequency = "0 0 1 1 *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings()
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                PeriodicBackupStatus status = null;
+                var value = WaitForValue(() =>
+                {
+                    status = store.Maintenance.Send(operation).Status;
+                    return status == null;
+                }, false);
+                Assert.False(value);
+                Assert.NotNull(status.Error);
+                Assert.NotNull(status.LocalBackup);
+                Assert.NotNull(status.LocalBackup.Exception);
+
+                // status.LastFullBackup is only saved if the backup ran successfully
+                Assert.Null(status.LastFullBackup);
+                Assert.NotNull(status.LastFullBackupInternal);
+                var oldLastFullBackupInternal = status.LastFullBackupInternal;
+                Assert.True(status.IsFull);
+                Assert.Null(status.LastEtag);
+                Assert.Null(status.FolderName);
+                Assert.Null(status.LastIncrementalBackup);
+                Assert.Null(status.LastIncrementalBackupInternal);
+                // update LastOperationId even on the task error
+                Assert.NotNull(status.LastOperationId);
+                var oldOpId = status.LastOperationId;
+
+                Assert.NotNull(status.LastRaftIndex);
+                Assert.Null(status.LastRaftIndex.LastEtag);
+                Assert.NotNull(status.LocalBackup.LastFullBackup);
+                var oldLastFullBackup = status.LastFullBackup;
+
+                Assert.Null(status.LocalBackup.LastIncrementalBackup);
+                Assert.NotNull(status.NodeTag);
+                Assert.True(status.DurationInMs > 0);
+
+                // update backup task
+                config.TaskId = backupTaskId;
+                config.BackupEncryptionSettings = null;
+                var id = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                Assert.Equal(backupTaskId, id);
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var etag = WaitForValue(() =>
+                {
+                    status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, etag);
+
+                Assert.Null(status.Error);
+                Assert.NotNull(status.LocalBackup);
+                Assert.Null(status.LocalBackup.Exception);
+
+                // status.LastFullBackup is only saved if the backup ran successfully
+                Assert.NotNull(status.LastFullBackup);
+                Assert.NotNull(status.LastFullBackupInternal);
+                Assert.NotEqual(oldLastFullBackupInternal, status.LastFullBackupInternal);
+
+                Assert.True(status.IsFull);
+                Assert.Equal(1, status.LastEtag);
+                Assert.NotNull(status.FolderName);
+                Assert.Null(status.LastIncrementalBackup);
+                Assert.Null(status.LastIncrementalBackupInternal);
+                Assert.NotNull(status.LastOperationId);
+                Assert.NotEqual(oldOpId, status.LastOperationId);
+                Assert.NotNull(status.LastRaftIndex);
+                Assert.NotNull(status.LastRaftIndex.LastEtag);
+                Assert.NotNull(status.LocalBackup.LastFullBackup);
+                Assert.NotEqual(oldLastFullBackup, status.LocalBackup.LastFullBackup);
+                Assert.Null(status.LocalBackup.LastIncrementalBackup);
+                Assert.NotNull(status.NodeTag);
+                Assert.True(status.DurationInMs > 0);
+            }
+        }
 
         [Fact]
         public async Task ShouldRearrangeTheTimeIfBackupAfterTimerCallbackGotActiveByOtherNode()
