@@ -367,6 +367,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
             {
                 table.ReadByKey(pageNumberSlice, out TableValueReader tvr);
 
+                var numberOfResults = *(int*)tvr.Read(ReduceMapResultsOfStaticIndex.NumberOfResultsPosition, out int _);
+
+                if (numberOfResults == 0)
+                    return context.ReadObject(new DynamicJsonValue(), "debug-reduce-result");
+
                 return new BlittableJsonReaderObject(tvr.Read(3, out int size), size, context);
             }
         }
@@ -426,7 +431,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
                      .Query(query, null, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, ctx, null, CancellationToken.None)
                     .ToList();
 
-                if (result.Count != 1)
+                if (result.Count == 0)
+                    return context.ReadObject(new DynamicJsonValue(), "debug-reduce-result");
+
+                if (result.Count > 1)
                     throw new InvalidOperationException("Cannot have multiple reduce results for a single reduce key");
 
                 return result[0].Result.Data;

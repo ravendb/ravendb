@@ -37,6 +37,8 @@ namespace Raven.Client.Documents.BulkInsert
             private readonly TaskCompletionSource<Stream> _outputStreamTcs;
             private readonly TaskCompletionSource<object> _done;
 
+            public bool IsDone => _done.Task.IsCompleted;
+
             public StreamExposerContent()
             {
                 _outputStreamTcs = new TaskCompletionSource<Stream>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -91,10 +93,11 @@ namespace Raven.Client.Documents.BulkInsert
             private readonly StreamExposerContent _stream;
             private readonly long _id;
 
-            public BulkInsertCommand(long id, StreamExposerContent stream)
+            public BulkInsertCommand(long id, StreamExposerContent stream, string nodeTag)
             {
                 _stream = stream;
                 _id = id;
+                SelectedNodeTag = nodeTag;
                 Timeout = TimeSpan.FromHours(12); // global max timeout
             }
 
@@ -146,6 +149,7 @@ namespace Raven.Client.Documents.BulkInsert
         private readonly CountersBulkInsertOperation _countersOperation;
         private readonly AttachmentsBulkInsertOperation _attachmentsOperation;
         private long _operationId = -1;
+        private string _nodeTag;
 
         public CompressionLevel CompressionLevel = CompressionLevel.NoCompression;
         private readonly IJsonSerializer _defaultSerializer;
@@ -159,6 +163,9 @@ namespace Raven.Client.Documents.BulkInsert
             {
                 try
                 {
+                    if (_streamExposerContent.IsDone)
+                        return;
+
                     EndPreviousCommandIfNeeded();
 
                     Exception flushEx = null;
@@ -251,6 +258,7 @@ namespace Raven.Client.Documents.BulkInsert
             var bulkInsertGetIdRequest = new GetNextOperationIdCommand();
             await _requestExecutor.ExecuteAsync(bulkInsertGetIdRequest, _context, sessionInfo: null, token: _token).ConfigureAwait(false);
             _operationId = bulkInsertGetIdRequest.Result;
+            _nodeTag = bulkInsertGetIdRequest.NodeTag;
         }
 
         public void Store(object entity, string id, IMetadataDictionary metadata = null)
@@ -333,11 +341,18 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task HandleErrors(string documentId, Exception e)
         {
-            var error = await GetExceptionFromOperation().ConfigureAwait(false);
-            if (error != null)
+            BulkInsertAbortedException errorFromServer = null;
+            try
             {
-                throw error;
+                errorFromServer = await GetExceptionFromOperation().ConfigureAwait(false);
             }
+            catch
+            {
+                // server is probably down, will propagate the original exception
+            }
+
+            if (errorFromServer != null)
+                throw errorFromServer;
 
             await ThrowOnUnavailableStream(documentId, e).ConfigureAwait(false);
         }
@@ -436,7 +451,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         private async Task<BulkInsertAbortedException> GetExceptionFromOperation()
         {
-            var stateRequest = new GetOperationStateOperation.GetOperationStateCommand(_operationId);
+            var stateRequest = new GetOperationStateOperation.GetOperationStateCommand(_operationId, _nodeTag);
             await _requestExecutor.ExecuteAsync(stateRequest, _context, sessionInfo: null, token: _token).ConfigureAwait(false);
 
             if (!(stateRequest.Result?.Result is OperationExceptionResult error))
@@ -458,7 +473,9 @@ namespace Raven.Client.Documents.BulkInsert
 
             var bulkCommand = new BulkInsertCommand(
                 _operationId,
-                _streamExposerContent);
+                _streamExposerContent,
+                _nodeTag);
+
             _bulkInsertExecuteTask = _requestExecutor.ExecuteAsync(bulkCommand, _context, sessionInfo: null, token: _token);
 
             _stream = await _streamExposerContent.OutputStream.ConfigureAwait(false);
@@ -487,7 +504,7 @@ namespace Raven.Client.Documents.BulkInsert
             await WaitForId().ConfigureAwait(false);
             try
             {
-                await _requestExecutor.ExecuteAsync(new KillOperationCommand(_operationId), _context, sessionInfo: null, token: _token).ConfigureAwait(false);
+                await _requestExecutor.ExecuteAsync(new KillOperationCommand(_operationId, _nodeTag), _context, sessionInfo: null, token: _token).ConfigureAwait(false);
             }
             catch (RavenException)
             {

@@ -70,6 +70,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         ConcurrentDatabaseLoadTimeout,
 
         HighClientCreationRate,
-        RollupExceedNumberOfValues
+        RollupExceedNumberOfValues,
+
+        LowSwapSize
     }
 }

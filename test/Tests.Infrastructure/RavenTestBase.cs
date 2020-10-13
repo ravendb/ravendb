@@ -528,7 +528,7 @@ namespace FastTests
             return string.Join(Environment.NewLine, states.OrderBy(x => x.transition.When).Select(x => $"State for {x.tag}-term{x.Item2.CurrentTerm}:{Environment.NewLine}{x.Item2.From}=>{x.Item2.To} at {x.Item2.When:o} {Environment.NewLine}because {x.Item2.Reason}"));
         }
 
-        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false)
+        public static void WaitForIndexing(IDocumentStore store, string dbName = null, TimeSpan? timeout = null, bool allowErrors = false, string nodeTag = null)
         {
             var admin = store.Maintenance.ForDatabase(dbName);
 
@@ -539,7 +539,7 @@ namespace FastTests
             var sp = Stopwatch.StartNew();
             while (sp.Elapsed < timeout.Value)
             {
-                var databaseStatistics = admin.Send(new GetStatisticsOperation());
+                var databaseStatistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
                 var indexes = databaseStatistics.Indexes
                     .Where(x => x.State != IndexState.Disabled);
 
@@ -574,7 +574,8 @@ namespace FastTests
             {
                 Errors = errors,
                 Stats = stats,
-                Performance = perf
+                Performance = perf,
+                NodeTag = nodeTag
             };
 
             var file = Path.GetTempFileName() + ".json";
@@ -588,7 +589,7 @@ namespace FastTests
                 writer.Flush();
             }
 
-            var statistics = admin.Send(new GetStatisticsOperation());
+            var statistics = admin.Send(new GetStatisticsOperation("wait-for-indexing", nodeTag));
 
             var corrupted = statistics.Indexes.Where(x => x.State == IndexState.Error).ToList();
             if (corrupted.Count > 0)
