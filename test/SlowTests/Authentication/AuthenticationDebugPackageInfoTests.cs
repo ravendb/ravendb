@@ -89,10 +89,10 @@ namespace SlowTests.Authentication
             SecurityClearance securityClearance, string[] shouldContain)
         {
             var certificates = SetupServerAuthentication();
-            using var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(),
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance.ClusterAdmin);
 
-            using var userCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, databaseAccesses, securityClearance);
+            var userCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, databaseAccesses, securityClearance);
 
             using var store = GetDocumentStore(new Options {AdminCertificate = adminCert, ClientCertificate = userCert, ModifyDatabaseName = s => dbName});
             var requestExecutor = store.GetRequestExecutor(store.Database);
