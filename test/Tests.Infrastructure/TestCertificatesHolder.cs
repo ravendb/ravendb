@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security;
 using System.Security.Cryptography;
@@ -95,14 +96,9 @@ namespace FastTests
 
             public override void Reset()
             {
+                Debug.Assert(false,"Do not dispose or reset this certificate.");
                 Console.WriteLine("Certificate reset from: " + Environment.StackTrace);
                 base.Reset();
-            }
-
-            protected override void Dispose(bool d)
-            {
-                Console.WriteLine($"Certificate disposed (dispose:{d}) from: " + Environment.StackTrace);
-                base.Dispose(d);
             }
         }
 
