@@ -18,6 +18,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Xunit;
@@ -625,6 +626,83 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public async Task PickupConfigurationChangesOnTheFly()
+        {
+            var certificates = SetupServerAuthentication();
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+            using var sinkStore1 = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            var pullCert = new X509Certificate2(File.ReadAllBytes(certificates.ClientCertificate2Path), (string)null,
+                X509KeyStorageFlags.Exportable);
+
+            var result = await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "both",
+                Mode = PullReplicationMode.HubToSink,
+                WithFiltering = true
+            }));
+
+            await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("both", new ReplicationHubAccess
+            {
+                Name = "Arava",
+                AllowedSinkToHubPaths = new[]
+                {
+                    "*",
+                },
+                AllowedHubToSinkPaths = new[]
+                {
+                    "*"
+                },
+                CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+            }));
+
+            await sinkStore1.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database, Name = hubStore.Database + "ConStr", TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            var sinkTask = new PullReplicationAsSink
+            {
+                ConnectionStringName = hubStore.Database + "ConStr",
+                Mode = PullReplicationMode.HubToSink,
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubName = "both",
+                AllowedHubToSinkPaths = new[] {"*",},
+                AllowedSinkToHubPaths = new[] {"*"}
+            };
+
+            var result2 = await sinkStore1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
+
+            EnsureReplicating(hubStore, sinkStore1);
+
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "both",
+                Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub,
+                WithFiltering = true,
+                TaskId = result.TaskId
+            }));
+            
+            sinkTask.Mode = PullReplicationMode.HubToSink | PullReplicationMode.SinkToHub;
+            sinkTask.TaskId = result2.TaskId;
+
+            await sinkStore1.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(sinkTask));
+
+            EnsureReplicating(sinkStore1, hubStore);
+        }
+
+        [Fact]
         public async Task Sinks_should_not_update_hubs_change_vector()
         {
             var certificates = SetupServerAuthentication();
@@ -1051,11 +1129,35 @@ namespace SlowTests.Issues
                 foo.Completed = true;
                 var bar = await s.LoadAsync<Propagation>("bar");
                 bar.Completed = true;
+
+                s.Advanced.Revisions.ForceRevisionCreationFor("foo");
+                s.Advanced.Revisions.ForceRevisionCreationFor("bar");
                 await s.SaveChangesAsync();
             }
 
             Assert.True(WaitForDocument<Propagation>(sinkStore2, "bar", x => x.Completed == true));
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "foo", x => x.Completed == true));
+
+            using (var token = new OperationCancelToken(hubDb.Configuration.Databases.OperationTimeout.AsTimeSpan, hubDb.DatabaseShutdown))
+                await hubDb.DocumentsStorage.RevisionsStorage.EnforceConfiguration(_ => { }, token);
+
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                var foo = await s.LoadAsync<Propagation>("foo");
+                foo.Source = "after-enforce-revision";
+                var bar = await s.LoadAsync<Propagation>("bar");
+                bar.Source = "after-enforce-revision";
+                await s.SaveChangesAsync();
+            }
+
+            Assert.True(WaitForDocument<Propagation>(sinkStore2, "bar", x => x.Source == "after-enforce-revision"));
+            Assert.True(WaitForDocument<Propagation>(sinkStore1, "foo", x => x.Source == "after-enforce-revision"));
+
+            await VerifyNoRevisions(hubStore, "foo");
+            await VerifyNoRevisions(hubStore, "bar");
+
+            await VerifyNoRevisions(sinkStore1, "foo");
+            await VerifyNoRevisions(sinkStore2, "bar");
 
             using (hubDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -1116,6 +1218,15 @@ namespace SlowTests.Issues
                 await database.TimeSeriesPolicyRunner.HandleChanges();
                 await database.TimeSeriesPolicyRunner.RunRollups();
                 await database.TimeSeriesPolicyRunner.DoRetention();
+            }
+        }
+
+        private static async Task VerifyNoRevisions(DocumentStore hubStore, string id)
+        {
+            using (var s = hubStore.OpenAsyncSession())
+            {
+                var rev = await s.Advanced.Revisions.GetForAsync<Propagation>(id);
+                Assert.Equal(0, rev?.Count ?? 0);
             }
         }
 

@@ -1493,16 +1493,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        public PullReplicationDefinition GetPullReplicationDefinition(string name)
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                using var record = ServerStore.Cluster.ReadRawDatabaseRecord(context, Name);
-                return record?.GetHubPullReplicationByName(name);
-            }
-        }
-
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
         {
             _serverStore?.NotificationCenter.Add(AlertRaised.Create(

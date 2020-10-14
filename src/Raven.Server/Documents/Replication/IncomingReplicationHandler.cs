@@ -1107,7 +1107,18 @@ namespace Raven.Server.Documents.Replication
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
-                                toDispose.Add(Slice.From(context.Allocator, revisionTombstone.Id, out var id)); // TODO: From not required
+
+                                Slice id;
+                                if (_isSink)
+                                {
+                                    var currentId = revisionTombstone.Id.ToString();
+                                    ReplaceKnownSinkEntries(context, ref currentId);
+                                    toDispose.Add(Slice.From(context.Allocator, currentId, out id));
+                                }
+                                else
+                                {
+                                    toDispose.Add(Slice.From(context.Allocator, revisionTombstone.Id, out id));
+                                }
 
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
                                     rcvdChangeVector, revisionTombstone.LastModifiedTicks);

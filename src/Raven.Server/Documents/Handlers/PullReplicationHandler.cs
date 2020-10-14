@@ -57,11 +57,16 @@ namespace Raven.Server.Documents.Handlers
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var hubDefinition = Database.GetPullReplicationDefinition(hubTaskName);
-                if (hubDefinition == null)
+                PullReplicationDefinition hubDefinition;
+
+                using (context.OpenReadTransaction())
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                    return;
+                    hubDefinition = Server.ServerStore.Cluster.ReadPullReplicationDefinition(Database.Name, hubTaskName, context);
+                    if (hubDefinition == null)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return;
+                    }
                 }
 
 #pragma warning disable CS0618 // Type or member is obsolete

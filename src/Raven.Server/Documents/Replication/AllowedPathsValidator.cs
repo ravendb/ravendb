@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Replication
                 AttachmentTombstoneReplicationItem at => AllowId(GetDocumentId(at.Key)),
                 CounterReplicationItem c => AllowId(c.Id),
                 DocumentReplicationItem d => AllowId(d.Id),
-                RevisionTombstoneReplicationItem r => AllowId(r.Id),
+                RevisionTombstoneReplicationItem _ => true, // revision tombstones doesn't contain any info about the doc. The id here is the change-vector of the deleted revision
                 TimeSeriesDeletedRangeItem td => AllowId(GetDocumentId(td.Key)),
                 TimeSeriesReplicationItem t => AllowId(GetDocumentId(t.Key)),
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
