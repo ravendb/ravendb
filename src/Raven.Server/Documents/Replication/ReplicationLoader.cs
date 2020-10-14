@@ -272,6 +272,9 @@ namespace Raven.Server.Documents.Replication
                 case UpdatePullReplicationAsHubCommand put:
                     DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
                     break;
+                case UpdatePullReplicationAsSinkCommand putSink:
+                    DisposeRelatedPullReplication(putSink.PullReplicationAsSink.HubName, null /*all*/);
+                    break;
                 case UnregisterReplicationHubAccessCommand del:
                     DisposeRelatedPullReplication(del.HubName, del.CertificateThumbprint);
                     break;
@@ -1481,7 +1484,7 @@ namespace Raven.Server.Documents.Replication
                             PullReplicationMode.HubToSink => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication,
                             PullReplicationMode.SinkToHub => TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication,
                             PullReplicationMode.None => throw new ArgumentOutOfRangeException(nameof(node), "Replication mode should be set to pull or push"),
-                            _ => throw new ArgumentOutOfRangeException("Unexpected replicatio mode: " + sink.Mode)
+                            _ => throw new ArgumentOutOfRangeException("Unexpected replication mode: " + sink.Mode)
                         },
                         AuthorizationFor = sink.HubName
                     };

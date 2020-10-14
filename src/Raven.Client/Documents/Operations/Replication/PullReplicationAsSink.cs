@@ -39,6 +39,7 @@ namespace Raven.Client.Documents.Operations.Replication
             if (other is PullReplicationAsSink sink)
             {
                 return base.IsEqualTo(other) &&
+                       Mode == sink.Mode &&
                        string.Equals(HubName, sink.HubName) &&
                        string.Equals(CertificatePassword, sink.CertificatePassword) &&
                        string.Equals(CertificateWithPrivateKey, sink.CertificateWithPrivateKey);
@@ -50,6 +51,7 @@ namespace Raven.Client.Documents.Operations.Replication
         public override ulong GetTaskKey()
         {
             var hashCode = base.GetTaskKey();
+            hashCode = (hashCode * 397) ^ (ulong)Mode;
             hashCode = (hashCode * 397) ^ CalculateStringHash(CertificateWithPrivateKey);
             hashCode = (hashCode * 397) ^ CalculateStringHash(CertificatePassword);
             return (hashCode * 397) ^ CalculateStringHash(HubName);
