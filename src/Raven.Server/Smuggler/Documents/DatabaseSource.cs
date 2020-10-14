@@ -94,7 +94,8 @@ namespace Raven.Server.Smuggler.Documents
 
             if (options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchange) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Identities) ||
-                options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchangeTombstones))
+                options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchangeTombstones) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.Subscriptions))
             {
                 _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
                 _disposeServerTransaction = _serverContext.OpenReadTransaction();
@@ -478,7 +479,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public IEnumerable<SubscriptionState> GetSubscriptions()
         {
-            Debug.Assert(_context != null);
+            Debug.Assert(_serverContext != null);
 
             return _database.SubscriptionStorage.GetAllSubscriptions(_serverContext, false, 0, int.MaxValue);
         }
