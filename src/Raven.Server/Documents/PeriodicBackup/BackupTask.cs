@@ -162,7 +162,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (_logger.IsInfoEnabled)
                             _logger.Info(message);
 
-                        UpdateOperationId(runningBackupStatus);
                         runningBackupStatus.LastIncrementalBackup = _periodicBackup.StartTimeInUtc;
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
                         DatabaseSmuggler.EnsureProcessed(_backupResult);
@@ -206,7 +205,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
-                UpdateOperationId(runningBackupStatus);
                 runningBackupStatus.LastEtag = internalBackupResult.LastDocumentEtag;
                 runningBackupStatus.LastDatabaseChangeVector = internalBackupResult.LastDatabaseChangeVector;
                 runningBackupStatus.LastRaftIndex.LastEtag = internalBackupResult.LastRaftIndex;
@@ -278,7 +276,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     runningBackupStatus.NodeTag = _serverStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
                     runningBackupStatus.Version = ++_previousBackupStatus.Version;
-
+                    UpdateOperationId(runningBackupStatus);
                     _periodicBackup.BackupStatus = runningBackupStatus;
 
                     // save the backup status
@@ -642,6 +640,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
 
                     IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
+
+                    status.LocalBackup.Exception = null;
                 }
                 catch (Exception e)
                 {
@@ -848,7 +848,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             runningBackupStatus.LastOperationId = _operationId;
             if (_previousBackupStatus.LastOperationId == null ||
-                _previousBackupStatus.NodeTag != _serverStore.NodeTag)
+                _previousBackupStatus.NodeTag != _serverStore.NodeTag ||
+                _previousBackupStatus.Error != null)
                 return;
 
             // dismiss the previous operation

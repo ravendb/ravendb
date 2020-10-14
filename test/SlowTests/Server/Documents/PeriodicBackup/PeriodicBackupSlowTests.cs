@@ -25,6 +25,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
@@ -1812,6 +1813,165 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal($"A:4-{originalDatabase.DbBase64Id}", databaseChangeVector);
                     }
                 }
+            }
+        }
+
+        [Fact]
+        public async Task SuccessfulFullBackupAfterAnErrorOneShouldClearTheErrorStatesFromBackupStatusAndLocalBackup()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "egr"
+                    }, "users/1");
+
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    BackupType = BackupType.Backup,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "0 0 1 1 *",
+                    FullBackupFrequency = "0 0 1 1 *",
+                    BackupEncryptionSettings = new BackupEncryptionSettings()
+                    {
+                        EncryptionMode = EncryptionMode.UseDatabaseKey
+                    }
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                PeriodicBackupStatus status = null;
+                var value = WaitForValue(() =>
+                {
+                    status = store.Maintenance.Send(operation).Status;
+                    return status == null;
+                }, false);
+                Assert.False(value);
+                Assert.NotNull(status.Error);
+                Assert.NotNull(status.LocalBackup);
+                Assert.NotNull(status.LocalBackup.Exception);
+
+                // status.LastFullBackup is only saved if the backup ran successfully
+                Assert.Null(status.LastFullBackup);
+                Assert.NotNull(status.LastFullBackupInternal);
+                var oldLastFullBackupInternal = status.LastFullBackupInternal;
+                Assert.True(status.IsFull, "status.IsFull");
+                Assert.Null(status.LastEtag);
+                Assert.Null(status.FolderName);
+                Assert.Null(status.LastIncrementalBackup);
+                Assert.Null(status.LastIncrementalBackupInternal);
+                // update LastOperationId even on the task error
+                Assert.NotNull(status.LastOperationId);
+                var oldOpId = status.LastOperationId;
+
+                Assert.NotNull(status.LastRaftIndex);
+                Assert.Null(status.LastRaftIndex.LastEtag);
+                Assert.NotNull(status.LocalBackup.LastFullBackup);
+                var oldLastFullBackup = status.LastFullBackup;
+
+                Assert.Null(status.LocalBackup.LastIncrementalBackup);
+                Assert.NotNull(status.NodeTag);
+                Assert.True(status.DurationInMs >= 0, "status.DurationInMs >= 0");
+                // update backup task
+                config.TaskId = backupTaskId;
+                config.BackupEncryptionSettings = null;
+                var id = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                Assert.Equal(backupTaskId, id);
+
+                await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, backupTaskId));
+                operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var etag = WaitForValue(() =>
+                {
+                    status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, etag);
+
+                Assert.Null(status.Error);
+                Assert.NotNull(status.LocalBackup);
+                Assert.Null(status.LocalBackup.Exception);
+
+                // status.LastFullBackup is only saved if the backup ran successfully
+                Assert.NotNull(status.LastFullBackup);
+                Assert.NotNull(status.LastFullBackupInternal);
+                Assert.NotEqual(oldLastFullBackupInternal, status.LastFullBackupInternal);
+
+                Assert.True(status.IsFull, "status.IsFull");
+                Assert.Equal(1, status.LastEtag);
+                Assert.NotNull(status.FolderName);
+                Assert.Null(status.LastIncrementalBackup);
+                Assert.Null(status.LastIncrementalBackupInternal);
+                Assert.NotNull(status.LastOperationId);
+                Assert.NotEqual(oldOpId, status.LastOperationId);
+                Assert.NotNull(status.LastRaftIndex);
+                Assert.NotNull(status.LastRaftIndex.LastEtag);
+                Assert.NotNull(status.LocalBackup.LastFullBackup);
+                Assert.NotEqual(oldLastFullBackup, status.LocalBackup.LastFullBackup);
+                Assert.Null(status.LocalBackup.LastIncrementalBackup);
+                Assert.NotNull(status.NodeTag);
+                Assert.True(status.DurationInMs > 0, "status.DurationInMs > 0");
+            }
+        }
+
+        [Fact]
+        public async Task ShouldRearrangeTheTimeIfBackupAfterTimerCallbackGotActiveByOtherNode()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var server = GetNewServer())
+            using (var store = GetDocumentStore(new Options
+            {
+                Server = server
+            }))
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                while (DateTime.Now.Second > 55)
+                    await Task.Delay(1000);
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(new ServerWideBackupConfiguration
+                {
+                    FullBackupFrequency = "*/1 * * * *",
+                    LocalSettings = new LocalSettings { FolderPath = backupPath },
+                }));
+
+                var record1 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                var backups1 = record1.PeriodicBackups;
+                Assert.Equal(1, backups1.Count);
+
+                var taskId = backups1.First().TaskId;
+                var responsibleDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                Assert.NotNull(responsibleDatabase);
+                var tag = responsibleDatabase.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                Assert.Equal(server.ServerStore.NodeTag, tag);
+
+                responsibleDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateActiveByOtherNodeStatus = true;
+                var pb = responsibleDatabase.PeriodicBackupRunner.PeriodicBackups.First();
+                Assert.NotNull(pb);
+
+                var val = WaitForValue(() => pb.HasScheduledBackup(), false, timeout: 66666, interval: 444);
+                Assert.False(val, "PeriodicBackup should cancel the ScheduledBackup if the task status is ActiveByOtherNode, " +
+                                  "so when the task status is back to be ActiveByCurrentNode, UpdateConfigurations will be able to reassign the backup timer");
+
+                responsibleDatabase.PeriodicBackupRunner._forTestingPurposes = null;
+                responsibleDatabase.PeriodicBackupRunner.UpdateConfigurations(record1);
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(taskId);
+
+                val = WaitForValue(() => store.Maintenance.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, true, timeout: 66666, interval: 444);
+                Assert.True(val, "Failed to complete the backup in time");
             }
         }
 
