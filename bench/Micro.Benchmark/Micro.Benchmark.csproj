@@ -15,7 +15,7 @@
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
     <PackageReference Include="xunit" Version="2.4.1" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0-rc.1.20451.14" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="5.0.0-rc.2.20475.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
