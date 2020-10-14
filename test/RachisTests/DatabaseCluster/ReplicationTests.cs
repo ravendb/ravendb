@@ -674,20 +674,49 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
 
+                Assert.True(await WaitForDocumentInClusterAsync<User>(
+                    databaseResult.Topology,
+                    databaseName,
+                    "users/1",
+                    u => u.Name.Equals("Karmel"),
+                    TimeSpan.FromSeconds(60),
+                    certificate: clientCertificate));
+
                 // we need to wait for database change vector to be updated
                 // which means that we need to wait for replication to do a full mesh propagation
-                Assert.True(await WaitForValueOnGroupAsync(topology, serverStore =>
+                try
                 {
-                    var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
-
-                    using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                    using (context.OpenReadTransaction())
+                    await WaitForValueOnGroupAsync(topology, serverStore =>
                     {
-                        var cv = DocumentsStorage.GetDatabaseChangeVector(context);
+                        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
 
-                        return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var cv = DocumentsStorage.GetDatabaseChangeVector(context);
+
+                            return cv != null && cv.Contains("A:1-") && cv.Contains("B:1-") && cv.Contains("C:1-");
+                        }
+                    }, expected: true, timeout: 60000);
+                }
+                catch (Exception e)
+                {
+                    var error = e.Message;
+                    foreach (var node in topology.AllNodes)
+                    {
+                        var serverStore = Servers.Single(s => s.ServerStore.NodeTag == node).ServerStore;
+                        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+                        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            var cv = DocumentsStorage.GetDatabaseChangeVector(context);
+
+                            error += $" {node}: cv.";
+                        }
                     }
-                }, expected: true, timeout: 60000));
+
+                    throw new Exception(error);
+                }
             }
 
             using (var store = new DocumentStore()
