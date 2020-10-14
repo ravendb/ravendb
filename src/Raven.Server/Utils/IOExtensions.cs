@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Threading;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
@@ -154,24 +155,10 @@ namespace Raven.Server.Utils
                     {
                         File.Delete(path);
                     }
-                    catch (UnauthorizedAccessException ex)
+                    catch (Exception ex)
                     {
-                        throw new IOException(WhoIsLocking.ThisFile(path), ex);
-                    }
-                    catch (IOException ex)
-                    {
-                        var processesUsingFiles = WhoIsLocking.GetProcessesUsingFile(path);
-                        if (processesUsingFiles.Count == 0)
-                            throw new IOException("Unable to figure out who is locking " + path, ex);
-
-                        var stringBuilder = new StringBuilder();
-                        stringBuilder.Append("The following processes are locking ").Append(path).AppendLine();
-                        foreach (var processesUsingFile in processesUsingFiles)
-                        {
-                            stringBuilder.Append(" ").Append(processesUsingFile.ProcessName).Append(' ').Append(processesUsingFile.Id).
-                                AppendLine();
-                        }
-                        throw new IOException(stringBuilder.ToString(), ex);
+                        var message = UnsuccessfulFileAccessException.GetMessage(path, FileAccess.Write, ex);
+                        throw new IOException(message, ex);
                     }
                 }
                 throw new IOException("Could not delete " + Path.GetFullPath(directory), e);
