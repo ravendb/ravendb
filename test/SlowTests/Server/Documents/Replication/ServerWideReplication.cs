@@ -37,7 +37,9 @@ namespace SlowTests.Server.Documents.Replication
                 var putConfiguration = new ServerWideExternalReplication
                 {
                     Disabled = true,
-                    TopologyDiscoveryUrls = new[] { store.Urls.First() }
+                    TopologyDiscoveryUrls = new[] { store.Urls.First() },
+                    DelayReplicationFor = TimeSpan.FromMinutes(3),
+                    MentorNode = "A"
                 };
 
                 var result = await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(putConfiguration));
@@ -631,7 +633,9 @@ namespace SlowTests.Server.Documents.Replication
         private static void ValidateServerWideConfiguration(ServerWideExternalReplication serverWideConfiguration, ServerWideExternalReplication putConfiguration)
         {
             Assert.Equal(serverWideConfiguration.Name, putConfiguration.Name ?? putConfiguration.GetDefaultTaskName());
-            Assert.Equal(putConfiguration.Disabled, serverWideConfiguration.Disabled);
+            Assert.Equal(serverWideConfiguration.Disabled, putConfiguration.Disabled);
+            Assert.Equal(serverWideConfiguration.MentorNode, putConfiguration.MentorNode);
+            Assert.Equal(serverWideConfiguration.DelayReplicationFor, putConfiguration.DelayReplicationFor);
             Assert.True(putConfiguration.TopologyDiscoveryUrls.SequenceEqual(serverWideConfiguration.TopologyDiscoveryUrls));
         }
 
@@ -639,6 +643,8 @@ namespace SlowTests.Server.Documents.Replication
         {
             Assert.Equal(PutServerWideExternalReplicationCommand.GetTaskName(serverWideConfiguration.Name), externalReplication.Name);
             Assert.Equal(serverWideConfiguration.Disabled, externalReplication.Disabled);
+            Assert.Equal(serverWideConfiguration.MentorNode, externalReplication.MentorNode);
+            Assert.Equal(serverWideConfiguration.DelayReplicationFor, externalReplication.DelayReplicationFor);
             Assert.Equal(databaseName, externalReplication.Database);
             Assert.Equal(PutServerWideExternalReplicationCommand.GetRavenConnectionStringName(serverWideConfiguration.Name), externalReplication.ConnectionStringName);
         }

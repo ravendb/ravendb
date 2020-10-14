@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Replication
         /// <summary>
         /// Used to indicate whether external replication is disabled.
         /// </summary>
-        public bool Disabled;
+        public bool Disabled { get; set; }
 
         public bool Equals(ReplicationNode other) => IsEqualTo(other);
 

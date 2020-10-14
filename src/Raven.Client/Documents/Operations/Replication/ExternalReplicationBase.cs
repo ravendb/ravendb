@@ -24,9 +24,9 @@ namespace Raven.Client.Documents.Operations.Replication
                 _taskId = value;
             }
         }
-        public string Name;
+        public string Name { get; set; }
         public string ConnectionStringName;
-        public string MentorNode;
+        public string MentorNode { get; set; }
 
         [JsonDeserializationIgnore]
         public RavenConnectionString ConnectionString; // this is in memory only
