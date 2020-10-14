@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastTests.Client;
+using SlowTests.Bugs;
 using SlowTests.Client.Counters;
 using SlowTests.Cluster;
 using SlowTests.Issues;
@@ -21,7 +22,7 @@ namespace Tryouts
         public static async Task Main(string[] args)
         {
             Console.WriteLine(Process.GetCurrentProcess().Id);
-            for (int i = 0; i < 123; i++)
+            for (int i = 0; i < 1230; i++)
             {
                 var sp = Stopwatch.StartNew();
                 Console.WriteLine($"Starting to run {i}");
@@ -29,9 +30,9 @@ namespace Tryouts
                 try
                 {
                     using (var testOutputHelper = new ConsoleTestOutputHelper())
-                    using (var test = new RavenDB_15608(testOutputHelper))
+                    using (var test = new ClusterTransactionTests(testOutputHelper))
                     {
-                        await test.ArtificalDocumentsMatchIndexEntries();
+                        await test.ClusterTransactionWaitForIndexes(10);
                     }
                 }
                 catch (Exception e)
@@ -40,6 +41,7 @@ namespace Tryouts
                     Console.WriteLine(e);
                     Console.ForegroundColor = ConsoleColor.White;
                     // Console.ReadLine();
+                    throw;
                 }
                 finally
                 {
