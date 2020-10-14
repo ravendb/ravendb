@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RuntimeFrameworkVersion>3.1.8</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>3.1.9</RuntimeFrameworkVersion>
     <PreserveCompilationContext>true</PreserveCompilationContext>
     <AssemblyName>Raven.Studio</AssemblyName>
     <OutputType>Exe</OutputType>
