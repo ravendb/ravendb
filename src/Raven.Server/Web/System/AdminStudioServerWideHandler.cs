@@ -124,6 +124,11 @@ namespace Raven.Server.Web.System
 
             public class ServerWideBackupTask : ServerWideTask
             {
+                public ServerWideBackupTask()
+                {
+                    TaskType = OngoingTaskType.Backup;
+                }
+
                 public BackupType BackupType { get; set; }
 
                 public List<string> BackupDestinations { get; set; }
@@ -145,6 +150,11 @@ namespace Raven.Server.Web.System
 
             public class ServerWideExternalReplicationTask : ServerWideTask
             {
+                public ServerWideExternalReplicationTask()
+                {
+                    TaskType = OngoingTaskType.Replication;
+                }
+
                 public string[] TopologyDiscoveryUrls { get; set; }
 
                 public TimeSpan DelayReplicationFor { get; set; }
