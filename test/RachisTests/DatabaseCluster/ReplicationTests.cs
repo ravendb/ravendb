@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using Esprima.Ast;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
@@ -711,8 +709,23 @@ namespace RachisTests.DatabaseCluster
                         {
                             var cv = DocumentsStorage.GetDatabaseChangeVector(context);
 
-                            error += $" {node}: cv.";
+                            error += $" {node}: {cv}.";
                         }
+
+                        foreach (var item in database.ReplicationLoader.OutgoingFailureInfo)
+                        {
+                            error += $"ErrorsCount: {item.Value.Errors.Count}. Exception: ";
+                            foreach (var err in item.Value.Errors)
+                            {
+                                error += $"{err.Message} , ";
+                            }
+                            error += $"NextTimeout: {item.Value.NextTimeout}. " +
+                                     $"RetryOn: {item.Value.RetryOn}. " +
+                                     $"External: {item.Value.RetryOn}." +
+                                     $"DestinationDbId: {item.Value.DestinationDbId}." +
+                                     $"LastHeartbeatTicks: {item.Value.LastHeartbeatTicks}. ";
+
+                        };
                     }
 
                     throw new Exception(error);
