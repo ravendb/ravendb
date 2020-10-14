@@ -132,7 +132,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                         if (_logger.IsInfoEnabled)
                             _logger.Info(message);
 
-                        UpdateOperationId(runningBackupStatus);
                         runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.LastIncrementalBackup = _startTimeUtc;
                         runningBackupStatus.LocalBackup.IncrementalBackupDurationInMs = 0;
@@ -183,7 +182,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                 }
 
-                UpdateOperationId(runningBackupStatus);
                 runningBackupStatus.LastEtag = internalBackupResult.LastDocumentEtag;
                 runningBackupStatus.LastDatabaseChangeVector = internalBackupResult.LastDatabaseChangeVector;
                 runningBackupStatus.LastRaftIndex.LastEtag = internalBackupResult.LastRaftIndex;
@@ -253,6 +251,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     runningBackupStatus.NodeTag = _database.ServerStore.NodeTag;
                     runningBackupStatus.DurationInMs = totalSw.ElapsedMilliseconds;
+                    UpdateOperationId(runningBackupStatus);
 
                     if (_isOneTimeBackup == false)
                     {
@@ -616,6 +615,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
 
                     IOExtensions.RenameFile(tempBackupFilePath, backupFilePath);
+
+                    status.LocalBackup.Exception = null;
                 }
                 catch (Exception e)
                 {
@@ -822,7 +823,8 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             runningBackupStatus.LastOperationId = _operationId;
             if (_previousBackupStatus.LastOperationId == null ||
-                _previousBackupStatus.NodeTag != _database.ServerStore.NodeTag)
+                _previousBackupStatus.NodeTag != _database.ServerStore.NodeTag ||
+                _previousBackupStatus.Error != null)
                 return;
 
             // dismiss the previous operation
