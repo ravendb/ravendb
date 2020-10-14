@@ -463,7 +463,6 @@ namespace Raven.Server.Documents.TimeSeries
         {
             var values = new double[NumberOfValues];
             var states = new TimestampState[NumberOfValues];
-            DateTime current = default;
 
             var tagPointer = new TagPointer();
             using (var enumerator = GetEnumerator(allocator))
@@ -473,12 +472,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (status == Dead && includeDead == false)
                         continue;
 
-                    var next = baseline.AddMilliseconds(ts);
-                    if (next == current && 
-                        Version == SegmentVersion.V50000) // fix legacy issue RavenDB-15617
-                        continue;
-
-                    current = next;
+                    var current = baseline.AddMilliseconds(ts);
 
                     var tag = SetTimestampTag(context, tagPointer);
 
@@ -613,6 +607,23 @@ namespace Raven.Server.Documents.TimeSeries
 
             public bool MoveNext(out int timestamp, Span<double> values, Span<TimestampState> state, ref TagPointer tag, out ulong status)
             {
+                var previousTimestamp = _previousTimestamp;
+                while (true)
+                {
+                    if (MoveNextInternal(out timestamp, values, state, ref tag, out status) == false)
+                        return false;
+
+                    if (_parent.Version == SegmentVersion.V50000 && // fix legacy issue RavenDB-15617
+                        previousTimestamp == timestamp)
+                        continue;
+
+                    return true;
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private bool MoveNextInternal(out int timestamp, Span<double> values, Span<TimestampState> state, ref TagPointer tag, out ulong status)
+            {
                 if (values.Length != _parent.Header->NumberOfValues)
                     ThrowInvalidNumberOfValues();
 
@@ -622,6 +633,7 @@ namespace Raven.Server.Documents.TimeSeries
                     timestamp = default;
                     return false;
                 }
+
                 if (_bitsPosition == 0)
                 {
                     // we use the values as the statement location for the previous values as well
