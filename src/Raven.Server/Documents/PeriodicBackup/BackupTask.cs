@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly DocumentDatabase _database;
         private readonly BackupConfiguration _configuration;
         private readonly PeriodicBackupStatus _previousBackupStatus;
-        private readonly bool _isFullBackup;
+        internal readonly bool _isFullBackup;
         private readonly bool _isOneTimeBackup;
         private readonly bool _backupToLocalFolder;
         private readonly long _operationId;
