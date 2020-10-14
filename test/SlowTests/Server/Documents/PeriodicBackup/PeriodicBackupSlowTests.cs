@@ -1313,7 +1313,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Null(status.LastFullBackup);
                 Assert.NotNull(status.LastFullBackupInternal);
                 var oldLastFullBackupInternal = status.LastFullBackupInternal;
-                Assert.True(status.IsFull);
+                Assert.True(status.IsFull, "status.IsFull");
                 Assert.Null(status.LastEtag);
                 Assert.Null(status.FolderName);
                 Assert.Null(status.LastIncrementalBackup);
@@ -1329,8 +1329,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 Assert.Null(status.LocalBackup.LastIncrementalBackup);
                 Assert.NotNull(status.NodeTag);
-                Assert.True(status.DurationInMs > 0);
-
+                Assert.True(status.DurationInMs >= 0, "status.DurationInMs >= 0");
                 // update backup task
                 config.TaskId = backupTaskId;
                 config.BackupEncryptionSettings = null;
@@ -1355,7 +1354,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(status.LastFullBackupInternal);
                 Assert.NotEqual(oldLastFullBackupInternal, status.LastFullBackupInternal);
 
-                Assert.True(status.IsFull);
+                Assert.True(status.IsFull, "status.IsFull");
                 Assert.Equal(1, status.LastEtag);
                 Assert.NotNull(status.FolderName);
                 Assert.Null(status.LastIncrementalBackup);
@@ -1368,7 +1367,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotEqual(oldLastFullBackup, status.LocalBackup.LastFullBackup);
                 Assert.Null(status.LocalBackup.LastIncrementalBackup);
                 Assert.NotNull(status.NodeTag);
-                Assert.True(status.DurationInMs > 0);
+                Assert.True(status.DurationInMs > 0, "status.DurationInMs > 0");
             }
         }
 
