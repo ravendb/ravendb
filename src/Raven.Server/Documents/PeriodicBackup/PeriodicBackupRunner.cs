@@ -641,7 +641,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 LastIncrementalBackup = periodicBackup.BackupStatus.LastIncrementalBackup,
                 LastFullBackupInternal = periodicBackup.BackupStatus.LastFullBackupInternal,
                 LastIncrementalBackupInternal = periodicBackup.BackupStatus.LastIncrementalBackupInternal,
-                IsFull = periodicBackup.BackupStatus.IsFull,
+                IsFull = backupTask._isFullBackup,
                 LocalBackup = periodicBackup.BackupStatus.LocalBackup,
                 LastOperationId = periodicBackup.BackupStatus.LastOperationId,
                 FolderName = periodicBackup.BackupStatus.FolderName,
