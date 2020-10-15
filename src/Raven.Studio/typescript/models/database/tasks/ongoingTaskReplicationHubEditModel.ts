@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import generalUtils = require("common/generalUtils");
-import replicationAccessHubModel = require("models/database/tasks/replicationAccessHubModel");
 
 class ongoingTaskReplicationHubEditModel {
 

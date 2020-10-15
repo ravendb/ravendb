@@ -1,7 +1,6 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import app = require("durandal/app");
 import appUrl = require("common/appUrl");
-import router = require("plugins/router");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import backupNowPeriodicCommand = require("commands/database/tasks/backupNowPeriodicCommand");
@@ -18,9 +17,7 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
     private static neverBackedUpText = "Never backed up";
     
     static serverWideNamePrefixFromServer = "Server Wide Backup";
-    isServerWide: KnockoutComputed<boolean>;
     
-    editUrl: KnockoutComputed<string>;
     activeDatabase = activeDatabaseTracker.default.database;
     
     private watchProvider: (task: ongoingTaskBackupListModel) => void;
@@ -67,10 +64,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
 
     initializeObservables() {
         super.initializeObservables();
-
-        this.isServerWide = ko.pureComputed(() => {
-            return this.taskName().startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer);
-        });
         
         this.editUrl = ko.pureComputed(()=> {
              const urls = appUrl.forCurrentDatabase();
@@ -207,6 +200,8 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         }
 
         this.backupNowInProgress(!!this.onGoingBackup());
+        
+        this.isServerWide(this.taskName().startsWith(ongoingTaskBackupListModel.serverWideNamePrefixFromServer));
     }
 
     private getBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType, isFull: boolean): string {
@@ -219,10 +214,6 @@ class ongoingTaskBackupListModel extends ongoingTaskListModel {
         }
 
         return "Full";
-    }
-
-    editTask() {
-        router.navigate(this.editUrl());
     }
 
     toggleDetails() {

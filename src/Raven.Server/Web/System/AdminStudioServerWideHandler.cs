@@ -38,7 +38,7 @@ namespace Raven.Server.Web.System
                     var configuration = JsonDeserializationCluster.ServerWideBackupConfiguration(blittable);
                     
                     if (taskName != null && type == OngoingTaskType.Backup && 
-                        string.Equals(taskName, configuration.Name))
+                        string.Equals(taskName, configuration.Name) == false)
                         continue;
 
                     result.Tasks.Add(new ServerWideTasksResult.ServerWideBackupTask
@@ -61,7 +61,7 @@ namespace Raven.Server.Web.System
                     var configuration = JsonDeserializationCluster.ServerWideExternalReplication(blittable);
 
                     if (taskName != null && type == OngoingTaskType.Replication &&
-                        string.Equals(taskName, configuration.Name))
+                        string.Equals(taskName, configuration.Name) == false)
                         continue;
 
                     result.Tasks.Add(new ServerWideTasksResult.ServerWideExternalReplicationTask

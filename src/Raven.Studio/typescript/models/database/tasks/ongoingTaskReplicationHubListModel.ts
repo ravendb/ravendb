@@ -20,7 +20,7 @@ class ongoingTaskReplicationHubListModel extends ongoingTaskListModel {
         super.update(dto);
 
         this.destinationDB(dto.DestinationDatabase);
-        this.destinationURL(dto.DestinationUrl || 'N/A');
+        this.destinationURL(dto.DestinationUrl || "N/A");
         
         this.uniqueName = ongoingTaskReplicationHubListModel.generateUniqueName(dto);
     }

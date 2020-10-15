@@ -27,7 +27,7 @@ class backups extends viewModelBase {
     isManualBackupInProgress = ko.observable<boolean>(false); // todo !!! create issue... for server ep
 
     canNavigateToServerWideBackupTasks: KnockoutComputed<boolean>;
-    serverWideBackupUrl: string;
+    serverWideTasksUrl: string;
     ongoingTasksUrl: string;
 
     private graph = new databaseGroupGraph();
@@ -44,7 +44,7 @@ class backups extends viewModelBase {
 
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
-        this.serverWideBackupUrl = appUrl.forServerWideBackupList();
+        this.serverWideTasksUrl = appUrl.forServerWideTasks();
         this.ongoingTasksUrl = appUrl.forOngoingTasks(this.activeDatabase());
         this.canNavigateToServerWideBackupTasks = accessManager.default.clusterAdminOrClusterNode;
     }
@@ -109,6 +109,7 @@ class backups extends viewModelBase {
         return new ongoingTasksCommand(db)
             .execute()
             .done((info) => {
+                info.OngoingTasksList = info.OngoingTasksList.filter(x => x.TaskType === "Backup");
                 this.processTasksResult(info);
                 this.graph.onTasksChanged(info);
             });
@@ -168,16 +169,13 @@ class backups extends viewModelBase {
             ] as Array<{ taskId: number }>;
 
         const oldTaskIds = oldTasks.map(x => x.taskId);
-        
         const newTaskIds = result.OngoingTasksList.map(x => x.TaskId);
-        newTaskIds.push(...result.PullReplications.map(x => x.TaskId));
-
         const toDeleteIds = _.without(oldTaskIds, ...newTaskIds);
 
         const groupedTasks = _.groupBy(result.OngoingTasksList, x => x.TaskType);
        
         this.mergeTasks(this.periodicBackupTasks, 
-            groupedTasks['Backup' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            groupedTasks["Backup" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => new ongoingTaskBackupListModel(dto, task => this.watchBackupCompletion(task)));
         
@@ -187,7 +185,7 @@ class backups extends viewModelBase {
         const ongoingBackupTasks = groupedBackupTasks.false;
 
         if (ongoingBackupTasks) {
-            this.periodicBackupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);            
+            this.periodicBackupTasks(serverWideBackupTasks ? ongoingBackupTasks.concat(serverWideBackupTasks) : ongoingBackupTasks);
         } else if (serverWideBackupTasks) {
             this.periodicBackupTasks(serverWideBackupTasks);
         }

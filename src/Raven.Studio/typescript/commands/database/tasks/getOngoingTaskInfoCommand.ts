@@ -17,7 +17,7 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
         return this.getTaskInfo()
             .fail((response: JQueryXHR) => {
                 if (this.reportFailure) {
-                    this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}. `, response.responseText, response.statusText);    
+                    this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}.`, response.responseText, response.statusText);
                 }
             });
     }

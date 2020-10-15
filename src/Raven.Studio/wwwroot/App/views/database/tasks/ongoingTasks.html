@@ -4,9 +4,12 @@
             <div class="flex-header flex-horizontal">
                 <div>
                     <button data-bind="click: addNewOngoingTask" class="btn btn-primary">
-                        <i class="icon-plus"></i><span>Add Task</span>
+                        <i class="icon-plus"></i><span>Add a Database Task</span>
                     </button>
                 </div>
+                <small class="text-info bg-info padding padding-xs margin-left" data-bind="if: canNavigateToServerWideTasks">
+                    <span>To add a server-wide task go to: <a target="_blank" data-bind="attr: { href: serverWideTasksUrl }">Server-Wide Tasks view</a></span>
+                </small>
                 <div class="flex-separator"></div>
                 <!-- TODO
                 <div class="btn-group-label" data-label="Selection">
@@ -18,7 +21,7 @@
                     </button>
                 </div>-->
             </div>
-            <div class="flex-horizontal">
+            <div class="flex-horizontal margin-bottom">
                 <div class="checkbox checkbox-primary checkbox-inline align-checkboxes hide">
                     <input type="checkbox" class="styled">
                     <label></label>
@@ -90,7 +93,7 @@
                                     </div>
                                     <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
-                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                    <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
                                     <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
@@ -245,9 +248,6 @@
                             <i class="icon-backups"></i>
                             <span>Periodic Backup</span><span data-bind="text: ' (' + backupTasks().length + ')'"></span>
                         </h5><hr>
-                        <h5 class="tasks-list-item no-text-transform" title="Navigate to the Server-Wide Backup View" data-bind="visible: $root.canNavigateToServerWideBackupTasks">
-                            <a target="_blank" data-bind="attr: { href: $root.serverWideBackupUrl }">&nbsp;Go to Server-Wide Backup View</a>
-                        </h5>
                     </div>
                     <div data-bind="foreach: backupTasks">
                         <div class="panel destination-item periodic-backup" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
@@ -258,19 +258,14 @@
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="panel-name flex-grow">
-                                        <h3 data-bind="attr: { 'title': 'Task name: ' + taskName() }">
-                                            <a href="#" data-bind="if: !isServerWide(), click: editTask"><span data-bind="text: taskName"></span></a>
-                                            <span data-bind="if: isServerWide()"><span data-bind="text: taskName"></span></span>
-                                        </h3>
-                                    </div>
+                                    <div class="panel-name flex-grow" data-bind="template: { name: 'name-template' }"></div>
                                     <div>
                                         <small title="Backup is encrypted" data-bind="visible: isBackupEncrypted"><i class="icon-encryption text-success"></i></small>
                                         <small title="Backup is not encrypted" data-bind="visible: !isBackupEncrypted()"><i class="icon-unlock text-gray"></i></small>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="visible: !isServerWide(), template: { name: 'state-template' }"></div>
-                                    <div data-bind="template: { name: 'backup-actions-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
                             <div class="collapse panel-addon" data-bind="collapse: showDetails">
@@ -573,10 +568,9 @@
 </div>
 
 <script type="text/html" id="name-template">
-    <h3>
-        <a href="#" data-bind="click: editTask, attr: { 'title': 'Task name: ' + taskName() }">
-            <span data-bind="text: taskName"></span>
-        </a>
+    <h3 data-bind="attr: { 'title': 'Task name: ' + taskName() }">
+        <a href="#" data-bind="if: !isServerWide(), click: editTask"><span data-bind="text: taskName"></span></a>
+        <span data-bind="if: isServerWide()"><span data-bind="text: taskName"></span></span>
     </h3>
 </script>
 
@@ -609,22 +603,12 @@
     </div>
 </script>
 
-<script type="text/html" id="backup-actions-template">
+<script type="text/html" id="actions-template">
     <div class="actions-container">
         <div class="actions">
             <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
             <button class="btn btn-default" title="Edit backup task" data-bind="visible: !isServerWide(), click: editTask"><i class="icon-edit"></i></button>
             <button class="btn btn-danger" data-bind="visible: !isServerWide(), click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
-        </div>
-    </div>
-</script>
-
-<script type="text/html" id="actions-template">
-    <div class="actions-container">
-        <div class="actions">
-            <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
-            <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
-            <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
         </div>
     </div>
 </script>

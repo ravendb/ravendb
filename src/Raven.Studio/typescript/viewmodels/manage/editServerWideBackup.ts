@@ -1,31 +1,34 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
-import serverWideBackupConfiguration = require("models/database/tasks/periodicBackup/serverWideBackupConfiguration");
+import serverWideBackupEditModel = require("models/database/tasks/serverWide/serverWideBackupEditModel");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
-import getServerWideBackupConfigCommand = require("commands/resources/getServerWideBackupConfigCommand");
-import getServerWideBackupCommand = require("commands/resources/getServerWideBackupCommand");
+import getServerWideBackupConfigCommand = require("commands/resources/serverWide/getServerWideBackupConfigCommand");
+import getServerWideTaskInfoCommand = require("commands/resources/serverWide/getServerWideTaskInfoCommand");
 import popoverUtils = require("common/popoverUtils");
 import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import cronEditor = require("viewmodels/common/cronEditor");
-import saveServerWideBackupCommand = require("commands/resources/saveServerWideBackupCommand");
+import saveServerWideBackupCommand = require("commands/resources/serverWide/saveServerWideBackupCommand");
 import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class editServerWideBackup extends viewModelBase {
     
-    configuration = ko.observable<serverWideBackupConfiguration>();
+    editedTask = ko.observable<serverWideBackupEditModel>();
     serverConfiguration = ko.observable<periodicBackupServerLimitsResponse>();
     
     fullBackupCronEditor = ko.observable<cronEditor>();
     incrementalBackupCronEditor = ko.observable<cronEditor>();
 
     isAddingNewBackupTask = ko.observable<boolean>(true);
+
+    spinners = {
+        save: ko.observable<boolean>(false)
+    };
     
     constructor() {
         super();
-
         this.bindToCurrentInstance("testCredentials");
     }
     
@@ -42,7 +45,7 @@ class editServerWideBackup extends viewModelBase {
                 // 1. Editing an existing task
                 this.isAddingNewBackupTask(false);
                
-                new getServerWideBackupCommand(args.taskName)
+                getServerWideTaskInfoCommand.forBackup(args.taskName)
                     .execute()
                     .done((result: Raven.Server.Web.System.ServerWideTasksResult<Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration>) => {
                         if (result.Results.length) {
@@ -51,32 +54,31 @@ class editServerWideBackup extends viewModelBase {
                                 backupTask.LocalSettings.FolderPath = backupTask.LocalSettings.FolderPath.substr(this.serverConfiguration().LocalRootPath.length);
                             }
 
-                            this.configuration(new serverWideBackupConfiguration(dbName, backupTask, this.serverConfiguration(), false, true));
+                            this.editedTask(new serverWideBackupEditModel(dbName, backupTask, this.serverConfiguration(), false, true));
                             deferred.resolve();
                         } else {
                             deferred.reject();
-                            router.navigate(appUrl.forServerWideBackupList());
+                            router.navigate(appUrl.forServerWideTasks());
                         }
                     })
                     .fail(() => {
                         deferred.reject();
-                        router.navigate(appUrl.forServerWideBackupList());
+                        router.navigate(appUrl.forServerWideTasks());
                     });
-            
             } else {
                 // 2. Creating a new task
                 this.isAddingNewBackupTask(true);
                 
-                this.configuration(serverWideBackupConfiguration.empty(dbName, this.serverConfiguration(), false, true));
+                this.editedTask(serverWideBackupEditModel.empty(dbName, this.serverConfiguration(), false, true));
                 deferred.resolve();
             }
 
             return deferred
                 .then(() => {
-                    this.dirtyFlag = this.configuration().serverWideDirtyFlag;
+                    this.dirtyFlag = this.editedTask().serverWideDirtyFlag;
 
-                    this.fullBackupCronEditor(new cronEditor(this.configuration().fullBackupFrequency));
-                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().incrementalBackupFrequency));
+                    this.fullBackupCronEditor(new cronEditor(this.editedTask().fullBackupFrequency));
+                    this.incrementalBackupCronEditor(new cronEditor(this.editedTask().incrementalBackupFrequency));
                 });
         };
 
@@ -156,26 +158,28 @@ class editServerWideBackup extends viewModelBase {
     }
 
     saveBackupSettings() {
-        this.configuration().encryptionSettings().setKeyUsedBeforeSave();
+        this.editedTask().encryptionSettings().setKeyUsedBeforeSave();
         
         if (!this.validate()) {
             return;
         }
-
-        const dto = this.configuration().toDto();
+        
+        const dto = this.editedTask().toDto();
 
         if (this.serverConfiguration().LocalRootPath) {
             dto.LocalSettings.FolderPath = this.serverConfiguration().LocalRootPath + dto.LocalSettings.FolderPath;
         }
 
+        this.spinners.save(true);
         eventsCollector.default.reportEvent("server-wide-backup", "save");
         
         new saveServerWideBackupCommand(dto as Raven.Client.ServerWide.Operations.Configuration.ServerWideBackupConfiguration)
             .execute()
             .done(() => {
                 this.dirtyFlag().reset();
-                this.goToServerWideBackupsView();
-            });
+                this.goToServerWideTasksView();
+            })
+            .always(() => this.spinners.save(false));
     }
 
     testCredentials(bs: backupSettings) {
@@ -195,46 +199,46 @@ class editServerWideBackup extends viewModelBase {
     }
 
     cancelOperation() {
-        this.goToServerWideBackupsView();
+        this.goToServerWideTasksView();
     }
 
-    private goToServerWideBackupsView() {
-        router.navigate(appUrl.forServerWideBackupList()); 
+    private goToServerWideTasksView() {
+        router.navigate(appUrl.forServerWideTasks()); 
     }
 
     private validate(): boolean {
         let valid = true;
 
-        if (!this.isValid(this.configuration().validationGroup))
+        if (!this.isValid(this.editedTask().validationGroup))
             valid = false;
         
-        if (!this.isValid(this.configuration().serverWideValidationGroup))
+        if (!this.isValid(this.editedTask().serverWideValidationGroup))
             valid = false;
 
-        if (!this.isValid(this.configuration().encryptionSettings().validationGroup()))
+        if (!this.isValid(this.editedTask().encryptionSettings().validationGroup()))
             valid = false;
 
-        const localSettings = this.configuration().localSettings();
+        const localSettings = this.editedTask().localSettings();
         if (localSettings.enabled() && !this.isValid(localSettings.effectiveValidationGroup()))
             valid = false;
 
-        const s3Settings = this.configuration().s3Settings();
+        const s3Settings = this.editedTask().s3Settings();
         if (s3Settings.enabled() && !this.isValid(s3Settings.effectiveValidationGroup()))
             valid = false;
 
-        const azureSettings = this.configuration().azureSettings();
+        const azureSettings = this.editedTask().azureSettings();
         if (azureSettings.enabled() && !this.isValid(azureSettings.effectiveValidationGroup()))
             valid = false;
 
-        const googleCloudSettings = this.configuration().googleCloudSettings();
+        const googleCloudSettings = this.editedTask().googleCloudSettings();
         if (googleCloudSettings.enabled() && !this.isValid(googleCloudSettings.effectiveValidationGroup()))
             valid = false;
 
-        const glacierSettings = this.configuration().glacierSettings();
+        const glacierSettings = this.editedTask().glacierSettings();
         if (glacierSettings.enabled() && !this.isValid(glacierSettings.effectiveValidationGroup()))
             valid = false;
 
-        const ftpSettings = this.configuration().ftpSettings();
+        const ftpSettings = this.editedTask().ftpSettings();
         if (ftpSettings.enabled() && !this.isValid(ftpSettings.effectiveValidationGroup()))
             valid = false;
         

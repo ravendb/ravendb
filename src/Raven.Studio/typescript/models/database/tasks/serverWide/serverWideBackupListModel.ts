@@ -1,13 +1,11 @@
-﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+﻿/// <reference path="../../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
-import router = require("plugins/router");
-import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
+import serverWideTaskListModel = require("models/database/tasks/serverWide/serverWideTaskListModel"); 
 import generalUtils = require("common/generalUtils");
 import shell = require("viewmodels/shell");
-import getAllServerWideTasksCommand = require("commands/resources/getAllServerWideTasksCommand");
+import getAllServerWideTasksCommand = require("commands/resources/serverWide/getAllServerWideTasksCommand");
 
-class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {    
-    editUrl: KnockoutComputed<string>;
+class serverWideBackupListModel extends serverWideTaskListModel {
 
     backupType = ko.observable<Raven.Client.Documents.Operations.Backups.BackupType>();
     fullBackupTypeName: KnockoutComputed<string>;
@@ -21,7 +19,6 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
     textClass: KnockoutComputed<string>;
     
     isBackupEncrypted = ko.observable<boolean>();
-    excludedDatabases = ko.observableArray<string>();
 
     constructor(dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask) {
         super();
@@ -39,8 +36,8 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
             return this.retentionPolicyDisabled() ? "No backups will be removed" : generalUtils.formatTimeSpan(this.retentionPolicyPeriod(), true);
         });
         
-        this.backupDestinationsHumanized =  ko.pureComputed(() => {
-            return this.backupDestinations().length ? this.backupDestinations().join(', ') : "No destinations defined";
+        this.backupDestinationsHumanized = ko.pureComputed(() => {
+            return this.backupDestinations().length ? this.backupDestinations().join(", ") : "No destinations defined";
         });
 
         this.fullBackupTypeName = ko.pureComputed(() => this.getBackupType(this.backupType(), true));
@@ -49,15 +46,17 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
     }
 
     // dto param is union-type only so that it compiles - due to class inheritance....
-    update(dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideTask | Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask) {
+    update(dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideTask |
+                Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask) {
         super.update({
+            TaskType: dto.TaskType,
             TaskName: dto.TaskName,
             TaskId: dto.TaskId,
             TaskState: dto.TaskState,
-                       TaskConnectionStatus: null, // not relevant for this view
-                       ResponsibleNode: null,      // not relevant for this view 
-                       MentorNode: null,           // not relevant for this view 
-                       } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTask );
+            TaskConnectionStatus: dto.TaskConnectionStatus, 
+            ResponsibleNode: dto.ResponsibleNode,
+            MentorNode: dto.MentorNode,
+       } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTask );
 
         const serverWideBackupTask = dto as Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask;
 
@@ -70,6 +69,7 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
         
         this.isBackupEncrypted(serverWideBackupTask.IsEncrypted);
         this.excludedDatabases(serverWideBackupTask.ExcludedDatabases);
+        this.isServerWide(true);
     }
 
     private getBackupType(backupType: Raven.Client.Documents.Operations.Backups.BackupType, isFull: boolean): string {
@@ -82,10 +82,6 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
         }
 
         return "Full";
-    }
-
-    editTask() {
-        router.navigate(this.editUrl());
     }
 
     toggleDetails() {
@@ -109,4 +105,4 @@ class ongoingTaskServerWideBackupListModel extends ongoingTaskListModel {
     }
 }
 
-export = ongoingTaskServerWideBackupListModel;
+export = serverWideBackupListModel;

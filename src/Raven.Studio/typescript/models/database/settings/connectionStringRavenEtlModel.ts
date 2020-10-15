@@ -6,9 +6,11 @@ import testClusterNodeConnectionCommand = require("commands/database/cluster/tes
 import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 
-
 class connectionStringRavenEtlModel extends connectionStringModel { 
 
+    static serverWidePrefix = "Server Wide Raven Connection String";
+    isServerWide: KnockoutComputed<boolean>;
+    
     database = ko.observable<string>();
     topologyDiscoveryUrls = ko.observableArray<discoveryUrl>([]);
     inputUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
@@ -43,6 +45,10 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             urlsCount,
             urlsAreDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+        
+        this.isServerWide = ko.pureComputed(() => {
+            return this.connectionStringName().startsWith(connectionStringRavenEtlModel.serverWidePrefix);
+        });
     }
 
     update(dto: Raven.Client.Documents.Operations.ETL.RavenConnectionString) {
@@ -97,7 +103,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
     
     removeDiscoveryUrl(url: discoveryUrl) {
         this.topologyDiscoveryUrls.remove(url); 
-    }   
+    }
 
     addDiscoveryUrlWithBlink() { 
         if ( !_.find(this.topologyDiscoveryUrls(), x => x.discoveryUrlName() === this.inputUrl().discoveryUrlName())) {

@@ -1,9 +1,10 @@
-<form class="content-margin edit-backup" data-bind="with: configuration" autocomplete="off">
+<form class="content-margin edit-backup" data-bind="with: editedTask" autocomplete="off">
     <div class="toolbar" data-bind="with: $root">
-        <button data-bind="click: saveBackupSettings, enable: dirtyFlag().isDirty" type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary"
+                data-bind="click: saveBackupSettings, disable: spinners.save() || !dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
             <i class="icon-save"></i><span>Save</span>
         </button>
-        <button data-bind="click: cancelOperation" class="btn btn-default">
+        <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to the Server-Wide Tasks view">
             <i class="icon-cancel"></i><span>Cancel</span>
         </button>
     </div>
@@ -45,47 +46,49 @@
                     </div>
                 </div>
             </div>
-            <div class="row margin-bottom">
-                <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4">
-                    <div class="toggle" data-placement="left" data-toggle="tooltip" title="Select databases to exclude from the server-wide backup" data-animation="true">
-                        <input id="excludeDatabase" type="checkbox" data-bind="checked: excludeDatabases">
-                        <label for="excludeDatabase">Exclude databases</label>
+            <div data-bind="with: excludeInfo">
+                <div class="row margin-bottom">
+                    <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4">
+                        <div class="toggle" data-placement="left" data-toggle="tooltip" title="Select databases to exclude from the server-wide backup" data-animation="true">
+                            <input id="excludeDatabase" type="checkbox" data-bind="checked: exclude">
+                            <label for="excludeDatabase">Exclude databases</label>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="row margin-bottom margin-bottom-xs">
-                <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="collapse: excludeDatabases">
-                    <div class="flex-horizontal">
-                        <div class="flex-grow">
-                            <div class="dropdown btn-block flex-grow" data-bind="validationElement: databasesToExclude">
-                                <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database to exclude" data-toggle="dropdown" autocomplete="off"
-                                       data-bind="textInput: inputDatabaseToExclude, attr: { id: 'databaseNameInput' }" />
-                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                <ul class="dropdown-menu" role="menu" style="display: none;"
-                                    data-bind="autoComplete: '#databaseNameInput', foreach: createDatabaseNameAutocompleter()">
-                                    <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
-                                        <a role="menuitem" tabindex="-1" href="#">
-                                            <span data-bind="text: $data"></span>
-                                        </a>
-                                    </li>
-                                </ul>
-                                <span class="help-block" data-bind="validationMessage: databasesToExclude"></span>
+                <div class="row margin-bottom margin-bottom-xs">
+                    <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4" data-bind="collapse: exclude">
+                        <div class="flex-horizontal">
+                            <div class="flex-grow">
+                                <div class="dropdown btn-block flex-grow" data-bind="validationElement: databasesToExclude">
+                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database to exclude" data-toggle="dropdown" autocomplete="off"
+                                           data-bind="textInput: inputDatabaseToExclude, attr: { id: 'databaseNameInput' }" />
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                        data-bind="autoComplete: '#databaseNameInput', foreach: createDatabaseNameAutocompleter()">
+                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                            <a role="menuitem" tabindex="-1" href="#">
+                                                <span data-bind="text: $data"></span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                    <span class="help-block" data-bind="validationMessage: databasesToExclude"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <button class="btn btn-info" data-bind="click: addDatabase, enable: inputDatabaseToExclude() && canAddDatabase()">
+                                    <i class="icon-plus"></i><span>Add Database</span>
+                                </button>
                             </div>
                         </div>
-                        <div>
-                            <button class="btn btn-info" data-bind="click: addDatabase, enable: inputDatabaseToExclude() && canAddDatabase()">
-                                <i class="icon-plus"></i><span>Add Database</span>
-                            </button>
+                        <div data-bind="visible: databasesToExclude() && databasesToExclude().length" class="margin-top">
+                            <label><strong>Excluded Databases:</strong></label>
+                            <ul class="well collection-list" data-bind="foreach: databasesToExclude">
+                                <li>
+                                    <div class="name" data-bind="text: $data"></div>
+                                    <a title="Remove database" href="#" data-bind="click: $parent.removeDatabase.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
                         </div>
-                    </div>
-                    <div data-bind="visible: databasesToExclude() && databasesToExclude().length" class="margin-top">
-                        <label><strong>Excluded Databases:</strong></label>
-                        <ul class="well collection-list" data-bind="foreach: databasesToExclude">
-                            <li>
-                                <div class="name" data-bind="text: $data"></div>
-                                <a title="Remove database" href="#" data-bind="click: $parent.removeDatabase.bind($parent, $data)"><i class="icon-trash"></i></a>
-                            </li>
-                        </ul>
                     </div>
                 </div>
             </div>
@@ -163,7 +166,7 @@
                     <label for="toggle-encryption">Encrypt backup</label>
                 </div>
                 <span class="help-block" data-bind="validationMessage: enabled"></span>
-                <small data-bind="visible: $root.configuration().backupType() === 'Snapshot' && enabled()"><i class="serverwide-snapshot-encryption-info icon-info text-info"></i></small>
+                <small data-bind="visible: $root.editedTask().backupType() === 'Snapshot' && enabled()"><i class="serverwide-snapshot-encryption-info icon-info text-info"></i></small>
             </div>
             <div data-bind="collapse: needExplicitConsent">
                 <div class="flex-horizontal" data-bind="validationElement: allowUnencryptedBackupForEncryptedDatabase">

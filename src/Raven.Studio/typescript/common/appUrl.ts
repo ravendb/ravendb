@@ -175,13 +175,18 @@ class appUrl {
         return "#admin/settings/certificates";
     }
 
-    static forServerWideBackupList(): string {
-        return "#admin/settings/serverWideBackupList";
+    static forServerWideTasks(): string {
+        return "#admin/settings/serverWideTasks";
     }
     
     static forEditServerWideBackup(serverWideBackupTaskName? : string): string {
         const backupNamePart = serverWideBackupTaskName ? "?&taskName=" + encodeURIComponent(serverWideBackupTaskName) : "";
         return "#admin/settings/editServerWideBackup" + backupNamePart;
+    }
+
+    static forEditServerWideExternalReplication(serverWideReplicationTaskName? : string): string {
+        const replicationNamePart = serverWideReplicationTaskName ? "?&taskName=" + encodeURIComponent(serverWideReplicationTaskName) : "";
+        return "#admin/settings/editServerWideExternalReplication" + replicationNamePart;
     }
 
     static forDatabases(databasesUrlAction?: "compact" | "restore", databaseToCompact?: string): string {

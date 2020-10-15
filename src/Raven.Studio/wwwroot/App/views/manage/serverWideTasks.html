@@ -1,0 +1,161 @@
+<!--// todo class ?-->
+<div class="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="flex-header flex-horizontal">
+                <div>
+                    <button data-bind="click: addNewServerWideTask" class="btn btn-primary">
+                        <i class="icon-plus"></i><span>Add a Server-Wide Task</span>
+                    </button>
+                </div>
+                <div class="flex-separator"></div>
+            </div>
+            <div class="scroll flex-grow">
+                <div data-bind="if: serverWideBackupTasks().length === 0 && serverWideExternalReplicationTasks().length === 0">
+                    <div class="row">
+                        <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
+                            <i class="icon-xl icon-empty-set text-muted"></i>
+                            <h2 class="text-center text-muted">No Server-Wide Tasks have been created for this cluster.</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Server-Wide External Replication -->
+
+                <div>
+                    <div class="hr-title" data-bind="if: serverWideExternalReplicationTasks().length">
+                        <!-- todo - replace icon with icon-server-wide-external-replication -->
+                        <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-external-replication"></i>
+                            <span>Server-Wide External Replication</span>
+                            <span data-bind="text: ' (' + serverWideExternalReplicationTasks().length + ')'"></span>
+                        </h5><hr>
+                    </div>
+                    <div data-bind="foreach: serverWideExternalReplicationTasks">
+
+                        <div class="panel destination-item external-replication">
+                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }">
+                                <!-- todo - replace icon with icon-server-wide-external-replication -->
+                                <i class="icon-external-replication"></i>
+                            </div>
+                            <div class="padding destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="panel-name flex-grow">
+                                        <h3>
+                                            <a href="#" data-bind="click: editTask, attr: { 'title': 'Server-Wide External Replication name: ' + taskName() }">
+                                                <span data-bind="text: '&nbsp;' + taskName()"></span>
+                                            </a>
+                                        </h3>
+                                    </div>
+                                    <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
+                                </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                                <div class="padding flex-horizontal">
+                                    <div class="flex-grow">
+                                        <div class="list-properties">
+                                            <div  class="property-item">
+                                                <div class="property-name">Delay time:</div>
+                                                <div class="property-value"><span data-bind="text: delayTimeText "></span></div>
+                                            </div>
+                                            <!-- ko foreach: excludedDatabases -->
+                                            <div class="property-item">
+                                                <div class="property-name" data-bind="text: $data === $parent.excludedDatabases()[0] ? 'Excluded Databases:' : ''"></div>
+                                                <div class="property-value" data-bind="text: $data, attr: { 'title': $data }"></div>
+                                            </div>
+                                            <!-- /ko -->
+                                        </div>
+                                    </div>
+                                    <div class="flex-noshrink">
+                                        <button class="btn btn-default" data-bind="click: refreshExternalReplicationInfo" title="Refresh info"><i class="icon-refresh"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <!-- Server-Wide Backup-->
+                
+                 <div class="hr-title" data-bind="if: serverWideBackupTasks().length">
+                     <h5 class="tasks-list-item periodic-backup no-text-transform"><i class="icon-server-wide-backup"></i>
+                         <span>Server-Wide Backup</span>
+                         <span data-bind="text: ' (' + serverWideBackupTasks().length + ')'"></span>
+                     </h5><hr>
+                 </div>
+                 <div data-bind="foreach: serverWideBackupTasks">
+                     <div class="panel destination-item periodic-backup">
+                         <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }">
+                             <i class="icon-server-wide-backup"></i>
+                         </div>
+                         <div class="padding destination-info flex-vertical">
+                             <div class="flex-horizontal">
+                                 <div class="panel-name flex-grow">
+                                     <h3>
+                                         <a href="#" data-bind="click: editTask, attr: { 'title': 'Server-Wide Backup name: ' + taskName() }">
+                                             <span data-bind="text: '&nbsp;' + taskName()"></span>
+                                         </a>
+                                     </h3>
+                                 </div>
+                                 <div>
+                                     <small title="Backup is encrypted" data-bind="visible: isBackupEncrypted"><i class="icon-encryption text-success"></i></small>
+                                     <small title="Backup is not encrypted" data-bind="visible: !isBackupEncrypted()"><i class="icon-unlock text-gray"></i></small>
+                                 </div>
+                                 <div class="status" data-bind="template: { name: 'state-template' }"></div>
+                                 <div data-bind="template: { name: 'actions-template' }"></div>
+                             </div>
+                         </div>
+                         <div class="collapse panel-addon" data-bind="collapse: showDetails">
+                             <div class="padding flex-horizontal">
+                                 <div class="flex-grow">
+                                     <div class="list-properties">
+                                         <div class="property-item">
+                                             <div class="property-name">Destinations:</div>
+                                             <div class="property-value"><span data-bind="text: backupDestinationsHumanized, attr: { class: textClass() }"></span></div>
+                                         </div>
+                                         <div class="property-item">
+                                             <div class="property-name">Retention Policy:</div>
+                                             <div class="property-value text-details"><span data-bind="text: retentionPolicyHumanized"></span></div>
+                                         </div>
+                                         <!-- ko foreach: excludedDatabases -->
+                                         <div class="property-item">
+                                             <div class="property-name" data-bind="text: $data === $parent.excludedDatabases()[0] ? 'Excluded Databases:' : ''"></div>
+                                             <div class="property-value" data-bind="text: $data, attr: { 'title': $data }"></div>
+                                         </div>
+                                         <!-- /ko -->
+                                     </div>
+                                 </div>
+                                 <div class="flex-noshrink">
+                                     <button class="btn btn-default" data-bind="click: refreshBackupInfo" title="Refresh info"><i class="icon-refresh"></i></button>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/html" id="state-template">
+    <div class="btn-group">
+        <button type="button" class="btn dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+            <span data-bind="text: stateText()"></span><span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu">
+            <li><a href="#" data-bind="click: $root.confirmEnableServerWideTask"><span>Enable</span></a></li>
+            <li><a href="#" data-bind="click: $root.confirmDisableServerWideTask"><span>Disable</span></a></li>
+        </ul>
+    </div>
+</script>
+
+<script type="text/html" id="actions-template">
+    <div class="actions-container">
+        <div class="actions">
+            <button class="btn btn-default" data-bind="click: _.partial($root.toggleDetails, $data)" title="Click for details"><i class="icon-info"></i></button>
+            <button class="btn btn-default" data-bind="click: editTask" title="Edit Server-Wide task"><i class="icon-edit"></i></button>
+            <button class="btn btn-danger" data-bind="click: $root.confirmRemoveServerWideTask" title="Delete Server-Wide task"><i class="icon-trash"></i></button>
+        </div>
+    </div>
+</script>

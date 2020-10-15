@@ -1,0 +1,168 @@
+<div class="content-margin edit-server-wide-replication">
+    <form class="flex-form" data-bind="submit: saveServerWideExternalReplication" autocomplete="off">
+        <div class="row flex-row absolute-fill">
+            <div class="col-xs-12 col-lg-6 flex-vertical">
+                <div class="flex-header">
+                    <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save() || !dirtyFlag().isDirty(), css: { 'btn-spinner': spinners.save }">
+                        <i class="icon-save"></i><span>Save</span>
+                    </button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to the Server-Wide Tasks view">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel">
+                    <div class="panel-body" data-bind="with: editedTask">
+                        <strong><h3 data-bind="text: $parent.isAddingNewExternalReplicationTask() ? `New Server-Wide External Replication` : `Edit Server-Wide External Replication`"></h3></strong>
+                        <div class="form-group margin-top margin-top-lg" data-bind="validationElement: taskName">
+                            <label for="taskName" class="control-label">Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" placeholder="Enter a name for the server-wide replication task (optional)">
+                            </div>
+                        </div>
+                        <div class="form-group margin-top margin-top-lg">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="right" data-toggle="tooltip" title="Set a delay time for the task" data-animation="true">
+                                <input id="setDelayTime" type="checkbox" data-bind="checked: showDelayTime">
+                                <label for="setDelayTime">Set Replication Delay Time</label>
+                            </div>
+                        </div>
+                        <div data-bind="validationElement: delayTime, collapse: showDelayTime">
+                            <div class="form-group">
+                                <div>
+                                    <label class="control-label">Delay Time</label>
+                                </div>
+                                <div class="flex-grow">
+                                    <input type="text" class="form-control" data-bind="durationPicker: delayTime, durationPickerOptions: { showDays: true, showSeconds: true }" />
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="collapse: humaneDelayDescription">
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="bg-info padding padding-sm small flex-horizontal">
+                                    <div><i class="icon-info"></i></div>
+                                    <div data-bind="html: humaneDelayDescription"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="with: excludeInfo" class="margin-bottom margin-bottom-lg">
+                            <div class="form-group">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="toggle" data-placement="right" data-toggle="tooltip" title="Select databases to exclude from the server-wide external replication" data-animation="true">
+                                    <input id="excludeDatabase" type="checkbox" data-bind="checked: exclude">
+                                    <label for="excludeDatabase">Exclude databases</label>
+                                </div>
+                            </div>
+                            <div data-bind="collapse: exclude">
+                                <div class="form-group">
+                                    <label class="control-label">&nbsp;</label>
+                                    <div class="flex-grow">
+                                        <div class="flex-horizontal">
+                                            <div class="flex-grow">
+                                                <div class="dropdown btn-block" data-bind="validationElement: databasesToExclude">
+                                                    <input class="form-control dropdown-toggle" placeholder="Select (or enter) a database to exclude" data-toggle="dropdown" autocomplete="off"
+                                                           data-bind="textInput: inputDatabaseToExclude, attr: { id: 'databaseNameInput' }" />
+                                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                                    <ul class="dropdown-menu" role="menu" style="display: none;"
+                                                        data-bind="autoComplete: '#databaseNameInput', foreach: createDatabaseNameAutocompleter()">
+                                                        <li role="presentation" data-bind="click: $parent.addWithBlink.bind($parent, $data)">
+                                                            <a role="menuitem" tabindex="-1" href="#">
+                                                                <span data-bind="text: $data"></span>
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                    <span class="help-block" data-bind="validationMessage: databasesToExclude"></span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-info" data-bind="click: addDatabase, enable: inputDatabaseToExclude() && canAddDatabase()">
+                                                    <i class="icon-plus"></i><span>Add Database</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div data-bind="visible: databasesToExclude() && databasesToExclude().length" class="margin-top">
+                                            <label><strong>Excluded Databases:</strong></label>
+                                            <ul class="well collection-list" data-bind="foreach: databasesToExclude">
+                                                <li>
+                                                    <div class="name" data-bind="text: $data"></div>
+                                                    <a title="Remove database" href="#" data-bind="click: $parent.removeDatabase.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="with: connectionString">
+                            <div class="form-group" data-bind="validationElement: inputUrl().discoveryUrlName">
+                                <label class="control-label">Discovery URLs:</label>
+                                <div class="flex-grow">
+                                    <input class="form-control" placeholder="Enter discovery url to add" data-bind="textInput: inputUrl().discoveryUrlName" />
+                                </div>
+                                <button class="btn btn-info"
+                                        data-bind="click: addDiscoveryUrlWithBlink, enable: inputUrl().discoveryUrlName() && inputUrl().validationGroup.isValid()">
+                                    <i class="icon-plus"></i><span>Add URL</span>
+                                </button>
+                            </div>
+                            <div class="form-group" data-bind="visible: topologyDiscoveryUrls().length">
+                                <label class="control-label">&nbsp;</label>
+                                <div class="flex-grow">
+                                    <ul class="well collection-list" data-bind="foreach: topologyDiscoveryUrls">
+                                        <li>
+                                            <div class="name" data-bind="text: $data.discoveryUrlName"></div>
+                                            <a title="Remove url" href="#"
+                                               data-bind="click: $parent.removeDiscoveryUrl.bind($parent, $data)">
+                                                <i class="icon-trash"></i>
+                                            </a>
+                                            <a class="btn btn-default" title="Test url connection" href="#"
+                                               data-bind="click: _.partial($root.onTestConnection, $data.discoveryUrlName()), disable: $root.spinners.test, 
+                                                          css: { 'btn-spinner': $root.spinners.test() && $root.connectionStringForTest().selectedUrlToTest() === $data.discoveryUrlName() }">
+                                                <i class="icon-rocket"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="form-group" data-bind="if: !topologyDiscoveryUrls.isValid()">
+                                <label class="control-label">&nbsp;</label>
+                                <span data-bind="validationElement: topologyDiscoveryUrls">
+                                    <span class="help-block" data-bind="validationMessage: topologyDiscoveryUrls"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-addon" data-bind="with: testConnectionResult">
+                        <div class="padding bg-success small" data-bind="visible: Success">
+                            <div>Successfully connected to node</div>
+                        </div>
+                        <div data-bind="if: !Success">
+                            <div class="padding bg-danger small">
+                                <h2>Connection test failed!</h2>
+                                <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+                                <div>
+                                    <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                                </div>
+                            </div>
+                            <div class="padding bg-info small">
+                                <h2>About this error</h2>
+                                <div>Each RavenDB server has both HTTP and TCP endpoints. While the first one is used for system management and client-server rest request, the second is used for inter-server and advanced client-server communications.</div>
+                                <div>The connection tests the TCP endpoint only after a successful HTTP connection.</div>
+                                <div data-bind="visible: HTTPSuccess">It appears that the current server was able to connect to the desired server through HTTP, but failed connecting to it using TCP.</div>
+                                <div data-bind="visible: !HTTPSuccess">It appears that the current server could not connect to the desired node through HTTP.</div>
+                                <div>
+                                    Please verify that:
+                                    <ul>
+                                        <li>The URL is correct</li>
+                                        <li>Both RavenDB and the target machine are up and running</li>
+                                        <li>There is no firewall settings on either machine blocking usage of that URL</li>
+                                        <li>There is no network configurations that prevent communication</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
