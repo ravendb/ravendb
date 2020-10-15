@@ -8,10 +8,10 @@
 <div class="form-group" data-bind="validationElement: database">
     <label class="control-label">Database</label>
     <div class="flex-grow">
-        <input class="form-control" data-bind="textInput: database" placeholder="Enter database for the connection string" title="Destination database" />
+        <input class="form-control" data-bind="textInput: database, enable: !isServerWide()" placeholder="Enter database for the connection string" title="Destination database" />
     </div>
 </div>
-<div class="form-group" data-bind="validationElement: inputUrl().discoveryUrlName"> 
+<div class="form-group" data-bind="validationElement: inputUrl().discoveryUrlName, visible: !isServerWide()"> 
     <label class="control-label">Discovery URLs:</label>
     <div class="flex-grow"> 
         <input class="form-control" placeholder="Enter discovery url to add" data-bind="textInput: inputUrl().discoveryUrlName" />
@@ -21,7 +21,7 @@
         <i class="icon-plus"></i><span>Add URL</span>
     </button> 
 </div>
-<div class="form-group" data-bind="visible: topologyDiscoveryUrls().length">
+<div class="form-group" data-bind="visible: topologyDiscoveryUrls().length && !isServerWide()">
     <label class="control-label">&nbsp;</label>
     <div class="flex-grow">
         <ul class="well collection-list" data-bind="foreach: topologyDiscoveryUrls">
@@ -36,6 +36,16 @@
                               css: { 'btn-spinner': $root.spinners.test() && $parent.selectedUrlToTest() === $data.discoveryUrlName() }">
                     <i class="icon-rocket"></i>
                 </a>
+            </li>
+        </ul>
+    </div>
+</div>
+<div class="form-group" data-bind="visible: topologyDiscoveryUrls().length && isServerWide()">
+    <label class="control-label">Discovery URLs:</label>
+    <div class="flex-grow">
+        <ul class="well collection-list" data-bind="foreach: topologyDiscoveryUrls">
+            <li>
+                <div class="name" data-bind="text: $data.discoveryUrlName"></div>
             </li>
         </ul>
     </div>

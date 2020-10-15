@@ -1,0 +1,26 @@
+<div class="modal-dialog destinationModal" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+            <h4 class="modal-title" id="myModalLabel">Choose a Server-Wide Task:</h4>
+        </div>
+        <div class="modal-body">
+            <div class="padding padding-sm text-center">
+                <div class="row row-sm flex-row">
+                    <div class="col-sm-offset-3 col-sm-6 margin-bottom" title="Create new Server-Wide External Replication task">
+                        <a href="#" class="external-replication" data-bind="click: newServerWideReplicationTask">
+                            <i class="icon-external-replication"></i><br />Server-Wide External Replication
+                        </a>
+                    </div>
+                </div>
+                <div class="row row-sm flex-row">
+                    <div class="col-sm-offset-3 col-sm-6 margin-bottom" title="Create new Server-Wide Backup task">
+                        <a href="#" class="periodic-backup" data-bind="click: newServerWideBackupTask">
+                            <i class="icon-server-wide-backup"></i><br />Server-Wide Periodic Backup
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

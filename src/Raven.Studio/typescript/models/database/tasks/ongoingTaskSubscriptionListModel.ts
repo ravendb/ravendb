@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
-import router = require("plugins/router");
 import generalUtils = require("common/generalUtils");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
@@ -9,8 +8,7 @@ import dropSubscriptionConnectionCommand = require("commands/database/tasks/drop
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 
 class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
-
-    editUrl: KnockoutComputed<string>;
+    
     activeDatabase = activeDatabaseTracker.default.database;
 
     // General stats
@@ -20,12 +18,11 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
     // Live connection stats
     clientIP = ko.observable<string>();
-    connectionStrategy = ko.observable<Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy>();  
-    clientDetailsIssue = ko.observable<string>(); // null (ok) | client is not connected | failed to get details.. 
+    connectionStrategy = ko.observable<Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy>();
+    clientDetailsIssue = ko.observable<string>(); // null (ok) | client is not connected | failed to get details..
     textClass = ko.observable<string>("text-details");
 
-    validationGroup: KnockoutValidationGroup; 
-    showDetails = ko.observable(false);
+    validationGroup: KnockoutValidationGroup;
     
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) {
         super();
@@ -39,10 +36,6 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
 
         const urls = appUrl.forCurrentDatabase();
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
-    }
-
-    editTask() {
-        router.navigate(this.editUrl());
     }
 
     toggleDetails() {
@@ -90,7 +83,7 @@ class ongoingTaskSubscriptionListModel extends ongoingTaskListModel {
                             // we can't even connect to node, show node connectivity error
                             this.clientDetailsIssue("Failed to connect to " + this.responsibleNode().NodeUrl + ". Please make sure this url is accessible from your browser.");
                         } else {
-                            this.clientDetailsIssue("Failed to get client connection details");    
+                            this.clientDetailsIssue("Failed to get client connection details");
                         }
                         
                         this.textClass("text-danger");

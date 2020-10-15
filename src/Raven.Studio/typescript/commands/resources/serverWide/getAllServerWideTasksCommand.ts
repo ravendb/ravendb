@@ -9,7 +9,7 @@ class getAllServerWideTasksCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult> {
         const args = {
-            taskName: this.taskName,
+            name: this.taskName,
             type: this.type
         };
 
@@ -17,8 +17,11 @@ class getAllServerWideTasksCommand extends commandBase {
 
         return this.query<Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult>(url, null)
             .fail((response: JQueryXHR) => {
-                this.reportError(`Failed to get all Server-Wide tasks`,
-                    response.responseText, response.statusText);
+                if (this.taskName) {
+                    this.reportError(`Failed to get Server-Wide task: ${this.taskName}`, response.responseText, response.statusText);
+                } else {
+                    this.reportError(`Failed to get all Server-Wide tasks`, response.responseText, response.statusText);
+                }
             });
     }
 }

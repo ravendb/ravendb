@@ -13,7 +13,7 @@
                     </div>
                 </div>
                 <div data-bind="foreach: ravenEtlConnectionStringsNames">
-                    <div class="panel padding padding-sm flex-horizontal destination-item" 
+                    <div class="panel padding padding-sm flex-horizontal destination-item"
                          data-bind="css: { 'active': $root.editedRavenEtlConnectionString() && $data === $root.editedRavenEtlConnectionString().connectionStringName() }">
                         <div class="flex-grow text-elipsis">
                             <a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data }">
@@ -23,18 +23,22 @@
                             </a>
                         </div>
                         <div class="actions">
-                            <button class="btn btn-default" data-bind="click: $parent.onEditRavenEtl" title="Edit connection string"><i class="icon-edit"></i></button>
-                            <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'RavenEtl') ? 'Connection string is being used by an ongoing task !' : '' }">
+                            <button class="btn btn-default" data-bind="click: $parent.onEditRavenEtl, attr: { title: $root.isServerWide($data)() ? 'View connection string' : 'Edit connection string' }">
+                                <span data-bind="if: $root.isServerWide($data)"><i class="icon-preview"></i></span>
+                                <span data-bind="if: !$root.isServerWide($data)()"><i class="icon-edit" data-bind=""></i></span>
+                            </button>
+                            <span class="has-disable-reason" data-placement="right"
+                                  data-bind="if: !$root.isServerWide($data)(), attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'RavenEtl') ? 'Connection string is being used by an ongoing task !' : '' }">
                                 <button class="btn btn-danger"
-                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'RavenEtl'), 
+                                        data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'RavenEtl'),
                                                    attr: { 'title': !$root.isConnectionStringInUse($data, 'RavenEtl') ? 'Remove connection string' : '' }">
                                         <i class="icon-trash"></i>
-                                </button> 
+                                </button>
                             </span>
                         </div>
                     </div>
                 </div>
-                <div class="hr-title on-base-background">
+                <div class="hr-title on-base-background margin-top margin-top-lg">
                     <h5><strong>SQL</strong> Connection Strings</h5><hr>
                     <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
                 </div>
@@ -58,8 +62,8 @@
                                 <button class="btn btn-danger"
                                         data-bind="click: $parent.confirmDelete.bind($parent, $data,'Sql'), disable: $root.isConnectionStringInUse($data, 'SqlEtl'), attr: { 'title': !$root.isConnectionStringInUse($data, 'SqlEtl') ? 'Remove connection string' : ''}">
                                         <i class="icon-trash"></i>
-                                </button>   
-                            </span>    
+                                </button>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -84,12 +88,12 @@
                             </div>
                         </div>
                     </div>
-                    <div data-bind="with: editedSqlEtlConnectionString">                        
-                        <div data-bind="compose: 'database/settings/connectionStringSql.html'"></div>    
+                    <div data-bind="with: editedSqlEtlConnectionString">
+                        <div data-bind="compose: 'database/settings/connectionStringSql.html'"></div>
                         <div class="form-group" data-bind="if: tasksThatAreUsingThisConnectionString().length > 0">
-                            <label class="control-label">Used in Tasks:</label>                           
-                            <div data-bind="foreach: tasksThatAreUsingThisConnectionString"> 
-                                <div class="task">                                   
+                            <label class="control-label">Used in Tasks:</label>
+                            <div data-bind="foreach: tasksThatAreUsingThisConnectionString">
+                                <div class="task"> 
                                     <a data-bind="attr: { 'href': $root.taskEditLink($data.taskId, $parent.connectionStringName()) }" title="Click to edit task.."><span class="text-info small" data-bind="text: $data.taskName"></span></a>
                                 </div>
                             </div>
@@ -105,8 +109,13 @@
                                     <span>Test Connection</span>
                                 </button>
                             </span>
-                            <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
-                            <button class="btn btn-success" data-bind="click: onSave" title="Click to save this connection string"><i class="icon-check"></i><span>Save</span></button>    
+                            <button class="btn btn-default" data-bind="click: onCloseEdit">
+                                <i class="icon-cancel"></i><span>Cancel</span>
+                            </button>
+                            <button class="btn btn-success" data-bind="click: onSave, visible: !editedRavenEtlConnectionString() || !editedRavenEtlConnectionString().isServerWide()"
+                                    title="Click to save this connection string">
+                                <i class="icon-check"></i><span>Save</span>
+                            </button>
                         </div>
                     </div>
                 </form>

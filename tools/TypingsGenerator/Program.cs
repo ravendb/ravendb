@@ -40,6 +40,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Server.Commercial;
@@ -419,7 +420,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideBackupTask));
             scripter.AddType(typeof(AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideExternalReplicationTask));
             scripter.AddType(typeof(ServerWideBackupConfiguration));
+            scripter.AddType(typeof(ServerWideExternalReplication));
             scripter.AddType(typeof(PutServerWideBackupConfigurationResponse));
+            scripter.AddType(typeof(ServerWideExternalReplicationResponse));
             scripter.AddType(typeof(ServerWideTasksResult<>));
 
             // certificates

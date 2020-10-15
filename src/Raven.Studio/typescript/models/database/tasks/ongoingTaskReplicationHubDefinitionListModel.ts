@@ -20,6 +20,7 @@ class ongoingTaskReplicationHubDefinitionListModel {
     stateText: KnockoutComputed<string>;
 
     showDetails = ko.observable(false);
+    isServerWide = ko.observable<boolean>(false);
   
     constructor(dto: Raven.Client.Documents.Operations.Replication.PullReplicationDefinition) {
         this.update(dto);
@@ -80,7 +81,6 @@ class ongoingTaskReplicationHubDefinitionListModel {
     toggleDetails() {
         this.showDetails.toggle();
     }
-
 }
 
 export = ongoingTaskReplicationHubDefinitionListModel;

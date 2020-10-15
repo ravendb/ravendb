@@ -37,7 +37,7 @@ class ongoingTasks extends viewModelBase {
     private definitionsCache: etlScriptDefinitionCache;
 
     // The Ongoing Tasks Lists:
-    replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>(); 
+    replicationTasks = ko.observableArray<ongoingTaskReplicationListModel>();
     etlTasks = ko.observableArray<ongoingTaskRavenEtlListModel>();
     sqlTasks = ko.observableArray<ongoingTaskSqlEtlListModel>();
     backupTasks = ko.observableArray<ongoingTaskBackupListModel>();
@@ -45,11 +45,11 @@ class ongoingTasks extends viewModelBase {
     replicationHubTasks = ko.observableArray<ongoingTaskReplicationHubDefinitionListModel>();
     replicationSinkTasks = ko.observableArray<ongoingTaskReplicationSinkListModel>();
     
-    showReplicationSection = this.createShowSectionComputed(this.replicationTasks, 'External Replication');
-    showEtlSection = this.createShowSectionComputed(this.etlTasks, 'RavenDB ETL');
-    showSqlSection = this.createShowSectionComputed(this.sqlTasks, 'SQL ETL');
-    showBackupSection = this.createShowSectionComputed(this.backupTasks, 'Backup');
-    showSubscriptionsSection = this.createShowSectionComputed(this.subscriptionTasks, 'Subscription');
+    showReplicationSection = this.createShowSectionComputed(this.replicationTasks, "External Replication");
+    showEtlSection = this.createShowSectionComputed(this.etlTasks, "RavenDB ETL");
+    showSqlSection = this.createShowSectionComputed(this.sqlTasks, "SQL ETL");
+    showBackupSection = this.createShowSectionComputed(this.backupTasks, "Backup");
+    showSubscriptionsSection = this.createShowSectionComputed(this.subscriptionTasks, "Subscription");
     showReplicationHubSection = this.createShowSectionComputedForPullHub(this.replicationHubTasks);
     showReplicationSinkSection = this.createShowSectionComputed(this.replicationSinkTasks, "Replication Sink");
 
@@ -62,8 +62,8 @@ class ongoingTasks extends viewModelBase {
     existingNodes = ko.observableArray<string>();
     selectedNode = ko.observable<string>();
 
-    canNavigateToServerWideBackupTasks: KnockoutComputed<boolean>;
-    serverWideBackupUrl: string;
+    canNavigateToServerWideTasks: KnockoutComputed<boolean>;
+    serverWideTasksUrl: string;
     backupsOnly = false;
     
     constructor() {
@@ -75,8 +75,8 @@ class ongoingTasks extends viewModelBase {
 
     private initObservables() {
         this.myNodeTag(this.clusterManager.localNodeTag());
-        this.serverWideBackupUrl = appUrl.forServerWideBackupList();
-        this.canNavigateToServerWideBackupTasks = accessManager.default.clusterAdminOrClusterNode;
+        this.serverWideTasksUrl = appUrl.forServerWideTasks();
+        this.canNavigateToServerWideTasks = accessManager.default.clusterAdminOrClusterNode;
         this.taskNameToCount = ko.pureComputed<dictionary<number>>(() => {
             return {
                 "External Replication": this.replicationTasks().length,
@@ -304,11 +304,23 @@ class ongoingTasks extends viewModelBase {
         const groupedTasks = _.groupBy(result.OngoingTasksList, x => x.TaskType);
 
         this.mergeTasks(this.replicationTasks, 
-            groupedTasks['Replication' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            groupedTasks["Replication" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) => new ongoingTaskReplicationListModel(dto));
+        
+        // Sort external replication tasks
+        const groupedReplicationTasks = _.groupBy(this.replicationTasks(), x => x.isServerWide());
+        const serverWideReplicationTasks = groupedReplicationTasks.true;
+        const ongoingReplicationTasks = groupedReplicationTasks.false;
+
+        if (ongoingReplicationTasks) {
+            this.replicationTasks(serverWideReplicationTasks ? ongoingReplicationTasks.concat(serverWideReplicationTasks) : ongoingReplicationTasks);
+        } else if (serverWideReplicationTasks) {
+            this.replicationTasks(serverWideReplicationTasks);
+        }
+        
         this.mergeTasks(this.backupTasks, 
-            groupedTasks['Backup' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            groupedTasks["Backup" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup) => new ongoingTaskBackupListModel(dto, task => this.watchBackupCompletion(task)));
         
@@ -324,23 +336,25 @@ class ongoingTasks extends viewModelBase {
         }
         
         this.mergeTasks(this.etlTasks, 
-            groupedTasks['RavenEtl' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            groupedTasks["RavenEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtlListView) => new ongoingTaskRavenEtlListModel(dto));
+        
         this.mergeTasks(this.sqlTasks, 
-            groupedTasks['SqlEtl' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            groupedTasks["SqlEtl" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtlListView) => new ongoingTaskSqlEtlListModel(dto));
+        
         this.mergeTasks(this.subscriptionTasks, 
-            groupedTasks['Subscription' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            groupedTasks["Subscription" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds, 
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription) => new ongoingTaskSubscriptionListModel(dto));
         this.mergeTasks(this.replicationSinkTasks,
-            groupedTasks['PullReplicationAsSink' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType], 
+            groupedTasks["PullReplicationAsSink" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType],
             toDeleteIds,
             (dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) => new ongoingTaskReplicationSinkListModel(dto));
         
-        const hubOngoingTasks = groupedTasks['PullReplicationAsHub' as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
+        const hubOngoingTasks = groupedTasks["PullReplicationAsHub" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType] as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub[];
         this.mergeReplicationHubs(result.PullReplications, hubOngoingTasks || [], toDeleteIds);
         
         const taskTypes = Object.keys(groupedTasks); 
@@ -412,33 +426,37 @@ class ongoingTasks extends viewModelBase {
     confirmEnableOngoingTask(model: ongoingTaskModel) {
         const db = this.activeDatabase();
 
-        this.confirmationMessage("Enable Task", "You're enabling task of type: " + model.taskType(), {
-            buttons: ["Cancel", "Enable"]
+        this.confirmationMessage("Enable Task",
+            `You're enabling ${model.taskType()} task:<br><strong>${model.taskName()}</strong>`, {
+                buttons: ["Cancel", "Enable"],
+                html: true
         })
-            .done(result => {
-                if (result.can) {
-                    new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
-                        .execute()
-                        .done(() => model.taskState('Enabled'))
-                        .always(() => this.fetchOngoingTasks());
-                }
-            });
+        .done(result => {
+            if (result.can) {
+                new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), false)
+                    .execute()
+                    .done(() => model.taskState("Enabled"))
+                    .always(() => this.fetchOngoingTasks());
+            }
+        });
     }
 
     confirmDisableOngoingTask(model: ongoingTaskModel | ongoingTaskReplicationHubDefinitionListModel) {
         const db = this.activeDatabase();
 
-        this.confirmationMessage("Disable Task", "You're disabling task of type: " + model.taskType(), {
-            buttons: ["Cancel", "Disable"]
-        })
-            .done(result => {
-                if (result.can) {
-                    new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
-                        .execute()
-                        .done(() => model.taskState('Disabled'))
-                        .always(() => this.fetchOngoingTasks());
-                }
-            });
+        this.confirmationMessage("Disable Task",
+            `You're disabling ${model.taskType()} task:<br><strong>${model.taskName()}</strong>`, {
+                buttons: ["Cancel", "Disable"],
+                html: true
+            })
+       .done(result => {
+           if (result.can) {
+               new toggleOngoingTaskCommand(db, model.taskType(), model.taskId, model.taskName(), true)
+                   .execute()
+                   .done(() => model.taskState("Disabled"))
+                   .always(() => this.fetchOngoingTasks());
+           }
+       });
     }
 
     confirmRemoveOngoingTask(model: ongoingTaskModel) {

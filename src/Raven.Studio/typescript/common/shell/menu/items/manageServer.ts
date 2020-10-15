@@ -29,7 +29,7 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forAddClusterNode,
             disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
             itemRouteToHighlight: 'admin/settings/cluster'
-        }),           
+        }),
         new leafMenuItem({
             route: 'admin/settings/clientConfiguration',
             moduleId: 'viewmodels/manage/clientConfiguration',
@@ -67,13 +67,13 @@ function getManageServerMenuItem() {
             disableWithReason: access.disableCertificatesMenuItem
         }),
         new leafMenuItem({
-            route: 'admin/settings/serverWideBackupList',
-            moduleId: "viewmodels/manage/serverWideBackupList",
-            title: "Server-Wide Backup",
+            route: 'admin/settings/serverWideTasks',
+            moduleId: "viewmodels/manage/serverWideTasks",
+            title: "Server-Wide Tasks",
             nav: true,
-            css: 'icon-server-wide-backup',
-            dynamicHash: appUrl.forServerWideBackupList,
-            disableWithReason: access.disableServerWideBackupMenuItem
+            css: 'icon-tasks',
+            dynamicHash: appUrl.forServerWideTasks,
+            disableWithReason: access.disableServerWideTasksMenuItem
         }),
         new leafMenuItem({
             route: 'admin/settings/editServerWideBackup',
@@ -82,7 +82,16 @@ function getManageServerMenuItem() {
             nav: false,
             dynamicHash: appUrl.forEditServerWideBackup,
             disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
-            itemRouteToHighlight: 'admin/settings/serverWideBackupList'
+            itemRouteToHighlight: 'admin/settings/serverWideTasks'
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/editServerWideExternalReplication',
+            moduleId: "viewmodels/manage/editServerWideExternalReplication",
+            title: "Edit Server-Wide External Replication Task",
+            nav: false,
+            dynamicHash: appUrl.forEditServerWideExternalReplication,
+            disableWithReason: accessManager.default.disableIfNotClusterAdminOrClusterNode,
+            itemRouteToHighlight: 'admin/settings/serverWideTasks'
         }),
         new separatorMenuItem(),
         new separatorMenuItem('Debug'),

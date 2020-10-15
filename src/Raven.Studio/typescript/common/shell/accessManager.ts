@@ -6,7 +6,7 @@ class accessManager {
     
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
 
-    private allLevels = ko.pureComputed(() =>  true);
+    private allLevels = ko.pureComputed(() => true);
     
     // cluster node has the same privileges as cluster admin
     clusterAdminOrClusterNode = ko.pureComputed(() => this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "ClusterNode");
@@ -76,7 +76,7 @@ class accessManager {
         disableStudioConfigurationMenuItem: this.disableIfNotOperatorOrAbove,
         disableAdminJSConsoleMenuItem: this.disableIfNotClusterAdminOrClusterNode,
         disableCertificatesMenuItem: this.disableIfNotOperatorOrAbove,
-        disableServerWideBackupMenuItem: this.disableIfNotClusterAdminOrClusterNode,
+        disableServerWideTasksMenuItem: this.disableIfNotClusterAdminOrClusterNode,
         disableAdminLogsMenuItem: this.disableIfNotOperatorOrAbove,
         disableTrafficWatchMenuItem: this.disableIfNotOperatorOrAbove,
         disableGatherDebugInfoMenuItem: this.disableIfNotOperatorOrAbove,
@@ -91,7 +91,7 @@ class accessManager {
         showDatabaseSettingsMenuItem: this.operatorAndAbove,
         showDatabaseRecordMenuItem: this.operatorAndAbove,
         showConnectionStringsMenuItem: this.operatorAndAbove,
-        enableConnectionStringsMenuItem: this.clusterAdminOrClusterNode, 
+        enableConnectionStringsMenuItem: this.clusterAdminOrClusterNode,
         enableConflictResolutionMenuItem: this.clusterAdminOrClusterNode
     };
 }

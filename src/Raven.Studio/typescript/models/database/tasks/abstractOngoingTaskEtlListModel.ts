@@ -1,6 +1,5 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel");
-import router = require("plugins/router");
 import genericProgress = require("common/helpers/database/genericProgress");
 import etlProgress = require("models/database/tasks/etlProgress");
 
@@ -59,8 +58,6 @@ class progressItem {
 }
 
 abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
-    editUrl: KnockoutComputed<string>;
-    showDetails = ko.observable(false);
     showProgress = ko.observable(false); // we use separate property for progress and details to smooth toggle animation, first we show progress then expand details 
     
     loadingProgress = ko.observable<boolean>(true);
@@ -79,10 +76,6 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
     toggleDetails() {
         this.showProgress(!this.showDetails() && this.canShowProgress());
         this.showDetails.toggle();
-    }
-
-    editTask() {
-        router.navigate(this.editUrl());
     }
     
     updateProgress(incomingProgress: Raven.Server.Documents.ETL.Stats.EtlTaskProgress) {
@@ -108,7 +101,6 @@ abstract class abstractOngoingTaskEtlListModel extends ongoingTaskListModel {
         
         this.loadingProgress(false);
     }
-
 }
 
 export = abstractOngoingTaskEtlListModel;

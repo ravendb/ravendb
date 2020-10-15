@@ -1,13 +1,13 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts"/>
 import appUrl = require("common/appUrl");
-import router = require("plugins/router");
 import ongoingTaskListModel = require("models/database/tasks/ongoingTaskListModel"); 
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import generalUtils = require("common/generalUtils");
 
 class ongoingTaskReplicationListModel extends ongoingTaskListModel {
-    editUrl: KnockoutComputed<string>;
 
+    static serverWideNamePrefixFromServer = "Server Wide External Replication";
+    
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();
     connectionStringName = ko.observable<string>();
@@ -18,13 +18,11 @@ class ongoingTaskReplicationListModel extends ongoingTaskListModel {
 
     connectionStringDefined: KnockoutComputed<boolean>;
     connectionStringsUrl: string; 
-    
-    showDetails = ko.observable(false);
   
     constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskReplication) {
         super();
 
-        this.update(dto); 
+        this.update(dto);
         this.initializeObservables();
 
         this.connectionStringsUrl = appUrl.forConnectionStrings(activeDatabaseTracker.default.database(), "raven", this.connectionStringName());
@@ -45,21 +43,18 @@ class ongoingTaskReplicationListModel extends ongoingTaskListModel {
         const delayTime = generalUtils.timeSpanToSeconds(dto.DelayReplicationFor);
         
         this.destinationDB(dto.DestinationDatabase);
-        this.destinationURL(dto.DestinationUrl || 'N/A');
+        this.destinationURL(dto.DestinationUrl || "N/A");
         this.connectionStringName(dto.ConnectionStringName);
         this.topologyDiscoveryUrls(dto.TopologyDiscoveryUrls);
         this.showDelayReplication(dto.DelayReplicationFor != null && delayTime !== 0);
         this.delayReplicationTime(dto.DelayReplicationFor ? delayTime : null);
-    }
-
-    editTask() {
-        router.navigate(this.editUrl());
+        
+        this.isServerWide(this.taskName().startsWith(ongoingTaskReplicationListModel.serverWideNamePrefixFromServer));
     }
 
     toggleDetails() {
         this.showDetails.toggle();
     }
-
 }
 
 export = ongoingTaskReplicationListModel;
