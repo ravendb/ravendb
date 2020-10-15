@@ -105,7 +105,8 @@ namespace Raven.Server.Web.Studio
                         | DatabaseItemType.Attachments
                         | DatabaseItemType.CounterGroups
                         | DatabaseItemType.TimeSeries
-                        | DatabaseItemType.Indexes;
+                        | DatabaseItemType.Indexes
+                        | DatabaseItemType.CompareExchange;
                 }
 
                 var result = DatabaseItemType.None;
