@@ -464,7 +464,7 @@ namespace SlowTests.Server.Replication
                 var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
                 var sw = Stopwatch.StartNew();
-                while (sw.ElapsedMilliseconds < 1000)
+                while (sw.ElapsedMilliseconds < 5000)
                 {
                     if (storage.ReplicationLoader.GetMinimalEtagForReplication() > 1)
                         break;
