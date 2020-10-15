@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Json;
@@ -15,6 +16,30 @@ namespace FastTests.Issues
     {
         public RavenDB_7493(ITestOutputHelper output) : base(output)
         {
+        }
+
+        public class Foo
+        {
+            public string Bar = "";
+
+            public List<string> ListOfStrings = new List<string>();
+        }
+
+        [Fact]
+        public void UseInitialValuesIfNotFoundOnJson()
+        {
+            var fun = JsonDeserializationBase.GenerateJsonDeserializationRoutine<Foo>();
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var djv = new DynamicJsonValue();
+
+                var emptyBlittable = context.ReadObject(djv, "goo");
+
+                var obj = fun(emptyBlittable);
+
+                Assert.Equal(string.Empty, obj.Bar);
+                Assert.Equal(new List<string>(), obj.ListOfStrings);
+            }
         }
 
         [Fact]

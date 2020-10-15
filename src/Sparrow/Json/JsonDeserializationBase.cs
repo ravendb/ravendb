@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -65,7 +66,13 @@ namespace Sparrow.Json
                     return l.Compile();
                 }
 
-                var propInit = new List<MemberBinding>();
+                var result = Expression.Variable(typeof(T), "result");
+                var assign = Expression.Assign(result, instance);
+
+                var expressionBuilder = new List<Expression>
+                {
+                    assign
+                };
                 foreach (var fieldInfo in typeof(T).GetFields())
                 {
                     if (fieldInfo.IsStatic || fieldInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
@@ -74,7 +81,9 @@ namespace Sparrow.Json
                     if (fieldInfo.IsPublic && fieldInfo.IsInitOnly)
                         ThrowDeserializationError(type, fieldInfo);
 
-                    propInit.Add(Expression.Bind(fieldInfo, GetValue(fieldInfo.Name, fieldInfo.FieldType, fieldInfo.GetCustomAttributes().ToList(), json, vars)));
+                    var fieldValue = GetValue(fieldInfo.Name, fieldInfo.FieldType, fieldInfo.GetCustomAttributes().ToList(), json, vars);
+                    var access = Expression.MakeMemberAccess(result, fieldInfo);
+                    SetValue(fieldInfo.FieldType, access, fieldValue);
                 }
 
                 foreach (var propertyInfo in typeof(T).GetProperties())
@@ -82,10 +91,14 @@ namespace Sparrow.Json
                     if (propertyInfo.CanWrite == false || propertyInfo.IsDefined(typeof(JsonDeserializationIgnoreAttribute)))
                         continue;
 
-                    propInit.Add(Expression.Bind(propertyInfo, GetValue(propertyInfo.Name, propertyInfo.PropertyType, propertyInfo.GetCustomAttributes().ToList(), json, vars)));
+                    var propertyValue = GetValue(propertyInfo.Name, propertyInfo.PropertyType, propertyInfo.GetCustomAttributes().ToList(), json, vars);
+                    var access = Expression.MakeMemberAccess(result, propertyInfo);
+                    SetValue(propertyInfo.PropertyType, access, propertyValue);
                 }
+               
+                expressionBuilder.Add(result);
+                var conversionFuncBody = Expression.Block(vars.Values.Concat(new[] {result}), expressionBuilder);
 
-                var conversionFuncBody = Expression.Block(vars.Values, Expression.MemberInit(instance, propInit));
                 if (interfaces.Contains(typeof(IPostJsonDeserialization)))
                 {
                     var obj = Expression.Parameter(type, "obj");
@@ -105,6 +118,20 @@ namespace Sparrow.Json
 
                 var lambda = Expression.Lambda<Func<BlittableJsonReaderObject, T>>(conversionFuncBody, json);
                 return lambda.Compile();
+
+                void SetValue(Type memberType, MemberExpression access, MethodCallExpression value)
+                {
+                    if (vars.ContainsKey(memberType))
+                    {
+                        // read directly from the json, and set only if found.
+                        expressionBuilder.Add(Expression.IfThen(value, Expression.Assign(access, vars[memberType])));
+                    }
+                    else
+                    {
+                        // call function to read from the json
+                        expressionBuilder.Add(Expression.Assign(access, value));
+                    }
+                }
             }
             catch (Exception e)
             {
@@ -122,7 +149,7 @@ namespace Sparrow.Json
             throw new InvalidOperationException($"Cannot create deserialization routine for '{type.FullName}' because '{fieldInfo.Name}' is readonly field");
         }
 
-        private static Expression GetValue(string propertyName, Type propertyType, List<Attribute> customAttributes, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
+        private static MethodCallExpression GetValue(string propertyName, Type propertyType, List<Attribute> customAttributes, ParameterExpression json, Dictionary<Type, ParameterExpression> vars)
         {
             var type = Nullable.GetUnderlyingType(propertyType) ?? propertyType;
 
@@ -151,8 +178,7 @@ namespace Sparrow.Json
                 else
                     genericTypes = new[] { propertyType };
 
-                var tryGet = Expression.Call(json, nameof(BlittableJsonReaderObject.TryGet), genericTypes, Expression.Constant(propertyName), value);
-                return Expression.Condition(tryGet, value, Expression.Default(propertyType));
+                return Expression.Call(json, nameof(BlittableJsonReaderObject.TryGet), genericTypes, Expression.Constant(propertyName), value);
             }
 
             if (type == typeof(TimeSpan))
@@ -161,8 +187,7 @@ namespace Sparrow.Json
                 var methodToCall = typeof(JsonDeserializationBase)
                     .GetMethod(propertyType == typeof(TimeSpan) ? nameof(TryGetTimeSpan) : nameof(TryGetNullableTimeSpan), BindingFlags.NonPublic | BindingFlags.Static);
 
-                var tryGet = Expression.Call(methodToCall, json, Expression.Constant(propertyName), value);
-                return Expression.Condition(tryGet, value, Expression.Default(propertyType));
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyName), value);
             }
 
             if (type == typeof(Size))
@@ -171,8 +196,7 @@ namespace Sparrow.Json
                 var methodToCall = typeof(JsonDeserializationBase)
                     .GetMethod(propertyType == typeof(Size) ? nameof(TryGetSize) : nameof(TryGetNullableSize), BindingFlags.NonPublic | BindingFlags.Static);
 
-                var tryGet = Expression.Call(methodToCall, json, Expression.Constant(propertyName), value);
-                return Expression.Condition(tryGet, value, Expression.Default(propertyType));
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyName), value);
             }
 
             if (propertyType.IsGenericType)
@@ -318,11 +342,13 @@ namespace Sparrow.Json
                 object converter;
                 if (DeserializedTypes.TryGetValue(propertyType, out converter) == false)
                 {
+                    DeserializedTypes[propertyType] = null; // prevent recursive call
                     DeserializedTypes[propertyType] = converter = typeof(JsonDeserializationBase)
                         .GetMethod(nameof(GenerateJsonDeserializationRoutine), BindingFlags.NonPublic | BindingFlags.Static)
                         .MakeGenericMethod(propertyType)
                         .Invoke(null, null);
                 }
+                Debug.Assert(converter != null, "Convertor is null probably due to recursive call.");
                 return converter;
             }
         }
