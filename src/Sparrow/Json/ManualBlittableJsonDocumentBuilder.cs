@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sparrow.Collections;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public sealed class ManualBlittableJsonDocumentBuilder<TWriter> : BlittableJsonDocumentBuilderCache, IDisposable
+    public sealed class ManualBlittableJsonDocumentBuilder<TWriter> : BlittableJsonDocumentBuilderCache
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
@@ -15,7 +14,6 @@ namespace Sparrow.Json
         private WriteToken _writeToken;
 
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
-        
 
         /// <summary>
         /// Allows incrementally building json document
@@ -40,6 +38,7 @@ namespace Sparrow.Json
                 State = ContinuationState.ReadObjectDocument
             });
         }
+
         public void StartArrayDocument()
         {
             var currentState = new BuildingState
@@ -53,7 +52,7 @@ namespace Sparrow.Json
             currentState.MaxPropertyId = prop.PropertyId;
             currentState.FirstWrite = _writer.Position;
             currentState.Properties = _propertiesCache.Allocate();
-            currentState.Properties.Add(new PropertyTag {Property = prop});
+            currentState.Properties.Add(new PropertyTag { Property = prop });
             _continuationState.Push(currentState);
         }
 
@@ -111,7 +110,7 @@ namespace Sparrow.Json
                     {
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite,
                             currentState.MaxPropertyId);
-                        
+
                         _propertiesCache.Return(ref currentState.Properties);
 
                         // here we know that the last item in the stack is the keep the last ReadObjectDocument
@@ -128,7 +127,7 @@ namespace Sparrow.Json
                                 outerState.Properties.Add(new PropertyTag(
                                     type: (byte)_writeToken.WrittenToken,
                                     property: outerState.CurrentProperty,
-                                    position: _writeToken.ValuePos                                    
+                                    position: _writeToken.ValuePos
                                 ));
                             }
 
@@ -138,11 +137,12 @@ namespace Sparrow.Json
                         }
                     }
                     break;
+
                 case ContinuationState.ReadArray:
                     {
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite,
                             currentState.MaxPropertyId);
-                        
+
                         _propertiesCache.Return(ref currentState.Properties);
 
                         if (_continuationState.Count > 1)
@@ -158,6 +158,7 @@ namespace Sparrow.Json
                         _continuationState.Push(currentState);
                     }
                     break;
+
                 case ContinuationState.ReadObjectDocument:
                     {
                         currentState.Properties.Add(new PropertyTag
@@ -174,6 +175,7 @@ namespace Sparrow.Json
                         _propertiesCache.Return(ref currentState.Properties);
                     }
                     break;
+
                 default:
                     ThrowIllegalStateException(currentState.State, "ReadEndObject");
                     break;
@@ -200,7 +202,7 @@ namespace Sparrow.Json
                     currentState.Properties[0] = new PropertyTag
                     {
                         Property = currentState.Properties[0].Property,
-                        Type = (byte) _writeToken.WrittenToken,
+                        Type = (byte)_writeToken.WrittenToken,
                         Position = _writeToken.ValuePos
                     };
 
@@ -208,6 +210,7 @@ namespace Sparrow.Json
                     _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
                     _continuationState.Push(currentState);
                     break;
+
                 case ContinuationState.ReadArray:
                     var arrayToken = BlittableJsonToken.StartArray;
                     var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types, ref arrayToken);
@@ -246,7 +249,7 @@ namespace Sparrow.Json
                         {
                             outerState.Properties[0] = new PropertyTag(
                                 type: (byte)_writeToken.WrittenToken,
-                                property: outerState.Properties[0].Property,                             
+                                property: outerState.Properties[0].Property,
                                 position: _writeToken.ValuePos
                             );
 
@@ -259,10 +262,10 @@ namespace Sparrow.Json
                         }
 
                         _continuationState.Push(outerState);
-
                     }
 
                     break;
+
                 default:
                     ThrowIllegalStateException(currentState.State, "ReadEndArray");
                     break;
@@ -293,36 +296,45 @@ namespace Sparrow.Json
                 case BlittableJsonToken.Integer:
                     WriteValue((long)value);
                     break;
+
                 case BlittableJsonToken.LazyNumber:
                     WriteValue((LazyNumberValue)value);
                     break;
+
                 case BlittableJsonToken.String:
                     WriteValue((LazyStringValue)value);
                     break;
+
                 case BlittableJsonToken.CompressedString:
                     WriteValue((LazyCompressedStringValue)value);
                     break;
+
                 case BlittableJsonToken.Boolean:
                     WriteValue((bool)value);
                     break;
+
                 case BlittableJsonToken.Null:
                     WriteValueNull();
                     break;
+
                 case BlittableJsonToken.StartObject:
                     var obj = value as BlittableJsonReaderObject;
                     StartWriteObject();
-                    obj.AddItemsToStream(this); 
-                    WriteObjectEnd();                
+                    obj.AddItemsToStream(this);
+                    WriteObjectEnd();
                     break;
+
                 case BlittableJsonToken.EmbeddedBlittable:
                     WriteEmbeddedBlittableDocument((BlittableJsonReaderObject)value);
                     break;
+
                 case BlittableJsonToken.StartArray:
                     var arr = value as BlittableJsonReaderArray;
                     StartWriteArray();
                     arr?.AddItemsToStream(this);
                     WriteArrayEnd();
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(token), token, null);
             }
@@ -469,9 +481,8 @@ namespace Sparrow.Json
         {
             var currentState = _continuationState.Pop();
             BlittableJsonToken stringToken;
-            
 
-            var valuePos = _writer.WriteValue(value, out stringToken,UsageMode.None,null);
+            var valuePos = _writer.WriteValue(value, out stringToken, UsageMode.None, null);
             _writeToken = new WriteToken
             {
                 ValuePos = valuePos,
@@ -559,10 +570,12 @@ namespace Sparrow.Json
 
                     currentState.State = ContinuationState.ReadPropertyName;
                     break;
+
                 case ContinuationState.ReadArray:
                     currentState.Types.Add(_writeToken.WrittenToken);
                     currentState.Positions.Add(_writeToken.ValuePos);
                     break;
+
                 default:
                     ThrowIllegalStateException(currentState.State, "ReadValue");
                     break;
@@ -597,7 +610,6 @@ namespace Sparrow.Json
             _writer.ResetAndRenew();
         }
 
-
         public BlittableJsonReaderObject CreateReader()
         {
             return _writer.CreateReader();
@@ -612,7 +624,7 @@ namespace Sparrow.Json
             throw new InvalidOperationException("Couldn't find array");
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
             _writer.Dispose();
             base.Dispose();
