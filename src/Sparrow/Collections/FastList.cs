@@ -262,6 +262,20 @@ namespace Sparrow.Collections
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T RemoveLast()
+        {
+            if (_size == 0)
+                return default;
+
+            _size--;
+            _version++;
+
+            T val = _items[_size];
+            _items[_size] = default;
+            return val;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RemoveAt(int index)
         {
             if ((uint) index >= _size)

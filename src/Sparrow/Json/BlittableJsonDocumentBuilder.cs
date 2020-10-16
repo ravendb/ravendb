@@ -8,24 +8,9 @@ using Sparrow.Threading;
 
 namespace Sparrow.Json
 {
-    public sealed class BlittableJsonDocumentBuilder : IDisposable
+    public sealed class BlittableJsonDocumentBuilder : BlittableJsonDocumentBuilderCache, IDisposable
     {
-        private class GlobalPoolItem
-        {
-            public void Reset()
-            {
-                PropertyCache.Reset();
-                PositionsCache.Reset();
-                TokensCache.Reset();
-            }
-
-            public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
-            public readonly ListCache<int> PositionsCache = new ListCache<int>();
-            public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>();
-        }
-
-        private static readonly PerCoreContainer<GlobalPoolItem> GlobalCache = new PerCoreContainer<GlobalPoolItem>();
-
+  
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
 
         private readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
@@ -43,40 +28,7 @@ namespace Sparrow.Json
         private WriteToken _writeToken;
         private  string _debugTag;
 
-        private readonly GlobalPoolItem _cacheItem;
-        private readonly ListCache<PropertyTag> _propertiesCache;
-        private readonly ListCache<int> _positionsCache;
-        private readonly ListCache<BlittableJsonToken> _tokensCache;
-
-        private class ListCache<T>
-        {
-            private readonly FastList<FastList<T>> _cache = new FastList<FastList<T>>();
-            private int _index = 0;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public FastList<T> Allocate()
-            {
-                if (_index != _cache.Count)
-                    return _cache[_index++];
-
-                var n = new FastList<T>();
-                _cache.Add(n);
-                _index++;
-                return n;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Reset()
-            {
-                for (var i = 0; i < _index; i++)
-                {
-                    var t = _cache[i];
-                    t.Clear();
-                }
-                _index = 0;
-            }
-        }
-
+      
 
         public BlittableJsonDocumentBuilder(JsonOperationContext context, JsonParserState state, IJsonParser reader,
             BlittableWriter<UnmanagedWriteBuffer> writer = null,
@@ -87,12 +39,6 @@ namespace Sparrow.Json
             _reader = reader;
             _modifier = modifier;
             _writer = writer ?? new BlittableWriter<UnmanagedWriteBuffer>(context);
-
-            if(GlobalCache.TryPull(out _cacheItem) == false)
-                _cacheItem = new GlobalPoolItem();
-            _propertiesCache = _cacheItem.PropertyCache;
-            _positionsCache = _cacheItem.PositionsCache;
-            _tokensCache = _cacheItem.TokensCache;            
         }  
 
         public BlittableJsonDocumentBuilder(
@@ -117,7 +63,6 @@ namespace Sparrow.Json
             _continuationState.Clear();
             _writeToken = default(WriteToken);
             _writer.Reset();
-            _cacheItem.Reset();
         }
 
         public void Renew(string debugTag, UsageMode mode)
@@ -127,7 +72,6 @@ namespace Sparrow.Json
             _mode = mode;
 
             _continuationState.Clear();          
-            _cacheItem.Reset();
 
             _writer.ResetAndRenew();
             _modifier?.Reset(_context);
@@ -159,8 +103,7 @@ namespace Sparrow.Json
                 return;
 
             _writer.Dispose();
-            _cacheItem.Reset();
-            GlobalCache.Push(_cacheItem);
+            base.Dispose();
         }
 
         private bool ReadInternal<TWriteStrategy>() where TWriteStrategy : IWriteStrategy
@@ -208,6 +151,7 @@ namespace Sparrow.Json
 
                         // Register property position, name id (PropertyId) and type (object type and metadata)
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
+                        _propertiesCache.Return(ref currentState.Properties);
                         goto ReturnTrue;
 
                     case ContinuationState.ReadObject:
@@ -260,6 +204,8 @@ namespace Sparrow.Json
                         var arrayToken = BlittableJsonToken.StartArray;
                         var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types, ref arrayToken);
                         _writeToken = new WriteToken(arrayInfoStart, arrayToken);
+                        _positionsCache.Return(ref currentState.Positions);
+                        _tokensCache.Return(ref currentState.Types);
                         currentState = continuationState.Pop();
                         continue;
 
@@ -274,6 +220,8 @@ namespace Sparrow.Json
                         {
                             _modifier?.EndObject();
                             _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite, currentState.MaxPropertyId);
+                            _propertiesCache.Return(ref currentState.Properties);
+
                             if (continuationState.Count == 0)
                                 goto ReturnTrue;
 
@@ -492,26 +440,6 @@ namespace Sparrow.Json
             }
         }
 
-
-        public struct PropertyTag
-        {
-            public int Position;
-
-            public override string ToString()
-            {
-                return $"{nameof(Position)}: {Position}, {nameof(Property)}: {Property.Comparer} {Property.PropertyId}, {nameof(Type)}: {(BlittableJsonToken)Type}";
-            }
-            public CachedProperties.PropertyName Property;
-            public byte Type;
-
-            public PropertyTag(byte type, CachedProperties.PropertyName property, int position)
-            {
-                Type = type;
-                Property = property;
-                Position = position;
-            }
-        }
-
         [Flags]
         public enum UsageMode
         {
@@ -551,7 +479,6 @@ namespace Sparrow.Json
             var rootOffset = _writeToken.ValuePos;
 
             _writer.WriteDocumentMetadata(rootOffset, documentToken);
-            _cacheItem.Reset();
         }
 
         public BlittableJsonReaderObject CreateReader()

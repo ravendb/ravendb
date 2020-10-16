@@ -5,7 +5,7 @@ using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public sealed class ManualBlittableJsonDocumentBuilder<TWriter> : IDisposable
+    public sealed class ManualBlittableJsonDocumentBuilder<TWriter> : BlittableJsonDocumentBuilderCache, IDisposable
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
@@ -44,7 +44,7 @@ namespace Sparrow.Json
         {
             var currentState = new BuildingState
             {
-                State = ContinuationState.ReadArrayDocument
+                State = ContinuationState.ReadArrayDocument,
             };
 
             var fakeFieldName = _context.GetLazyStringForFieldWithCaching(UnderscoreSegment);
@@ -52,14 +52,8 @@ namespace Sparrow.Json
             currentState.CurrentProperty = prop;
             currentState.MaxPropertyId = prop.PropertyId;
             currentState.FirstWrite = _writer.Position;
-            currentState.Properties = new FastList<PropertyTag>
-                        {
-                            new PropertyTag
-                            {
-                                Property = prop
-                            }
-                        };
-
+            currentState.Properties = _propertiesCache.Allocate();
+            currentState.Properties.Add(new PropertyTag {Property = prop});
             _continuationState.Push(currentState);
         }
 
@@ -100,7 +94,7 @@ namespace Sparrow.Json
             _continuationState.Push(new BuildingState()
             {
                 State = ContinuationState.ReadPropertyName,
-                Properties = new FastList<PropertyTag>(),
+                Properties = _propertiesCache.Allocate(),
                 FirstWrite = -1
             });
         }
@@ -117,8 +111,10 @@ namespace Sparrow.Json
                     {
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite,
                             currentState.MaxPropertyId);
+                        
+                        _propertiesCache.Return(ref currentState.Properties);
 
-                        // here we know that the last itme in the stack is the keep the last ReadObjectDocument
+                        // here we know that the last item in the stack is the keep the last ReadObjectDocument
                         if (_continuationState.Count > 1)
                         {
                             var outerState = _continuationState.Pop();
@@ -146,6 +142,8 @@ namespace Sparrow.Json
                     {
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite,
                             currentState.MaxPropertyId);
+                        
+                        _propertiesCache.Return(ref currentState.Properties);
 
                         if (_continuationState.Count > 1)
                         {
@@ -173,6 +171,7 @@ namespace Sparrow.Json
 
                         _writeToken = _writer.WriteObjectMetadata(currentState.Properties, currentState.FirstWrite,
                                             currentState.MaxPropertyId);
+                        _propertiesCache.Return(ref currentState.Properties);
                     }
                     break;
                 default:
@@ -186,8 +185,8 @@ namespace Sparrow.Json
             _continuationState.Push(new BuildingState
             {
                 State = ContinuationState.ReadArray,
-                Types = new FastList<BlittableJsonToken>(),
-                Positions = new FastList<int>()
+                Types = _tokensCache.Allocate(),
+                Positions = _positionsCache.Allocate()
             });
         }
 
@@ -212,6 +211,8 @@ namespace Sparrow.Json
                 case ContinuationState.ReadArray:
                     var arrayToken = BlittableJsonToken.StartArray;
                     var arrayInfoStart = _writer.WriteArrayMetadata(currentState.Positions, currentState.Types, ref arrayToken);
+                    _positionsCache.Return(ref currentState.Positions);
+                    _tokensCache.Return(ref currentState.Types);
 
                     _writeToken = new WriteToken
                     {
@@ -575,6 +576,14 @@ namespace Sparrow.Json
             var rootOffset = _writeToken.ValuePos;
 
             _writer.WriteDocumentMetadata(rootOffset, documentToken);
+
+            while (_continuationState.Count > 0)
+            {
+                var state = _continuationState.Pop();
+                _propertiesCache.Return(ref state.Properties);
+                _tokensCache.Return(ref state.Types);
+                _positionsCache.Return(ref state.Positions);
+            }
         }
 
         private void ThrowIllegalStateException(ContinuationState state, string realOperation)
@@ -606,6 +615,7 @@ namespace Sparrow.Json
         public void Dispose()
         {
             _writer.Dispose();
+            base.Dispose();
         }
     }
 }
