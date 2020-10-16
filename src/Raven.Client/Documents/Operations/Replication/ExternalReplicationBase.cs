@@ -24,16 +24,19 @@ namespace Raven.Client.Documents.Operations.Replication
                 _taskId = value;
             }
         }
+
         public string Name { get; set; }
-        public string ConnectionStringName;
+        public string ConnectionStringName { get; set; }
         public string MentorNode { get; set; }
 
         [JsonDeserializationIgnore]
-        public RavenConnectionString ConnectionString; // this is in memory only
+        internal RavenConnectionString ConnectionString; // this is in memory only
 
         private long _taskId;
 
-        protected ExternalReplicationBase() { }
+        protected ExternalReplicationBase()
+        {
+        }
 
         protected ExternalReplicationBase(string database, string connectionStringName)
         {
@@ -106,7 +109,7 @@ namespace Raven.Client.Documents.Operations.Replication
         }
 
         public bool Equals(ExternalReplicationBase other) => IsEqualTo(other);
-        
+
         public override bool Equals(object obj)
         {
             if (ReferenceEquals(null, obj))
