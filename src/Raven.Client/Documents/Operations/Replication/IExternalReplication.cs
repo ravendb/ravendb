@@ -3,7 +3,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Replication
 {
-    public interface IExternalReplicationBase : IDynamicJsonValueConvertible
+    internal interface IExternalReplication : IDynamicJsonValueConvertible
     {
         bool Disabled { get; set; }
 

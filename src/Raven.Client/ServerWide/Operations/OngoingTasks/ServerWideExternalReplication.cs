@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.OngoingTasks
 {
-    public class ServerWideExternalReplication : IExternalReplicationBase, IServerWideTask
+    public class ServerWideExternalReplication : IExternalReplication, IServerWideTask
     {
         internal static string NamePrefix = "Server Wide External Replication";
 
