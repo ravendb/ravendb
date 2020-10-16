@@ -21,7 +21,7 @@ namespace Sparrow.Json
             _tokensCache = _cacheItem.TokensCache;
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             GlobalCache.Push(_cacheItem);
         }
