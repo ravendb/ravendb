@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using Sparrow.Collections;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
@@ -9,7 +9,7 @@ namespace Sparrow.Json
     {
         private readonly JsonOperationContext _context;
         private readonly BlittableWriter<TWriter> _writer;
-        private readonly Stack<BuildingState> _continuationState = new Stack<BuildingState>();
+        private readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
         private UsageMode _mode;
         private WriteToken _writeToken;
 
