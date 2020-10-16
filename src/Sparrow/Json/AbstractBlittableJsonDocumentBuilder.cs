@@ -39,6 +39,46 @@ namespace Sparrow.Json
             }
         }
 
+        private static readonly PerCoreContainer<GlobalPoolItem> GlobalCache = new PerCoreContainer<GlobalPoolItem>();
+
+        protected struct BuildingState
+        {
+            public ContinuationState State;
+            public int MaxPropertyId;
+            public CachedProperties.PropertyName CurrentProperty;
+            public FastList<PropertyTag> Properties;
+            public FastList<BlittableJsonToken> Types;
+            public FastList<int> Positions;
+            public long FirstWrite;
+
+            public BuildingState(ContinuationState state)
+            {
+                State = state;
+                MaxPropertyId = 0;
+                CurrentProperty = null;
+                Properties = null;
+                Types = null;
+                Positions = null;
+                FirstWrite = 0;
+            }
+        }
+
+        protected enum ContinuationState
+        {
+            ReadPropertyName,
+            ReadPropertyValue,
+            ReadArray,
+            ReadArrayValue,
+            ReadObject,
+            ReadValue,
+            CompleteReadingPropertyValue,
+            ReadObjectDocument,
+            ReadArrayDocument,
+            CompleteDocumentArray,
+            CompleteArray,
+            CompleteArrayValue
+        }
+
         public struct PropertyTag
         {
             public int Position;
@@ -58,15 +98,6 @@ namespace Sparrow.Json
                 Position = position;
             }
         }
-
-        private class GlobalPoolItem
-        {
-            public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
-            public readonly ListCache<int> PositionsCache = new ListCache<int>();
-            public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>();
-        }
-
-        private static readonly PerCoreContainer<GlobalPoolItem> GlobalCache = new PerCoreContainer<GlobalPoolItem>();
 
         protected class ListCache<T>
         {
@@ -96,42 +127,11 @@ namespace Sparrow.Json
             }
         }
 
-        public struct BuildingState
+        private class GlobalPoolItem
         {
-            public ContinuationState State;
-            public int MaxPropertyId;
-            public CachedProperties.PropertyName CurrentProperty;
-            public FastList<PropertyTag> Properties;
-            public FastList<BlittableJsonToken> Types;
-            public FastList<int> Positions;
-            public long FirstWrite;
-
-            public BuildingState(ContinuationState state)
-            {
-                State = state;
-                MaxPropertyId = 0;
-                CurrentProperty = null;
-                Properties = null;
-                Types = null;
-                Positions = null;
-                FirstWrite = 0;
-            }
-        }
-
-        public enum ContinuationState
-        {
-            ReadPropertyName,
-            ReadPropertyValue,
-            ReadArray,
-            ReadArrayValue,
-            ReadObject,
-            ReadValue,
-            CompleteReadingPropertyValue,
-            ReadObjectDocument,
-            ReadArrayDocument,
-            CompleteDocumentArray,
-            CompleteArray,
-            CompleteArrayValue
+            public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
+            public readonly ListCache<int> PositionsCache = new ListCache<int>();
+            public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>();
         }
     }
 }
