@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Sparrow.Collections;
 using Sparrow.Exceptions;
 using Sparrow.Json.Parsing;
+using Sparrow.Platform;
 using Sparrow.Threading;
 
 namespace Sparrow.Json
@@ -12,6 +13,10 @@ namespace Sparrow.Json
     {
         private class GlobalPoolItem
         {
+            private static readonly int MaxCacheSize = PlatformDetails.Is32Bits == false
+                ? 8 * 1024
+                : 2 * 1024;
+
             public void Reset()
             {
                 PropertyCache.Reset();
@@ -19,9 +24,9 @@ namespace Sparrow.Json
                 TokensCache.Reset();
             }
 
-            public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>();
-            public readonly ListCache<int> PositionsCache = new ListCache<int>();
-            public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>();
+            public readonly ListCache<PropertyTag> PropertyCache = new ListCache<PropertyTag>(MaxCacheSize);
+            public readonly ListCache<int> PositionsCache = new ListCache<int>(MaxCacheSize);
+            public readonly ListCache<BlittableJsonToken> TokensCache = new ListCache<BlittableJsonToken>(MaxCacheSize);
         }
 
         private static readonly PerCoreContainer<GlobalPoolItem> GlobalCache = new PerCoreContainer<GlobalPoolItem>();
@@ -51,7 +56,13 @@ namespace Sparrow.Json
         private class ListCache<T>
         {
             private readonly FastList<FastList<T>> _cache = new FastList<FastList<T>>();
-            private int _index = 0;
+            private readonly int _maxSize;
+            private int _index;
+
+            public ListCache(int maxSize)
+            {
+                _maxSize = maxSize;
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public FastList<T> Allocate()
@@ -60,6 +71,9 @@ namespace Sparrow.Json
                     return _cache[_index++];
 
                 var n = new FastList<T>();
+                if (_index >= _maxSize)
+                    return n;
+
                 _cache.Add(n);
                 _index++;
                 return n;
@@ -73,6 +87,7 @@ namespace Sparrow.Json
                     var t = _cache[i];
                     t.Clear();
                 }
+
                 _index = 0;
             }
         }

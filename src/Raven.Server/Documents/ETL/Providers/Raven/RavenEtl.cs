@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -13,7 +12,6 @@ using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -137,27 +135,28 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 };
             }
 
-            var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, context, commands, options);
-
-            var duration = Stopwatch.StartNew();
-
-            try
+            using (var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, context, commands, options))
             {
-                BeforeActualLoad?.Invoke(this);
+                var duration = Stopwatch.StartNew();
 
-                AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
-                _recentUrl = _requestExecutor.Url;
-
-                return commands.Count;
-            }
-            catch (OperationCanceledException e)
-            {
-                if (CancellationToken.IsCancellationRequested == false)
+                try
                 {
-                    ThrowTimeoutException(commands.Count, duration.Elapsed, e);
-                }
+                    BeforeActualLoad?.Invoke(this);
 
-                throw;
+                    AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
+                    _recentUrl = _requestExecutor.Url;
+
+                    return commands.Count;
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (CancellationToken.IsCancellationRequested == false)
+                    {
+                        ThrowTimeoutException(commands.Count, duration.Elapsed, e);
+                    }
+
+                    throw;
+                }
             }
         }
 
