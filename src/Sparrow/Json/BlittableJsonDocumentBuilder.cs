@@ -1,18 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.CompilerServices;
-using Sparrow.Collections;
 using Sparrow.Exceptions;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 
 namespace Sparrow.Json
 {
-    public sealed class BlittableJsonDocumentBuilder : BlittableJsonDocumentBuilderCache
+    public sealed class BlittableJsonDocumentBuilder : AbstractBlittableJsonDocumentBuilder
     {
         private static readonly StringSegment UnderscoreSegment = new StringSegment("_");
-
-        private readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
 
         private readonly JsonOperationContext _context;
         private UsageMode _mode;
@@ -57,7 +54,9 @@ namespace Sparrow.Json
         {
             _debugTag = null;
             _mode = UsageMode.None;
-            _continuationState.Clear();
+
+            ClearState();
+
             _writeToken = default;
             _writer.Reset();
         }
@@ -68,7 +67,7 @@ namespace Sparrow.Json
             _debugTag = debugTag;
             _mode = mode;
 
-            _continuationState.Clear();
+            ClearState();
 
             _writer.ResetAndRenew();
             _modifier?.Reset(_context);
@@ -403,44 +402,6 @@ namespace Sparrow.Json
         private void ThrowExpectedValue(JsonParserToken token)
         {
             throw new InvalidDataException("Expected a value, but got " + token);
-        }
-
-        public enum ContinuationState
-        {
-            ReadPropertyName,
-            ReadPropertyValue,
-            ReadArray,
-            ReadArrayValue,
-            ReadObject,
-            ReadValue,
-            CompleteReadingPropertyValue,
-            ReadObjectDocument,
-            ReadArrayDocument,
-            CompleteDocumentArray,
-            CompleteArray,
-            CompleteArrayValue
-        }
-
-        public struct BuildingState
-        {
-            public ContinuationState State;
-            public int MaxPropertyId;
-            public CachedProperties.PropertyName CurrentProperty;
-            public FastList<PropertyTag> Properties;
-            public FastList<BlittableJsonToken> Types;
-            public FastList<int> Positions;
-            public long FirstWrite;
-
-            public BuildingState(ContinuationState state)
-            {
-                State = state;
-                MaxPropertyId = 0;
-                CurrentProperty = null;
-                Properties = null;
-                Types = null;
-                Positions = null;
-                FirstWrite = 0;
-            }
         }
 
         [Flags]
