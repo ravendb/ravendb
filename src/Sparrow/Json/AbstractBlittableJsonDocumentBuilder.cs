@@ -5,14 +5,16 @@ using Sparrow.Platform;
 
 namespace Sparrow.Json
 {
-    public abstract class BlittableJsonDocumentBuilderCache : IDisposable
+    public abstract class AbstractBlittableJsonDocumentBuilder : IDisposable
     {
         private readonly GlobalPoolItem _cacheItem;
         protected readonly ListCache<PropertyTag> _propertiesCache;
         protected readonly ListCache<int> _positionsCache;
         protected readonly ListCache<BlittableJsonToken> _tokensCache;
 
-        protected BlittableJsonDocumentBuilderCache()
+        protected readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
+
+        protected AbstractBlittableJsonDocumentBuilder()
         {
             if (GlobalCache.TryPull(out _cacheItem) == false)
                 _cacheItem = new GlobalPoolItem();
@@ -24,6 +26,17 @@ namespace Sparrow.Json
         public virtual void Dispose()
         {
             GlobalCache.Push(_cacheItem);
+        }
+
+        protected void ClearState()
+        {
+            while (_continuationState.Count > 0)
+            {
+                var state = _continuationState.Pop();
+                _propertiesCache.Return(ref state.Properties);
+                _tokensCache.Return(ref state.Types);
+                _positionsCache.Return(ref state.Positions);
+            }
         }
 
         public struct PropertyTag
@@ -81,6 +94,44 @@ namespace Sparrow.Json
                 _cache.Add(n);
                 n = null;
             }
+        }
+
+        public struct BuildingState
+        {
+            public ContinuationState State;
+            public int MaxPropertyId;
+            public CachedProperties.PropertyName CurrentProperty;
+            public FastList<PropertyTag> Properties;
+            public FastList<BlittableJsonToken> Types;
+            public FastList<int> Positions;
+            public long FirstWrite;
+
+            public BuildingState(ContinuationState state)
+            {
+                State = state;
+                MaxPropertyId = 0;
+                CurrentProperty = null;
+                Properties = null;
+                Types = null;
+                Positions = null;
+                FirstWrite = 0;
+            }
+        }
+
+        public enum ContinuationState
+        {
+            ReadPropertyName,
+            ReadPropertyValue,
+            ReadArray,
+            ReadArrayValue,
+            ReadObject,
+            ReadValue,
+            CompleteReadingPropertyValue,
+            ReadObjectDocument,
+            ReadArrayDocument,
+            CompleteDocumentArray,
+            CompleteArray,
+            CompleteArrayValue
         }
     }
 }

@@ -4,7 +4,7 @@ using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
 namespace Sparrow.Json
 {
-    public sealed class ManualBlittableJsonDocumentBuilder<TWriter> : BlittableJsonDocumentBuilderCache
+    public sealed class ManualBlittableJsonDocumentBuilder<TWriter> : AbstractBlittableJsonDocumentBuilder
         where TWriter : struct, IUnmanagedWriteBuffer
     {
         private readonly JsonOperationContext _context;
@@ -590,13 +590,7 @@ namespace Sparrow.Json
 
             _writer.WriteDocumentMetadata(rootOffset, documentToken);
 
-            while (_continuationState.Count > 0)
-            {
-                var state = _continuationState.Pop();
-                _propertiesCache.Return(ref state.Properties);
-                _tokensCache.Return(ref state.Types);
-                _positionsCache.Return(ref state.Positions);
-            }
+            ClearState();
         }
 
         private void ThrowIllegalStateException(ContinuationState state, string realOperation)
