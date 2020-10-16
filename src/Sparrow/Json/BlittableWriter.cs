@@ -173,7 +173,7 @@ namespace Sparrow.Json
                 _innerBuffer = _context.GetMemory(32);
         }
 
-        public WriteToken WriteObjectMetadata(FastList<PropertyTag> properties, long firstWrite, int maxPropId)
+        public WriteToken WriteObjectMetadata(FastList<BlittableJsonDocumentBuilderCache.PropertyTag> properties, long firstWrite, int maxPropId)
         {
             CachedProperties.Sort(properties);
 

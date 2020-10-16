@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using BenchmarkTests.Utils;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -46,6 +47,7 @@ update
                 using (var session = store.OpenSession())
                 {
                     var company = session.Load<Company>("companies/1-A");
+                    
 
                     Assert.True(company.Name.EndsWith("_patched"));
                     Assert.Equal(1, company.Contacts.Count);
