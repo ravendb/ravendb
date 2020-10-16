@@ -50,6 +50,7 @@ namespace Sparrow.Json
             public FastList<BlittableJsonToken> Types;
             public FastList<int> Positions;
             public long FirstWrite;
+            internal bool PartialRead;
 
             public BuildingState(ContinuationState state)
             {
@@ -60,6 +61,7 @@ namespace Sparrow.Json
                 Types = null;
                 Positions = null;
                 FirstWrite = 0;
+                PartialRead = false;
             }
         }
 
