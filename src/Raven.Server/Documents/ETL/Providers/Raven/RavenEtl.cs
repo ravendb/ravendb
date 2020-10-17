@@ -160,27 +160,28 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 };
             }
 
-            var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, context, commands, options);
-
-            var duration = Stopwatch.StartNew();
-
-            try
+            using (var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, context, commands, options))
             {
-                BeforeActualLoad?.Invoke(this);
+                var duration = Stopwatch.StartNew();
 
-                AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
-                _recentUrl = _requestExecutor.Url;
-
-                return commands.Count;
-            }
-            catch (OperationCanceledException e)
-            {
-                if (CancellationToken.IsCancellationRequested == false)
+                try
                 {
-                    ThrowTimeoutException(commands.Count, duration.Elapsed, e);
-                }
+                    BeforeActualLoad?.Invoke(this);
 
-                throw;
+                    AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
+                    _recentUrl = _requestExecutor.Url;
+
+                    return commands.Count;
+                }
+                catch (OperationCanceledException e)
+                {
+                    if (CancellationToken.IsCancellationRequested == false)
+                    {
+                        ThrowTimeoutException(commands.Count, duration.Elapsed, e);
+                    }
+
+                    throw;
+                }
             }
         }
 
