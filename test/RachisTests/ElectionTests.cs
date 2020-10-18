@@ -205,8 +205,10 @@ namespace RachisTests
                     {
                         break;
                     }
+
                     var maxTerm = followers.Max(f => f.CurrentTerm);
-                    Assert.True(currentTerm + 1 < maxTerm, $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})");
+                    Assert.True(currentTerm + 1 <= maxTerm, $"Followers didn't become leaders although old leader can't communicate with the cluster in term {currentTerm} (max term: {maxTerm})" +
+                                                            $"{string.Join(',',followers.Select(f=>$"{f.Tag}={f.CurrentState}:{f.CurrentTerm}"))}");
                     Assert.True(maxTerm < 10, "Followers were unable to elect a leader.");
                     currentTerm = maxTerm;
                     waitingList.Clear();
