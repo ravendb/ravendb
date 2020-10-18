@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sparrow.Platform;
 
 namespace Raven.Server.Commercial
 {
@@ -396,7 +397,14 @@ namespace Raven.Server.Commercial
             switch (key)
             {
                 case RSACng rsaCng:
+                    // This is not supposed to happen, since RSACng is only used in Windows, so suppressing the warning.
+                    if (PlatformDetails.RunningOnPosix)
+                        throw new PlatformNotSupportedException($"The private key of the current server certificate is {nameof(RSACng)} which is only supported in Windows.");
+
+#pragma warning disable CA1416 // Validate platform compatibility
                     var parameters = rsaCng.ExportParameters(true);
+#pragma warning restore CA1416 // Validate platform compatibility
+
                     var newRsaCsp = new RSACryptoServiceProvider();
                     newRsaCsp.ImportParameters(parameters);
                     blob = newRsaCsp.ExportCspBlob(true);
