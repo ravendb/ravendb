@@ -139,7 +139,7 @@ namespace SlowTests.Authentication
 
                     var indexDefinitions = store.Maintenance.Send(new GetIndexesOperation(0, 10));
 
-                    Assert.Equal(8, indexDefinitions.Length); // 6 sample data indexes + 2 new dynamic indexes
+                    Assert.Equal(9, indexDefinitions.Length); // 6 sample data indexes + 2 new dynamic indexes
 
                     WaitForIndexing(store);
 
