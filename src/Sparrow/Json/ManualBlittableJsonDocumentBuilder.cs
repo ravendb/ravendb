@@ -9,7 +9,6 @@ namespace Sparrow.Json
     {
         private readonly JsonOperationContext _context;
         private readonly BlittableWriter<TWriter> _writer;
-        private readonly FastStack<BuildingState> _continuationState = new FastStack<BuildingState>();
         private UsageMode _mode;
         private WriteToken _writeToken;
 
