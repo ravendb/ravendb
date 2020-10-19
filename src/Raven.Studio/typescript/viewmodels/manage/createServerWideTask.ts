@@ -5,19 +5,15 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class createServerWideTask extends dialogViewModelBase {
 
-    compositionComplete() {
-        super.compositionComplete();
-    }
-
     newServerWideReplicationTask() {
-        eventsCollector.default.reportEvent("ServerWideExternalReplication", "new");
+        eventsCollector.default.reportEvent("serverWideExternalReplication", "new");
         const url = appUrl.forEditServerWideExternalReplication();
         router.navigate(url);
         this.close();
     }
 
     newServerWideBackupTask() {
-        eventsCollector.default.reportEvent("ServerWidePeriodicBackup", "new");
+        eventsCollector.default.reportEvent("serverWidePeriodicBackup", "new");
         const url = appUrl.forEditServerWideBackup();
         router.navigate(url);
         this.close();

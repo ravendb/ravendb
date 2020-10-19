@@ -1,4 +1,3 @@
-<!--// todo class ?-->
 <div class="destinations flex-vertical absolute-fill content-margin manage-ongoing-tasks">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
@@ -31,10 +30,8 @@
                         </h5><hr>
                     </div>
                     <div data-bind="foreach: serverWideExternalReplicationTasks">
-
                         <div class="panel destination-item external-replication">
-                            <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }">
-                                <!-- todo - replace icon with icon-server-wide-external-replication -->
+                            <div data-bind="attr: { class: 'state ' + badgeClass() }">
                                 <i class="icon-external-replication"></i>
                             </div>
                             <div class="padding destination-info flex-vertical">
@@ -86,7 +83,7 @@
                  </div>
                  <div data-bind="foreach: serverWideBackupTasks">
                      <div class="panel destination-item periodic-backup">
-                         <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }">
+                         <div data-bind="attr: { class: 'state ' + badgeClass() }">
                              <i class="icon-server-wide-backup"></i>
                          </div>
                          <div class="padding destination-info flex-vertical">
