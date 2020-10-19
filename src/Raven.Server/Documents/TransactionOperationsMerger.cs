@@ -907,6 +907,7 @@ namespace Raven.Server.Documents
 
                 meter.IncrementCounter(1);
                 meter.IncrementCommands(op.Execute(context, _recording.State));
+                _parent.LastAccessTime = _parent.Time.GetUtcNow();
 
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
