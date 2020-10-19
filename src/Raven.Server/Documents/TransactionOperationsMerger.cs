@@ -89,7 +89,7 @@ namespace Raven.Server.Documents
 
         public abstract class MergedTransactionCommand : IRecordableCommand
         {
-            public virtual bool UpdateAccessTime => true;
+            public bool UpdateAccessTime = true;
 
             protected abstract long ExecuteCmd(DocumentsOperationContext context);
 
