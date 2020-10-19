@@ -315,6 +315,8 @@ namespace Raven.Server.Documents.Queries.Parser
                         continue;
                 }
 
+                _tokenStart = _pos;
+                _tokenLength = match.Length;
                 _pos += match.Length;
                 Column += match.Length;
                 found = match;
