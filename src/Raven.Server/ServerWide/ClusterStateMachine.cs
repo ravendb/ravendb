@@ -2808,10 +2808,20 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static unsafe BlittableJsonReaderObject ReadInternal<T>(TransactionOperationContext<T> context, out long etag, Slice key)
+        public static unsafe BlittableJsonReaderObject ReadInternal<T>(TransactionOperationContext<T> context, out long etag, Slice key, bool ignoreMissingTable = false)
             where T : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+            if (items == null && ignoreMissingTable)
+            {
+                // can happen if we fail on first run of the server
+                // we created the system store but failed to create all tables
+                etag = 0;
+                return null;
+            }
+
+            Debug.Assert(items != null);
+
             if (items.ReadByKey(key, out TableValueReader reader) == false)
             {
                 etag = 0;
