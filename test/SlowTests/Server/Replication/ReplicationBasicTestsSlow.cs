@@ -156,6 +156,44 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        [Fact]
+        public async Task Update_LastWork_With_Replication()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                var db2 = await GetDocumentDatabaseInstanceFor(store2);
+
+                await SetupReplicationAsync(store1, store2);
+
+                EnsureReplicating(store1, store2);
+
+                var lastAccessTime = db2.LastAccessTime;
+                
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Name = "John Dow",
+                        Age = 30
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                Assert.Equal(2, await WaitForValueAsync(() => db2.DocumentsStorage.GetNumberOfDocuments(), 2));
+
+                var lastAccessTimeAfterLoad = db2.LastAccessTime;
+
+                using (var session = store2.OpenSession())
+                {
+                    Assert.NotNull(session.Load<User>("users/1"));
+                }
+
+                Assert.NotEqual(lastAccessTimeAfterLoad, lastAccessTime);
+            }
+        }
+
         // RavenDB-15081
         [Fact]
         public async Task CanReplicateExpiredRevisionsWithAttachment()
