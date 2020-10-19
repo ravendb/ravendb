@@ -7,10 +7,10 @@
                         <i class="icon-plus"></i><span>Add a Database Task</span>
                     </button>
                 </div>
-                <small class="text-info bg-info padding padding-xs margin-left" data-bind="if: canNavigateToServerWideTasks">
-                    <span>To add a server-wide task go to: <a target="_blank" data-bind="attr: { href: serverWideTasksUrl }">Server-Wide Tasks view</a></span>
-                </small>
                 <div class="flex-separator"></div>
+                <small class="padding padding-xs margin-left" data-bind="if: canNavigateToServerWideTasks" title="Go to the Server-Wide Tasks view">
+                    <a target="_blank" data-bind="attr: { href: serverWideTasksUrl }"><i class="icon-link"></i>Server-Wide Tasks</a>
+                </small>
                 <!-- TODO
                 <div class="btn-group-label" data-label="Selection">
                     <button class="btn btn-default disabled">
