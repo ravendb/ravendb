@@ -271,7 +271,11 @@ namespace Raven.Server.Rachis
 
         public readonly RachisDebug InMemoryDebug = new RachisDebug();
 
-        public RachisState CurrentState { get; private set; }
+        public RachisState CurrentState
+        {
+            get => _currentState;
+            private set => _currentState = value;
+        }
 
         public string LastStateChangeReason
         {
@@ -2036,6 +2040,7 @@ namespace Raven.Server.Rachis
         private DateTime _lastStateChangeTime;
         private readonly string _clusterIdBase64Id = new string(' ', 22);
         public readonly CipherSuitesPolicy CipherSuitesPolicy;
+        private volatile RachisState _currentState;
 
         private unsafe void SetClusterBase(string str)
         {

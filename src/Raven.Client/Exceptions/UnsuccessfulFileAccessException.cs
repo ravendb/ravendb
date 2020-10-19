@@ -8,12 +8,10 @@ namespace Raven.Client.Exceptions
 {
     public class UnsuccessfulFileAccessException : Exception
     {
-
-        private static string GetMessage(string filePath,FileAccess accessType, Exception underlyingException)
+        internal static string GetMessage(string filePath, FileAccess accessType, Exception underlyingException)
         {
-            
             var msg = $@"Failed to get {accessType} access a file at <{filePath}>.{Environment.NewLine}Possible reasons:{Environment.NewLine}";
-            
+
             switch (underlyingException)
             {
                 //precaution, for completeness sake
@@ -35,19 +33,28 @@ namespace Raven.Client.Exceptions
             if ((File.GetAttributes(filePath) & FileAttributes.Directory) != 0)
             {
                 msg += $@"* The file path points to a directory and thus cannot be accessed as a file. {Environment.NewLine}";
-            }            
+            }
 
             if (PlatformDetails.RunningOnPosix)
             {
-                msg += $"* The file may be locked by another process that has it opened. The 'lslk' utility can help list locking processes. Please refer to man pages for more information{Environment.NewLine}";
+                msg +=
+                    $"* The file may be locked by another process that has it opened. The 'lslk' utility can help list locking processes. Please refer to man pages for more information{Environment.NewLine}";
             }
             else
             {
-                var whoIsLocking = WhoIsLocking.GetProcessesUsingFile(filePath);
-                if (whoIsLocking.Count > 0) //on posix this will be always empty
+                try
                 {
-                    msg += $@"* The file is being used by the following process(es): {string.Join(",", whoIsLocking)}. {Environment.NewLine}";
+                    var whoIsLocking = WhoIsLocking.GetProcessesUsingFile(filePath);
+                    if (whoIsLocking.Count > 0) //on posix this will be always empty
+                    {
+                        msg += $@"* The file is being used by the following process(es): {string.Join(",", whoIsLocking)}. {Environment.NewLine}";
+                    }
                 }
+                catch (Exception e)
+                {
+                    msg += $@"* Failed to identify which process(es) is holding the file: {e}. {Environment.NewLine}";
+                }
+
             }
 
             return msg;
@@ -58,7 +65,7 @@ namespace Raven.Client.Exceptions
 
 
         public UnsuccessfulFileAccessException(Exception e, string filePath, FileAccess accessType)
-            : base(GetMessage(filePath, accessType,e),e)
+            : base(GetMessage(filePath, accessType, e), e)
         {
             FilePath = filePath;
             AccessType = accessType;

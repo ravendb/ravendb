@@ -87,6 +87,8 @@ namespace Raven.Server.Documents
 
         public abstract class MergedTransactionCommand : IRecordableCommand
         {
+            public virtual bool UpdateAccessTime => true;
+
             protected abstract long ExecuteCmd(DocumentsOperationContext context);
 
             internal long ExecuteDirectly(DocumentsOperationContext context)
@@ -905,6 +907,8 @@ namespace Raven.Server.Documents
 
                 meter.IncrementCounter(1);
                 meter.IncrementCommands(op.Execute(context, _recording.State));
+                if (op.UpdateAccessTime)
+                    _parent.LastAccessTime = _parent.Time.GetUtcNow();
 
                 var modifiedSize = llt.NumberOfModifiedPages * Constants.Storage.PageSize;
 
