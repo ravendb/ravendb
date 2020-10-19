@@ -1479,6 +1479,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
                 var backupStatus = database.PeriodicBackupRunner.GetBackupStatus(backupTaskId);
                 var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                config.TaskId = backupTaskId;
                 var newResponsibleNode = database.WhoseTaskIsIt(databaseRecord.Topology, config, backupStatus, keepTaskOnOriginalMemberNode: true);
 
                 Assert.Equal(server.ServerStore.NodeTag, newResponsibleNode);
