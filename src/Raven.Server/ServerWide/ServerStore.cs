@@ -2466,10 +2466,10 @@ namespace Raven.Server.ServerWide
 
         public License LoadLicense()
         {
-            return LoadLicense(ContextPool);
+            return LoadLicense(ContextPool, ignoreMissingTable: false);
         }
 
-        public License LoadLicense(TransactionContextPool contextPool)
+        public License LoadLicense(TransactionContextPool contextPool, bool ignoreMissingTable)
         {
             var lowerName = LicenseStorageKey.ToLowerInvariant();
 
@@ -2477,7 +2477,7 @@ namespace Raven.Server.ServerWide
             using (context.OpenReadTransaction())
             using (Slice.From(context.Allocator, lowerName, out Slice key))
             {
-                var licenseBlittable = ClusterStateMachine.ReadInternal(context, out _, key);
+                var licenseBlittable = ClusterStateMachine.ReadInternal(context, out _, key, ignoreMissingTable);
                 if (licenseBlittable == null)
                     return null;
 
