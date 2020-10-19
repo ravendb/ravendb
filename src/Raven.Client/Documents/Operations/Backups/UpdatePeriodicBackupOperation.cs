@@ -58,7 +58,6 @@ namespace Raven.Client.Documents.Operations.Backups
                     ThrowInvalidResponse();
 
                 Result = JsonDeserializationClient.ConfigurePeriodicBackupOperationResult(response);
-                _configuration.TaskId = Result.TaskId;
             }
 
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
