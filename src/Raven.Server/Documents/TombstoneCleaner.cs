@@ -158,6 +158,8 @@ namespace Raven.Server.Documents
 
             public long NumberOfTombstonesDeleted { get; private set; }
 
+            public override bool UpdateAccessTime => false;
+
             public DeleteTombstonesCommand(Dictionary<string, (string Component, long Value)> tombstones, long minAllDocsEtag, long numberOfTombstonesToDeleteInBatch, DocumentDatabase database, Logger logger)
             {
                 _tombstones = tombstones ?? throw new ArgumentNullException(nameof(tombstones));
