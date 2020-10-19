@@ -1133,7 +1133,9 @@ namespace RachisTests.DatabaseCluster
                     Assert.Equal(3, session.Advanced.GetChangeVectorFor(user).ToChangeVectorList().Count);
                 }
 
-                await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, "A"));
+                var deleteResult = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, "A"));
+                await WaitForRaftIndexToBeAppliedInCluster(deleteResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+
                 Assert.False(await WaitForValueAsync(async () =>
                 {
                     var command = new GetDatabaseRecordOperation(store.Database);
