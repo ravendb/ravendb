@@ -797,6 +797,8 @@ class serverDashboard extends viewModelBase {
         this.initSections();
         
         this.enableLiveView();
+        
+        this.onResize();
     }
 
     private initSections() {
