@@ -150,8 +150,7 @@ class connectionStrings extends viewModelBase {
                 const groupedRavenEtlNames = _.groupBy(this.ravenEtlConnectionStringsNames(), x => this.hasServerWidePrefix(x));
                 const serverWideNames = _.sortBy(groupedRavenEtlNames.true, x => x.toUpperCase());
                 const regularNames = _.sortBy(groupedRavenEtlNames.false, x => x.toUpperCase());
-                this.ravenEtlConnectionStringsNames(regularNames);
-                this.ravenEtlConnectionStringsNames.push(...serverWideNames);
+                this.ravenEtlConnectionStringsNames([...regularNames, ...serverWideNames]);
                 
                 // sqlEtl
                 this.sqlEtlConnectionStringsNames(Object.keys(result.SqlConnectionStrings));

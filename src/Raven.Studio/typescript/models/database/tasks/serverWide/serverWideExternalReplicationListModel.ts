@@ -25,16 +25,8 @@ class serverWideExternalReplicationListModel extends serverWideTaskListModel {
     // dto param is union-type only so that it compiles - due to class inheritance....
     update(dto: Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideTask |
                 Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideExternalReplicationTask) {
-        super.update({
-            TaskType: dto.TaskType,
-            TaskName: dto.TaskName,
-            TaskId: dto.TaskId,
-            TaskState: dto.TaskState,
-            TaskConnectionStatus: dto.TaskConnectionStatus,
-            ResponsibleNode: dto.ResponsibleNode, 
-            MentorNode: dto.MentorNode 
-        } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTask);
-        
+        super.update(dto as Raven.Client.Documents.Operations.OngoingTasks.OngoingTask);
+
         const serverWideExternalReplicationTask = dto as Raven.Server.Web.System.AdminStudioServerWideHandler.ServerWideTasksResult.ServerWideExternalReplicationTask;
         
         const delayTime = generalUtils.timeSpanToSeconds(serverWideExternalReplicationTask.DelayReplicationFor);
