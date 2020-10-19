@@ -14,6 +14,14 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.backupsUrl
         }),
         new leafMenuItem({
+            route: 'databases/tasks/ongoingTasks',
+            moduleId: 'viewmodels/database/tasks/ongoingTasks',
+            title: 'Ongoing Tasks',
+            nav: true,
+            css: 'icon-manage-ongoing-tasks',
+            dynamicHash: appUrls.ongoingTasksUrl
+        }),
+        new leafMenuItem({
             route: 'databases/tasks/import*details',
             moduleId: 'viewmodels/database/tasks/importParent',
             title: 'Import Data',
@@ -36,14 +44,6 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-create-sample-data',
             dynamicHash: appUrls.sampleDataUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/ongoingTasks',
-            moduleId: 'viewmodels/database/tasks/ongoingTasks',
-            title: 'Manage Ongoing Tasks',
-            nav: true,
-            css: 'icon-manage-ongoing-tasks',
-            dynamicHash: appUrls.ongoingTasksUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',
