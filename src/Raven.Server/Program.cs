@@ -297,7 +297,7 @@ namespace Raven.Server
 
             using (var contextPool = new TransactionContextPool(storageEnvironment, serverStore.Configuration.Memory.MaxContextSizeToKeep))
             {
-                var license = serverStore.LoadLicense(contextPool, ignoreMissingTable: true);
+                var license = serverStore.LoadLicense(contextPool);
                 if (license == null)
                     return;
 
