@@ -31,6 +31,7 @@ using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Tests.Infrastructure.Utils;
+using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 using XunitLogger;
@@ -82,6 +83,7 @@ namespace FastTests
         static TestBase()
         {
             IgnoreProcessorAffinityChanges(ignore: true);
+            EncryptionBuffersPool.Instance.Disabled = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
