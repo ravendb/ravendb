@@ -24,11 +24,13 @@ namespace Raven.Client.Documents.Operations.Replication
             if (pullReplication.CertificateWithPrivateKey != null)
             {
                 var certBytes = Convert.FromBase64String(pullReplication.CertificateWithPrivateKey);
-                var certificate = new X509Certificate2(certBytes,
+                using (var certificate = new X509Certificate2(certBytes,
                     pullReplication.CertificatePassword,
-                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-                if (certificate.HasPrivateKey == false)
-                    throw new AuthorizationException("Certificate with private key is required");
+                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet))
+                {
+                    if (certificate.HasPrivateKey == false)
+                        throw new AuthorizationException("Certificate with private key is required");
+                }
             }
         }
 
