@@ -25,6 +25,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
@@ -1135,13 +1136,19 @@ namespace RachisTests.DatabaseCluster
 
                 var deleteResult = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true, "A"));
                 await WaitForRaftIndexToBeAppliedInCluster(deleteResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                var db = store.Database;
 
-                Assert.False(await WaitForValueAsync(async () =>
+                Func<ServerStore, bool> waitFunc = (s) =>
                 {
-                    var command = new GetDatabaseRecordOperation(store.Database);
-                    var result = await store.Maintenance.Server.SendAsync(command);
-                    return result.DeletionInProgress?.Count > 0;
-                }, false));
+                    using (s.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var result = s.Cluster.ReadDatabase(ctx, db);
+                        return result.DeletionInProgress.Count == 0 && result.Topology.AllNodes.Count() == 2;
+                    }
+                };
+
+                Assert.True(await WaitForValueOnGroupAsync(new DatabaseTopology {Members = new List<string> {"A", "B", "C"}}, waitFunc, true));
 
                 using (var session = store.OpenAsyncSession())
                 {
