@@ -55,6 +55,9 @@ namespace Raven.Client.Documents.Session.Tokens
                 case TimeSeriesTimeRange tr:
                     WriteTo(writer, tr);
                     break;
+                case TimeSeriesCountRange cr:
+                    WriteTo(writer, cr);
+                    break;
                 default:
                     throw new NotSupportedException($"Not supported time range type '{_range?.GetType().Name}'.");
             };
@@ -79,6 +82,23 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append(", '")
                 .Append(range.Time.Unit)
                 .Append("')");
+        }
+
+        private static void WriteTo(StringBuilder writer, TimeSeriesCountRange range)
+        {
+            switch (range.Type)
+            {
+                case TimeSeriesRangeType.Last:
+                    writer
+                        .Append("last(");
+                    break;
+                default:
+                    throw new NotSupportedException($"Not supported time range type '{range.Type}'.");
+            }
+
+            writer
+                .Append(range.Count)
+                .Append(")");
         }
 
         private static void WriteTo(StringBuilder writer, TimeSeriesRange range)

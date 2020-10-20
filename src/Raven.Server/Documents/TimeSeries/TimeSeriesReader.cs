@@ -136,9 +136,13 @@ namespace Raven.Server.Documents.TimeSeries
             return AllValues().FirstOrDefault();
         }
 
-        public SingleResult Last()
+        public SingleResult Last(DateTime? to = null)
         {
-            var date = _to;
+            if (to.HasValue == false)
+                to = _to;
+
+            var date = to.Value;
+
             while (true)
             {
                 using (var holder = new TimeSeriesSliceHolder(_context, _documentId, _name).WithBaseline(date))
@@ -157,7 +161,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 SingleResult last = default;
-                if (_to == DateTime.MaxValue)
+                if (to == DateTime.MaxValue)
                 {
                     last = segment.YieldAllValues(_context, date, includeDead: false).Last();
                     last.Type = IsRaw ? SingleResultType.Raw : SingleResultType.RolledUp;
@@ -166,7 +170,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 foreach (var item in segment.YieldAllValues(_context, date, includeDead: false))
                 {
-                    if (item.Timestamp > _to)
+                    if (item.Timestamp > to)
                         return last;
 
                     last = item;

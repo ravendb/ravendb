@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.TrafficWatch;
+using Sparrow;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -300,15 +302,36 @@ namespace Raven.Server.Documents.Handlers
             includeTimeSeries = null;
 
             var timeSeriesNames = GetStringValuesQueryString("timeseries", required: false);
-            if (timeSeriesNames.Count == 0)
+            var timeSeriesTimeNames = GetStringValuesQueryString("timeseriestime", required: false);
+            var timeSeriesCountNames = GetStringValuesQueryString("timeseriescount", required: false);
+            if (timeSeriesNames.Count == 0 && timeSeriesTimeNames.Count == 0 && timeSeriesCountNames.Count == 0)
                 return;
+
+            if (timeSeriesNames.Count > 1 && timeSeriesNames.Contains(Constants.TimeSeries.All))
+                throw new InvalidOperationException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
+            if (timeSeriesTimeNames.Count > 1 && timeSeriesTimeNames.Contains(Constants.TimeSeries.All))
+                throw new InvalidOperationException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
+            if (timeSeriesCountNames.Count > 1 && timeSeriesCountNames.Contains(Constants.TimeSeries.All))
+                throw new InvalidOperationException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
 
             var fromList = GetStringValuesQueryString("from", required: false);
             var toList = GetStringValuesQueryString("to", required: false);
-
             if (timeSeriesNames.Count != fromList.Count || fromList.Count != toList.Count)
                 throw new InvalidOperationException("Parameters 'timeseriesNames', 'fromList' and 'toList' must be of equal length. " +
                                                     $"Got : timeseriesNames.Count = {timeSeriesNames.Count}, fromList.Count = {fromList.Count}, toList.Count = {toList.Count}.");
+
+            var timeTypeList = GetStringValuesQueryString("timeType", required: false);
+            var timeValueList = GetStringValuesQueryString("timeValue", required: false);
+            var timeUnitList = GetStringValuesQueryString("timeUnit", required: false);
+            if (timeSeriesTimeNames.Count != timeTypeList.Count || timeTypeList.Count != timeValueList.Count || timeValueList.Count != timeUnitList.Count)
+                throw new InvalidOperationException($"Parameters '{nameof(timeSeriesTimeNames)}', '{nameof(timeTypeList)}', '{nameof(timeValueList)}' and '{nameof(timeUnitList)}' must be of equal length. " +
+                                                    $"Got : {nameof(timeSeriesTimeNames)}.Count = {timeSeriesTimeNames.Count}, {nameof(timeTypeList)}.Count = {timeTypeList.Count}, {nameof(timeValueList)}.Count = {timeValueList.Count}, {nameof(timeUnitList)}.Count = {timeUnitList.Count}.");
+
+            var countTypeList = GetStringValuesQueryString("countType", required: false);
+            var countValueList = GetStringValuesQueryString("countValue", required: false);
+            if (timeSeriesCountNames.Count != countTypeList.Count || countTypeList.Count != countValueList.Count)
+                throw new InvalidOperationException($"Parameters '{nameof(timeSeriesCountNames)}', '{nameof(countTypeList)}', '{nameof(countValueList)}' must be of equal length. " +
+                                                    $"Got : {nameof(timeSeriesCountNames)}.Count = {timeSeriesCountNames.Count}, {nameof(countTypeList)}.Count = {countTypeList.Count}, {nameof(countValueList)}.Count = {countValueList.Count}.");
 
             var hs = new HashSet<AbstractTimeSeriesRange>(AbstractTimeSeriesRangeComparer.Instance);
 
@@ -323,6 +346,36 @@ namespace Raven.Server.Documents.Handlers
                     To = string.IsNullOrEmpty(toList[i])
                         ? DateTime.MaxValue
                         : TimeSeriesHandler.ParseDate(toList[i], "to")
+                });
+            }
+
+            for (int i = 0; i < timeSeriesTimeNames.Count; i++)
+            {
+                var timeValueUnit = (TimeValueUnit)Enum.Parse(typeof(TimeValueUnit), timeUnitList[i]);
+                if (timeValueUnit == TimeValueUnit.None)
+                    throw new InvalidOperationException($"Got unexpected {nameof(TimeValueUnit)} '{nameof(TimeValueUnit.None)}'. Only the following are supported: '{nameof(TimeValueUnit.Second)}' or '{nameof(TimeValueUnit.Month)}'.");
+
+                if (int.TryParse(timeValueList[i], out int res) == false)
+                    throw new InvalidOperationException($"Could not parse timeseries time range value.");
+
+                hs.Add(new TimeSeriesTimeRange
+                {
+                    Name = timeSeriesTimeNames[i],
+                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), timeTypeList[i]),
+                    Time = timeValueUnit == TimeValueUnit.Second ? TimeValue.FromSeconds(res) : TimeValue.FromMonths(res)
+                });
+            }
+
+            for (int i = 0; i < timeSeriesCountNames.Count; i++)
+            {
+                if (int.TryParse(countValueList[i], out int res) == false)
+                    throw new InvalidOperationException($"Could not parse timeseries count value.");
+
+                hs.Add(new TimeSeriesCountRange
+                {
+                    Name = timeSeriesCountNames[i],
+                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), countTypeList[i]),
+                    Count = res
                 });
             }
 

@@ -12,6 +12,7 @@ using FastTests.Client.Subscriptions;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
@@ -22,6 +23,7 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -767,6 +769,278 @@ namespace SlowTests.Client.Subscriptions
                 {
                     subscription._forTestingPurposes = null;
                 }
+            }
+        }
+
+        [Fact]
+        public void CanCreateSubscriptionWithIncludeTimeSeries_LastRangeByTime()
+        {
+            var now = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var store = GetDocumentStore())
+            {
+                var name = store.Subscriptions
+                    .Create(new SubscriptionCreationOptions<Company>()
+                    {
+                        Includes = builder => builder
+                            .IncludeTimeSeries("StockPrice", TimeSeriesRangeType.Last, TimeValue.FromMonths(1))
+                    });
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name);
+                worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var company = session.Load<Company>("companies/1");
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var timeSeries = session.TimeSeriesFor(company, "StockPrice");
+                        var timeSeriesEntries = timeSeries.Get(from: now.AddDays(-7));
+
+                        Assert.Equal(1, timeSeriesEntries.Length);
+                        Assert.Equal(now, timeSeriesEntries[0].Timestamp);
+                        Assert.Equal(10, timeSeriesEntries[0].Value);
+
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+                    }
+
+                    mre.Set();
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Id = "companies/1", Name = "HR" };
+                    session.Store(company);
+
+                    session.TimeSeriesFor(company, "StockPrice").Append(now, 10);
+
+                    session.SaveChanges();
+                }
+
+                Assert.True(mre.Wait(TimeSpan.FromSeconds(30)));
+            }
+        }
+
+        [Fact]
+        public void CanCreateSubscriptionWithIncludeTimeSeries_LastRangeByCount()
+        {
+            var now = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var store = GetDocumentStore())
+            {
+                var name = store.Subscriptions
+                    .Create(new SubscriptionCreationOptions<Company>()
+                    {
+                        Includes = builder => builder
+                            .IncludeTimeSeries("StockPrice", TimeSeriesRangeType.Last, count: 32)
+                    });
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name);
+                var t = worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var company = session.Load<Company>("companies/1");
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var timeSeries = session.TimeSeriesFor(company, "StockPrice");
+                        var timeSeriesEntries = timeSeries.Get(from: now.AddDays(-7));
+
+                        Assert.Equal(1, timeSeriesEntries.Length);
+                        Assert.Equal(now.AddDays(-7), timeSeriesEntries[0].Timestamp);
+                        Assert.Equal(10, timeSeriesEntries[0].Value);
+
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+                    }
+
+                    mre.Set();
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Id = "companies/1", Name = "HR" };
+                    session.Store(company);
+
+                    session.TimeSeriesFor(company, "StockPrice").Append(now.AddDays(-7), 10);
+
+                    session.SaveChanges();
+                }
+
+                var result = WaitForValue(() => mre.Wait(TimeSpan.FromSeconds(500)), true);
+                if (result == false && t.IsFaulted)
+                    Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
+
+                Assert.True(result);
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CanCreateSubscriptionWithIncludeTimeSeries_Array_LastRange(bool byTime)
+        {
+            var now = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var store = GetDocumentStore())
+            {
+                string name;
+                if (byTime)
+                {
+                    name = store.Subscriptions
+                        .Create(new SubscriptionCreationOptions<Company>()
+                        {
+                            Includes = builder => builder
+                                .IncludeTimeSeries(new[] { "StockPrice", "StockPrice2" }, TimeSeriesRangeType.Last, TimeValue.FromDays(7))
+                        });
+                }
+                else
+                {
+                    name = store.Subscriptions
+                        .Create(new SubscriptionCreationOptions<Company>()
+                        {
+                            Includes = builder => builder
+                                .IncludeTimeSeries(new[] { "StockPrice", "StockPrice2" }, TimeSeriesRangeType.Last, count: 32)
+                        });
+
+                }
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name);
+                var t = worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var company = session.Load<Company>("companies/1");
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var timeSeries = session.TimeSeriesFor(company, "StockPrice");
+                        var timeSeriesEntries = timeSeries.Get(from: now.AddDays(-7));
+
+                        Assert.Equal(1, timeSeriesEntries.Length);
+                        Assert.Equal(now.AddDays(-7), timeSeriesEntries[0].Timestamp);
+                        Assert.Equal(10, timeSeriesEntries[0].Value);
+
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        timeSeries = session.TimeSeriesFor(company, "StockPrice2");
+                        timeSeriesEntries = timeSeries.Get(from: now.AddDays(-5));
+
+                        Assert.Equal(1, timeSeriesEntries.Length);
+                        Assert.Equal(now.AddDays(-5), timeSeriesEntries[0].Timestamp);
+                        Assert.Equal(100, timeSeriesEntries[0].Value);
+
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+                    }
+
+                    mre.Set();
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Id = "companies/1", Name = "HR" };
+                    session.Store(company);
+
+                    session.TimeSeriesFor(company, "StockPrice").Append(now.AddDays(-7), 10);
+                    session.TimeSeriesFor(company, "StockPrice2").Append(now.AddDays(-5), 100);
+
+                    session.SaveChanges();
+                }
+
+                var result = WaitForValue(() => mre.Wait(TimeSpan.FromSeconds(500)), true);
+                if (result == false && t.IsFaulted)
+                    Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
+
+                Assert.True(result);
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CanCreateSubscriptionWithIncludeTimeSeries_All_LastRange(bool byTime)
+        {
+            var now = DateTime.UtcNow.EnsureMilliseconds();
+
+            using (var store = GetDocumentStore())
+            {
+                string name;
+                if (byTime)
+                {
+                    name = store.Subscriptions
+                        .Create(new SubscriptionCreationOptions<Company>()
+                        {
+                            Includes = builder => builder
+                                .IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromDays(7))
+                        });
+                }
+                else
+                {
+                    name = store.Subscriptions
+                        .Create(new SubscriptionCreationOptions<Company>()
+                        {
+                            Includes = builder => builder
+                                .IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 32)
+                        });
+
+                }
+
+                var mre = new ManualResetEventSlim();
+                var worker = store.Subscriptions.GetSubscriptionWorker<Company>(name);
+                var t = worker.Run(batch =>
+                {
+                    using (var session = batch.OpenSession())
+                    {
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var company = session.Load<Company>("companies/1");
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        var timeSeries = session.TimeSeriesFor(company, "StockPrice");
+                        var timeSeriesEntries = timeSeries.Get(from: now.AddDays(-7));
+
+                        Assert.Equal(1, timeSeriesEntries.Length);
+                        Assert.Equal(now.AddDays(-7), timeSeriesEntries[0].Timestamp);
+                        Assert.Equal(10, timeSeriesEntries[0].Value);
+
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+
+                        timeSeries = session.TimeSeriesFor(company, "StockPrice2");
+                        timeSeriesEntries = timeSeries.Get(from: now.AddDays(-5));
+
+                        Assert.Equal(1, timeSeriesEntries.Length);
+                        Assert.Equal(now.AddDays(-5), timeSeriesEntries[0].Timestamp);
+                        Assert.Equal(100, timeSeriesEntries[0].Value);
+
+                        Assert.Equal(0, session.Advanced.NumberOfRequests);
+                    }
+
+                    mre.Set();
+                });
+
+                using (var session = store.OpenSession())
+                {
+                    var company = new Company { Id = "companies/1", Name = "HR" };
+                    session.Store(company);
+
+                    session.TimeSeriesFor(company, "StockPrice").Append(now.AddDays(-7), 10);
+                    session.TimeSeriesFor(company, "StockPrice2").Append(now.AddDays(-5), 100);
+
+                    session.SaveChanges();
+                }
+
+                var result = WaitForValue(() => mre.Wait(TimeSpan.FromSeconds(500)), true);
+                if (result == false && t.IsFaulted)
+                    Assert.True(result, $"t.IsFaulted: {t.Exception}, {t.Exception?.InnerException}");
+
+                Assert.True(result);
             }
         }
 

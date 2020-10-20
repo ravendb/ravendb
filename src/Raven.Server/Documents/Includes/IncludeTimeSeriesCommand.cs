@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -27,6 +29,9 @@ namespace Raven.Server.Documents.Includes
 
         public void Fill(Document document)
         {
+            if (document == null)
+                return;
+
             string docId = document.Id;
 
             foreach (var kvp in _timeSeriesRangesBySourcePath)
@@ -41,9 +46,45 @@ namespace Raven.Server.Documents.Includes
                 if (Results.ContainsKey(docId))
                     continue;
 
-                var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value);
-
-                Results.Add(docId, rangeResults);
+                var count = kvp.Value.Count(x => x.Name == Constants.TimeSeries.All);
+                switch (count)
+                {
+                    case 0:
+                    {
+                        var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value);
+                        Results.Add(docId, rangeResults);
+                        break;
+                    }
+                    case 1:
+                    {
+                        // get all ts names
+                        var timeSeriesNames = new List<string>();
+                        TimeSeriesHandler.GetTimesSeriesNames(document, timeSeriesNames);
+                        var arr = new HashSet<AbstractTimeSeriesRange>();
+                        switch (kvp.Value.First())
+                        {
+                            case TimeSeriesRange r:
+                                foreach (var name in timeSeriesNames)
+                                    arr.Add(new TimeSeriesRange { Name = name, From = r.From, To = r.To });
+                                break;
+                            case TimeSeriesTimeRange tr:
+                                foreach (var name in timeSeriesNames)
+                                    arr.Add(new TimeSeriesTimeRange { Name = name, Time = tr.Time, Type = tr.Type });
+                                break;
+                            case TimeSeriesCountRange cr:
+                                foreach (var name in timeSeriesNames)
+                                    arr.Add(new TimeSeriesCountRange { Name = name, Count = cr.Count, Type = cr.Type });
+                                break;
+                            default:
+                                throw new NotSupportedException($"Not supported time series range type '{kvp.Value.First()?.GetType().Name}'.");
+                        }
+                        var rangeResults = GetTimeSeriesForDocument(docId, arr);
+                        Results.Add(docId, rangeResults);
+                        break;
+                    }
+                    default:
+                        throw new NotSupportedException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
+                }
             }
         }
 
@@ -59,7 +100,6 @@ namespace Raven.Server.Documents.Includes
                 switch (range)
                 {
                     case TimeSeriesRange r:
-
                         result = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, r.Name, r.From ?? DateTime.MinValue, r.To ?? DateTime.MaxValue, ref start, ref pageSize);
                         if (result == null)
                         {
@@ -85,6 +125,40 @@ namespace Raven.Server.Documents.Includes
                             }
 
                             result = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, tr.Name, from, to, ref start, ref pageSize);
+                        }
+                        break;
+                    case TimeSeriesCountRange cr:
+                        {
+                            var stats = GetTimeSeriesStats(docId, cr.Name);
+                            if (stats.Count == 0)
+                                continue;
+
+                            if (stats.Count <= cr.Count)
+                            {
+                                switch (cr.Type)
+                                {
+                                    case TimeSeriesRangeType.Last:
+                                        result = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref start, ref pageSize);
+                                        break;
+                                    default:
+                                        throw new NotSupportedException($"Not supported time series range type '{cr.Type}'.");
+                                }
+                            }
+                            else
+                            {
+                                switch (cr.Type)
+                                {
+                                    case TimeSeriesRangeType.Last:
+                                        //TODO: what if start point is bigger than int max value
+                                        var longStart = stats.Count - cr.Count;
+                                        Debug.Assert(longStart < int.MaxValue, "longStart < int.MaxValue");
+                                        var s = (int)longStart;
+                                        result = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize);
+                                        break;
+                                    default:
+                                        throw new NotSupportedException($"Not supported time series range type '{cr.Type}'.");
+                                }
+                            }
                         }
                         break;
                     default:

@@ -11,13 +11,13 @@ using Esprima;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
-using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -1087,7 +1087,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     switch (include)
                     {
                         case MethodExpression me:
-                            switch (QueryMethod.GetMethodType(me.Name.Value))
+                            var includeType = QueryMethod.GetMethodType(me.Name.Value);
+                            switch (includeType)
                             {
                                 case MethodType.Counters:
                                     QueryValidator.ValidateIncludeCounter(me.Arguments, q.QueryText, null);
@@ -1110,26 +1111,67 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                     switch (me.Arguments.Count)
                                     {
-                                        case 1: // include timeseries(last(7, 'months'))
+                                        case 1:
                                             {
-                                                var (type, time) = TimeSeriesHandler.ParseTime(me.Arguments[0], q.QueryText);
-                                                timeSeriesIncludes.AddTimeSeries(string.Empty, type, time);
+                                                if (!(me.Arguments[0] is MethodExpression methodExpression))
+                                                    throw new InvalidQueryException($"Expected to get include '{nameof(MethodType.TimeSeries)}' clause expression, but got: '{me.Arguments[0]}'.", q.QueryText);
+
+                                                switch (methodExpression.Arguments.Count)
+                                                {
+                                                    case 1:
+                                                        {
+                                                            // include timeseries(last(11))
+                                                            var (type, count) = TimeseriesIncludesHelper.ParseCount(methodExpression, q.QueryText);
+                                                            timeSeriesIncludes.AddTimeSeries(Client.Constants.TimeSeries.All, type, count);
+                                                            break;
+                                                        }
+                                                    case 2:
+                                                        {
+                                                            // include timeseries(last(600, 'seconds'))
+                                                            var (type, time) = TimeseriesIncludesHelper.ParseTime(methodExpression, q.QueryText);
+                                                            timeSeriesIncludes.AddTimeSeries(Client.Constants.TimeSeries.All, type, time);
+
+                                                            break;
+                                                        }
+                                                    default:
+                                                        throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", q.QueryText);
+                                                }
                                             }
                                             break;
                                         case 2: // include timeseries('Name', last(7, 'months'));
                                             {
-                                                var name = ExtractValueFromExpression(me.Arguments[0]);
-                                                var (type, time) = TimeSeriesHandler.ParseTime(me.Arguments[1], q.QueryText);
-                                                timeSeriesIncludes.AddTimeSeries(name, type, time);
+                                                if (!(me.Arguments[1] is MethodExpression methodExpression))
+                                                    throw new InvalidQueryException($"Expected to get include {nameof(MethodType.TimeSeries)} clause expression, but got: {me.Arguments[1]}.", q.QueryText);
+
+                                                string name = TimeseriesIncludesHelper.ExtractValueFromExpression(me.Arguments[0]);
+
+                                                switch (methodExpression.Arguments.Count)
+                                                {
+                                                    case 1:
+                                                        {
+                                                            // last count query
+                                                            var (type, count) = TimeseriesIncludesHelper.ParseCount(methodExpression, q.QueryText);
+                                                            timeSeriesIncludes.AddTimeSeries(name, type, count);
+                                                            break;
+                                                        }
+                                                    case 2:
+                                                        {
+                                                            // last time query
+                                                            var (type, time) = TimeseriesIncludesHelper.ParseTime(methodExpression, q.QueryText);
+                                                            timeSeriesIncludes.AddTimeSeries(name, type, time);
+                                                            break;
+                                                        }
+                                                    default:
+                                                        throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", q.QueryText);
+                                                }
                                             }
                                             break;
                                         default:
-                                            throw new NotSupportedException("TODO ppekrol");
+                                            throw new NotSupportedException($"Invalid number of arguments '{me.Arguments.Count}' in include {nameof(MethodType.TimeSeries)} clause expression.");
                                     }
-
                                     break;
                                 default:
-                                    throw new NotSupportedException("TODO ppekrol");
+                                    throw new NotSupportedException($"Subscription include expected to get {MethodType.Counters} or {nameof(MethodType.TimeSeries)} but got {includeType}");
                             }
                             break;
                         default:
@@ -1151,19 +1193,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         case ValueExpression ve:
                             (string memberPath, string _) = QueryMetadata.ParseExpressionPath(expression, ve.Token.Value, q.From.Alias);
                             return memberPath;
-                        default:
-                            throw new InvalidOperationException("Subscription only support include of fields, but got: " + expression);
-                    }
-                }
-
-                static string ExtractValueFromExpression(QueryExpression expression)
-                {
-                    switch (expression)
-                    {
-                        case FieldExpression fe:
-                            return fe.FieldValue;
-                        case ValueExpression ve:
-                            return ve.GetValue(null)?.ToString();
                         default:
                             throw new InvalidOperationException("Subscription only support include of fields, but got: " + expression);
                     }
