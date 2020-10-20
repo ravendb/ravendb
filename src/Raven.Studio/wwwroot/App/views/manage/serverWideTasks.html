@@ -24,7 +24,7 @@
                 <div>
                     <div class="hr-title" data-bind="if: serverWideExternalReplicationTasks().length">
                         <!-- todo - replace icon with icon-server-wide-external-replication -->
-                        <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-external-replication"></i>
+                        <h5 class="tasks-list-item external-replication no-text-transform"><i class="icon-server-wide-replication"></i>
                             <span>Server-Wide External Replication</span>
                             <span data-bind="text: ' (' + serverWideExternalReplicationTasks().length + ')'"></span>
                         </h5><hr>
@@ -32,7 +32,7 @@
                     <div data-bind="foreach: serverWideExternalReplicationTasks">
                         <div class="panel destination-item external-replication">
                             <div data-bind="attr: { class: 'state ' + badgeClass() }">
-                                <i class="icon-external-replication"></i>
+                                <i class="icon-server-wide-replication"></i>
                             </div>
                             <div class="padding destination-info flex-vertical">
                                 <div class="flex-horizontal">

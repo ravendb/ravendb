@@ -71,7 +71,7 @@ function getManageServerMenuItem() {
             moduleId: "viewmodels/manage/serverWideTasks",
             title: "Server-Wide Tasks",
             nav: true,
-            css: 'icon-tasks',
+            css: 'icon-server-wide-tasks',
             dynamicHash: appUrl.forServerWideTasks,
             disableWithReason: access.disableServerWideTasksMenuItem
         }),
