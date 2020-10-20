@@ -2104,6 +2104,95 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public async Task can_move_database_with_backup()
+        {
+            DoNotReuseServer();
+
+            var cluster = await CreateRaftCluster(2);
+            var databaseName = GetDatabaseName();
+            await CreateDatabaseInCluster(databaseName, 2, cluster.Nodes[0].WebUrl);
+
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = new DocumentStore
+            {
+                Urls = new[]
+                {
+                    cluster.Nodes[0].WebUrl,
+                    cluster.Nodes[1].WebUrl
+                },
+                Database = databaseName
+            }.Initialize())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *"
+                };
+
+                var backupTaskId = (await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                await store.Maintenance.SendAsync(new StartBackupOperation(true, backupTaskId));
+                var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+                var value = WaitForValue(() =>
+                {
+                    var status = store.Maintenance.Send(operation).Status;
+                    return status?.LastEtag;
+                }, 1);
+                Assert.Equal(1, value);
+
+                var responsibleNode = store.Maintenance.Send(operation).Status.NodeTag;
+
+                store.Maintenance.Server.Send(new DeleteDatabasesOperation(databaseName, hardDelete: true, fromNode: responsibleNode, timeToWaitForConfirmation: TimeSpan.FromSeconds(30)));
+                await WaitForDatabaseToBeDeleted(store, TimeSpan.FromSeconds(30));
+
+                var server = cluster.Nodes.FirstOrDefault(x => x.ServerStore.NodeTag == responsibleNode == false);
+                server.ServerStore.LicenseManager.LicenseStatus.Attributes["highlyAvailableTasks"] = false;
+
+                var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).ConfigureAwait(false);
+                var backupStatus = database.PeriodicBackupRunner.GetBackupStatus(backupTaskId);
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                config.TaskId = backupTaskId;
+                var newResponsibleNode = database.WhoseTaskIsIt(databaseRecord.Topology, config, backupStatus, keepTaskOnOriginalMemberNode: true);
+
+                Assert.Equal(server.ServerStore.NodeTag, newResponsibleNode);
+                Assert.NotEqual(responsibleNode, newResponsibleNode);
+            }
+
+            async Task<bool> WaitForDatabaseToBeDeleted(IDocumentStore store, TimeSpan timeout)
+            {
+                var pollingInterval = timeout.TotalSeconds < 1 ? timeout : TimeSpan.FromSeconds(1);
+                var sw = Stopwatch.StartNew();
+                while (true)
+                {
+                    var delayTask = Task.Delay(pollingInterval);
+                    var dbTask = store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    var doneTask = await Task.WhenAny(dbTask, delayTask);
+                    if (doneTask == delayTask)
+                    {
+                        if (sw.Elapsed > timeout)
+                        {
+                            return false;
+                        }
+                        continue;
+                    }
+                    var dbRecord = dbTask.Result;
+                    if (dbRecord == null || dbRecord.DeletionInProgress == null || dbRecord.DeletionInProgress.Count == 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
         private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;
