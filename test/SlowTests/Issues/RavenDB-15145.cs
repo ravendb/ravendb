@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task PullReplicationWithoutPrivatekey()
+        public async Task PullReplicationWithoutPrivateKey()
         {
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
