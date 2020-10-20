@@ -272,9 +272,6 @@ namespace Raven.Server.Documents.Replication
                 case UpdatePullReplicationAsHubCommand put:
                     DisposeRelatedPullReplication(put.Definition.Name, null /*all*/);
                     break;
-                case UpdatePullReplicationAsSinkCommand putSink:
-                    DisposeRelatedPullReplication(putSink.PullReplicationAsSink.HubName, null /*all*/);
-                    break;
                 case UnregisterReplicationHubAccessCommand del:
                     DisposeRelatedPullReplication(del.HubName, del.CertificateThumbprint);
                     break;
