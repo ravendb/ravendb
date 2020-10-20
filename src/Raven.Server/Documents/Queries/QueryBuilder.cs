@@ -714,6 +714,8 @@ namespace Raven.Server.Documents.Queries
                 fieldName = ExtractIndexFieldName(query, parameters, ft, metadata);
             else if (expression.Arguments[0] is ValueExpression vt)
                 fieldName = ExtractIndexFieldName(vt, metadata, parameters);
+            else if (expression.Arguments[0] is MethodExpression me && QueryMethod.GetMethodType(me.Name.Value) == MethodType.Id)
+                fieldName = QueryFieldName.DocumentId;
             else
                 throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
 
@@ -754,8 +756,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     firstQuery = t;
                     continue;
-            }
-
+                }
 
                 if (q == null)
                 {
