@@ -43,5 +43,19 @@ namespace Raven.Server.Documents.Queries.TimeSeries
                 Type = type
             });
         }
+
+        public void AddTimeSeries(string timeseries, TimeSeriesRangeType type, int count, string sourcePath = null)
+        {
+            var key = sourcePath ?? string.Empty;
+            if (TimeSeries.TryGetValue(key, out var hashSet) == false)
+                TimeSeries[key] = hashSet = new HashSet<AbstractTimeSeriesRange>(AbstractTimeSeriesRangeComparer.Instance);
+
+            hashSet.Add(new TimeSeriesCountRange
+            {
+                Name = timeseries,
+                Count = count,
+                Type = type
+            });
+        }
     }
 }

@@ -132,11 +132,29 @@ namespace Raven.Client.Documents.Commands
 
             if (_timeSeriesIncludes != null)
             {
-                foreach (var range in _timeSeriesIncludes.OfType<TimeSeriesRange>()) // TODO [ppekrol]
+                foreach (var tsInclude in _timeSeriesIncludes)
                 {
-                    pathBuilder.Append("&timeseries=").Append(Uri.EscapeDataString(range.Name))
-                        .Append("&from=").Append(range.From?.GetDefaultRavenFormat())
-                        .Append("&to=").Append(range.To?.GetDefaultRavenFormat());
+                    switch (tsInclude)
+                    {
+                        case TimeSeriesRange range:
+                            pathBuilder.Append("&timeseries=").Append(Uri.EscapeDataString(range.Name))
+                                .Append("&from=").Append(range.From?.GetDefaultRavenFormat())
+                                .Append("&to=").Append(range.To?.GetDefaultRavenFormat());
+                            break;
+                        case TimeSeriesTimeRange timeRange:
+                            pathBuilder.Append("&timeseriestime=").Append(Uri.EscapeDataString(timeRange.Name))
+                                .Append("&timeType=").Append(Uri.EscapeDataString(timeRange.Type.ToString()))
+                                .Append("&timeValue=").Append(Uri.EscapeDataString($"{timeRange.Time.Value}"))
+                                .Append("&timeUnit=").Append(Uri.EscapeDataString(timeRange.Time.Unit.ToString()));
+                            break;
+                        case TimeSeriesCountRange countRange:
+                            pathBuilder.Append("&timeseriescount=").Append(Uri.EscapeDataString(countRange.Name))
+                                .Append("&countType=").Append(Uri.EscapeDataString(countRange.Type.ToString()))
+                                .Append("&countValue=").Append(Uri.EscapeDataString($"{countRange.Count}"));
+                            break;
+                        default:
+                            throw new InvalidOperationException($"Unexpected TimesSeries range {tsInclude.GetType()}");
+                    }
                 }
             }
 

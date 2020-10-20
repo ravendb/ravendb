@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -30,11 +31,6 @@ namespace Raven.Client.Documents.Session.Loaders
         TBuilder IncludeAllCounters();
     }
 
-    public interface ITimeSeriesIncludeBuilder<T, out TBuilder>
-    {
-        TBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null);
-    }
-
     public interface ITimeSeriesIncludeBuilder
     {
         ITimeSeriesIncludeBuilder IncludeTags();
@@ -42,14 +38,30 @@ namespace Raven.Client.Documents.Session.Loaders
         ITimeSeriesIncludeBuilder IncludeDocument();
     }
 
-    public interface ISubscriptionTimeSeriesIncludeBuilder<T, out TBuilder>
+    public interface IAbstractTimeSeriesIncludeBuilder<T, out TBuilder>
     {
         TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time);
 
+        TBuilder IncludeTimeSeries(string name, TimeSeriesRangeType type, int count);
+
         TBuilder IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time);
 
+        TBuilder IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count);
+
         TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time);
+
+        TBuilder IncludeAllTimeSeries(TimeSeriesRangeType type, int count);
     }
+
+    public interface ITimeSeriesIncludeBuilder<T, out TBuilder> : IAbstractTimeSeriesIncludeBuilder<T, TBuilder>
+    {
+        TBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null);
+    }
+
+    public interface ISubscriptionTimeSeriesIncludeBuilder<T, out TBuilder> : IAbstractTimeSeriesIncludeBuilder<T, TBuilder>
+    {
+    }
+
     public interface ICompareExchangeValueIncludeBuilder<T, out TBuilder>
     {
         TBuilder IncludeCompareExchangeValue(string path);
@@ -306,20 +318,20 @@ namespace Raven.Client.Documents.Session.Loaders
 
         IIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime? from, DateTime? to)
         {
-            IncludeTimeSeries(string.Empty, name, from, to);
+            IncludeTimeSeriesFromTo(string.Empty, name, from, to);
             return this;
         }
 
         IQueryIncludeBuilder<T> ITimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, DateTime? from, DateTime? to)
         {
-            IncludeTimeSeries(string.Empty, name, from, to);
+            IncludeTimeSeriesFromTo(string.Empty, name, from, to);
             return this;
         }
 
         IQueryIncludeBuilder<T> IQueryIncludeBuilder<T>.IncludeTimeSeries(Expression<Func<T, string>> path, string name, DateTime from, DateTime to)
         {
             WithAlias(path);
-            IncludeTimeSeries(path.ToPropertyPath(), name, from, to);
+            IncludeTimeSeriesFromTo(path.ToPropertyPath(), name, from, to);
             return this;
         }
 
@@ -373,33 +385,118 @@ namespace Raven.Client.Documents.Session.Loaders
 
         public ITimeSeriesIncludeBuilder IncludeTimeSeries(string name, DateTime? from = null, DateTime? to = null)
         {
-            IncludeTimeSeries(string.Empty, name, from, to);
+            IncludeTimeSeriesFromTo(string.Empty, name, from, to);
             return this;
         }
 
-
-        ISubscriptionIncludeBuilder<T> ISubscriptionTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
         {
-            IncludeTimeSeries(string.Empty, name, type, time);
+            IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
             return this;
         }
 
-        ISubscriptionIncludeBuilder<T> ISubscriptionTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, int count)
         {
-            if (names is null)
-                throw new ArgumentNullException(nameof(names));
-
-            foreach (var name in names)
-                IncludeTimeSeries(string.Empty, name, type, time);
-
+            IncludeTimeSeriesByRangeTypeAndCount(string.Empty, name, type, count);
             return this;
         }
 
-        ISubscriptionIncludeBuilder<T> ISubscriptionTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
         {
-            IncludeTimeSeries(string.Empty, string.Empty, type, time);
+            IncludeArrayOfTimeSeriesByRangeTypeAndTime(names, type, time);
             return this;
         }
+
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count)
+        {
+            IncludeArrayOfTimeSeriesByRangeTypeAndCount(names, type, count);
+            return this;
+        }
+
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeTimeSeriesByRangeTypeAndTime(string.Empty, Constants.TimeSeries.All, type, time);
+            return this;
+        }
+
+        IIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, int count)
+        {
+            IncludeTimeSeriesByRangeTypeAndCount(string.Empty, Constants.TimeSeries.All, type, count);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, int count)
+        {
+            IncludeTimeSeriesByRangeTypeAndCount(string.Empty, name, type, count);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeArrayOfTimeSeriesByRangeTypeAndTime(names, type, time);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count)
+        {
+            IncludeArrayOfTimeSeriesByRangeTypeAndCount(names, type, count);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeTimeSeriesByRangeTypeAndTime(string.Empty, Constants.TimeSeries.All, type, time);
+            return this;
+        }
+
+        IQueryIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, IQueryIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, int count)
+        {
+            IncludeTimeSeriesByRangeTypeAndCount(string.Empty, Constants.TimeSeries.All, type, count);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string name, TimeSeriesRangeType type, int count)
+        {
+            IncludeTimeSeriesByRangeTypeAndCount(string.Empty, name, type, count);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeArrayOfTimeSeriesByRangeTypeAndTime(names, type, time);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeTimeSeries(string[] names, TimeSeriesRangeType type, int count)
+        {
+            IncludeArrayOfTimeSeriesByRangeTypeAndCount(names, type, count);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, TimeValue time)
+        {
+            IncludeTimeSeriesByRangeTypeAndTime(string.Empty, Constants.TimeSeries.All, type, time);
+            return this;
+        }
+
+        ISubscriptionIncludeBuilder<T> IAbstractTimeSeriesIncludeBuilder<T, ISubscriptionIncludeBuilder<T>>.IncludeAllTimeSeries(TimeSeriesRangeType type, int count)
+        {
+            IncludeTimeSeriesByRangeTypeAndCount(string.Empty, Constants.TimeSeries.All, type, count);
+            return this;
+        }
+
         private void IncludeDocuments(string path)
         {
             if (DocumentsToInclude == null)
@@ -501,10 +598,9 @@ namespace Raven.Client.Documents.Session.Loaders
                 Alias = path.Parameters[0].Name;
         }
 
-        private void IncludeTimeSeries(string alias, string name, DateTime? from, DateTime? to)
+        private void IncludeTimeSeriesFromTo(string alias, string name, DateTime? from, DateTime? to)
         {
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentNullException(nameof(name));
+            AssertValid(alias, name);
 
             if (TimeSeriesToIncludeBySourceAlias == null)
             {
@@ -524,9 +620,10 @@ namespace Raven.Client.Documents.Session.Loaders
             });
         }
 
-        private void IncludeTimeSeries(string alias, string name, TimeSeriesRangeType type, TimeValue time)
+        private void IncludeTimeSeriesByRangeTypeAndTime(string alias, string name, TimeSeriesRangeType type, TimeValue time)
         {
-            AssertValid(name, type, time);
+            AssertValid(alias, name);
+            AssertValidType(type, time);
 
             if (TimeSeriesToIncludeBySourceAlias == null)
             {
@@ -545,21 +642,20 @@ namespace Raven.Client.Documents.Session.Loaders
                 Type = type
             });
 
-            static void AssertValid(string name, TimeSeriesRangeType type, TimeValue time)
+            static void AssertValidType(TimeSeriesRangeType type, TimeValue time)
             {
-                if (name is null)
-                    throw new ArgumentNullException(nameof(name));
-
                 switch (type)
                 {
                     case TimeSeriesRangeType.None:
-                        if (time == default)
-                            return;
-
                         throw new InvalidOperationException($"Time range type cannot be set to '{nameof(TimeSeriesRangeType.None)}' when time is specified.");
                     case TimeSeriesRangeType.Last:
                         if (time != default)
+                        {
+                            if (time.Value <= 0)
+                                throw new InvalidOperationException($"Time range type cannot be set to '{nameof(TimeSeriesRangeType.Last)}' when time is negative or zero.");
+
                             return;
+                        }
 
                         throw new InvalidOperationException($"Time range type cannot be set to '{nameof(TimeSeriesRangeType.Last)}' when time is not specified.");
                     default:
@@ -567,6 +663,78 @@ namespace Raven.Client.Documents.Session.Loaders
                 };
             }
         }
+
+        private void IncludeTimeSeriesByRangeTypeAndCount(string alias, string name, TimeSeriesRangeType type, int count)
+        {
+            AssertValid(alias, name);
+            AssertValidTypeAndCount(type, count);
+
+            if (TimeSeriesToIncludeBySourceAlias == null)
+            {
+                TimeSeriesToIncludeBySourceAlias = new Dictionary<string, HashSet<AbstractTimeSeriesRange>>();
+            }
+
+            if (TimeSeriesToIncludeBySourceAlias.TryGetValue(alias, out var hashSet) == false)
+            {
+                TimeSeriesToIncludeBySourceAlias[alias] = hashSet = new HashSet<AbstractTimeSeriesRange>(comparer: AbstractTimeSeriesRangeComparer.Instance);
+            }
+
+            hashSet.Add(new TimeSeriesCountRange
+            {
+                Name = name,
+                Count = count,
+                Type = type
+            });
+
+            static void AssertValidTypeAndCount(TimeSeriesRangeType type, int count)
+            {
+                switch (type)
+                {
+                    case TimeSeriesRangeType.None:
+                        throw new InvalidOperationException($"Time range type cannot be set to '{nameof(TimeSeriesRangeType.None)}' when count is specified.");
+                    case TimeSeriesRangeType.Last:
+                        if (count <= 0)
+                            throw new ArgumentException(nameof(count) + " have to be positive.");
+                        break;
+                    default:
+                        throw new NotSupportedException($"Not supported time range type '{type}'.");
+                };
+            }
+        }
+
+        private void IncludeArrayOfTimeSeriesByRangeTypeAndTime(string[] names, TimeSeriesRangeType type, TimeValue time)
+        {
+            if (names is null)
+                throw new ArgumentNullException(nameof(names));
+
+            foreach (var name in names)
+                IncludeTimeSeriesByRangeTypeAndTime(string.Empty, name, type, time);
+        }
+
+        private void IncludeArrayOfTimeSeriesByRangeTypeAndCount(string[] names, TimeSeriesRangeType type, int count)
+        {
+            if (names is null)
+                throw new ArgumentNullException(nameof(names));
+
+            foreach (var name in names)
+                IncludeTimeSeriesByRangeTypeAndCount(string.Empty, name, type, count);
+        }
+
+        private void AssertValid(string alias, string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name));
+
+            if (TimeSeriesToIncludeBySourceAlias != null && TimeSeriesToIncludeBySourceAlias.TryGetValue(alias, out var hashSet2) && hashSet2.Count > 0)
+            {
+                if (name == Constants.TimeSeries.All)
+                    throw new InvalidOperationException("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.");
+
+                if (hashSet2.Any(x => x.Name == Constants.TimeSeries.All))
+                    throw new InvalidOperationException("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.");
+            }
+        }
+
     }
 
     internal class AbstractTimeSeriesRangeComparer : IEqualityComparer<AbstractTimeSeriesRange>

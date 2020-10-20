@@ -14,6 +14,12 @@ namespace Raven.Client.Documents.Operations.TimeSeries
         public TimeSeriesRangeType Type;
     }
 
+    internal class TimeSeriesCountRange : AbstractTimeSeriesRange
+    {
+        public int Count;
+        public TimeSeriesRangeType Type;
+    }
+
     public abstract class AbstractTimeSeriesRange
     {
         public string Name;

@@ -12,9 +12,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
-using Raven.Client.Documents.Session.Loaders;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Counters;
 using Raven.Server.Documents.Queries.Explanation;
@@ -770,45 +770,106 @@ namespace Raven.Server.Documents.Queries
                 return;
             }
 
-            Debug.Assert(expression.Arguments.Count - start == 3);
-
-            var args = new string[3];
-
-            for (var index = start; index < expression.Arguments.Count; index++)
+            switch (expression.Arguments.Count - start)
             {
-                if (!(expression.Arguments[index] is ValueExpression vt))
-                    continue;
-                var argIndex = index - start;
-                var arg = QueryBuilder.GetValue(Query, this, parameters, vt);
-
-                // name arg
-                if (argIndex == 0)
+                case 3:
                 {
-                    if (arg.Type != ValueTokenType.String)
-                        throw new InvalidQueryException("Name parameters of method `timeseries` must be of type `string``, " +
-                                                       $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
-                    args[argIndex] = arg.Value.ToString();
-                    continue;
-                }
+                    var args = new string[3];
 
-                // from/to args
-                switch (arg.Type)
-                {
-                    case ValueTokenType.String:
-                        args[argIndex] = arg.Value.ToString();
-                        break;
-                    case ValueTokenType.Null:
-                        args[argIndex] = null;
-                        break;
-                    default:
-                        throw new InvalidQueryException("From/To parameters of method of `timeseries` must be of type `string` or `null`, " +
-                                                        $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters); 
+                    for (var index = start; index < expression.Arguments.Count; index++)
+                    {
+                        if (!(expression.Arguments[index] is ValueExpression vt))
+                            continue;
+                        var argIndex = index - start;
+                        var arg = QueryBuilder.GetValue(Query, this, parameters, vt);
+
+                        // name arg
+                        if (argIndex == 0)
+                        {
+                            if (arg.Type != ValueTokenType.String)
+                                throw new InvalidQueryException("Name parameters of method `timeseries` must be of type `string``, " +
+                                                                $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
+                            args[argIndex] = arg.Value.ToString();
+                            continue;
+                        }
+
+                        // from/to args
+                        switch (arg.Type)
+                        {
+                            case ValueTokenType.String:
+                                args[argIndex] = arg.Value.ToString();
+                                break;
+                            case ValueTokenType.Null:
+                                args[argIndex] = null;
+                                break;
+                            default:
+                                throw new InvalidQueryException("From/To parameters of method of `timeseries` must be of type `string` or `null`, " +
+                                                                $"but got `{arg.Value}` of type `{arg.Type}`", QueryText, parameters);
+                        }
+                    }
+                    timeSeriesIncludes.AddTimeSeries(args[0], args[1], args[2], alias);
+                    break;
                 }
+                case 2:
+                    {
+                        string name = TimeseriesIncludesHelper.ExtractValueFromExpression(expression.Arguments[0]);
+
+                        if (!(expression.Arguments[1] is MethodExpression methodExpression))
+                            throw new InvalidQueryException($"Expected to get include {nameof(MethodType.TimeSeries)} clause expression, but got: {expression}.", Query.QueryText, parameters);
+
+                        switch (methodExpression.Arguments.Count)
+                        {
+                            case 1:
+                                {
+                                    // last count query
+                                    var (type, count) = TimeseriesIncludesHelper.ParseCount(methodExpression, Query.QueryText);
+                                    timeSeriesIncludes.AddTimeSeries(name, type, count, alias);
+                                    break;
+                                }
+                            case 2:
+                                {
+                                    // last time query
+                                    var (type, time) = TimeseriesIncludesHelper.ParseTime(methodExpression, Query.QueryText);
+                                    timeSeriesIncludes.AddTimeSeries(name, type, time, alias);
+                                    break;
+                                }
+                            default:
+                                throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", Query.QueryText, parameters);
+                        }
+
+                        break;
+                    }
+                case 1:
+                    {
+                        if (!(expression.Arguments[0] is MethodExpression methodExpression))
+                            throw new InvalidQueryException($"Expected to get include '{nameof(MethodType.TimeSeries)}' clause expression, but got: '{expression}'.", Query.QueryText, parameters);
+
+                        switch (methodExpression.Arguments.Count)
+                        {
+                            case 1:
+                                {
+                                    // include timeseries(last(11))
+                                    var (type, count) = TimeseriesIncludesHelper.ParseCount(methodExpression, Query.QueryText);
+                                    timeSeriesIncludes.AddTimeSeries(Constants.TimeSeries.All, type, count, alias);
+                                    break;
+                                }
+                            case 2:
+                                {
+                                    // include timeseries(last(600, 'seconds'))
+                                    var (type, time) = TimeseriesIncludesHelper.ParseTime(methodExpression, Query.QueryText);
+                                    timeSeriesIncludes.AddTimeSeries(Constants.TimeSeries.All, type, time);
+
+                                    break;
+                                }
+                            default:
+                                throw new InvalidQueryException($"Got invalid arguments count '{methodExpression.Arguments.Count}' in '{methodExpression.Name}' method.", Query.QueryText, parameters);
+                        }
+                        break;
+                    }
+                default:
+                    throw new InvalidQueryException($"Got invalid arguments count '{expression.Arguments.Count}' in '{expression.Name}' method.", Query.QueryText, parameters);
             }
-
-            timeSeriesIncludes.AddTimeSeries(args[0], args[1], args[2], alias);
         }
-
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
         {

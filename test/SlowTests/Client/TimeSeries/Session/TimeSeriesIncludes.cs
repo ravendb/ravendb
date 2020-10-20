@@ -1,14 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Basic.Entities;
+using Raven.Client;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
-using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -360,7 +362,35 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(1, ranges.Count);
                     Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
                     Assert.Equal(baseline.AddMinutes(50), ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
+                    
+                    // evict just the document
+                    sessionOperations.DocumentsByEntity.Evict(user);
+                    sessionOperations.DocumentsById.Remove(documentId);
 
+                    // should go to server to get range [50, ∞]
+                    // and merge the result with existing range [0, 50] into single range [0, ∞]
+
+                    user = session.Load<User>(
+                        documentId,
+                        i => i.IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)));
+
+                    Assert.Equal(8, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    vals = session.TimeSeriesFor(documentId, "Heartrate")
+                        .Get(baseline.AddMinutes(50))
+                        .ToList();
+
+                    Assert.Equal(8, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(60, vals.Count);
+                    Assert.Equal(baseline.AddMinutes(50), vals[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(baseline.AddMinutes(59).AddSeconds(50), vals[59].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, ranges.Count);
+                    Assert.Equal(baseline.AddMinutes(0), ranges[0].From, RavenTestHelper.DateTimeComparer.Instance);
+                    Assert.Equal(DateTime.MaxValue, ranges[0].To, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -2089,6 +2119,1009 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.Equal(67d, vals[0].Values[0]);
                     Assert.Equal(baseline.AddMinutes(30).AddSeconds(-10), vals[89].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
 
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AsyncSessionLoadWithIncludeTimeSeries_LastRangeByTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(-5), new[] { 64d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(-10), new[] { 65d }, "watches/fitbit");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        i => i.IncludeDocuments("Company")
+                            .IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var values = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(3, values.Count);
+
+                    Assert.Equal(1, values[0].Values.Length);
+                    Assert.Equal(65d, values[0].Values[0]);
+                    Assert.Equal("watches/fitbit", values[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(-10), values[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, values[1].Values.Length);
+                    Assert.Equal(64d, values[1].Values[0]);
+                    Assert.Equal("watches/apple", values[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(-5), values[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, values[2].Values.Length);
+                    Assert.Equal(67d, values[2].Values[0]);
+                    Assert.Equal("watches/apple", values[2].Tag);
+                    Assert.Equal(baseline, values[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanLoadWithIncludeTimeSeriesRange_ByLastTimeAndFromTo()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(-5), new[] { 64d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(-10), new[] { 65d }, "watches/fitbit");
+                    var tsf2 = session.TimeSeriesFor("orders/1-A", "Speedrate");
+                    tsf2.Append(baseline.AddMinutes(-15), new[] { 6d }, "watches/bitfit");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        i => i.IncludeDocuments("Company")
+                            .IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))
+                            .IncludeTimeSeries("Speedrate", DateTime.MinValue, baseline.AddMinutes(-11))
+                        );
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var values = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(3, values.Count);
+
+                    Assert.Equal(1, values[0].Values.Length);
+                    Assert.Equal(65d, values[0].Values[0]);
+                    Assert.Equal("watches/fitbit", values[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(-10), values[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, values[1].Values.Length);
+                    Assert.Equal(64d, values[1].Values[0]);
+                    Assert.Equal("watches/apple", values[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(-5), values[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, values[2].Values.Length);
+                    Assert.Equal(67d, values[2].Values[0]);
+                    Assert.Equal("watches/apple", values[2].Tag);
+                    Assert.Equal(baseline, values[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    // should not go to server
+                    var values2 = (await session.TimeSeriesFor(order, "Speedrate")
+                            .GetAsync(from: baseline.AddMinutes(-15), to: baseline.AddMinutes(-11)))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal(1, values2.Count);
+
+                    Assert.Equal(1, values2[0].Values.Length);
+                    Assert.Equal(6d, values2[0].Values[0]);
+                    Assert.Equal("watches/bitfit", values2[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(-15), values2[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanLoadAsyncWithIncludeTimeSeries_LastRange_ByCount()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.AddHours(12);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/fitbit");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        i => i.IncludeDocuments("Company").IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var values = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(11, values.Count);
+
+                    for (int i = 0; i < values.Count; i++)
+                    {
+                        Assert.Equal(1, values[i].Values.Length);
+                        Assert.Equal((double)(values.Count - 1 - i), values[i].Values[0]);
+                        Assert.Equal("watches/fitbit", values[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(values.Count - 1 - i)), values[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanLoadAsyncWithInclude_AllTimeSeries_LastRange_ByTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/bitfit");
+                    }
+                    var tsf2 = session.TimeSeriesFor("orders/1-A", "Speedrate");
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf2.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/fitbit");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        i => i.IncludeDocuments("Company")
+                            .IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var heartrateValues = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(11, heartrateValues.Count);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var speedrateValues = (await session.TimeSeriesFor(order, "Speedrate")
+                            .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(11, speedrateValues.Count);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+
+                    for (int i = 0; i < heartrateValues.Count; i++)
+                    {
+                        Assert.Equal(1, heartrateValues[i].Values.Length);
+                        Assert.Equal((double)(heartrateValues.Count - 1 - i), heartrateValues[i].Values[0]);
+                        Assert.Equal("watches/bitfit", heartrateValues[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(heartrateValues.Count - 1 - i)), heartrateValues[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+
+                    for (int i = 0; i < speedrateValues.Count; i++)
+                    {
+                        Assert.Equal(1, speedrateValues[i].Values.Length);
+                        Assert.Equal((double)(speedrateValues.Count - 1 - i), speedrateValues[i].Values[0]);
+                        Assert.Equal("watches/fitbit", speedrateValues[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(speedrateValues.Count - 1 - i)), speedrateValues[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanLoadAsyncWithInclude_AllTimeSeries_LastRange_ByCount()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today.AddHours(3);
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/bitfit");
+                    }
+                    var tsf2 = session.TimeSeriesFor("orders/1-A", "Speedrate");
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf2.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/fitbit");
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var order = await session.LoadAsync<Order>(
+                        "orders/1-A",
+                        i => i.IncludeDocuments("Company")
+                            .IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11));
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var heartrateValues = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(11, heartrateValues.Count);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    var speedrateValues = (await session.TimeSeriesFor(order, "Speedrate")
+                            .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(11, speedrateValues.Count);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+
+                    for (int i = 0; i < heartrateValues.Count; i++)
+                    {
+                        Assert.Equal(1, heartrateValues[i].Values.Length);
+                        Assert.Equal((double)(heartrateValues.Count - 1 - i), heartrateValues[i].Values[0]);
+                        Assert.Equal("watches/bitfit", heartrateValues[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(heartrateValues.Count - 1 - i)), heartrateValues[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+
+                    for (int i = 0; i < speedrateValues.Count; i++)
+                    {
+                        Assert.Equal(1, speedrateValues[i].Values.Length);
+                        Assert.Equal((double)(speedrateValues.Count - 1 - i), speedrateValues[i].Values[0]);
+                        Assert.Equal("watches/fitbit", speedrateValues[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(speedrateValues.Count - 1 - i)), speedrateValues[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrowOnIncludeAllTimeSeriesAfterIncludingTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A", 
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.MaxValue).IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.MaxValue).IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.MaxValue).IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11).IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11).IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrowOnIncludingTimeSeriesAfterIncludeAllTimeSeries()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.MaxValue).IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.MaxValue)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.MaxValue)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11)));
+
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    e =  Assert.Throws<InvalidOperationException>(() => session.Query<User>()
+                        .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))));
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = Assert.Throws<InvalidOperationException>(() => session.Query<User>()
+                        .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.MaxValue).IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11)));
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeAllTimeSeries' after using 'IncludeTimeSeries' or 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = Assert.Throws<InvalidOperationException>(() => session.Query<User>()
+                        .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.MaxValue)));
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = Assert.Throws<InvalidOperationException>(() => session.Query<User>()
+                        .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.MaxValue)));
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = Assert.Throws<InvalidOperationException>(() => session.Query<User>()
+                        .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11)));
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    e = Assert.Throws<InvalidOperationException>(() => session.Query<User>()
+                        .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11).IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11)));
+                    Assert.StartsWith("IIncludeBuilder : Cannot use 'IncludeTimeSeries' or 'IncludeAllTimeSeries' after using 'IncludeAllTimeSeries'.", e.Message);
+
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrowOnIncludingTimeSeriesWithLastRangeZeroOrNegativeTime()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.MinValue)));
+
+                    Assert.StartsWith("Time range type cannot be set to 'Last' when time is negative or zero.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.Zero)));
+
+                    Assert.StartsWith("Time range type cannot be set to 'Last' when time is not specified.", e.Message);
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrowOnIncludingTimeSeriesWithNoneRange()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.None, TimeValue.FromMinutes(-30))));
+
+                    Assert.StartsWith("Time range type cannot be set to 'None' when time is specified.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                         async () => await session.LoadAsync<Order>("orders/1-A",
+                             i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.None, TimeValue.Zero)));
+
+                    Assert.StartsWith("Time range type cannot be set to 'None' when time is specified.", e.Message);
+
+                   e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.None, count: 1024)));
+
+                    Assert.StartsWith("Time range type cannot be set to 'None' when count is specified.", e.Message);
+
+                    e = await Assert.ThrowsAsync<InvalidOperationException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.None, TimeValue.FromMinutes(30))));
+
+                    Assert.StartsWith("Time range type cannot be set to 'None' when time is specified.", e.Message);
+                    Assert.Equal(0, session.Advanced.NumberOfRequests);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ShouldThrowOnIncludingTimeSeriesWithNegativeCount()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var e = await Assert.ThrowsAsync<ArgumentException>(
+                        async () => await session.LoadAsync<Order>("orders/1-A",
+                            i => i.IncludeDocuments("Company").IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: -1024)));
+
+                    Assert.StartsWith("count have to be positive.", e.Message);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanLoadAsyncWithInclude_ArrayOfTimeSeriesLastRange(bool byTime)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Company { Name = "HR" }, "companies/1-A");
+                    await session.StoreAsync(new Order { Company = "companies/1-A" }, "orders/1-A");
+                    var tsf = session.TimeSeriesFor("orders/1-A", "Heartrate");
+                    tsf.Append(baseline, new[] { 67d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(-5), new[] { 64d }, "watches/apple");
+                    tsf.Append(baseline.AddMinutes(-10), new[] { 65d }, "watches/fitbit");
+                    var tsf2 = session.TimeSeriesFor("orders/1-A", "Speedrate");
+                    tsf2.Append(baseline.AddMinutes(-15), new[] { 6d }, "watches/bitfit");
+                    tsf2.Append(baseline.AddMinutes(-10), new[] { 7d }, "watches/bitfit");
+                    tsf2.Append(baseline.AddMinutes(-9), new[] { 7d }, "watches/bitfit");
+                    tsf2.Append(baseline.AddMinutes(-8), new[] { 6d }, "watches/bitfit");
+
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    Order order = null;
+                    if (byTime)
+                    {
+                        order = await session.LoadAsync<Order>(
+                            "orders/1-A",
+                            i => i.IncludeDocuments("Company")
+                                .IncludeTimeSeries(new[] { "Heartrate", "Speedrate" }, TimeSeriesRangeType.Last, TimeValue.FromMinutes(10))
+                        );
+                    }
+                    else
+                    {
+                        order = await session.LoadAsync<Order>(
+                            "orders/1-A",
+                            i => i.IncludeDocuments("Company")
+                                .IncludeTimeSeries(new[] { "Heartrate", "Speedrate" }, TimeSeriesRangeType.Last, count: 3)
+                        );
+                    }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    // should not go to server
+                    var company = await session.LoadAsync<Company>(order.Company);
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("HR", company.Name);
+
+                    // should not go to server
+                    var heartrateValues = (await session.TimeSeriesFor(order, "Heartrate")
+                        .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, heartrateValues.Count);
+
+                    Assert.Equal(1, heartrateValues[0].Values.Length);
+                    Assert.Equal(65d, heartrateValues[0].Values[0]);
+                    Assert.Equal("watches/fitbit", heartrateValues[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(-10), heartrateValues[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, heartrateValues[1].Values.Length);
+                    Assert.Equal(64d, heartrateValues[1].Values[0]);
+                    Assert.Equal("watches/apple", heartrateValues[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(-5), heartrateValues[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, heartrateValues[2].Values.Length);
+                    Assert.Equal(67d, heartrateValues[2].Values[0]);
+                    Assert.Equal("watches/apple", heartrateValues[2].Tag);
+                    Assert.Equal(baseline, heartrateValues[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    // should not go to server
+                    var speedrateValues = (await session.TimeSeriesFor(order, "Speedrate")
+                            .GetAsync(from: baseline.AddMinutes(-10)))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(3, speedrateValues.Count);
+
+                    Assert.Equal(1, speedrateValues[0].Values.Length);
+                    Assert.Equal(7d, speedrateValues[0].Values[0]);
+                    Assert.Equal("watches/bitfit", speedrateValues[0].Tag);
+                    Assert.Equal(baseline.AddMinutes(-10), speedrateValues[0].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, speedrateValues[1].Values.Length);
+                    Assert.Equal(7d, speedrateValues[1].Values[0]);
+                    Assert.Equal("watches/bitfit", speedrateValues[1].Tag);
+                    Assert.Equal(baseline.AddMinutes(-9), speedrateValues[1].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+
+                    Assert.Equal(1, speedrateValues[2].Values.Length);
+                    Assert.Equal(6d, speedrateValues[2].Values[0]);
+                    Assert.Equal("watches/bitfit", speedrateValues[2].Tag);
+                    Assert.Equal(baseline.AddMinutes(-8), speedrateValues[2].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        public void CanQueryWithIncludeTimeSeries_LastRange(bool byTime, bool raw)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    List<User> result = null;
+                    if (byTime)
+                    {
+                        if (raw)
+                        {
+                            IRawDocumentQuery<User> query = session.Advanced.RawQuery<User>("from Users include timeseries('Heartrate', last(600, 'seconds'))");
+                            result = query.ToList();
+                        }
+                        else
+                        {
+                            var query = session.Query<User>().Include(i => i.IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)));
+                            result = query.ToList();
+                        }
+                    }
+                    else
+                    {
+                        if (raw)
+                        {
+                            IRawDocumentQuery<User> query = session.Advanced.RawQuery<User>("from Users include timeseries('Heartrate', last(11))");
+                            result = query.ToList();
+                        }
+                        else
+                        {
+                            var query = session.Query<User>()
+                                .Include(i => i.IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: 11));
+                            result = query.ToList();
+                        }
+                    }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(from: baseline.AddMinutes(-10))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(11, vals.Count);
+                    for (int i = 0; i < vals.Count; i++)
+                    {
+                        Assert.Equal(1, vals[i].Values.Length);
+                        Assert.Equal((double)(vals.Count - 1 - i), vals[i].Values[0]);
+                        Assert.Equal("watches/fitbit", vals[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(vals.Count - 1 - i)), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        public void CanQueryWithInclude_ArrayOfTimeSeries_LastRange(bool byTime, bool raw)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/fitbit");
+                    }
+
+                    var tsf2 = session.TimeSeriesFor("users/ayende", "Speedrate");
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf2.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/bitfit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    List<User> result;
+                    if (byTime)
+                    {
+                        if (raw)
+                        {
+                            var query = session.Advanced.RawQuery<User>("from Users include timeseries('Heartrate', last(600, 'seconds')),timeseries('Speedrate', last(600, 'seconds'))");
+                            result = query.ToList();
+                        }
+                        else
+                        {
+                            var query = session.Query<User>()
+                                .Include(i => i.IncludeTimeSeries(new[] { "Heartrate", "Speedrate" }, TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)));
+                            result = query.ToList();
+                        }
+                    }
+                    else
+                    {
+                        if (raw)
+                        {
+                            var query = session.Advanced.RawQuery<User>("from Users include timeseries('Heartrate', last(11)),timeseries('Speedrate', last(11))");
+                            result = query.ToList();
+                        }
+                        else
+                        {
+                            var query = session.Query<User>()
+                                .Include(i => i.IncludeTimeSeries(new[] { "Heartrate", "Speedrate" }, TimeSeriesRangeType.Last, count: 11));
+                            result = query.ToList();
+                        }
+                    }
+
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+                    var heartrateVals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(from: baseline.AddMinutes(-10))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(11, heartrateVals.Count);
+                    for (int i = 0; i < heartrateVals.Count; i++)
+                    {
+                        Assert.Equal(1, heartrateVals[i].Values.Length);
+                        Assert.Equal((double)(heartrateVals.Count - 1 - i), heartrateVals[i].Values[0]);
+                        Assert.Equal("watches/fitbit", heartrateVals[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(heartrateVals.Count - 1 - i)), heartrateVals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+
+                    // should not go to server
+                    var vals = session.TimeSeriesFor("users/ayende", "Speedrate")
+                        .Get(from: baseline.AddMinutes(-10))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(11, vals.Count);
+                    for (int i = 0; i < vals.Count; i++)
+                    {
+                        Assert.Equal(1, vals[i].Values.Length);
+                        Assert.Equal((double)(vals.Count - 1 - i), vals[i].Values[0]);
+                        Assert.Equal("watches/bitfit", vals[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(vals.Count - 1 - i)), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+                }
+            }
+        }
+        [Theory]
+        [InlineData(true, true, true)]
+        [InlineData(true, true, false)]
+        [InlineData(true, false, true)]
+        [InlineData(true, false, false)]
+        [InlineData(false, true, true)]
+        [InlineData(false, true, false)]
+        [InlineData(false, false, true)]
+        [InlineData(false, false, false)]
+        public void CanQueryWithInclude_AllTimeSeries_LastRange(bool byTime, bool raw1, bool raw2)
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = byTime ? DateTime.UtcNow.EnsureMilliseconds() : DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/fitbit");
+                    }
+
+                    var tsf2 = session.TimeSeriesFor("users/ayende", "Speedrate");
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf2.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/bitfit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    List<User> result;
+                    if (byTime)
+                    {
+                        if (raw1)
+                        {
+                            var query = session.Advanced.RawQuery<User>("from Users include timeseries(last(600, 'seconds'))");
+                            result = query.ToList();
+                        } 
+                        else if (raw2)
+                        {
+                            var query = session.Advanced.RawQuery<User>($"from Users include timeseries('{Constants.TimeSeries.All}', last(600, 'seconds'))");
+                            result = query.ToList();
+                        }
+                        else
+                        {
+                            var query = session.Query<User>()
+                                .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, TimeValue.FromMinutes(10)));
+                            result = query.ToList();
+                        }
+                    }
+                    else
+                    {
+                        if (raw1)
+                        {
+                            var query = session.Advanced.RawQuery<User>("from Users include timeseries(last(11))");
+                            result = query.ToList();
+                        }
+                        else if (raw2)
+                        {
+                            var query = session.Advanced.RawQuery<User>($"from Users include timeseries('{Constants.TimeSeries.All}', last(11))");
+                            result = query.ToList();
+                        }
+                        else
+                        {
+                            var query = session.Query<User>()
+                                .Include(i => i.IncludeAllTimeSeries(TimeSeriesRangeType.Last, count: 11));
+                            result = query.ToList();
+                        }
+                    }
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+                    var heartrateVals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(from: baseline.AddMinutes(-10))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(11, heartrateVals.Count);
+                    for (int i = 0; i < heartrateVals.Count; i++)
+                    {
+                        Assert.Equal(1, heartrateVals[i].Values.Length);
+                        Assert.Equal((double)(heartrateVals.Count - 1 - i), heartrateVals[i].Values[0]);
+                        Assert.Equal("watches/fitbit", heartrateVals[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(heartrateVals.Count - 1 - i)), heartrateVals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+
+                    // should not go to server
+                    var vals = session.TimeSeriesFor("users/ayende", "Speedrate")
+                        .Get(from: baseline.AddMinutes(-10))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(11, vals.Count);
+                    for (int i = 0; i < vals.Count; i++)
+                    {
+                        Assert.Equal(1, vals[i].Values.Length);
+                        Assert.Equal((double)(vals.Count - 1 - i), vals[i].Values[0]);
+                        Assert.Equal("watches/bitfit", vals[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(vals.Count - 1 - i)), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void CanQueryWithIncludeTimeSeries_LastRangeByCount_WhenNumberOfTimeSeriesIsLessThanRequested()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Oren" }, "users/ayende");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var tsf = session.TimeSeriesFor("users/ayende", "Heartrate");
+
+                    for (int i = 0; i < 15; i++)
+                    {
+                        tsf.Append(baseline.AddMinutes(-i), new[] { (double)i }, "watches/fitbit");
+                    }
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    List<User> result = null;
+
+                    var query = session.Query<User>()
+                        .Include(i => i.IncludeTimeSeries("Heartrate", TimeSeriesRangeType.Last, count: int.MaxValue));
+                    result = query.ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    Assert.Equal("Oren", result[0].Name);
+
+                    // should not go to server
+
+                    var vals = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(from: baseline.AddMinutes(-14))
+                        .ToList();
+
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+                    Assert.Equal(15, vals.Count);
+                    for (int i = 0; i < vals.Count; i++)
+                    {
+                        Assert.Equal(1, vals[i].Values.Length);
+                        Assert.Equal((double)(vals.Count - 1 - i), vals[i].Values[0]);
+                        Assert.Equal("watches/fitbit", vals[i].Tag);
+                        Assert.Equal(baseline.AddMinutes(-(vals.Count - 1 - i)), vals[i].Timestamp, RavenTestHelper.DateTimeComparer.Instance);
+                    }
                 }
             }
         }

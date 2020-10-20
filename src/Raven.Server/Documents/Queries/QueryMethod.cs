@@ -122,18 +122,34 @@ namespace Raven.Server.Documents.Queries
 
         public static class TimeSeries
         {
-            public static TimeValue Last(MethodExpression expression, string queryText, BlittableJsonReaderObject parameters)
+            public static TimeValue LastWithTime(MethodExpression expression, string queryText, BlittableJsonReaderObject parameters)
             {
                 try
                 {
                     if (expression.Arguments.Count != 2)
                         throw new InvalidOperationException("Method 'last()' expects two arguments to be provided");
 
-                    var duration = QueryMethod.Helpers.GetLong(expression.Arguments[0], parameters);
-                    var timeValueUnitAsString = QueryMethod.Helpers.GetString(expression.Arguments[1], parameters);
+                    var duration = Helpers.GetLong(expression.Arguments[0], parameters);
+                    var timeValueUnitAsString = Helpers.GetString(expression.Arguments[1], parameters);
 
                     var offset = 0;
                     return RangeGroup.ParseTimePeriodFromString(duration, timeValueUnitAsString, ref offset);
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidQueryException("Could not parse last() method.", queryText, parameters, e);
+                }
+            }
+
+            public static int LastWithCount(MethodExpression expression, string queryText, BlittableJsonReaderObject parameters)
+            {
+                try
+                {
+                    if (expression.Arguments.Count != 1)
+                        throw new InvalidOperationException("Method 'last()' with count expects one arguments to be provided");
+
+                    var duration = (int)Helpers.GetLong(expression.Arguments[0], parameters);
+                    return duration;
                 }
                 catch (Exception e)
                 {
@@ -149,17 +165,18 @@ namespace Raven.Server.Documents.Queries
                 switch (expression)
                 {
                     case ValueExpression ve:
-                        switch (ve.GetValue(parameters))
+                        var value = ve.GetValue(parameters);
+                        switch (value)
                         {
                             case string s:
                                 return s;
                             case StringSegment ss:
                                 return ss.ToString();
                             default:
-                                throw new InvalidOperationException("TODO ppekrol");
+                                throw new InvalidOperationException($"Expected to get a value with type of string, but got {value.GetType()}.");
                         }
                     default:
-                        throw new InvalidOperationException("TODO ppekrol");
+                        throw new InvalidOperationException($"Expected to get a {nameof(ValueExpression)} but got {expression.GetType()}.");
                 }
             }
 
@@ -168,7 +185,8 @@ namespace Raven.Server.Documents.Queries
                 switch (expression)
                 {
                     case ValueExpression ve:
-                        switch (ve.GetValue(parameters))
+                        var value = ve.GetValue(parameters);
+                        switch (value)
                         {
                             case long l:
                                 return l;
@@ -177,16 +195,16 @@ namespace Raven.Server.Documents.Queries
                             case StringSegment ss:
                                 return Parse(ss.ToString());
                             default:
-                                throw new InvalidOperationException("TODO ppekrol");
+                                throw new InvalidOperationException($"Expected to get a value with type of long or string, but got {value.GetType()}.");
                         }
                     default:
-                        throw new InvalidOperationException("TODO ppekrol");
+                        throw new InvalidOperationException($"Expected to get a {nameof(ValueExpression)} but got {expression.GetType()}.");
                 }
 
                 static long Parse(string s)
                 {
                     if (long.TryParse(s, out var sAsLong) == false)
-                        throw new InvalidOperationException("TODO ppekrol");
+                        throw new InvalidOperationException($"Could not parse the provided string '{s}' to long.");
 
                     return sAsLong;
                 }

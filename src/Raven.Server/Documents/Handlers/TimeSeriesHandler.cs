@@ -48,22 +48,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var timeSeriesNames = new List<string>();
 
-                if (document.TryGetMetadata(out var metadata))
-                {
-                    if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeries) && timeSeries != null)
-                    {
-                        foreach (object name in timeSeries)
-                        {
-                            if (name == null)
-                                continue;
-
-                            if (name is string || name is LazyStringValue || name is LazyCompressedStringValue)
-                            {
-                                timeSeriesNames.Add(name.ToString());
-                            }
-                        }
-                    }
-                }
+                GetTimesSeriesNames(document, timeSeriesNames);
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -118,6 +103,26 @@ namespace Raven.Server.Documents.Handlers
             }
 
             return Task.CompletedTask;
+        }
+
+        internal static void GetTimesSeriesNames(Document document, List<string> timeSeriesNames)
+        {
+            if (document.TryGetMetadata(out var metadata))
+            {
+                if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeries) && timeSeries != null)
+                {
+                    foreach (object name in timeSeries)
+                    {
+                        if (name == null)
+                            continue;
+
+                        if (name is string || name is LazyStringValue || name is LazyCompressedStringValue)
+                        {
+                            timeSeriesNames.Add(name.ToString());
+                        }
+                    }
+                }
+            }
         }
 
         [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser)]
@@ -377,27 +382,6 @@ namespace Raven.Server.Documents.Handlers
 
                 return dt;
             }
-        }
-
-        public static unsafe (TimeSeriesRangeType Type, TimeValue Time) ParseTime(QueryExpression expression, string queryText, BlittableJsonReaderObject parameters = null)
-        {
-            var methodExpression = expression as MethodExpression;
-            if (methodExpression == null)
-                throw new InvalidQueryException("TODO ppekrol", queryText, parameters);
-
-            TimeSeriesRangeType type;
-            TimeValue time;
-            switch (QueryMethod.GetMethodType(methodExpression.Name.ToString()))
-            {
-                case MethodType.Last:
-                    type = TimeSeriesRangeType.Last;
-                    time = QueryMethod.TimeSeries.Last(methodExpression, queryText, parameters);
-                    break;
-                default:
-                    throw new InvalidQueryException("TODO ppekrol", queryText, parameters);
-            }
-
-            return (type, time);
         }
 
         private static unsafe string CombineHashesFromMultipleRanges(Dictionary<string, List<TimeSeriesRangeResult>> ranges)
