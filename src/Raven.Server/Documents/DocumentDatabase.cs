@@ -1371,12 +1371,20 @@ namespace Raven.Server.Documents
                 getLastResponsibleNode:
                 () =>
                 {
-                    // first time this task is assigned
                     var lastResponsibleNode = taskStatus?.NodeTag;
                     if (lastResponsibleNode == null)
+                    {
+                        // first time this task is assigned
                         return null;
+                    }
 
-                    // avoid moving backup tasks when the machine is out of CPU credit
+                    if (databaseTopology.AllNodes.Contains(lastResponsibleNode) == false)
+                    {
+                        // the topology doesn't include the last responsible node anymore
+                        // we'll choose a different one
+                        return null;
+                    }
+
                     if (taskStatus is PeriodicBackupStatus)
                     {
                         if (databaseTopology.Rehabs.Contains(lastResponsibleNode) &&
@@ -1385,24 +1393,26 @@ namespace Raven.Server.Documents
                              status == DatabasePromotionStatus.EarlyOutOfMemory ||
                              status == DatabasePromotionStatus.HighDirtyMemory))
                         {
+                            // avoid moving backup tasks when the machine is out of CPU credit
                             return lastResponsibleNode;
                         }
                     }
 
-                    // can't redistribute, keep it on the original node
                     if (ServerStore.LicenseManager.HasHighlyAvailableTasks() == false)
                     {
+                        // can't redistribute, keep it on the original node
                         RaiseAlertIfNecessary(databaseTopology, configuration, lastResponsibleNode);
                         return lastResponsibleNode;
                     }
 
-                    // keep the task on the original node
                     if (keepTaskOnOriginalMemberNode &&
                         databaseTopology.Members.Contains(lastResponsibleNode))
+                    {
+                        // keep the task on the original node
                         return lastResponsibleNode;
+                    }
 
                     return null;
-
                 });
 
             if (whoseTaskIsIt == null && taskStatus is PeriodicBackupStatus)

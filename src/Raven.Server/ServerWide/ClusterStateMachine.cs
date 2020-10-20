@@ -2875,7 +2875,7 @@ namespace Raven.Server.ServerWide
             where T : RavenTransaction
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
-            if (items.ReadByKey(key, out TableValueReader reader) == false)
+            if (items == null || items.ReadByKey(key, out TableValueReader reader) == false)
             {
                 etag = 0;
                 return null;
