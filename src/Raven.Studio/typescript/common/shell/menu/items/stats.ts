@@ -56,5 +56,5 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem("Stats", statsItems, "icon-stats");
+    return new intermediateMenuItem("Stats", statsItems, "icon-stats-menu");
 }

@@ -103,5 +103,5 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         })
     ];
 
-    return new intermediateMenuItem('Tasks', tasksItems, 'icon-tasks');
+    return new intermediateMenuItem('Tasks', tasksItems, 'icon-tasks-menu');
 }
