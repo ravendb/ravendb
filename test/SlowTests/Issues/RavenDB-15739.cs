@@ -40,6 +40,15 @@ namespace SlowTests.Issues
 
                     Assert.Equal(3, list.Count);
                 }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var list = await session.Query<User>()
+                        .Search(x => x.Id, "*ser*")
+                        .ToListAsync();
+
+                    Assert.Equal(3, list.Count);
+                }
             }
         }
 
@@ -66,6 +75,5 @@ namespace SlowTests.Issues
                     };
             }
         }
-
     }
 }
