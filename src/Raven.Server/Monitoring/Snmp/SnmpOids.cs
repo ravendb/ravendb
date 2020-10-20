@@ -74,6 +74,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("CPU Credits Any Alert Raised")]
             public const string CpuCreditsAlertRaised = "1.5.3.7";
 
+            [Description("IO wait in %")]
+            public const string MachineIoWait = "1.5.4";
+
             [Description("Server allocated memory in MB")]
             public const string TotalMemory = "1.6.1";
 

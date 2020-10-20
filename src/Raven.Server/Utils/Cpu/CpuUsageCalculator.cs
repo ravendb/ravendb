@@ -13,17 +13,18 @@ namespace Raven.Server.Utils.Cpu
 {
     public interface ICpuUsageCalculator : IDisposable
     {
-        (double MachineCpuUsage, double ProcessCpuUsage) Calculate();
+        (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) Calculate();
+        
         void Init();
     }
 
     internal abstract class CpuUsageCalculator<T> : ICpuUsageCalculator where T : ProcessInfo
     {
-        private readonly (double MachineCpuUsage, double ProcessCpuUsage) _emptyCpuUsage = (0.0, 0.0);
+        private readonly (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) _emptyCpuUsage = (0.0, 0.0, (double?)null);
         protected readonly Logger Logger = LoggingSource.Instance.GetLogger<MachineResources>("Server");
         private readonly object _locker = new object();
 
-        protected (double MachineCpuUsage, double ProcessCpuUsage)? LastCpuUsage;
+        protected (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait)? LastCpuUsage;
 
         protected T PreviousInfo;
 
@@ -32,9 +33,9 @@ namespace Raven.Server.Utils.Cpu
             PreviousInfo = GetProcessInfo();
         }
 
-        protected abstract double CalculateMachineCpuUsage(T processInfo);
+        protected abstract (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(T processInfo);
 
-        public (double MachineCpuUsage, double ProcessCpuUsage) Calculate()
+        public (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) Calculate()
         {
             // this is a pretty quick method (sys call only), and shouldn't be
             // called heavily, so it is easier to make sure that this is thread
@@ -49,12 +50,12 @@ namespace Raven.Server.Utils.Cpu
                     return _emptyCpuUsage;
 
                 var machineCpuUsage = CalculateMachineCpuUsage(currentInfo);
-                var processCpuUsage = CalculateProcessCpuUsage(currentInfo, machineCpuUsage);
+                var processCpuUsage = CalculateProcessCpuUsage(currentInfo, machineCpuUsage.MachineCpuUsage);
 
                 PreviousInfo = currentInfo;
 
-                LastCpuUsage = (machineCpuUsage, processCpuUsage);
-                return (machineCpuUsage, processCpuUsage);
+                LastCpuUsage = (machineCpuUsage.MachineCpuUsage, processCpuUsage, machineCpuUsage.MachineIoWait);
+                return (machineCpuUsage.MachineCpuUsage, processCpuUsage, machineCpuUsage.MachineIoWait);
             }
         }
 
@@ -98,7 +99,7 @@ namespace Raven.Server.Utils.Cpu
 
     internal class WindowsCpuUsageCalculator : CpuUsageCalculator<WindowsInfo>
     {
-        protected override double CalculateMachineCpuUsage(WindowsInfo windowsInfo)
+        protected override (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(WindowsInfo windowsInfo)
         {
             var systemIdleDiff = windowsInfo.SystemIdleTime - PreviousInfo.SystemIdleTime;
             var systemKernelDiff = windowsInfo.SystemKernelTime - PreviousInfo.SystemKernelTime;
@@ -111,7 +112,7 @@ namespace Raven.Server.Utils.Cpu
                 machineCpuUsage = (sysTotal - systemIdleDiff) * 100.00 / sysTotal;
             }
 
-            return machineCpuUsage;
+            return (machineCpuUsage, null);
         }
 
         protected override WindowsInfo GetProcessInfo()
@@ -159,28 +160,32 @@ namespace Raven.Server.Utils.Cpu
     {
         private static char[] _separators = { ' ', '\t' };
 
-        protected override double CalculateMachineCpuUsage(LinuxInfo linuxInfo)
+        protected override (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(LinuxInfo linuxInfo)
         {
             double machineCpuUsage = 0;
+            double? machineIoWait = 0;
             if (linuxInfo.TotalIdle >= PreviousInfo.TotalIdle &&
                 linuxInfo.TotalWorkTime >= PreviousInfo.TotalWorkTime)
             {
                 var idleDiff = linuxInfo.TotalIdle - PreviousInfo.TotalIdle;
                 var workDiff = linuxInfo.TotalWorkTime - PreviousInfo.TotalWorkTime;
                 var totalSystemWork = idleDiff + workDiff;
+                var ioWaitDiff = linuxInfo.TotalIoWait - PreviousInfo.TotalIoWait;
 
                 if (totalSystemWork > 0)
                 {
                     machineCpuUsage = (workDiff * 100.0) / totalSystemWork;
+                    machineIoWait = (ioWaitDiff * 100.0) / totalSystemWork;
                 }
             }
             else if (LastCpuUsage != null)
             {
                 // overflow
                 machineCpuUsage = LastCpuUsage.Value.MachineCpuUsage;
+                machineIoWait = LastCpuUsage.Value.MachineIoWait;
             }
 
-            return machineCpuUsage;
+            return (machineCpuUsage, machineIoWait);
         }
 
         protected override LinuxInfo GetProcessInfo()
@@ -201,7 +206,7 @@ namespace Raven.Server.Utils.Cpu
                     TotalUserLowTime = ulong.Parse(items[2]),
                     TotalSystemTime = ulong.Parse(items[3]),
                     TotalIdleTime = ulong.Parse(items[4]),
-                    TotalIOTime = ulong.Parse(items[5]),
+                    TotalIoWait = ulong.Parse(items[5]), 
                     TotalIRQTime = ulong.Parse(items[6]),
                     TotalSoftIRQTime = ulong.Parse(items[7]),
                     TotalStealTime = ulong.Parse(items[8])
@@ -216,7 +221,7 @@ namespace Raven.Server.Utils.Cpu
     {
         private static readonly unsafe int HostCpuLoadInfoSize = sizeof(host_cpu_load_info) / sizeof(uint);
 
-        protected override double CalculateMachineCpuUsage(MacInfo macInfo)
+        protected override (double MachineCpuUsage, double? MachineIoWait) CalculateMachineCpuUsage(MacInfo macInfo)
         {
             var totalTicksSinceLastTime = macInfo.TotalTicks - PreviousInfo.TotalTicks;
             var idleTicksSinceLastTime = macInfo.IdleTicks - PreviousInfo.IdleTicks;
@@ -226,7 +231,7 @@ namespace Raven.Server.Utils.Cpu
                 machineCpuUsage = (1.0d - (double)idleTicksSinceLastTime / totalTicksSinceLastTime) * 100;
             }
 
-            return machineCpuUsage;
+            return (machineCpuUsage, null);
         }
 
         protected override unsafe MacInfo GetProcessInfo()
@@ -271,10 +276,10 @@ namespace Raven.Server.Utils.Cpu
             );
         }
 
-        public (double MachineCpuUsage, double ProcessCpuUsage) Calculate()
+        public (double MachineCpuUsage, double ProcessCpuUsage, double? MachineIoWait) Calculate()
         {
             var data = _inspector.Data;
-            return (data.MachineCpuUsage, data.ProcessCpuUsage);
+            return (data.MachineCpuUsage, data.ProcessCpuUsage, null);
         }
 
         public void Init()
