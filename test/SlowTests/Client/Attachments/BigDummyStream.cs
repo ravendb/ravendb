@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Xunit;
 
 namespace SlowTests.Client.Attachments
 {
@@ -22,7 +21,6 @@ namespace SlowTests.Client.Attachments
                     return i - offset;
                 }
                 buffer[i] = (byte)(Position++);
-                
             }
             return count;
         }
@@ -33,7 +31,9 @@ namespace SlowTests.Client.Attachments
             {
                 if (Position == _size)
                     return;
-                Assert.Equal(buffer[i], (byte)(Position++));
+
+                if (buffer[i] != (byte)Position++)
+                    throw new InvalidOperationException($"buffer[i] != (byte)(Position++) | {buffer[i]} != {(byte)(Position++)}");
             }
         }
 
