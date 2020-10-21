@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
@@ -18,6 +20,18 @@ namespace Raven.Client.Documents.Operations.Replication
         public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication)
         {
             _pullReplication = pullReplication;
+
+            if (pullReplication.CertificateWithPrivateKey != null)
+            {
+                var certBytes = Convert.FromBase64String(pullReplication.CertificateWithPrivateKey);
+                using (var certificate = new X509Certificate2(certBytes,
+                    pullReplication.CertificatePassword,
+                    X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet))
+                {
+                    if (certificate.HasPrivateKey == false)
+                        throw new AuthorizationException("Certificate with private key is required");
+                }
+            }
         }
 
         public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)

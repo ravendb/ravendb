@@ -23,6 +23,7 @@ using Sparrow.Platform;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Voron;
+using Voron.Impl;
 
 namespace Raven.Server
 {
@@ -82,6 +83,8 @@ namespace Raven.Server
                 configuration.AddCommandLine(configurationArgs);
 
             configuration.Initialize();
+
+            EncryptionBuffersPool.Instance.Disabled = configuration.Storage.DisableEncryptionBuffersPooling;
 
             LoggingSource.UseUtcTime = configuration.Logs.UseUtcTime;
             LoggingSource.Instance.MaxFileSizeInBytes = configuration.Logs.MaxFileSize.GetValue(SizeUnit.Bytes);

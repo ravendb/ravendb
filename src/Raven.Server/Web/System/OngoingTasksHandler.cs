@@ -440,10 +440,14 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/databases/*/admin/backup/database", "POST", AuthorizationStatus.DatabaseAdmin, CorsMode = CorsMode.Cluster)]
-        public Task BackupDatabase()
+        public async Task BackupDatabase()
         {
             var taskId = GetLongQueryString("taskId");
             var isFullBackup = GetBoolValueQueryString("isFullBackup", required: false);
+
+            // task id == raft index
+            // we must wait here to ensure that the task was actually created on this node
+            await ServerStore.Cluster.WaitForIndexNotification(taskId);
 
             var nodeTag = Database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
             if (nodeTag == null)
@@ -464,11 +468,10 @@ namespace Raven.Server.Web.System
                     writer.WriteEndObject();
                 }
 
-                return Task.CompletedTask;
+                return;
             }
 
             RedirectToRelevantNode(nodeTag);
-            return Task.CompletedTask;
         }
 
         private void RedirectToRelevantNode(string nodeTag)

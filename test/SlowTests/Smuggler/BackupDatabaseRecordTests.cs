@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -39,6 +40,13 @@ namespace SlowTests.Smuggler
         public async Task CanExportAndImportDatabaseRecord()
         {
             var file = Path.GetTempFileName();
+            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            string privateKey;
+            using (var pullReplicationCertificate =
+                new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
+            {
+                privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
+            }
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -103,8 +111,8 @@ namespace SlowTests.Smuggler
                     store1.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
                     {
                         Database = "sinkDatabase",
-                        CertificatePassword = "CertificatePassword",
-                        CertificateWithPrivateKey = "CertificateWithPrivateKey",
+                        CertificatePassword = (string)null,
+                        CertificateWithPrivateKey = privateKey,
                         TaskId = 2,
                         Name = "Sink",
                         HubName = "hub",
@@ -200,8 +208,8 @@ namespace SlowTests.Smuggler
                     Assert.Equal(1, record.SinkPullReplications.Count);
                     Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
                     Assert.Equal("hub", record.SinkPullReplications[0].HubName);
-                    Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
-                    Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
+                    Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
+                    Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
                     Assert.Equal(true, record.SinkPullReplications[0].Disabled);
 
                     Assert.Equal(1, record.HubPullReplications.Count);
@@ -234,6 +242,13 @@ namespace SlowTests.Smuggler
         public async Task CanMigrateDatabaseRecord()
         {
             var file = Path.GetTempFileName();
+            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            string privateKey;
+            using (var pullReplicationCertificate =
+                new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
+            {
+                privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
+            }
             try
             {
                 using (var store1 = GetDocumentStore(new Options
@@ -285,8 +300,8 @@ namespace SlowTests.Smuggler
                     store1.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
                     {
                         Database = "sinkDatabase",
-                        CertificatePassword = "CertificatePassword",
-                        CertificateWithPrivateKey = "CertificateWithPrivateKey",
+                        CertificatePassword = (string)null,
+                        CertificateWithPrivateKey = privateKey,
                         TaskId = 2,
                         Name = "Sink",
                         HubName = "hub",
@@ -411,8 +426,8 @@ namespace SlowTests.Smuggler
                     Assert.Equal(1, record.SinkPullReplications.Count);
                     Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
                     Assert.Equal("hub", record.SinkPullReplications[0].HubName);
-                    Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
-                    Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
+                    Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
+                    Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
                     Assert.Equal(true, record.SinkPullReplications[0].Disabled);
 
                     Assert.Equal(1, record.HubPullReplications.Count);
@@ -1011,6 +1026,14 @@ namespace SlowTests.Smuggler
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = Path.GetTempFileName();
+            var dummy = GenerateAndSaveSelfSignedCertificate(true);
+            string privateKey;
+            using (var pullReplicationCertificate =
+                new X509Certificate2(dummy.ServerCertificatePath, (string)null, X509KeyStorageFlags.MachineKeySet | X509KeyStorageFlags.Exportable))
+            {
+                privateKey = Convert.ToBase64String(pullReplicationCertificate.Export(X509ContentType.Pfx));
+            }
+
             try
             {
                 using (var store = GetDocumentStore(new Options
@@ -1057,8 +1080,8 @@ namespace SlowTests.Smuggler
                     store.Maintenance.Send(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink()
                     {
                         Database = "sinkDatabase",
-                        CertificatePassword = "CertificatePassword",
-                        CertificateWithPrivateKey = "CertificateWithPrivateKey",
+                        CertificatePassword = (string)null,
+                        CertificateWithPrivateKey = privateKey,
                         TaskId = 2,
                         Name = "Sink",
                         HubName = "hub",
@@ -1201,8 +1224,8 @@ namespace SlowTests.Smuggler
                         Assert.Equal(1, record.SinkPullReplications.Count);
                         Assert.Equal("sinkDatabase", record.SinkPullReplications[0].Database);
                         Assert.Equal("hub", record.SinkPullReplications[0].HubName);
-                        Assert.Equal("CertificatePassword", record.SinkPullReplications[0].CertificatePassword);
-                        Assert.Equal("CertificateWithPrivateKey", record.SinkPullReplications[0].CertificateWithPrivateKey);
+                        Assert.Equal((string)null, record.SinkPullReplications[0].CertificatePassword);
+                        Assert.Equal(privateKey, record.SinkPullReplications[0].CertificateWithPrivateKey);
                         Assert.Equal(false, record.SinkPullReplications[0].Disabled);
 
                         Assert.Equal(1, record.HubPullReplications.Count);
