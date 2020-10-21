@@ -26,6 +26,7 @@ namespace Voron.Impl
         private DateTime _lastAllocationsRebuild = DateTime.UtcNow;
         private long _generation;
         private bool _hasDisposedAllocations;
+        public bool Disabled;
 
         public long Generation => _generation;
 
@@ -48,7 +49,7 @@ namespace Voron.Impl
         {
             size = Bits.PowerOf2(size);
 
-            if (size > _maxBufferSizeToKeepInBytes)
+            if (Disabled || size > _maxBufferSizeToKeepInBytes)
             {
                 // We don't want to pool large buffers
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
@@ -76,7 +77,7 @@ namespace Voron.Impl
             size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (size > _maxBufferSizeToKeepInBytes || (_isLowMemory.IsRaised() && generation < Generation))
+            if (Disabled || size > _maxBufferSizeToKeepInBytes || (_isLowMemory.IsRaised() && generation < Generation))
             {
                 // - don't want to pool large buffers
                 // - release all the buffers that were created before we got the low memory event
