@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -104,6 +105,7 @@ namespace Raven.Server.Documents.Indexes.Static
             CreateMetadataReferenceFromAssembly(typeof(Enumerable).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(IndexCompiler).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(BoostedValue).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(GZipStream).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(Lucene.Net.Documents.Document).Assembly),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("System.Runtime"))),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("Microsoft.CSharp"))),
