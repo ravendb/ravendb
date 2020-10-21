@@ -47,19 +47,31 @@
                     </button>
                 </div>
             </div>
-            <div class="scroll flex-grow">
+            <div class="scroll flex-grow">                
                 <div data-bind="with: defaultConfiguration">
                     <div class="panel panel-info panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
+                </div>
+                <div class="hr-title">
+                    <h5 class="no-text-transform">
+                        <i class="icon-conflicts"></i>
+                        <span>Conflicts</span>
+                    </h5><hr>
                 </div>
                 <div data-bind="with: conflictsConfiguration">
                     <div class="panel panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
+                <div class="hr-title">
+                    <h5 class="no-text-transform">
+                        <i class="icon-folder"></i>
+                        <span>Collections Definitions</span>
+                    </h5><hr>
+                </div>
                 <div data-bind="foreach: perCollectionConfigurations">
                     <div class="panel panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
-                </div>  
+                </div>
             </div>
         </div>
         <div class="col-sm-12 col-lg-4">
@@ -83,7 +95,7 @@
             <div data-bind="with: currentlyEditedItem">
                 <div class="panel padding edit-panel">
                     <div class="flex-horizontal">
-                        <div data-bind="text: isDefault() ? 'Default collection' : (isConflicts() ? 'Conflicts' : 'Collection')"></div>
+                        <h3 data-bind="text: isDefault() ? 'Default collection' : (isConflicts() ? 'Conflicts' : 'Collection')" class="margin-right"></h3>
 
                         <div class="dropdown btn-group flex-grow" data-bind="validationElement: collection, visible: canChangeName">
                             <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" data-bind="textInput: collection, attr: { id: 'collectionNameInput' }" />
