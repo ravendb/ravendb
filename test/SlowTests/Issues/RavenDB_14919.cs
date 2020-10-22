@@ -79,7 +79,7 @@ namespace SlowTests.Issues
                     {
                         string name = $"likes{i}";
                         counterNames[i] = name;
-                        c.Increment(name);
+                        c.Increment(name, i);
                     }
 
                     session.SaveChanges();
@@ -90,7 +90,7 @@ namespace SlowTests.Issues
 
                 for (int i = 0; i < 1000; i++)
                 {
-                    Assert.Equal(1, vals.Counters[i].TotalValue);
+                    Assert.Equal(i, vals.Counters[i].TotalValue);
                 }
 
                 Assert.Null(vals.Counters[^1]);
@@ -102,6 +102,7 @@ namespace SlowTests.Issues
                 for (int i = 0; i < 1000; i++)
                 {
                     Assert.Equal(1, vals.Counters[i].CounterValues.Count);
+                    Assert.Equal(i, vals.Counters[i].TotalValue);
                 }
 
                 Assert.Null(vals.Counters[^1]);
