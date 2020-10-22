@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx)
+            public IEnumerable<Slice> GetItemKeysFromCollectionThatReference(string collection, LazyStringValue referenceKey, RavenTransaction tx, string lastItemId = null)
             {
                 var collectionTree = tx.InnerTransaction.ReadTree(_referenceCollectionPrefix + collection);
                 if (collectionTree == null)
@@ -467,8 +467,19 @@ namespace Raven.Server.Documents.Indexes
                 using (DocumentIdWorker.GetLower(tx.InnerTransaction.Allocator, referenceKey, out var k))
                 using (var it = collectionTree.MultiRead(k))
                 {
-                    if (it.Seek(Slices.BeforeAllKeys) == false)
-                        yield break;
+                    if (lastItemId == null)
+                    {
+                        if (it.Seek(Slices.BeforeAllKeys) == false)
+                            yield break;
+                    }
+                    else
+                    {
+                        using (Slice.From(tx.InnerTransaction.Allocator, lastItemId, out var idSlice))
+                        {
+                            if (it.Seek(idSlice) == false)
+                                yield break;
+                        }
+                    }
 
                     do
                     {
