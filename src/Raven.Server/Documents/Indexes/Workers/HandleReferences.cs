@@ -108,8 +108,6 @@ namespace Raven.Server.Documents.Indexes.Workers
         public bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext,
             IndexingStatsScope stats, IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
         {
-            //TODO: check this every 64 items
-            
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
 
@@ -217,8 +215,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
-                                        var isFirst = true;
-
                                         while (itemsEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag))
                                         {
                                             token.ThrowIfCancellationRequested();
@@ -231,14 +227,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             indexWriter ??= writeOperation.Value;
 
-                                            if (isFirst == false && CanContinue() == false)
+                                            if (CanContinueReferenceBatch() == false)
                                             {
                                                 _index.LastProcessedReference.Set(actionType, collection, referencedDocument, current.Id);
                                                 earlyExit = true;
                                                 break;
                                             }
-
-                                            isFirst = false;
 
                                             try
                                             {
@@ -271,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     lastEtag = referencedDocument.Etag;
                                     inMemoryStats.UpdateLastEtag(lastEtag, isTombstone);
 
-                                    if (CanContinue() == false)
+                                    if (CanContinueReferenceBatch() == false)
                                         break;
                                 }
 
@@ -279,7 +273,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
                             }
 
-                            bool CanContinue()
+                            bool CanContinueReferenceBatch()
                             {
                                 if (CanContinueBatch(queryContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                 {

@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
                                 }
 
-                                if (MapDocuments.MaybeRenewTransaction(queryContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
+                                if (MapItems.MaybeRenewTransaction(queryContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
                                     break;
                             }
 

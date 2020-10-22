@@ -3670,6 +3670,9 @@ namespace Raven.Server.Documents.Indexes
         {
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
+            if (count % MinBatchSize != 0)
+                return true;
+
             //We need to take the read transaction encryption size into account as we might read alot of document and produce very little indexing output.
             txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
@@ -3746,8 +3749,7 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            if (Configuration.ManagedAllocationsBatchLimit != null && 
-                count % 128 == 0)
+            if (Configuration.ManagedAllocationsBatchLimit != null)
             {
                 var currentManagedAllocations = new Size(GC.GetAllocatedBytesForCurrentThread(), SizeUnit.Bytes);
                 var diff = currentManagedAllocations - _initialManagedAllocations;
