@@ -44,7 +44,7 @@
                     -->
                     <div class="margin-bottom">
                         <pre class="form-control map"
-                             data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter  }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
+                             data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
 
                         <div data-bind="validationElement: map">
                             <div class="help-block" data-bind="validationMessage: map"></div>
@@ -178,6 +178,7 @@
                     </div>
                     <div data-bind="foreach: editedIndex().fields">
                         <div class="panel">
+                            <hr>
                             <div data-bind="template: { name: 'field-template'}"></div>
                         </div>
                     </div>
@@ -318,7 +319,6 @@
                     <div class="flex-horizontal flex-content-center">
                         <div class="flex-horizontal" data-bind="foreach: editedIndex().mapFields">
                             <div class="panel padding padding-sm flex-vertical" data-bind="template: { name: 'field-template-auto-index'}"></div>
-
                         </div>
                     </div>
                 </div>
@@ -538,18 +538,17 @@
                             </div>
                         </div>
                         <div class="properties-item">
-                            <span class="properties-label">Indexing
-                                <span class="margin-left margin-left-sm" data-bind="visible: explainIndexingStatus">
-                                    <i class="icon-info text-info indexing-status"></i>
-                                </span>
-                            </span>
+                            <span class="properties-label">Indexing</span>
                             <div class="btn-group properties-value">
-                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveIndexing }">
+                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" 
+                                        data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing is not defined. Search is used since an analyzer is defined' : effectiveIndexing() }">
                                     <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" data-bind=" css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
-                                    <li><a href="#" data-bind="click: indexing.bind(indexing, null)"><span data-bind="text: defaultIndexing"></span></a></li>
-                                    <!-- ko foreach: $data.constructor.Indexing -->
+                                    <li data-bind="if:!analyzerDefinedWithoutIndexing()">
+                                        <a href="#" data-bind="click: indexing.bind(indexing, null)"><span data-bind="text: defaultIndexing"></span></a>
+                                    </li>
+                                    <!-- ko foreach: indexingDropdownOptions -->
                                     <li><a href="#" data-bind="click: $parent.indexing.bind($parent.indexing, value)"><span data-bind="text: label"></span></a></li>
                                     <!-- /ko -->
                                 </ul>
@@ -559,9 +558,9 @@
                             <span class="properties-label">Analyzer</span>
                             <div class="btn-group properties-value">
                                 <div class="has-disable-reason" data-bind="attr: { 'data-original-title': disabledAnalyzerText }" data-placement="top">
-                                    <input class="form-control" placeholder="StandardAnalyzer" autocomplete="off"
+                                    <input class="form-control" autocomplete="off"
                                            data-bind="textInput: analyzer, disable: !!disabledAnalyzerText(),
-                                                      attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()) }" />
+                                                      attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()), placeholder: analyzerPlaceHolder }" />
                                     <ul class="dropdown-menu" role="menu"
                                         data-bind="autoComplete: '#analyzerName' + (isDefaultFieldOptions() ? '' : $index()), foreach: $root.createAnalyzerNameAutocompleter($data.analyzer()),
                                                        css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">

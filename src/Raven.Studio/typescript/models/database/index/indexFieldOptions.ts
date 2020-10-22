@@ -10,33 +10,37 @@ function yesNoLabelProvider(arg: boolean) {
     return arg ? "Yes" : "No";
 }
 
+type indexingTypes = Raven.Client.Documents.Indexes.FieldIndexing | "Search (implied)";
+
+type analyzerNameInUI = "Keyword Analyzer" | "LowerCase Keyword Analyzer" | "LowerCase Whitespace Analyzer" |
+                        "NGram Analyzer" | "Simple Analyzer" | "Standard Analyzer" | "Stop Analyzer" | "Whitespace Analyzer";
+
 interface analyzerName {
-    shortName: string;
-    fullName: string;
+    studioName: analyzerNameInUI;
+    serverName: string;
 }
 
 class indexFieldOptions {
 
     static readonly analyzersNamesDictionary: analyzerName[] = [
-        // default analyzer for indexing.Exact
-        { shortName: "Keyword Analyzer", fullName: "KeywordAnalyzer" },
+        // default analyzer for Indexing.Exact
+        { studioName: "Keyword Analyzer", serverName: "KeywordAnalyzer" },
         
-        // default analyzer for indexing.Default or when 'index fields options' are not defined
-        { shortName: "LowerCase Keyword Analyzer", fullName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
+        // default analyzer for Indexing.Default or when 'Indexing' options are not defined
+        { studioName: "LowerCase Keyword Analyzer", serverName: "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" },
         
-        { shortName: "LowerCase Whitespace Analyzer", fullName: "LowerCaseWhitespaceAnalyzer" },
-        { shortName: "NGram Analyzer", fullName:"NGramAnalyzer" },
-        { shortName: "Simple Analyzer", fullName: "SimpleAnalyzer" },
+        { studioName: "LowerCase Whitespace Analyzer", serverName: "LowerCaseWhitespaceAnalyzer" },
+        { studioName: "NGram Analyzer", serverName:"NGramAnalyzer" },
+        { studioName: "Simple Analyzer", serverName: "SimpleAnalyzer" },
         
-        // default analyzer for indexing.Search
-        { shortName: "Standard Analyzer", fullName: "StandardAnalyzer" },
+        // default analyzer for Indexing.Search
+        { studioName: "Standard Analyzer", serverName: "StandardAnalyzer" },
         
-        { shortName: "Stop Analyzer", fullName: "StopAnalyzer" },
-        { shortName: "Whitespace Analyzer", fullName:"WhitespaceAnalyzer" }
-        
+        { studioName: "Stop Analyzer", serverName: "StopAnalyzer" },
+        { studioName: "Whitespace Analyzer", serverName:"WhitespaceAnalyzer" }
     ];
 
-    static readonly analyzersNames = indexFieldOptions.analyzersNamesDictionary.map(a => a.shortName)
+    static readonly analyzersNames = indexFieldOptions.analyzersNamesDictionary.map(a => a.studioName)
         // exclude the default analyzer from dropdown list (shown only for Indexing.Default is selected)
         .filter(x => x !== "LowerCase Keyword Analyzer");
 
@@ -76,6 +80,9 @@ class indexFieldOptions {
             label: "Search",
             value: "Search"
         }];
+
+    static readonly IndexingWithSearchImplied: Array<valueAndLabelItem<indexingTypes, string>> =
+        [...indexFieldOptions.Indexing, { label: "Search (implied)", value: "Search (implied)" }];
     
     static readonly SpatialType: Array<Raven.Client.Documents.Indexes.Spatial.SpatialFieldType> = ["Cartesian", "Geography"];
     
@@ -89,18 +96,18 @@ class indexFieldOptions {
 
     analyzer = ko.observable<string>();
     disabledAnalyzerText = ko.observable<string>();
+    analyzerPlaceHolder = ko.observable<string>();
     
-    isDefaultAnalyzer = ko.pureComputed(() => this.analyzer() === "LowerCase Keyword Analyzer" ||
-                                              this.analyzer() === "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer");
-    
-    // show analyzer only if Indexing.Search defined -or- if analyzer is defined
-    showAnalyzer = ko.pureComputed(() => this.indexing() === "Search" ||
-                                         (this.indexing() === null && this.parent().indexing() === "Search") ||
-                                         this.analyzer());
-    
-    indexing = ko.observable<Raven.Client.Documents.Indexes.FieldIndexing>();
-    effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
-    defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
+    analyzerDefinedWithoutIndexing = ko.observable<boolean>(false);
+    theAnalyzerThatWasDefinedWithoutIndexing = ko.observable<string>();
+
+    isDefaultAnalyzer: KnockoutComputed<boolean>;
+    showAnalyzer: KnockoutComputed<boolean>;
+
+    indexing = ko.observable<indexingTypes>(); // the actual value
+    effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.IndexingWithSearchImplied)); // for button label
+    defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.IndexingWithSearchImplied)); // for dropdown label
+    indexingDropdownOptions: KnockoutComputed<Array<valueAndLabelItem<indexingTypes, string>>>;
 
     storage = ko.observable<Raven.Client.Documents.Indexes.FieldStorage>();
     effectiveStorage = this.effectiveComputed(x => x.storage());
@@ -126,7 +133,6 @@ class indexFieldOptions {
     hasSpatialOptions = ko.observable<boolean>(false);
     
     showAdvancedOptions = ko.observable<boolean>(false);
-    explainIndexingStatus: KnockoutComputed<boolean>;
 
     validationGroup: KnockoutObservable<any>;
     dirtyFlag: () => DirtyFlag;
@@ -135,12 +141,33 @@ class indexFieldOptions {
         this.name(name);
         this.parent(parentFields);
         
-        this.analyzer(dto.Analyzer);
+        const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.serverName === dto.Analyzer);
+        const analyzerStudioName = analyzer ? analyzer.studioName : (this.analyzer() || null);
+        this.analyzer(analyzerStudioName);
+        
+        this.isDefaultAnalyzer = ko.pureComputed(() => this.analyzer() === "LowerCase Keyword Analyzer" ||
+                                                       this.analyzer() === "Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers.LowerCaseKeywordAnalyzer" ||
+                                                       this.analyzerPlaceHolder() === "LowerCase Keyword Analyzer");
+        
+        this.showAnalyzer = ko.pureComputed(() => this.indexing() === "Search" ||
+                                                   this.indexing() === "Search (implied)" ||
+                                                  (this.indexing() === null && this.parent().indexing() === "Search") ||
+                                                  !!this.analyzer() ||
+                                                  (!this.analyzer() && !!this.analyzerPlaceHolder()));
+        
         if (this.isDefaultAnalyzer()) {
-            this.analyzer("LowerCase Keyword Analyzer"); // show short name in ui
+            this.analyzer(null);
         }
         
         this.indexing(dto.Indexing);
+        
+        // for issue RavenDB-12607
+        if (!dto.Indexing && this.analyzer() && !this.isDefaultAnalyzer()) {
+           this.analyzerDefinedWithoutIndexing(true);
+           this.theAnalyzerThatWasDefinedWithoutIndexing(this.analyzer());
+           this.indexing("Search (implied)");
+        }
+        
         this.storage(dto.Storage);
         this.suggestions(dto.Suggestions);
         this.termVector(dto.TermVector);
@@ -151,20 +178,20 @@ class indexFieldOptions {
         } else {
             this.spatial(spatialOptions.empty());
         }
-        
+
+        this.computeAnalyzer();
         this.computeFullTextSearch();
         this.computeHighlighting();
-        
-        if ((this.termVector() && this.termVector() !== "No") ||
-            (this.indexing() && this.indexing() !== "Default") ||
-            this.analyzer()) {
-            this.showAdvancedOptions(true);
-        }
         
         _.bindAll(this, "toggleAdvancedOptions");
 
         this.initValidation();
         this.initObservables();
+
+        if ((this.termVector() && this.termVector() !== "No") ||
+            (this.indexing() && this.indexing() !== "Default")) {
+            this.showAdvancedOptions(true);
+        }
     }
     
     private initObservables() {
@@ -276,13 +303,20 @@ class indexFieldOptions {
             this.spatial().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
-        this.explainIndexingStatus = ko.pureComputed(() => {
-           // This case can result from defining an index outside of Studio, where Analyzer is defined but Indexing is Not defined.
-           // In this case the server uses Indexing.Search under the hood, even though we get Indexing.Default from the server.
-           return (!!this.analyzer() &&
-                   !this.isDefaultAnalyzer() &&
-                   this.indexing() === null && 
-                   (this.parent().indexing() === null || this.parent().indexing() === "Default"));
+        this.parent.subscribe(() => {
+            if (!changeInProgess) {
+                changeInProgess = true;
+                if (!this.isDefaultFieldOptions()) {
+                    this.computeAnalyzer();
+                    this.computeFullTextSearch();
+                    this.computeHighlighting();
+                }
+                changeInProgess = false;
+            }
+        });
+        
+        this.indexingDropdownOptions = ko.pureComputed(() => {
+           return this.analyzerDefinedWithoutIndexing() ? indexFieldOptions.IndexingWithSearchImplied : indexFieldOptions.Indexing; 
         });
     }
 
@@ -291,11 +325,12 @@ class indexFieldOptions {
         
         switch (this.indexing()) {
             case "Search":
+            case "Search (implied)":
                 fts = true;
                 break;
             // 'Exact', 'No' & 'Default' stay false
             case null:
-                if (!this.analyzer()) {
+                if (!this.analyzer() && !this.analyzerPlaceHolder()) {
                     fts = null;
                 } else {
                     switch (this.parent().indexing()) {
@@ -318,9 +353,9 @@ class indexFieldOptions {
     }
 
     private computeHighlighting() {
-        this.highlighting(!this.analyzer() &&
-                           this.indexing() === "Search" &&
-                           this.storage() === "Yes" && 
+        this.highlighting(!this.analyzer() && this.analyzerPlaceHolder() &&
+                          (this.indexing() === "Search" || this.indexing() === "Search (implied)") &&
+                           this.storage() === "Yes" &&
                            this.termVector() === "WithPositionsAndOffsets");
        
         if (this.storage() === null &&
@@ -330,8 +365,9 @@ class indexFieldOptions {
     }
     
     public computeAnalyzer() {
+        let placeHolder = null;
         const thisIndexing = this.indexing();
-        const parentIndexing = this.parent().indexing();
+        const parentIndexing = this.parent() ? this.parent().indexing() : null;
 
         if (thisIndexing === "No" ||
            (thisIndexing === null && parentIndexing === "No")) {
@@ -343,21 +379,38 @@ class indexFieldOptions {
         
         if (thisIndexing === "Exact" ||
            (thisIndexing === null && parentIndexing === "Exact")) {
-            this.analyzer("KeywordAnalyzer"); 
+            this.analyzer(null);
+            placeHolder = "Keyword Analyzer";
             this.disabledAnalyzerText("KeywordAnalyzer is used when selecting Indexing.Exact. " + helpMsg);
         } 
         
         if (thisIndexing === "Default" ||
            (thisIndexing === null && parentIndexing === "Default") ||
            (thisIndexing === null && parentIndexing === null)) {
-            this.analyzer("LowerCase Keyword Analyzer");
+            this.analyzer(null);
+            placeHolder = "LowerCase Keyword Analyzer";
             this.disabledAnalyzerText("LowerCaseKeywordAnalyzer is used when selecting Indexing.Default. " + helpMsg);
         }
+
+        if (!thisIndexing && parentIndexing === "Search") {
+            this.analyzer(null);
+            placeHolder = this.parent().analyzer() || "Standard Analyzer";
+        }
+
+        if (thisIndexing === "Search") {
+            this.analyzer(null);
+            placeHolder = "Standard Analyzer";
+        }
         
-        if (thisIndexing === "Search" ||
-            (thisIndexing === null && parentIndexing === "Search"))
-        {
-            this.analyzer("StandardAnalyzer");
+        // for issue RavenDB-12607
+        if (thisIndexing === "Search (implied)") {
+            this.analyzer(this.theAnalyzerThatWasDefinedWithoutIndexing());
+        }
+
+        this.analyzerPlaceHolder(placeHolder);
+
+        if (this.analyzer() || (!this.analyzer() && this.analyzerPlaceHolder())) {
+            this.showAdvancedOptions(true);
         }
     }
     
@@ -441,12 +494,16 @@ class indexFieldOptions {
     }
 
     toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
-        const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.shortName === this.analyzer()); 
-        const analyzerFullName = analyzer ? analyzer.fullName : (this.analyzer() || null);
+        let analyzerToSend = null;
+        
+        if (this.analyzer()) {
+            const selectedAnalyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.studioName === this.analyzer());
+            analyzerToSend = selectedAnalyzer ? selectedAnalyzer.serverName : this.analyzer();
+        }
         
         return {
-            Analyzer: analyzerFullName, 
-            Indexing: this.indexing(),
+            Analyzer: analyzerToSend,
+            Indexing: this.indexing() === "Search (implied)" ? null : this.indexing() as Raven.Client.Documents.Indexes.FieldIndexing,
             Storage: this.storage(),
             Suggestions: this.suggestions(),
             TermVector: this.termVector(),
