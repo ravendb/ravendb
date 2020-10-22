@@ -791,12 +791,22 @@ namespace Raven.Server.Documents.Queries
             Analyzer analyzer, int? proximity)
         {
             QueryFieldName fieldName;
-            if (expression.Arguments[0] is FieldExpression ft)
-                fieldName = ExtractIndexFieldName(query, parameters, ft, metadata);
-            else if (expression.Arguments[0] is ValueExpression vt)
-                fieldName = ExtractIndexFieldName(vt, metadata, parameters);
-            else
-                throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
+            var isDocumentId = false;
+            switch (expression.Arguments[0])
+            {
+                case FieldExpression ft:
+                    fieldName = ExtractIndexFieldName(query, parameters, ft, metadata);
+                    break;
+                case ValueExpression vt:
+                    fieldName = ExtractIndexFieldName(vt, metadata, parameters);
+                    break;
+                case MethodExpression me when QueryMethod.GetMethodType(me.Name.Value) == MethodType.Id:
+                    fieldName = QueryFieldName.DocumentId;
+                    isDocumentId = true;
+                    break;
+                default:
+                    throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
+            }
 
             var (value, valueType) = GetValue(query, metadata, parameters, (ValueExpression)expression.Arguments[1]);
 
@@ -805,7 +815,7 @@ namespace Raven.Server.Documents.Queries
 
             Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
-            if (metadata.IsDynamic)
+            if (metadata.IsDynamic && isDocumentId == false)
                 fieldName = new QueryFieldName(AutoIndexField.GetSearchAutoIndexFieldName(fieldName.Value), fieldName.IsQuoted);
 
             var valueAsString = GetValueAsString(value);

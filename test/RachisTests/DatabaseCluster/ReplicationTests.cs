@@ -228,7 +228,7 @@ namespace RachisTests.DatabaseCluster
         }
 
         [Fact]
-        public async Task WaitForReplicaitonShouldWaitOnlyForInternalNodes()
+        public async Task WaitForReplicationShouldWaitOnlyForInternalNodes()
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
@@ -303,13 +303,17 @@ namespace RachisTests.DatabaseCluster
 
         private void WaitForDocumentInExternalReplication(List<ExternalReplication> watchers, Dictionary<string, string[]> watcherUrls)
         {
+            var reached = 0;
             foreach (var watcher in watchers)
             {
-                WaitForDocument(watcherUrls[watcher.Database], watcher.Database);
+                if (WaitForDocument(watcherUrls[watcher.Database], watcher.Database))
+                    reached++;
             }
+
+            Assert.True(reached == watchers.Count, $"reached only {reached} out of {watchers.Count}");
         }
 
-        private void WaitForDocument(string[] urls, string database)
+        private bool WaitForDocument(string[] urls, string database)
         {
             using (var store = new DocumentStore
             {
@@ -317,7 +321,7 @@ namespace RachisTests.DatabaseCluster
                 Database = database
             }.Initialize())
             {
-                Assert.True(WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel"));
+                return WaitForDocument<User>(store, "users/1", u => u.Name == "Karmel", timeout: 15_000);
             }
         }
 
@@ -468,7 +472,7 @@ namespace RachisTests.DatabaseCluster
                 };
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
                 await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
-                WaitForDocument(new[] { leader.WebUrl }, watcher.Database);
+                Assert.True(WaitForDocument(new[] {leader.WebUrl}, watcher.Database));
             }
 
             var handler = await InstantiateOutgoingTaskHandler(databaseName, leader);
@@ -516,7 +520,7 @@ namespace RachisTests.DatabaseCluster
                 watcher.Database = external2;
                 var updateRes = await AddWatcherToReplicationTopology((DocumentStore)store, watcher);
                 await WaitForRaftIndexToBeAppliedInCluster(updateRes.RaftCommandIndex, TimeSpan.FromSeconds(10));
-                WaitForDocument(new[] { leader.WebUrl }, watcher.Database);
+                Assert.True(WaitForDocument(new[] {leader.WebUrl}, watcher.Database));
             }
 
             tasks = handler.GetOngoingTasksInternal().OngoingTasksList;

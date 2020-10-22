@@ -41,7 +41,11 @@ namespace StressTests.Cluster
 
                     await ClusterIndexNotificationsTest.WaitForIndexCreation(store2);
 
-                    var e = await Assert.ThrowsAsync<RavenException>(async () => await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true)));
+                    var e = await Assert.ThrowsAsync<RavenException>(async () =>
+                    {
+                        var r = await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(store.Database, true));
+                        throw new InvalidOperationException($"Expected to fail, but got: Name={r.Name}, Disabled={r.Disabled}, Success={r.Success}, Reason={r.Reason}");
+                    });
                     Assert.True(e.InnerException is TimeoutException);
 
                     cts.Cancel();

@@ -337,5 +337,45 @@ namespace SlowTests.Client.Subscriptions
                 Assert.True(ongoingTask.Disabled);
             }
         }
+        
+        private class Command
+        {
+            public string Error { get; set; }
+        }
+        
+        [Fact]
+        public async Task Subscription_WhenFilteredByNull_ShouldWork()
+        {
+            const string id = "A1";
+            
+            using var store = GetDocumentStore();
+            var subscriptionCreationParams = new SubscriptionCreationOptions
+            {
+                Query = "from Commands where Error = null"
+            };
+            var subsName = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+
+            await using (var acceptedSubscription = store.Subscriptions.GetSubscriptionWorker<Thing>(new SubscriptionWorkerOptions(subsName)))
+            {
+                var isProcessed = new AsyncManualResetEvent();
+
+                var task = acceptedSubscription.Run(x =>
+                {
+                    foreach (var item in x.Items)
+                    {
+                        if(item.Id == id)
+                            isProcessed.Set();
+                    }
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Command(), id);
+                    await session.SaveChangesAsync();
+                }
+
+                Assert.True(await isProcessed.WaitAsync(TimeSpan.FromSeconds(15)));
+            }
+        }
     }
 }

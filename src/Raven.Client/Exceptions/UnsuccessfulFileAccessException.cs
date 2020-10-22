@@ -6,7 +6,7 @@ using Sparrow.Platform;
 
 namespace Raven.Client.Exceptions
 {
-    public class UnsuccessfulFileAccessException : Exception
+    internal class UnsuccessfulFileAccessException : Exception
     {
         internal static string GetMessage(string filePath, FileAccess accessType, Exception underlyingException)
         {
@@ -19,12 +19,15 @@ namespace Raven.Client.Exceptions
                 case NotSupportedException _: //for posix
                     msg += $"* The file path refers to a non-file device.{Environment.NewLine}";
                     break;
+
                 case PathTooLongException _: //precaution, for completeness sake
                     msg += $"* The specified path, file name, or both exceed the system-defined maximum length.{Environment.NewLine}";
                     break;
+
                 case FileNotFoundException _:
                     msg += $"* The file path refers to a non-existing file.{Environment.NewLine}";
                     break;
+
                 case SecurityException _:
                     msg += $"* RavenDB process does not have the required permissions to open the file.{Environment.NewLine}";
                     break;
@@ -54,7 +57,6 @@ namespace Raven.Client.Exceptions
                 {
                     msg += $@"* Failed to identify which process(es) is holding the file: {e}. {Environment.NewLine}";
                 }
-
             }
 
             return msg;
@@ -62,7 +64,6 @@ namespace Raven.Client.Exceptions
 
         public string FilePath { get; }
         public FileAccess AccessType { get; }
-
 
         public UnsuccessfulFileAccessException(Exception e, string filePath, FileAccess accessType)
             : base(GetMessage(filePath, accessType, e), e)
