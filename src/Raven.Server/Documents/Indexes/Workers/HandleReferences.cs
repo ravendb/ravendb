@@ -178,6 +178,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                         IndexWriteOperation indexWriter = null;
 
                         var keepRunning = true;
+                        var earlyExit = false;
                         var lastCollectionEtag = -1L;
                         while (keepRunning)
                         {
@@ -233,7 +234,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                             if (isFirst == false && CanContinue() == false)
                                             {
                                                 _index.LastProcessedReference.Set(actionType, collection, referencedDocument, current.Id);
-                                                moreWorkFound = true;
+                                                earlyExit = true;
                                                 break;
                                             }
 
@@ -264,7 +265,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         }
                                     }
 
-                                    if (moreWorkFound)
+                                    if (earlyExit)
                                         break;
 
                                     lastEtag = referencedDocument.Etag;
@@ -301,9 +302,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         if (lastReferenceEtag == lastEtag)
                         {
-                            if (keepRunning == false)
-                                return moreWorkFound;
                             // the last referenced etag hasn't changed
+
+                            if (keepRunning == false && earlyExit)
+                                return true;
+
                             continue;
                         }
 
