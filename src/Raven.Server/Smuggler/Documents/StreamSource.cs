@@ -154,7 +154,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.DocumentsCompression), out BlittableJsonReaderObject documentsCompression) 
+                if (reader.TryGet(nameof(databaseRecord.DocumentsCompression), out BlittableJsonReaderObject documentsCompression)
                     && documentsCompression != null)
                 {
                     try
@@ -729,6 +729,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 case DatabaseItemType.None:
                     return 0;
+
                 case DatabaseItemType.Documents:
                 case DatabaseItemType.RevisionDocuments:
                 case DatabaseItemType.Tombstones:
@@ -745,10 +746,16 @@ namespace Raven.Server.Smuggler.Documents
 #pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
                     return SkipArray(onSkipped, null, token);
+
                 case DatabaseItemType.TimeSeries:
                     return SkipArray(onSkipped, SkipBlob, token);
+
                 case DatabaseItemType.DatabaseRecord:
                     return SkipObject(onSkipped);
+
+                case DatabaseItemType.ReplicationHubCertificates:
+                    return SkipArray(onSkipped, null, token);
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
             }

@@ -56,7 +56,7 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.CounterGroups,
             DatabaseItemType.Subscriptions,
             DatabaseItemType.TimeSeries,
-            DatabaseItemType.ReplicationHubCertificates, 
+            DatabaseItemType.ReplicationHubCertificates,
             DatabaseItemType.None
         };
 
@@ -95,7 +95,8 @@ namespace Raven.Server.Smuggler.Documents
             if (options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchange) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.Identities) ||
                 options.OperateOnTypes.HasFlag(DatabaseItemType.CompareExchangeTombstones) ||
-                options.OperateOnTypes.HasFlag(DatabaseItemType.Subscriptions))
+                options.OperateOnTypes.HasFlag(DatabaseItemType.Subscriptions) ||
+                options.OperateOnTypes.HasFlag(DatabaseItemType.ReplicationHubCertificates))
             {
                 _returnServerContext = _database.ServerStore.ContextPool.AllocateOperationContext(out _serverContext);
                 _disposeServerTransaction = _serverContext.OpenReadTransaction();
@@ -169,7 +170,7 @@ namespace Raven.Server.Smuggler.Documents
                 },
                 new DocumentsIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
-                    StartEtag = _startDocumentEtag, 
+                    StartEtag = _startDocumentEtag,
                     StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
                 });
 
@@ -210,7 +211,7 @@ namespace Raven.Server.Smuggler.Documents
             var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
                 state =>
                 {
-                    if(state.StartEtagByCollection.Count != 0)
+                    if (state.StartEtagByCollection.Count != 0)
                         return GetRevisionsFromCollections(_context, state);
 
                     return revisionsStorage.GetRevisionsFrom(_context, state.StartEtag, long.MaxValue);
@@ -290,7 +291,8 @@ namespace Raven.Server.Smuggler.Documents
                 },
                 new TombstonesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
                 {
-                    StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                    StartEtag = _startDocumentEtag,
+                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
                 });
 
             while (enumerator.MoveNext())
@@ -440,7 +442,8 @@ namespace Raven.Server.Smuggler.Documents
                 },
                 new CountersIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit) // initial state
                 {
-                    StartEtag = _startDocumentEtag, StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
+                    StartEtag = _startDocumentEtag,
+                    StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
                 });
 
             while (enumerator.MoveNext())
@@ -490,7 +493,7 @@ namespace Raven.Server.Smuggler.Documents
 
             var initialState = new TimeSeriesIterationState(_context, _database.Configuration.Databases.PulseReadTransactionLimit)
             {
-                StartEtag = _startDocumentEtag, 
+                StartEtag = _startDocumentEtag,
                 StartEtagByCollection = collectionsToExport.ToDictionary(x => x, x => _startDocumentEtag)
             };
 
