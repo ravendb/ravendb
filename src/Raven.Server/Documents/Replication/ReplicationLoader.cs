@@ -15,6 +15,7 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
@@ -1062,6 +1063,18 @@ namespace Raven.Server.Documents.Replication
                     {
                         _log.Info($"Failed to fetch tcp connection information for the destination '{node.FromString()}' , the connection will be retried later.", e);
                     }
+                }
+
+                if (e is AuthorizationException)
+                {
+                    var alert = AlertRaised.Create(
+                        node.Database,
+                        $"Forbidden access to {node.FromString()}'",
+                        $"Replication failed. Certificate does not have permission to access or is unknown.",
+                        AlertType.Replication,
+                        NotificationSeverity.Error);
+
+                        _server.NotificationCenter.Add(alert);
                 }
 
                 var replicationPulse = new LiveReplicationPulsesCollector.ReplicationPulse
