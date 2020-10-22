@@ -1087,6 +1087,7 @@ namespace Raven.Server.Documents.Queries.Results
             "yyyy",
             "yyyy-MM",
             "yyyy-MM-ddTHH:mm",
+            "yyyy-MM-ddTHH:mm:ss.fffZ",
             "yyyy-MM-ddTHH:mm:ss.fff"
         };
     }
