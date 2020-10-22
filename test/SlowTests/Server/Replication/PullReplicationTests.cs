@@ -344,8 +344,8 @@ namespace SlowTests.Server.Replication
         public async Task FailoverOnHubNodeFail()
         {
             var clusterSize = 3;
-            var hub = await CreateRaftClusterAndGetLeader(clusterSize);
-            var minion = await CreateRaftClusterAndGetLeader(clusterSize);
+            var hub = await CreateRaftClusterAndGetLeader(clusterSize, allServers: false);
+            var minion = await CreateRaftClusterAndGetLeader(clusterSize, allServers: false);
 
             var hubDB = GetDatabaseName();
             var minionDB = GetDatabaseName();
@@ -438,8 +438,8 @@ namespace SlowTests.Server.Replication
         public async Task FailoverOnSinkNodeFail()
         {
             var clusterSize = 3;
-            var hub = await CreateRaftClusterAndGetLeader(clusterSize);
-            var minion = await CreateRaftClusterAndGetLeader(clusterSize);
+            var hub = await CreateRaftClusterAndGetLeader(clusterSize, allServers: false);
+            var minion = await CreateRaftClusterAndGetLeader(clusterSize, allServers: false);
 
             var hubDB = GetDatabaseName();
             var minionDB = GetDatabaseName();

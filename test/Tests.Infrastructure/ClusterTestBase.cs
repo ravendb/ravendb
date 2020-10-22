@@ -225,7 +225,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<RavenServer> ActionWithLeader(Func<RavenServer, Task> act)
+        protected async Task<RavenServer> ActionWithLeader(Func<RavenServer, Task> act, List<RavenServer> servers = null)
         {
             var retries = 5;
             Exception err = null;
@@ -233,7 +233,7 @@ namespace Tests.Infrastructure
             {
                 try
                 {
-                    var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
+                    var leader = servers == null ? Servers.FirstOrDefault(s => s.ServerStore.IsLeader()) : servers.FirstOrDefault(s => s.ServerStore.IsLeader());
                     if (leader != null)
                     {
                         await act(leader);
@@ -487,6 +487,7 @@ namespace Tests.Infrastructure
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
+            bool allServers = true,
             [CallerMemberName] string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
@@ -559,9 +560,13 @@ namespace Tests.Infrastructure
                         continue;
                     }
                     var follower = clusterNodes[i];
+
                     // ReSharper disable once PossibleNullReferenceException
-                    leader = await ActionWithLeader(l =>
-                        l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token));
+
+                    leader = (allServers) ? await ActionWithLeader(l =>
+                                                l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token)) :
+                                            await ActionWithLeader(l =>
+                                                l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token), clusterNodes);
 
                     if (watcherCluster)
                     {
@@ -585,9 +590,10 @@ namespace Tests.Infrastructure
             return (clusterNodes, leader);
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null, [CallerMemberName] string caller = null)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false, 
+            IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null, [CallerMemberName] string caller = null, bool allServers = true)
         {
-            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList, caller: caller)).Leader;
+            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList, caller: caller, allServers: allServers)).Leader;
         }
 
         protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0, [CallerMemberName] string caller = null)

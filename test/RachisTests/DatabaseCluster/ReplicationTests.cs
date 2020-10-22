@@ -859,8 +859,8 @@ namespace RachisTests.DatabaseCluster
         public async Task ExternalReplicationFailover()
         {
             var clusterSize = 3;
-            var srcLeader = await CreateRaftClusterAndGetLeader(clusterSize);
-            var dstLeader = await CreateRaftClusterAndGetLeader(clusterSize);
+            var srcLeader = await CreateRaftClusterAndGetLeader(clusterSize, allServers: false);
+            var dstLeader = await CreateRaftClusterAndGetLeader(clusterSize, allServers: false);
 
             var dstDB = GetDatabaseName();
             var srcDB = GetDatabaseName();

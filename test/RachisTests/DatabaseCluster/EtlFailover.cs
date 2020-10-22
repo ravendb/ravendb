@@ -136,8 +136,8 @@ namespace RachisTests.DatabaseCluster
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";
             var dstDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterDst";
-            var srcRaft = await CreateRaftClusterAndGetLeader(3, leaderIndex: 0);
-            var dstRaft = await CreateRaftClusterAndGetLeader(3);
+            var srcRaft = await CreateRaftClusterAndGetLeader(3, leaderIndex: 0, allServers: false);
+            var dstRaft = await CreateRaftClusterAndGetLeader(3, allServers: false);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 3, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 3, dstRaft.WebUrl);
 
