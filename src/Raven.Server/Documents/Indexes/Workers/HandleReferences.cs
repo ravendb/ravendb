@@ -219,12 +219,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         {
                                             token.ThrowIfCancellationRequested();
 
-                                            totalProcessedCount++;
-                                            collectionStats.RecordMapReferenceAttempt();
-
                                             var current = itemsEnumerator.Current;
-                                            stats.RecordDocumentSize(current.Size);
-
                                             indexWriter ??= writeOperation.Value;
 
                                             if (CanContinueReferenceBatch() == false)
@@ -233,6 +228,10 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                 earlyExit = true;
                                                 break;
                                             }
+
+                                            totalProcessedCount++;
+                                            collectionStats.RecordMapReferenceAttempt();
+                                            stats.RecordDocumentSize(current.Size);
 
                                             try
                                             {
@@ -321,11 +320,12 @@ namespace Raven.Server.Documents.Indexes.Workers
                             default:
                                 throw new NotSupportedException();
                         }
+
+                        if (earlyExit == false)
+                            _index.LastProcessedReference.Clear(actionType);
                     }
                 }
             }
-
-            _index.LastProcessedReference.Clear(actionType);
 
             return moreWorkFound;
         }
