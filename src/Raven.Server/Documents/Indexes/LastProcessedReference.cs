@@ -1,23 +1,34 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.Documents.Indexes.Workers;
 
 namespace Raven.Server.Documents.Indexes
 {
     public class LastProcessedReference
     {
-        private readonly Dictionary<string, string> _lastIdPerCollectionForDocuments = new Dictionary<string, string>();
+        private readonly Dictionary<(string Collection, string ReferencedDocumentId), (long ReferencedDocumentEtag, string ItemId)> _lastIdPerCollectionForDocuments = new Dictionary<(string, string), (long, string)>();
 
-        private readonly Dictionary<string, string> _lastIdPerCollectionForTombstones = new Dictionary<string, string>();
+        private readonly Dictionary<(string Collection, string ReferencedDocumentId), (long ReferencedDocumentEtag, string ItemId)> _lastIdPerCollectionForTombstones = new Dictionary<(string, string), (long, string)>();
 
-        public void Set(ActionType actionType, string collection, string id)
+        public void Set(ActionType actionType, string collection, HandleReferencesBase.Reference referencedDocument, string itemId)
         {
             var dictionary = GetDictionary(actionType);
-            dictionary[collection] = id;
+            dictionary[(collection, referencedDocument.Key)] = (referencedDocument.Etag, itemId);
         }
 
-        public string GetDocumentId(ActionType actionType, string collection)
+        public string GetLastProcessedItemId(ActionType actionType, string collection, HandleReferencesBase.Reference referencedDocument)
         {
             var dictionary = GetDictionary(actionType);
-            return dictionary.TryGetValue(collection, out var id) ? id : null;
+            if (dictionary.TryGetValue((collection, referencedDocument.Key), out var tuple) == false)
+                return null;
+
+            if (referencedDocument.Etag != tuple.ReferencedDocumentEtag)
+            {
+                // the document has changed since, cannot continue from the same point
+                dictionary.Remove((collection, referencedDocument.Key));
+                return null;
+            }
+
+            return tuple.ItemId;
         }
 
         public void Clear(ActionType actionType)
@@ -26,7 +37,7 @@ namespace Raven.Server.Documents.Indexes
             dictionary.Clear();
         }
 
-        private Dictionary<string, string> GetDictionary(ActionType actionType)
+        private Dictionary<(string Collection, string ReferencedDocumentId), (long ReferencedDocumentEtag, string ItemId)> GetDictionary(ActionType actionType)
         {
             var dictionary = actionType == ActionType.Document
                 ? _lastIdPerCollectionForDocuments

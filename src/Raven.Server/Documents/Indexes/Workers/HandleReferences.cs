@@ -211,7 +211,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 foreach (var referencedDocument in references)
                                 {
                                     hasChanges = true;
-                                    inMemoryStats.UpdateLastEtag(lastEtag, isTombstone);
 
                                     var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedDocument, lastIndexedEtag, indexed, actionType);
 
@@ -233,7 +232,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             if (isFirst == false && CanContinue() == false)
                                             {
-                                                _index.LastProcessedReference.Set(actionType, collection, current.Id);
+                                                _index.LastProcessedReference.Set(actionType, collection, referencedDocument, current.Id);
                                                 moreWorkFound = true;
                                                 break;
                                             }
@@ -269,6 +268,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         break;
 
                                     lastEtag = referencedDocument.Etag;
+                                    inMemoryStats.UpdateLastEtag(lastEtag, isTombstone);
 
                                     if (CanContinue() == false)
                                         break;
@@ -337,7 +337,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             string collection, Reference referencedDocument, long lastIndexedEtag, HashSet<string> indexed, ActionType actionType)
         {
             //TODO: support Counters/TimeSeries/CompareExchange indexes references as well
-            var lastProcessedItemId = _index.LastProcessedReference.GetDocumentId(actionType, collection);
+            var lastProcessedItemId = _index.LastProcessedReference.GetLastProcessedItemId(actionType, collection, referencedDocument);
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction, lastProcessedItemId))
             {
                 var item = GetItem(queryContext.Documents, key);
@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
 
-        protected class Reference
+        public class Reference
         {
             public LazyStringValue Key;
 
