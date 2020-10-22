@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,10 +18,16 @@ namespace SlowTests.Issues
         {
         }
 
+        private const int _employeesCount = 20_000;
+        private const string _managedAllocationsBatchLimit = "16";
+
         [Fact]
         public async Task CanIndexReferencedDocumentChange()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
             {
                 const string companyName1 = "Hibernating Rhinos";
                 const string companyName2 = "HR";
@@ -29,7 +36,6 @@ namespace SlowTests.Issues
                     Name = companyName1
                 };
 
-                var employeesCount = 700_000;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -37,7 +43,7 @@ namespace SlowTests.Issues
 
                     using (var bulk = store.BulkInsert())
                     {
-                        for (var i = 0; i < employeesCount; i++)
+                        for (var i = 0; i < _employeesCount; i++)
                         {
                             await bulk.StoreAsync(new Employee
                             {
@@ -51,7 +57,7 @@ namespace SlowTests.Issues
                 new Index().Execute(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, companyName1, employeesCount);
+                await AssertCount(store, companyName1, _employeesCount);
 
                 var batchCount = 0;
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
@@ -71,16 +77,19 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, companyName1, 0);
-                await AssertCount(store, companyName2, employeesCount);
+                await AssertCount(store, companyName2, _employeesCount);
 
-                Assert.True(batchCount >= 2);
+                Assert.True(batchCount >= 5, batchCount.ToString());
             }
         }
 
         [Fact]
         public async Task CanIndexReferencedDocumentMultipleChanges()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
             {
                 const string companyName1 = "Hibernating Rhinos";
                 const string companyName2 = "HR";
@@ -89,7 +98,6 @@ namespace SlowTests.Issues
                     Name = companyName1
                 };
 
-                var employeesCount = 700_000;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -97,7 +105,7 @@ namespace SlowTests.Issues
 
                     using (var bulk = store.BulkInsert())
                     {
-                        for (var i = 0; i < employeesCount; i++)
+                        for (var i = 0; i < _employeesCount; i++)
                         {
                             await bulk.StoreAsync(new Employee
                             {
@@ -111,7 +119,7 @@ namespace SlowTests.Issues
                 new Index().Execute(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, companyName1, employeesCount);
+                await AssertCount(store, companyName1, _employeesCount);
 
                 var batchCount = 0;
                 var sm = new SemaphoreSlim(0);
@@ -141,17 +149,20 @@ namespace SlowTests.Issues
                 }
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
-                await AssertCount(store, companyName1, employeesCount);
+                await AssertCount(store, companyName1, _employeesCount);
                 await AssertCount(store, companyName2, 0);
 
-                Assert.True(batchCount >= 2);
+                Assert.True(batchCount >= 5);
             }
         }
 
         [Fact]
         public async Task CanIndexReferencedDocumentDelete()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
             {
                 const string companyName1 = "Hibernating Rhinos";
                 var company = new Company
@@ -159,7 +170,6 @@ namespace SlowTests.Issues
                     Name = companyName1
                 };
 
-                var employeesCount = 700_000;
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(company);
@@ -167,7 +177,7 @@ namespace SlowTests.Issues
 
                     using (var bulk = store.BulkInsert())
                     {
-                        for (var i = 0; i < employeesCount; i++)
+                        for (var i = 0; i < _employeesCount; i++)
                         {
                             await bulk.StoreAsync(new Employee
                             {
@@ -181,7 +191,7 @@ namespace SlowTests.Issues
                 index.Execute(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                await AssertCount(store, companyName1, employeesCount);
+                await AssertCount(store, companyName1, _employeesCount);
 
                 var batchCount = 0;
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
@@ -201,7 +211,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, companyName1, 0);
 
-                Assert.True(batchCount >= 2);
+                Assert.True(batchCount >= 5);
             }
         }
 
