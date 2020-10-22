@@ -128,6 +128,8 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryReferencesIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
 
+        public LastProcessedReference LastProcessedReference = new LastProcessedReference();
+
         internal DocumentDatabase DocumentDatabase;
 
         internal PoolOfThreads.LongRunningWork _indexingThread;
