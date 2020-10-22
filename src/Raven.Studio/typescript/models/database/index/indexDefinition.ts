@@ -186,7 +186,11 @@ class indexDefinition {
     
     private initDefaultFieldOptionsSubscriptions() {
         this.defaultFieldOptions().indexing.subscribe(() => {
-            this.fields().forEach(x => x.computeAnalyzer())
+            this.fields().forEach(x => {
+                if (x.indexing() === null) {
+                    x.indexing.valueHasMutated();
+                }
+            })
         });
 
         this.defaultFieldOptions().fullTextSearch.subscribe(() => {
@@ -195,6 +199,16 @@ class indexDefinition {
                     x.fullTextSearch.valueHasMutated();
                 }
             })
+        })
+
+        this.defaultFieldOptions().analyzer.subscribe(() => {
+            if (this.defaultFieldOptions().indexing() === "Search") {
+                this.fields().forEach(x => {
+                    if (x.indexing() === null) {
+                        x.computeAnalyzer();
+                    }
+                })
+            }
         })
     }
     

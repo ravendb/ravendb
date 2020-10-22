@@ -208,16 +208,6 @@ class editIndex extends viewModelBase {
                         "</ul> " +
                     "</small>"
             });
-
-        popoverUtils.longWithHover($(".indexing-status"),
-            {
-                content:
-                    `<small>
-                        This index field was defined outside of studio.<br>
-                        The <strong>Indexing</strong> property contains <i>'Default'</i> since it was not set for this index field.<br>
-                        Note: the server will be using <strong>Indexing.Search</strong> since an Analyzer is defined.
-                    </small>`
-            });
     }
 
     compositionComplete() {
