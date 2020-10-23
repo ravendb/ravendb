@@ -14,6 +14,7 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson
@@ -176,17 +177,19 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         /// <returns>The serializable members for the type.</returns>
         protected override List<MemberInfo> GetSerializableMembers(Type objectType)
         {
+            var isRecord = objectType.IsRecord();
             var serializableMembers = base.GetSerializableMembers(objectType);
             foreach (var toRemove in serializableMembers
-                .Where(MembersToFilterOut)
+                .Where(x => MembersToFilterOut(x, isRecord))
                 .ToArray())
             {
                 serializableMembers.Remove(toRemove);
             }
+
             return serializableMembers;
         }
 
-        private bool MembersToFilterOut(MemberInfo info)
+        private bool MembersToFilterOut(MemberInfo info, bool isRecord)
         {
             if (info is EventInfo)
                 return true;
@@ -218,6 +221,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             var propertyInfo = info as PropertyInfo;
             if (propertyInfo != null)
             {
+                if (isRecord && propertyInfo.Name == Sparrow.Extensions.TypeExtensions.RecordEqualityContractPropertyName)
+                    return true;
+
 #if NETSTANDARD2_0
                 if (propertyInfo.PropertyType.IsByRef)
 #else
