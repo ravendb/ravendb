@@ -54,17 +54,20 @@ namespace SlowTests.Issues
                 }
 
                 var index = new Index();
-                new Index().Execute(store);
+                await new Index().ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, companyName1, _employeesCount);
 
                 var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
+                
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
                     {
-                        Interlocked.Increment(ref batchCount);
+                        if(Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
                     }
                 });
 
@@ -78,7 +81,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, companyName1, 0);
                 await AssertCount(store, companyName2, _employeesCount);
-
+                Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
                 Assert.True(batchCount > 1);
             }
         }
@@ -116,19 +119,19 @@ namespace SlowTests.Issues
                 }
 
                 var index = new Index();
-                new Index().Execute(store);
+                await new Index().ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, companyName1, _employeesCount);
 
                 var batchCount = 0;
-                var sm = new SemaphoreSlim(0);
+                var tcs = new TaskCompletionSource<object>();
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
                     {
-                        sm.Release();
-                        Interlocked.Increment(ref batchCount);
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.TrySetResult(null);
                     }
                 });
 
@@ -139,7 +142,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                await sm.WaitAsync(TimeSpan.FromMinutes(1));
+                Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -188,17 +191,19 @@ namespace SlowTests.Issues
                 }
 
                 var index = new Index();
-                index.Execute(store);
+                await index.ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, companyName1, _employeesCount);
 
                 var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
                 store.Changes().ForIndex(index.IndexName).Subscribe(x =>
                 {
                     if (x.Type == IndexChangeTypes.BatchCompleted)
                     {
-                        Interlocked.Increment(ref batchCount);
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.TrySetResult(null);
                     }
                 });
 
@@ -210,6 +215,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, companyName1, 0);
+                Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
 
                 Assert.True(batchCount > 1);
             }
