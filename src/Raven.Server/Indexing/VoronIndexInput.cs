@@ -90,8 +90,7 @@ namespace Raven.Server.Indexing
 
         public override byte ReadByte(IState s)
         {
-            var state = s as VoronState;
-            if (state == null)
+            if (!(s is VoronState state))
             {
                 ThrowStateNullException();
                 return byte.MinValue;
