@@ -7,8 +7,6 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
-using Raven.Server.Config.Categories;
-using Raven.Server.Exceptions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -43,13 +41,10 @@ namespace Raven.Server.Documents.Handlers
             }
             return Task.CompletedTask;
         }
-        
+
         [RavenAction("/databases/*/admin/documents-compression/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigDocumentsCompression()
         {
-            if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                FeaturesAvailabilityException.Throw("Documents Compression");
-
             await DatabaseConfigurations(ServerStore.ModifyDocumentsCompression, "write-compression-config", GetRaftRequestIdFromQuery());
         }
     }
