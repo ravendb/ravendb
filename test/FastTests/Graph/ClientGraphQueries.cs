@@ -36,7 +36,8 @@ namespace FastTests.Graph
                 }
             }
         }
-
+       
+        
         [Fact]
         public void CanAggregateQueryParametersProperly()
         {
@@ -55,22 +56,27 @@ namespace FastTests.Graph
                     });
                     session.SaveChanges();
 
-                    var names = new[]
+                    foreach (var names in new[]
                     {
-                        "Fi",
-                        "Fah",
-                        "Foozy"
-                    };
+                        new[] {"Fi", "Fah", "Foozy"},
+                        new[] {"Fi","Foozy", "Fah"},
+                        new[] {"Foozy", "Fi", "Fah", "Foozy"},
+                        new[] {"Fi","Foozy", "Fah", "Fah", "Foozy"},
+                    })
+                    {
+                        var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
+                            .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
+                            .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18))
+                            .WaitForNonStaleResults()
+                            .ToList();
 
-                    var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
-                        .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18))
-                        .WaitForNonStaleResults()
-                        .ToList();
-
-                    Assert.Single(res);
-                    Assert.Equal(res[0].Foo.Name, "Foozy");
-                    Assert.Equal(res[0].Bar.Name, "Barvazon");
+                        Assert.Single(res);
+                        Assert.Equal(res[0].Foo.Name, "Foozy");
+                        Assert.Equal(res[0].Bar.Name, "Barvazon");
+                    }
+                    
+                    
+                   
                 }
             }
         }
