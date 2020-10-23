@@ -5,7 +5,6 @@ using System.Linq;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                         termEnum.Term.Field != _termsMatchQuery.Field)
                         break;
 
-                    for (; _pos < _termsMatchQuery.Matches.Count; _pos++)
+                    do
                     {
                         int cmp = string.CompareOrdinal(_termsMatchQuery.Matches[_pos], termEnum.Term.Text);
                         if (cmp == 0)
@@ -69,13 +68,18 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                         {
                             break; // search the next term
                         }
-                    }
+                    } while (termEnum.Next(state));
                 }
 
                 return false;
             }
 
             protected override bool TermCompare(Term term)
+            {
+                throw new NotSupportedException("Shouldn't be called");
+            }
+
+            public override int DocFreq()
             {
                 throw new NotSupportedException("Shouldn't be called");
             }
