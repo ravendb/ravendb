@@ -35,7 +35,6 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
-using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
@@ -52,9 +51,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
-using Sparrow.Utils;
 using Voron.Util.Settings;
-using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 using Constants = Raven.Client.Constants;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -285,8 +282,6 @@ namespace Raven.Server.Web.System
                     databaseRecord.DocumentsCompression?.Collections?.Length > 0)
                 {
                     ServerStore.LicenseManager.AssertCanUseDocumentsCompression();
-                    if (Server.Configuration.Core.FeaturesAvailability != FeaturesAvailability.Experimental)
-                        FeaturesAvailabilityException.Throw("Documents Compression");
                 }
 
                 // Validate Directory
