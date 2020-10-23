@@ -99,8 +99,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                             ? _configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan
                             : TimeSpan.FromMinutes(15);
 
-            var moreWorkFound = HandleItems(ActionType.Tombstone, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
-            moreWorkFound |= HandleItems(ActionType.Document, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            var moreWorkFound = HandleItems(LastProcessedReference.ActionType.Tombstone, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
+            moreWorkFound |= HandleItems(LastProcessedReference.ActionType.Document, queryContext, indexContext, writeOperation, stats, pageSize, maxTimeForDocumentTransactionToRemainOpen, token);
 
             return moreWorkFound;
         }
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         protected abstract bool TryGetReferencedCollectionsFor(string collection, out HashSet<CollectionName> referencedCollections);
 
-        private unsafe bool HandleItems(ActionType actionType, QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
+        private unsafe bool HandleItems(LastProcessedReference.ActionType actionType, QueryOperationContext queryContext, TransactionOperationContext indexContext, Lazy<IndexWriteOperation> writeOperation, IndexingStatsScope stats, long pageSize, TimeSpan maxTimeForDocumentTransactionToRemainOpen, CancellationToken token)
         {
             var moreWorkFound = false;
             Dictionary<string, long> lastIndexedEtagsByCollection = null;
@@ -159,10 +159,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         switch (actionType)
                         {
-                            case ActionType.Document:
+                            case LastProcessedReference.ActionType.Document:
                                 lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
                                 break;
-                            case ActionType.Tombstone:
+                            case LastProcessedReference.ActionType.Tombstone:
                                 lastReferenceEtag = _referencesStorage.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
                                 break;
                             default:
@@ -189,13 +189,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 IEnumerable<Reference> references;
                                 switch (actionType)
                                 {
-                                    case ActionType.Document:
+                                    case LastProcessedReference.ActionType.Document:
                                         if (lastCollectionEtag == -1)
                                             lastCollectionEtag = _index.GetLastItemEtagInCollection(queryContext, collection);
 
                                         references = GetItemReferences(queryContext, referencedCollection, lastEtag, pageSize);
                                         break;
-                                    case ActionType.Tombstone:
+                                    case LastProcessedReference.ActionType.Tombstone:
                                         if (lastCollectionEtag == -1)
                                             lastCollectionEtag = _index.GetLastTombstoneEtagInCollection(queryContext, collection);
 
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         throw new NotSupportedException();
                                 }
 
-                                var isTombstone = actionType == ActionType.Tombstone;
+                                var isTombstone = actionType == LastProcessedReference.ActionType.Tombstone;
 
                                 foreach (var referencedDocument in references)
                                 {
@@ -296,7 +296,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                         if (lastReferenceEtag == lastEtag)
                         {
                             // the last referenced etag hasn't changed
-
                             if (keepRunning == false && earlyExit)
                                 return true;
 
@@ -311,10 +310,10 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                         switch (actionType)
                         {
-                            case ActionType.Document:
+                            case LastProcessedReference.ActionType.Document:
                                 _referencesStorage.WriteLastReferenceEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
                                 break;
-                            case ActionType.Tombstone:
+                            case LastProcessedReference.ActionType.Tombstone:
                                 _referencesStorage.WriteLastReferenceTombstoneEtag(indexContext.Transaction, collection, referencedCollection, lastEtag);
                                 break;
                             default:
@@ -331,7 +330,7 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            string collection, Reference referencedDocument, long lastIndexedEtag, HashSet<string> indexed, ActionType actionType)
+            string collection, Reference referencedDocument, long lastIndexedEtag, HashSet<string> indexed, LastProcessedReference.ActionType actionType)
         {
             //TODO: support Counters/TimeSeries/CompareExchange indexes references as well
             var lastProcessedItemId = _index.LastProcessedReference.GetLastProcessedItemId(actionType, collection, referencedDocument);

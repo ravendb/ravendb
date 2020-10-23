@@ -3670,9 +3670,9 @@ namespace Raven.Server.Documents.Indexes
         {
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
-            if (count % MinBatchSize != 0)
+            if (count % 128 == 0) // do the actual check only every N ops 
                 return true;
-
+            
             //We need to take the read transaction encryption size into account as we might read alot of document and produce very little indexing output.
             txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
