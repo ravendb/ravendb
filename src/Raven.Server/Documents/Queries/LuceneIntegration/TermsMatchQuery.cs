@@ -86,7 +86,6 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         {
             private FastBitArray _docs;
             private IEnumerator<int> _enum;
-            private int _currentDocId;
             internal EagerTermMatchScorer(TermsMatchQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
             {
                 _docs = new FastBitArray(reader.MaxDoc);
@@ -101,11 +100,6 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 }
 
                 _enum = _docs.Iterate(0).GetEnumerator();
-                if (_enum.MoveNext() == false)
-                {
-                    _enum.Dispose();
-                    _enum = null;
-                }
             }
 
             public override int DocID()

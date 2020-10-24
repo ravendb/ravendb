@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.Intrinsics.X86;
 
@@ -22,9 +23,14 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         public IEnumerable<int> Iterate(int from)
         {
             // https://lemire.me/blog/2018/02/21/iterating-over-set-bits-quickly/
-            for (int i = from / 64; i < _bits.Length; i++)
+            int i = from / 64;
+            if (i >= _bits.Length)
+                yield break;
+
+            ulong bitmap = _bits[i];
+            bitmap &= ulong.MaxValue << (from % 64);
+            while (true)
             {
-                ulong bitmap = _bits[i];
                 while (bitmap != 0)
                 {
                     ulong t = bitmap & (ulong)-(long)bitmap;
@@ -34,6 +40,10 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                         yield return setBitPos; 
                     bitmap ^= t;
                 }
+                i++;
+                if (i >= _bits.Length)
+                    break;
+                bitmap = _bits[i];
             }
         }
 
