@@ -1773,7 +1773,6 @@ input[type=file] + .form-control {
     top: 29px !important;
 }
 
-
 .error-messages {
     height: 300px;
     overflow: auto;
@@ -1996,6 +1995,23 @@ ul.properties {
 
 .position-relative {
     position: relative;
+}
+
+.copy-example-button {
+    visibility: hidden;
+    color: @copy-button-color;
+
+    &:hover {
+        color: @copy-button-hover-color;
+    }
+}
+
+ .copy-example-area {
+     &:hover {
+         .copy-example-button {
+             visibility: visible;
+         }
+     }
 }
 
 @import "prism.less";
