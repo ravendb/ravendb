@@ -48,12 +48,13 @@ namespace Voron.Impl
 
         public byte* Get(int numberOfPages, out int size, out NativeMemory.ThreadStats thread)
         {
-            numberOfPages = Bits.PowerOf2(numberOfPages); ;
-            size = numberOfPages * Constants.Storage.PageSize;
+            var numberOfPagesPowerOfTwo = Bits.PowerOf2(numberOfPages); ;
+            size = numberOfPagesPowerOfTwo * Constants.Storage.PageSize;
 
-            if (Disabled || numberOfPages > MaxNumberOfPagesToCache)
+            if (Disabled || numberOfPagesPowerOfTwo > MaxNumberOfPagesToCache)
             {
                 // We don't want to pool large buffers
+                size = numberOfPages * Constants.Storage.PageSize;
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
             }
 
