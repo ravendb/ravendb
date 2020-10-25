@@ -487,7 +487,6 @@ namespace Tests.Infrastructure
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
-            bool allServers = true,
             [CallerMemberName] string caller = null)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
@@ -563,10 +562,8 @@ namespace Tests.Infrastructure
 
                     // ReSharper disable once PossibleNullReferenceException
 
-                    leader = (allServers) ? await ActionWithLeader(l =>
-                                                l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token)) :
-                                            await ActionWithLeader(l =>
-                                                l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token), clusterNodes);
+                    leader = await ActionWithLeader(l =>
+                        l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token), clusterNodes);
 
                     if (watcherCluster)
                     {
@@ -591,9 +588,9 @@ namespace Tests.Infrastructure
         }
 
         protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false, 
-            IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null, [CallerMemberName] string caller = null, bool allServers = true)
+            IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null, [CallerMemberName] string caller = null)
         {
-            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList, caller: caller, allServers: allServers)).Leader;
+            return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList, caller: caller)).Leader;
         }
 
         protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0, [CallerMemberName] string caller = null)
