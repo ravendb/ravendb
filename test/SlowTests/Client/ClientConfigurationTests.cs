@@ -1,13 +1,15 @@
-﻿using FastTests;
+﻿using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
-    public class ClientConfigurationTests : RavenTestBase
+    public class ClientConfigurationTests : ClusterTestBase
     {
         public ClientConfigurationTests(ITestOutputHelper output) : base(output)
         {
@@ -54,6 +56,45 @@ namespace SlowTests.Client
                 }
                 Assert.Equal(ReadBalanceBehavior.None, store.Conventions.ReadBalanceBehavior);
                 Assert.Equal(ReadBalanceBehavior.RoundRobin, requestExecutor.Conventions.ReadBalanceBehavior);
+            }
+        }
+
+        [Fact]
+        public async Task ChangeClientConfiguration_ShouldUpdateTheClient()
+        {
+            var (_, leader) = await CreateRaftCluster(3);
+            using var store = GetDocumentStore(new Options{Server = leader, });
+            var requestExecutor = store.GetRequestExecutor();
+
+            var origin = requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 100, Disabled = false }));
+            await AssertWaitForClientConfiguration(100);
+            
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { Disabled = true }));
+            await AssertWaitForClientConfiguration(origin);
+            
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 101, Disabled = false }));
+            await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 102, Disabled = false }));
+            await AssertWaitForClientConfiguration(101);
+                
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { Disabled = true}));
+            await AssertWaitForClientConfiguration(102);
+                
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 103, Disabled = false }));
+            await AssertWaitForClientConfiguration(103);
+
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(new ClientConfiguration { Disabled = true}));
+            await AssertWaitForClientConfiguration(102);
+            
+            async Task AssertWaitForClientConfiguration(int maxNumberOfRequestsPerSession)
+            {
+                await WaitForValueAsync(async () =>
+                {
+                    using var session = store.OpenAsyncSession();
+                    await session.LoadAsync<dynamic>("users/1");
+                    return requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
+                }, maxNumberOfRequestsPerSession);
+                Assert.Equal(maxNumberOfRequestsPerSession, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
             }
         }
 
