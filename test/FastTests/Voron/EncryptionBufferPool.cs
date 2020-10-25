@@ -25,7 +25,7 @@ namespace FastTests.Voron
 
             while (i < 8192)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out var size, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -67,7 +67,7 @@ namespace FastTests.Voron
 
             while (i <= 1024)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out _, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -88,7 +88,7 @@ namespace FastTests.Voron
             stats = encryptionBuffersPool.GetStats();
             Assert.Equal(0, stats.TotalSize);
 
-            var pointer = encryptionBuffersPool.Get(1, out _);
+            var pointer = encryptionBuffersPool.Get(1, out var size, out _);
             encryptionBuffersPool.Return(pointer, 8192, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
 
             // will cache the buffer
@@ -114,7 +114,7 @@ namespace FastTests.Voron
 
             while (i <= 1024)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out var size, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -148,7 +148,7 @@ namespace FastTests.Voron
             var generation = encryptionBuffersPool.Generation;
             while (i <= 1024)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out var size, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -174,17 +174,17 @@ namespace FastTests.Voron
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
 
-            var ptr = encryptionBuffersPool.Get(1, out _);
+            var ptr = encryptionBuffersPool.Get(1, out var size, out _);
             var stats = encryptionBuffersPool.GetStats();
             Assert.Equal(0, stats.TotalSize);
 
             encryptionBuffersPool.Return(ptr, 8192, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(8192, stats.TotalSize);
+            Assert.Equal(size, stats.TotalSize);
 
             encryptionBuffersPool.LowMemory(LowMemorySeverity.Low);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(8192, stats.TotalSize);
+            Assert.Equal(size, stats.TotalSize);
 
             ClearMemory(encryptionBuffersPool);
         }
