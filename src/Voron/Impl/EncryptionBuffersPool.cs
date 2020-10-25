@@ -5,23 +5,24 @@ using System.Linq;
 using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Server;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
+using Voron.Global;
 
 namespace Voron.Impl
 {
     public unsafe class EncryptionBuffersPool : ILowMemoryHandler
     {
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
-
-        private readonly long _maxBufferSizeToKeepInBytes = new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
+        private const int MaxNumberOfPagesToCache = 128; // 128 * 8K = 1 MB, beyond that, we'll not both 
         private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
         private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
-        private readonly ConcurrentStack<NativeAllocation>[] _items;
+        private readonly PerCoreContainer<NativeAllocation>[] _items;
         private readonly Timer _cleanupTimer;
         private DateTime _lastAllocationsRebuild = DateTime.UtcNow;
         private long _generation;
@@ -32,12 +33,12 @@ namespace Voron.Impl
 
         public EncryptionBuffersPool()
         {
-            var numberOfSlots = Bits.MostSignificantBit(_maxBufferSizeToKeepInBytes) + 1;
-            _items = new ConcurrentStack<NativeAllocation>[numberOfSlots];
+            var numberOfSlots = Bits.MostSignificantBit(MaxNumberOfPagesToCache * Constants.Storage.PageSize) + 1;
+            _items = new PerCoreContainer<NativeAllocation>[numberOfSlots];
 
             for (int i = 0; i < _items.Length; i++)
             {
-                _items[i] = new ConcurrentStack<NativeAllocation>();
+                _items[i] = new PerCoreContainer<NativeAllocation>();
             }
 
             LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
@@ -45,18 +46,19 @@ namespace Voron.Impl
             _cleanupTimer = new Timer(CleanupTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
-        public byte* Get(int size, out NativeMemory.ThreadStats thread)
+        public byte* Get(int numberOfPages, out NativeMemory.ThreadStats thread)
         {
-            size = Bits.PowerOf2(size);
+            numberOfPages = Bits.PowerOf2(numberOfPages); ;
+            int size = numberOfPages * Constants.Storage.PageSize;
 
-            if (Disabled || size > _maxBufferSizeToKeepInBytes)
+            if (Disabled || numberOfPages > MaxNumberOfPagesToCache)
             {
                 // We don't want to pool large buffers
                 return PlatformSpecific.NativeMemory.Allocate4KbAlignedMemory(size, out thread);
             }
 
             var index = Bits.MostSignificantBit(size);
-            while (_items[index].TryPop(out var allocation))
+            while (_items[index].TryPull(out var allocation))
             {
                 if (allocation.InUse.Raise() == false)
                     continue;
@@ -77,7 +79,8 @@ namespace Voron.Impl
             size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (Disabled || size > _maxBufferSizeToKeepInBytes || (_isLowMemory.IsRaised() && generation < Generation))
+            if (Disabled || size / Constants.Storage.PageSize > MaxNumberOfPagesToCache || 
+                (_isLowMemory.IsRaised() && generation < Generation))
             {
                 // - don't want to pool large buffers
                 // - release all the buffers that were created before we got the low memory event
@@ -110,9 +113,9 @@ namespace Voron.Impl
             if (_isExtremelyLowMemory.Raise() == false)
                 return;
 
-            foreach (var stack in _items)
+            foreach (var container in _items)
             {
-                while (stack.TryPop(out var allocation))
+                while (container.TryPull(out var allocation))
                 {
                     if (allocation.InUse.Raise() == false)
                         continue;
@@ -137,7 +140,7 @@ namespace Voron.Impl
                 var totalStackSize = 0L;
                 var numberOfItems = 0;
 
-                foreach (var allocation in nativeAllocations)
+                foreach (var (allocation,_) in nativeAllocations)
                 {
                     if (allocation.InUse.IsRaised())
                     {
@@ -177,14 +180,14 @@ namespace Voron.Impl
                 var idleTime = TimeSpan.FromMinutes(10);
                 var allocationsRebuildInterval = TimeSpan.FromMinutes(15);
 
-                foreach (var stack in _items)
+                foreach (var container in _items)
                 {
-                    var currentStack = stack;
+                    var currentStack = container;
                     using (var currentStackEnumerator = currentStack.GetEnumerator())
                     {
                         while (currentStackEnumerator.MoveNext())
                         {
-                            var nativeAllocation = currentStackEnumerator.Current;
+                            var (nativeAllocation, _) = currentStackEnumerator.Current;
 
                             var timeInPool = currentTime - nativeAllocation.InPoolSince;
                             if (timeInPool <= idleTime)
@@ -205,11 +208,11 @@ namespace Voron.Impl
                     _lastAllocationsRebuild = currentTime;
                     _hasDisposedAllocations = false;
 
-                    foreach (var stack in _items)
+                    foreach (var container in _items)
                     {
-                        var localStack = new ConcurrentStack<NativeAllocation>();
+                        var localStack = new Stack<NativeAllocation>();
 
-                        while (stack.TryPop(out var allocation))
+                        while (container.TryPull(out var allocation))
                         {
                             if (allocation.InUse.Raise() == false)
                                 continue;
@@ -219,7 +222,7 @@ namespace Voron.Impl
                         }
 
                         while (localStack.TryPop(out var allocation))
-                            stack.Push(allocation);
+                            container.Push(allocation);
                     }
                 }
             }
