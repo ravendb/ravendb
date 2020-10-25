@@ -46,10 +46,10 @@ namespace Voron.Impl
             _cleanupTimer = new Timer(CleanupTimer, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
-        public byte* Get(int numberOfPages, out NativeMemory.ThreadStats thread)
+        public byte* Get(int numberOfPages, out int size, out NativeMemory.ThreadStats thread)
         {
             numberOfPages = Bits.PowerOf2(numberOfPages); ;
-            int size = numberOfPages * Constants.Storage.PageSize;
+            size = numberOfPages * Constants.Storage.PageSize;
 
             if (Disabled || numberOfPages > MaxNumberOfPagesToCache)
             {
@@ -76,7 +76,6 @@ namespace Voron.Impl
             if (ptr == null)
                 return;
 
-            size = Bits.PowerOf2(size);
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
             if (Disabled || size / Constants.Storage.PageSize > MaxNumberOfPagesToCache || 

@@ -247,11 +247,11 @@ namespace Voron.Impl.Paging
 
         private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int numberOfPages)
         {
-            var ptr = EncryptionBuffersPool.Instance.Get(numberOfPages, out var thread);
+            var ptr = EncryptionBuffersPool.Instance.Get(numberOfPages, out var size, out var thread);
 
             var buffer = new EncryptionBuffer
             {
-                Size = numberOfPages * Constants.Storage.PageSize,
+                Size = size,
                 Pointer = ptr,
                 AllocatingThread = thread
             };
