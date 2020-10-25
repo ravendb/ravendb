@@ -154,14 +154,13 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 if (_enum?.MoveNext() == true)
                     return _enum.Current;
                 _enum?.Dispose();
-                _docs?.Dispose();
-                _docs = null;
+                _docs.Dispose();
                 return NO_MORE_DOCS;
             }
 
             public override int Advance(int target, IState state)
             {
-                if (_docs == null) 
+                if (_docs.Disposed) 
                     return NO_MORE_DOCS;
                 
                 _enum?.Dispose();

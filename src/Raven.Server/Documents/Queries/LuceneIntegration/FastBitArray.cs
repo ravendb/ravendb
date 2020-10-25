@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Runtime.Intrinsics.X86;
 
 namespace Raven.Server.Documents.Queries.LuceneIntegration
 {
-    public class FastBitArray : IDisposable
+    public struct FastBitArray : IDisposable
     {
         private ulong[] _bits;
+        public bool Disposed => _bits == null;
         public FastBitArray(int countOfBits)
         {
             _bits = ArrayPool<ulong>.Shared.Rent(countOfBits / 64 + (countOfBits % 64 == 0 ? 0 : 1));
