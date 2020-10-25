@@ -1021,9 +1021,10 @@ namespace Raven.Server.Documents.Replication
                 MaxConnectionTimeout = Database.Configuration.Replication.RetryMaxTimeout.AsTimeSpan.TotalMilliseconds
             });
 
+            X509Certificate2 certificate = null;
             try
             {
-                var certificate = GetCertificateForReplication(node, out _);
+                certificate = GetCertificateForReplication(node, out _);
 
                 if (node is ExternalReplicationBase exNode)
                 {
@@ -1070,7 +1071,7 @@ namespace Raven.Server.Documents.Replication
                     var alert = AlertRaised.Create(
                         node.Database,
                         $"Forbidden access to {node.FromString()}'",
-                        $"Replication failed. Certificate does not have permission to access or is unknown.",
+                        $"Replication failed. Certificate : {certificate?.FriendlyName} does not have permission to access or is unknown.",
                         AlertType.Replication,
                         NotificationSeverity.Error);
 
