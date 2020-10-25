@@ -4,13 +4,13 @@
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
             <div class="margin-top">Entire Collection Documents:
             </div>
-<pre class="margin-bottom">
-<span class="token keyword">from</span><span class="token string"> Orders</span>
-</pre>            
+<pre class="margin-bottom copy-example-area">
+<span class="token keyword">from</span><span class="token string"> Orders</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 0)"><i class="icon-copy"></i></a>
+</pre>
             <div>Collection Documents with Projection:
             </div> 
-<pre>
-<span class="token keyword">from</span><span class="token string"> Orders </span><span class="token keyword">as</span> o
+<pre class="copy-example-area">
+<span class="token keyword">from</span><span class="token string"> Orders </span><span class="token keyword">as</span> o <a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 1)"><i class="icon-copy"></i></a>
 <span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
 <span class="token keyword">select</span>
 <span class="token punctuation">{</span>
@@ -25,5 +25,5 @@
                 <span class="padding"><strong>Note</strong>: Only object literal notation can be used with the 'select'</span>
             </div>
         </div>
-    </div>  
+    </div>
 </div>

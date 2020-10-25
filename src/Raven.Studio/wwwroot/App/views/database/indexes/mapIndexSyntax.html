@@ -13,13 +13,13 @@
             <div class="margin-bottom">
                 The following examples index data for companies located in USA.
             </div>
-            <div class="row">                
+            <div class="row">
                 <div class="col-md-6">
                     <h3 class="margin-top">
                         <strong>LINQ </strong>Map Example:
                     </h3>
-<pre>
-<span class="token keyword">from </span>company <span class="token keyword">in </span><span class="token builtin">docs.Companies</span>
+<pre class="copy-example-area">
+<span class="token keyword">from </span>company <span class="token keyword">in </span><span class="token builtin">docs.Companies</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 0)"><i class="icon-copy"></i></a>
 <span class="token keyword">where </span>company.Address.Country <span class="token operator">== </span>"USA"
 <span class="token keyword">select new </span>{
      company.<span class="token string">Name</span>,
@@ -34,8 +34,8 @@
                     <h3 class="margin-top">
                         <strong>JavaScript </strong>Map Example:
                     </h3>
-<pre>
-<span class="token keyword">map</span>(<span class="token string">"Companies"</span>, (company) <span class="token operator">=></span> {
+<pre class="copy-example-area">
+<span class="token keyword">map</span>(<span class="token string">"Companies"</span>, (company) <span class="token operator">=></span> { <a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 1)"><i class="icon-copy"></i></a>
     <span class="token keyword">if </span>(company.Address.Country <span class="token operator">=== </span>"USA") {
         <span class="token keyword">return</span> {
             Name: company.<span class="token string">Name</span>,
