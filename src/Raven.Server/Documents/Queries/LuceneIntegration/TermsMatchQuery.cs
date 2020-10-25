@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             {
                 Similarity similarity = _parent.GetSimilarity(_searcher);
                 if(_parent.Matches.Count > 128)
-                    return new EagerTermMatchScorer(_parent, reader, state, similarity);
+                    return new LazyInitTermMatchScorer(_parent, reader, state, similarity);
 
                 var scorers = new Scorer[_parent.Matches.Count];
                 int index = 0;
@@ -82,6 +82,48 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             public override float Value { get; }
         }
         
+        private class LazyInitTermMatchScorer : Scorer
+        {
+            private readonly TermsMatchQuery _parent;
+            private readonly IndexReader _reader;
+            private readonly IState _state;
+            private readonly Similarity _similarity;
+            private EagerTermMatchScorer _inner;
+
+            internal LazyInitTermMatchScorer(TermsMatchQuery parent, IndexReader reader, IState state, Similarity similarity) : base(similarity)
+            {
+                _parent = parent;
+                _reader = reader;
+                _state = state;
+                _similarity = similarity;
+            }
+
+            private EagerTermMatchScorer InitIfNeeded()
+            {
+                return _inner ??= new EagerTermMatchScorer(_parent, _reader, _state, _similarity);
+            }
+
+            public override int DocID()
+            {
+                return InitIfNeeded().DocID();
+            }
+
+            public override int NextDoc(IState state)
+            {
+                return InitIfNeeded().NextDoc(state);
+            }
+
+            public override int Advance(int target, IState state)
+            {
+                return InitIfNeeded().Advance(target, state);
+            }
+
+            public override float Score(IState state)
+            {
+                return InitIfNeeded().Score(state);
+            }
+        }
+
         private class EagerTermMatchScorer : Scorer
         {
             private FastBitArray _docs;
