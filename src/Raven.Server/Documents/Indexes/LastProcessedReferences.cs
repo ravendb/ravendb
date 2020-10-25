@@ -3,41 +3,36 @@ using Raven.Server.Documents.Indexes.Workers;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class LastProcessedReference
+    public class LastProcessedReferences
     {
-        public enum ActionType
-        {
-            Document,
-            Tombstone
-        }
         private class ReferenceState
         {
-            public string ReferencedDocumentId;
+            public string ReferencedItemId;
             public string NextItemId;
-            public long ReferenceDocumentEtag;
+            public long ReferencedItemEtag;
         }
         
         private readonly Dictionary<string, ReferenceState> _lastIdPerCollectionForDocuments = new Dictionary<string, ReferenceState>();
 
         private readonly Dictionary<string, ReferenceState> _lastIdPerCollectionForTombstones = new Dictionary<string, ReferenceState>();
 
-        public void Set(ActionType actionType, string collection, HandleReferencesBase.Reference referencedDocument, string itemId)
+        public void Set(HandleReferencesBase.ActionType actionType, string collection, HandleReferencesBase.Reference reference, string itemId)
         {
             GetDictionary(actionType)[collection] = new ReferenceState
             {
-                ReferencedDocumentId = referencedDocument.Key, 
-                ReferenceDocumentEtag = referencedDocument.Etag, 
+                ReferencedItemId = reference.Key, 
+                ReferencedItemEtag = reference.Etag, 
                 NextItemId = itemId,
             };
         }
 
-        public string GetLastProcessedItemId(ActionType actionType, string collection, HandleReferencesBase.Reference referencedDocument)
+        public string GetLastProcessedItemId(HandleReferencesBase.ActionType actionType, string collection, HandleReferencesBase.Reference reference)
         {
             var dictionary = GetDictionary(actionType);
             if (dictionary.TryGetValue(collection, out var state) == false)
                 return null;
 
-            if (referencedDocument.Key == state.ReferencedDocumentId && referencedDocument.Etag == state.ReferenceDocumentEtag) 
+            if (reference.Key == state.ReferencedItemId && reference.Etag == state.ReferencedItemEtag) 
                 return state.NextItemId;
             
             // the document has changed since, cannot continue from the same point
@@ -46,14 +41,21 @@ namespace Raven.Server.Documents.Indexes
 
         }
 
-        public void Clear(ActionType actionType)
+        public void ClearForCollection(HandleReferencesBase.ActionType actionType, string collection)
         {
-            GetDictionary(actionType).Clear();
+            var dictionary = GetDictionary(actionType);
+            dictionary.Remove(collection);
         }
 
-        private Dictionary<string, ReferenceState> GetDictionary(ActionType actionType)
+        public void Clear()
         {
-            return actionType == ActionType.Document
+            _lastIdPerCollectionForDocuments.Clear();
+            _lastIdPerCollectionForTombstones.Clear();
+        }
+
+        private Dictionary<string, ReferenceState> GetDictionary(HandleReferencesBase.ActionType actionType)
+        {
+            return actionType == HandleReferencesBase.ActionType.Document
                 ? _lastIdPerCollectionForDocuments
                 : _lastIdPerCollectionForTombstones;
         }

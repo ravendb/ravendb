@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryReferencesIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
 
-        public LastProcessedReference LastProcessedReference = new LastProcessedReference();
+        public LastProcessedReferences _lastProcessedReferences = new LastProcessedReferences();
 
         internal DocumentDatabase DocumentDatabase;
 
@@ -3670,10 +3670,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
-            if (count % 128 != 0) // do the actual check only every N ops 
-                return true;
-            
-            //We need to take the read transaction encryption size into account as we might read alot of document and produce very little indexing output.
+            // we need to take the read transaction encryption size into account as we might read a lot of documents and produce very little indexing output.
             txAllocationsInBytes += queryContext.Documents.Transaction.InnerTransaction.LowLevelTransaction.AdditionalMemoryUsageSize.GetValue(SizeUnit.Bytes);
 
             if (_indexDisabled)
@@ -3836,6 +3833,12 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return true;
+        }
+
+        public bool ShouldRunCanContinueBatch(long count)
+        {
+            // do the actual check only every N ops
+            return count % 128 == 0;
         }
 
         public long UpdateThreadAllocations(
