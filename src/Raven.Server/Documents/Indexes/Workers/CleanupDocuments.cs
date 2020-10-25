@@ -144,6 +144,9 @@ namespace Raven.Server.Documents.Indexes.Workers
             long maxEtag,
             long count)
         {
+            if (_index.ShouldRunCanContinueBatch(count) == false)
+                return true;
+
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
                 return false;
 

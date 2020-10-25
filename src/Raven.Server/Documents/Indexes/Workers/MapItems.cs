@@ -191,6 +191,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, long count)
         {
+            if (_index.ShouldRunCanContinueBatch(count) == false)
+                return true;
+
             if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
             {
                 stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({_configuration.MapTimeout.AsTimeSpan}). Was {stats.Duration}");
