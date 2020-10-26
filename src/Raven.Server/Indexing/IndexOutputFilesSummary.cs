@@ -1,4 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
+using Raven.Server.Documents.Indexes;
+using Voron.Debugging;
 
 namespace Raven.Server.Indexing
 {
@@ -7,6 +9,8 @@ namespace Raven.Server.Indexing
         public long TotalWritten { get; private set; }
 
         public bool HasVoronWriteErrors { get; private set; }
+
+        public IndexingStatsScope CommitStats { get; private set; }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Increment(long value)
@@ -18,6 +22,11 @@ namespace Raven.Server.Indexing
         {
             TotalWritten = 0;
             HasVoronWriteErrors = false;
+        }
+
+        public void SetCommitStats(IndexingStatsScope commitStats)
+        {
+            CommitStats = commitStats;
         }
 
         public void SetWriteError()

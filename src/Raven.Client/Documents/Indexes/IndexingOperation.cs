@@ -37,6 +37,7 @@ namespace Raven.Client.Documents.Indexes
         internal static class Storage
         {
             public const string Commit = "Storage/Commit";
+            public const string CopyFileStream = "Voron/CopyFileStream";
         }
 
         internal static class Reduce
@@ -56,7 +57,6 @@ namespace Raven.Client.Documents.Indexes
             public static string GetMapEntries = "GetMapEntries";
             public static string SaveOutputDocuments = "SaveOutputDocuments";
             public static string DeleteOutputDocuments = "DeleteOutputDocuments";
-
         }
     }
 }
