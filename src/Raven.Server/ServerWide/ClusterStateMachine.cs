@@ -1307,6 +1307,16 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private static readonly string[] DatabaseRecordTasks = 
+        {
+            nameof(DatabaseRecord.PeriodicBackups),
+            nameof(DatabaseRecord.ExternalReplications),
+            nameof(DatabaseRecord.SinkPullReplications),
+            nameof(DatabaseRecord.HubPullReplications),
+            nameof(DatabaseRecord.RavenEtls),
+            nameof(DatabaseRecord.SqlEtls)
+        };
+        
         private unsafe List<string> AddDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
         {
             var addDatabaseCommand = JsonDeserializationCluster.AddDatabaseCommand(cmd);
@@ -1317,7 +1327,7 @@ namespace Raven.Server.ServerWide
                 var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name, out Slice valueName))
                 using (Slice.From(context.Allocator, "db/" + addDatabaseCommand.Name.ToLowerInvariant(), out Slice valueNameLowered))
-                using (var currentDatabaseRecord = EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context))
+                using (var newDatabaseRecord = EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context))
                 {
                     if (addDatabaseCommand.RaftCommandIndex != null)
                     {
@@ -1329,11 +1339,19 @@ namespace Raven.Server.ServerWide
                         Debug.Assert(size == sizeof(long));
 
                         if (actualEtag != addDatabaseCommand.RaftCommandIndex.Value)
+                        {
                             throw new RachisConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
                                                                  " but was expecting " + addDatabaseCommand.RaftCommandIndex);
+                        }
                     }
 
-                    VerifyUnchangedTasks();
+                    bool isClientConfigChanged;
+                    var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
+                    using (var oldDatabaseRecord = Read(context, dbId, out _))
+                    {
+                        VerifyUnchangedTasks(oldDatabaseRecord);
+                        isClientConfigChanged = IsClientConfigChanged(newDatabaseRecord, oldDatabaseRecord);
+                    }
 
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded())
                     {
@@ -1342,82 +1360,74 @@ namespace Raven.Server.ServerWide
                         return addDatabaseCommand.Record.Topology.Members;
                     }
 
-                    void VerifyUnchangedTasks()
+                    void VerifyUnchangedTasks(BlittableJsonReaderObject dbDoc)
                     {
                         if (addDatabaseCommand.IsRestore)
                             return;
-
-                        var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
-                        using (var dbDoc = Read(context, dbId, out _))
+                        
+                        if (dbDoc == null)
                         {
-                            var tasksList = new List<string>
+                            foreach (var task in DatabaseRecordTasks)
                             {
-                                nameof(DatabaseRecord.PeriodicBackups),
-                                nameof(DatabaseRecord.ExternalReplications),
-                                nameof(DatabaseRecord.SinkPullReplications),
-                                nameof(DatabaseRecord.HubPullReplications),
-                                nameof(DatabaseRecord.RavenEtls),
-                                nameof(DatabaseRecord.SqlEtls)
-                            };
-
-                            if (dbDoc == null)
-                            {
-                                foreach (var task in tasksList)
+                                if (newDatabaseRecord.TryGet(task, out BlittableJsonReaderArray dbRecordVal) && dbRecordVal.Length > 0)
                                 {
-                                    if (currentDatabaseRecord.TryGet(task, out BlittableJsonReaderArray dbRecordVal) && dbRecordVal.Length > 0)
-                                    {
-                                        throw new RachisInvalidOperationException(
-                                            $"Failed to create a new Database {addDatabaseCommand.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use a dedicated operation to update the {task} configuration.");
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                // compare tasks configurations of both db records
-                                foreach (var task in tasksList)
-                                {
-                                    var hasChanges = false;
-
-                                    if (dbDoc.TryGet(task, out BlittableJsonReaderArray oldDbRecordVal))
-                                    {
-                                        if (currentDatabaseRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordVal) == false && oldDbRecordVal.Length > 0)
-                                        {
-                                            hasChanges = true;
-                                        }
-                                        else if (oldDbRecordVal.Equals(newDbRecordVal) == false)
-                                        {
-                                            hasChanges = true;
-                                        }
-                                    }
-                                    else if (currentDatabaseRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordObject) && newDbRecordObject.Length > 0)
-                                    {
-                                        hasChanges = true;
-                                    }
-
-                                    if (hasChanges)
-                                        throw new RachisInvalidOperationException(
-                                            $"Cannot update {task} configuration with DatabaseRecord. Please use a dedicated operation to update the {task} configuration.");
+                                    throw new RachisInvalidOperationException(
+                                        $"Failed to create a new Database {addDatabaseCommand.Name}. Updating tasks configurations via DatabaseRecord is not supported, please use a dedicated operation to update the {task} configuration.");
                                 }
                             }
                         }
+                        else
+                        {
+                            // compare tasks configurations of both db records
+                            foreach (var task in DatabaseRecordTasks)
+                            {
+                                var hasChanges = false;
+
+                                if (dbDoc.TryGet(task, out BlittableJsonReaderArray oldDbRecordVal))
+                                {
+                                    if (newDatabaseRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordVal) == false && oldDbRecordVal.Length > 0)
+                                    {
+                                        hasChanges = true;
+                                    }
+                                    else if (oldDbRecordVal.Equals(newDbRecordVal) == false)
+                                    {
+                                        hasChanges = true;
+                                    }
+                                }
+                                else if (newDatabaseRecord.TryGet(task, out BlittableJsonReaderArray newDbRecordObject) && newDbRecordObject.Length > 0)
+                                {
+                                    hasChanges = true;
+                                }
+
+                                if (hasChanges)
+                                    throw new RachisInvalidOperationException(
+                                        $"Cannot update {task} configuration with DatabaseRecord. Please use a dedicated operation to update the {task} configuration.");
+                            }
+                        }
+
                     }
 
                     BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded()
                     {
+                        if (isClientConfigChanged)
+                        {
+                            addDatabaseCommand.Record.Client.Etag = index;
+                            return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
+                        }
                         if (items.ReadByKey(valueNameLowered, out _) && addDatabaseCommand.IsRestore == false)
                         {
                             // the backup tasks cannot be changed by modifying the database record
                             // (only by using the dedicated UpdatePeriodicBackup command)
-                            return currentDatabaseRecord;
+                            return newDatabaseRecord;
                         }
 
                         var serverWideBackups = Read(context, ServerWideBackupConfigurationsKey);
                         if (serverWideBackups == null)
-                            return currentDatabaseRecord;
+                            return newDatabaseRecord;
 
                         var propertyNames = serverWideBackups.GetPropertyNames();
                         if (propertyNames.Length == 0)
-                            return currentDatabaseRecord;
+                            return newDatabaseRecord;
 
                         // add the server-wide backup configurations
                         foreach (var propertyName in propertyNames)
@@ -1447,6 +1457,17 @@ namespace Raven.Server.ServerWide
                         ? DatabasesLandlord.ClusterDatabaseChangeType.RecordRestored
                         : DatabasesLandlord.ClusterDatabaseChangeType.RecordChanged);
             }
+        }
+
+        private static bool IsClientConfigChanged(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
+        {
+            const string clientPropName = nameof(DatabaseRecord.Client);
+            if (newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) == false || newDbClientConfig == null) 
+                return false;
+            
+            return oldDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject oldDbClientConfig) == false
+                   || oldDbClientConfig == null
+                   || oldDbClientConfig.Equals(newDbClientConfig) == false;
         }
 
         private static void SetDatabaseValues(

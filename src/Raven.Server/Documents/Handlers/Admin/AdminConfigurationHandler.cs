@@ -49,6 +49,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
 
             NoContentStatus();
+            HttpContext.Response.Headers[Constants.Headers.RefreshClientConfiguration] = "true";
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
 
