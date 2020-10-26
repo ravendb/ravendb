@@ -11,8 +11,6 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
     {
         private readonly TimeSeriesStorage _timeSeriesStorage;
 
-        protected override ReferenceType Type => ReferenceType.TimeSeries;
-
         public HandleTimeSeriesReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, TimeSeriesStorage timeSeriesStorage, DocumentsStorage documentsStorage, IndexStorage indexStorage, Config.Categories.IndexingConfiguration configuration)
             : base(index, referencedCollections, documentsStorage, indexStorage, indexStorage.ReferencesForDocuments, configuration)
         {
