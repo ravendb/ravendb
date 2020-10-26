@@ -110,9 +110,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (_writer != null)
             {
-                using (stats.For(IndexingOperation.Lucene.Commit))
+                using (var commitStats = stats.For(IndexingOperation.Lucene.Commit))
                 {
-                    _writer.Commit(_state); // just make sure changes are flushed to disk
+                    _writer.Commit(_state, commitStats); // just make sure changes are flushed to disk
 
                     if (_hasSuggestions)
                     {

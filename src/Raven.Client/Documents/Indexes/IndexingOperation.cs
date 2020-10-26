@@ -30,6 +30,7 @@ namespace Raven.Client.Documents.Indexes
             public const string AddDocument = "Lucene/AddDocument";
             public const string Suggestion = "Lucene/Suggestion";
             public const string Commit = "Lucene/Commit";
+            public const string Merge = "Lucene/Merge";
             public const string RecreateSearcher = "Lucene/RecreateSearcher";
         }
 
