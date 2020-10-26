@@ -156,7 +156,8 @@ namespace Raven.Client.ServerWide
                     if (differences.Value.HasFlag(IndexDefinitionCompareDifferences.Maps) == false && 
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Reduce) == false &&
                         differences.Value.HasFlag(IndexDefinitionCompareDifferences.Fields) == false &&
-                        differences.Value.HasFlag(IndexDefinitionCompareDifferences.AdditionalSources) == false)
+                        differences.Value.HasFlag(IndexDefinitionCompareDifferences.AdditionalSources) == false &&
+                        differences.Value.HasFlag(IndexDefinitionCompareDifferences.AdditionalAssemblies) == false)
                     {
                         // index definition change does not affect the output documents - version need to stay the same
 

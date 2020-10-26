@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Sparrow.Json.Parsing;
 
@@ -65,6 +66,12 @@ namespace Raven.Server.Extensions
                 additionalSources[kvp.Key] = kvp.Value;
 
             result[nameof(IndexDefinition.AdditionalSources)] = additionalSources;
+
+            var additionalAssemblies = new List<DynamicJsonValue>();
+            foreach (var additionalAssembly in definition.AdditionalAssemblies)
+                additionalAssemblies.Add(additionalAssembly.ToJson());
+
+            result[nameof(IndexDefinition.AdditionalAssemblies)] = new DynamicJsonArray(additionalAssemblies);
 
             return result;
         }

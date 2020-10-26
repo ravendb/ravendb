@@ -21,6 +21,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -85,6 +86,11 @@ namespace FastTests
             IgnoreProcessorAffinityChanges(ignore: true);
             EncryptionBuffersPool.Instance.Disabled = true;
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
+
+            var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
+            GlobalPathsToDelete.Add(packagesPath.FullPath);
+            MultiSourceNuGetFetcher.Instance.Initialize(packagesPath);
+
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
             {
@@ -188,12 +194,11 @@ namespace FastTests
             TestCertificatesHolder Generate()
             {
                 var log = new StringBuilder();
-                byte[] certBytes;                  
+                byte[] certBytes;
                 string serverCertificatePath = null;
-                serverCertificatePath = Path.Combine(Path.GetTempPath(), "Server-" + DateTime.Today.ToString("yyyy-MM-dd")+".pfx");
+                serverCertificatePath = Path.Combine(Path.GetTempPath(), "Server-" + DateTime.Today.ToString("yyyy-MM-dd") + ".pfx");
                 if (File.Exists(serverCertificatePath) == false)
                 {
-                    
                     try
                     {
                         certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServer", log);
@@ -231,7 +236,7 @@ namespace FastTests
                 {
                     throw new CryptographicException($"Unable to load the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
                 }
-                
+
                 SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
 
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk);
@@ -244,7 +249,7 @@ namespace FastTests
             string GenerateClientCertificate(int index, X509Certificate2 serverCertificate, Org.BouncyCastle.Pkcs.AsymmetricKeyEntry pk)
             {
                 string name = $"{Environment.MachineName}_CC_{index}_{DateTime.Today:yyyy-MM-DD}";
-                string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx") ;
+                string clientCertificatePath = Path.Combine(Path.GetTempPath(), name + ".pfx");
 
                 if (File.Exists(clientCertificatePath) == false)
                 {
@@ -269,7 +274,7 @@ namespace FastTests
                                                             $"MachineName = {Environment.MachineName}.", e);
                     }
                 }
-                
+
                 return clientCertificatePath;
             }
         }

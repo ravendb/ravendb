@@ -63,12 +63,12 @@ namespace Raven.Client.Documents.Indexes
 
         /// <summary>
         /// Index term vector options
-        /// </summary>		
+        /// </summary>
         protected IDictionary<Expression<Func<TReduceResult, object>>, FieldTermVector> TermVectors { get; set; }
 
         /// <summary>
         /// Index term vector options
-        /// </summary>		
+        /// </summary>
         protected IDictionary<string, FieldTermVector> TermVectorsStrings { get; set; }
 
         /// <summary>
@@ -197,6 +197,17 @@ namespace Raven.Client.Documents.Indexes
         protected void Suggestion(Expression<Func<TReduceResult, object>> field)
         {
             IndexSuggestions.Add(field);
+        }
+
+        protected void AddAssembly(AdditionalAssembly assembly)
+        {
+            if (assembly is null)
+                throw new ArgumentNullException(nameof(assembly));
+
+            if (AdditionalAssemblies == null)
+                AdditionalAssemblies = new HashSet<AdditionalAssembly>();
+
+            AdditionalAssemblies.Add(assembly);
         }
     }
 }

@@ -28,10 +28,13 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 case IndexSourceType.Documents:
                     return GetDocumentsIndexInstance(definition, configuration, type);
+
                 case IndexSourceType.TimeSeries:
                     return GetIndexInstance<StaticTimeSeriesIndexBase>(definition, configuration, type);
+
                 case IndexSourceType.Counters:
                     return GetIndexInstance<StaticCountersIndexBase>(definition, configuration, type);
+
                 default:
                     throw new NotSupportedException($"Not supported source type '{definition.SourceType}'.");
             }
@@ -77,14 +80,40 @@ namespace Raven.Server.Documents.Indexes.Static
             var list = new List<string>();
 
             list.AddRange(definition.Maps);
+
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
+
             if (definition.AdditionalSources != null)
             {
                 foreach (var kvp in definition.AdditionalSources.OrderBy(x => x.Key))
                 {
                     list.Add(kvp.Key);
                     list.Add(kvp.Value);
+                }
+            }
+
+            if (definition.AdditionalAssemblies != null)
+            {
+                foreach (var additionalAssembly in definition.AdditionalAssemblies)
+                {
+                    if (additionalAssembly.AssemblyName != null)
+                        list.Add(additionalAssembly.AssemblyName);
+
+                    if (additionalAssembly.AssemblyPath != null)
+                        list.Add(additionalAssembly.AssemblyPath);
+
+                    if (additionalAssembly.PackageName != null)
+                        list.Add(additionalAssembly.PackageName);
+
+                    if (additionalAssembly.PackageVersion != null)
+                        list.Add(additionalAssembly.PackageVersion);
+
+                    if (additionalAssembly.PackageSourceUrl != null)
+                        list.Add(additionalAssembly.PackageSourceUrl);
+
+                    if (additionalAssembly.Usings != null && additionalAssembly.Usings.Count > 0)
+                        list.AddRange(additionalAssembly.Usings);
                 }
             }
 
@@ -102,9 +131,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 case IndexType.MapReduce:
                 case IndexType.Faulty:
                     return IndexCompiler.Compile(definition);
+
                 case IndexType.JavaScriptMap:
                 case IndexType.JavaScriptMapReduce:
                     return AbstractJavaScriptIndex.Create(definition, configuration);
+
                 default:
                     throw new ArgumentOutOfRangeException($"Can't generate index of unknown type {definition.DetectStaticIndexType()}");
             }

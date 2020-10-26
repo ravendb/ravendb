@@ -17,6 +17,8 @@ using Microsoft.CodeAnalysis.Formatting;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Raven.Client.Util;
+using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Counters;
@@ -128,7 +130,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var @class = CreateClass(cSharpSafeName, definition);
 
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, extensions: definition.AdditionalSources);
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, definition);
             var type = compilationResult.Type;
 
             var index = (AbstractStaticIndexBase)Activator.CreateInstance(type);
@@ -137,14 +139,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, Dictionary<string, string> extensions = null)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, IndexDefinition definition)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + IndexExtension;
 
             var @namespace = RoslynHelper.CreateNamespace(IndexNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
-            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(extensions);
+            var res = GetUsingDirectiveAndSyntaxTreesAndReferences(definition);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
                 .WithUsings(RoslynHelper.CreateUsings(res.UsingDirectiveSyntaxes))
@@ -224,67 +226,81 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References)
-            GetUsingDirectiveAndSyntaxTreesAndReferences(Dictionary<string, string> extensions)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndReferences(IndexDefinition definition)
         {
-            if (extensions == null)
+            if (definition.AdditionalSources == null && definition.AdditionalSources == null)
             {
                 return (Usings, new List<SyntaxTree>(), References);
             }
 
-            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) res;
+            (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) result;
             var syntaxTrees = new List<SyntaxTree>();
-            var @using = new HashSet<string>();
+            var usings = new HashSet<string>();
 
-            foreach (var ext in extensions)
+            if (definition.AdditionalSources != null)
             {
-                var tree = SyntaxFactory.ParseSyntaxTree(AddUsingIndexStatic(ext.Value));
-                syntaxTrees.Add(tree);
-
-                var ns = tree.GetRoot().DescendantNodes()
-                    .OfType<NamespaceDeclarationSyntax>()
-                    .FirstOrDefault();
-
-                if (ns != null)
+                foreach (var ext in definition.AdditionalSources)
                 {
-                    @using.Add(ns.Name.ToString());
+                    var tree = SyntaxFactory.ParseSyntaxTree(AddUsingIndexStatic(ext.Value));
+                    syntaxTrees.Add(tree);
+
+                    var ns = tree.GetRoot().DescendantNodes()
+                        .OfType<NamespaceDeclarationSyntax>()
+                        .FirstOrDefault();
+
+                    if (ns != null)
+                    {
+                        usings.Add(ns.Name.ToString());
+                    }
                 }
             }
 
-            if (@using.Count > 0)
+            if (definition.AdditionalAssemblies != null)
+            {
+                foreach (var additionalAssembly in definition.AdditionalAssemblies)
+                {
+                    if (additionalAssembly.Usings != null)
+                    {
+                        foreach (var @using in additionalAssembly.Usings)
+                            usings.Add(@using);
+                    }
+                }
+            }
+
+            if (usings.Count > 0)
             {
                 //Adding using directive with duplicates to avoid O(n*m) operation and confusing code
-                var newUsing = @using.Select(x => SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
+                var newUsing = usings.Select(x => SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
                 newUsing.AddRange(Usings);
-                res.UsingDirectiveSyntaxes = newUsing.ToArray();
+                result.UsingDirectiveSyntaxes = newUsing.ToArray();
             }
             else
             {
-                res.UsingDirectiveSyntaxes = Usings;
+                result.UsingDirectiveSyntaxes = Usings;
             }
 
-            res.References = GetReferences();
+            result.References = GetReferences(definition);
 
             var tempCompilation = CSharpCompilation.Create(
                 assemblyName: string.Empty,
                 syntaxTrees: syntaxTrees,
-                references: res.References,
+                references: result.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(EnableDebugging ? OptimizationLevel.Debug : OptimizationLevel.Release)
             );
 
             var rewriter = new MethodDynamicParametersRewriter();
-            res.SyntaxTrees = new List<SyntaxTree>();
+            result.SyntaxTrees = new List<SyntaxTree>();
 
             foreach (var tree in syntaxTrees) //now do the rewrites
             {
                 rewriter.SemanticModel = tempCompilation.GetSemanticModel(tree);
 
                 var rewritten = rewriter.Visit(tree.GetRoot()).NormalizeWhitespace();
-                res.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten, new CSharpParseOptions(documentationMode: DocumentationMode.None)));
+                result.SyntaxTrees.Add(SyntaxFactory.SyntaxTree(rewritten, new CSharpParseOptions(documentationMode: DocumentationMode.None)));
             }
 
-            return res;
+            return result;
         }
 
         private static string AddUsingIndexStatic(string ext)
@@ -292,19 +308,102 @@ namespace Raven.Server.Documents.Indexes.Static
             return $"using {IndexesStaticNamespace};{Environment.NewLine}{ext}";
         }
 
-        private static MetadataReference[] GetReferences()
+        private static MetadataReference[] GetReferences(IndexDefinition definition)
         {
             var knownManageRefs = KnownManagedDlls.Value;
-            var newReferences = new MetadataReference[References.Length + knownManageRefs.Length];
+            var newReferences = new List<MetadataReference>();
             for (var i = 0; i < References.Length; i++)
-            {
-                newReferences[i] = References[i];
-            }
+                newReferences.Add(References[i]);
+
             for (int i = 0; i < knownManageRefs.Length; i++)
+                newReferences.Add(knownManageRefs[i].Reference);
+
+            if (definition.AdditionalAssemblies != null)
             {
-                newReferences[i + References.Length] = knownManageRefs[i].Reference;
+                foreach (var additionalAssembly in definition.AdditionalAssemblies)
+                {
+                    if (additionalAssembly.AssemblyName != null)
+                    {
+                        newReferences.Add(FromAssemblyName(additionalAssembly.AssemblyName));
+                        continue;
+                    }
+
+                    if (additionalAssembly.AssemblyPath != null)
+                    {
+                        newReferences.Add(FromAssemblyPath(additionalAssembly.AssemblyPath));
+                        continue;
+                    }
+
+                    if (additionalAssembly.PackageName != null)
+                    {
+                        newReferences.AddRange(FromPackage(additionalAssembly.PackageName, additionalAssembly.PackageVersion, additionalAssembly.PackageSourceUrl));
+                        continue;
+                    }
+                }
             }
-            return newReferences;
+
+            return newReferences.ToArray();
+
+            static MetadataReference FromAssemblyName(string name)
+            {
+                try
+                {
+                    var assemblyName = new AssemblyName(name);
+                    var assembly = Assembly.Load(assemblyName);
+                    return CreateMetadataReferenceFromAssembly(assembly);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexCompilationException($"Cannot load assembly '{name}'.", e);
+                }
+            }
+
+            static MetadataReference FromAssemblyPath(string path)
+            {
+                try
+                {
+                    var assemblyName = AssemblyName.GetAssemblyName(path);
+                    var assembly = Assembly.Load(assemblyName);
+                    return CreateMetadataReferenceFromAssembly(assembly);
+                }
+                catch (Exception e)
+                {
+                    throw new IndexCompilationException($"Cannot load assembly from path '{path}'.", e);
+                }
+            }
+
+            static List<MetadataReference> FromPackage(string packageName, string packageVersion, string packageSourceUrl)
+            {
+                try
+                {
+                    packageSourceUrl ??= "https://api.nuget.org/v3/index.json";
+
+                    if (string.IsNullOrWhiteSpace(packageName))
+                        throw new ArgumentException($"'{nameof(packageName)}' cannot be null or whitespace", nameof(packageName));
+
+                    if (string.IsNullOrWhiteSpace(packageVersion))
+                        throw new ArgumentException($"'{nameof(packageVersion)}' cannot be null or whitespace", nameof(packageVersion));
+
+                    var paths = AsyncHelpers.RunSync(() => MultiSourceNuGetFetcher.Instance.DownloadAsync(packageName, packageVersion, packageSourceUrl));
+                    if (paths == null)
+                        throw new InvalidOperationException("Package does not exist.");
+
+                    var references = new List<MetadataReference>();
+
+                    foreach (var path in paths)
+                    {
+                        var assemblyName = AssemblyName.GetAssemblyName(path);
+                        var assembly = Assembly.Load(assemblyName);
+                        references.Add(CreateMetadataReferenceFromAssembly(assembly));
+                    }
+
+                    return references;
+                }
+                catch (Exception e)
+                {
+                    throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl}'.", e);
+                }
+            }
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)

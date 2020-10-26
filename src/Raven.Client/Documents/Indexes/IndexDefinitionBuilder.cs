@@ -119,6 +119,8 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public Dictionary<string, string> AdditionalSources { get; set; }
 
+        public HashSet<AdditionalAssembly> AdditionalAssemblies { get;set;}
+
         public IndexConfiguration Configuration { get; set; }
 
         /// <summary>
@@ -218,6 +220,7 @@ namespace Raven.Client.Documents.Indexes
                 ApplyValues(indexDefinition, suggestionsOptions, (options, value) => options.Suggestions = value);
 
                 indexDefinition.AdditionalSources = AdditionalSources;
+                indexDefinition.AdditionalAssemblies = AdditionalAssemblies;
                 indexDefinition.Configuration = Configuration;
 
                 ToIndexDefinition(indexDefinition, conventions);

@@ -44,7 +44,7 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
-        
+
         [DefaultValue(true)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Metrics.Enabled", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -210,10 +210,16 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.ErrorIndexStartupBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexStartupBehavior ErrorIndexStartupBehavior { get; set; }
 
+        [Description("Location of NuGet packages cache")]
+        [DefaultValue(@"NuGetPackages")]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
+        public PathSetting NuGetPackagesPath { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);
-            
+
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
             if (updateTypeAttribute == null)
                 throw new InvalidOperationException($"No {nameof(IndexUpdateTypeAttribute)} available for '{property.Name}' property.");
