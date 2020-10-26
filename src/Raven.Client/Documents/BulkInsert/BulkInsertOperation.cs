@@ -218,7 +218,7 @@ namespace Raven.Client.Documents.BulkInsert
             _token = token;
             _conventions = store.Conventions;
             if (string.IsNullOrWhiteSpace(database))
-                throw new ArgumentNullException(nameof(database), "Document store database name cannot be empty");
+                ThrowNoDatabase();
             _requestExecutor = store.GetRequestExecutor(database);
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _currentWriter = new StreamWriter(new MemoryStream());
@@ -250,6 +250,13 @@ namespace Raven.Client.Documents.BulkInsert
             errors.Add(e);
 
             throw new BulkInsertAbortedException("Failed to execute bulk insert", new AggregateException(errors));
+        }
+
+        private void ThrowNoDatabase()
+        {
+            throw new InvalidOperationException(
+                $"Cannot start bulk insert operation without specifying a name of a database to operate on. " +
+                $"Database name can be passed as an argument when bulk insert is being created or default database can be defined using '{nameof(DocumentStore)}.{nameof(IDocumentStore.Database)}' property.");
         }
 
         private async Task WaitForId()

@@ -18,7 +18,7 @@ namespace FastTests.Issues
             {
                 store.Urls = new[] { Server.WebUrl };
                 store.Initialize();
-                Assert.Throws<ArgumentNullException>(() => store.BulkInsert());
+                Assert.Throws<InvalidOperationException>(() => store.BulkInsert());
             }
         }
     }
