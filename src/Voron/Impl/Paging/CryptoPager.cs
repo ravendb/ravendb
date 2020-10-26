@@ -199,7 +199,6 @@ namespace Voron.Impl.Paging
             var pageHeader = (PageHeader*)pagePointer;
 
             int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
-            var size = numberOfPages * Constants.Storage.PageSize;
 
             buffer = GetBufferAndAddToTxState(pageNumber, state, numberOfPages);
 
