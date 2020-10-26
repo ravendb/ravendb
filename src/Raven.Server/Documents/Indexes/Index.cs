@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes
         private readonly ConcurrentDictionary<string, IndexProgress.CollectionStats> _inMemoryReferencesIndexProgress =
             new ConcurrentDictionary<string, IndexProgress.CollectionStats>();
 
-        public LastProcessedReferences _lastProcessedReferences = new LastProcessedReferences();
+        public LastProcessedReferences LastProcessedReferences = new LastProcessedReferences();
 
         internal DocumentDatabase DocumentDatabase;
 
@@ -3632,7 +3632,7 @@ namespace Raven.Server.Documents.Indexes
 
         private DateTime _lastCheckedFlushLock;
 
-        public bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
+        private bool ShouldReleaseTransactionBecauseFlushIsWaiting(IndexingStatsScope stats)
         {
             if (GlobalFlushingBehavior.GlobalFlusher.Value.HasLowNumberOfFlushingResources == false)
                 return false;
@@ -3661,13 +3661,39 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        public bool CanContinueBatch(
-            IndexingStatsScope stats,
-            QueryOperationContext queryContext,
-            TransactionOperationContext indexingContext,
-            IndexWriteOperation indexWriteOperation,
-            long count)
+        public bool CanContinueBatch(IndexingStatsScope stats, QueryOperationContext queryContext, TransactionOperationContext indexingContext,
+            IndexWriteOperation indexWriteOperation, long currentEtag, long maxEtag, long count)
         {
+            if (Configuration.MapBatchSize.HasValue && count >= Configuration.MapBatchSize.Value)
+            {
+                stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({Configuration.MapBatchSize.Value:#,#;;0}).");
+                return false;
+            }
+
+            if (currentEtag >= maxEtag && stats.Duration >= Configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
+            {
+                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag:#,#;;0}) and map duration ({stats.Duration}) exceeded configured limit ({Configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
+                return false;
+            }
+
+            if (count % 128 != 0)
+            {
+                // do the actual check only every N ops
+                return true;
+            }
+
+            if (stats.Duration >= Configuration.MapTimeout.AsTimeSpan)
+            {
+                stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({Configuration.MapTimeout.AsTimeSpan}). Was {stats.Duration}");
+                return false;
+            }
+
+            if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
+            {
+                stats.RecordMapCompletedReason("Releasing the transaction because we have a pending flush");
+                return false;
+            }
+
             var txAllocationsInBytes = UpdateThreadAllocations(indexingContext, indexWriteOperation, stats, updateReduceStats: false);
 
             // we need to take the read transaction encryption size into account as we might read a lot of documents and produce very little indexing output.
@@ -3833,12 +3859,6 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return true;
-        }
-
-        public bool ShouldRunCanContinueBatch(long count)
-        {
-            // do the actual check only every N ops
-            return count % 128 == 0;
         }
 
         public long UpdateThreadAllocations(
