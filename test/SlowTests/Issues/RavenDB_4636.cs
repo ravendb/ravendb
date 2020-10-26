@@ -56,20 +56,10 @@ namespace SlowTests.Issues
 
                 store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15 }));
 
-                using (var session = store.OpenSession())
-                {
-                    session.Load<dynamic>("users/1"); // forcing client configuration update
-                }
-
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(15, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
 
                 store.Maintenance.Send(new PutClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 15, Disabled = true }));
-
-                using (var session = store.OpenSession())
-                {
-                    session.Load<dynamic>("users/1"); // forcing client configuration update
-                }
 
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(30, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
