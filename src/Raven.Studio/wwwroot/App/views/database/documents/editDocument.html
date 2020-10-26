@@ -1,7 +1,7 @@
 <form data-bind="submit: saveDocument, css: { 'diff': inDiffMode }" class="editDocument" autocomplete="off">
     <div class="docEditor flex-window flex-grow content-margin">
         <div class="flex-window-head">
-            <div class="flex-horizontal" id="document-id-header-area">
+            <div class="flex-horizontal copy-area">
                 <div class="flex-grow">
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument()">
@@ -20,7 +20,7 @@
                                 <!--<span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>-->
                             <!--</a>-->
                             <span class="obj-name on-base-background" data-bind="text: userSpecifiedId, attr: { title: userSpecifiedId }"></span>
-                            <a href="#" id="copy-document-id" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
+                            <a href="#" class="copy-button" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
                             <span data-bind="visible: inReadOnlyMode() && !isDeleteRevision()" class="text-primary revision flex-noshrink"> | REVISION</span>
                             <span data-bind="visible: inReadOnlyMode() && isDeleteRevision()" class="text-primary revision flex-noshrink"> | DELETED REVISION</span>
                             <a target="_blank" href="#" title="Show raw output" class="flex-noshrink margin-left margin-left-sm" data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i></a>
@@ -181,7 +181,7 @@
             <button class="collapse-options-panel btn btn-sm" title="Collapse properties panel" data-bind="click: togglePropertiesPanel"><i class="icon-arrow-right"></i></button>
             <button class="show-options-panel btn btn-sm" title="Expand properties panel" data-bind="click: togglePropertiesPanel"><i class="icon-arrow-left"></i></button>
         </div>
-        <div class="panel document-properties flex-window-head">
+        <div class="panel document-properties flex-window-head copy-area">
             <div class="panel-body">
                 <h3 class="margin-none">Properties</h3>
                 <hr class="small" />
@@ -193,10 +193,10 @@
                                 <div data-placement="left" data-toggle="tooltip" data-html="true" data-animation="true" data-bind="tooltipText: $root.changeVectorHtml()">
                                     <div class="change-vector" data-bind="foreach: $root.changeVector">
                                         <span class="badge badge-default" data-bind="text: shortFormat"></span>
-                                    </div>                                
+                                    </div>
                                 </div>
                                 <div>
-                                    <a href="#" id="copy-change-vector" title="Copy change vector" data-bind="click: $root.copyChangeVectorToClipboard"><i class="icon-copy"></i></a>
+                                    <a href="#" class="copy-button" title="Copy change vector" data-bind="click: $root.copyChangeVectorToClipboard"><i class="icon-copy"></i></a>
                                 </div>
                             </div>
                         </dd>
