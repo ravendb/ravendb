@@ -141,7 +141,9 @@ class indexFieldOptions {
         this.name(name);
         this.parent(parentFields);
         
-        const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.serverName === dto.Analyzer);
+        const analyzerPositionInName = dto.Analyzer ? dto.Analyzer.lastIndexOf(".") : 0;
+        const analyzerName = analyzerPositionInName !== -1 && dto.Analyzer ? dto.Analyzer.substring(analyzerPositionInName + 1) : dto.Analyzer;
+        const analyzer = indexFieldOptions.analyzersNamesDictionary.find(x => x.serverName === analyzerName);
         const analyzerStudioName = analyzer ? analyzer.studioName : (this.analyzer() || null);
         this.analyzer(analyzerStudioName);
         
@@ -151,7 +153,7 @@ class indexFieldOptions {
         
         this.showAnalyzer = ko.pureComputed(() => this.indexing() === "Search" ||
                                                    this.indexing() === "Search (implied)" ||
-                                                  (this.indexing() === null && this.parent().indexing() === "Search") ||
+                                                  (!this.indexing() && this.parent().indexing() === "Search") ||
                                                   !!this.analyzer() ||
                                                   (!this.analyzer() && !!this.analyzerPlaceHolder()));
         
@@ -370,7 +372,7 @@ class indexFieldOptions {
         const parentIndexing = this.parent() ? this.parent().indexing() : null;
 
         if (thisIndexing === "No" ||
-           (thisIndexing === null && parentIndexing === "No")) {
+           (!thisIndexing && parentIndexing === "No")) {
             this.analyzer(null);
         }
         
@@ -378,15 +380,14 @@ class indexFieldOptions {
         const helpMsg = "To set a different analyzer, select the 'Indexing.Search' option first."
         
         if (thisIndexing === "Exact" ||
-           (thisIndexing === null && parentIndexing === "Exact")) {
+           (!thisIndexing && parentIndexing === "Exact")) {
             this.analyzer(null);
             placeHolder = "Keyword Analyzer";
             this.disabledAnalyzerText("KeywordAnalyzer is used when selecting Indexing.Exact. " + helpMsg);
         } 
         
         if (thisIndexing === "Default" ||
-           (thisIndexing === null && parentIndexing === "Default") ||
-           (thisIndexing === null && parentIndexing === null)) {
+           (!thisIndexing && (parentIndexing === "Default" || !parentIndexing))) {
             this.analyzer(null);
             placeHolder = "LowerCase Keyword Analyzer";
             this.disabledAnalyzerText("LowerCaseKeywordAnalyzer is used when selecting Indexing.Default. " + helpMsg);
@@ -397,8 +398,7 @@ class indexFieldOptions {
             placeHolder = this.parent().analyzer() || "Standard Analyzer";
         }
 
-        if (thisIndexing === "Search") {
-            this.analyzer(null);
+        if (thisIndexing === "Search" && !this.analyzer()) {
             placeHolder = "Standard Analyzer";
         }
         

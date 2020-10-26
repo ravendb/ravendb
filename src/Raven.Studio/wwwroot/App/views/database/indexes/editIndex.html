@@ -541,7 +541,7 @@
                             <span class="properties-label">Indexing</span>
                             <div class="btn-group properties-value">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" 
-                                        data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing is not defined. Search is used since an analyzer is defined' : effectiveIndexing() }">
+                                        data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing is not defined. Search is implied since an analyzer is defined' : effectiveIndexing() }">
                                     <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" data-bind=" css: { 'list-dropup' : $root.shouldDropupMenu($data, isDefaultFieldOptions() ? 0 : $index())() }">
