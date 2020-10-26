@@ -2,43 +2,10 @@
     <div class="modal-content">
         <div class="modal-body">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-            <div class="margin-top">Simple collection query:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from</span> <span class="token string">Orders</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 0)"><i class="icon-copy"></i></a>
-<span class="token keyword">where</span> Lines.Count <span class="token operator">></span> <span class="token number">4</span>
-<span class="token keyword">order by</span> Freight <span class="token keyword">as double</span>
-<span class="token keyword">select</span> Lines[].ProductName <span class="token keyword">as</span> ProductNames, OrderedAt, ShipTo.City
-</pre>
-            <div>Using JavaScript select:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from</span> <span class="token string">Orders</span> <span class="token keyword">as</span> o <a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 1)"><i class="icon-copy"></i></a>
-<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
-<span class="token keyword">select</span> <span class="token punctuation">{</span>
-    Name: c.Name.toLowerCase(),
-    Country: c.Address.Country,
-    LinesCount: o.Lines.length
-<span class="token punctuation">}</span>
-</pre>
-            <div>Group by:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from</span> <span class="token string">Orders</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 2)"><i class="icon-copy"></i></a>
-<span class="token keyword">group by</span> Company
-<span class="token keyword">where</span> <span class="token builtin">count()</span> <span class="token operator">></span> <span class="token number">5</span>
-<span class="token keyword">order by</span> <span class="token builtin">count()</span> <span class="token keyword">desc</span>
-<span class="token keyword">select</span> <span class="token builtin">count()</span> <span class="token keyword">as</span> Count, <span class="token builtin">key()</span> <span class="token keyword">as</span> Company
-<span class="token keyword">include</span> Company
-</pre>
-            <div>Querying an index:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from index</span> <span class="token string">'Orders/Totals'</span> <span class="token keyword">as</span> i <a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 3)"><i class="icon-copy"></i></a>
-<span class="token keyword">where</span> i.Total <span class="token operator">></span> <span class="token number">10000</span>
-<span class="token keyword">load</span> i.Company <span class="token keyword">as</span> c
-<span class="token keyword">select</span> <span class="token punctuation">{</span>
-    Name: c.Name,
-    Region: c.Address.Region,
-    OrderedAt: i.OrderedAt
-<span class="token punctuation">}</span>
-</pre>
+            <div data-bind="foreach: $data.constructor.samples">
+                <div class="margin-top" data-bind="text: title"></div>
+                <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+            </div>
         </div>
     </div>
 </div>

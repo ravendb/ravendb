@@ -2,23 +2,10 @@
     <div class="modal-content">
         <div class="modal-body">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-            <div class="margin-top">Entire Collection Documents:
+            <div data-bind="foreach: $data.constructor.samples">
+                <div class="margin-top" data-bind="text: title"></div>
+                <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
             </div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from</span><span class="token string"> Orders</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 0)"><i class="icon-copy"></i></a>
-</pre>
-            <div>Collection Documents with Projection:
-            </div> 
-<pre class="copy-example-area">
-<span class="token keyword">from</span><span class="token string"> Orders </span><span class="token keyword">as</span> o <a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 1)"><i class="icon-copy"></i></a>
-<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
-<span class="token keyword">select</span>
-<span class="token punctuation">{</span>
-     Name: c.Name.toLowerCase(),
-     Country: c.Address.Country,
-     LinesCount: o.Lines.length
-<span class="token punctuation">}</span>
-</pre>
         </div>
         <div class="modal-footer margin-bottom">
             <div class="text-left bg-info text-info">

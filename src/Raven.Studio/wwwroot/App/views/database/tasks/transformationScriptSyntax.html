@@ -2,44 +2,19 @@
     <div class="modal-content">
        <div class="modal-body">
            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-           <div data-bind="visible: etlType() === 'Raven'">
-               <h3>RavenDB ETL Script Reference</h3>
-               <div class="margin-bottom margin-top margin-top margin-top-lg">Simple Transformation Script:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">loadTo<span class="token string">NewEmployees</span></span><span class="token punctuation"> ({</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 0)"><i class="icon-copy"></i></a>
-        Name: this.LastName <span class="token operator">+</span> " some new data..",
-        Title: this.Title <span class="token operator">+</span> " some new data.."
-<span class="token punctuation">})</span>;
-</pre>
-
-               <div class="margin-bottom margin-top">Transformation Script with custom logic for counters:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">loadTo<span class="token string">Users</span></span><span class="token punctuation"> ({</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 1)"><i class="icon-copy"></i></a>
-        Name: this.Name <span class="token operator">+</span> " some new data.."
-<span class="token punctuation">})</span>;
-
-function <span class="token keyword">loadCountersOf<span class="token string">Users</span>Behavior</span>(documentId, counterName) {
-    return true;
-}
-</pre>
-               <div class="margin-bottom margin-top">Transformation Script with custom logic for documents deletion:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">loadTo<span class="token string">Users</span></span><span class="token punctuation"> ({</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 2)"><i class="icon-copy"></i></a>
-        Name: this.Name <span class="token operator">+</span> " some new data.."
-<span class="token punctuation">})</span>;
-                   
-function <span class="token keyword">deleteDocumentsOf<span class="token string">Users</span>Behavior</span>(documentId) {
-    return false; <span class="token comment">// don't propagate document deletions</span>
-}
-</pre>
+           <div data-bind="if: etlType() === 'Raven'">
+               <h3 class="margin-bottom margin-bottom-lg margin-top">RavenDB ETL Script Reference</h3>
+               <div data-bind="foreach: $data.constructor.ravenEtlSamples">
+                   <div class="margin-top" data-bind="text: title"></div>
+                   <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+               </div>
             </div>
-            <div data-bind="visible: etlType() === 'Sql'" class="copy-example-area">
-                <div class="flex-horizontal">
-                    <h3 class="margin-bottom margin-top">Simple SQL ETL Transformation Script:</h3>
-                    <a href="#" class="copy-example-button margin-left" title="Copy example" data-bind="click: _.partial(copyExample, 3)"><i class="icon-copy"></i></a>
-                </div>
-                <pre class="margin-top" data-bind="html: sqlScriptHtml"></pre> 
-            </div>
+           <div data-bind="if: etlType() === 'Sql'" class="copy-area">
+               <h3 class="margin-bottom margin-bottom-lg margin-top">Simple SQL ETL Transformation Script</h3>
+               <div class="margin-bottom">
+                   <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: copySample"><i class="icon-copy"></i></a><span data-bind="html: sqlEtlSampleHtml"></span></pre>
+               </div>
+           </div>
        </div>
        <div class="modal-footer margin-bottom">
            <div class="text-left bg-info text-info">

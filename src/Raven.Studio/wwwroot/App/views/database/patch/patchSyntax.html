@@ -2,45 +2,10 @@
     <div class="modal-content">
         <div class="modal-body">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
-            <div class="margin-top">Filter out an array item:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from</span><span class="token string"> Orders </span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 0)"><i class="icon-copy"></i></a>
-<span class="token keyword">update</span><span class="token punctuation"> { </span>
-    this.Lines = this.Lines.filter(l => l.Product <span class="token operator">!=</span> <span class="token string">'products/1'</span>);
-<span class="token punctuation">}</span>
-</pre>
-            <div>Denormalize the company name:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from</span> <span class="token string">Orders</span> <span class="token keyword">as</span> o <a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 1)"><i class="icon-copy"></i></a>
-<span class="token keyword">load</span> o.Company <span class="token keyword">as</span> c
-<span class="token keyword">update</span><span class="token punctuation"> { </span>
-    o.CompanyName = c.Name;
-<span class="token punctuation">}</span>
-</pre>
-            <div>Use JavaScript to patch:</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from index</span><span class="token string"> 'Orders/Totals' </span><span class="token keyword">as</span> i <a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 2)"><i class="icon-copy"></i></a>
-<span class="token keyword">where</span> i.Total<span class="token operator"> > </span>10000
-<span class="token keyword">load</span> i.Company <span class="token keyword">as</span> c
-<span class="token keyword">update</span><span class="token punctuation"> { </span>
-    i.LowerName = c.Name.toLowerCase();
-<span class="token punctuation">}</span>
-</pre>
-            <div>Access the metadata</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from </span><span class="token string">Orders </span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 3)"><i class="icon-copy"></i></a>
-<span class="token keyword">update</span><span class="token punctuation"> { </span>
-    <span class="token keyword">this</span>.DocumentId = id(<span class="token keyword">this</span>);
-    <span class="token keyword">this</span>.DocumentCollection = <span class="token keyword">this</span>["@metadata"]["@collection"];
-<span class="token punctuation">}</span>
-</pre>
-            <div>Add a time series entry</div>
-<pre class="margin-bottom copy-example-area">
-<span class="token keyword">from </span><span class="token string">Persons</span><a href="#" class="copy-example-button pull-right" title="Copy example" data-bind="click: _.partial(copyExample, 4)"><i class="icon-copy"></i></a>
-<span class="token keyword">update</span><span class="token punctuation"> { </span>
-    timeseries(<span class="token string">"Persons/1"</span>, <span class="token string">"HeartRate"</span>).append(<span class="token string">"2020-06-25T10:48:14.794"</span>, [120, 80], <span class="token string">"TagName"</span>);
-<span class="token punctuation">}</span>
-</pre>
+            <div data-bind="foreach: $data.constructor.samples">
+                <div class="margin-top" data-bind="text: title"></div>
+                <pre class="margin-bottom copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+            </div>
         </div>
         <div class="modal-footer">
             <div class="text-left">
