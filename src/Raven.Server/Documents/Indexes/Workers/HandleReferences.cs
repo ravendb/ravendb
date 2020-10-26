@@ -16,8 +16,6 @@ namespace Raven.Server.Documents.Indexes.Workers
 {
     public class HandleDocumentReferences : HandleReferences
     {
-        protected override ReferenceType Type => ReferenceType.Documents;
-
         public HandleDocumentReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
             : this(index, referencedCollections, documentsStorage, indexStorage, indexStorage.ReferencesForDocuments, configuration)
         {
@@ -66,8 +64,10 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
     }
 
-    public abstract class HandleReferencesBase : IIndexingWork
+    public abstract partial class HandleReferencesBase : IIndexingWork
     {
+        private readonly ReferencesState _referencesState = new ReferencesState();
+
         private readonly Logger _logger;
 
         private readonly Index _index;
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (lastIndexedEtag == 0) // we haven't indexed yet, so we are skipping references for now
                     continue;
 
-                var reference = _index.LastProcessedReferences.For(Type, actionType, collection);
+                var reference = _referencesState.For(actionType, collection);
                 foreach (var referencedCollection in referencedCollections)
                 {
                     var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             if (moreWorkFound == false)
-                _index.LastProcessedReferences.ClearForType(Type, actionType);
+                _referencesState.Clear(actionType);
 
             return moreWorkFound;
         }
@@ -371,8 +371,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
-        protected abstract ReferenceType Type { get; }
-
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
@@ -388,15 +386,6 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             Document,
             Tombstone
-        }
-
-        public enum ReferenceType
-        {
-            Documents,
-            Counters,
-            TimeSeries,
-            CompareExchangeCounters,
-            CompareExchangeTimeSeries
         }
     }
 }

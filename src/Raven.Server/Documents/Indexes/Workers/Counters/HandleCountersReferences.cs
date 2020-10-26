@@ -10,8 +10,6 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
     {
         private readonly CountersStorage _countersStorage;
 
-        protected override ReferenceType Type => ReferenceType.Counters;
-
         public HandleCountersReferences(Index index, Dictionary<string, HashSet<CollectionName>> referencedCollections, CountersStorage countersStorage, DocumentsStorage documentsStorage, IndexStorage indexStorage, Config.Categories.IndexingConfiguration configuration)
             : base(index, referencedCollections, documentsStorage, indexStorage, indexStorage.ReferencesForDocuments, configuration)
         {
