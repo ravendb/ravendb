@@ -156,10 +156,10 @@ namespace Raven.Server.Json
                     wp.WritePropertyName(nameof(processProgress.NumberOfTimeSeriesDeletedRangesToProcess));
                     wp.WriteInteger(processProgress.NumberOfTimeSeriesDeletedRangesToProcess);
                     wp.WriteComma();
-                    
+
                     wp.WritePropertyName(nameof(processProgress.TotalNumberOfTimeSeriesDeletedRanges));
                     wp.WriteInteger(processProgress.TotalNumberOfTimeSeriesDeletedRanges);
-                    
+
                     wp.WriteEndObject();
                 });
 
@@ -972,7 +972,7 @@ namespace Raven.Server.Json
                 writer.WritePropertyName(nameof(index.Type));
                 writer.WriteString(index.Type.ToString());
                 writer.WriteComma();
-                
+
                 writer.WritePropertyName(nameof(index.SourceType));
                 writer.WriteString(index.SourceType.ToString());
                 writer.WriteComma();
@@ -1069,6 +1069,9 @@ namespace Raven.Server.Json
                 writer.WriteString(kvp.Value);
             }
             writer.WriteEndObject();
+            writer.WriteComma();
+
+            writer.WriteArray(context, nameof(indexDefinition.AdditionalAssemblies), indexDefinition.AdditionalAssemblies, (w, c, a) => a.WriteTo(w));
             writer.WriteComma();
 
 #if FEATURE_TEST_INDEX
@@ -1194,7 +1197,7 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(progress.SourceType));
             writer.WriteString(progress.SourceType.ToString());
-            
+
             writer.WriteEndObject();
         }
 
@@ -1357,7 +1360,7 @@ namespace Raven.Server.Json
                 return;
             }
 
-            // Explicitly not disposing it, a single document can be 
+            // Explicitly not disposing it, a single document can be
             // used multiple times in a single query, for example, due to projections
             // so we will let the context handle it, rather than handle it directly ourselves
             //using (document.Data)
@@ -1655,7 +1658,7 @@ namespace Raven.Server.Json
             Dictionary<string, Dictionary<string, List<TimeSeriesRangeResult>>> timeSeries)
         {
             writer.WriteStartObject();
-            
+
             var first = true;
             foreach (var kvp in timeSeries)
             {
@@ -1995,7 +1998,7 @@ namespace Raven.Server.Json
             return (DynamicJsonValue)(result[Constants.Documents.Metadata.Key] ?? (result[Constants.Documents.Metadata.Key] = new DynamicJsonValue()));
         }
 
-        public static void MergeMetadata(DynamicJsonValue result ,DynamicJsonValue metadata)
+        public static void MergeMetadata(DynamicJsonValue result, DynamicJsonValue metadata)
         {
             var m1 = GetOrCreateMetadata(result);
             var m2 = GetOrCreateMetadata(metadata);

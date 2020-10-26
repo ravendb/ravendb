@@ -67,6 +67,7 @@ namespace Raven.Client.Documents.Indexes.Counters
             _definition.Name = IndexName;
             _definition.Type = IsMapReduce ? IndexType.JavaScriptMapReduce : IndexType.JavaScriptMap;
             _definition.AdditionalSources = AdditionalSources ?? (_definition.AdditionalSources = new Dictionary<string, string>());
+            _definition.AdditionalAssemblies = AdditionalAssemblies ?? (_definition.AdditionalAssemblies = new HashSet<AdditionalAssembly>());
             _definition.Configuration = Configuration;
             _definition.LockMode = LockMode;
             _definition.Priority = Priority;

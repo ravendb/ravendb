@@ -139,6 +139,11 @@
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="Npgsql" Version="4.1.5" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.91" />
+    <PackageReference Include="NuGet.PackageManagement" Version="5.7.0" />
+    <PackageReference Include="NuGet.ProjectModel" Version="5.7.0" />
+    <PackageReference Include="NuGet.Protocol" Version="5.7.0" />
+    <PackageReference Include="NuGet.Resolver" Version="5.7.0" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.19.90" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.8" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>

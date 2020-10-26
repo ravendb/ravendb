@@ -45,8 +45,14 @@ namespace Raven.Client.Documents.Indexes
         /// </summary>
         public Dictionary<string, string> AdditionalSources
         {
-            get => _additionalSources ?? (_additionalSources = new Dictionary<string, string>());
+            get => _additionalSources ??= new Dictionary<string, string>();
             set => _additionalSources = value;
+        }
+
+        public HashSet<AdditionalAssembly> AdditionalAssemblies
+        {
+            get => _additionalAssemblies ??= new HashSet<AdditionalAssembly>();
+            set => _additionalAssemblies = value;
         }
 
         /// <summary>
@@ -159,6 +165,17 @@ namespace Raven.Client.Documents.Indexes
             if (DictionaryExtensions.ContentEquals(AdditionalSources, other.AdditionalSources) == false)
                 result |= IndexDefinitionCompareDifferences.AdditionalSources;
 
+            bool additionalAssembliesEquals;
+            if (AdditionalAssemblies == null && other.AdditionalAssemblies == null)
+                additionalAssembliesEquals = true;
+            else if (AdditionalAssemblies != null && other.AdditionalAssemblies != null)
+                additionalAssembliesEquals = AdditionalAssemblies.SetEquals(other.AdditionalAssemblies);
+            else
+                additionalAssembliesEquals = false;
+
+            if (additionalAssembliesEquals == false)
+                result |= IndexDefinitionCompareDifferences.AdditionalAssemblies;
+
             return result;
         }
 
@@ -227,6 +244,9 @@ namespace Raven.Client.Documents.Indexes
 
         [JsonIgnore]
         private Dictionary<string, string> _additionalSources;
+
+        [JsonIgnore]
+        private HashSet<AdditionalAssembly> _additionalAssemblies;
 
         [JsonIgnore]
         private IndexConfiguration _configuration;
@@ -455,6 +475,9 @@ namespace Raven.Client.Documents.Indexes
 
             foreach (var kvp in _additionalSources)
                 definition.AdditionalSources[kvp.Key] = kvp.Value;
+
+            foreach (var additionalAssembly in _additionalAssemblies)
+                definition.AdditionalAssemblies.Add(additionalAssembly.Clone());
         }
     }
 
@@ -470,7 +493,8 @@ namespace Raven.Client.Documents.Indexes
         Priority = 1 << 8,
         State = 1 << 9,
         AdditionalSources = 1 << 10,
+        AdditionalAssemblies = 1 << 10,
 
-        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources
+        All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies
     }
 }

@@ -90,6 +90,7 @@ namespace Raven.Client.Documents.Indexes
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 PatternReferencesCollectionName = PatternReferencesCollectionName,
                 AdditionalSources = AdditionalSources,
+                AdditionalAssemblies = AdditionalAssemblies,
                 Configuration = Configuration,
                 LockMode = LockMode,
                 Priority = Priority

@@ -73,6 +73,7 @@ namespace Raven.Client.Documents.Indexes.TimeSeries
                 OutputReduceToCollection = OutputReduceToCollection,
                 PatternForOutputReduceToCollectionReferences = PatternForOutputReduceToCollectionReferences,
                 AdditionalSources = AdditionalSources,
+                AdditionalAssemblies = AdditionalAssemblies,
                 Configuration = Configuration,
                 LockMode = LockMode,
                 Priority = Priority
