@@ -36,6 +36,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
 
+        private CustomSerialMergeScheduler _mergeScheduler;
+
         public Directory Directory => _indexWriter?.Directory;
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
@@ -62,10 +64,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.DeleteDocuments(term, state);
         }
 
-        public void Commit(IState state)
+        public void Commit(IState state, IndexingStatsScope commitStats)
         {
             try
             {
+                _mergeScheduler.SetCommitStats(commitStats);
                 _indexWriter.Commit(state);
             }
             catch (SystemException e)
@@ -160,7 +163,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             using (_indexWriter.MergeScheduler)
             {
             }
-            _indexWriter.SetMergeScheduler(new SerialMergeScheduler(), state);
+
+            _mergeScheduler = new CustomSerialMergeScheduler();
+            _indexWriter.SetMergeScheduler(_mergeScheduler, state);
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
             _indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
