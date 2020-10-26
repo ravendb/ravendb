@@ -217,6 +217,8 @@ namespace Raven.Client.Documents.BulkInsert
 
             _token = token;
             _conventions = store.Conventions;
+            if (string.IsNullOrWhiteSpace(database))
+                throw new ArgumentNullException(nameof(database), "Document store database name cannot be empty");
             _requestExecutor = store.GetRequestExecutor(database);
             _resetContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
             _currentWriter = new StreamWriter(new MemoryStream());
