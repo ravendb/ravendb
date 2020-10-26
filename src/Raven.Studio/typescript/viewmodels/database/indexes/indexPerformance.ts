@@ -278,6 +278,7 @@ class indexPerformance extends viewModelBase {
             "Aggregation/NestedValues": undefined as string,
             "Lucene/Commit": undefined as string,
             "Lucene/Merge": undefined as string,
+            "Voron/CopyFileStream": undefined as string,
             "Storage/Commit": undefined as string,
             "Lucene/RecreateSearcher": undefined as string,
             "SaveOutputDocuments": undefined as string,

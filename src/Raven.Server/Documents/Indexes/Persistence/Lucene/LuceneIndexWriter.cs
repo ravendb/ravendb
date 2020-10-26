@@ -68,6 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
+                _directory.SetCommitStats(commitStats);
                 _mergeScheduler.SetCommitStats(commitStats);
                 _indexWriter.Commit(state);
             }
