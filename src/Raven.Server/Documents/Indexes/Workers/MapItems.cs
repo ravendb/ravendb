@@ -124,7 +124,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    if (CanContinueBatch(queryContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    if (_index.CanContinueBatch(collectionStats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                     {
                                         keepRunning = false;
                                         break;
@@ -186,39 +186,8 @@ namespace Raven.Server.Documents.Indexes.Workers
                     maxTimeForDocumentTransactionToRemainOpen.Add(
                         configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan);
             }
+
             return false;
-        }
-
-        public bool CanContinueBatch(QueryOperationContext queryContext, TransactionOperationContext indexingContext, IndexingStatsScope stats, IndexWriteOperation indexWriter, long currentEtag, long maxEtag, long count)
-        {
-            if (_index.ShouldRunCanContinueBatch(count) == false)
-                return true;
-
-            if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
-            {
-                stats.RecordMapCompletedReason($"Exceeded maximum configured map duration ({_configuration.MapTimeout.AsTimeSpan}). Was {stats.Duration}");
-                return false;
-            }
-
-            if (_configuration.MapBatchSize.HasValue && count >= _configuration.MapBatchSize.Value)
-            {
-                stats.RecordMapCompletedReason($"Reached maximum configured map batch size ({_configuration.MapBatchSize.Value:#,#;;0}).");
-                return false;
-            }
-
-            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
-            {
-                stats.RecordMapCompletedReason($"Reached maximum etag that was seen when batch started ({maxEtag:#,#;;0}) and map duration ({stats.Duration}) exceeded configured limit ({_configuration.MapTimeoutAfterEtagReached.AsTimeSpan})");
-                return false;
-            }
-
-            if (_index.ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
-                return false;
-
-            if (_index.CanContinueBatch(stats, queryContext, indexingContext, indexWriter, count) == false)
-                return false;
-
-            return true;
         }
 
         protected abstract IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize);

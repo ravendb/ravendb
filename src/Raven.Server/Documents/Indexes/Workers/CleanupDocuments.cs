@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 : TimeSpan.FromMinutes(15);
 
             var moreWorkFound = false;
-
+            var totalProcessedCount = 0;
             foreach (var collection in _index.Collections)
             {
                 using (var collectionStats = stats.For("Collection_" + collection))
@@ -65,8 +65,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastCollectionEtag = -1L;
                     while (keepRunning)
                     {
-                        var batchCount = 0L;
-
+                        var hasChanges = false;
                         using (queryContext.OpenReadTransaction())
                         {
                             sw.Restart();
@@ -86,19 +85,20 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     indexWriter = writeOperation.Value;
 
                                 count++;
-                                batchCount++;
+                                totalProcessedCount++;
+                                hasChanges = true;
                                 lastEtag = tombstone.Etag;
                                 inMemoryStats.UpdateLastEtag(lastEtag, isTombstone: true);
 
-                                if (_logger.IsInfoEnabled && count % 2048 == 0)
-                                    _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {count:#,#;;0} etag: {lastEtag}.");
+                                if (_logger.IsInfoEnabled && totalProcessedCount % 2048 == 0)
+                                    _logger.Info($"Executing cleanup for '{_index.Name}'. Processed count: {totalProcessedCount:#,#;;0} etag: {lastEtag}.");
 
                                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                                     continue; // this can happen when we have '@all_docs'
 
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
-                                if (CanContinueBatch(queryContext, indexContext, collectionStats, indexWriter, lastEtag, lastCollectionEtag, batchCount) == false)
+                                if (_index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
                                 {
                                     keepRunning = false;
                                     break;
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     break;
                             }
 
-                            if (batchCount == 0 || batchCount >= pageSize)
+                            if (hasChanges == false)
                                 break;
                         }
                     }
@@ -133,30 +133,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
-        }
-
-        public bool CanContinueBatch(
-            QueryOperationContext queryContext,
-            TransactionOperationContext indexingContext,
-            IndexingStatsScope stats,
-            IndexWriteOperation indexWriteOperation,
-            long currentEtag,
-            long maxEtag,
-            long count)
-        {
-            if (_index.ShouldRunCanContinueBatch(count) == false)
-                return true;
-
-            if (stats.Duration >= _configuration.MapTimeout.AsTimeSpan)
-                return false;
-
-            if (currentEtag >= maxEtag && stats.Duration >= _configuration.MapTimeoutAfterEtagReached.AsTimeSpan)
-                return false;
-
-            if (_index.CanContinueBatch(stats, queryContext, indexingContext, indexWriteOperation, count) == false)
-                return false;
-
-            return true;
         }
     }
 }

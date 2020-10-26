@@ -14,6 +14,8 @@ namespace Raven.Server.Documents.Indexes.Workers.TimeSeries
         private readonly HashSet<string> _collectionsWithCompareExchangeReferences;
         private readonly TimeSeriesStorage _timeSeriesStorage;
 
+        protected override ReferenceType Type => ReferenceType.CompareExchangeTimeSeries;
+
         public HandleCompareExchangeTimeSeriesReferences(Index index, HashSet<string> collectionsWithCompareExchangeReferences, TimeSeriesStorage timeSeriesStorage, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
             : base(index, collectionsWithCompareExchangeReferences, documentsStorage, indexStorage, configuration)
         {

@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Indexes.Workers.Counters
         private readonly HashSet<string> _collectionsWithCompareExchangeReferences;
         private readonly CountersStorage _countersStorage;
 
+        protected override ReferenceType Type => ReferenceType.CompareExchangeCounters;
+
         public HandleCompareExchangeCountersReferences(Index index, HashSet<string> collectionsWithCompareExchangeReferences, CountersStorage countersStorage, DocumentsStorage documentsStorage, IndexStorage indexStorage, IndexingConfiguration configuration)
             : base(index, collectionsWithCompareExchangeReferences, documentsStorage, indexStorage, configuration)
         {
