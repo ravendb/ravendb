@@ -292,7 +292,8 @@ class indexDefinition {
                                              this.createReferencesToResultsCollection() &&
                                              this.collectionNameForReferenceDocuments() ?
                                                 this.collectionNameForReferenceDocuments() : null,
-            AdditionalSources: this.additionalSourceToDto()
+            AdditionalSources: this.additionalSourceToDto(),
+            AdditionalAssemblies: []
         }
     }
 
@@ -349,6 +350,7 @@ class indexDefinition {
             SourceType: "None",
             OutputReduceToCollection: null,
             AdditionalSources: null,
+            AdditionalAssemblies: null,
             PatternForOutputReduceToCollectionReferences: null,
             PatternReferencesCollectionName: null
         });

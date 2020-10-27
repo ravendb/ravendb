@@ -211,7 +211,7 @@ namespace Raven.Server.Config.Categories
         public IndexStartupBehavior ErrorIndexStartupBehavior { get; set; }
 
         [Description("Location of NuGet packages cache")]
-        [DefaultValue(@"NuGetPackages")]
+        [DefaultValue("Packages/NuGet")]
         [IndexUpdateType(IndexUpdateType.Reset)]
         [ConfigurationEntry("Indexing.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }

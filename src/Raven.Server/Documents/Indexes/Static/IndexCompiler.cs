@@ -392,8 +392,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     foreach (var path in paths)
                     {
-                        var assemblyName = AssemblyName.GetAssemblyName(path);
-                        var assembly = Assembly.Load(assemblyName);
+                        var assembly = LoadAssembly(path);
                         references.Add(CreateMetadataReferenceFromAssembly(assembly));
                     }
 
@@ -402,6 +401,22 @@ namespace Raven.Server.Documents.Indexes.Static
                 catch (Exception e)
                 {
                     throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl}'.", e);
+                }
+
+                static Assembly LoadAssembly(string path)
+                {
+                    try
+                    {
+                        // this allows us to load assembly from runtime if there is a newer one
+                        // e.g. when we are using newer runtime
+                        var assemblyName = AssemblyName.GetAssemblyName(path);
+                        return Assembly.Load(assemblyName);
+                    }
+                    catch
+                    {
+                    }
+
+                    return Assembly.LoadFile(path);
                 }
             }
         }
