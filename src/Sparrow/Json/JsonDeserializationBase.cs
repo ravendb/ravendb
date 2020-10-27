@@ -95,9 +95,9 @@ namespace Sparrow.Json
                     var access = Expression.MakeMemberAccess(result, propertyInfo);
                     SetValue(propertyInfo.PropertyType, access, propertyValue);
                 }
-               
+
                 expressionBuilder.Add(result);
-                var conversionFuncBody = Expression.Block(vars.Values.Concat(new[] {result}), expressionBuilder);
+                var conversionFuncBody = Expression.Block(vars.Values.Concat(new[] { result }), expressionBuilder);
 
                 if (interfaces.Contains(typeof(IPostJsonDeserialization)))
                 {
@@ -280,6 +280,14 @@ namespace Sparrow.Json
                     var valueType = propertyType.GenericTypeArguments[0];
                     var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
                     var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToList), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
+                    return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
+                }
+
+                if (genericTypeDefinition == typeof(HashSet<>))
+                {
+                    var valueType = propertyType.GenericTypeArguments[0];
+                    var converterExpression = Expression.Constant(GetConverterFromCache(valueType));
+                    var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(ToHashSet), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(valueType);
                     return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
                 }
             }
@@ -671,6 +679,27 @@ namespace Sparrow.Json
             return converter(obj);
         }
 
+        private static HashSet<T> ToHashSet<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
+        {
+            var hashset = new HashSet<T>();
+
+            if (json.TryGet(name, out BlittableJsonReaderArray array) == false || array == null)
+                return hashset;
+
+            foreach (BlittableJsonReaderObject item in array.Items)
+            {
+                if (item == null)
+                {
+                    hashset.Add(default);
+                    continue;
+                }
+
+                hashset.Add(converter(item));
+            }
+
+            return hashset;
+        }
+
         private static List<T> ToList<T>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, T> converter)
         {
             var list = new List<T>();
@@ -685,7 +714,7 @@ namespace Sparrow.Json
                     list.Add(default);
                     continue;
                 }
-            
+
                 list.Add(converter(item));
             }
 
@@ -828,16 +857,22 @@ namespace Sparrow.Json
             {
                 case StringComparison.CurrentCulture:
                     return StringComparer.CurrentCulture;
+
                 case StringComparison.CurrentCultureIgnoreCase:
                     return StringComparer.CurrentCultureIgnoreCase;
+
                 case StringComparison.InvariantCulture:
                     return StringComparer.InvariantCulture;
+
                 case StringComparison.InvariantCultureIgnoreCase:
                     return StringComparer.InvariantCultureIgnoreCase;
+
                 case StringComparison.Ordinal:
                     return StringComparer.Ordinal;
+
                 case StringComparison.OrdinalIgnoreCase:
                     return StringComparer.OrdinalIgnoreCase;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(stringComparison));
             }
