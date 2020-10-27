@@ -1,5 +1,6 @@
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
+import genUtils = require("common/generalUtils");
 
 class googleCloudSettings extends backupSettings {
     bucket = ko.observable<string>();
@@ -87,6 +88,8 @@ class googleCloudSettings extends backupSettings {
         dto.BucketName = this.bucket();
         dto.RemoteFolderName = this.remoteFolderName();
         dto.GoogleCredentialsJson = this.googleCredentialsJson();
+
+        genUtils.trimProperties(dto, ["RemoteFolderName"]);
         return dto;
     }
 

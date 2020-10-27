@@ -1,5 +1,6 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
+import genUtils = require("common/generalUtils");
 
 class localSettings extends backupSettings {
     folderPath = ko.observable<string>();
@@ -18,7 +19,7 @@ class localSettings extends backupSettings {
             this.enabled,
             this.folderPath,
             this.configurationScriptDirtyFlag().isDirty 
-        ], false,  jsonUtil.newLineNormalizingHashFunction);
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     initValidation() {
@@ -43,6 +44,8 @@ class localSettings extends backupSettings {
     toDto(): Raven.Client.Documents.Operations.Backups.LocalSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.LocalSettings;
         dto.FolderPath = this.folderPath();
+
+        genUtils.trimProperties(dto, ["FolderPath"]);
         return dto;
     }
 

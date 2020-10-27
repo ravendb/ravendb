@@ -1,5 +1,6 @@
 ﻿import amazonSettings = require("models/database/tasks/periodicBackup/amazonSettings");
 import jsonUtil = require("common/jsonUtil");
+import genUtils = require("common/generalUtils");
 
 class glacierSettings extends amazonSettings {
     vaultName = ko.observable<string>();
@@ -52,6 +53,8 @@ class glacierSettings extends amazonSettings {
     toDto(): Raven.Client.Documents.Operations.Backups.GlacierSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.GlacierSettings;
         dto.VaultName = this.vaultName();
+
+        genUtils.trimProperties(dto, ["RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
         return dto;
     }
 

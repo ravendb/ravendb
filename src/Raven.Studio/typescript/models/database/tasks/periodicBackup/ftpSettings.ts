@@ -1,6 +1,7 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
 import fileImporter = require("common/fileImporter");
+import genUtils = require("common/generalUtils");
 
 class ftpSettings extends backupSettings {
     url = ko.observable<string>();
@@ -43,7 +44,7 @@ class ftpSettings extends backupSettings {
             this.password,
             this.certificateAsBase64,
             this.configurationScriptDirtyFlag().isDirty
-        ], false,  jsonUtil.newLineNormalizingHashFunction);
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     initValidation() {
@@ -138,6 +139,8 @@ class ftpSettings extends backupSettings {
         dto.Password = this.password();
         dto.CertificateAsBase64 = this.isFtps() ? this.certificateAsBase64() : null;
         dto.CertificateFileName = this.isFtps() ? this.certificateFileName() : null;
+
+        genUtils.trimProperties(dto, ["Url", "Port", "UserName"]);
         return dto;
     }
 
