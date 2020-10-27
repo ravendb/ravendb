@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.SetRAMBufferSizeMB(1024);
         }
 
-        private void DisposeIndexWriter(bool waitForMerges = true)
+        private void DisposeIndexWriter()
         {
             if (_indexWriter == null)
                 return;
@@ -193,7 +193,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                writer.Dispose(waitForMerges);
+                writer.Dispose(waitForMerges: false);
             }
             catch (Exception e)
             {
