@@ -8,8 +8,12 @@ namespace Raven.Client.Documents.Session.Tokens
         {
         }
 
-        public static readonly OpenSubclauseToken Instance = new OpenSubclauseToken();
-        public string BoostParameterName { get; set; }
+        public string BoostParameterName { get; internal set; }
+
+        internal static OpenSubclauseToken Create()
+        {
+            return new OpenSubclauseToken();
+        }
 
         public override void WriteTo(StringBuilder writer)
         {
