@@ -4,12 +4,16 @@ namespace Raven.Client.Documents.Session.Tokens
 {
     public sealed class CloseSubclauseToken : QueryToken
     {
-        public string BoostParameterName { get; set; }
         private CloseSubclauseToken()
         {
         }
 
-        public static readonly CloseSubclauseToken Instance = new CloseSubclauseToken();
+        public string BoostParameterName { get; internal set; }
+
+        internal static CloseSubclauseToken Create()
+        {
+            return new CloseSubclauseToken();
+        }
 
         public override void WriteTo(StringBuilder writer)
         {

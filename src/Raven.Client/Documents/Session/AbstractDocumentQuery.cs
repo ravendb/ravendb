@@ -11,12 +11,10 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.TimeSeries;
@@ -232,12 +230,12 @@ namespace Raven.Client.Documents.Session
 
             return new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
         }
-        
+
         protected internal QueryOperation InitializeQueryOperation()
         {
             var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
             TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
-            
+
             var indexQuery = GetIndexQuery();
 
             return new QueryOperation(TheSession,
@@ -343,7 +341,7 @@ namespace Raven.Client.Documents.Session
             name = name.TrimStart('$');
             if (QueryParameters.ContainsKey(name))
                 throw new InvalidOperationException("The parameter " + name + " was already added");
-            
+
             QueryParameters[name] = value;
         }
 
@@ -566,7 +564,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, null);
 
-            tokens.AddLast(OpenSubclauseToken.Instance);
+            tokens.AddLast(OpenSubclauseToken.Create());
         }
 
         /// <summary>
@@ -578,7 +576,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             _currentClauseDepth--;
 
             var tokens = GetCurrentWhereTokens();
-            tokens.AddLast(CloseSubclauseToken.Instance);
+            tokens.AddLast(CloseSubclauseToken.Create());
         }
 
         /// <summary>
@@ -961,7 +959,6 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (boost < 0m)
                 throw new ArgumentOutOfRangeException(nameof(boost), "Boost factor must be a non-negative number");
 
-            
             var tokens = GetCurrentWhereTokens();
             var last = tokens.Last;
             switch (last?.Value)
@@ -969,6 +966,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 case WhereToken whereToken:
                     whereToken.Options.Boost = boost;
                     return;
+
                 case CloseSubclauseToken close:
                     string parameter = AddQueryParameter(boost);
                     while (last != null)
@@ -977,17 +975,15 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                         if (last?.Value is OpenSubclauseToken open)
                         {
                             open.BoostParameterName = parameter;
-                            close.BoostParameterName = parameter ;
+                            close.BoostParameterName = parameter;
                             return;
                         }
-                        
                     }
                     break;
+
                 default:
                     throw new InvalidOperationException("Cannot apply boost on: " + (last?.Value.ToString() ?? "null"));
             }
-
-
         }
 
         /// <summary>
