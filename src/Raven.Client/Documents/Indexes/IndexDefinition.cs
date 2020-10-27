@@ -473,11 +473,17 @@ namespace Raven.Client.Documents.Indexes
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;
 
-            foreach (var kvp in _additionalSources)
-                definition.AdditionalSources[kvp.Key] = kvp.Value;
+            if (_additionalSources != null)
+            {
+                foreach (var kvp in _additionalSources)
+                    definition.AdditionalSources[kvp.Key] = kvp.Value;
+            }
 
-            foreach (var additionalAssembly in _additionalAssemblies)
-                definition.AdditionalAssemblies.Add(additionalAssembly.Clone());
+            if (_additionalAssemblies != null)
+            {
+                foreach (var additionalAssembly in _additionalAssemblies)
+                    definition.AdditionalAssemblies.Add(additionalAssembly.Clone());
+            }
         }
     }
 
@@ -493,7 +499,7 @@ namespace Raven.Client.Documents.Indexes
         Priority = 1 << 8,
         State = 1 << 9,
         AdditionalSources = 1 << 10,
-        AdditionalAssemblies = 1 << 10,
+        AdditionalAssemblies = 1 << 11,
 
         All = Maps | Reduce | Fields | Configuration | LockMode | Priority | State | AdditionalSources | AdditionalAssemblies
     }

@@ -339,6 +339,11 @@ namespace Raven.Server.Documents.Indexes.Static
                         newReferences.AddRange(FromPackage(additionalAssembly.PackageName, additionalAssembly.PackageVersion, additionalAssembly.PackageSourceUrl));
                         continue;
                     }
+
+                    if (additionalAssembly.Usings != null && additionalAssembly.Usings.Count > 0)
+                        continue;
+
+                    throw new NotSupportedException($"Not supported additional assembly: {additionalAssembly}");
                 }
             }
 
@@ -362,8 +367,7 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 try
                 {
-                    var assemblyName = AssemblyName.GetAssemblyName(path);
-                    var assembly = Assembly.Load(assemblyName);
+                    var assembly = LoadAssembly(path);
                     return CreateMetadataReferenceFromAssembly(assembly);
                 }
                 catch (Exception e)
@@ -402,22 +406,22 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl}'.", e);
                 }
+            }
 
-                static Assembly LoadAssembly(string path)
+            static Assembly LoadAssembly(string path)
+            {
+                try
                 {
-                    try
-                    {
-                        // this allows us to load assembly from runtime if there is a newer one
-                        // e.g. when we are using newer runtime
-                        var assemblyName = AssemblyName.GetAssemblyName(path);
-                        return Assembly.Load(assemblyName);
-                    }
-                    catch
-                    {
-                    }
-
-                    return Assembly.LoadFile(path);
+                    // this allows us to load assembly from runtime if there is a newer one
+                    // e.g. when we are using newer runtime
+                    var assemblyName = AssemblyName.GetAssemblyName(path);
+                    return Assembly.Load(assemblyName);
                 }
+                catch
+                {
+                }
+
+                return Assembly.LoadFile(path);
             }
         }
 

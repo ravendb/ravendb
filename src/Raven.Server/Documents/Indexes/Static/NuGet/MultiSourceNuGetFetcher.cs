@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
                 throw new ArgumentNullException(nameof(rootPath));
 
             if (_initialized)
-                throw new InvalidOperationException("TODO ppekrol");
+                throw new InvalidOperationException("NuGet fetcher was already initialized.");
 
             _rootPath = rootPath;
             _initialized = true;
