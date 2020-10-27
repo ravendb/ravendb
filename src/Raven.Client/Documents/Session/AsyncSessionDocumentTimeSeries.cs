@@ -73,14 +73,9 @@ namespace Raven.Client.Documents.Session
                     return rangeResult.Entries;
                 }
 
-                var (servedFromCache, resultToUser, mergedValues, fromRangeIndex, toRangeIndex) =
-                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ranges, start, pageSize, token)
+                var resultToUser =
+                    await ServeFromCacheOrGetMissingPartsFromServerAndMerge(cache, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, ranges, start, pageSize, token)
                         .ConfigureAwait(false);
-
-                if (servedFromCache == false && Session.NoTracking == false)
-                {
-                    InMemoryDocumentSessionOperations.AddToCache(Name, from ?? DateTime.MinValue, to ?? DateTime.MaxValue, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
-                }
 
                 return resultToUser?.Take(pageSize).Cast<TTValues>().ToArray();
             }
@@ -149,8 +144,9 @@ namespace Raven.Client.Documents.Session
             return values;
         }
 
-        private async Task<(bool ServedFromCache, IEnumerable<TimeSeriesEntry> ResultToUser, TimeSeriesEntry[] MergedValues, int FromRangeIndex, int ToRangeIndex)>
+        private async Task<IEnumerable<TimeSeriesEntry>>
             ServeFromCacheOrGetMissingPartsFromServerAndMerge(
+                Dictionary<string, List<TimeSeriesRangeResult>> cache, 
                 DateTime from,
                 DateTime to,
                 List<TimeSeriesRangeResult> ranges,
@@ -170,7 +166,6 @@ namespace Raven.Client.Documents.Session
             var fromRangeIndex = -1;
 
             List<TimeSeriesRange> rangesToGetFromServer = default;
-            IEnumerable<TimeSeriesEntry> resultToUser;
 
             for (toRangeIndex = 0; toRangeIndex < ranges.Count; toRangeIndex++)
             {
@@ -182,8 +177,7 @@ namespace Raven.Client.Documents.Session
                         // we have all the range we need
                         // or that we have all the results we need in smaller range
 
-                        resultToUser = ChopRelevantRange(ranges[toRangeIndex], from, to, start, pageSize);
-                        return (true, resultToUser, null, -1, -1);
+                        return ChopRelevantRange(ranges[toRangeIndex], from, to, start, pageSize);
                     }
 
                     fromRangeIndex = toRangeIndex;
@@ -240,9 +234,16 @@ namespace Raven.Client.Documents.Session
             // with all the ranges in cache that are between 'fromRange' and 'toRange'
 
             var mergedValues = MergeRangesWithResults(from, to, ranges, fromRangeIndex, toRangeIndex,
-                resultFromServer: details.Values[Name], out resultToUser);
+                resultFromServer: details.Values[Name], out var resultToUser);
 
-            return (false, resultToUser, mergedValues, fromRangeIndex, toRangeIndex);
+            if (Session.NoTracking == false)
+            {
+                from = details.Values[Name].Min(ts => ts.From);
+                to = details.Values[Name].Max(ts => ts.To);
+                InMemoryDocumentSessionOperations.AddToCache(Name, from, to, fromRangeIndex, toRangeIndex, ranges, cache, mergedValues);
+            }
+
+            return resultToUser;
         }
 
         private static TimeSeriesEntry[] MergeRangesWithResults(DateTime @from, DateTime to, List<TimeSeriesRangeResult> ranges,
