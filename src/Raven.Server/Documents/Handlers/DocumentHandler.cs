@@ -224,11 +224,12 @@ namespace Raven.Server.Documents.Handlers
             {
                 foreach (var id in ids)
                 {
-                Document document = null;
-                if (string.IsNullOrEmpty(id) == false)
-                {
-                    document = Database.DocumentsStorage.Get(context, id);
-                }
+                    Document document = null;
+                    if (string.IsNullOrEmpty(id) == false)
+                    {
+                        document = Database.DocumentsStorage.Get(context, id);
+                    }
+
                     if (document == null && ids.Count == 1)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;

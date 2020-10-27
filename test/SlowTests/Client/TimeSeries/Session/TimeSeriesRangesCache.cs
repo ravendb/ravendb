@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using FastTests;
+using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
@@ -97,6 +100,127 @@ namespace SlowTests.Client.TimeSeries.Session
                     Assert.True(inMemoryDocumentSession.TimeSeriesByDocId.TryGetValue("users/ayende", out var cache));
                     Assert.True(cache.TryGetValue("Heartrate", out var ranges));
                     Assert.Equal(1, ranges.Count);
+                }
+            }
+        }
+
+        [Fact]
+        public void ReturnCorrectStatusCodeIfNoEntriesFound()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(2), new[] { 60d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(3), new[] { 61d }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var re = session.Advanced.RequestExecutor;
+                    using (re.ContextPool.AllocateOperationContext(out var context))
+                    {
+                        var multiGet = new GetMultipleTimeSeriesOperation.
+                            GetMultipleTimeSeriesCommand("users/ayende", new List<TimeSeriesRange>
+                            {
+                                new TimeSeriesRange
+                                {
+                                    Name = "Heartrate"
+                                }
+                            }, 5, 10);
+                        re.Execute(multiGet, context);
+                        var multiGetResult = multiGet.Result;
+
+                        Assert.Equal(1, multiGetResult.Values.Count);
+                        Assert.Equal(0, multiGetResult.Values["Heartrate"][0].Entries.Length);
+                        Assert.Equal(HttpStatusCode.OK, multiGet.StatusCode);
+
+                        multiGet = new GetMultipleTimeSeriesOperation.
+                            GetMultipleTimeSeriesCommand("users/ayende", new List<TimeSeriesRange>
+                            {
+                                new TimeSeriesRange
+                                {
+                                    Name = "Heartrate"
+                                }
+                            }, 5, 10);
+                        re.Execute(multiGet, context);
+                        multiGetResult = multiGet.Result;
+
+                        Assert.Equal(1, multiGetResult.Values.Count);
+                        Assert.Equal(0, multiGetResult.Values["Heartrate"][0].Entries.Length);
+                        Assert.Equal(HttpStatusCode.NotModified, multiGet.StatusCode);
+
+
+                        var get = new GetTimeSeriesOperation.GetTimeSeriesCommand("users/ayende", "HeartRate", start: 5, pageSize: 10, from: null, to: null);
+                        re.Execute(get, context);
+                        var getResult = get.Result;
+
+                        Assert.Equal(0, getResult.Entries.Length);
+                        Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+
+                        get = new GetTimeSeriesOperation.GetTimeSeriesCommand("users/ayende", "HeartRate", start: 5, pageSize: 10, from: null, to: null);
+                        re.Execute(get, context);
+                        getResult = get.Result;
+
+                        Assert.Equal(0, getResult.Entries.Length);
+                        Assert.Equal(HttpStatusCode.NotModified, get.StatusCode);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public void ShouldGetPartialRangeFromCache2()
+        {
+            var start = 5;
+            var pageSize = 10;
+
+            using (var store = GetDocumentStore())
+            {
+                var baseline = DateTime.Today;
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new { Name = "Oren" }, "users/ayende");
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(1), new[] { 59d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(2), new[] { 60d }, "watches/fitbit");
+                    session.TimeSeriesFor("users/ayende", "Heartrate").Append(baseline.AddMinutes(3), new[] { 61d }, "watches/fitbit");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddDays(2), baseline.AddDays(3), start: start, pageSize: pageSize);
+                    
+                    Assert.Empty(val);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddDays(1), baseline.AddDays(4), start: start, pageSize: pageSize);
+                    
+                    Assert.Empty(val);
+                    Assert.Equal(2, session.Advanced.NumberOfRequests);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(start: start, pageSize: pageSize);
+                    
+                    Assert.Empty(val);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
+
+                    val = session.TimeSeriesFor("users/ayende", "Heartrate")
+                        .Get(baseline.AddDays(1), baseline.AddDays(4), start: start, pageSize: pageSize);
+                    
+                    Assert.Empty(val);
+                    Assert.Equal(1, session.Advanced.NumberOfRequests);
                 }
             }
         }
@@ -642,6 +766,5 @@ namespace SlowTests.Client.TimeSeries.Session
                 }
             }
         }
-
     }
 }
