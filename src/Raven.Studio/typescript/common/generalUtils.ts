@@ -158,7 +158,7 @@ class genUtils {
 
         if (timeTokens.length === 0) {
             if (skipSecondsAndMilliseconds) {
-                timeTokens.push("less than a minute");    
+                timeTokens.push("less than a minute");
             } else {
                 timeTokens.push("0 ms");
             }
@@ -482,6 +482,15 @@ class genUtils {
             default:
                 return `${items.slice(0, items.length-1).join(', ')} & ${items[items.length-1]}`;
         }
+    }
+
+    // Trim inner properties of the passed object param 
+    static trimProperties(obj: any, propsToTrim: string[]) {
+        Object.keys(obj).map(key => {
+            if (_.includes(propsToTrim, key) && obj[key]) {
+                obj[key] = obj[key].toString().trim();
+            }
+        });
     }
 
     /***  File Methods ***/

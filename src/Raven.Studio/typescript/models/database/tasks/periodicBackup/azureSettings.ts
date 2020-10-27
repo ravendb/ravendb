@@ -1,5 +1,6 @@
 ﻿import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import jsonUtil = require("common/jsonUtil");
+import genUtils = require("common/generalUtils");
 
 class azureSettings extends backupSettings {
     storageContainer = ko.observable<string>();
@@ -87,6 +88,8 @@ class azureSettings extends backupSettings {
         dto.AccountName = this.accountName();
         dto.AccountKey = this.accountKey();
         dto.SasToken = this.sasToken();
+
+        genUtils.trimProperties(dto, ["RemoteFolderName", "AccountName"]);
         return dto;
     }
 

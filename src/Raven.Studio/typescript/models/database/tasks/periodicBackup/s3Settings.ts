@@ -5,7 +5,7 @@ import genUtils = require("common/generalUtils");
 class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
     useCustomS3Host = ko.observable<boolean>();
-    customServerUrl = ko.observable<string>();    
+    customServerUrl = ko.observable<string>();
     accessKeyPropertyName: KnockoutComputed<string>;
     secretKeyPropertyName: KnockoutComputed<string>;
 
@@ -120,7 +120,7 @@ class s3Settings extends amazonSettings {
     
     isRegionRequired() {
         const isRegionRequired = this.useCustomS3Host ? !this.hasConfigurationScript() && !this.useCustomS3Host() :
-                                                        !this.hasConfigurationScript();        
+                                                        !this.hasConfigurationScript();
         return super.isRegionRequired() && isRegionRequired;
     }
 
@@ -130,6 +130,7 @@ class s3Settings extends amazonSettings {
         dto.BucketName = this.bucketName();
         dto.CustomServerUrl = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.customServerUrl() : undefined;
         
+        genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
         return dto;
     }
 
