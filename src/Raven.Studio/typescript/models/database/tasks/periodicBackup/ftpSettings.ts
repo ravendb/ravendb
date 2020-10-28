@@ -140,8 +140,7 @@ class ftpSettings extends backupSettings {
         dto.CertificateAsBase64 = this.isFtps() ? this.certificateAsBase64() : null;
         dto.CertificateFileName = this.isFtps() ? this.certificateFileName() : null;
 
-        genUtils.trimProperties(dto, ["Url", "Port", "UserName"]);
-        return dto;
+        return genUtils.trimProperties(dto, ["Url", "UserName"]);
     }
 
     static empty(): ftpSettings {

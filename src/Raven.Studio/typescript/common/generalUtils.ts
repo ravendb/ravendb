@@ -484,13 +484,26 @@ class genUtils {
         }
     }
 
-    // Trim inner properties of the passed object param 
-    static trimProperties(obj: any, propsToTrim: string[]) {
-        Object.keys(obj).map(key => {
-            if (_.includes(propsToTrim, key) && obj[key]) {
-                obj[key] = obj[key].toString().trim();
+
+    // Trim the specified properties for the object param passed. Return the trimmed object.
+    static trimProperties<T extends object>(obj: T, propsToTrim: (OnlyStrings<T>)[]): T {
+        if (!obj) {
+            return null;
+        }
+
+        const result = {} as T;
+
+        for (const key of Object.keys(obj)) {
+            const value = (obj as any)[key];
+
+            if (_.includes(propsToTrim, key)) {
+                (result as any)[key] = value?.toString().trim();
+            } else {
+                (result as any)[key] = value;
             }
-        });
+        }
+
+        return result;
     }
 
     /***  File Methods ***/
