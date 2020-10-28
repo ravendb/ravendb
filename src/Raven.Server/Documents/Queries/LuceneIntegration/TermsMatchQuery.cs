@@ -30,6 +30,38 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
             return new TermMatchQueryWeight(this, searcher);
         }
 
+        private class SharedArrayDisjunctionMaxScorer : DisjunctionMaxScorer
+        {
+            private Scorer[] _subScorers;
+
+            public SharedArrayDisjunctionMaxScorer(float tieBreakerMultiplier, Similarity similarity, Scorer[] subScorers, int numScorers) : base(tieBreakerMultiplier, similarity, subScorers, numScorers)
+            {
+                _subScorers = subScorers;
+            }
+
+            public override int NextDoc(IState state)
+            {
+                var result = base.NextDoc(state);
+                if (result == NO_MORE_DOCS && _subScorers != null)
+                {
+                    ArrayPool<Scorer>.Shared.Return(_subScorers);
+                    _subScorers = null;
+                }
+                return result;
+            }
+
+            public override int Advance(int target, IState state)
+            {
+                int result = base.Advance(target, state);
+                if (result == NO_MORE_DOCS && _subScorers != null)
+                {
+                    ArrayPool<Scorer>.Shared.Return(_subScorers);
+                    _subScorers = null;
+                }
+                return result;
+            }
+        }
+        
         private class TermMatchQueryWeight : Weight
         {
             private readonly TermsMatchQuery _parent;
@@ -59,18 +91,19 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 if(_parent.Matches.Count > 128)
                     return new LazyInitTermMatchScorer(_parent, reader, state, similarity);
 
-                var scorers = new Scorer[_parent.Matches.Count];
+                var scorers = ArrayPool<Scorer>.Shared.Rent(_parent.Matches.Count);
                 int index = 0;
+                byte[] norms = reader.Norms(_parent.Field, state);
                 foreach (var match in _parent.Matches)
                 {
                     var termDocs = reader.TermDocs(new Term(_parent.Field, match),state);
-                    var scorer = new TermScorer(this, termDocs,similarity, reader.Norms(_parent.Field, state));
+                    var scorer = new TermScorer(this, termDocs,similarity, norms);
                     if (scorer.NextDoc(state) != DocIdSetIterator.NO_MORE_DOCS)
                     {
                         scorers[index++] = scorer;
                     }
                 }
-                return new DisjunctionMaxScorer(1.0f, similarity, scorers, index);
+                return new SharedArrayDisjunctionMaxScorer(1.0f, similarity, scorers, index);
             }
 
             public override float GetSumOfSquaredWeights()
