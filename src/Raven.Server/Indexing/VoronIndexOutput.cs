@@ -133,7 +133,6 @@ namespace Raven.Server.Indexing
             {
                 var files = _tx.ReadTree(_tree);
 
-                using (_indexOutputFilesSummary.CommitStats?.For(IndexingOperation.Storage.CopyFileStream))
                 using (Slice.From(_tx.Allocator, _name, out var nameSlice))
                 {
                     _file.Seek(0, SeekOrigin.Begin);
