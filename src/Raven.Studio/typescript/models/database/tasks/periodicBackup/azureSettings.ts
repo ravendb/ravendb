@@ -89,8 +89,7 @@ class azureSettings extends backupSettings {
         dto.AccountKey = this.accountKey();
         dto.SasToken = this.sasToken();
 
-        genUtils.trimProperties(dto, ["RemoteFolderName", "AccountName"]);
-        return dto;
+        return genUtils.trimProperties(dto, ["RemoteFolderName", "AccountName"]);
     }
 
     static empty(): azureSettings {

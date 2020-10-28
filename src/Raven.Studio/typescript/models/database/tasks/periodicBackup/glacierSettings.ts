@@ -54,8 +54,7 @@ class glacierSettings extends amazonSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.GlacierSettings;
         dto.VaultName = this.vaultName();
 
-        genUtils.trimProperties(dto, ["RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
-        return dto;
+        return genUtils.trimProperties(dto, ["RemoteFolderName", "AwsRegionName", "AwsAccessKey"]);
     }
 
     static empty(allowedRegions: Array<string>): glacierSettings {

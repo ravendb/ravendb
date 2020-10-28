@@ -89,8 +89,7 @@ class googleCloudSettings extends backupSettings {
         dto.RemoteFolderName = this.remoteFolderName();
         dto.GoogleCredentialsJson = this.googleCredentialsJson();
 
-        genUtils.trimProperties(dto, ["RemoteFolderName"]);
-        return dto;
+        return genUtils.trimProperties(dto, ["RemoteFolderName"]);
     }
 
     static empty(): googleCloudSettings {

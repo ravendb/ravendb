@@ -739,4 +739,6 @@ interface sampleCode {
     title: string,
     text: string,
     html: string
-} 
+}
+
+type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];

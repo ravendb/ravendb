@@ -45,8 +45,7 @@ class localSettings extends backupSettings {
         const dto = super.toDto() as Raven.Client.Documents.Operations.Backups.LocalSettings;
         dto.FolderPath = this.folderPath();
 
-        genUtils.trimProperties(dto, ["FolderPath"]);
-        return dto;
+        return genUtils.trimProperties(dto, ["FolderPath"]);
     }
 
     static empty(): localSettings {
