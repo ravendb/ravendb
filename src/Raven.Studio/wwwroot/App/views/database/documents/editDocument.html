@@ -110,7 +110,7 @@
                             Compare with: <span class="caret margin-left margin-left-sm"></span>
                         </button>
                         <ul class="dropdown-menu" data-bind="foreach: revisionsToCompare">
-                            <li data-bind="css: { active:  $data === $root.comparingWith() }">
+                            <li data-bind="css: { active: $data === $root.comparingWith() }">
                                 <a href="#" data-bind="text: $data.__metadata.lastModified(), click: _.partial($root.compareRevisions, $data)"></a>
                             </li>
                         </ul>
@@ -123,7 +123,7 @@
                             data-bind="enable: !isNewLineFriendlyMode(), click: formatDocument">
                         <i class="icon-indent"></i><span>Format</span>
                     </button>
-                    <button class="btn btn-default btn-sm" data-bind="click: toggleCollapse, css: { 'active': !isDocumentCollapsed() }">
+                    <button class="btn btn-default btn-sm" data-bind="click: toggleCollapse">
                         <i data-bind="attr: { class: isDocumentCollapsed() ? 'icon-unfold' : 'icon-fold'} "></i>
                         <span data-bind="text: isDocumentCollapsed() ? 'Expand document' : 'Collapse document'"></span>
                     </button>
@@ -163,7 +163,7 @@
         </small>
         <div class="differences_summary" data-bind="visible: currentDiff, with: currentDiff">
             <div class="padding padding-sm" data-bind="visible: identicalContent">
-                <small class="text-success">Contents are identical</small>    
+                <small class="text-success">Contents are identical</small>
             </div>
             <div class="padding padding-sm" data-bind="visible: !identicalContent()">
                 <small class="text-warning">
