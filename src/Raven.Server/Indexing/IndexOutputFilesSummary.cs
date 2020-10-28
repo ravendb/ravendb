@@ -10,8 +10,6 @@ namespace Raven.Server.Indexing
 
         public bool HasVoronWriteErrors { get; private set; }
 
-        public IndexingStatsScope CommitStats { get; private set; }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Increment(long value)
         {
@@ -22,11 +20,6 @@ namespace Raven.Server.Indexing
         {
             TotalWritten = 0;
             HasVoronWriteErrors = false;
-        }
-
-        public void SetCommitStats(IndexingStatsScope commitStats)
-        {
-            CommitStats = commitStats;
         }
 
         public void SetWriteError()

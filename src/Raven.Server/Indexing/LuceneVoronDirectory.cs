@@ -210,11 +210,6 @@ namespace Raven.Server.Indexing
             });
         }
 
-        public void SetCommitStats(IndexingStatsScope commitStats)
-        {
-            _indexOutputFilesSummary.SetCommitStats(commitStats);
-        }
-
         public void ResetAllocations()
         {
             _indexOutputFilesSummary.Reset();

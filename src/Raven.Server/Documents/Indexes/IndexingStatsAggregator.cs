@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;
+using Lucene.Net.Index;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
@@ -293,6 +294,9 @@ namespace Raven.Server.Documents.Indexes
             if (_stats.MapDetails != null && name == "Map")
                 operation.MapDetails = _stats.MapDetails;
 
+            if (_stats.LuceneMergeDetails != null && name == IndexingOperation.Lucene.Merge)
+                operation.LuceneMergeDetails = _stats.LuceneMergeDetails;
+
             if (_stats.CommitDetails != null && name == IndexingOperation.Storage.Commit)
                 operation.CommitDetails = _stats.CommitDetails;
 
@@ -359,6 +363,19 @@ namespace Raven.Server.Documents.Indexes
         public void RecordDocumentSize(int size)
         {
             _stats.DocumentsSize += size;
+        }
+
+        public void RecordPendingMergesCount(int pendingMergesCount)
+        {
+            _stats.LuceneMergeDetails ??= new LuceneMergeDetails();
+            _stats.LuceneMergeDetails.PendingMergesCount += pendingMergesCount;
+        }
+
+        public void RecordMergeStats(MergePolicy.OneMerge.OneMergeStats mergeStats)
+        {
+            _stats.LuceneMergeDetails ??= new LuceneMergeDetails();
+            _stats.LuceneMergeDetails.MergedFilesCount += mergeStats.NumberOfFiles;
+            _stats.LuceneMergeDetails.MergedDocumentsCount += mergeStats.TotalDocuments;
         }
     }
 }

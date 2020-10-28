@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly Logger _logger;
 
-        private IndexWriter _indexWriter;
+        private CustomIndexWriter _indexWriter;
 
         private readonly LuceneVoronDirectory _directory;
 
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             try
             {
-                _directory.SetCommitStats(commitStats);
+                _indexWriter.SetCommitStats(commitStats);
                 _mergeScheduler.SetCommitStats(commitStats);
                 _indexWriter.Commit(state);
             }
@@ -80,6 +80,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             finally
             {
+                _indexWriter.SetCommitStats(null);
+                _mergeScheduler.SetCommitStats(null);
                 RecreateIndexWriter(state);
             }
         }
@@ -155,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void CreateIndexWriter(IState state)
         {
-            _indexWriter = new IndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state);
+            _indexWriter = new CustomIndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state);
             _indexWriter.UseCompoundFile = false;
             if (_indexReaderWarmer != null)
             {

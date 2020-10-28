@@ -31,13 +31,13 @@ namespace Raven.Client.Documents.Indexes
             public const string Suggestion = "Lucene/Suggestion";
             public const string Commit = "Lucene/Commit";
             public const string Merge = "Lucene/Merge";
+            public const string ApplyDeletes = "Lucene/ApplyDeletes";
             public const string RecreateSearcher = "Lucene/RecreateSearcher";
         }
 
         internal static class Storage
         {
             public const string Commit = "Storage/Commit";
-            public const string CopyFileStream = "Voron/CopyFileStream";
         }
 
         internal static class Reduce
