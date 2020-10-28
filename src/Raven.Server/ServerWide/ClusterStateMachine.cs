@@ -1345,12 +1345,12 @@ namespace Raven.Server.ServerWide
                         }
                     }
 
-                    bool isClientConfigChanged;
+                    bool shouldSetClientConfigEtag;
                     var dbId = Constants.Documents.Prefix + addDatabaseCommand.Name;
                     using (var oldDatabaseRecord = Read(context, dbId, out _))
                     {
                         VerifyUnchangedTasks(oldDatabaseRecord);
-                        isClientConfigChanged = IsClientConfigChanged(newDatabaseRecord, oldDatabaseRecord);
+                        shouldSetClientConfigEtag = ShouldSetClientConfigEtag(newDatabaseRecord, oldDatabaseRecord);
                     }
 
                     using (var databaseRecordAsJson = UpdateDatabaseRecordIfNeeded())
@@ -1409,7 +1409,7 @@ namespace Raven.Server.ServerWide
 
                     BlittableJsonReaderObject UpdateDatabaseRecordIfNeeded()
                     {
-                        if (isClientConfigChanged)
+                        if (shouldSetClientConfigEtag)
                         {
                             addDatabaseCommand.Record.Client.Etag = index;
                             return EntityToBlittable.ConvertCommandToBlittable(addDatabaseCommand.Record, context);
@@ -1459,7 +1459,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static bool IsClientConfigChanged(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
+        private static bool ShouldSetClientConfigEtag(BlittableJsonReaderObject newDatabaseRecord, BlittableJsonReaderObject oldDatabaseRecord)
         {
             const string clientPropName = nameof(DatabaseRecord.Client);
             if (newDatabaseRecord.TryGet(clientPropName, out BlittableJsonReaderObject newDbClientConfig) == false || newDbClientConfig == null) 
