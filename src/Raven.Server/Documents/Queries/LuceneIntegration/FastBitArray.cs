@@ -35,8 +35,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                     ulong t = bitmap & (ulong)-(long)bitmap;
                     int count = BitOperations.TrailingZeroCount(bitmap);
                     int setBitPos = i * 64 + count;
-                    if (setBitPos >= from) 
-                        yield return setBitPos; 
+                    yield return setBitPos; 
                     bitmap ^= t;
                 }
                 i++;
