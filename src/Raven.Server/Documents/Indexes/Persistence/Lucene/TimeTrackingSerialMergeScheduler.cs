@@ -1,13 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading;
-using Lucene.Net.Index;
+﻿using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Indexes;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class CustomSerialMergeScheduler : MergeScheduler
+    public class TimeTrackingSerialMergeScheduler : MergeScheduler
     {
         private IndexingStatsScope _commitStats;
 

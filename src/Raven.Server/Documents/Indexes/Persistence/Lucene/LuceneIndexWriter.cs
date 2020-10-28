@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly Logger _logger;
 
-        private CustomIndexWriter _indexWriter;
+        private TimeTrackingIndexWriter _indexWriter;
 
         private readonly LuceneVoronDirectory _directory;
 
@@ -36,7 +36,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
 
-        private CustomSerialMergeScheduler _mergeScheduler;
 
         public Directory Directory => _indexWriter?.Directory;
 
@@ -69,7 +68,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             try
             {
                 _indexWriter.SetCommitStats(commitStats);
-                _mergeScheduler.SetCommitStats(commitStats);
                 _indexWriter.Commit(state);
             }
             catch (SystemException e)
@@ -81,7 +79,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             finally
             {
                 _indexWriter.SetCommitStats(null);
-                _mergeScheduler.SetCommitStats(null);
                 RecreateIndexWriter(state);
             }
         }
@@ -157,18 +154,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void CreateIndexWriter(IState state)
         {
-            _indexWriter = new CustomIndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state);
+            _indexWriter = new TimeTrackingIndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state);
             _indexWriter.UseCompoundFile = false;
             if (_indexReaderWarmer != null)
             {
                 _indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
             }
-            using (_indexWriter.MergeScheduler)
-            {
-            }
 
-            _mergeScheduler = new CustomSerialMergeScheduler();
-            _indexWriter.SetMergeScheduler(_mergeScheduler, state);
+            _indexWriter.InitializeMergeScheduler(state);
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
             _indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
