@@ -434,7 +434,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 _snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                 return _indexWriter = new LuceneIndexWriter(_directory, StopAnalyzer, _snapshotter,
-                    IndexWriter.MaxFieldLength.UNLIMITED, null, _index._indexStorage.DocumentDatabase, state);
+                    IndexWriter.MaxFieldLength.UNLIMITED, null, _index, state);
             }
             catch (Exception e) when (e.IsOutOfMemory())
             {

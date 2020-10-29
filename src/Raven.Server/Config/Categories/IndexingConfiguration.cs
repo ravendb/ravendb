@@ -65,6 +65,14 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; protected set; }
 
+
+        [Description("Expert: How long will we let merges to run before we close the transaction")]
+        [DefaultValue(60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MaxTimeForMergesToKeepRunning", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting MaxTimeForMergesToKeepRunning { get; protected set; }
+
         [Description("How long should we keep a superseded auto index?")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
@@ -156,6 +164,14 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.ManagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
+        
+        [Description("Expert: The maximum size that we'll consider for segments merging")]
+        [DefaultValue(4096)]
+        [SizeUnit(SizeUnit.Megabytes)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.MaximumSegmentMergeSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public Size? MaximumSegmentMergeSize { get; protected set; }
+
 
         [Description("Transaction size limit after which an index will stop and complete the current batch")]
         [DefaultValue(null)]
