@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
@@ -103,13 +101,16 @@ namespace Raven.Client.Documents.Operations.Counters
 
             private void PrepareRequestWithMultipleCounters(StringBuilder pathBuilder, HttpRequestMessage request, JsonOperationContext ctx)
             {
-                var uniqueNames = new HashSet<string>(_counters);
+                var uniqueNames = GetOrderedUniqueNames(out int sumLength);
 
                 // if it is too big, we drop to POST (note that means that we can't use the HTTP cache any longer)
-                // we are fine with that, requests to load more than 1024 counters are going to be rare
-                if (uniqueNames.Sum(x => x?.Length ?? 0) < 1024)
+                // we are fine with that, such requests are going to be rare
+                if (sumLength < 1024)
                 {
-                    uniqueNames.ApplyIfNotNull(counter => pathBuilder.Append("&counter=").Append(Uri.EscapeDataString(counter ?? string.Empty)));
+                    foreach (var counter in uniqueNames)
+                    {
+                        pathBuilder.Append("&counter=").Append(Uri.EscapeDataString(counter ?? string.Empty));
+                }
                 }
                 else
                 {
@@ -146,6 +147,24 @@ namespace Raven.Client.Documents.Operations.Counters
                         ctx.Write(stream, config);
                     });
                 }
+            }
+
+            private List<string> GetOrderedUniqueNames(out int sum)
+            {
+                var uniqueNames = new HashSet<string>();
+                var orderedUniqueNames = new List<string>();
+                sum = 0;
+
+                foreach (var counter in _counters)
+                {
+                    if (uniqueNames.Add(counter))
+                    {
+                        orderedUniqueNames.Add(counter);
+                        sum += counter?.Length ?? 0;
+                    }
+                }
+
+                return orderedUniqueNames;
             }
 
             public override bool IsReadRequest => true;

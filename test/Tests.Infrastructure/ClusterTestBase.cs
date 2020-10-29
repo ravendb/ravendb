@@ -225,7 +225,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        protected async Task<RavenServer> ActionWithLeader(Func<RavenServer, Task> act)
+        protected async Task<RavenServer> ActionWithLeader(Func<RavenServer, Task> act, List<RavenServer> servers = null)
         {
             var retries = 5;
             Exception err = null;
@@ -233,7 +233,7 @@ namespace Tests.Infrastructure
             {
                 try
                 {
-                    var leader = Servers.FirstOrDefault(s => s.ServerStore.IsLeader());
+                    var leader = servers == null ? Servers.FirstOrDefault(s => s.ServerStore.IsLeader()) : servers.FirstOrDefault(s => s.ServerStore.IsLeader());
                     if (leader != null)
                     {
                         await act(leader);
@@ -560,7 +560,8 @@ namespace Tests.Infrastructure
                     }
                     var follower = clusterNodes[i];
                     // ReSharper disable once PossibleNullReferenceException
-                    await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token);
+                    leader = await ActionWithLeader(l =>
+                        l.ServerStore.AddNodeToClusterAsync(serversToPorts[follower], nodeTag: allowedNodeTags[i], asWatcher: watcherCluster, token: cts.Token), clusterNodes);
                     if (watcherCluster)
                     {
                         await follower.ServerStore.WaitForTopology(Leader.TopologyModification.NonVoter, cts.Token);
@@ -583,7 +584,8 @@ namespace Tests.Infrastructure
             return (clusterNodes, leader);
         }
 
-        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false, IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null, [CallerMemberName] string caller = null)
+        protected async Task<RavenServer> CreateRaftClusterAndGetLeader(int numberOfNodes, bool? shouldRunInMemory = null, int? leaderIndex = null, bool useSsl = false,
+            IDictionary<string, string> customSettings = null, List<IDictionary<string, string>> customSettingsList = null, [CallerMemberName] string caller = null)
         {
             return (await CreateRaftCluster(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl, customSettings: customSettings, customSettingsList: customSettingsList, caller: caller)).Leader;
         }
