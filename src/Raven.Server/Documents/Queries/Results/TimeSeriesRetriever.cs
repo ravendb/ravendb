@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Results
             RangeGroup rangeSpec;
             if (groupBy != null)
             {
-                rangeSpec = RangeGroup.ParseRangeFromString(groupBy);
+                rangeSpec = RangeGroup.ParseRangeFromString(groupBy, from);
             }
             else
             {

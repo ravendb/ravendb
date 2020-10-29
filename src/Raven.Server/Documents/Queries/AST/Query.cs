@@ -221,12 +221,21 @@ namespace Raven.Server.Documents.Queries.AST
             _init = true;
         }
 
-        private void InitByTicks(DateTime start)
+        private void InitByTicks(DateTime first)
         {
-            var ticks = start.Ticks;
+            var ticks = first.Ticks;
             ticks -= (ticks % AlignedTicks);
-            _start = new DateTime(ticks, start.Kind);
+
+            if (ticks > _start.Ticks)
+            {
+                double distance = ticks - _start.Ticks;
+                var ticksToAdd = (long)Math.Floor(distance / Ticks) * Ticks;
+                _start = _start.AddTicks(ticksToAdd);
+            }
+
+            _start = DateTime.SpecifyKind(_start, first.Kind);
             _end = _start.AddTicks(Ticks);
+
         }
 
         private void InitByMonth(DateTime start)
@@ -268,7 +277,7 @@ namespace Raven.Server.Documents.Queries.AST
             return timestamp >= _start && timestamp < _end;
         }
 
-        public static RangeGroup ParseRangeFromString(string s)
+        public static RangeGroup ParseRangeFromString(string s, DateTime? from = null)
         {
             var range = new RangeGroup();
             var offset = 0;
@@ -283,6 +292,13 @@ namespace Raven.Server.Documents.Queries.AST
 
             if (offset != s.Length)
                 throw new ArgumentException("After range specification, found additional unknown data: " + s);
+
+            if (from != null && range.Ticks != 0)
+            {
+                var ticks = from.Value.Ticks;
+                ticks -= (ticks % range.AlignedTicks);
+                range._start = new DateTime(ticks);
+            }
 
             return range;
         }
