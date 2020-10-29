@@ -1,7 +1,5 @@
 @raven-field-color: @color-3;
 
-
-
 .fullscreen {
 
     #editTransform {
@@ -54,6 +52,22 @@
 }
 
 .sql-migration {
+
+    #editTransform {
+        position: fixed;
+        top: @gutter + @navbar-height;
+        right: @gutter;
+        display: block;
+        margin-left: auto;
+        z-index: 900;
+        margin-bottom: @gutter;
+        width: 500px;
+        max-width: 100%;
+    }
+
+    .js-scroll-tables {
+        flex-basis: 100px;
+    }
 
     .table-header {
         i {
@@ -153,7 +167,7 @@
         padding: 20px 7.5px 20px 20px;
         position: relative;
         display: grid;
-        align-items: start;
+        align-items: end;
         grid-template-columns: repeat(7,auto) 1fr;
 
         .prop-table {
@@ -213,6 +227,10 @@
         .references-container {
             display: contents;
 
+            .key, .relation-type, .from, .in, .actions-container {
+                border-bottom: 1px solid @hr-border;
+            }
+
             .reference-item {
                 display: contents;
 
@@ -222,12 +240,14 @@
                     .key, .relation-type, .from, .in {
                         height: 30px;
                         line-height: 30px;
+                        white-space: nowrap;
                     }
 
                     .key {
                         margin-left: -20px;
                         grid-column-start: 1;
                         padding-right: @grid-gutter-width/2;
+                        white-space: nowrap;
                     }
 
                     .relation-type {
@@ -254,7 +274,6 @@
                     align-items: center;
                     min-height: 30px;
                     justify-content: flex-start;
-                    flex-wrap: wrap;
 
                     .btn {
                         &.active {
@@ -264,6 +283,7 @@
                 }
 
                 .link-actions {
+                    display: flex;
                 }
             }
         }
@@ -313,10 +333,26 @@
     .panel-heading {
         color: @gray-lighter;
         font-weight: 900;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .sticky-vertical-scroll {
+        display: none;
+        /*
+            TODO
+            position: sticky; http://jsfiddle.net/TBnqw/1/
+            bottom: 0;
+            background-color: deeppink;
+            height: 10px;
+
+        */
     }
 
     .panel-body {
         font-size: 13px;
+        overflow: auto;
     }
 
     .properties_table {
