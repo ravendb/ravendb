@@ -94,6 +94,10 @@
         margin: @grid-gutter-width/2;
     }
 
+    .license-info, .support-info {
+        flex-basis: 200px;
+    }
+
     .license-id-container {
         margin-bottom: 1px;
         background-color: @panel-bg-2;
@@ -113,12 +117,7 @@
         display: grid;
         grid-template-columns: 1fr;
         grid-gap: @grid-gutter-width;
-
-        @media (min-width: @screen-sm) {
-            grid-auto-flow: column;
-            grid-template-columns: auto auto;
-            grid-template-rows: auto auto;
-        }
+        max-width: 420px;
     }
 
 
@@ -175,9 +174,9 @@
         grid-template-columns: 1fr 1fr 1fr;
         grid-template-rows: auto 1fr 1fr 1fr auto;
         font-size: 12px;
-        text-align: center;        
+        text-align: center;
         line-height: 13px;
-        
+
 
         & > div > i {
             font-size: 24px;

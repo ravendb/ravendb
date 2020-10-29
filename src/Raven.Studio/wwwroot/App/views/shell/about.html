@@ -10,18 +10,20 @@
             <hr/>
             <div class="margin-top">
                 <div class="about-grid">
-                    <div class="big-label on-base-background">
-                        <i class="icon-server"></i>
-                        <div class="content">
-                            <small>Server version</small>
-                            <strong data-bind="text: serverVersion().FullVersion"></strong>
+                    <div class="flex-horizontal flex-wrap">
+                        <div class="big-label on-base-background">
+                            <i class="icon-server"></i>
+                            <div class="content">
+                                <small>Server version</small>
+                                <strong data-bind="text: serverVersion().FullVersion"></strong>
+                            </div>
                         </div>
-                    </div>
-                    <div class="big-label on-base-background">
-                        <i class="icon-client"></i>
-                        <div class="content">
-                            <small>Studio version</small>
-                            <strong data-bind="text: clientVersion()"></strong>
+                        <div class="big-label on-base-background">
+                            <i class="icon-client"></i>
+                            <div class="content">
+                                <small>Studio version</small>
+                                <strong data-bind="text: clientVersion()"></strong>
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -35,7 +37,7 @@
                     </div>
                     <div>
                         <div class="flex-horizontal flex-stretch-items">
-                            <button data-bind="click: openLatestVersionDownload" class="btn btn-primary big-button">
+                            <button data-bind="click: openLatestVersionDownload" class="btn btn-primary big-button flex-grow">
                                 <i class="icon-client"></i>
                                 <div class="content">
                                     <small data-bind="html: newVersionAvailableHtml"></small>
