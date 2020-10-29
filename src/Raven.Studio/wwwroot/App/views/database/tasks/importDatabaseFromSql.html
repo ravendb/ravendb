@@ -208,8 +208,8 @@
         </div>
     </div>
 
-    <div class="row flex-row flex-grow flex-stretch-items modal-root" id="js-second-step" data-bind="if: !inFirstStep()">
-        <div class="col-sm-12 col-lg-8 flex-vertical">
+    <div class="flex-grow flex-vertical modal-root" id="js-second-step" data-bind="if: !inFirstStep()">
+        
             <div class="flex-header flex-horizontal">
                 <div class="panel panel-default flex-grow no-margin">
                     <div class="panel-body padding padding-sm flex-horizontal">
@@ -262,23 +262,22 @@
                             <div class="flex-horizontal flex-wrap table-header">
                                 <span class="with-top-label js-sql-table-name" data-label="Table" data-bind="text: tableName"></span>
                                 <i class="icon-arrow-filled-right"></i>
-                                <div class="with-top-label raven-property-name inline-edit inline-block" data-bind="css: { 'edit-disabled': !checked() }" data-label="Collection">
+                                <div class="with-top-label raven-property-name inline-edit" data-bind="css: { 'edit-disabled': !checked() }" data-label="Collection">
                                     <span class="static" data-bind="text: collectionName"></span>
                                     <input class="form-control input-sm" data-bind="textInput: collectionName" />
                                 </div>
                             </div>
                             <div class="flex-separator"></div>
                             <div class="customizations flex-horizontal" data-bind="visible: checked">
-                                <div data-bind="visible: customizeQuery" class="margin-right">
+                                <div data-bind="visible: customizeQuery" class="margin-right nobr">
                                     <i title="Filtering is enabled" class="icon-tick text-success"></i>
                                     <span>filtering</span>
                                 </div>
-                                <div data-bind="visible: transformResults" class="margin-right">
+                                <div data-bind="visible: transformResults" class="margin-right nobr">
                                     <i title="Transform script is enabled" class="icon-tick text-success"></i>
                                     <span>transform</span>
                                 </div>
-                                
-                                
+
                             </div>
                             <div data-bind="visible: checked">
                                 <button class="btn btn-default" title="Show incoming links" data-bind="click: $root.showIncomingReferences">
@@ -291,7 +290,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div data-bind="collapse: checked">
+                        <div class="table-content" data-bind="collapse: checked">
                             <div class="panel-body">
                                 <div class="table-warning has-error" data-bind="visible: hasDuplicateProperties">
                                     <div class="help-block">
@@ -306,11 +305,12 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="sticky-vertical-scroll"></div>
                     </div>
                 </div>
 
             </div>
-            <div class="panel panel-default no-margin" data-bind="visible: $root.pageCount() > 1">
+            <div class="flex-footer panel-default" data-bind="visible: $root.pageCount() > 1">
                 <div class="panel-body flex-horizontal">
                     <div>Page <span data-bind="text: $root.currentPage() + 1"></span> <span data-bind="text: '(' + $root.currentLocationHumane() + ')'"></span></div>
                     <div data-bind="foreach: _.range(0, $root.pageCount())">
@@ -319,10 +319,8 @@
                 </div>
             </div>
 
-        </div>
-
-        <div class="col-sm-12 col-lg-4 flex-vertical">
-            <div id="editTransform" class="panel" data-bind="with: itemBeingEdited">
+        
+            <div id="editTransform" class="panel shadow-style slidein-style" data-bind="visible: itemBeingEdited, with: itemBeingEdited">
                 <div class="padding">
                     <div>
                         <label>
@@ -418,7 +416,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        
     </div>
 </div>
 
@@ -501,13 +499,13 @@
                     <span class="arrow" data-bind="visible: effectiveInnerTable() || effectiveLinkTable()">
                         <i class="icon-arrow-filled-right"></i>
                     </span>
-                    <div class="inline-edit inline-block" data-bind="with: effectiveInnerTable, visible: action() === 'embed'">
+                    <div class="inline-edit" data-bind="with: effectiveInnerTable, visible: action() === 'embed'">
                         <span class="static">
                             <span class="raven-property-name" data-bind="text: $parent.name"></span>:
                         </span>
                         <input class="form-control input-sm" data-bind="textInput: $parent.name" />
                     </div>
-                    <div class="inline-edit inline-block" data-bind="with: effectiveLinkTable, visible: action() === 'link'">
+                    <div class="inline-edit" data-bind="with: effectiveLinkTable, visible: action() === 'link'">
                         <div class="static">
                             <span class="raven-property-name" data-bind="text: $parent.name"></span>:
                             <span class="text-muted" data-bind="visible: $parent.type === 'OneToMany'">[</span>
