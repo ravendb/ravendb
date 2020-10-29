@@ -996,9 +996,6 @@ namespace Raven.Server.Smuggler.Documents
 
                     if (IsRevision)
                     {
-                        if (_database.DocumentsStorage.RevisionsStorage.Configuration == null)
-                            ThrowRevisionsDisabled();
-
                         PutAttachments(context, document, isRevision: true, out var hasAttachments);
                         if (hasAttachments)
                         {

@@ -188,8 +188,6 @@ namespace Raven.Server.Smuggler.Documents
             Debug.Assert(_context != null);
 
             var revisionsStorage = _database.DocumentsStorage.RevisionsStorage;
-            if (revisionsStorage.Configuration == null)
-                yield break;
 
             var enumerator = new PulsedTransactionEnumerator<Document, DocumentsIterationState>(_context,
                 state =>
