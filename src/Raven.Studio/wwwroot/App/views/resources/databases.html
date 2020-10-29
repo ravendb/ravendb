@@ -110,6 +110,23 @@
         </div>
     </div>
     <div class="flex-grow scroll" data-bind="if: databases().sortedDatabases().length, visible: databases().sortedDatabases().length">
+        
+        <div>
+            Total count: <span data-bind="text: databases().sortedDatabases().length"></span>
+            <div data-bind="visible: $root.databasesByState().errored">
+                Errored: <span data-bind="text: $root.databasesByState().errored"></span>    
+            </div>
+            <div data-bind="visible: $root.databasesByState().disabled">
+                Disabled: <span data-bind="text: $root.databasesByState().disabled"></span>
+            </div>
+            <div data-bind="visible: $root.databasesByState().offline">
+                Offline: <span data-bind="text: $root.databasesByState().offline"></span>
+            </div>
+            <div data-bind="visible: $root.databasesByState().online">
+                Online: <span data-bind="text: $root.databasesByState().online"></span>
+            </div>
+        </div>
+        
         <div data-bind="foreach: databases().sortedDatabases">
             <div id="" class="database-item panel panel-hover panel-state database-item" data-bind="click: $root.databasePanelClicked, scrollTo: isCurrentlyActiveDatabase(), visible: !filteredOut(),
                                                                           attr: { class: 'panel panel-hover panel-state database-item ' + badgeClass() + ' ' + (isCurrentlyActiveDatabase() ? 'active' : '') + ' ' + ($root.createIsLocalDatabaseObservable(name)() ? 'relevant' : '') }">
