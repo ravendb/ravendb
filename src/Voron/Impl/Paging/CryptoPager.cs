@@ -181,7 +181,7 @@ namespace Voron.Impl.Paging
             }
 
             // allocate new buffer
-            buffer = GetBufferAndAddToTxState(pageNumber, state, size);
+            buffer = GetBufferAndAddToTxState(pageNumber, state, numberOfPages);
             buffer.Modified = true;
 
             return buffer.Pointer;
@@ -198,9 +198,9 @@ namespace Voron.Impl.Paging
 
             var pageHeader = (PageHeader*)pagePointer;
 
-            var size = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader) * Constants.Storage.PageSize;
+            int numberOfPages = VirtualPagerLegacyExtensions.GetNumberOfPages(pageHeader);
 
-            buffer = GetBufferAndAddToTxState(pageNumber, state, size);
+            buffer = GetBufferAndAddToTxState(pageNumber, state, numberOfPages);
 
             Memory.Copy(buffer.Pointer, pagePointer, buffer.Size);
 
@@ -244,9 +244,9 @@ namespace Voron.Impl.Paging
             // encBuffer.Hash = remains the same
         }
 
-        private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int size)
+        private EncryptionBuffer GetBufferAndAddToTxState(long pageNumber, CryptoTransactionState state, int numberOfPages)
         {
-            var ptr = EncryptionBuffersPool.Instance.Get(size, out var thread);
+            var ptr = EncryptionBuffersPool.Instance.Get(numberOfPages, out var size, out var thread);
 
             var buffer = new EncryptionBuffer
             {

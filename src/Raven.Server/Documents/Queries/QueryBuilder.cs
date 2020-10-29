@@ -753,11 +753,33 @@ namespace Raven.Server.Documents.Queries
                     metadata.QueryText, parameters);
             }
 
-            string value = ((ValueExpression)expression.Arguments[1]).Token.Value;
-            if (float.TryParse(value, out var boost) == false)
+
+            float boost;
+            var (val, type) = GetValue(query, metadata, parameters, expression.Arguments[1]);
+            switch (val)
             {
-                throw new InvalidQueryException($"The boost value must be a valid float, but was called with {value}",
-                    metadata.QueryText, parameters);
+                case float f:
+                    boost = f;
+                    break;
+                case double d:
+                    boost = (float)d;
+                    break;
+                case int i:
+                    boost = i;
+                    break;
+                case long l:
+                    boost = l;
+                    break;
+                case string s:
+                    if (float.TryParse(s, out boost) == false)
+                    {
+                        throw new InvalidQueryException($"The boost value must be a valid float, but was called with {s}",
+                            metadata.QueryText, parameters);
+                    }
+                    break;
+                default:
+                    throw new InvalidQueryException($"Unable to find boost value: {val} ({type})",
+                        metadata.QueryText, parameters);
             }
 
             var q = ToLuceneQuery(serverContext, context, query, expression.Arguments[0], metadata, index: null, parameters, analyzer, factories, exact);

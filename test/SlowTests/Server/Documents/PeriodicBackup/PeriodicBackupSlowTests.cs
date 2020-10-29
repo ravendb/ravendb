@@ -2398,6 +2398,69 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
+        [Fact]
+        public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
+            var userForFullBackup = new User();
+            var userForIncrementalBackup = new User();
+            using (var src = GetDocumentStore())
+            {
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings { FolderPath = backupPath },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+                var backupTaskId = (await src.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    await session.StoreAsync(userForFullBackup);
+                    await session.StoreAsync(userForIncrementalBackup);
+                    await session.SaveChangesAsync();
+                    
+                    session.Advanced.Revisions.ForceRevisionCreationFor(userForFullBackup.Id);
+                    await session.SaveChangesAsync();
+                }
+                await BackupAndAssertWait(src, backupTaskId, true);
+                
+                using (var session = src.OpenAsyncSession())
+                {
+                    session.Advanced.Revisions.ForceRevisionCreationFor(userForIncrementalBackup.Id);
+                    await session.SaveChangesAsync();
+                }
+                await BackupAndAssertWait(src, backupTaskId, false);
+            }
+
+            using (var dest = GetDocumentStore())
+            {
+                string fromDirectory = Directory.GetDirectories(backupPath).First();
+                await dest.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerImportOptions(), fromDirectory);
+                using (var session = dest.OpenAsyncSession())
+                {
+                    await AssertRevisions(userForFullBackup.Id);
+                    await AssertRevisions(userForIncrementalBackup.Id);
+
+                    async Task AssertRevisions(string id)
+                    {
+                        var revision = await session.Advanced.Revisions.GetForAsync<User>(id);
+                        Assert.NotNull(revision);
+                        Assert.NotEmpty(revision);
+                    }
+                }
+            }
+        }
+
+        async Task BackupAndAssertWait(IDocumentStore store, long backupTaskId, bool isFullBackup)
+        {
+            await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup, backupTaskId));
+            var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
+            var databaseLastEtag = store.Maintenance.Send(new GetStatisticsOperation()).LastDatabaseEtag;
+            var backupLastEtag = await WaitForValueAsync(async () => store.Maintenance.Send(operation).Status.LastEtag, databaseLastEtag);
+            Assert.Equal(databaseLastEtag, backupLastEtag);
+        }
+        
         private void RunBackup(long taskId, Raven.Server.Documents.DocumentDatabase documentDatabase, bool isFullBackup, DocumentStore store)
         {
             var periodicBackupRunner = documentDatabase.PeriodicBackupRunner;

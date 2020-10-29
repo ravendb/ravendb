@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client.Documents;
@@ -24,6 +25,7 @@ namespace SlowTests.Issues
 
             string context = "users/1";
 
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             using var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -49,7 +51,7 @@ namespace SlowTests.Issues
                 s0.Load<User>("test/1");
             }
 
-            await amre.WaitAsync();
+            await amre.WaitAsync(cts.Token);
 
             int s1Ctx = -1;
 

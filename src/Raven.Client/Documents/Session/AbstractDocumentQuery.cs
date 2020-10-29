@@ -232,12 +232,12 @@ namespace Raven.Client.Documents.Session
 
             return new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
         }
-        
+
         protected internal QueryOperation InitializeQueryOperation()
         {
             var beforeQueryExecutedEventArgs = new BeforeQueryEventArgs(TheSession, this);
             TheSession.OnBeforeQueryInvoke(beforeQueryExecutedEventArgs);
-            
+
             var indexQuery = GetIndexQuery();
 
             return new QueryOperation(TheSession,
@@ -571,7 +571,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, null);
 
-            tokens.AddLast(OpenSubclauseToken.Instance);
+            tokens.AddLast(OpenSubclauseToken.Create());
         }
 
         /// <summary>
@@ -583,7 +583,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             _currentClauseDepth--;
 
             var tokens = GetCurrentWhereTokens();
-            tokens.AddLast(CloseSubclauseToken.Instance);
+            tokens.AddLast(CloseSubclauseToken.Create());
         }
 
         /// <summary>
@@ -963,15 +963,34 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             if (boost == 1m) // 1.0 is the default
                 return;
 
-            var tokens = GetCurrentWhereTokens();
-            var whereToken = tokens.Last?.Value as WhereToken;
-            if (whereToken == null)
-                throw new InvalidOperationException("Missing where clause");
-
             if (boost < 0m)
                 throw new ArgumentOutOfRangeException(nameof(boost), "Boost factor must be a non-negative number");
 
-            whereToken.Options.Boost = boost;
+            var tokens = GetCurrentWhereTokens();
+            var last = tokens.Last;
+            switch (last?.Value)
+            {
+                case WhereToken whereToken:
+                    whereToken.Options.Boost = boost;
+                    return;
+
+                case CloseSubclauseToken close:
+                    string parameter = AddQueryParameter(boost);
+                    while (last != null)
+                    {
+                        last = last.Previous; // find the previous option
+                        if (last?.Value is OpenSubclauseToken open)
+                        {
+                            open.BoostParameterName = parameter;
+                            close.BoostParameterName = parameter;
+                            return;
+                        }
+                    }
+                    break;
+
+                default:
+                    throw new InvalidOperationException("Cannot apply boost on: " + (last?.Value.ToString() ?? "null"));
+            }
         }
 
         /// <summary>

@@ -525,7 +525,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    var (overallMachineCpuUsage, _) = MetricCacher.GetValue(Raven.Server.Utils.MetricCacher.Keys.Server.CpuUsage, CpuUsageCalculator.Calculate);
+                    var (overallMachineCpuUsage, _, _) = MetricCacher.GetValue(Raven.Server.Utils.MetricCacher.Keys.Server.CpuUsage, CpuUsageCalculator.Calculate);
                     var utilizationOverAllCores = (overallMachineCpuUsage / 100) * Environment.ProcessorCount;
                     CpuCreditsBalance.CurrentConsumption = utilizationOverAllCores;
                     CpuCreditsBalance.MachineCpuUsage = overallMachineCpuUsage;

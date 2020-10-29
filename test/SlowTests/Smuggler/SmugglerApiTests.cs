@@ -1578,6 +1578,34 @@ namespace SlowTests.Smuggler
             }
         }
 
+        [Fact]
+        public async Task Smugller_WhenContainRevisionWithoutConfiguration_ShouldExportImportRevisions()
+        {
+            using var src = GetDocumentStore();
+            using var dest = GetDocumentStore();
+            
+            var user = new User();
+
+            using (var session = src.OpenAsyncSession())
+            {
+                await session.StoreAsync(user);
+                await session.SaveChangesAsync();
+                
+                session.Advanced.Revisions.ForceRevisionCreationFor(user.Id);
+                await session.SaveChangesAsync();
+            }
+
+            var operation = await src.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), dest.Smuggler);
+            await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+            using (var session = dest.OpenAsyncSession())
+            {
+                var revision = await session.Advanced.Revisions.GetForAsync<User>(user.Id);
+                Assert.NotNull(revision);
+                Assert.NotEmpty(revision);
+            }
+        }
+        
         private static Stream GetDump(string name)
         {
             var assembly = typeof(RavenDB_9912).Assembly;

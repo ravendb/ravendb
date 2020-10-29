@@ -21,14 +21,10 @@ namespace FastTests.Graph
             {
                 using (var session = store.OpenSession())
                 {
-                    var bar = new Bar { Name = "Barvazon" };
+                    var bar = new Bar {Name = "Barvazon"};
                     var barId = "Bars/1";
                     session.Store(bar, barId);
-                    session.Store(new Foo
-                    {
-                        Name = "Foozy",
-                        Bars = new List<string> { barId }
-                    });
+                    session.Store(new Foo {Name = "Foozy", Bars = new List<string> {barId}});
                     session.SaveChanges();
                     FooBar res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)").With("Foo", session.Query<Foo>()).Single();
                     Assert.Equal(res.Foo.Name, "Foozy");
@@ -37,6 +33,7 @@ namespace FastTests.Graph
             }
         }
 
+
         [Fact]
         public void CanAggregateQueryParametersProperly()
         {
@@ -44,33 +41,29 @@ namespace FastTests.Graph
             {
                 using (var session = store.OpenSession())
                 {
-                    var bar = new Bar { Name = "Barvazon", Age = 19 };
+                    var bar = new Bar {Name = "Barvazon", Age = 19};
                     var barId = "Bars/1";
                     session.Store(bar, barId);
 
-                    session.Store(new Foo
-                    {
-                        Name = "Foozy",
-                        Bars = new List<string> { barId }
-                    });
+                    session.Store(new Foo {Name = "Foozy", Bars = new List<string> {barId}});
                     session.SaveChanges();
 
-                    var names = new[]
+                    foreach (var names in new[]
                     {
-                        "Fi",
-                        "Fah",
-                        "Foozy"
-                    };
+                        new[] {"Fi", "Fah", "Foozy"}, new[] {"Fi", "Foozy", "Fah"}, new[] {"Foozy", "Fi", "Fah", "Foozy"},
+                        new[] {"Fi", "Foozy", "Fah", "Fah", "Foozy"},
+                    })
+                    {
+                        var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
+                            .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
+                            .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18))
+                            .WaitForNonStaleResults()
+                            .ToList();
 
-                    var res = session.Advanced.GraphQuery<FooBar>("match (Foo)-[Bars as _]->(Bars as Bar)")
-                        .With("Foo", builder => builder.DocumentQuery<Foo>().WhereIn(x => x.Name, names))
-                        .With("Bar", session.Query<Bar>().Where(x => x.Age >= 18))
-                        .WaitForNonStaleResults()
-                        .ToList();
-
-                    Assert.Single(res);
-                    Assert.Equal(res[0].Foo.Name, "Foozy");
-                    Assert.Equal(res[0].Bar.Name, "Barvazon");
+                        Assert.Single(res);
+                        Assert.Equal(res[0].Foo.Name, "Foozy");
+                        Assert.Equal(res[0].Bar.Name, "Barvazon");
+                    }
                 }
             }
         }
@@ -80,12 +73,7 @@ namespace FastTests.Graph
         {
             using (var store = GetDocumentStore())
             {
-                var names = new[]
-                {
-                    "Fi",
-                    "Fah",
-                    "Foozy"
-                };
+                var names = new[] {"Fi", "Fah", "Foozy"};
 
                 using (var session = store.OpenSession())
                 {
@@ -129,21 +117,9 @@ namespace FastTests.Graph
                             Age = 21,
                             Friends = new[]
                             {
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/2",
-                                    FriendsSince = now - TimeSpan.FromDays(1024)
-                                },
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/3",
-                                    FriendsSince = now - TimeSpan.FromDays(678)
-                                },
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/4",
-                                    FriendsSince = now - TimeSpan.FromDays(345)
-                                }
+                                new FriendDescriptor {FriendId = "Friend/2", FriendsSince = now - TimeSpan.FromDays(1024)},
+                                new FriendDescriptor {FriendId = "Friend/3", FriendsSince = now - TimeSpan.FromDays(678)},
+                                new FriendDescriptor {FriendId = "Friend/4", FriendsSince = now - TimeSpan.FromDays(345)}
                             }
                         }, "Friend/1");
                     session.Store(
@@ -153,32 +129,13 @@ namespace FastTests.Graph
                             Age = 19,
                             Friends = new[]
                             {
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/1",
-                                    FriendsSince = now - TimeSpan.FromDays(1024)
-                                },
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/4",
-                                    FriendsSince = now - TimeSpan.FromDays(304)
-                                }
+                                new FriendDescriptor {FriendId = "Friend/1", FriendsSince = now - TimeSpan.FromDays(1024)},
+                                new FriendDescriptor {FriendId = "Friend/4", FriendsSince = now - TimeSpan.FromDays(304)}
                             }
                         }, "Friend/2");
                     session.Store(
-                        new Friend
-                        {
-                            Name = "F3",
-                            Age = 41,
-                            Friends = new[]
-                            {
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/1",
-                                    FriendsSince = now - TimeSpan.FromDays(678)
-                                }
-                            }
-                        }, "Friend/3");
+                        new Friend {Name = "F3", Age = 41, Friends = new[] {new FriendDescriptor {FriendId = "Friend/1", FriendsSince = now - TimeSpan.FromDays(678)}}},
+                        "Friend/3");
                     session.Store(
                         new Friend
                         {
@@ -186,16 +143,8 @@ namespace FastTests.Graph
                             Age = 32,
                             Friends = new[]
                             {
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/2",
-                                    FriendsSince = now - TimeSpan.FromDays(304)
-                                },
-                                new FriendDescriptor
-                                {
-                                    FriendId = "Friend/1",
-                                    FriendsSince = now -  TimeSpan.FromDays(345)
-                                }
+                                new FriendDescriptor {FriendId = "Friend/2", FriendsSince = now - TimeSpan.FromDays(304)},
+                                new FriendDescriptor {FriendId = "Friend/1", FriendsSince = now - TimeSpan.FromDays(345)}
                             }
                         }, "Friend/4");
 
