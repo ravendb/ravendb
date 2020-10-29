@@ -42,7 +42,7 @@ namespace Raven.Server.Utils.Cpu
 
         public ulong TotalIdleTime { private get; set; }
 
-        public ulong TotalIOTime { private get; set; }
+        public ulong TotalIoWait { get; set; }
 
         public ulong TotalIRQTime { private get; set; }
 
@@ -53,7 +53,7 @@ namespace Raven.Server.Utils.Cpu
         public ulong TotalWorkTime => TotalUserTime + TotalUserLowTime + TotalSystemTime +
                                       TotalIRQTime + TotalSoftIRQTime + TotalStealTime;
 
-        public ulong TotalIdle => TotalIdleTime + TotalIOTime;
+        public ulong TotalIdle => TotalIdleTime + TotalIoWait;
     }
 
     internal class MacInfo : ProcessInfo

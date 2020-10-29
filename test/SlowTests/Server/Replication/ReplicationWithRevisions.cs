@@ -376,71 +376,65 @@ namespace SlowTests.Server.Replication
         [Fact]
         public async Task ResolvedDocumentShouldNotGenerateRevision()
         {
+            const int revisionsAmountFromConflict = 3;
+            const string docId = "foo/bar";
+
             var file = GetTempFileName();
-            try
+            using (var storeA = GetDocumentStore())
+            using (var storeB = GetDocumentStore())
             {
-                using (var storeA = GetDocumentStore())
-                using (var storeB = GetDocumentStore())
+                var user = new User { Name = "Name" };
+                var user2 = new User { Name = "Name2" };
+
+                using (var session = storeA.OpenAsyncSession())
                 {
-                    var user = new User { Name = "Name" };
-                    var user2 = new User { Name = "Name2" };
-
-                    using (var session = storeA.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(user, "foo/bar");
-                        await session.SaveChangesAsync();
-                    }
-
-                    using (var session = storeB.OpenAsyncSession())
-                    {
-                        await session.StoreAsync(user2, "foo/bar");
-                        await session.SaveChangesAsync();
-                    }
-
-                    await SetupReplicationAsync(storeA, storeB);
-                    using (var sessionB = storeB.OpenSession())
-                    {
-                        Assert.Equal(3, WaitForValue(() => sessionB.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
-                    }
-
-                    await SetupReplicationAsync(storeB, storeA);
-                    using (var sessionA = storeA.OpenSession())
-                    {
-                        Assert.Equal(3, WaitForValue(() => sessionA.Advanced.Revisions.GetMetadataFor("foo/bar").Count, 3));
-                    }
-
-                    var exportOp = await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
-                    {
-                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments
-                    }, file);
-                    await exportOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                    await session.StoreAsync(user, docId);
+                    await session.SaveChangesAsync();
                 }
 
-                using (var src = GetDocumentStore())
-                using (var dst = GetDocumentStore())
+                using (var session = storeB.OpenAsyncSession())
                 {
-                    var importOp = await src.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
-                    {
-                        OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments
-                    }, file);
-                    await importOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-
-                    await SetupReplicationAsync(src, dst);
-                    WaitForDocument(dst, "foo/bar");
-
-                    WaitForUserToContinueTheTest(src);
-
-                    using (var session1 = src.OpenSession())
-                    using (var session2 = dst.OpenSession())
-                    {
-                        Assert.Equal(0, session1.Advanced.Revisions.GetMetadataFor("foo/bar").Count);
-                        Assert.Equal(0, session2.Advanced.Revisions.GetMetadataFor("foo/bar").Count);
-                    }
+                    await session.StoreAsync(user2, docId);
+                    await session.SaveChangesAsync();
                 }
+
+                await SetupReplicationAsync(storeA, storeB);
+                using (var sessionB = storeB.OpenSession())
+                {
+                    Assert.Equal(revisionsAmountFromConflict, WaitForValue(() => sessionB.Advanced.Revisions.GetMetadataFor(docId).Count, revisionsAmountFromConflict));
+                }
+
+                await SetupReplicationAsync(storeB, storeA);
+                using (var sessionA = storeA.OpenSession())
+                {
+                    Assert.Equal(revisionsAmountFromConflict, WaitForValue(() => sessionA.Advanced.Revisions.GetMetadataFor(docId).Count, revisionsAmountFromConflict));
+                }
+
+                var exportOp = await storeA.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions
+                {
+                    OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments
+                }, file);
+                await exportOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
             }
-            finally
+
+            using (var src = GetDocumentStore())
+            using (var dst = GetDocumentStore())
             {
-                File.Delete(file);
+                var importOp = await src.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions
+                {
+                    OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments
+                }, file);
+                await importOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                await SetupReplicationAsync(src, dst);
+                WaitForDocument(dst, docId);
+
+                using (var session1 = src.OpenSession())
+                using (var session2 = dst.OpenSession())
+                {
+                    Assert.Equal(revisionsAmountFromConflict, session1.Advanced.Revisions.GetMetadataFor(docId).Count);
+                    Assert.Equal(revisionsAmountFromConflict, session2.Advanced.Revisions.GetMetadataFor(docId).Count);
+                }
             }
         }
 

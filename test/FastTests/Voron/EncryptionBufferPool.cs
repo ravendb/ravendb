@@ -23,9 +23,9 @@ namespace FastTests.Voron
             var i = 1;
             var toFree = new List<(IntPtr, long)>();
 
-            while (i < new Size(64, SizeUnit.Megabytes).GetDoubleValue(SizeUnit.Bytes))
+            while (i < 8192)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out var size, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -65,9 +65,9 @@ namespace FastTests.Voron
             var i = 1;
             var toFree = new List<(IntPtr, long)>();
 
-            while (i <= new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes))
+            while (i <= 1024)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out _, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -88,18 +88,17 @@ namespace FastTests.Voron
             stats = encryptionBuffersPool.GetStats();
             Assert.Equal(0, stats.TotalSize);
 
-            var size = 8 * 1024;
-            var pointer = encryptionBuffersPool.Get(size, out _);
-            encryptionBuffersPool.Return(pointer, size, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
+            var pointer = encryptionBuffersPool.Get(1, out var size, out _);
+            encryptionBuffersPool.Return(pointer, 8192, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
 
             // will cache the buffer
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(size, stats.TotalSize);
+            Assert.Equal(8192, stats.TotalSize);
 
             // will continue to cache the buffer
             encryptionBuffersPool.LowMemory(lowMemorySeverity);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(size, stats.TotalSize);
+            Assert.Equal(8192, stats.TotalSize);
 
             encryptionBuffersPool.LowMemoryOver();
             ClearMemory(encryptionBuffersPool);
@@ -113,9 +112,9 @@ namespace FastTests.Voron
             var i = 1;
             var toFree = new List<(IntPtr, long)>();
 
-            while (i <= new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes))
+            while (i <= 1024)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out var size, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -147,9 +146,9 @@ namespace FastTests.Voron
             var toFree = new List<(IntPtr, long)>();
 
             var generation = encryptionBuffersPool.Generation;
-            while (i <= new Size(8, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes))
+            while (i <= 1024)
             {
-                var ptr = encryptionBuffersPool.Get(i, out _);
+                var ptr = encryptionBuffersPool.Get(i, out var size, out _);
                 toFree.Add(((IntPtr)ptr, i));
 
                 i *= 2;
@@ -175,17 +174,17 @@ namespace FastTests.Voron
         {
             var encryptionBuffersPool = new EncryptionBuffersPool();
 
-            var ptr = encryptionBuffersPool.Get(1, out _);
+            var ptr = encryptionBuffersPool.Get(1, out var size, out _);
             var stats = encryptionBuffersPool.GetStats();
             Assert.Equal(0, stats.TotalSize);
 
-            encryptionBuffersPool.Return(ptr, 1, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
+            encryptionBuffersPool.Return(ptr, 8192, NativeMemory.ThreadAllocations.Value, encryptionBuffersPool.Generation);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(1, stats.TotalSize);
+            Assert.Equal(size, stats.TotalSize);
 
             encryptionBuffersPool.LowMemory(LowMemorySeverity.Low);
             stats = encryptionBuffersPool.GetStats();
-            Assert.Equal(1, stats.TotalSize);
+            Assert.Equal(size, stats.TotalSize);
 
             ClearMemory(encryptionBuffersPool);
         }

@@ -8,10 +8,17 @@ namespace Raven.Client.Documents.Session.Tokens
         {
         }
 
-        public static readonly CloseSubclauseToken Instance = new CloseSubclauseToken();
+        public string BoostParameterName { get; internal set; }
+
+        internal static CloseSubclauseToken Create()
+        {
+            return new CloseSubclauseToken();
+        }
 
         public override void WriteTo(StringBuilder writer)
         {
+            if (BoostParameterName != null)
+                writer.Append(", $").Append(BoostParameterName);
             writer.Append(")");
         }
     }

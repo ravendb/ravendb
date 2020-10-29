@@ -85,7 +85,6 @@ namespace Raven.Server.Documents
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
         private DateTime _nextIoMetricsCleanupTime;
         private long _lastTopologyIndex = -1;
-        private long _lastClientConfigurationIndex = -1;
         private long _preventUnloadCounter;
 
         public string DatabaseGroupId;
@@ -1168,8 +1167,6 @@ namespace Raven.Server.Documents
                 ClientConfiguration = record.Client;
                 IdentityPartsSeparator = record.Client?.IdentityPartsSeparator ?? '/';
 
-                _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
-
                 StudioConfiguration = record.Studio;
 
                 NotifyFeaturesAboutStateChange(record, index);
@@ -1453,9 +1450,15 @@ namespace Raven.Server.Documents
 
         public bool HasClientConfigurationChanged(long index)
         {
-            var actual = Hashing.Combine(_lastClientConfigurationIndex, ServerStore.LastClientConfigurationIndex);
+            var serverIndex = GetClientConfigurationEtag();
+            return index < serverIndex;
+        }
 
-            return index != actual;
+        public long GetClientConfigurationEtag()
+        {
+            return ClientConfiguration == null || ClientConfiguration.Disabled && ServerStore.LastClientConfigurationIndex > ClientConfiguration.Etag
+                ? ServerStore.LastClientConfigurationIndex
+                : ClientConfiguration.Etag;
         }
 
         public (Size Data, Size TempBuffers) GetSizeOnDisk()

@@ -43,9 +43,8 @@ namespace Raven.Server.Documents.Handlers
             var inherit = GetBoolValueQueryString("inherit", required: false) ?? true;
 
             var configuration = Database.ClientConfiguration;
-            long etag = configuration?.Etag ?? -1;
-            var serverConfiguration = GetServerClientConfiguration(out long serverIndex);
-            etag = Hashing.Combine(etag, serverIndex);
+            var serverConfiguration = GetServerClientConfiguration();
+            
             if (inherit && (configuration == null || configuration.Disabled) && serverConfiguration != null)
             {
                 configuration = serverConfiguration;
@@ -65,7 +64,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
 
                     writer.WritePropertyName(nameof(GetClientConfigurationOperation.Result.Etag));
-                    writer.WriteInteger(etag);
+                    writer.WriteInteger(Database.GetClientConfigurationEtag());
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(GetClientConfigurationOperation.Result.Configuration));
@@ -85,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        private ClientConfiguration GetServerClientConfiguration(out long index)
+        private ClientConfiguration GetServerClientConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -95,8 +94,6 @@ namespace Raven.Server.Documents.Handlers
                     var config =  clientConfigurationJson != null
                         ? JsonDeserializationServer.ClientConfiguration(clientConfigurationJson)
                         : null;
-
-                    index = config?.Etag ?? ServerStore.LastClientConfigurationIndex;
 
                     return config;
                 }
