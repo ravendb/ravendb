@@ -27,6 +27,8 @@ import eventsCollector = require("common/eventsCollector");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDialog");
 
+type databaseState = "errored" | "disabled" | "online" | "offline";
+
 class databases extends viewModelBase {
     
     static readonly sizeLimits = {
@@ -48,6 +50,8 @@ class databases extends viewModelBase {
 
     selectionState: KnockoutComputed<checkbox>;
     selectedDatabases = ko.observableArray<string>([]);
+    
+    databasesByState: KnockoutComputed<Record<databaseState, number>>;
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
@@ -93,6 +97,31 @@ class databases extends viewModelBase {
             if (selectedCount > 0)
                 return "some_checked";
             return "unchecked";
+        });
+        
+        this.databasesByState = ko.pureComputed(() => {
+            const databases = this.databases().sortedDatabases();
+            
+            const result: Record<databaseState, number> = {
+                errored: 0,
+                disabled: 0,
+                offline: 0,
+                online: 0
+            };
+
+            for (const database of databases) {
+                if (database.hasLoadError()) {
+                    result.errored++;
+                } else if (database.disabled()) {
+                    result.disabled++;
+                } else if (database.online()) {
+                    result.online++;
+                } else {
+                    result.offline++;
+                }
+            }
+            
+            return result;
         });
     }
 
