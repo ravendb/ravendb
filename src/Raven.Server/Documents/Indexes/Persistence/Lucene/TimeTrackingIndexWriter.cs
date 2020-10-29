@@ -11,33 +11,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private IndexingStatsScope _commitStats;
 
-        public TimeTrackingIndexWriter(Directory d, Analyzer a, bool create, MaxFieldLength mfl, IState state) : base(d, a, create, mfl, state)
-        {
-        }
-
-        public TimeTrackingIndexWriter(Directory d, Analyzer a, MaxFieldLength mfl, IState state) : base(d, a, mfl, state)
-        {
-        }
-
         public TimeTrackingIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, MaxFieldLength mfl, IState state) : base(d, a, deletionPolicy, mfl, state)
         {
         }
 
-        public TimeTrackingIndexWriter(Directory d, Analyzer a, bool create, IndexDeletionPolicy deletionPolicy, MaxFieldLength mfl, IState state) : base(d, a, create, deletionPolicy, mfl, state)
+        public void InitializeMergeScheduler(TimeTrackingSerialMergeScheduler scheduler, IState state)
         {
-        }
-
-        public TimeTrackingIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy, MaxFieldLength mfl, IndexCommit commit, IState state) : base(d, a, deletionPolicy, mfl, commit, state)
-        {
-        }
-
-        public void InitializeMergeScheduler(IState state)
-        {
-            using (MergeScheduler)
-            {
-            }
-
-            _mergeScheduler = new TimeTrackingSerialMergeScheduler();
+            _mergeScheduler = scheduler;
             SetMergeScheduler(_mergeScheduler, state);
         }
 

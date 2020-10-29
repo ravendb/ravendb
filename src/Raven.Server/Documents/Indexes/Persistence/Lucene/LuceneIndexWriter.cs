@@ -12,6 +12,7 @@ using Lucene.Net.Store;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.Utils;
+using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Utils;
@@ -35,21 +36,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly IndexWriter.MaxFieldLength _maxFieldLength;
 
         private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
-
-
-        public Directory Directory => _indexWriter?.Directory;
+        private readonly Index _index;
 
         public Analyzer Analyzer => _indexWriter?.Analyzer;
 
         public LuceneIndexWriter(LuceneVoronDirectory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
-            IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase, IState state)
+            IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, Index index, IState state)
         {
             _directory = d;
             _analyzer = a;
             _indexDeletionPolicy = deletionPolicy;
             _maxFieldLength = mfl;
             _indexReaderWarmer = indexReaderWarmer;
-            _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(documentDatabase.Name);
+            _index = index;
+
+            _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(index.DocumentDatabase.Name);
             RecreateIndexWriter(state);
         }
 
@@ -156,12 +157,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _indexWriter = new TimeTrackingIndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state);
             _indexWriter.UseCompoundFile = false;
+            _indexWriter.SetMergePolicy(new LogByteSizeMergePolicy(_indexWriter)
+            {
+                MaxMergeMB = _index.Configuration.MaximumSegmentMergeSize.Value.GetValue(SizeUnit.Megabytes),
+            });
             if (_indexReaderWarmer != null)
             {
                 _indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
             }
 
-            _indexWriter.InitializeMergeScheduler(state);
+            var scheduler = new TimeTrackingSerialMergeScheduler(_index);
+            _indexWriter.InitializeMergeScheduler(scheduler, state);
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
             _indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
