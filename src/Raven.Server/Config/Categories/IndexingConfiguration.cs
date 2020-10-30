@@ -44,7 +44,7 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Disable", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public virtual bool Disabled { get; protected set; }
-        
+
         [DefaultValue(true)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Metrics.Enabled", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -65,12 +65,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; protected set; }
 
-
         [Description("Expert: How long will we let merges to run before we close the transaction")]
         [DefaultValue(60)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.MaxTimeForMergesToKeepRunning", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        [ConfigurationEntry("Indexing.MaxTimeForMergesToKeepRunningInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting MaxTimeForMergesToKeepRunning { get; protected set; }
 
         [Description("How long should we keep a superseded auto index?")]
@@ -164,14 +163,13 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.ManagedAllocationsBatchSizeLimitInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
-        
+
         [Description("Expert: The maximum size that we'll consider for segments merging")]
         [DefaultValue(4096)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MaximumSegmentMergeSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public Size? MaximumSegmentMergeSize { get; protected set; }
-
 
         [Description("Transaction size limit after which an index will stop and complete the current batch")]
         [DefaultValue(null)]
@@ -229,7 +227,7 @@ namespace Raven.Server.Config.Categories
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);
-            
+
             var updateTypeAttribute = property.GetCustomAttribute<IndexUpdateTypeAttribute>();
             if (updateTypeAttribute == null)
                 throw new InvalidOperationException($"No {nameof(IndexUpdateTypeAttribute)} available for '{property.Name}' property.");
