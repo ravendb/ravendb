@@ -18,10 +18,56 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class StorageHandler : DatabaseRequestHandler
     {
+        [RavenAction("/databases/*/debug/storage/trees", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
+        public Task Trees()
+        {
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenReadTransaction())
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+
+                    writer.WriteStartObject();
+
+                    writer.WritePropertyName("Results");
+                    writer.WriteStartArray();
+                    var first = true;
+
+                    foreach (var treeType in new[] { RootObjectType.VariableSizeTree, RootObjectType.FixedSizeTree, RootObjectType.EmbeddedFixedSizeTree })
+                    {
+                        foreach (var name in GetTreeNames(tx.InnerTransaction, treeType))
+                        {
+                            if (first == false)
+                                writer.WriteComma();
+
+                            first = false;
+
+                            writer.WriteStartObject();
+
+                            writer.WritePropertyName("Name");
+                            writer.WriteString(name);
+                            writer.WriteComma();
+
+                            writer.WritePropertyName("Type");
+                            writer.WriteString(treeType.ToString());
+
+                            writer.WriteEndObject();
+                        }
+                    }
+
+                    writer.WriteEndArray();
+
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/databases/*/debug/storage/btree-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
         public Task BTreeStructure()
         {
-            var treeName = GetStringQueryString("name", required: false);
+            var treeName = GetStringQueryString("name", required: true);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using(var tx = context.OpenReadTransaction())
@@ -41,7 +87,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/storage/fst-structure", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = false)]
         public Task FixedSizeTreeStructure()
         {
-            var treeName = GetStringQueryString("name", required: false);
+            var treeName = GetStringQueryString("name", required: true);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenReadTransaction())
