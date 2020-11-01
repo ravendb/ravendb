@@ -17,7 +17,8 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
     
     validationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink) {
+    constructor(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink, 
+                private serverCertificate: replicationCertificateModel) {
         super();
 
         this.update(dto);
@@ -53,6 +54,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
         const accessInfo = new replicationAccessSinkModel(
             dto.AccessName,
             dto.CertificatePublicKey ? new replicationCertificateModel(dto.CertificatePublicKey) : null,
+            this.serverCertificate,
             dto.AllowedHubToSinkPaths ? dto.AllowedHubToSinkPaths.map(x => new prefixPathModel(x)) : [],
             dto.AllowedSinkToHubPaths ? dto.AllowedSinkToHubPaths.map(x => new prefixPathModel(x)) : []);
         
@@ -74,7 +76,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
             Mode: this.replicationMode(),
             AccessName: accessInfo.replicationAccessName(),
             CertificatePassword: certificatePassphrase,
-            CertificateWithPrivateKey: certificate,
+            CertificateWithPrivateKey: this.replicationAccess().serverCertificateSelected() ? null : certificate,
             AllowedHubToSinkPaths: accessInfo.hubToSinkPrefixes()?.map(x => x.path()),
             AllowedSinkToHubPaths: accessInfo.sinkToHubPrefixes()?.map(x => x.path())
         } as Raven.Client.Documents.Operations.Replication.PullReplicationAsSink;
@@ -107,7 +109,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
         });
     }
     
-    static empty(): ongoingTaskReplicationSinkEditModel {
+    static empty(serverCertificate: replicationCertificateModel): ongoingTaskReplicationSinkEditModel {
         return new ongoingTaskReplicationSinkEditModel({
             TaskType: "ReplicationAsSink" as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskType,
             TaskName: "",
@@ -116,7 +118,7 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
             AllowedSinkToHubPaths: null,
             HubDefinitionName: "",
             Mode: "HubToSink"
-        } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink);
+        } as Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink, serverCertificate);
     }
 }
 

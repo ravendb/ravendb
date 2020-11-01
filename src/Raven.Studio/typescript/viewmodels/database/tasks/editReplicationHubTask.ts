@@ -23,6 +23,8 @@ import getReplicationHubAccessCommand = require("commands/database/tasks/getRepl
 import prefixPathModel = require("models/database/tasks/prefixPathModel");
 import deleteReplicationHubAccessConfigCommand = require("commands/database/tasks/deleteReplicationHubAccessConfigCommand");
 import genUtils = require("common/generalUtils");
+import certificateUtils = require("common/certificateUtils");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 class editReplicationHubTask extends viewModelBase {
 
@@ -57,7 +59,7 @@ class editReplicationHubTask extends viewModelBase {
     constructor() {
         super();
         
-        this.bindToCurrentInstance("generateCertificate", "importCertificate", "downloadCertificate", "removeCertificate",
+        this.bindToCurrentInstance("generateCertificate", "uploadCertificate", "downloadCertificate", "removeCertificate",
                                    "exportHubConfiguration", "exportAccessConfiguration",
                                    "cancelHubTaskOperation", "cancelReplicationAccessOperation",
                                    "addNewReplicationAccess", "editReplicationAccessItem", 
@@ -196,7 +198,7 @@ class editReplicationHubTask extends viewModelBase {
         super.compositionComplete();
         document.getElementById('taskName').focus();
         
-        $('.edit-pull-replication-hub-task [data-toggle="tooltip"]').tooltip(); 
+        $('.edit-pull-replication-hub-task [data-toggle="tooltip"]').tooltip();
     }
 
     saveReplicationHubTask() {
@@ -358,11 +360,27 @@ class editReplicationHubTask extends viewModelBase {
     
     private initTooltips() {
         this.setupDisableReasons();
+
+        const uploadCertificateSelector = "#upload-certificate";
+        $(uploadCertificateSelector).on("click", function () {
+            $(this).tooltip("hide");
+        })
+        
+        popoverUtils.longWithHover($(uploadCertificateSelector),
+            {
+                content: "<small>Upload your own certificate (<strong>Public key</strong>)</small>",
+                trigger: "hover"
+            });
+        
+        popoverUtils.longWithHover($("#generate-certificate"),
+            {
+                content: "<small>RavenDB will generate a certificate for you (<strong>Public & private keys</strong>)</small>"
+            });
         
         popoverUtils.longWithHover($("#hub-to-sink-info"),
             {
                 content:
-                    "<ul class='margin-bottom margin-bottom-xs padding'>" +
+                    "<ul class='no-margin padding'>" +
                         "<li><small>These prefixes define what docments are allowed to be <strong>sent from the Hub.</strong></small></li>" +
                         "<li><small>You can <strong>further restrict this list</strong> when defining a Sink task that receives data from this Hub.</small></li>" +
                     "</ul>"
@@ -371,23 +389,59 @@ class editReplicationHubTask extends viewModelBase {
         popoverUtils.longWithHover($("#sink-to-hub-info"),
             {
                 content:
-                    "<ul class='margin-bottom margin-bottom-xs padding'>" +
+                    "<ul class='no-margin padding'>" +
                         "<li><small>These prefixes define what docments are allowed to be <strong>sent to this Hub.</strong></small></li>" +
                         "<li><small>You can <strong>further restrict this list</strong> when defining a Sink task that sends data to this Hub.</small></li>" +
                     "</ul>"
             });
     }
 
-    importCertificate(fileInput: HTMLInputElement) {
-        fileImporter.readAsText(fileInput, data => this.certificateImported(data));
+    uploadCertificate(fileInput: HTMLInputElement) {
+        fileImporter.readAsBinaryString(fileInput, data => this.onCertificateUploaded(data));
     }
 
-    certificateImported(cert: string) {
+    onCertificateUploaded(data: string) {
+        const accessItem = this.editedReplicationAccessItem();
+        let certificateModel: replicationCertificateModel;
+        
         try {
-            this.editedReplicationAccessItem().certificate(new replicationCertificateModel(cert));
-            this.editedReplicationAccessItem().usingExistingCertificate(true);
-        } catch ($e) {
-            messagePublisher.reportError("Unable to import certificate", $e);
+            // First detect the data format, pfx (binary) or crt/cer (text)
+            // The line bellow will throw if data is not pfx
+            forge.asn1.fromDer(data);
+            
+            // *** Handle pfx ***
+            
+            const errMsg = "The .pfx file uploaded contains multiple certificates. <br>" +
+                "Extract each certificate and upload a single certificate per Replication Access Item.<br><br>" +
+                "i.e. If your Sink task spans multiple RavenDb nodes, each having a different certificate, " +
+                "then the Hub task must be defined with multiple Replication Access Items, one per certificate.";
+            
+            try {
+                const certAsBase64 = forge.util.encode64(data);
+                const certificatesArray = certificateUtils.extractCertificatesFromPkcs12(certAsBase64, undefined);
+
+                if (certificatesArray.length > 1) {
+                    viewHelpers.confirmationMessage("Multiple certificates", errMsg, {html: true, buttons: ["Ok"]});
+                } else {
+                    const publicKey = certificatesArray[0];
+                    certificateModel =  new replicationCertificateModel(publicKey, certAsBase64);
+                }
+            } catch ($ex1) {
+                messagePublisher.reportError("Unable to upload certificate", $ex1);
+            }
+            
+        } catch {
+            // *** Handle crt/cer ***
+            try {
+                certificateModel = new replicationCertificateModel(data);
+            } catch ($ex2) {
+                messagePublisher.reportError("Unable to upload certificate", $ex2);
+            }
+        }
+        
+        if (certificateModel) {
+            accessItem.certificate(certificateModel);
+            accessItem.usingExistingCertificate(true);
         }
     }
     

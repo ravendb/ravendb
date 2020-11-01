@@ -11,11 +11,25 @@ class replicationAccessSinkModel extends replicationAccessBaseModel {
     selectedFilePassphrase = ko.observable<string>();
     
     certificateExtracted = ko.observable<boolean>(false);
+    certificateSourceText: KnockoutComputed<string>;
+    
+    serverCertificateSelected = ko.observable<boolean>(false);
+    serverCertificate = ko.observable<replicationCertificateModel>();
     
     validationGroup: KnockoutValidationGroup;
     
-    constructor(accessName: string, certificate: replicationCertificateModel, hubToSink: prefixPathModel[], sinkToHub: prefixPathModel[]) {
+    constructor(accessName: string, 
+                certificate: replicationCertificateModel,
+                serverCertificate: replicationCertificateModel,
+                hubToSink: prefixPathModel[],
+                sinkToHub: prefixPathModel[]) {
         super(accessName, certificate, hubToSink, sinkToHub, false);
+        
+        this.serverCertificate(serverCertificate);
+        
+        this.certificateSourceText = ko.pureComputed(() => {
+            return this.serverCertificateSelected() ? "Use the server certificate" : "Provide your own certificate";
+        });
         
         this.initValidation();
     }
@@ -31,7 +45,7 @@ class replicationAccessSinkModel extends replicationAccessBaseModel {
                 },
                 {
                     validator: () => this.certificate(),
-                    message: "Certificate is required"
+                    message: "A certificate with a private key is required"
                 }
             ]
         });
@@ -60,21 +74,30 @@ class replicationAccessSinkModel extends replicationAccessBaseModel {
                 this.certificateExtracted(true);
                 return true;
             } catch ($e) {
-                messagePublisher.reportError("Unable to extract certificate from file", $e);
+                messagePublisher.reportError("Unable to extract certificate from file. " +
+                    "Verify file is .pfx containing a single private key and check provided password.", $e);
                 this.certificateExtracted(false);
                 return false;
             }
         }
     }
-    
-    static empty(): replicationAccessSinkModel {
-        return new replicationAccessSinkModel("", null, [], []);
+
+    useServerCertificate(useServerCertificate: boolean) {
+        if (!useServerCertificate) {
+            this.serverCertificateSelected(false);
+            this.certificate(null);
+            return;
+        }
+
+        this.serverCertificateSelected(true);
+        this.certificate(this.serverCertificate());
     }
 
     static clone(itemToClone: replicationAccessSinkModel): replicationAccessSinkModel {
         return new replicationAccessSinkModel(
             itemToClone.replicationAccessName(),
             itemToClone.certificate(),
+            itemToClone.serverCertificate(),
             itemToClone.hubToSinkPrefixes(),
             itemToClone.sinkToHubPrefixes()
         );

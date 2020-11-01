@@ -15,7 +15,7 @@ class certificateUtils {
         return certificateUtils.extractCertificateInfoInternal(publicKeyParsed);
     }
     
-    static extractCertificateFromPkcs12(base64EncodedCertificate: string, password: string): string {
+    static extractCertificatesFromPkcs12(base64EncodedCertificate: string, password: string): string[] {
         const der = forge.util.decode64(base64EncodedCertificate);
         const asn1 = forge.asn1.fromDer(der);
         const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, password);
@@ -23,11 +23,18 @@ class certificateUtils {
         const bags = p12.getBags({
             bagType: forge.pki.oids.certBag
         });
-
-        const certBag = bags[forge.pki.oids.certBag][0];
-        const cert = certBag.cert;
         
-        return forge.pki.certificateToPem(cert);
+        return bags[forge.pki.oids.certBag].map(x => forge.pki.certificateToPem(x.cert));
+    }
+    
+    static extractCertificateFromPkcs12(base64EncodedCertificate: string, password: string): string {
+        const pems = certificateUtils.extractCertificatesFromPkcs12(base64EncodedCertificate, password);
+        
+        if (pems.length > 1) {
+            throw new Error("File contains multiple certificates. Please extract and upload a single certificate.");
+        }
+        
+        return pems.length ? pems[0] : null;
     }
     
     private static extractCertificateInfoInternal(publicKeyParsed: forge.pki.Certificate): certificateInfo {
