@@ -3,7 +3,7 @@ import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
 
 class generateReplicationCertificateConfirm extends dialogViewModelBase {
     
-    validityInMonths = ko.observable<number>(1);
+    validityInMonths = ko.observable<number>(12);
     
     validationGroup: KnockoutValidationGroup;
     

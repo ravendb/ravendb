@@ -157,7 +157,7 @@
             <div class="col-xs-12 col-lg-6 margin-top margin-top-lg" data-bind="with: editedSinkTask">
                 <div class="flex-horizontal">
                     <div class="flex-separator"></div>
-                    <label for="configurationFilePicker" class="btn btn-default margin-top" data-bind="visible: $root.canDefineCertificates" title="Import configuration from the configuratio file created on the Hub">
+                    <label for="configurationFilePicker" class="btn btn-default margin-top" data-bind="visible: $root.canDefineCertificates" title="Import configuration from the configuration file created on the Hub">
                         <i class="icon-import"></i><span>Import configuration from Hub</span>
                     </label>
                 </div>
@@ -172,14 +172,34 @@
                                            placeholder="Enter a name for the Replication Access" />
                                 </div>
                             </div>
+                            <hr>
+                            <div class="form-group margin-top margin-top-lg">
+                                <label class="control-label ">Certificate Source</label>
+                                <div class="btn-group ">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Select certificate source">
+                                        <span data-bind="text: certificateSourceText"></span>&nbsp;&nbsp;
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu">
+                                        <li><a href="#" data-bind="text: 'Provide your own certificate', click: _.partial(useServerCertificate, false)"></a></li>
+                                        <li><a href="#" data-bind="text: 'Use the server certificate', click: _.partial(useServerCertificate, true)"></a></li>
+                                    </ul>
+                                </div>
+                                <small id="sink-certificate-info" class="margin-left margin-left-sm margin-top margin-top-sm" data-toggle="tooltip" data-placement="bottom"><i class="icon-info text-info"></i></small>
+                                <div class="flex-separator"></div>
+                                <button type="button" class="btn btn-default" id="download-server-certificate" data-toggle="tooltip" data-placement="left"
+                                        data-bind="visible: serverCertificateSelected, click: $root.downloadServerCertificate">
+                                    <i class="icon-export"></i><span>Download</span>
+                                </button>
+                            </div>
                             <div data-bind="if: !certificate()">
                                 <div class="form-group">
-                                    <label class="control-label certificate-file-label">
+                                    <label class="control-label">
                                         Certificate File
                                     </label>
                                     <div class="input-group file-input flex-grow" data-bind="validationElement: certificateExtracted">
                                         <input type="file" name="uploadFile" id="uploadFile" accept="" data-bind="event: { change: _.partial($root.certFileSelected, $element) }" />
-                                        <span class="static-name form-control" data-bind="text: selectedFileName() || 'Upload .pfx file, or import configuration file from Hub'"></span>
+                                        <span class="static-name form-control" data-bind="text: selectedFileName() || 'Upload *.pfx, or import configuration from Hub'"></span>
                                         <span class="input-group-btn">
                                             <label for="uploadFile" class="btn btn-default"><i class="icon-document"></i><span>Browse</span></label>
                                         </span>
@@ -204,7 +224,8 @@
                                                 <i class="icon-certificate"></i><span data-bind="text: certificate().thumbprint()"></span>
                                             </div>
                                             <div class="flex-separator"></div>
-                                            <button type="button" class="btn btn-sm btn-danger" title="Remove certificate" data-bind="click: _.partial($root.removeCertificate, $data)">
+                                            <button type="button" class="btn btn-sm btn-danger" title="Remove certificate"
+                                                    data-bind="visible: !serverCertificateSelected(), click: _.partial($root.removeCertificate, $data)"> 
                                                 <i class="icon-trash"></i>
                                             </button>
                                         </div>
@@ -296,3 +317,7 @@
         </div>
     </form>
 </div>
+
+<form id="certificates_download_form" target="certificate_download_iframe" style="display: none"></form>
+
+<iframe name="certificate_download_iframe" style="display: none"></iframe>

@@ -272,13 +272,13 @@
                                     </div>
                                 </div>
                                 <div class="input-group file-input">
-                                    <input type="file" id="certificateFilePicker" data-bind="event: { change: _.partial($root.importCertificate, $element) }" tabindex="-1" />
+                                    <input type="file" id="certificateFilePicker" data-bind="event: { change: _.partial($root.uploadCertificate, $element) }" tabindex="-1" />
                                 </div>
-                                <div class="flex-horizontal certificates-actions margin-bottom" title="Import your own certificate" data-bind="if: isNewAccessItem() && !certificate() ">
-                                    <label for="certificateFilePicker" class="btn btn-default">
-                                        <i class="icon-import"></i><span>Import existing certificate</span>
+                                <div class="flex-horizontal certificates-actions margin-bottom" data-bind="if: isNewAccessItem() && !certificate()">
+                                    <label for="certificateFilePicker" class="btn btn-default" id="upload-certificate" data-toggle="tooltip" data-placement="bottom">
+                                        <i class="icon-import"></i><span>Upload existing certificate</span>
                                     </label>
-                                    <button type="button" class="btn btn-default" title="RavenDB will generate a certificate for you"
+                                    <button type="button" class="btn btn-default" id="generate-certificate" data-toggle="tooltip" data-placement="bottom"
                                             data-bind="click: $root.generateCertificate, disable: $root.spinners.generateCertificate,
                                                        css: { 'btn-spinner' : $root.spinners.generateCertificate }">
                                         <i class="icon-magic-wand"></i><span>Generate new certificate</span>
@@ -379,9 +379,9 @@
                                                                  usingExistingCertificate() ? 'Download is available only for a RavenDb generated certificate.' :
                                                                 'Please add a certificate before downloading.' : '',
                                                                 'title': !$root.spinners.generateCertificate() && !disableDownload() ?
-                                                                'Download the generated certificate to a .pfx file' : '' }">
-                                            <button class="btn btn-default" title="Download the generated certificate"
-                                                    data-bind="click: $root.downloadCertificate, 
+                                                                'Download the generated certificate to a .pfx file (public & private keys)' : '' }">
+                                            <button class="btn btn-default"
+                                                    data-bind="click: $root.downloadCertificate,
                                                                disable: $root.spinners.generateCertificate() || disableDownload()">
                                                 <i class="icon-export"></i><span>Download generated certificate</span>
                                             </button>

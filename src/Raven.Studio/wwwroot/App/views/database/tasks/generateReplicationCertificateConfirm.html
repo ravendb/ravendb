@@ -4,7 +4,7 @@
             <button type="button" class="close" data-bind="click: cancel" aria-hidden="true">
                 <i class="icon-cancel"></i>
             </button>
-            <h4 class="modal-title">Generate New Replication Certificate</h4>
+            <h4 class="modal-title">Generate New Replication Certificate (public & private keys)</h4>
         </div>
         <div class="modal-body">
             <p class="margin-top">
@@ -15,7 +15,7 @@
             <hr>
             <p>
                 <i class="text-warning icon-warning"></i>
-                <span>Save the private key for the Sink task usage by either one of the following:</span>
+                <span>After the certificate is generated, save the private key for the Sink task definition by either one of the following:</span>
             </p>
             <ul>
                 <li>
@@ -27,9 +27,6 @@
                     <small>Only the certificate will be downloaded as a PFX file.</small>
                 </li>
             </ul>
-            <p class="margin-top">
-                Either one of the above files can be used when defining a Sink task.
-            </p>
             <p class="text-info bg-info padding padding-xs margin-right margin-right-lg margin-top margin-bottom">
                 <small><i class="icon-info"></i><span>Keep these files in a safe place. The private key isn't saved on the Hub task.</span></small>
             </p>
@@ -52,7 +49,7 @@
                 <i class="icon-cancel"></i>
                 <span>Cancel</span>
             </button>
-            <button type="button" class="btn btn-danger" data-bind="click: generate">
+            <button type="button" class="btn btn-success" data-bind="click: generate">
                 <i class="icon-magic-wand"></i>
                 <span>Generate new certificate</span>
             </button>
