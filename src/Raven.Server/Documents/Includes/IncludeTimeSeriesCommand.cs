@@ -46,45 +46,37 @@ namespace Raven.Server.Documents.Includes
                 if (Results.ContainsKey(docId))
                     continue;
 
-                var count = kvp.Value.Count(x => x.Name == Constants.TimeSeries.All);
-                switch (count)
+                var tsRanges = kvp.Value;
+                var firstTsRange = kvp.Value.First();
+                if (firstTsRange.Name == Constants.TimeSeries.All)
                 {
-                    case 0:
-                    {
-                        var rangeResults = GetTimeSeriesForDocument(docId, kvp.Value);
-                        Results.Add(docId, rangeResults);
-                        break;
-                    }
-                    case 1:
-                    {
-                        // get all ts names
-                        var timeSeriesNames = new List<string>();
-                        TimeSeriesHandler.GetTimesSeriesNames(document, timeSeriesNames);
-                        var arr = new HashSet<AbstractTimeSeriesRange>();
-                        switch (kvp.Value.First())
-                        {
-                            case TimeSeriesRange r:
-                                foreach (var name in timeSeriesNames)
-                                    arr.Add(new TimeSeriesRange { Name = name, From = r.From, To = r.To });
-                                break;
-                            case TimeSeriesTimeRange tr:
-                                foreach (var name in timeSeriesNames)
-                                    arr.Add(new TimeSeriesTimeRange { Name = name, Time = tr.Time, Type = tr.Type });
-                                break;
-                            case TimeSeriesCountRange cr:
-                                foreach (var name in timeSeriesNames)
-                                    arr.Add(new TimeSeriesCountRange { Name = name, Count = cr.Count, Type = cr.Type });
-                                break;
-                            default:
-                                throw new NotSupportedException($"Not supported time series range type '{kvp.Value.First()?.GetType().Name}'.");
-                        }
-                        var rangeResults = GetTimeSeriesForDocument(docId, arr);
-                        Results.Add(docId, rangeResults);
-                        break;
-                    }
-                    default:
+                    if (kvp.Value.Count > 1)
                         throw new NotSupportedException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
+
+                    // get all ts names
+                    var timeSeriesNames = TimeSeriesHandler.GetTimesSeriesNames(document);
+
+                    tsRanges = new HashSet<AbstractTimeSeriesRange>();
+                    switch (firstTsRange)
+                    {
+                        case TimeSeriesRange r:
+                            foreach (var name in timeSeriesNames)
+                                tsRanges.Add(new TimeSeriesRange { Name = name, From = r.From, To = r.To });
+                            break;
+                        case TimeSeriesTimeRange tr:
+                            foreach (var name in timeSeriesNames)
+                                tsRanges.Add(new TimeSeriesTimeRange { Name = name, Time = tr.Time, Type = tr.Type });
+                            break;
+                        case TimeSeriesCountRange cr:
+                            foreach (var name in timeSeriesNames)
+                                tsRanges.Add(new TimeSeriesCountRange { Name = name, Count = cr.Count, Type = cr.Type });
+                            break;
+                        default:
+                            throw new NotSupportedException($"Not supported time series range type '{kvp.Value.First()?.GetType().Name}'.");
+                    }
                 }
+
+                Results.Add(docId, GetTimeSeriesForDocument(docId, tsRanges));
             }
         }
 

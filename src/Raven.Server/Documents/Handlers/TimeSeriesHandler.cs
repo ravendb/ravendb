@@ -46,10 +46,7 @@ namespace Raven.Server.Documents.Handlers
                     return Task.CompletedTask;
                 }
 
-                var timeSeriesNames = new List<string>();
-
-                GetTimesSeriesNames(document, timeSeriesNames);
-
+                var timeSeriesNames = GetTimesSeriesNames(document);
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
@@ -105,8 +102,9 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        internal static void GetTimesSeriesNames(Document document, List<string> timeSeriesNames)
+        internal static List<string> GetTimesSeriesNames(Document document)
         {
+            var timeSeriesNames = new List<string>();
             if (document.TryGetMetadata(out var metadata))
             {
                 if (metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out BlittableJsonReaderArray timeSeries) && timeSeries != null)
@@ -123,6 +121,8 @@ namespace Raven.Server.Documents.Handlers
                     }
                 }
             }
+
+            return timeSeriesNames;
         }
 
         [RavenAction("/databases/*/timeseries/ranges", "GET", AuthorizationStatus.ValidUser)]
