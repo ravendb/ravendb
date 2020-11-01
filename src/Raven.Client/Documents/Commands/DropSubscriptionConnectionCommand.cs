@@ -1,4 +1,6 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
+using System.Text;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -15,8 +17,17 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/subscriptions/drop?name={_name}";
-
+            var path = new StringBuilder(node.Url)
+                .Append("/databases/")
+                .Append(node.Database)
+                .Append("/subscriptions/drop");
+            
+            if(string.IsNullOrEmpty(_name) == false)
+            {
+                path.Append("?name=").Append(Uri.EscapeDataString(_name));
+            }
+            
+            url = path.ToString();
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post

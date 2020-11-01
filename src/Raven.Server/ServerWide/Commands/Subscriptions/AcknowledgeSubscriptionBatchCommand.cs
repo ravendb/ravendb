@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
 
             if (existingValue == null)
-                throw new SubscriptionDoesNotExistException($"Subscription with name {subscriptionName} does not exist");
+                throw new SubscriptionDoesNotExistException($"Subscription with name \"{subscriptionName}\" does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 

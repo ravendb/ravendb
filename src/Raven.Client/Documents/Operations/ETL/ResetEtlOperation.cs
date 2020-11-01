@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -14,8 +15,8 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public ResetEtlOperation(string configurationName, string transformationName)
         {
-            _configurationName = configurationName;
-            _transformationName = transformationName;
+            _configurationName = configurationName ?? throw new ArgumentNullException(nameof(configurationName));
+            _transformationName = transformationName ?? throw new ArgumentNullException(nameof(transformationName));
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -38,8 +39,15 @@ namespace Raven.Client.Documents.Operations.ETL
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/etl?configurationName={_configurationName}&transformationName={_transformationName}";
-
+                var path = new StringBuilder(node.Url)
+                    .Append("/databases/")
+                    .Append(node.Database)
+                    .Append("/admin/etl?configurationName=")
+                    .Append(Uri.EscapeDataString(_configurationName))
+                    .Append("&transformationName=")
+                    .Append(Uri.EscapeDataString(_transformationName));
+                
+                url = path.ToString();
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Reset,
