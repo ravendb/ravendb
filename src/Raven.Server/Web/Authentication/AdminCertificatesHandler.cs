@@ -241,7 +241,8 @@ namespace Raven.Server.Web.Authentication
                 try
                 {
                     var password = string.IsNullOrEmpty(certificate.Password) ? null : certificate.Password;
-                    _ = new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet);
+                    var certificate2 = new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet);
+                    certificate2.Dispose();
                 }
                 catch (Exception e)
                 {
@@ -564,7 +565,7 @@ namespace Raven.Server.Web.Authentication
         {
             var localCertificates = ServerStore.CurrentRachisState == RachisState.Passive
                 // If we are passive, we take the certs from the local state
-                ? ClusterStateMachine.GetCertificateFromLocalState(context)
+                ? ClusterStateMachine.GetAllCertificatesFromLocalState(context)
                 : ClusterStateMachine.GetAllCertificatesFromCluster(context, GetStart(), GetPageSize());
             
             foreach (var (thumbprint, certificate) in localCertificates)
