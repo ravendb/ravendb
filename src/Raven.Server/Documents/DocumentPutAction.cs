@@ -1,19 +1,21 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Exceptions;
+using Raven.Client.Json.Converters;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
-using System.Linq;
-using Raven.Client.Documents.Operations.Revisions;
-using Raven.Client.Exceptions;
-using Sparrow.Server;
 using static Raven.Server.Documents.DocumentsStorage;
 using Constants = Raven.Client.Constants;
 
@@ -422,6 +424,33 @@ namespace Raven.Server.Documents
             }
             else
             {
+                // check for attachments with duplicate name
+                if ((flags & DocumentFlags.Resolved) == DocumentFlags.Resolved)
+                {
+                    if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray currentDocumentAttachments))
+                    {
+                        // actualAttachments can contain attachments of current document which were directly put, we want to check if there are attachment with duplicate name
+                        var attachmentsChanged = false;
+                        foreach (BlittableJsonReaderObject bjro in currentDocumentAttachments)
+                        {
+                            var currentAttachment = JsonDeserializationClient.AttachmentName(bjro);
+
+                            if (actualAttachments.Items.Count(o =>
+                                o is DynamicJsonValue attachment && attachment[nameof(AttachmentName.Name)] is LazyStringValue lzv && lzv == currentAttachment.Name) > 1)
+                            {
+                                // rename currentAttachment which is already saved in storage
+                                _documentsStorage.AttachmentsStorage.RenameAttachment(
+                                    context, lowerId, currentAttachment.Name, currentAttachment.Hash, currentAttachment.ContentType, AttachmentType.Document, $"RESOLVED_{currentAttachment.Name}");
+
+                                attachmentsChanged = true;
+                            }
+                        }
+
+                        if (attachmentsChanged)
+                            actualAttachments = _documentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerId);
+                    }
+                }
+
                 metadata.Modifications = new DynamicJsonValue(metadata)
                 {
                     [Constants.Documents.Metadata.Attachments] = actualAttachments

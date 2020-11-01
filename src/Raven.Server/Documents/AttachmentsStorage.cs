@@ -184,7 +184,7 @@ namespace Raven.Server.Documents
                 using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
                     lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
                 {
-                    Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
+                    Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {base64Hash.Size}");
 
                     DeleteTombstoneIfNeeded(context, keySlice);
 
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents
         /// </summary>
         public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, string changeVector = null)
         {
-            Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {key.Size}");
+            Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {base64Hash.Size}");
 
             var newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -899,6 +899,64 @@ namespace Raven.Server.Documents
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector);
 
             return result;
+        }
+
+        public AttachmentDetails RenameAttachment(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType, AttachmentType attachmentType, string newName)
+        {
+            var docId = lowerId.ToString();
+            if (string.IsNullOrWhiteSpace(docId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(lowerId));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
+            if (string.IsNullOrWhiteSpace(hash))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(hash));
+            if (string.IsNullOrWhiteSpace(contentType))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(contentType));
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(newName));
+            if (attachmentType != AttachmentType.Document)
+                throw new ArgumentException($"{nameof(RenameAttachment)} only supported for documents attachment.", nameof(attachmentType));
+            if (context.Transaction == null)
+                throw new ArgumentException($"Context must be set with a valid transaction before calling {nameof(RenameAttachment)}", nameof(context));
+
+            Attachment attachment;
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
+            using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
+                    return null;
+
+                attachment = TableValueToAttachment(context, ref tvr);
+                if (attachment == null)
+                    AttachmentDoesNotExistException.ThrowFor(docId, name);
+
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerNewName, out Slice newNamePtr))
+                using (var cv = context.GetLazyString(attachment.ChangeVector))
+                using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerNewName.Content.Ptr, lowerNewName.Size, base64Hash, lowerContentType.Content.Ptr,
+                    lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice newKeySlice))
+                {
+                    PutDirect(context, newKeySlice, newNamePtr, contentTypePtr, base64Hash, attachment.ChangeVector);
+
+                    var tombstoneEtag = _documentsStorage.GenerateNextEtag();
+                    var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
+                    context.LastDatabaseChangeVector = changeVector;
+                    DeleteAttachmentDirect(context, keySlice, isPartialKey: false, name, attachment.ChangeVector, changeVector, _documentDatabase.Time.GetUtcNow().Ticks);
+                }
+            }
+
+            return new AttachmentDetails
+            {
+                ChangeVector = attachment.ChangeVector,
+                ContentType = contentType,
+                Name = newName,
+                DocumentId = docId,
+                Hash = hash,
+                Size = attachment.Size
+            };
         }
 
         public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true)
