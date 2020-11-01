@@ -828,24 +828,23 @@ namespace FastTests
             return RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, permissions, clearance, server);
         }
 
-        protected X509Certificate2 RegisterClientCertificate(X509Certificate2 serverCertificate, X509Certificate2 clientCertificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
+        protected X509Certificate2 RegisterClientCertificate(
+            X509Certificate2 serverCertificate, 
+            X509Certificate2 clientCertificate, 
+            Dictionary<string, DatabaseAccess> permissions, 
+            SecurityClearance clearance = SecurityClearance.ValidUser, 
+            RavenServer server = null, 
+            string certificateName = "client certificate")
         {
-            using (var store = GetDocumentStore(new Options
+            using var store = GetDocumentStore(new Options
             {
                 CreateDatabase = false,
                 Server = server,
                 ClientCertificate = serverCertificate,
                 AdminCertificate = serverCertificate,
-                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
-                {
-                    DisableTopologyUpdates = true
-                }
-            }))
-            {
-                var operation = new PutClientCertificateOperation("client certificate", clientCertificate, permissions, clearance);
-                store.Maintenance.Server.Send(operation);
-            }
-
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions {DisableTopologyUpdates = true}
+            });
+            store.Maintenance.Server.Send(new PutClientCertificateOperation(certificateName, clientCertificate, permissions, clearance));
             return clientCertificate;
         }
 

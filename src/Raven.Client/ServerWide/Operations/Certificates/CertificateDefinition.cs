@@ -4,18 +4,35 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-    public class CertificateDefinition
+    public class CertificateDefinition : CertificateMetadata
     {
-        public string Name;
         public string Certificate;
         public string Password;
-        public SecurityClearance SecurityClearance;
-        public string Thumbprint;
         public string PublicKeyPinningHash;
-        public DateTime? NotAfter;
-        public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
         public string CollectionPrimaryKey = string.Empty;
         public List<string> CollectionSecondaryKeys = new List<string>();
+
+        public DynamicJsonValue ToJson(bool metadataOnly = false)
+        {
+            var jsonValue = base.ToJson();
+            if (metadataOnly == false)
+            {
+                jsonValue[nameof(Certificate)] = Certificate;
+                jsonValue[nameof(PublicKeyPinningHash)] = PublicKeyPinningHash;
+                jsonValue[nameof(CollectionPrimaryKey)] = CollectionPrimaryKey;
+                jsonValue[nameof(CollectionSecondaryKeys)] = CollectionSecondaryKeys;
+            }
+            return jsonValue;
+        }
+    }
+
+    public class CertificateMetadata
+    {
+        public string Name;
+        public SecurityClearance SecurityClearance;
+        public string Thumbprint;
+        public DateTime? NotAfter;
+        public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
 
         public DynamicJsonValue ToJson()
         {
@@ -24,19 +41,16 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             if (Permissions != null)
                 foreach (var kvp in Permissions)
                     permissions[kvp.Key] = kvp.Value.ToString();
-            
-            return new DynamicJsonValue
+
+            var jsonValue = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(Certificate)] = Certificate,
                 [nameof(Thumbprint)] = Thumbprint,
-                [nameof(PublicKeyPinningHash)] = PublicKeyPinningHash,
-                [nameof(NotAfter)] = NotAfter,
                 [nameof(SecurityClearance)] = SecurityClearance,
                 [nameof(Permissions)] = permissions,
-                [nameof(CollectionPrimaryKey)] = CollectionPrimaryKey,
-                [nameof(CollectionSecondaryKeys)] = CollectionSecondaryKeys
+                [nameof(NotAfter)] = NotAfter,
             };
+            return jsonValue;
         }
     }
 

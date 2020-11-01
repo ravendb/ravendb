@@ -240,9 +240,8 @@ namespace Raven.Server.Web.Authentication
 
                 try
                 {
-                    var _ = string.IsNullOrEmpty(certificate.Password)
-                        ? new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet)
-                        : new X509Certificate2(certBytes, certificate.Password, X509KeyStorageFlags.MachineKeySet);
+                    var password = string.IsNullOrEmpty(certificate.Password) ? null : certificate.Password;
+                    _ = new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (Exception e)
                 {
@@ -453,6 +452,8 @@ namespace Raven.Server.Web.Authentication
         public Task GetCertificates()
         {
             var thumbprint = GetStringQueryString("thumbprint", required: false);
+            var name = GetStringQueryString("name", required: false);
+            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
             var includeSecondary = GetBoolValueQueryString("secondary", required: false) ?? false;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -464,12 +465,13 @@ namespace Raven.Server.Web.Authentication
                 {
                     if (string.IsNullOrEmpty(thumbprint))
                     {
+                        const string serverCertificateName = "Server Certificate";
                         // The server cert is not part of the local state or the cluster certificates, we add it to the list separately
-                        if (Server.Certificate.Certificate != null)
+                        if ((name == null || name == serverCertificateName) && Server.Certificate.Certificate != null)
                         {
                             var serverCertDef = new CertificateDefinition
                             {
-                                Name = "Server Certificate",
+                                Name = serverCertificateName,
                                 Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
                                 Permissions = new Dictionary<string, DatabaseAccess>(),
                                 SecurityClearance = SecurityClearance.ClusterNode,
@@ -478,42 +480,22 @@ namespace Raven.Server.Web.Authentication
                                 NotAfter = Server.Certificate.Certificate.NotAfter
                             };
 
-                            var serverCert = context.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
+                            var serverCert = context.ReadObject(serverCertDef.ToJson(metadataOnly), "Server/Certificate/Definition");
 
                             certificateList.TryAdd(Server.Certificate.Certificate?.Thumbprint, serverCert);
                         }
 
-                        GetAllRegisteredCertificates(context, certificateList, includeSecondary);
+                        GetAllRegisteredCertificates(context, certificateList, includeSecondary, name, metadataOnly);
                     }
                     else
                     {
-                        var certificate = ServerStore.CurrentRachisState == RachisState.Passive
-                            ? ServerStore.Cluster.GetLocalStateByThumbprint(context, thumbprint)
-                            : ServerStore.Cluster.GetCertificateByThumbprint(context, thumbprint);
-
-                        if (certificate == null)
+                        if (TryGetAndAddCertificateByThumbprint(context, certificateList, thumbprint, metadataOnly) == false)
                         {
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                             return Task.CompletedTask;
                         }
-
-                        var definition = JsonDeserializationServer.CertificateDefinition(certificate);
-                        if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
-                        {
-                            certificate = ServerStore.CurrentRachisState == RachisState.Passive
-                                ? ServerStore.Cluster.GetLocalStateByThumbprint(context, thumbprint)
-                                : ServerStore.Cluster.GetCertificateByThumbprint(context, definition.CollectionPrimaryKey);
-                            if (certificate == null)
-                            {
-                                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                                return Task.CompletedTask;
-                            }
-                        }
-
-                        certificateList.TryAdd(thumbprint, certificate);
                     }
                     
-
                     var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -541,39 +523,66 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        private void GetAllRegisteredCertificates(TransactionOperationContext context, Dictionary<string, BlittableJsonReaderObject> certificates, bool includeSecondary)
+        private bool TryGetCertificateByThumbprint(TransactionOperationContext context, string thumbprint, out BlittableJsonReaderObject certificate)
         {
-            // If we are passive, we take the certs from the local state
-            if (ServerStore.CurrentRachisState == RachisState.Passive)
+            certificate = ServerStore.CurrentRachisState == RachisState.Passive
+                ?ServerStore.Cluster.GetLocalStateByThumbprint(context, thumbprint)
+                :ServerStore.Cluster.GetCertificateByThumbprint(context, thumbprint);
+            return certificate != null;
+        }
+
+        private bool TryGetAndAddCertificateByThumbprint(TransactionOperationContext context, Dictionary<string, BlittableJsonReaderObject> certificateList,
+            string thumbprint, bool metadataOnly)
+        {
+            if (TryGetCertificateByThumbprint(context, thumbprint, out var certificate) == false)
+                return false;
+
+            var definition = JsonDeserializationServer.CertificateDefinition(certificate);
+            if (string.IsNullOrEmpty(definition.CollectionPrimaryKey) == false)
             {
-                var localCertKeys = ServerStore.Cluster.GetCertificateThumbprintsFromLocalState(context).ToList();
-
-                foreach (var localCertKey in localCertKeys)
-                {
-                    var localCertificate = ServerStore.Cluster.GetLocalStateByThumbprint(context, localCertKey);
-                    if (localCertificate == null)
-                        continue;
-
-                    var def = JsonDeserializationServer.CertificateDefinition(localCertificate);
-
-                    if (includeSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                        certificates.TryAdd(localCertKey, localCertificate);
-                    else
-                        localCertificate.Dispose();
-                }
+                certificate.Dispose();
+                if (TryGetCertificateByThumbprint(context, definition.CollectionPrimaryKey, out certificate) == false)
+                    return false;
             }
-            // If we are not passive, we take the certs from the cluster
-            else
-            {
-                foreach (var item in ServerStore.Cluster.GetAllCertificatesFromCluster(context, GetStart(), GetPageSize()))
-                {
-                    var def = JsonDeserializationServer.CertificateDefinition(item.Certificate);
 
-                    if (includeSecondary || string.IsNullOrEmpty(def.CollectionPrimaryKey))
-                        certificates.TryAdd(item.Thumbprint, item.Certificate);
-                    else
-                        item.Certificate.Dispose();
+            if (metadataOnly)
+            {
+                certificate.Dispose();
+                certificate = context.ReadObject(definition.ToJson(true), "Client/Certificate/Definition");
+            }
+
+            certificateList.TryAdd(thumbprint, certificate);
+            return true;
+        }
+
+        private void GetAllRegisteredCertificates(
+            TransactionOperationContext context, 
+            Dictionary<string, BlittableJsonReaderObject> certificates, 
+            bool includeSecondary,
+            string name = null,
+            bool metadataOnly = false)
+        {
+            var localCertificates = ServerStore.CurrentRachisState == RachisState.Passive
+                // If we are passive, we take the certs from the local state
+                ? ClusterStateMachine.GetCertificateFromLocalState(context)
+                : ClusterStateMachine.GetAllCertificatesFromCluster(context, GetStart(), GetPageSize());
+            
+            foreach (var (thumbprint, certificate) in localCertificates)
+            {
+                var def = JsonDeserializationServer.CertificateDefinition(certificate);
+                if (name != null && name != def.Name || includeSecondary == false && string.IsNullOrEmpty(def.CollectionPrimaryKey) == false)
+                {
+                    certificate.Dispose();
+                    continue;
                 }
+
+                var certificateRef = certificate;
+                if (metadataOnly)
+                {
+                    certificate.Dispose();
+                    certificateRef = context.ReadObject(def.ToJson(true), "Client/Certificate/Definition");
+                }
+                certificates.TryAdd(thumbprint, certificateRef);
             }
         }
 
@@ -716,7 +725,7 @@ namespace Raven.Server.Web.Authentication
                         List<(string ItemName, BlittableJsonReaderObject Value)> allItems = null;
                         try
                         {
-                            allItems = ServerStore.Cluster.GetAllCertificatesFromCluster(context, 0, int.MaxValue).ToList();
+                            allItems = ClusterStateMachine.GetAllCertificatesFromCluster(context, 0, int.MaxValue).ToList();
                             var clusterNodes = allItems.Select(item => JsonDeserializationServer.CertificateDefinition(item.Value))
                                 .Where(certificateDef => certificateDef.SecurityClearance == SecurityClearance.ClusterNode)
                                 .ToList();
