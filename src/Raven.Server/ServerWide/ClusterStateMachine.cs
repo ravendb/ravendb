@@ -2237,7 +2237,7 @@ namespace Raven.Server.ServerWide
             }
         }
         
-        public static IEnumerable<(string Key, BlittableJsonReaderObject Cert)> GetCertificateFromLocalState(TransactionOperationContext context)
+        public static IEnumerable<(string Key, BlittableJsonReaderObject Cert)> GetAllCertificatesFromLocalState(TransactionOperationContext context)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
             if (tree == null)
