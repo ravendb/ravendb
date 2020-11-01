@@ -2236,8 +2236,31 @@ namespace Raven.Server.ServerWide
                 } while (it.MoveNext());
             }
         }
+        
+        public static IEnumerable<(string Key, BlittableJsonReaderObject Cert)> GetCertificateFromLocalState(TransactionOperationContext context)
+        {
+            var tree = context.Transaction.InnerTransaction.ReadTree(LocalNodeStateTreeName);
+            if (tree == null)
+                yield break;
 
-        public IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, int start, int take)
+            using (var it = tree.Iterate(prefetch: false))
+            {
+                if (it.Seek(Slices.BeforeAllKeys) == false)
+                    yield break;
+                do
+                {
+                    yield return GetCertificate(context, it);
+                } while (it.MoveNext());
+            }
+        }
+
+        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate(TransactionOperationContext context, TreeIterator treeIterator)
+        {
+            var reader = treeIterator.CreateReaderForCurrent();
+            return GetCertificate(context, reader.Base, reader.Length, treeIterator.CurrentKey.ToString());
+        }
+
+        public static IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, int start, int take)
         {
             var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -2579,10 +2602,15 @@ namespace Raven.Server.ServerWide
 
         private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate(TransactionOperationContext context, Table.TableValueHolder result)
         {
-            var ptr = result.Reader.Read((int)CertificatesTable.Data, out int size);
-            var doc = new BlittableJsonReaderObject(ptr, size, context);
-            var key = Encoding.UTF8.GetString(result.Reader.Read((int)CertificatesTable.Thumbprint, out size), size);
+            var ptr = result.Reader.Read((int)CertificatesTable.Data, out var dataSize);
+            var key = Encoding.UTF8.GetString(result.Reader.Read((int)CertificatesTable.Thumbprint, out var size), size);
 
+            return GetCertificate(context, ptr, dataSize, key);
+        }
+
+        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate(TransactionOperationContext context, byte* ptr, int size, string key)
+        {
+            var doc = new BlittableJsonReaderObject(ptr, size, context);
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);
             return (key, doc);
         }
