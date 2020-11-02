@@ -46,6 +46,7 @@ class editReplicationSinkTask extends viewModelBase {
     canDefineCertificates = location.protocol === "https:";
     serverCertificateModel = ko.observable<replicationCertificateModel>();
     exportCertificateUrl = endpoints.global.adminCertificates.adminCertificatesExport;
+    private readonly serverCertificateName = "Server Certificate";
 
     constructor() {
         super();
@@ -62,7 +63,7 @@ class editReplicationSinkTask extends viewModelBase {
                     new getCertificatesCommand()
                         .execute()
                         .done(certificatesInfo => {
-                            const serverCertificate = certificatesInfo.Certificates.find(cert => cert.Name === "Server Certificate");
+                            const serverCertificate = certificatesInfo.Certificates.find(cert => cert.Name === this.serverCertificateName);
                             this.serverCertificateModel(new replicationCertificateModel(serverCertificate.Certificate));
                             deferred.resolve({can: true});
                         })
