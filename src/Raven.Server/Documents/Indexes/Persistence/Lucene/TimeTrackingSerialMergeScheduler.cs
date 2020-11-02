@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly TimeSpan _maxMergeTime;
         private IndexingStatsScope _commitStats;
 
-        public TimeTrackingSerialMergeScheduler( Index index)
+        public TimeTrackingSerialMergeScheduler(Index index)
         {
             _index = index;
             _maxMergeTime = index.Configuration.MaxTimeForMergesToKeepRunning.AsTimeSpan;
