@@ -140,7 +140,7 @@ namespace Raven.Server.Documents
                 ThrowFailedToUpdateHash();
         }
 
-        private static unsafe void HashNumber(byte* state, long num)
+        public static unsafe void HashNumber(byte* state, long num)
         {
             if (Sodium.crypto_generichash_update(state, (byte*)&num, sizeof(long)) != 0)
                 ThrowFailedToUpdateHash();
