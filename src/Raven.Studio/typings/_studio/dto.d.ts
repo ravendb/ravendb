@@ -738,7 +738,7 @@ type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Back
 interface sampleCode {
     title: string,
     text: string,
-    html: string
+    html: string | KnockoutComputed<string>;
 }
 
 type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];

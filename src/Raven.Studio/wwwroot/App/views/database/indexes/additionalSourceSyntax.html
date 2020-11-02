@@ -4,29 +4,27 @@
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
         </div>
         <div class="modal-header margin-top">
-           <div class="well well-sm">
-               Upload additional source files which can be referenced inside the index definition functions.
-           </div>
+            <div class="well well-sm">
+                Upload additional source files which can be referenced inside the index definition functions.
+            </div>
         </div>
-        <div class="modal-body">           
+        <div class="modal-body">
             <div class="row">
                 <div class="col-lg-6">
                     <h3 class="margin-top">
-                        <strong>C# </strong>Example:
+                        <strong>C# </strong>Example
                     </h3>
-                    <pre data-bind="html: additionalSourceCsharpHtml"> 
-                    </pre>
-                    <pre data-bind="html: usageInMapCsharpHtml">
-                    </pre>
+                    <div data-bind="foreach: $data.constructor.csharpSamples">
+                        <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+                    </div>
                 </div>
                 <div class="col-lg-6">
                     <h3 class="margin-top">
-                        <strong>JavaScript </strong>Example:
+                        <strong>JavaScript </strong>Example
                     </h3>
-                    <pre data-bind="html: additionalSourceJavascriptHtml">
-                    </pre>
-                    <pre data-bind="html: usageInMapJavascriptHtml">
-                    </pre>
+                    <div data-bind="foreach: $data.constructor.javascriptSamples">
+                        <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+                    </div>
                 </div>
             </div>
         </div>
