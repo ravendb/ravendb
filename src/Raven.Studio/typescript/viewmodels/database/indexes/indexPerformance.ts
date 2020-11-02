@@ -1222,11 +1222,12 @@ class indexPerformance extends viewModelBase {
             if (element.LuceneMergeDetails) {
                 let luceneMergeDetails: string;
                 luceneMergeDetails = `<br/>*** <span class="tooltip-title">Lucene Merge Details</span> ***<br/>`;
-                luceneMergeDetails += `Pending merges count: ${element.LuceneMergeDetails.PendingMergesCount.toLocaleString()}`;
+                luceneMergeDetails += `Total merges: ${element.LuceneMergeDetails.TotalMergesCount.toLocaleString()}<br/>`;
+                luceneMergeDetails += `Executed merges: ${element.LuceneMergeDetails.ExecutedMergesCount.toLocaleString()}`;
                 if (element.LuceneMergeDetails.MergedFilesCount > 0)
-                    luceneMergeDetails += `<br/>Merged files count: ${element.LuceneMergeDetails.MergedFilesCount.toLocaleString()}`;
+                    luceneMergeDetails += `<br/>Merged files: ${element.LuceneMergeDetails.MergedFilesCount.toLocaleString()}`;
                 if (element.LuceneMergeDetails.MergedDocumentsCount > 0)
-                    luceneMergeDetails += `<br/>Merged documents count: ${element.LuceneMergeDetails.MergedDocumentsCount.toLocaleString()}`;
+                    luceneMergeDetails += `<br/>Merged documents: ${element.LuceneMergeDetails.MergedDocumentsCount.toLocaleString()}`;
                 tooltipHtml += luceneMergeDetails;
             }
 

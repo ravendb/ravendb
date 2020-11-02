@@ -2,7 +2,9 @@
 {
     public class LuceneMergeDetails
     {
-        public int PendingMergesCount { get; set; }
+        public int TotalMergesCount { get; set; }
+
+        public int ExecutedMergesCount { get; set; }
 
         public long MergedFilesCount { get; set; }
 
