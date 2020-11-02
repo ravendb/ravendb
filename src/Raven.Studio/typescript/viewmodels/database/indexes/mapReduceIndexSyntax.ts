@@ -12,7 +12,7 @@ class mapReduceIndexSyntax extends dialogViewModelBase {
     }
 
     copySample(sampleTitle: string) {
-        let sampleArray = sampleTitle.startsWith('Linq') ? mapReduceIndexSyntax.linqSamples : mapReduceIndexSyntax.javascriptSamples;
+        let sampleArray = sampleTitle.startsWith("Linq") ? mapReduceIndexSyntax.linqSamples : mapReduceIndexSyntax.javascriptSamples;
         const sampleText = sampleArray.find(x => x.title === sampleTitle).text;
         copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
     }
