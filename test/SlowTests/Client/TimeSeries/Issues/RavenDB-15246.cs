@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -225,7 +226,7 @@ namespace SlowTests.Client.TimeSeries.Issues
                     Assert.Equal(1, session.Advanced.NumberOfRequests);
 
                     var res = ts.Get(start: 20);
-                    Assert.Null(res);
+                    Assert.Empty(res);
                     Assert.Equal(2, session.Advanced.NumberOfRequests);
 
                     res = ts.Get(start: 10);
@@ -474,9 +475,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                     res = tsCommand.Result;
 
                     Assert.Equal(1, res.Values.Count);
-                    Assert.Equal(1, res.Values["raven"].Count);
+                    Assert.Equal(3, res.Values["raven"].Count);
 
-                    Assert.Equal(3, res.Values["raven"][0].Entries.Length);
+                    Assert.Equal(0, res.Values["raven"][0].Entries.Length);
+                    Assert.Equal(0, res.Values["raven"][1].Entries.Length);
+                    Assert.Equal(3, res.Values["raven"][2].Entries.Length);
                 }
             }
         }

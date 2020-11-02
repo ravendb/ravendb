@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -53,6 +54,12 @@ namespace Raven.Server.Documents.Includes
                 var start = 0;
                 var pageSize = int.MaxValue;
                 var timeSeriesRangeResult = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, range.Name, range.From ?? DateTime.MinValue, range.To ?? DateTime.MaxValue, ref start, ref pageSize);
+                if (timeSeriesRangeResult == null)
+                {
+                    Debug.Assert(pageSize <= 0, "Page size must be zero or less here");
+                    return dictionary; 
+                }
+
                 if (dictionary.TryGetValue(range.Name, out var list) == false)
                 {
                     dictionary[range.Name] = new List<TimeSeriesRangeResult>{ timeSeriesRangeResult };
