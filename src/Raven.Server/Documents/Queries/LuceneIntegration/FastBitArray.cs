@@ -12,6 +12,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
         public FastBitArray(int countOfBits)
         {
             _bits = ArrayPool<ulong>.Shared.Rent(countOfBits / 64 + (countOfBits % 64 == 0 ? 0 : 1));
+            new Span<ulong>(_bits).Clear();
         }
 
         public void Set(int index)
