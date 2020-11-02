@@ -368,7 +368,7 @@ namespace Raven.Server.Documents.Indexes
         public void RecordPendingMergesCount(int pendingMergesCount)
         {
             _stats.LuceneMergeDetails ??= new LuceneMergeDetails();
-            _stats.LuceneMergeDetails.PendingMergesCount += pendingMergesCount;
+            _stats.LuceneMergeDetails.TotalMergesCount += pendingMergesCount;
         }
 
         public void RecordMergeStats(MergePolicy.OneMerge.OneMergeStats mergeStats)
@@ -376,6 +376,7 @@ namespace Raven.Server.Documents.Indexes
             _stats.LuceneMergeDetails ??= new LuceneMergeDetails();
             _stats.LuceneMergeDetails.MergedFilesCount += mergeStats.NumberOfFiles;
             _stats.LuceneMergeDetails.MergedDocumentsCount += mergeStats.TotalDocuments;
+            _stats.LuceneMergeDetails.ExecutedMergesCount++;
         }
     }
 }
