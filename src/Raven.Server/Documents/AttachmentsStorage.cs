@@ -544,6 +544,27 @@ namespace Raven.Server.Documents
             return attachments;
         }
 
+        public List<AttachmentDetails> GetAttachmentDetailsForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
+        {
+            var attachments = new List<AttachmentDetails>();
+            using (GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            {
+                foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
+                {
+                    attachments.Add(new AttachmentDetails
+                    {
+                        Name = attachment.Name,
+                        Hash = attachment.Base64Hash.ToString(),
+                        ContentType = attachment.ContentType,
+                        Size = attachment.Size,
+                        ChangeVector = attachment.ChangeVector,
+                        DocumentId = lowerDocumentId.ToString()
+                    });
+                }
+            }
+            return attachments;
+        }
+
         public (long AttachmentCount, long StreamsCount) GetNumberOfAttachments(DocumentsOperationContext context)
         {
             // We count in also revision attachments
@@ -957,6 +978,32 @@ namespace Raven.Server.Documents
                 Hash = hash,
                 Size = attachment.Size
             };
+        }
+
+        public string ResolveAttachmentName(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType)
+        {
+            const string prefix = "RESOLVED";
+            var count = 0;
+            string newName = $"{prefix}_#{count}_{name}";
+
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (Slice.From(context.Allocator, hash, out Slice base64Hash))
+            {
+                while (true)
+                {
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerName, out Slice namePtr))
+                    using (GetAttachmentPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, changeVector: null, out Slice partialKeySlice))
+                    {
+                        if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out _) == false)
+                            break;
+
+                        newName = $"{prefix}_#{++count}_{name}";
+                    }
+                }
+            }
+
+            return newName;
         }
 
         public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true)

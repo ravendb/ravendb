@@ -431,18 +431,31 @@ namespace Raven.Server.Documents
                     {
                         // actualAttachments can contain attachments of current document which were directly put, we want to check if there are attachment with duplicate name
                         var attachmentsChanged = false;
+                        var actualAttachmentsDetails = _documentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, lowerId);
+
                         foreach (BlittableJsonReaderObject bjro in currentDocumentAttachments)
                         {
                             var currentAttachment = JsonDeserializationClient.AttachmentName(bjro);
 
-                            if (actualAttachments.Items.Count(o =>
-                                o is DynamicJsonValue attachment && attachment[nameof(AttachmentName.Name)] is LazyStringValue lzv && lzv == currentAttachment.Name) > 1)
+                            var count = 0;
+                            foreach (var item in actualAttachmentsDetails)
                             {
+
+                                if (item.Name != currentAttachment.Name)
+                                    continue;
+
+                                if (++count != 2)
+                                    continue;
+
+                                var newName = _documentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, currentAttachment.Name, currentAttachment.Hash,
+                                    currentAttachment.ContentType);
+
                                 // rename currentAttachment which is already saved in storage
                                 _documentsStorage.AttachmentsStorage.RenameAttachment(
-                                    context, lowerId, currentAttachment.Name, currentAttachment.Hash, currentAttachment.ContentType, AttachmentType.Document, $"RESOLVED_{currentAttachment.Name}");
+                                    context, lowerId, currentAttachment.Name, currentAttachment.Hash, currentAttachment.ContentType, AttachmentType.Document, newName);
 
                                 attachmentsChanged = true;
+                                break;
                             }
                         }
 
