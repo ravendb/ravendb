@@ -6,6 +6,7 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.ServerWide;
 using Sparrow;
+using Sparrow.Platform;
 
 namespace Raven.Server.Config.Categories
 {
@@ -21,6 +22,8 @@ namespace Raven.Server.Config.Categories
         public IndexingConfiguration(RavenConfiguration root)
         {
             _root = root;
+
+            MaximumSegmentMergeSize = new Size(PlatformDetails.Is32Bits ? 128 : 1024, SizeUnit.Megabytes);
         }
 
         [DefaultValue(false)]
@@ -158,7 +161,7 @@ namespace Raven.Server.Config.Categories
         public Size? ManagedAllocationsBatchLimit { get; protected set; }
 
         [Description("Expert: The maximum size that we'll consider for segments merging")]
-        [DefaultValue(4096)]
+        [DefaultValue(DefaultValueSetInConstructor)]
         [SizeUnit(SizeUnit.Megabytes)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MaximumSegmentMergeSizeInMb", ConfigurationEntryScope.ServerWideOrPerDatabase)]
@@ -171,7 +174,7 @@ namespace Raven.Server.Config.Categories
         public int SegmentsMergeFactor { get; protected set; }
 
         [Description("Expert: How long will we let merges to run before we close the transaction")]
-        [DefaultValue(60)]
+        [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MaxTimeForMergesToKeepRunningInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
