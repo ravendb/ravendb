@@ -160,7 +160,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.SetMergePolicy(new LogByteSizeMergePolicy(_indexWriter)
             {
                 MaxMergeMB = _index.Configuration.MaximumSegmentMergeSize.Value.GetValue(SizeUnit.Megabytes),
+                MergeFactor = _index.Configuration.SegmentsMergeFactor
             });
+
             if (_indexReaderWarmer != null)
             {
                 _indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
