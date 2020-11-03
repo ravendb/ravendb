@@ -48,22 +48,26 @@ class queryCommand extends commandBase {
 
 
     static extractQueryParameters(queryText: string) {
-        var arrayOfLines = queryText.match(/[^\r\n]+/g);
-        if(arrayOfLines.length >0) {
-            var index = arrayOfLines.length - 1;
-            var line = arrayOfLines[index].trim();
+        const arrayOfLines = queryText.match(/[^\r\n]+/g);
+        if (arrayOfLines.length > 0) {
+            let index = arrayOfLines.length - 1;
+            let line = arrayOfLines[index].trim();
             while (line.endsWith("}") && !line.startsWith("{")) {
-                if(index == 0)
+                if (!index) {
                     break;
+                }
+                    
                 line = arrayOfLines[--index].trim() + " " + line;
             }
-            if(line.endsWith("}") && line.startsWith("{")){
+            if (line.endsWith("}") && line.startsWith("{")) {
                 try {
                     // check if this is valid JSON, if so, can send it
                     JSON.parse(line);
-                    var q = arrayOfLines.splice(0, index).join("\n");
+                    const q = arrayOfLines.splice(0, index).join("\n");
                     return [line, q];
-                }catch (e){}// ignore non JSON data
+                } catch (e){
+                    // ignore non JSON data
+                }
             }
         }
 
