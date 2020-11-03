@@ -17,7 +17,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -407,7 +407,7 @@ namespace SlowTests.Authentication
             const string certificateName = "Client&Certificate 2";
 
             var certificates = SetupServerAuthentication();
-            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName:"ClientCertificate1");
+            var adminCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "ClientCertificate1");
             var userCert = RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 ["SomeName"] = DatabaseAccess.ReadWrite
@@ -415,8 +415,8 @@ namespace SlowTests.Authentication
 
             using var store = GetDocumentStore(new Options
             {
-                AdminCertificate = adminCert, 
-                ClientCertificate = adminCert, 
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
             });
 
             var clientCertificate = certificates.ClientCertificate3.Value;
@@ -425,11 +425,14 @@ namespace SlowTests.Authentication
             var certsMetadata = await store.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(certificateName));
             Assert.Equal(2, certsMetadata.Length);
             var certMetadata = certsMetadata.First();
-            
+
             certMetadata.Permissions[store.Database] = DatabaseAccess.ReadWrite;
             var parameters = new EditClientCertificateOperation.Parameters
             {
-                Thumbprint = certMetadata.Thumbprint, Name = certMetadata.Name, Permissions = certMetadata.Permissions, Clearance = certMetadata.SecurityClearance
+                Thumbprint = certMetadata.Thumbprint,
+                Name = certMetadata.Name,
+                Permissions = certMetadata.Permissions,
+                Clearance = certMetadata.SecurityClearance
             };
             await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(parameters));
 
@@ -441,7 +444,7 @@ namespace SlowTests.Authentication
             }.Initialize())
             {
                 using var session = testedStore.OpenAsyncSession();
-                await session.StoreAsync(new {Id = "someId"});
+                await session.StoreAsync(new { Id = "someId" });
                 await session.SaveChangesAsync();
             }
         }
@@ -458,11 +461,11 @@ namespace SlowTests.Authentication
                 (Name: certificateName, Certificate: certificatesHolder.ClientCertificate2.Value),
                 (Name: "DifferentName", Certificate: certificatesHolder.ClientCertificate3.Value),
             };
-            
+
             using var store = GetDocumentStore(new Options
             {
                 CreateDatabase = false,
-                AdminCertificate = certificatesHolder.ServerCertificate.Value, 
+                AdminCertificate = certificatesHolder.ServerCertificate.Value,
                 ClientCertificate = certificatesHolder.ServerCertificate.Value,
             });
 
@@ -473,29 +476,29 @@ namespace SlowTests.Authentication
                 foreach (var (name, certificate) in certificates)
                 {
                     var certBytes = certificate.Export(X509ContentType.Cert);
-                    var certDef = new CertificateDefinition{Name = name, Permissions = permissions, SecurityClearance = clearance};
+                    var certDef = new CertificateDefinition { Name = name, Permissions = permissions, SecurityClearance = clearance };
                     await AdminCertificatesHandler.PutCertificateCollectionInCluster(certDef, certBytes, string.Empty, Server.ServerStore, ctx, RaftIdGenerator.NewId());
                 }
             }
             {
                 var certsMetadata = await store.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation());
                 Assert.Equal(4, certsMetadata.Length);
-            
+
                 var certsMetadataByName = await store.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(certificateName));
                 Assert.Equal(2, certsMetadataByName.Length);
-            
+
                 var certMetadata = await store.Maintenance.Server.SendAsync(new GetCertificateMetadataOperation(certificates[0].Certificate.Thumbprint));
                 Assert.NotNull(certMetadata);
             }
-            
-            Server.ServerStore.EnsureNotPassive();
+
+            await Server.ServerStore.EnsureNotPassiveAsync();
             {
                 var certsMetadata = await store.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation());
                 Assert.Equal(4, certsMetadata.Length);
-            
+
                 var certsMetadataByName = await store.Maintenance.Server.SendAsync(new GetCertificatesMetadataOperation(certificateName));
                 Assert.Equal(2, certsMetadataByName.Length);
-            
+
                 var certMetadata = await store.Maintenance.Server.SendAsync(new GetCertificateMetadataOperation(certificates[0].Certificate.Thumbprint));
                 Assert.NotNull(certMetadata);
             }
@@ -513,14 +516,14 @@ namespace SlowTests.Authentication
             var adminCert = RegisterClientCertificate(serverCert, certificates.ClientCertificate1.Value, permissions, SecurityClearance.ClusterAdmin, certificateName: certificateName);
             RegisterClientCertificate(serverCert, certificates.ClientCertificate2.Value, permissions, certificateName: certificateName);
 
-            using var store = GetDocumentStore(new Options {AdminCertificate = adminCert, ClientCertificate = adminCert,});
+            using var store = GetDocumentStore(new Options { AdminCertificate = adminCert, ClientCertificate = adminCert, });
 
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var operation = new GetCertificateMetadataOperation(adminCert.Thumbprint);
                 var json = await ExecuteOperation(operation, context);
                 var results = JsonDeserializationClient.GetCertificatesResponse(json).Results;
-            
+
                 Assert.All(results, c => Assert.Null(c.Certificate));
             }
 
@@ -530,15 +533,15 @@ namespace SlowTests.Authentication
                 var json = await ExecuteOperation(operation, context);
                 var results = JsonDeserializationClient.GetCertificatesResponse(json).Results;
                 RavenTestHelper.AssertAll(
-                    () => Assert.All(results, c => Assert.Null(c.Certificate)), 
-                    () => Assert.All(results, c => Assert.Equal(certificateName, c.Name)), 
+                    () => Assert.All(results, c => Assert.Null(c.Certificate)),
+                    () => Assert.All(results, c => Assert.Equal(certificateName, c.Name)),
                     () => Assert.Equal(2, results.Length));
             }
-            
+
             async Task<BlittableJsonReaderObject> ExecuteOperation<T>(IServerOperation<T> operation, JsonOperationContext context)
             {
                 var command = operation.GetCommand(store.Conventions, context);
-                var request = command.CreateRequest(context, new ServerNode {Url = store.Urls.First()}, out var url);
+                var request = command.CreateRequest(context, new ServerNode { Url = store.Urls.First() }, out var url);
                 request.RequestUri = new Uri(url);
                 var client = store.GetRequestExecutor(store.Database).HttpClient;
                 var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);

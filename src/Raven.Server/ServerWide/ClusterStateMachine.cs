@@ -2260,7 +2260,7 @@ namespace Raven.Server.ServerWide
             return GetCertificate(context, reader.Base, reader.Length, treeIterator.CurrentKey.ToString());
         }
 
-        public static IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, int start, int take)
+        public static IEnumerable<(string Thumbprint, BlittableJsonReaderObject Certificate)> GetAllCertificatesFromCluster(TransactionOperationContext context, long start, long take)
         {
             var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
 
@@ -2687,7 +2687,8 @@ namespace Raven.Server.ServerWide
             return GetCertificate(context, ptr, dataSize, key);
         }
 
-        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate(TransactionOperationContext context, byte* ptr, int size, string key)
+        private static unsafe (string Key, BlittableJsonReaderObject Cert) GetCertificate<TTransaction>(TransactionOperationContext<TTransaction> context, byte* ptr, int size, string key)
+            where TTransaction : RavenTransaction
         {
             var doc = new BlittableJsonReaderObject(ptr, size, context);
             Transaction.DebugDisposeReaderAfterTransaction(context.Transaction.InnerTransaction, doc);

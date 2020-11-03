@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Http;
-using Raven.Client.ServerWide.Operations.Certificates;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,13 +48,13 @@ namespace FastTests.Client
                 "ReorderDatabaseMembersCommand", "ReplaceClusterCertificateCommand", "ResetEtlCommand", "ResetIndexCommand", "SetDatabaseDynamicDistributionCommand",
                 "SetIndexLockCommand", "SetIndexPriorityCommand", "SetLogsConfigurationCommand", "StartIndexCommand", "StartIndexingCommand",
                 "StartTransactionsRecordingCommand", "StopIndexCommand", "StopIndexingCommand", "StopTransactionsRecordingCommand",
-                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand"
-                
+                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand",
                 "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", "ConfigureTimeSeriesValue",
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
                 "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand",
+                "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand"
             }.OrderBy(t => t);
-            
+
             var commandBaseType = typeof(RavenCommand<>);
             var types = commandBaseType.Assembly.GetTypes();
 
@@ -98,15 +97,14 @@ namespace FastTests.Client
         {
             while (true)
             {
-                if (type.BaseType == null || type.BaseType == typeof(object)) 
+                if (type.BaseType == null || type.BaseType == typeof(object))
                     return false;
 
-                if (type.BaseType.IsGenericType && type.BaseType.GetGenericTypeDefinition() == baseType) 
+                if (type.BaseType.IsGenericType && type.BaseType.GetGenericTypeDefinition() == baseType)
                     return true;
                 type = type.BaseType;
             }
         }
-
 
         private static void GetDerivedFromNonGeneric(Type[] types, Type type, List<Type> results)
         {

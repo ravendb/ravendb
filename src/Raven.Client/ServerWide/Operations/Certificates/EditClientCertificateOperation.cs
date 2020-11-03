@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -71,7 +70,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream => ctx.Write(stream, EntityToBlittable.ConvertCommandToBlittable(definition, ctx)))
+                    Content = new BlittableJsonContent(stream => ctx.Write(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(definition, ctx)))
                 };
 
                 return request;

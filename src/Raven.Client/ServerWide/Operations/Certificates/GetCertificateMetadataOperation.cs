@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
@@ -30,7 +30,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             {
                 _thumbprint = thumbprint;
             }
-            
+
             public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
