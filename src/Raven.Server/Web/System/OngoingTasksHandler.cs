@@ -990,7 +990,7 @@ namespace Raven.Server.Web.System
                             {
                                 name = Database.SubscriptionStorage.GetSubscriptionNameById(context, key);
                                 if (name == null)
-                                    throw new SubscriptionDoesNotExistException($"Subscription with id {key} was not found in server store");
+                                    throw new SubscriptionDoesNotExistException($"Subscription with id '{key}' was not found in server store");
                             }
                             itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(record.DatabaseName, name);
                             var doc = ServerStore.Cluster.Read(context, itemKey);
