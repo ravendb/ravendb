@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         {
             _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
             _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-            _name = name;
+            _name = name ?? throw new ArgumentNullException(nameof(name));
             _clearance = clearance;
         }
 
@@ -59,7 +59,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                         {
                             writer.WriteStartObject();
                             writer.WritePropertyName(nameof(CertificateDefinition.Name));
-                            writer.WriteString(_name.ToString());
+                            writer.WriteString(_name);
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
                             writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Cert)));

@@ -1015,7 +1015,7 @@ namespace SlowTests.Client.TimeSeries.Query
                     var query = session.Query<User>()
                         .Where(u => u.Id == id)
                         .Statistics(out var stats)
-                        .Select(u => RavenQuery.TimeSeries(u, name)
+                        .Select(u => RavenQuery.TimeSeries(u, name, baseline, DateTime.MaxValue)
                             .GroupBy(g => g.Days(15))
                             .Select(g => new
                             {
@@ -1039,7 +1039,7 @@ namespace SlowTests.Client.TimeSeries.Query
             {
                 var id = "users/1";
                 var name = "heartrate";
-                var baseline = DateTime.Today;
+                var baseline = new DateTime(2020, 1, 1).EnsureUtc();
 
                 using (var session = store.OpenAsyncSession())
                 {

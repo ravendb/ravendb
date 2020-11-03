@@ -28,14 +28,14 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             var itemId = GetItemId();
             if (existingValue == null)
-                throw new RachisApplyException($"Subscription with id {itemId} does not exist");
+                throw new RachisApplyException($"Subscription with id '{itemId}' does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
             var topology = record.Topology;
             var lastResponsibleNode = AcknowledgeSubscriptionBatchCommand.GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             if (topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode) != NodeTag)
-                throw new RachisApplyException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
+                throw new RachisApplyException($"Can't update subscription with name '{itemId}' by node {NodeTag}, because it's not it's task to update this subscription");
 
             subscription.LastClientConnectionTime = LastClientConnectionTime;
             subscription.NodeTag = NodeTag;

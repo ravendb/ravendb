@@ -46,7 +46,31 @@ class queryCommand extends commandBase {
         return [parameters, rql];
     }
 
+
     static extractQueryParameters(queryText: string) {
+        const arrayOfLines = queryText.match(/[^\r\n]+/g);
+        if (arrayOfLines.length > 0) {
+            let index = arrayOfLines.length - 1;
+            let line = arrayOfLines[index].trim();
+            while (line.endsWith("}") && !line.startsWith("{")) {
+                if (!index) {
+                    break;
+                }
+                    
+                line = arrayOfLines[--index].trim() + " " + line;
+            }
+            if (line.endsWith("}") && line.startsWith("{")) {
+                try {
+                    // check if this is valid JSON, if so, can send it
+                    JSON.parse(line);
+                    const q = arrayOfLines.splice(0, index).join("\n");
+                    return [line, q];
+                } catch (e){
+                    // ignore non JSON data
+                }
+            }
+        }
+
         const parametersEndRegex = /^\s*(with|match|from|declare)/mi;
         const match = parametersEndRegex.exec(queryText);
         if (!match) {
@@ -66,6 +90,7 @@ f();
         const rql = queryText.substring(match.index);
         return [parameters, rql];
     }
+    
     
     getUrl() {
         const criteria = this.criteria;
