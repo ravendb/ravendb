@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import indexFieldOptions = require("models/database/index/indexFieldOptions");
 import additionalSource = require("models/database/index/additionalSource");
+import additionalAssembly = require("models/database/index/additionalAssemblyModel");
 import configurationItem = require("models/database/index/configurationItem");
 import validateNameCommand = require("commands/resources/validateNameCommand");
 import generalUtils = require("common/generalUtils");
@@ -39,6 +40,8 @@ class indexDefinition {
     hasDuplicateFieldsNames: KnockoutComputed<boolean>;
     
     additionalSources = ko.observableArray<additionalSource>();
+    additionalAssemblies = ko.observableArray<additionalAssembly>();
+    
     defaultFieldOptions = ko.observable<indexFieldOptions>(null);
     isAutoIndex = ko.observable<boolean>(false);
 
@@ -97,6 +100,7 @@ class indexDefinition {
         this.configuration(this.parseConfiguration(dto.Configuration));
 
         this.additionalSources(_.map(dto.AdditionalSources, (code, name) => additionalSource.create(name, code)));
+        this.additionalAssemblies(dto.AdditionalAssemblies.map(assembly => new additionalAssembly(assembly)));
 
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
             return _.uniqBy(this.fields(), field => field.name()).length !== this.fields().length;
@@ -293,7 +297,7 @@ class indexDefinition {
                                              this.collectionNameForReferenceDocuments() ?
                                                 this.collectionNameForReferenceDocuments() : null,
             AdditionalSources: this.additionalSourceToDto(),
-            AdditionalAssemblies: []
+            AdditionalAssemblies: this.additionalAssemblies().map(assembly => assembly.toDto())
         }
     }
 
@@ -337,6 +341,15 @@ class indexDefinition {
         });
     }
 
+    addAssembly() {
+        const newAssembly = additionalAssembly.empty();
+        this.additionalAssemblies.unshift(newAssembly);
+    }
+    
+    removeAssembly(assemblyItem: additionalAssembly) {
+       this.additionalAssemblies.remove(assemblyItem);
+    }
+    
     static empty(): indexDefinition {
         return new indexDefinition({
             Fields: {},

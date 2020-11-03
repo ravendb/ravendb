@@ -156,6 +156,12 @@
                         <i class="icon-settings"></i><span>Configuration</span>
                     </a>
                 </li>
+                <li role="presentation" id="additionalAssembliesTab">
+                    <a href="#additionalAssemblies" aria-controls="additionalAssemblies" role="tab" data-toggle="tab">
+                        <i class="icon-plus"></i>
+                        <span>Additional Assemblies</span>
+                    </a>
+                </li>
                 <li role="presentation" id="additionalSourcesTab">
                     <a href="#additionalSources" aria-controls="additionalSources" role="tab" data-toggle="tab">
                         <i class="icon-chash"></i>
@@ -216,6 +222,105 @@
                         </div>
                     </div>
                 </div>
+                <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
+                    <div class="flex-form">
+                        <div class="row margin-left margin-bottom margin-bottom-lg">
+                            <button type="button" data-bind="click: addAssembly" class="btn btn-info margin-left"><i class="icon-plus"></i> <span>Add Assembly</span></button>
+                            <a href="#" data-bind="click: additionalSourceSyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a>
+                        </div>
+                        <div data-bind="foreach: editedIndex().additionalAssemblies">
+                            <hr>
+                            <div class="row">
+                                <div class="col-lg-3">
+                                    <div class="form-group">
+                                        <label class="control-label">Assembly Source</label>
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Select assembly source type">
+                                                <span data-bind="text: assemblySource"></span>&nbsp;&nbsp;<span class="caret"></span>
+                                            </button>
+                                            <ul class="dropdown-menu" role="menu">
+                                                <li data-bind="click: _.partial(setAssemblySourceType, 'Server Runtime')"><a href="#">Server Runtime</a></li>
+                                                <li data-bind="click: _.partial(setAssemblySourceType, 'Path')"><a href="#">Path</a></li>
+                                                <li data-bind="click: _.partial(setAssemblySourceType, 'NuGet')"><a href="#">NuGet</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-7">
+                                    <div class="form-group" data-bind="visible: assemblySource() === 'Server Runtime'">
+                                        <label class="control-label">Assembly Name <i class="required"></i></label>
+                                        <div class="flex-grow" data-bind="validationElement: assemblyName">
+                                            <input type="text" autocomplete="off" class="form-control" placeholder="Enter assembly name" data-bind="textInput: assemblyName" />
+                                        </div>
+                                    </div>
+                                    <div class="form-group" data-bind="visible: assemblySource() === 'Path'">
+                                        <label class="control-label">Assembly Path <i class="required"></i></label>
+                                        <div class="flex-grow" data-bind="validationElement: assemblyPath">
+                                            <input type="text" autocomplete="off" class="form-control" placeholder="Enter path to assembly" data-bind="textInput: assemblyPath" />
+                                        </div>
+                                    </div>
+                                    <div data-bind="visible: assemblySource() === 'NuGet'">
+                                        <div class="form-group">
+                                            <label class="control-label">Package Name <i class="required"></i></label>
+                                            <div class="flex-grow" data-bind="validationElement: packageName">
+                                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter package name" data-bind="textInput: packageName" />
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="control-label">Package Version <i class="required"></i></label>
+                                            <div class="flex-grow" data-bind="validationElement: packageVersion">
+                                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter package version" data-bind="textInput: packageVersion" />
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="control-label">&nbsp;</label>
+                                            <div class="toggle margin-left margin-left-sm">
+                                                <input id="toggleDefaultPackageSource" type="checkbox" data-bind="checked: useDefaultPackageSourceUrl" />
+                                                <label for="toggleDefaultPackageSource">Use Default Package Source Url</label>
+                                            </div>
+                                        </div>
+                                        <div data-bind="collapse: !useDefaultPackageSourceUrl()">
+                                            <div class="form-group">
+                                                <label class="control-label">Package Source URL</label>
+                                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter package source URL" data-bind="textInput: packageSourceUrl" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="control-label">Usings</label>
+                                        <div class="usings flex-grow">
+                                            <div class="flex-horizontal">
+                                                <div class="flex-grow">
+                                                    <input type="text" autocomplete="off" class="form-control flex-grow" placeholder="Enter a namespace (i.e. System.Net)" data-bind="textInput: namespaceText" />
+                                                </div>
+                                                <button class="btn btn-info"
+                                                        data-bind="click: addNamespaceToUsingsWithBlink, enable: namespaceText">
+                                                    <i class="icon-plus"></i><span>Add Namespace</span>
+                                                </button>
+                                            </div>
+                                            <div data-bind="visible: usings().length" class="margin-top">
+                                                <ul class="well collection-list" data-bind="foreach: usings">
+                                                    <li>
+                                                        <div class="name" data-bind="text: $data"></div>
+                                                        <a title="Remove namespace" href="#" data-bind="click: $parent.removeNamespaceFromUsings.bind($parent, $data)"><i class="icon-trash"></i></a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-offset-1 col-lg-1 text-center no-padding-right">
+                                    <button class="btn btn-danger" data-bind="click: _.partial($root.removeAssembly, $data)" title="Delete this additional assembly information">
+                                        <i class="icon-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div data-bind="visible: !editedIndex().additionalAssemblies().length">
+                            <div class="text-muted"><i class="icon-xl icon-empty-set"></i><h2 class="text-center">No additional assemblies added</h2></div>
+                        </div>
+                    </div>
+                </div>
                 <div role="tabpanel" class="tab-pane fade" id="additionalSources">
                     <div class="flex-horizontal">
                         <input type="file" accept=".cs,.js" id="additionalSourceFilePicker" class="hidden" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" />
@@ -225,7 +330,7 @@
                             </label>
                         </div>
                         <div>
-                            <a href="#" data-bind="click: additionalSourceSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a> 
+                            <a href="#" data-bind="click: additionalSourceSyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a> 
                         </div>
                     </div>
                     <div class="flex-horizontal flex-stretch-items margin-top">
