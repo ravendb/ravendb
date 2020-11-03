@@ -228,8 +228,8 @@ namespace Raven.Server.Documents.Queries.AST
 
             if (ticks > _start.Ticks)
             {
-                double distance = ticks - _start.Ticks;
-                var ticksToAdd = (long)Math.Floor(distance / Ticks) * Ticks;
+                var distance = ticks - _start.Ticks;
+                var ticksToAdd = (distance / Ticks) * Ticks;
                 _start = _start.AddTicks(ticksToAdd);
             }
 
