@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
@@ -37,16 +38,30 @@ namespace Raven.Server.ServerWide.Commands
                 Value.ExcludedDatabases.Any(string.IsNullOrWhiteSpace))
                 throw new RachisApplyException($"{nameof(ServerWideExternalReplication.ExcludedDatabases)} cannot contain null or empty database names");
 
+            var originTaskId = Value.TaskId; 
             Value.TaskId = index;
 
             if (previousValue != null)
             {
-                previousValue.Modifications ??= new DynamicJsonValue();
-                previousValue.Modifications = new DynamicJsonValue
+                var lazy = context.GetLazyString(Value.Name);
+                if (previousValue.Contains(lazy) == false)
                 {
-                    [Value.Name] = Value.ToJson()
-                };
-
+                    //The name have might modified so we search by index/TaskId
+                    foreach (var propertyName in previousValue.GetPropertyNames())
+                    {
+                        var value = previousValue[propertyName] as BlittableJsonReaderObject;
+                        Debug.Assert(value != null);
+                        if (value.TryGet(nameof(ServerWideExternalReplication.TaskId), out long taskId) && taskId == originTaskId)
+                        {
+                            previousValue.Modifications = new DynamicJsonValue(previousValue);
+                            previousValue.Modifications.Remove(propertyName);
+                            break;
+                        }
+                    }
+                }
+                previousValue.Modifications ??= new DynamicJsonValue();
+                previousValue.Modifications[Value.Name] = Value.ToJson();
+                
                 return context.ReadObject(previousValue, Name);
             }
 

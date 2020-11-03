@@ -160,6 +160,11 @@ namespace FastTests
             Assert.Empty(forMonitor);
         }
 
+        public static void AssertAll(params Action[] asserts)
+        {
+            Assert.All(asserts, assert => assert());
+        }
+        
         private static string ConvertRespectingNewLines(string toConvert)
         {
             if (string.IsNullOrEmpty(toConvert))
