@@ -14,10 +14,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     {
         public class Parameters
         {
-            public string Thumbprint;
-            public Dictionary<string, DatabaseAccess> Permissions;
-            public string Name;
-            public SecurityClearance Clearance;
+            public string Thumbprint { get; set; }
+            public Dictionary<string, DatabaseAccess> Permissions { get; set; }
+            public string Name { get; set; }
+            public SecurityClearance Clearance { get; set; }
         }
 
         private readonly string _thumbprint;
@@ -27,7 +27,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public EditClientCertificateOperation(Parameters parameters)
         {
-            if(parameters == null) throw new ArgumentNullException(nameof(parameters));
+            if (parameters == null)
+                throw new ArgumentNullException(nameof(parameters));
             _name = parameters.Name ?? throw new ArgumentNullException(nameof(parameters.Name));
             _thumbprint = parameters.Thumbprint ?? throw new ArgumentNullException(nameof(parameters.Thumbprint));
             _permissions = parameters.Permissions ?? throw new ArgumentNullException(nameof(parameters.Permissions));
@@ -70,7 +71,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream => ctx.Write(stream,  EntityToBlittable.ConvertCommandToBlittable(definition, ctx)))
+                    Content = new BlittableJsonContent(stream => ctx.Write(stream, EntityToBlittable.ConvertCommandToBlittable(definition, ctx)))
                 };
 
                 return request;
