@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
@@ -16,12 +17,12 @@ namespace Raven.Server.Documents.Indexes.Errors
             Definition = definition;
         }
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' auto index does not support that");
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' auto index does not support that");
         }

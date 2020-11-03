@@ -115,14 +115,13 @@ namespace Raven.Client.Documents.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Delete,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
-                            using (var writer = new BlittableJsonTextWriter(ctx, stream))
-                            {
-                                writer.WriteIndexQuery(_conventions, ctx, _queryToDelete);
-                            }
+                            writer.WriteIndexQuery(_conventions, ctx, _queryToDelete);
                         }
-                    )
+                    })
                 };
 
                 url = path.ToString();

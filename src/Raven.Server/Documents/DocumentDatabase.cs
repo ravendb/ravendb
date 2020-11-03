@@ -47,6 +47,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
@@ -1001,7 +1002,7 @@ namespace Raven.Server.Documents
                                 options: databaseSmugglerOptionsServerSide,
                                 token: cancellationToken);
 
-                            smugglerResult = smuggler.Execute();
+                            smugglerResult = smuggler.ExecuteAsync().Result;
                         }
 
                         outputStream.Flush();

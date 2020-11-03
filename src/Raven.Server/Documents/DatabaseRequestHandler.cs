@@ -2,10 +2,10 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Util;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -50,8 +50,7 @@ namespace Raven.Server.Documents
            Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null,
            HttpStatusCode statusCode = HttpStatusCode.OK)
         {
-
-            if (TryGetAllowedDbs(Database.Name, out var _, requireAdmin: true) == false)
+            if (await CanAccessDatabaseAsync(Database.Name, requireAdmin: true) == false)
                 return;
 
             if (ResourceNameValidator.IsValidResourceName(Database.Name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
@@ -67,7 +66,7 @@ namespace Raven.Server.Documents
                 await WaitForIndexToBeApplied(context, index);
                 HttpContext.Response.StatusCode = (int)statusCode;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
                     {
@@ -75,11 +74,10 @@ namespace Raven.Server.Documents
                     };
                     fillJson?.Invoke(json, configurationJson, index);
                     context.Write(writer, json);
-                    writer.Flush();
                 }
             }
         }
-        
+
         protected async Task WaitForIndexToBeApplied(TransactionOperationContext context, long index)
         {
             DatabaseTopology dbTopology;

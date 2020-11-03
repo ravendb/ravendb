@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             var diff = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
             if (diff >= size)
             {
-                var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
+                var result = _copiedBuffer.Buffer.Address + _copiedBuffer.Buffer.Used;
                 _copiedBuffer.Buffer.Used += size;
                 return result;
             }
@@ -207,21 +207,21 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         private unsafe byte* ReadExactlyUnlikely(int size, int diff)
         {
             Memory.Move(
-                _copiedBuffer.Buffer.Pointer,
-                _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used,
+                _copiedBuffer.Buffer.Address,
+                _copiedBuffer.Buffer.Address + _copiedBuffer.Buffer.Used,
                 diff);
             _copiedBuffer.Buffer.Valid = diff;
             _copiedBuffer.Buffer.Used = 0;
             while (diff < size)
             {
-                var read = _stream.Read(_copiedBuffer.Buffer.Memory.Span.Slice(diff, _copiedBuffer.Buffer.Length - diff));
+                var read = _stream.Read(_copiedBuffer.Buffer.Memory.Memory.Span.Slice(diff, _copiedBuffer.Buffer.Size - diff));
                 if (read == 0)
                     throw new EndOfStreamException();
 
                 _copiedBuffer.Buffer.Valid += read;
                 diff += read;
             }
-            var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
+            var result = _copiedBuffer.Buffer.Address + _copiedBuffer.Buffer.Used;
             _copiedBuffer.Buffer.Used += size;
             return result;
         }
@@ -235,7 +235,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
                 if (available == 0)
                 {
-                    var read = _stream.Read(_copiedBuffer.Buffer.Memory.Span);
+                    var read = _stream.Read(_copiedBuffer.Buffer.Memory.Memory.Span);
                     if (read == 0)
                         throw new EndOfStreamException();
 
@@ -245,7 +245,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 }
 
                 var min = Math.Min(size, available);
-                var result = _copiedBuffer.Buffer.Pointer + _copiedBuffer.Buffer.Used;
+                var result = _copiedBuffer.Buffer.Address + _copiedBuffer.Buffer.Used;
                 Memory.Copy(ptr + written, result, (uint)min);
                 written += min;
                 _copiedBuffer.Buffer.Used += min;
@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var available = _copiedBuffer.Buffer.Valid - _copiedBuffer.Buffer.Used;
                 if (available == 0)
                 {
-                    var read = _stream.Read(_copiedBuffer.Buffer.Memory.Span);
+                    var read = _stream.Read(_copiedBuffer.Buffer.Memory.Memory.Span);
                     if (read == 0)
                         throw new EndOfStreamException();
 
@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     continue;
                 }
                 var min = (int)Math.Min(size, available);
-                file.Write(_copiedBuffer.Buffer.Memory.Span.Slice(_copiedBuffer.Buffer.Used, min));
+                file.Write(_copiedBuffer.Buffer.Memory.Memory.Span.Slice(_copiedBuffer.Buffer.Used, min));
                 _copiedBuffer.Buffer.Used += min;
                 size -= min;
             }

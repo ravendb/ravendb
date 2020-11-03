@@ -7,6 +7,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -23,9 +24,9 @@ namespace FastTests.Blittable
         private const string InitialJson = @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false}}";
 
         [Fact]
-        public void CanAddProperty()
+        public Task CanAddProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -35,9 +36,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void CanAddNegativeIntegerProperty()
+        public Task CanAddNegativeIntegerProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -47,9 +48,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void CanCompressFields()
+        public Task CanCompressFields()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -61,9 +62,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void WillPreserveEscapes()
+        public Task WillPreserveEscapes()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 source.Modifications = new DynamicJsonValue
                 {
@@ -73,11 +74,10 @@ namespace FastTests.Blittable
                 @"{""Name"":""Oren\r\n""}");
         }
 
-
         [Fact]
-        public void CanModifyArrayProperty()
+        public Task CanModifyArrayProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 object result;
                 source.TryGetMember("Dogs", out result);
@@ -90,11 +90,10 @@ namespace FastTests.Blittable
             }, @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Phoebe""],""State"":{""Sleep"":false}}");
         }
 
-
         [Fact]
-        public void CanModifyNestedObjectProperty()
+        public Task CanModifyNestedObjectProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 object result;
                 source.TryGetMember("State", out result);
@@ -107,9 +106,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void CanRemoveAndAddProperty()
+        public Task CanRemoveAndAddProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 source.Modifications = new DynamicJsonValue(source)
                 {
@@ -120,34 +119,33 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void CanAddAndRemoveProperty()
+        public Task CanAddAndRemoveProperty()
         {
-            AssertEqualAfterRoundTrip(source =>
+            return AssertEqualAfterRoundTripAsync(source =>
             {
                 source.Modifications = new DynamicJsonValue(source)
                 {
-
                 };
                 source.Modifications.Remove("Dogs");
             }, @"{""Name"":""Oren"",""State"":{""Sleep"":false}}");
         }
 
-        private static void AssertEqualAfterRoundTrip(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
+        private static async Task AssertEqualAfterRoundTripAsync(Action<BlittableJsonReaderObject> mutate, string expected, string json = null)
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var stream = new MemoryStream();
                 var streamWriter = new StreamWriter(stream);
-                streamWriter.Write(json ?? InitialJson);
-                streamWriter.Flush();
+                await streamWriter.WriteAsync(json ?? InitialJson);
+                await streamWriter.FlushAsync();
                 stream.Position = 0;
-                using (var writer = ctx.Read(stream, "foo"))
+                using (var writer = await ctx.ReadForDiskAsync(stream, "foo"))
                 {
                     mutate(writer);
                     using (var document = ctx.ReadObject(writer, "foo"))
                     {
                         var ms = new MemoryStream();
-                        ctx.Write(ms, document);
+                        await ctx.WriteAsync(ms, document);
                         var actual = Encoding.UTF8.GetString(ms.ToArray());
                         Assert.Equal(expected, actual);
                     }

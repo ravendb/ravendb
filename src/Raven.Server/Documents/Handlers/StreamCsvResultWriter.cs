@@ -4,13 +4,14 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using CsvHelper;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Json;
+using Raven.Client.Util;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
-using Raven.Client.Util;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -51,7 +52,6 @@ namespace Raven.Server.Documents.Handlers
             if (_properties == null)
             {
                 _properties = GetPropertiesRecursive((string.Empty, string.Empty), blittable, writeIds).ToArray();
-
             }
             _writeHeader = false;
             foreach ((var property, var path) in _properties)
@@ -63,16 +63,20 @@ namespace Raven.Server.Documents.Handlers
         }
 
         private readonly char[] _splitter = { '.' };
+
         private string Escape(string s)
         {
             var tokens = s.Split(_splitter, StringSplitOptions.RemoveEmptyEntries);
             return string.Join('.', tokens.Select(BlittablePath.EscapeString));
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _csvWriter?.Dispose();
-            _writer?.Dispose();
+            if (_csvWriter != null)
+                await _csvWriter.DisposeAsync();
+
+            if (_writer != null)
+                await _writer.DisposeAsync();
         }
 
         public void StartResponse()

@@ -15,7 +15,7 @@ namespace Raven.Server.Web.Studio
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var json = context.Read(RequestBodyStream(), "feedback form");
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "feedback form");
                 feedbackForm = JsonDeserializationServer.FeedbackForm(json);
             }
 

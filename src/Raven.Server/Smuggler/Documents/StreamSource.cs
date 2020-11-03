@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
@@ -68,33 +69,35 @@ namespace Raven.Server.Smuggler.Documents
             _log = LoggingSource.Instance.GetLogger<StreamSource>(database.Name);
         }
 
-        public IDisposable Initialize(DatabaseSmugglerOptionsServerSide options, SmugglerResult result, out long buildVersion)
+        public async Task<SmugglerInitializeResult> InitializeAsync(DatabaseSmugglerOptionsServerSide options, SmugglerResult result)
         {
             _result = result;
             _returnBuffer = _context.GetMemoryBuffer(out _buffer);
             _state = new JsonParserState();
             _parser = new UnmanagedJsonParser(_context, _state, "file");
 
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json.", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected start object, but got " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
             _operateOnTypes = options.OperateOnTypes;
-            buildVersion = ReadBuildVersion();
+            var buildVersion = await ReadBuildVersionAsync();
             _buildVersionType = BuildVersion.Type(buildVersion);
             _readLegacyEtag = options.ReadLegacyEtag;
 
-            return new DisposableAction(() =>
+            var disposable = new DisposableAction(() =>
             {
                 _parser.Dispose();
                 _returnBuffer.Dispose();
                 _returnWriteBuffer.Dispose();
             });
+
+            return new SmugglerInitializeResult(disposable, buildVersion);
         }
 
-        public DatabaseItemType GetNextType()
+        public async Task<DatabaseItemType> GetNextTypeAsync()
         {
             if (_currentType != null)
             {
@@ -104,7 +107,7 @@ namespace Raven.Server.Smuggler.Documents
                 return currentType;
             }
 
-            var type = ReadType();
+            var type = await ReadTypeAsync();
             var dbItemType = GetType(type);
             while (dbItemType == DatabaseItemType.Unknown)
             {
@@ -113,18 +116,18 @@ namespace Raven.Server.Smuggler.Documents
                     _log.Operations(msg);
                 _result.AddWarning(msg);
 
-                SkipArray(onSkipped: null, MaySkipBlob, CancellationToken.None);
-                type = ReadType();
+                await SkipArrayAsync(onSkipped: null, MaySkipBlobAsync, CancellationToken.None);
+                type = await ReadTypeAsync();
                 dbItemType = GetType(type);
             }
 
             return dbItemType;
         }
 
-        public DatabaseRecord GetDatabaseRecord()
+        public async Task<DatabaseRecord> GetDatabaseRecordAsync()
         {
             var databaseRecord = new DatabaseRecord();
-            ReadObject(reader =>
+            await ReadObjectAsync(reader =>
             {
                 if (reader.TryGet(nameof(databaseRecord.Revisions), out BlittableJsonReaderObject revisions) &&
                     revisions != null)
@@ -240,12 +243,12 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     foreach (var id in unusedDatabaseIds)
                     {
-                        if(id is LazyStringValue == false && id is LazyCompressedStringValue == false)
+                        if (id is LazyStringValue == false && id is LazyCompressedStringValue == false)
                             throw new InvalidOperationException($"{nameof(databaseRecord.UnusedDatabaseIds)} should be a collection of strings but got {id.GetType()}");
                         databaseRecord.UnusedDatabaseIds.Add(id.ToString());
                     }
                 }
-                
+
                 if (reader.TryGet(nameof(databaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) &&
                     externalReplications != null)
                 {
@@ -437,24 +440,24 @@ namespace Raven.Server.Smuggler.Documents
             return databaseRecord;
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValues()
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> GetCompareExchangeValuesAsync()
         {
-            return InternalGetCompareExchangeValues();
+            return InternalGetCompareExchangeValuesAsync();
         }
 
-        public IEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstones()
+        public IAsyncEnumerable<(CompareExchangeKey Key, long Index)> GetCompareExchangeTombstonesAsync()
         {
-            return InternalGetCompareExchangeTombstones();
+            return InternalGetCompareExchangeTombstonesAsync();
         }
 
-        public IEnumerable<CounterGroupDetail> GetCounterValues(List<string> collectionsToExport, ICounterActions actions)
+        public IAsyncEnumerable<CounterGroupDetail> GetCounterValuesAsync(List<string> collectionsToExport, ICounterActions actions)
         {
-            return InternalGetCounterValues(actions);
+            return InternalGetCounterValuesAsync(actions);
         }
 
-        public IEnumerable<CounterDetail> GetLegacyCounterValues()
+        public async IAsyncEnumerable<CounterDetail> GetLegacyCounterValuesAsync()
         {
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
@@ -479,9 +482,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificates()
+        public async IAsyncEnumerable<(string Hub, ReplicationHubAccess Access)> GetReplicationHubCertificatesAsync()
         {
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
@@ -500,9 +503,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<SubscriptionState> GetSubscriptions()
+        public async IAsyncEnumerable<SubscriptionState> GetSubscriptionsAsync()
         {
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
@@ -538,9 +541,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<TimeSeriesItem> GetTimeSeries(List<string> collectionsToExport)
+        public async IAsyncEnumerable<TimeSeriesItem> GetTimeSeriesAsync(List<string> collectionsToExport)
         {
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
@@ -556,11 +559,11 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         _result.TimeSeries.ErroredCount++;
                         _result.AddWarning($"Could not read time series entry. {reader}");
-                        Skip(size);
+                        await SkipAsync(size);
                         continue;
                     }
 
-                    var segment = ReadSegment(size);
+                    var segment = await ReadSegmentAsync(size);
                     yield return new TimeSeriesItem
                     {
                         DocId = docId,
@@ -574,7 +577,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private unsafe TimeSeriesValuesSegment ReadSegment(int segmentSize)
+        private async Task<TimeSeriesValuesSegment> ReadSegmentAsync(int segmentSize)
         {
             var mem = _context.GetMemory(segmentSize);
             var offset = 0;
@@ -582,12 +585,17 @@ namespace Raven.Server.Smuggler.Documents
             var size = segmentSize;
             while (size > 0)
             {
-                var read = _parser.Copy(mem.Address + offset, size);
+                (bool Done, int BytesRead) read;
+                unsafe
+                {
+                    read = _parser.Copy(mem.Address + offset, size);
+                }
+
                 if (read.Done == false)
                 {
                     offset += read.BytesRead;
 
-                    var read2 = _peepingTomStream.Read(_buffer.Memory.Span);
+                    var read2 = await _peepingTomStream.ReadAsync(_buffer.Memory.Memory);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 
@@ -597,7 +605,10 @@ namespace Raven.Server.Smuggler.Documents
                 size -= read.BytesRead;
             }
 
-            return new TimeSeriesValuesSegment(mem.Address, segmentSize);
+            unsafe
+            {
+                return new TimeSeriesValuesSegment(mem.Address, segmentSize);
+            }
         }
 
         private unsafe void SetBuffer(UnmanagedJsonParser parser, LazyStringValue value)
@@ -605,14 +616,14 @@ namespace Raven.Server.Smuggler.Documents
             parser.SetBuffer(value.Buffer, value.Size);
         }
 
-        private IEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValues()
+        private async IAsyncEnumerable<(CompareExchangeKey Key, long Index, BlittableJsonReaderObject Value)> InternalGetCompareExchangeValuesAsync()
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(_context, state, "Import/CompareExchange"))
             using (var builder = new BlittableJsonDocumentBuilder(_context,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, "Import/CompareExchange", parser, state))
             {
-                foreach (var reader in ReadArray())
+                await foreach (var reader in ReadArrayAsync())
                 {
                     using (reader)
                     {
@@ -638,9 +649,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<(CompareExchangeKey Key, long Index)> InternalGetCompareExchangeTombstones()
+        private async IAsyncEnumerable<(CompareExchangeKey Key, long Index)> InternalGetCompareExchangeTombstonesAsync()
         {
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
@@ -657,9 +668,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<CounterGroupDetail> InternalGetCounterValues(ICounterActions actions)
+        private async IAsyncEnumerable<CounterGroupDetail> InternalGetCounterValuesAsync(ICounterActions actions)
         {
-            foreach (var reader in ReadArray(actions))
+            await foreach (var reader in ReadArrayAsync(actions))
             {
                 if (reader.TryGet(nameof(CounterItem.DocId), out LazyStringValue docId) == false ||
                     reader.TryGet(nameof(CounterItem.Batch.Values), out BlittableJsonReaderObject values) == false ||
@@ -716,11 +727,7 @@ namespace Raven.Server.Smuggler.Documents
                         newEntry->Etag = (long)arr[j + 1];
                     }
 
-                    counterValues.Modifications[prop.Name] = new BlittableJsonReaderObject.RawBlob
-                    {
-                        Ptr = newVal.Ptr,
-                        Length = newVal.Length
-                    };
+                    counterValues.Modifications[prop.Name] = new BlittableJsonReaderObject.RawBlob(newVal.Ptr, newVal.Length);
                 }
 
                 return context.ReadObject(values, null);
@@ -734,7 +741,7 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public long SkipType(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
+        public async Task<long> SkipTypeAsync(DatabaseItemType type, Action<long> onSkipped, CancellationToken token)
         {
             switch (type)
             {
@@ -756,16 +763,16 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Counters:
 #pragma warning restore 618
                 case DatabaseItemType.CounterGroups:
-                    return SkipArray(onSkipped, null, token);
+                    return await SkipArrayAsync(onSkipped, null, token);
 
                 case DatabaseItemType.TimeSeries:
-                    return SkipArray(onSkipped, SkipBlob, token);
+                    return await SkipArrayAsync(onSkipped, SkipBlobAsync, token);
 
                 case DatabaseItemType.DatabaseRecord:
-                    return SkipObject(onSkipped);
+                    return await SkipObjectAsync(onSkipped);
 
                 case DatabaseItemType.ReplicationHubCertificates:
-                    return SkipArray(onSkipped, null, token);
+                    return await SkipArrayAsync(onSkipped, null, token);
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(type), type, null);
@@ -777,45 +784,45 @@ namespace Raven.Server.Smuggler.Documents
             return SmugglerSourceType.Import;
         }
 
-        public IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return ReadDocuments(actions);
+            return ReadDocumentsAsync(actions);
         }
 
-        public IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetRevisionDocumentsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return ReadDocuments(actions);
+            return ReadDocumentsAsync(actions);
         }
 
-        public IEnumerable<DocumentItem> GetLegacyAttachments(INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentItem> GetLegacyAttachmentsAsync(INewDocumentActions actions)
         {
-            return ReadLegacyAttachments(actions);
+            return ReadLegacyAttachmentsAsync(actions);
         }
 
-        public IEnumerable<string> GetLegacyAttachmentDeletions()
+        public async IAsyncEnumerable<string> GetLegacyAttachmentDeletionsAsync()
         {
-            foreach (var id in ReadLegacyDeletions())
+            await foreach (var id in ReadLegacyDeletionsAsync())
                 yield return GetLegacyAttachmentId(id);
         }
 
-        public IEnumerable<string> GetLegacyDocumentDeletions()
+        public IAsyncEnumerable<string> GetLegacyDocumentDeletionsAsync()
         {
-            return ReadLegacyDeletions();
+            return ReadLegacyDeletionsAsync();
         }
 
-        public IEnumerable<Tombstone> GetTombstones(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<Tombstone> GetTombstonesAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return ReadTombstones(actions);
+            return ReadTombstonesAsync(actions);
         }
 
-        public IEnumerable<DocumentConflict> GetConflicts(List<string> collectionsToExport, INewDocumentActions actions)
+        public IAsyncEnumerable<DocumentConflict> GetConflictsAsync(List<string> collectionsToExport, INewDocumentActions actions)
         {
-            return ReadConflicts(actions);
+            return ReadConflictsAsync(actions);
         }
 
-        public IEnumerable<IndexDefinitionAndType> GetIndexes()
+        public async IAsyncEnumerable<IndexDefinitionAndType> GetIndexesAsync()
         {
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
@@ -843,14 +850,14 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        public IEnumerable<(string Prefix, long Value, long Index)> GetIdentities()
+        public IAsyncEnumerable<(string Prefix, long Value, long Index)> GetIdentitiesAsync()
         {
-            return InternalGetIdentities();
+            return InternalGetIdentitiesAsync();
         }
 
-        private IEnumerable<(string Prefix, long Value, long Index)> InternalGetIdentities()
+        private async IAsyncEnumerable<(string Prefix, long Value, long Index)> InternalGetIdentitiesAsync()
         {
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
@@ -869,9 +876,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private unsafe string ReadType()
+        private async Task<string> ReadTypeAsync()
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of object when reading type", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType == JsonParserToken.EndObject)
@@ -880,19 +887,22 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.String)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected property type to be string, but was " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
-            return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
+            unsafe
+            {
+                return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
+            }
         }
 
-        private void ReadObject(BlittableJsonDocumentBuilder builder)
+        private async Task ReadObjectAsync(BlittableJsonDocumentBuilder builder)
         {
-            UnmanagedJsonParserHelper.ReadObject(builder, _peepingTomStream, _parser, _buffer);
+            await UnmanagedJsonParserHelper.ReadObjectAsync(builder, _peepingTomStream, _parser, _buffer);
 
             _totalObjectsRead.Add(builder.SizeInBytes, SizeUnit.Bytes);
         }
 
-        private void ReadObject(Action<BlittableJsonReaderObject> readAction)
+        private async Task ReadObjectAsync(Action<BlittableJsonReaderObject> readAction)
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartObject)
@@ -901,7 +911,7 @@ namespace Raven.Server.Smuggler.Documents
             using (var builder = CreateBuilder(_context))
             {
                 _context.CachedProperties.NewDocument();
-                ReadObject(builder);
+                await ReadObjectAsync(builder);
 
                 using (var reader = builder.CreateReader())
                 {
@@ -910,9 +920,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private long ReadBuildVersion()
+        private async Task<long> ReadBuildVersionAsync()
         {
-            var type = ReadType();
+            var type = await ReadTypeAsync();
             if (type == null)
                 return 0;
 
@@ -922,7 +932,7 @@ namespace Raven.Server.Smuggler.Documents
                 return 0;
             }
 
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json.", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.Integer)
@@ -931,15 +941,17 @@ namespace Raven.Server.Smuggler.Documents
             return _state.Long;
         }
 
-        private long SkipArray(Action<long> onSkipped, Action<BlittableJsonReaderObject> additionalSkip, CancellationToken token)
+        private async Task<long> SkipArrayAsync(Action<long> onSkipped, Func<BlittableJsonReaderObject, Task> additionalSkip, CancellationToken token)
         {
             var count = 0L;
-            foreach (var reader in ReadArray())
+            await foreach (var reader in ReadArrayAsync())
             {
                 using (reader)
                 {
                     token.ThrowIfCancellationRequested();
-                    additionalSkip?.Invoke(reader);
+
+                    if (additionalSkip != null)
+                        await additionalSkip(reader);
 
                     count++; //skipping
                     onSkipped?.Invoke(count);
@@ -949,30 +961,31 @@ namespace Raven.Server.Smuggler.Documents
             return count;
         }
 
-        private void SkipBlob(BlittableJsonReaderObject reader)
+        private Task SkipBlobAsync(BlittableJsonReaderObject reader)
         {
             if (reader.TryGet(Constants.Documents.Blob.Size, out int size) == false)
                 throw new InvalidOperationException($"Trying to skip BLOB without size specified: doc: {reader}");
-            Skip(size);
+
+            return SkipAsync(size);
         }
 
-        private void MaySkipBlob(BlittableJsonReaderObject reader)
+        private async Task MaySkipBlobAsync(BlittableJsonReaderObject reader)
         {
             if (reader.TryGet(Constants.Documents.Blob.Size, out int size))
-                Skip(size);
+                await SkipAsync(size);
         }
 
-        private void SkipAttachmentStream(BlittableJsonReaderObject data)
+        private Task SkipAttachmentStreamAsync(BlittableJsonReaderObject data)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue _) == false ||
                 data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
                 data.TryGet(nameof(DocumentItem.AttachmentStream.Tag), out LazyStringValue _) == false)
                 throw new ArgumentException($"Data of attachment stream is not valid: {data}");
 
-            Skip(size);
+            return SkipAsync(size);
         }
 
-        private void Skip(long size)
+        private async Task SkipAsync(long size)
         {
             while (size > 0)
             {
@@ -980,7 +993,7 @@ namespace Raven.Server.Smuggler.Documents
                 var read = _parser.Skip(sizeToRead);
                 if (read.Done == false)
                 {
-                    var read2 = _peepingTomStream.Read(_buffer.Memory.Span);
+                    var read2 = await _peepingTomStream.ReadAsync(_buffer.Memory.Memory);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 
@@ -990,17 +1003,17 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private long SkipObject(Action<long> onSkipped = null)
+        private async Task<long> SkipObjectAsync(Action<long> onSkipped = null)
         {
             var count = 1;
-            ReadObject(reader => { });
+            await ReadObjectAsync(reader => { });
             onSkipped?.Invoke(count);
             return count;
         }
 
-        private IEnumerable<BlittableJsonReaderObject> ReadArray(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<BlittableJsonReaderObject> ReadArrayAsync(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -1013,7 +1026,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading array", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -1034,7 +1047,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     context.CachedProperties.NewDocument();
 
-                    ReadObject(builder);
+                    await ReadObjectAsync(builder);
 
                     var data = builder.CreateReader();
                     builder.Reset();
@@ -1044,7 +1057,7 @@ namespace Raven.Server.Smuggler.Documents
                         type == DocumentItem.ExportDocumentType.Attachment)
                     {
                         // skip document attachments, documents with attachments are handled separately
-                        SkipAttachmentStream(data);
+                        await SkipAttachmentStreamAsync(data);
                         continue;
                     }
 
@@ -1057,9 +1070,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<string> ReadLegacyDeletions()
+        private async IAsyncEnumerable<string> ReadLegacyDeletionsAsync()
         {
-            foreach (var item in ReadArray())
+            await foreach (var item in ReadArrayAsync())
             {
                 if (item.TryGet("Key", out string key) == false)
                     continue;
@@ -1068,9 +1081,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<DocumentItem> ReadLegacyAttachments(INewDocumentActions actions)
+        private async IAsyncEnumerable<DocumentItem> ReadLegacyAttachmentsAsync(INewDocumentActions actions)
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -1083,7 +1096,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading legacy attachments", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -1105,7 +1118,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     _context.CachedProperties.NewDocument();
 
-                    ReadObject(builder);
+                    await ReadObjectAsync(builder);
 
                     var data = builder.CreateReader();
                     builder.Reset();
@@ -1179,9 +1192,9 @@ namespace Raven.Server.Smuggler.Documents
             return context.ReadObject(djv, details.Id);
         }
 
-        private IEnumerable<DocumentItem> ReadDocuments(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<DocumentItem> ReadDocumentsAsync(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -1196,7 +1209,7 @@ namespace Raven.Server.Smuggler.Documents
                 List<DocumentItem.AttachmentStream> attachments = null;
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading docs", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -1222,7 +1235,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     context.CachedProperties.NewDocument();
 
-                    ReadObject(builder);
+                    await ReadObjectAsync(builder);
 
                     var data = builder.CreateReader();
                     builder.Reset();
@@ -1246,7 +1259,7 @@ namespace Raven.Server.Smuggler.Documents
                         {
                             Stream = actions.GetTempStream()
                         };
-                        ProcessAttachmentStream(context, data, ref attachment);
+                        attachment = await ProcessAttachmentStreamAsync(context, data, attachment);
                         attachments.Add(attachment);
                         continue;
                     }
@@ -1295,9 +1308,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<Tombstone> ReadTombstones(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<Tombstone> ReadTombstonesAsync(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -1309,7 +1322,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading docs", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -1329,7 +1342,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     _context.CachedProperties.NewDocument();
 
-                    ReadObject(builder);
+                    await ReadObjectAsync(builder);
 
                     var data = builder.CreateReader();
                     builder.Reset();
@@ -1371,9 +1384,9 @@ namespace Raven.Server.Smuggler.Documents
             }
         }
 
-        private IEnumerable<DocumentConflict> ReadConflicts(INewDocumentActions actions = null)
+        private async IAsyncEnumerable<DocumentConflict> ReadConflictsAsync(INewDocumentActions actions = null)
         {
-            if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+            if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json", _peepingTomStream, _parser);
 
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
@@ -1385,7 +1398,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 while (true)
                 {
-                    if (UnmanagedJsonParserHelper.Read(_peepingTomStream, _parser, _state, _buffer) == false)
+                    if (await UnmanagedJsonParserHelper.ReadAsync(_peepingTomStream, _parser, _state, _buffer) == false)
                         UnmanagedJsonParserHelper.ThrowInvalidJson("Unexpected end of json while reading docs", _peepingTomStream, _parser);
 
                     if (_state.CurrentTokenType == JsonParserToken.EndArray)
@@ -1405,7 +1418,7 @@ namespace Raven.Server.Smuggler.Documents
 
                     _context.CachedProperties.NewDocument();
 
-                    ReadObject(builder);
+                    await ReadObjectAsync(builder);
 
                     var data = builder.CreateReader();
                     builder.Reset();
@@ -1528,7 +1541,7 @@ namespace Raven.Server.Smuggler.Documents
         private const char RecordSeparator = (char)SpecialChars.RecordSeparator;
         private const string DummyDocumentPrefix = "files/";
 
-        public unsafe void ProcessAttachmentStream(DocumentsOperationContext context, BlittableJsonReaderObject data, ref DocumentItem.AttachmentStream attachment)
+        public async Task<DocumentItem.AttachmentStream> ProcessAttachmentStreamAsync(DocumentsOperationContext context, BlittableJsonReaderObject data, DocumentItem.AttachmentStream attachment)
         {
             if (data.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
                 data.TryGet(nameof(AttachmentName.Size), out long size) == false ||
@@ -1544,14 +1557,19 @@ namespace Raven.Server.Smuggler.Documents
 
             while (size > 0)
             {
-                var sizeToRead = (int)Math.Min(_writeBuffer.Length, size);
-                var read = _parser.Copy(_writeBuffer.Pointer, sizeToRead);
+                var sizeToRead = (int)Math.Min(_writeBuffer.Size, size);
 
-                attachment.Stream.Write(_writeBuffer.Memory.Span.Slice(0, read.BytesRead));
+                (bool Done, int BytesRead) read;
+                unsafe
+                {
+                    read = _parser.Copy(_writeBuffer.Address, sizeToRead);
+                }
+
+                attachment.Stream.Write(_writeBuffer.Memory.Memory.Span.Slice(0, read.BytesRead));
 
                 if (read.Done == false)
                 {
-                    var read2 = _peepingTomStream.Read(_buffer.Memory.Span);
+                    var read2 = await _peepingTomStream.ReadAsync(_buffer.Memory.Memory);
                     if (read2 == 0)
                         throw new EndOfStreamException("Stream ended without reaching end of stream content");
 
@@ -1559,7 +1577,10 @@ namespace Raven.Server.Smuggler.Documents
                 }
                 size -= read.BytesRead;
             }
+
             attachment.Stream.Flush();
+
+            return attachment;
         }
 
         private BlittableJsonDocumentBuilder CreateBuilder(JsonOperationContext context, BlittableMetadataModifier modifier)

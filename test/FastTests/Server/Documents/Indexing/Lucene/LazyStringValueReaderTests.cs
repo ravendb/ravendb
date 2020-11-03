@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Xunit;
@@ -70,7 +71,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         public void Can_reuse_reader_multiple_times()
         {
             var r = new Random();
-            
+
             for (int i = 0; i < 10; i++)
             {
                 var bytes = RandomString(2000);
@@ -78,7 +79,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 var expected = Encoding.UTF8.GetString(bytes);
 
                 var lazyString = _ctx.GetLazyString(expected);
-             
+
                 var stringResult = LazyStringReader.GetStringFor(lazyString);
                 var readerResult = _sut.GetTextReaderFor(lazyString);
 
@@ -88,24 +89,24 @@ namespace FastTests.Server.Documents.Indexing.Lucene
         }
 
         [Fact]
-        public void CompareLazyCompressedStringValue()
+        public async Task CompareLazyCompressedStringValue()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var ms = new MemoryStream())
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            await using (var ms = new MemoryStream())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Test");
                 writer.WriteString(new string('c', 1024 * 1024));
                 writer.WriteEndObject();
-                writer.Flush();
-                ms.Flush();
+                await writer.FlushAsync();
+                await ms.FlushAsync();
 
                 ms.Position = 0;
-                var json = context.Read(ms, "test");
+                var json = await context.ReadForDiskAsync(ms, "test");
 
                 ms.Position = 0;
-                var json2 = context.Read(ms, "test");
+                var json2 = await context.ReadForDiskAsync(ms, "test");
 
                 Assert.IsType<LazyCompressedStringValue>(json["Test"]);
                 Assert.IsType<LazyCompressedStringValue>(json2["Test"]);

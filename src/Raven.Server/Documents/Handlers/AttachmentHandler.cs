@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var request = context.Read(RequestBodyStream(), "GetAttachments");
+                var request = await context.ReadForDiskAsync(RequestBodyStream(), "GetAttachments");
 
                 if (request.TryGet(nameof(AttachmentType), out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
                     throw new ArgumentException($"The '{nameof(AttachmentType)}' field in the body request is mandatory");
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Handlers
                     throw new ArgumentException($"The '{nameof(GetAttachmentsOperation.GetAttachmentsCommand.Attachments)}' field in the body request is mandatory");
 
                 var attachmentsStreams = new List<Stream>();
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName(nameof(GetAttachmentsOperation.GetAttachmentsCommand.AttachmentsMetadata));
@@ -116,11 +116,11 @@ namespace Raven.Server.Documents.Handlers
                     {
                         using (var tmpStream = stream)
                         {
-                            var count = await tmpStream.ReadAsync(buffer.Memory);
+                            var count = await tmpStream.ReadAsync(buffer.Memory.Memory);
                             while (count > 0)
                             {
-                                await responseStream.WriteAsync(buffer.Memory.Slice(0, count), Database.DatabaseShutdown);
-                                count = await tmpStream.ReadAsync(buffer.Memory);
+                                await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), Database.DatabaseShutdown);
+                                count = await tmpStream.ReadAsync(buffer.Memory.Memory);
                             }
                         }
                     }
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static void WriteAttachmentDetails(BlittableJsonTextWriter writer, Attachment attachment, string documentId)
+        private static void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
         {
             writer.WriteStartObject();
             writer.WritePropertyName(nameof(AttachmentDetails.Name));
@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
-        public Task Exists()
+        public async Task Exists()
         {
             var hash = GetStringQueryString("hash");
 
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Handlers
             using (Slice.From(context.Allocator, hash, out var hashSlice))
             {
                 var count = AttachmentsStorage.GetCountOfAttachmentsForHash(context, hashSlice);
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Hash");
@@ -172,18 +172,17 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/debug/attachments/metadata", "GET", AuthorizationStatus.ValidUser, DisableOnCpuCreditsExhaustion = true)]
-        public Task GetDocumentsAttachmentMetadataWithCounts()
+        public async Task GetDocumentsAttachmentMetadataWithCounts()
         {
             var id = GetStringQueryString("id", false);
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var array = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumentWithCounts(context, id.ToLowerInvariant());
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Id");
@@ -193,7 +192,6 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteEndObject();
                 }
             }
-            return Task.CompletedTask;
         }
 
         private async Task GetAttachment(bool isDocument)
@@ -209,7 +207,7 @@ namespace Raven.Server.Documents.Handlers
                 if (isDocument == false)
                 {
                     var stream = TryGetRequestFromStream("ChangeVectorAndType") ?? RequestBodyStream();
-                    var request = context.Read(stream, "GetAttachment");
+                    var request = await context.ReadForDiskAsync(stream, "GetAttachment");
 
                     if (request.TryGet("Type", out string typeString) == false ||
                         Enum.TryParse(typeString, out type) == false)
@@ -263,12 +261,12 @@ namespace Raven.Server.Documents.Handlers
                 using (var stream = attachment.Stream)
                 {
                     var responseStream = ResponseBodyStream();
-                    var count = stream.Read(buffer.Memory.Span); // can never wait, so no need for async
+                    var count = stream.Read(buffer.Memory.Memory.Span); // can never wait, so no need for async
                     while (count > 0)
                     {
-                        await responseStream.WriteAsync(buffer.Memory.Slice(0, count), Database.DatabaseShutdown);
+                        await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), Database.DatabaseShutdown);
                         // we know that this can never wait, so no need to do async i/o here
-                        count = stream.Read(buffer.Memory.Span);
+                        count = stream.Read(buffer.Memory.Memory.Span);
                     }
                 }
             }
@@ -331,7 +329,7 @@ namespace Raven.Server.Documents.Handlers
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 

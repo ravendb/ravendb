@@ -48,12 +48,12 @@ namespace SlowTests.Issues
 
                     var destination = new DatabaseDestination(database);
 
-                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptionsServerSide
+                    var smuggler = await (new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptionsServerSide
                     {
                         OperateOnTypes = DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Attachments |
                                          DatabaseItemType.Indexes,
                         SkipRevisionCreation = true
-                    }).Execute();
+                    }).ExecuteAsync());
 
                     using (context.OpenReadTransaction())
                     {

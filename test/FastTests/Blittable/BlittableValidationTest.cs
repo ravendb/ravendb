@@ -1,16 +1,15 @@
 ﻿using System;
 using System.IO;
-using System.Text;
-using Xunit.Abstractions;
-
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Xunit;
-using FastTests.Blittable.BlittableJsonWriterTests;
-using System.Reflection;
 using System.Linq;
+using System.Text;
+using FastTests.Blittable.BlittableJsonWriterTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
@@ -34,7 +33,7 @@ namespace FastTests.Blittable
             streamWriter.Write(objString);
             streamWriter.Flush();
             stream.Position = 0;
-            var reader = context.Read(stream, "docs/1 ");
+            var reader = context.Sync.ReadForDisk(stream, "docs/1 ");
             size = reader.Size;
             return reader;
         }
@@ -42,7 +41,6 @@ namespace FastTests.Blittable
         [Fact]
         public void WithEscape()
         {
-
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var obj = JObject.FromObject(new Employee
@@ -57,7 +55,7 @@ namespace FastTests.Blittable
                 streamWriter.Write(objString);
                 streamWriter.Flush();
                 stream.Position = 0;
-                var reader = context.Read(stream, "docs/1 ");
+                var reader = context.Sync.ReadForDisk(stream, "docs/1 ");
                 reader.BlittableValidation();
             }
         }
@@ -202,7 +200,7 @@ namespace FastTests.Blittable
                 streamWriter.Write(objString);
                 streamWriter.Flush();
                 stream.Position = 0;
-                var reader = context.Read(stream, "docs/1 ");
+                var reader = context.Sync.ReadForDisk(stream, "docs/1 ");
                 reader.BlittableValidation();
             }
         }
@@ -220,7 +218,7 @@ namespace FastTests.Blittable
                 streamWriter.Flush();
                 stream.Position = 0;
 
-                var reader = context.Read(stream, "docs/1 ");
+                var reader = context.Sync.ReadForDisk(stream, "docs/1 ");
                 reader.BlittableValidation();
             }
         }
@@ -486,7 +484,7 @@ namespace FastTests.Blittable
                 streamWriter.Write(objString);
                 streamWriter.Flush();
                 stream.Position = 0;
-                var reader = context.Read(stream, "docs/1 ");
+                var reader = context.Sync.ReadForDisk(stream, "docs/1 ");
                 reader.BlittableValidation();
             }
         }
@@ -545,7 +543,6 @@ namespace FastTests.Blittable
                 var jsonParserState = new JsonParserState();
                 using (var parser = new UnmanagedJsonParser(context, jsonParserState, "changes/1"))
                 {
-
                     byte[] buffer = new byte[4096];
                     var bufferOffset = 128; //non-zero offset
 
@@ -763,9 +760,8 @@ namespace FastTests.Blittable
                 {
                     using (var stream = assembly.GetManifestResourceStream(name))
                     {
-                        using (var obj = context.Read(stream, "docs/1"))
+                        using (var obj = context.Sync.ReadForDisk(stream, "docs/1"))
                         {
-
                             obj.BlittableValidation();
                         }
                     }

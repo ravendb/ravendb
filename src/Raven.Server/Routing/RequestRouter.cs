@@ -93,7 +93,7 @@ namespace Raven.Server.Routing
             return tryMatch.Value;
         }
 
-        internal bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database, out RavenServer.AuthenticationStatus authenticationStatus)
+        internal async ValueTask<(bool Authorized, RavenServer.AuthenticationStatus Status)> TryAuthorizeAsync(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
             var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
@@ -138,7 +138,7 @@ namespace Raven.Server.Routing
                 }
             }
 
-            authenticationStatus = feature?.Status ?? RavenServer.AuthenticationStatus.None;
+            var authenticationStatus = feature?.Status ?? RavenServer.AuthenticationStatus.None;
             switch (route.AuthorizationStatus)
             {
                 case AuthorizationStatus.UnauthenticatedClients:
@@ -153,12 +153,12 @@ namespace Raven.Server.Routing
                             case RavenServer.AuthenticationStatus.None:
                             case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                             case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
-                                UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
-                                return false;
+                                await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+                                return (false, authenticationStatus);
                         }
                     }
 
-                    return true;
+                    return (true, authenticationStatus);
 
                 case AuthorizationStatus.ClusterAdmin:
                 case AuthorizationStatus.Operator:
@@ -171,14 +171,15 @@ namespace Raven.Server.Routing
                         case RavenServer.AuthenticationStatus.Expired:
                         case RavenServer.AuthenticationStatus.NotYetValid:
                         case RavenServer.AuthenticationStatus.None:
-                            UnlikelyFailAuthorization(context, database?.Name, feature, route.AuthorizationStatus);
-                            return false;
+                            await UnlikelyFailAuthorizationAsync(context, database?.Name, feature, route.AuthorizationStatus);
+                            return (false, authenticationStatus);
 
                         case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                         case RavenServer.AuthenticationStatus.UnfamiliarIssuer:
                             // we allow an access to the restricted endpoints with an unfamiliar certificate, since we will authorize it at the endpoint level
                             if (route.AuthorizationStatus == AuthorizationStatus.RestrictedAccess)
-                                return true;
+                                return (true, authenticationStatus);
+                            ;
                             goto case RavenServer.AuthenticationStatus.None;
 
                         case RavenServer.AuthenticationStatus.Allowed:
@@ -186,25 +187,27 @@ namespace Raven.Server.Routing
                                 goto case RavenServer.AuthenticationStatus.None;
 
                             if (database == null)
-                                return true;
+                                return (true, authenticationStatus);
+                            ;
                             if (feature.CanAccess(database.Name, route.AuthorizationStatus == AuthorizationStatus.DatabaseAdmin))
-                                return true;
+                                return (true, authenticationStatus);
 
                             goto case RavenServer.AuthenticationStatus.None;
                         case RavenServer.AuthenticationStatus.Operator:
                             if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;
-                            return true;
+                            return (true, authenticationStatus);
+                            ;
 
                         case RavenServer.AuthenticationStatus.ClusterAdmin:
-                            return true;
+                            return (true, authenticationStatus);
 
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
                 default:
                     ThrowUnknownAuthStatus(route);
-                    return false; // never hit
+                    return (false, authenticationStatus); // never hit
             }
         }
 
@@ -245,7 +248,7 @@ namespace Raven.Server.Routing
 
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                    using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
                     {
                         ctx.Write(writer,
                             new DynamicJsonValue
@@ -273,7 +276,10 @@ namespace Raven.Server.Routing
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        if (TryAuthorize(tryMatch.Value, context, reqCtx.Database, out status) == false)
+                        var (authorized, authorizationStatus) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.Database);
+                        status = authorizationStatus;
+
+                        if (authorized == false)
                             return;
                     }
                 }
@@ -323,7 +329,7 @@ namespace Raven.Server.Routing
                     if (tryMatch.Value.DisableOnCpuCreditsExhaustion &&
                         _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
-                        RejectRequestBecauseOfCpuThreshold(context);
+                        await RejectRequestBecauseOfCpuThresholdAsync(context);
                         return;
                     }
 
@@ -350,7 +356,7 @@ namespace Raven.Server.Routing
             }
         }
 
-        private static void DrainRequest(JsonOperationContext ctx, HttpContext context)
+        private static async ValueTask DrainRequestAsync(JsonOperationContext ctx, HttpContext context)
         {
             if (context.Response.Headers.TryGetValue("Connection", out Microsoft.Extensions.Primitives.StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close
@@ -360,18 +366,18 @@ namespace Raven.Server.Routing
                 var requestBody = context.Request.Body;
                 while (true)
                 {
-                    var read = requestBody.Read(buffer.Memory.Span);
+                    var read = await requestBody.ReadAsync(buffer.Memory.Memory);
                     if (read == 0)
                         break;
                 }
             }
         }
 
-        private static void RejectRequestBecauseOfCpuThreshold(HttpContext context)
+        private static async ValueTask RejectRequestBecauseOfCpuThresholdAsync(HttpContext context)
         {
             context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
             {
                 ctx.Write(writer,
                     new DynamicJsonValue
@@ -382,7 +388,7 @@ namespace Raven.Server.Routing
             }
         }
 
-        public static void UnlikelyFailAuthorization(HttpContext context, string database,
+        public static async ValueTask UnlikelyFailAuthorizationAsync(HttpContext context, string database,
             RavenServer.AuthenticateConnection feature,
             AuthorizationStatus authorizationStatus)
         {
@@ -454,9 +460,9 @@ namespace Raven.Server.Routing
 
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
+            await using (var writer = new AsyncBlittableJsonTextWriter(ctx, context.Response.Body))
             {
-                DrainRequest(ctx, context);
+                await DrainRequestAsync(ctx, context);
 
                 if (RavenServerStartup.IsHtmlAcceptable(context))
                 {

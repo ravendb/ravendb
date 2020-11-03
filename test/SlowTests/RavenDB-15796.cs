@@ -45,21 +45,21 @@ namespace SlowTests
 
                 using (var session = store1.OpenAsyncSession())
                 {
-                    var x = new User {Name = "Fitzchak"};
+                    var x = new User { Name = "Fitzchak" };
                     await session.StoreAsync(x, "users/1");
                     await session.SaveChangesAsync();
 
-                    using (var a1 = new MemoryStream(new byte[] {1, 2, 3}))
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/png"));
                     }
 
                     using (var session2 = store2.OpenSession())
                     {
-                        session2.Store(new User {Name = "Fitzchak"}, "users/1");
+                        session2.Store(new User { Name = "Fitzchak" }, "users/1");
                         session2.SaveChanges();
 
-                        using (var a2 = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
+                        using (var a2 = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                         {
                             store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a2, "a1/png"));
                         }
@@ -76,7 +76,7 @@ namespace SlowTests
 
                         using (var context = JsonOperationContext.ShortTermSingleUse())
                         using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(_conflictedDocument)))
-                        using (var blittableJson = context.Read(stringStream, "Reading of foo/bar"))
+                        using (var blittableJson = await context.ReadForMemoryAsync(stringStream, "Reading of foo/bar"))
                         {
                             var result = new InMemoryDocumentSessionOperations.SaveChangesData((InMemoryDocumentSessionOperations)session2);
                             result.SessionCommands.Add(new PutCommandDataWithBlittableJson("users/1", null, blittableJson));
@@ -117,5 +117,4 @@ namespace SlowTests
     }
         ";
     }
-
 }

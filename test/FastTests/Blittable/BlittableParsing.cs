@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace FastTests.Blittable
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    using (var blittableJsonReaderObject = context.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "n"))
+                    using (var blittableJsonReaderObject = context.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(json)), "n"))
                     {
                         string s;
                         blittableJsonReaderObject.TryGet("Type", out s);

@@ -11,28 +11,28 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Server.Routing;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Raven.Server.Rachis;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Rachis;
+using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
     public class AdminServerWideHandler : ServerRequestHandler
     {
         [RavenAction("/admin/configuration/server-wide", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task GetConfigurationServerWide()
+        public async Task GetConfigurationServerWide()
         {
             // FullPath removes the trailing '/' so adding it back for the studio
             var localRootPath = ServerStore.Configuration.Backup.LocalRootPath;
             var localRootFullPath = localRootPath != null ? localRootPath.FullPath + Path.DirectorySeparatorChar : null;
-            
+
             var result = new DynamicJsonValue
             {
                 [nameof(ServerStore.Configuration.Backup.LocalRootPath)] = localRootFullPath,
@@ -41,12 +41,10 @@ namespace Raven.Server.Web.System
             };
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result);
             }
-
-            return Task.CompletedTask;
         }
 
         // Used for Create, Edit
@@ -65,23 +63,22 @@ namespace Raven.Server.Web.System
 
                 var (newIndex, _) = await ServerStore.PutServerWideBackupConfigurationAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
-               
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
                     var backupName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.Backup, newIndex);
                     if (backupName == null)
                         throw new InvalidOperationException($"Backup name is null for server-wide backup with task id: {newIndex}");
-                    
+
                     var putResponse = new PutServerWideBackupConfigurationResponse
                     {
                         Name = backupName,
-                        RaftCommandIndex = newIndex 
+                        RaftCommandIndex = newIndex
                     };
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                     context.Write(writer, putResponse.ToJson());
-                    writer.Flush();
                 }
             }
         }
@@ -99,7 +96,7 @@ namespace Raven.Server.Web.System
                 var (newIndex, _) = await ServerStore.PutServerWideExternalReplicationAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
                     var taskName = ServerStore.Cluster.GetServerWideTaskNameByTaskId(context, ClusterStateMachine.ServerWideConfigurationKey.ExternalReplication, newIndex);
@@ -114,7 +111,6 @@ namespace Raven.Server.Web.System
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
                     context.Write(writer, putResponse.ToJson());
-                    writer.Flush();
                 }
             }
         }
@@ -141,32 +137,32 @@ namespace Raven.Server.Web.System
         public Task GetServerWideBackupConfigurations()
         {
             // backward compatibility
-            GetTaskConfigurations(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration);
-            return Task.CompletedTask;
+            return GetTaskConfigurationsAsync(OngoingTaskType.Backup, JsonDeserializationCluster.ServerWideBackupConfiguration);
         }
 
         [RavenAction("/admin/configuration/server-wide/tasks", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task GetServerWideTasks()
+        public async Task GetServerWideTasks()
         {
             var typeAsString = GetStringQueryString("type", required: true);
             if (Enum.TryParse(typeAsString, out OngoingTaskType type) == false)
                 throw new ArgumentException($"{typeAsString} is unknown task type.");
-            
+
             Func<BlittableJsonReaderObject, IDynamicJsonValueConvertible> converter;
             switch (type)
             {
                 case OngoingTaskType.Backup:
                     converter = JsonDeserializationCluster.ServerWideBackupConfiguration;
                     break;
+
                 case OngoingTaskType.Replication:
                     converter = JsonDeserializationCluster.ServerWideExternalReplication;
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException($"Task type '{type} isn't suppported");
             }
 
-            GetTaskConfigurations(type, converter);
-            return Task.CompletedTask;
+            await GetTaskConfigurationsAsync(type, converter);
         }
 
         [RavenAction("/admin/configuration/server-wide/state", "POST", AuthorizationStatus.ClusterAdmin)]
@@ -191,20 +187,19 @@ namespace Raven.Server.Web.System
                 var (newIndex, _) = await ServerStore.ToggleServerWideTaskStateAsync(configuration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var toggleResponse = new ServerWideTaskResponse
                     {
                         Name = taskName,
-                        RaftCommandIndex = newIndex 
+                        RaftCommandIndex = newIndex
                     };
 
                     context.Write(writer, toggleResponse.ToJson());
-                    writer.Flush();
                 }
             }
         }
-        
+
         private async Task DeleteServerWideTaskCommand(OngoingTaskType taskType)
         {
             var name = GetStringQueryString("name", required: true);
@@ -219,7 +214,7 @@ namespace Raven.Server.Web.System
                 var (newIndex, _) = await ServerStore.DeleteServerWideTaskAsync(deleteConfiguration, GetRaftRequestIdFromQuery());
                 await ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, newIndex);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 using (context.OpenReadTransaction())
                 {
                     var deleteResponse = new ServerWideTaskResponse
@@ -230,19 +225,18 @@ namespace Raven.Server.Web.System
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                     context.Write(writer, deleteResponse.ToJson());
-                    writer.Flush();
                 }
             }
         }
 
-        private void GetTaskConfigurations<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter)
+        private async Task GetTaskConfigurationsAsync<T>(OngoingTaskType type, Func<BlittableJsonReaderObject, T> converter)
             where T : IDynamicJsonValueConvertible
         {
             var taskName = GetStringQueryString("name", required: false);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var blittables = ServerStore.Cluster.GetServerWideConfigurations(context, type, taskName);
                 var result = new ServerWideTasksResult<T>();
@@ -254,7 +248,6 @@ namespace Raven.Server.Web.System
                 }
 
                 context.Write(writer, result.ToJson());
-                writer.Flush();
             }
         }
     }

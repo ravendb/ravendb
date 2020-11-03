@@ -52,10 +52,7 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
-                    Content = new BlittableJsonContent(stream =>
-                    {
-                        ctx.Write(stream, databaseDocument);
-                    })
+                    Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, databaseDocument).ConfigureAwait(false))
                 };
 
                 if (_etag.HasValue)

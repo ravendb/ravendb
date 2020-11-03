@@ -14,15 +14,14 @@ namespace Raven.Server.Web.System
     public class AdminIoMetricsHandler : RequestHandler
     {
         [RavenAction("/admin/debug/io-metrics", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task IoMetrics()
+        public async Task IoMetrics()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var result = IoMetricsUtil.GetIoMetricsResponse(GetSystemEnvironment(ServerStore), null);
                 context.Write(writer, result.ToJson());
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/debug/io-metrics/live", "GET", AuthorizationStatus.Operator, SkipUsagesCount = true)]

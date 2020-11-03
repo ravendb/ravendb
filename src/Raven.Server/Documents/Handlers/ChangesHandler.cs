@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Handlers
     public class ChangesHandler : DatabaseRequestHandler
     {
         private static readonly string StudioMarker = "fromStudio";
+
         [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetChanges()
         {
@@ -32,7 +33,6 @@ namespace Raven.Server.Documents.Handlers
                     }
                     catch (OperationCanceledException)
                     {
-
                     }
                     catch (Exception ex)
                     {
@@ -41,9 +41,9 @@ namespace Raven.Server.Documents.Handlers
 
                         try
                         {
-                            using (var ms = new MemoryStream())
+                            await using (var ms = new MemoryStream())
                             {
-                                using (var writer = new BlittableJsonTextWriter(context, ms))
+                                await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                                 {
                                     context.Write(writer, new DynamicJsonValue
                                     {
@@ -67,10 +67,10 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/changes/debug", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetConnectionsDebugInfo()
+        public async Task GetConnectionsDebugInfo()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Connections");
@@ -88,7 +88,6 @@ namespace Raven.Server.Documents.Handlers
 
                 writer.WriteEndObject();
             }
-            return Task.CompletedTask;
         }
 
         private async Task HandleConnection(WebSocket webSocket, JsonOperationContext context)
@@ -107,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     var segments = new[] { segment1, segment2 };
                     int index = 0;
-                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory, Database.DatabaseShutdown);
+                    var receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, Database.DatabaseShutdown);
                     var jsonParserState = new JsonParserState();
                     using (var parser = new UnmanagedJsonParser(context, jsonParserState, debugTag))
                     {
@@ -118,7 +117,7 @@ namespace Raven.Server.Documents.Handlers
 
                         parser.SetBuffer(segments[index], 0, result.Count);
                         index++;
-                        receiveAsync = webSocket.ReceiveAsync(segments[index].Memory, Database.DatabaseShutdown);
+                        receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, Database.DatabaseShutdown);
 
                         while (true)
                         {
@@ -136,9 +135,8 @@ namespace Raven.Server.Documents.Handlers
                                     parser.SetBuffer(segments[index], 0, result.Count);
                                     if (++index >= segments.Length)
                                         index = 0;
-                                    receiveAsync = webSocket.ReceiveAsync(segments[index].Memory, Database.DatabaseShutdown);
+                                    receiveAsync = webSocket.ReceiveAsync(segments[index].Memory.Memory, Database.DatabaseShutdown);
                                 }
-
 
                                 builder.FinalizeDocument();
 

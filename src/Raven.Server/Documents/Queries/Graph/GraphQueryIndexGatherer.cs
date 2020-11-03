@@ -3,10 +3,10 @@ using NCrontab.Advanced.Extensions;
 
 namespace Raven.Server.Documents.Queries.Graph
 {
-    public class GraphQueryIndexNamesGatherer: QueryPlanVisitor
-    {        
+    public class GraphQueryIndexNamesGatherer : QueryPlanVisitor
+    {
         public List<string> Indexes { get; } = new List<string>();
-        
+
         public List<QueryQueryStep> QueryStepsWithoutExplicitIndex { get; } = new List<QueryQueryStep>();
 
         public override void VisitQueryQueryStep(QueryQueryStep qqs)

@@ -49,10 +49,10 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
                         var config = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_restoreConfiguration, ctx);
-                        ctx.Write(stream, config);
+                        await ctx.WriteAsync(stream, config).ConfigureAwait(false);
                     })
                 };
 

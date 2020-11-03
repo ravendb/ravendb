@@ -87,11 +87,11 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public async Task WriteDetailedQueryResult(IndexQueryServerSide indexQuery, QueryOperationContext queryContext, AsyncBlittableJsonTextWriter writer, OperationCancelToken token)
         {
             var qr = await GetQueryResults(indexQuery, queryContext, null, token, true);
             var reporter = new GraphQueryDetailedReporter(writer, queryContext.Documents);
-            reporter.Visit(qr.QueryPlan.RootQueryStep);
+            await reporter.VisitAsync(qr.QueryPlan.RootQueryStep);
         }
 
         public override async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag,

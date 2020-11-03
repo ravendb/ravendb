@@ -5,6 +5,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Extensions;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Auto
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Auto
         {
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
         }
@@ -100,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Auto
                     if (stream == null)
                         return null;
 
-                    using (var reader = context.ReadForDisk(stream, string.Empty))
+                    using (var reader = context.Sync.ReadForDisk(stream, string.Empty))
                     {
                         return LoadFromJson(reader);
                     }

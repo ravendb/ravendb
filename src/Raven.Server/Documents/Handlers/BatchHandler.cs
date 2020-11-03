@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -151,6 +151,7 @@ namespace Raven.Server.Documents.Handlers
                                 throw new NotSupportedException($"The document {document.Id} has time series, this is not supported in cluster wide transaction.");
                         }
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException($"The command type {document.Type} is not supported in cluster transaction.");
                 }
@@ -234,7 +235,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
                 {
@@ -597,6 +598,7 @@ namespace Raven.Server.Documents.Handlers
                                     }
 
                                     break;
+
                                 case CommandType.DELETE:
                                     if (current < count)
                                     {
@@ -638,6 +640,7 @@ namespace Raven.Server.Documents.Handlers
                                         }
                                     }
                                     break;
+
                                 default:
                                     throw new NotSupportedException($"{cmd.Type} is not supported in {nameof(ClusterTransactionMergedCommand)}.");
                             }
@@ -987,6 +990,7 @@ namespace Raven.Server.Documents.Handlers
                             acReplies.Add((acReply, nameof(Constants.Fields.CommandData.DocumentChangeVector)));
                             Reply.Add(acReply);
                             break;
+
                         case CommandType.TimeSeries:
                             EtlGetDocIdFromPrefixIfNeeded(ref cmd.Id, cmd, lastPutResult);
                             var tsCmd = new TimeSeriesHandler.ExecuteTimeSeriesBatchCommand(Database, cmd.Id, cmd.TimeSeries, cmd.FromEtl);
@@ -1005,6 +1009,7 @@ namespace Raven.Server.Documents.Handlers
                             });
 
                             break;
+
                         case CommandType.TimeSeriesCopy:
 
                             var reader = Database.DocumentsStorage.TimeSeriesStorage.GetReader(context, cmd.Id, cmd.Name, cmd.From ?? DateTime.MinValue, cmd.To ?? DateTime.MaxValue);
@@ -1025,6 +1030,7 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(BatchRequestParser.CommandData.Type)] = nameof(CommandType.TimeSeriesCopy),
                             });
                             break;
+
                         case CommandType.Counters:
                             EtlGetDocIdFromPrefixIfNeeded(ref cmd.Counters.DocumentId, cmd, lastPutResult);
 

@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.ETL.Stats;
@@ -33,7 +34,7 @@ namespace Raven.Server.Documents.ETL
 
         protected override async Task StartCollectingStats()
         {
-            Database.EtlLoader.BatchCompleted  += BatchCompleted;
+            Database.EtlLoader.BatchCompleted += BatchCompleted;
             Database.EtlLoader.ProcessAdded += ProcessAdded;
             Database.EtlLoader.ProcessRemoved += EtlProcessRemoved;
 
@@ -113,7 +114,7 @@ namespace Raven.Server.Documents.ETL
 
                 if (etl == null)
                     return;
-                
+
                 processAndPerformanceStats = new EtlProcessAndPerformanceStatsList(etl);
 
                 taskProcesses.TryAdd(change.TransformationName, processAndPerformanceStats);
@@ -158,7 +159,7 @@ namespace Raven.Server.Documents.ETL
                     {
                         if (processesStats == null)
                             processesStats = new List<EtlProcessPerformanceStats>();
-                        
+
                         processesStats.Add(new EtlProcessPerformanceStats
                         {
                             TransformationName = etl.TransformationName,
@@ -195,7 +196,7 @@ namespace Raven.Server.Documents.ETL
             {
                 TaskId = etl.TaskId;
             }
-            
+
             public long TaskId { get; }
         }
     }

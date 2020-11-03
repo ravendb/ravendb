@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
@@ -24,11 +22,8 @@ using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Raven.Server.Web.System;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.LowMemory;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -55,6 +50,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         case AddOrUpdateCompareExchangeBatchCommand batchCmpExchangeCommand:
                             batchCmpExchangeCommand.ContextToWriteResult = context;
                             break;
+
                         case CompareExchangeCommandBase cmpExchange:
                             cmpExchange.ContextToWriteResult = context;
                             break;
@@ -68,14 +64,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var ms = context.CheckoutMemoryStream();
                     try
                     {
-                        using (var writer = new BlittableJsonTextWriter(context, ms))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
                         {
                             context.Write(writer, new DynamicJsonValue
                             {
                                 [nameof(ServerStore.PutRaftCommandResult.RaftCommandIndex)] = etag,
                                 [nameof(ServerStore.PutRaftCommandResult.Data)] = result,
                             });
-                            writer.Flush();
                         }
 
                         // now that we know that we properly serialized it
@@ -128,12 +123,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
-        public Task GetObserverDecisions()
+        public async Task GetObserverDecisions()
         {
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var res = ServerStore.Observer.ReadDecisionsForDatabase();
                     var json = new DynamicJsonValue
@@ -146,63 +141,52 @@ namespace Raven.Server.Documents.Handlers.Admin
                     };
 
                     context.Write(writer, json);
-                    writer.Flush();
-                    return Task.CompletedTask;
+                    return;
                 }
             }
             RedirectToLeader();
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/cluster/log", "GET", AuthorizationStatus.Operator)]
-        public Task GetLogs()
+        public async Task GetLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.OpenReadTransaction();
                 context.Write(writer, ServerStore.GetLogDetails(context));
-                writer.Flush();
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/debug/cluster/history-logs", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task GetHistoryLogs()
+        public async Task GetHistoryLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 context.OpenReadTransaction();
                 writer.WriteArray("RachisLogHistory", ServerStore.Engine.LogHistory.GetHistoryLogs(context), context);
                 writer.WriteEndObject();
-
-                writer.Flush();
             }
-            return Task.CompletedTask;
         }
 
-
         [RavenAction("/cluster/node-info", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetNodeInfo()
+        public async Task GetNodeInfo()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var nodeInfo = ServerStore.GetNodeInfo();
                 var json = nodeInfo.ToJson();
                 json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
 
                 context.Write(writer, json);
-                writer.Flush();
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetClusterTopology()
+        public async Task GetClusterTopology()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -237,7 +221,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var loadLicenseLimits = ServerStore.LoadLicenseLimits();
                     var nodeLicenseDetails = loadLicenseLimits == null ?
@@ -262,32 +246,29 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json["Status"] = DynamicJsonValue.Convert(nodesStatues);
 
                     context.Write(writer, json);
-                    writer.Flush();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.Operator)]
-        public Task ClusterMaintenanceStats()
+        public async Task ClusterMaintenanceStats()
         {
             if (ServerStore.LeaderTag == null)
             {
-                return Task.CompletedTask;
+                return;
             }
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 if (ServerStore.IsLeader())
                 {
                     context.Write(writer, DynamicJsonValue.Convert(ServerStore.ClusterMaintenanceSupervisor?.GetStats()));
-                    writer.Flush();
-                    return Task.CompletedTask;
+                    await writer.FlushAsync();
+                    return;
                 }
                 RedirectToLeader();
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/cluster/bootstrap", "POST", AuthorizationStatus.ClusterAdmin)]
@@ -411,8 +392,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         var now = DateTime.UtcNow;
                         if (certificate.NotBefore.ToUniversalTime() > now)
                         {
-                            // Because of time zone and time drift issues, we can't assume that the certificate generation will be 
-                            // proper. Because of that, we allow tolerance of the NotBefore to be a bit earlier / later than the 
+                            // Because of time zone and time drift issues, we can't assume that the certificate generation will be
+                            // proper. Because of that, we allow tolerance of the NotBefore to be a bit earlier / later than the
                             // current time. Clients may still fail to work with our certificate because of timing issues,
                             // but the admin needs to setup time sync properly and there isn't much we can do at that point
                             if ((certificate.NotBefore.ToUniversalTime() - now).TotalDays > 1)
@@ -457,7 +438,6 @@ namespace Raven.Server.Documents.Handlers.Admin
                                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
                             }
                         }
-
                     }
 
                     await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology: true, asWatcher: watcher ?? false);
@@ -504,7 +484,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         try
                         {
-                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores,$"{raftRequestId}/put-license-limits");
+                            await ServerStore.PutNodeLicenseLimitsAsync(nodeTag, detailsPerNode, maxCores, $"{raftRequestId}/put-license-limits");
                         }
                         catch
                         {
@@ -587,7 +567,6 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-
         [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.Operator, CorsMode = CorsMode.Cluster)]
         public Task EnforceReelection()
         {
@@ -602,6 +581,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
+
         [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task PromoteNode()
         {
@@ -635,6 +615,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
+
         [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin, CorsMode = CorsMode.Cluster)]
         public async Task DemoteNode()
         {

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
@@ -30,6 +31,21 @@ namespace Raven.Client.Util
         public void Dispose()
         {
             _action();
+        }
+    }
+
+    internal class AsyncDisposableAction : IAsyncDisposable
+    {
+        private readonly Func<Task> _action;
+
+        public AsyncDisposableAction(Func<Task> action)
+        {
+            _action = action ?? throw new ArgumentNullException(nameof(action));
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _action().ConfigureAwait(false);
         }
     }
 }

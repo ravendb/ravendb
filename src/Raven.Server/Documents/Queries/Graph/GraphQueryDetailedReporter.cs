@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -7,10 +8,10 @@ namespace Raven.Server.Documents.Queries.Graph
 {
     public class GraphQueryDetailedReporter : QueryPlanVisitor
     {
-        private BlittableJsonTextWriter _writer;
+        private AsyncBlittableJsonTextWriter _writer;
         private DocumentsOperationContext _ctx;
 
-        public GraphQueryDetailedReporter(BlittableJsonTextWriter writer, DocumentsOperationContext ctx)
+        public GraphQueryDetailedReporter(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext ctx)
         {
             _writer = writer;
             _ctx = ctx;
@@ -24,7 +25,7 @@ namespace Raven.Server.Documents.Queries.Graph
             _writer.WriteComma();
             _writer.WritePropertyName("Query");
             _writer.WriteString(qqs.Query.ToString());
-            _writer.WriteComma();            
+            _writer.WriteComma();
             WriteIntermidiateResults(qqs.IntermediateResults);
             _writer.WriteEndObject();
         }
@@ -50,17 +51,17 @@ namespace Raven.Server.Documents.Queries.Graph
             _writer.WriteEndArray();
         }
 
-        public override void VisitEdgeQueryStep(EdgeQueryStep eqs)
+        public override async Task VisitEdgeQueryStepAsync(EdgeQueryStep eqs)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");
             _writer.WriteString("EdgeQueryStep");
             _writer.WriteComma();
             _writer.WritePropertyName("Left");
-            Visit(eqs.Left);
+            await VisitAsync(eqs.Left);
             _writer.WriteComma();
             _writer.WritePropertyName("Right");
-            Visit(eqs.Right);
+            await VisitAsync(eqs.Right);
             _writer.WriteEndObject();
         }
 
@@ -77,62 +78,62 @@ namespace Raven.Server.Documents.Queries.Graph
             _writer.WriteEndObject();
         }
 
-        public override void VisitIntersectionQueryStepExcept(IntersectionQueryStep<Except> iqse)
+        public override async Task VisitIntersectionQueryStepExceptAsync(IntersectionQueryStep<Except> iqse)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");
             _writer.WriteString("IntersectionQueryStep<Except>");
             _writer.WriteComma();
             _writer.WritePropertyName("Left");
-            Visit(iqse.Left);
+            await VisitAsync(iqse.Left);
             _writer.WriteComma();
             _writer.WritePropertyName("Right");
-            Visit(iqse.Right);
+            await VisitAsync(iqse.Right);
             _writer.WriteComma();
             WriteIntermidiateResults(iqse.IntermediateResults);
             _writer.WriteEndObject();
         }
 
-        public override void VisitIntersectionQueryStepUnion(IntersectionQueryStep<Union> iqsu)
+        public override async Task VisitIntersectionQueryStepUnionAsync(IntersectionQueryStep<Union> iqsu)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");
             _writer.WriteString("IntersectionQueryStep<Except>");
             _writer.WriteComma();
             _writer.WritePropertyName("Left");
-            Visit(iqsu.Left);
+            await VisitAsync(iqsu.Left);
             _writer.WriteComma();
             _writer.WritePropertyName("Right");
-            Visit(iqsu.Right);
+            await VisitAsync(iqsu.Right);
             _writer.WriteComma();
             WriteIntermidiateResults(iqsu.IntermediateResults);
             _writer.WriteEndObject();
         }
 
-        public override void VisitIntersectionQueryStepIntersection(IntersectionQueryStep<Intersection> iqsi)
+        public override async Task VisitIntersectionQueryStepIntersectionAsync(IntersectionQueryStep<Intersection> iqsi)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");
             _writer.WriteString("IntersectionQueryStep<Except>");
             _writer.WriteComma();
             _writer.WritePropertyName("Left");
-            Visit(iqsi.Left);
+            await VisitAsync(iqsi.Left);
             _writer.WriteComma();
             _writer.WritePropertyName("Right");
-            Visit(iqsi.Right);
+            await VisitAsync(iqsi.Right);
             _writer.WriteComma();
             WriteIntermidiateResults(iqsi.IntermediateResults);
             _writer.WriteEndObject();
         }
 
-        public override void VisitRecursionQueryStep(RecursionQueryStep rqs)
+        public override async Task VisitRecursionQueryStepAsync(RecursionQueryStep rqs)
         {
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");
             _writer.WriteString("RecursionQueryStep");
             _writer.WriteComma();
             _writer.WritePropertyName("Left");
-            Visit(rqs.Left);
+            await VisitAsync(rqs.Left);
             _writer.WriteComma();
             _writer.WritePropertyName("Steps");
             _writer.WriteStartArray();
@@ -145,19 +146,19 @@ namespace Raven.Server.Documents.Queries.Graph
                 }
 
                 first = false;
-                Visit(step.Right);
+                await VisitAsync(step.Right);
             }
             _writer.WriteEndArray();
             _writer.WriteComma();
-            Visit(rqs.GetNextStep());
+            await VisitAsync(rqs.GetNextStep());
             WriteIntermidiateResults(rqs.IntermediateResults);
             _writer.WriteEndObject();
         }
 
-        public override void VisitEdgeMatcher(EdgeQueryStep.EdgeMatcher em)
+        public override async Task VisitEdgeMatcherAsync(EdgeQueryStep.EdgeMatcher em)
         {
             _writer.WritePropertyName("Next");
-            Visit(em._parent.Right);
+            await VisitAsync(em._parent.Right);
             _writer.WriteComma();
         }
     }

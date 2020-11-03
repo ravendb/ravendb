@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,16 +31,16 @@ namespace SlowTests.Tests.Views
         private const string Map =
             @"from post in docs.Blogs
 select new {
-  post.blog_id, 
-  comments_length = post.comments.Length 
+  post.blog_id,
+  comments_length = post.comments.Length
   }";
 
         private const string Reduce =
             @"
 from agg in results
 group agg by agg.blog_id into g
-select new { 
-  blog_id = g.Key, 
+select new {
+  blog_id = g.Key,
   comments_length = g.Sum(x=>(int)x.comments_length)
   }";
 
@@ -85,7 +86,7 @@ select new {
                     {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
-                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            var json = commands.Context.Sync.ReadForMemory(stream, "blog");
                             commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
@@ -110,7 +111,7 @@ select new {
                     {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': " + i + ", 'comments': [{},{},{}]}")))
                         {
-                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            var json = commands.Context.Sync.ReadForMemory(stream, "blog");
                             commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
@@ -190,7 +191,7 @@ select new {
                     {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
-                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            var json = commands.Context.Sync.ReadForMemory(stream, "blog");
                             commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
@@ -201,7 +202,7 @@ select new {
 
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': 3, 'comments': [{}]}")))
                     {
-                        var json = commands.Context.ReadForMemory(stream, "blog");
+                        var json = commands.Context.Sync.ReadForMemory(stream, "blog");
                         commands.Put("blogs/0", null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                     }
 
@@ -211,7 +212,6 @@ select new {
                 }
             }
         }
-
 
         [Fact]
         public void CanDelete()
@@ -241,7 +241,7 @@ select new {
                     {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
-                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            var json = commands.Context.Sync.ReadForMemory(stream, "blog");
                             commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
@@ -285,7 +285,7 @@ select new {
                     {
                         using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(values[i])))
                         {
-                            var json = commands.Context.ReadForMemory(stream, "blog");
+                            var json = commands.Context.Sync.ReadForMemory(stream, "blog");
                             commands.Put("blogs/" + i, null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                         }
                     }
@@ -294,7 +294,7 @@ select new {
 
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': 7, 'comments': [{}]}")))
                     {
-                        var json = commands.Context.ReadForMemory(stream, "blog");
+                        var json = commands.Context.Sync.ReadForMemory(stream, "blog");
                         commands.Put("blogs/0", null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                     }
 

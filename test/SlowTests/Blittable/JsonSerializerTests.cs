@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
@@ -113,7 +114,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void JsonDeserialize_WhenHasBlittableObjectPropertyAndWriteAndReadFromStream_ShouldResultInCommandWithTheProperty()
+        public async Task JsonDeserialize_WhenHasBlittableObjectPropertyAndWriteAndReadFromStream_ShouldResultInCommandWithTheProperty()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -142,7 +143,7 @@ namespace SlowTests.Blittable
                 using (Stream stream = new MemoryStream())
                 {
                     //Pass to stream
-                    using (var textWriter = new BlittableJsonTextWriter(context, stream))
+                    await using (var textWriter = new AsyncBlittableJsonTextWriter(context, stream))
                     {
                         context.Write(textWriter, toStream);
                     }

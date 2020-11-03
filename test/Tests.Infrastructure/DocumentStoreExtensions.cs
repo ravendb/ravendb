@@ -18,6 +18,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 
 namespace FastTests
 {
@@ -51,7 +52,7 @@ namespace FastTests
             {
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(json)))
                 {
-                    return Context.ReadForMemory(stream, "json");
+                    return Context.Sync.ReadForMemory(stream, "json");
                 }
             }
 
@@ -378,10 +379,10 @@ namespace FastTests
                     var request = new HttpRequestMessage
                     {
                         Method = _method,
-                        Content = new BlittableJsonContent(stream =>
+                        Content = new BlittableJsonContent(async stream =>
                         {
                             if (_payload != null)
-                                ctx.Write(stream, _payload);
+                                await ctx.WriteAsync(stream, _payload);
                         })
                     };
 

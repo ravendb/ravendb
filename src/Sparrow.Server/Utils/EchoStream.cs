@@ -86,13 +86,13 @@ namespace Sparrow.Server.Utils
         }
 
         // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
-        public new Task WriteAsync(byte[] buffer, int offset, int count)
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             return Task.Run(() => Write(buffer, offset, count));
         }
 
         // we override the xxxxAsync functions because the default base class shares state between ReadAsync and WriteAsync, which causes a hang if both are called at once
-        public new Task<int> ReadAsync(byte[] buffer, int offset, int count)
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             return Task.Run(() => Read(buffer, offset, count));
         }

@@ -90,7 +90,7 @@ namespace Raven.Server.Web.System
                         errorMessage = DomainRegistrationServiceUnreachableError;
                     }
 
-                    using (var streamWriter = new StreamWriter(ResponseBodyStream()))
+                    await using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                     {
                         if (error != null)
                         {
@@ -102,14 +102,14 @@ namespace Raven.Server.Web.System
                                 Type = typeof(RavenException).FullName
                             });
 
-                            streamWriter.Flush();
+                            await streamWriter.FlushAsync();
                         }
                         else
                         {
-                            streamWriter.Write(responseString);
+                            await streamWriter.WriteAsync(responseString);
                         }
 
-                        streamWriter.Flush();
+                        await streamWriter.FlushAsync();
                     }
                 }
                 catch (Exception e)
@@ -126,7 +126,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var json = context.Read(RequestBodyStream(), "license activation");
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "license activation");
                 var licenseInfo = JsonDeserializationServer.LicenseInfo(json);
 
                 var content = new StringContent(JsonConvert.SerializeObject(licenseInfo), Encoding.UTF8, "application/json");
@@ -170,7 +170,7 @@ namespace Raven.Server.Web.System
                             JsonConvert.DeserializeObject<JObject>(responseString).TryGetValue("Error", out errorJToken);
                         }
 
-                        using (var streamWriter = new StreamWriter(ResponseBodyStream()))
+                        await using (var streamWriter = new StreamWriter(ResponseBodyStream()))
                         {
                             new JsonSerializer().Serialize(streamWriter, new
                             {
@@ -179,7 +179,7 @@ namespace Raven.Server.Web.System
                                 Error = errorJToken ?? error
                             });
 
-                            streamWriter.Flush();
+                            await streamWriter.FlushAsync();
                         }
 
                         return;
@@ -225,7 +225,7 @@ namespace Raven.Server.Web.System
                     fullResult.MaxClusterSize = licenseStatus.MaxClusterSize;
                     fullResult.LicenseType = licenseStatus.Type;
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(fullResult, context);
                         context.Write(writer, blittable);
@@ -243,13 +243,13 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/setup/populate-ips", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public Task PopulateIps()
+        public async Task PopulateIps()
         {
             AssertOnlyInSetupMode();
             var rootDomain = GetQueryStringValueAndAssertIfSingleAndNotEmpty("rootDomain");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var userDomainsWithIpsJson = context.ReadForMemory(RequestBodyStream(), "setup-secured"))
+            using (var userDomainsWithIpsJson = await context.ReadForMemoryAsync(RequestBodyStream(), "setup-secured"))
             {
                 var userDomainsWithIps = JsonDeserializationServer.UserDomainsWithIps(userDomainsWithIpsJson);
 
@@ -268,14 +268,12 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(userDomainsWithIps, context);
                     context.Write(writer, blittable);
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/setup/parameters", "GET", AuthorizationStatus.UnauthenticatedClients)]
@@ -284,7 +282,7 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
             var setupParameters = await SetupParameters.Get(ServerStore);
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName(nameof(SetupParameters.FixedServerPortNumber));
@@ -340,7 +338,7 @@ namespace Raven.Server.Web.System
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var setupParameters = await SetupParameters.Get(ServerStore);
 
@@ -418,12 +416,12 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/setup/hosts", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public Task GetHosts()
+        public async Task GetHosts()
         {
             AssertOnlyInSetupMode();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var certificateJson = context.ReadForMemory(RequestBodyStream(), "setup-certificate"))
+            using (var certificateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "setup-certificate"))
             {
                 var certDef = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
@@ -462,7 +460,7 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException($"Failed to load the uploaded certificate. Did you accidentally upload a client certificate?", e);
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("CN");
@@ -486,8 +484,6 @@ namespace Raven.Server.Web.System
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/setup/unsecured", "POST", AuthorizationStatus.UnauthenticatedClients)]
@@ -496,7 +492,7 @@ namespace Raven.Server.Web.System
             AssertOnlyInSetupMode();
 
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(RequestBodyStream(), "setup-unsecured"))
+            using (var setupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "setup-unsecured"))
             {
                 // Making sure we don't have leftovers from previous setup
                 try
@@ -517,7 +513,7 @@ namespace Raven.Server.Web.System
                 BlittableJsonReaderObject settingsJson;
                 using (var fs = new FileStream(ServerStore.Configuration.ConfigPath, FileMode.Open, FileAccess.Read))
                 {
-                    settingsJson = context.ReadForMemory(fs, "settings-json");
+                    settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                 }
 
                 settingsJson.Modifications = new DynamicJsonValue(settingsJson)
@@ -577,7 +573,7 @@ namespace Raven.Server.Web.System
                 operationId = ServerStore.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(stream, "setup-secured"))
+            using (var setupInfoJson = await context.ReadForMemoryAsync(stream, "setup-secured"))
             {
                 var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
 
@@ -600,7 +596,7 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
-                HttpContext.Response.Body.Write(zip, 0, zip.Length);
+                await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
             }
         }
 
@@ -616,7 +612,7 @@ namespace Raven.Server.Web.System
                 var baseUri = new Uri("https://letsencrypt.org/");
                 var uri = new Uri(baseUri, await SetupManager.LetsEncryptAgreement(email, ServerStore));
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Uri");
@@ -640,7 +636,7 @@ namespace Raven.Server.Web.System
                 operationId = ServerStore.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var setupInfoJson = context.ReadForMemory(stream, "setup-lets-encrypt"))
+            using (var setupInfoJson = await context.ReadForMemoryAsync(stream, "setup-lets-encrypt"))
             {
                 var setupInfo = JsonDeserializationServer.SetupInfo(setupInfoJson);
 
@@ -656,17 +652,17 @@ namespace Raven.Server.Web.System
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "application/octet-stream";
 
-                HttpContext.Response.Body.Write(zip, 0, zip.Length);
+                await HttpContext.Response.Body.WriteAsync(zip, 0, zip.Length);
             }
         }
 
         [RavenAction("/setup/continue/extract", "POST", AuthorizationStatus.UnauthenticatedClients)]
-        public Task ExtractInfoFromZip()
+        public async Task ExtractInfoFromZip()
         {
             AssertOnlyInSetupMode();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var continueSetupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-setup-info"))
+            using (var continueSetupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "continue-setup-info"))
             {
                 var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
                 byte[] zipBytes;
@@ -693,13 +689,13 @@ namespace Raven.Server.Web.System
 
                             var tag = entry.FullName.Substring(0, entry.FullName.Length - "/settings.json".Length);
 
-                            using (var settingsJson = context.ReadForMemory(entry.Open(), "settings-json"))
+                            using (var settingsJson = await context.ReadForMemoryAsync(entry.Open(), "settings-json"))
                                 if (settingsJson.TryGet(nameof(ConfigurationNodeInfo.PublicServerUrl), out string publicServerUrl))
                                     urlByTag[tag] = publicServerUrl;
                         }
                     }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartArray();
                         var first = true;
@@ -728,8 +724,6 @@ namespace Raven.Server.Web.System
                     throw new InvalidOperationException("Unable to extract setup information from the zip file.", e);
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/setup/continue", "POST", AuthorizationStatus.UnauthenticatedClients)]
@@ -744,7 +738,7 @@ namespace Raven.Server.Web.System
                 operationId = ServerStore.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var continueSetupInfoJson = context.ReadForMemory(RequestBodyStream(), "continue-cluster-setup"))
+            using (var continueSetupInfoJson = await context.ReadForMemoryAsync(RequestBodyStream(), "continue-cluster-setup"))
             {
                 var continueSetupInfo = JsonDeserializationServer.ContinueSetupInfo(continueSetupInfoJson);
 

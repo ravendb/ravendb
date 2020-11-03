@@ -20,6 +20,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 using static FastTests.Server.Documents.Indexing.Lucene.LuceneDocumentConverterTests;
@@ -87,7 +88,7 @@ namespace SlowTests.Tests.Indexes
         private static dynamic GetDocumentFromString(string json, JsonOperationContext context)
         {
             var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
-            var reader = context.ReadForMemory(ms, "doc");
+            var reader = context.Sync.ReadForMemory(ms, "doc");
 
             return new DynamicBlittableJson(new Document
             {

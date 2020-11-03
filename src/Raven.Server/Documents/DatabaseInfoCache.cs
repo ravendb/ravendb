@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -67,7 +68,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public unsafe bool TryGet(string databaseName, Action<BlittableJsonReaderObject> action)
+        public bool TryGet(string databaseName, Action<BlittableJsonReaderObject> action)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
@@ -81,9 +82,12 @@ namespace Raven.Server.Documents
                         return false;
                 }
 
-                //it seems like the database was shutdown rudely and never wrote it stats onto the disk
-                if (infoTvr.Pointer == null)
-                    return false;
+                unsafe
+                {
+                    //it seems like the database was shutdown rudely and never wrote it stats onto the disk
+                    if (infoTvr.Pointer == null)
+                        return false;
+                }
 
                 using (var databaseInfoJson = Read(context, ref infoTvr))
                 {

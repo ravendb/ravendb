@@ -5,7 +5,7 @@ namespace Sparrow.Server.Extensions
     public static class RavenDateTimeExtensions
     {
         /// <summary>
-        /// This function Processes the to string format of the form "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff" for date times in 
+        /// This function Processes the to string format of the form "yyyy'-'MM'-'dd'T'HH':'mm':'ss.fffffff" for date times in
         /// invariant culture scenarios. This implementation takes 20% of the time of a regular .ToString(format) call
         /// </summary>
         /// <param name="dt"></param>

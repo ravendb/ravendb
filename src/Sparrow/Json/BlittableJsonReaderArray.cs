@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -45,13 +46,20 @@ namespace Sparrow.Json
             AssertContextNotDisposed();
 
             using (var memoryStream = new MemoryStream())
-            using (var tw = new BlittableJsonTextWriter(_context, memoryStream))
             {
-                tw.WriteValue(BlittableJsonToken.StartArray, this);
-                tw.Flush();
-                memoryStream.Position = 0;
+                var tw = new AsyncBlittableJsonTextWriter(_context, memoryStream);
+                try
+                {
+                    tw.WriteValue(BlittableJsonToken.StartArray, this);
+                    tw.FlushAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+                    memoryStream.Position = 0;
 
-                return new StreamReader(memoryStream).ReadToEnd();
+                    return new StreamReader(memoryStream).ReadToEnd();
+                }
+                finally
+                {
+                    tw.DisposeAsync().AsTask().ConfigureAwait(false).GetAwaiter().GetResult();
+                }
             }
         }
 
@@ -80,18 +88,23 @@ namespace Sparrow.Json
                                 var clone = item.CloneOnTheSameContext();
                                 builder.WriteEmbeddedBlittableDocument(clone.BasePointer, clone.Size);
                                 break;
+
                             case LazyStringValue item:
                                 builder.WriteValue(item);
                                 break;
+
                             case long item:
                                 builder.WriteValue(item);
                                 break;
+
                             case LazyNumberValue item:
                                 builder.WriteValue(item);
                                 break;
+
                             case LazyCompressedStringValue item:
                                 builder.WriteValue(item);
                                 break;
+
                             default:
                                 throw new InvalidDataException($"Actual value type is {itr.Current.GetType()}. Should be known serialized type and should not happen. ");
                         }
@@ -108,7 +121,7 @@ namespace Sparrow.Json
         {
             AssertContextNotDisposed();
 
-            // this is required only in cases that we get a BlittableJsonReaderArray, which is an only child of an BlittableJsonReaderObject and we lose track of it's parent, 
+            // this is required only in cases that we get a BlittableJsonReaderArray, which is an only child of an BlittableJsonReaderObject and we lose track of it's parent,
             // like in BlittableJsonDocumentBuilder.CreateArrayReader.
             if (_disposeParent)
                 _parent?.Dispose();
@@ -123,7 +136,7 @@ namespace Sparrow.Json
         }
 
         public object this[int index] => GetValueTokenTupleByIndex(index).Item1;
-        
+
         public int BinarySearch(string key, StringComparison comparison)
         {
             AssertContextNotDisposed();
@@ -172,7 +185,6 @@ namespace Sparrow.Json
                 return lazyCompressedStringValue;
             BlittableJsonReaderObject.ConvertType(obj, out string result);
             return result;
-
         }
 
         public void AddItemsToStream<T>(ManualBlittableJsonDocumentBuilder<T> writer) where T : struct, IUnmanagedWriteBuffer

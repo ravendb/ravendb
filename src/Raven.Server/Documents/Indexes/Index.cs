@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -62,6 +63,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
+using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
 using Size = Sparrow.Size;
@@ -189,7 +191,8 @@ namespace Raven.Server.Documents.Indexes
         private Lazy<Size?> _transactionSizeLimit;
         private bool _scratchSpaceLimitExceeded;
 
-        private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
+        private readonly AsyncReaderWriterLock _currentlyRunningQueriesLock = new AsyncReaderWriterLock();
+        private readonly AsyncLocal<bool> _isRunningQueriesWriteLockTaken = new AsyncLocal<bool>();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private readonly MultipleUseFlag _definitionChanged = new MultipleUseFlag();
@@ -278,49 +281,43 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void DisposeIndex()
         {
-            var needToLock = _currentlyRunningQueriesLock.IsWriteLockHeld == false;
-            if (needToLock)
-                _currentlyRunningQueriesLock.EnterWriteLock();
-            try
+            if (_isRunningQueriesWriteLockTaken.Value == false)
+                throw new InvalidOperationException("Are you trying to dispose an index without a lock?");
+
+            _isRunningQueriesWriteLockTaken.Value = true;
+
+            _indexingProcessCancellationTokenSource?.Cancel();
+
+            //Does happen for faulty in memory indexes
+            if (DocumentDatabase != null)
             {
-                _indexingProcessCancellationTokenSource?.Cancel();
+                DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
 
-                //Does happen for faulty in memory indexes
-                if (DocumentDatabase != null)
-                {
-                    DocumentDatabase.TombstoneCleaner.Unsubscribe(this);
-
-                    DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
-                }
-
-                var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
-
-                exceptionAggregator.Execute(() =>
-                {
-                    var indexingThread = _indexingThread;
-
-                    // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
-                    if (indexingThread != null && PoolOfThreads.LongRunningWork.Current != indexingThread)
-                        indexingThread.Join(int.MaxValue);
-                });
-
-                exceptionAggregator.Execute(() => { IndexPersistence?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _environment?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _unmanagedBuffersPool?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
-
-                exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
-
-                exceptionAggregator.ThrowIfNeeded();
+                DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
             }
-            finally
+
+            var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
+
+            exceptionAggregator.Execute(() =>
             {
-                if (needToLock)
-                    _currentlyRunningQueriesLock.ExitWriteLock();
-            }
+                var indexingThread = _indexingThread;
+
+                // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+                if (indexingThread != null && PoolOfThreads.LongRunningWork.Current != indexingThread)
+                    indexingThread.Join(int.MaxValue);
+            });
+
+            exceptionAggregator.Execute(() => { IndexPersistence?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _environment?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _unmanagedBuffersPool?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _contextPool?.Dispose(); });
+
+            exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
+
+            exceptionAggregator.ThrowIfNeeded();
         }
 
         public static Index Open(string path, DocumentDatabase documentDatabase)
@@ -643,12 +640,19 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal ExitWriteLock DrainRunningQueries()
+        internal IDisposable DrainRunningQueries()
         {
-            if (_currentlyRunningQueriesLock.IsWriteLockHeld)
-                return new ExitWriteLock();
+            if (_isRunningQueriesWriteLockTaken.Value)
+                return null;
 
-            if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
+            IDisposable currentlyRunningQueriesWriteLock;
+
+            try
+            {
+                currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+                _isRunningQueriesWriteLockTaken.Value = true;
+            }
+            catch (OperationCanceledException)
             {
                 if (_disposeOne.Disposed)
                     ThrowObjectDisposed();
@@ -656,7 +660,7 @@ namespace Raven.Server.Documents.Indexes
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
 
-            return new ExitWriteLock(_currentlyRunningQueriesLock);
+            return new ExitWriteLock(currentlyRunningQueriesWriteLock, this);
         }
 
         protected void Initialize(
@@ -2582,6 +2586,7 @@ namespace Raven.Server.Documents.Indexes
             var result = new StreamDocumentIndexEntriesQueryResult(response, writer, token);
             await IndexEntriesQueryInternal(result, query, queryContext, token);
             result.Flush();
+
             DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
@@ -2632,7 +2637,7 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
 
                     // we take the awaiter _before_ the indexing transaction happens,
                     // so if there are any changes, it will already happen to it, and we'll
@@ -2883,7 +2888,7 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
                     var frozenAwaiter = GetIndexingBatchAwaiter();
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
@@ -2982,7 +2987,7 @@ namespace Raven.Server.Documents.Indexes
                     token.ThrowIfCancellationRequested();
 
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
@@ -3095,7 +3100,7 @@ namespace Raven.Server.Documents.Indexes
                 while (true)
                 {
                     AssertIndexState();
-                    marker.HoldLock();
+                    await marker.HoldLockAsync();
 
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
@@ -4173,7 +4178,7 @@ namespace Raven.Server.Documents.Indexes
         public IDisposable RestartEnvironment(Action onBeforeEnvironmentDispose = null)
         {
             // shutdown environment
-            if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
+            if (_isRunningQueriesWriteLockTaken.Value == false)
                 throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
             // here we ensure that we aren't currently running any indexing,
@@ -4189,7 +4194,7 @@ namespace Raven.Server.Documents.Indexes
             return new DisposableAction(() =>
             {
                 // restart environment
-                if (_currentlyRunningQueriesLock.IsWriteLockHeld == false)
+                if (_isRunningQueriesWriteLockTaken.Value == false)
                     throw new InvalidOperationException("Expected to be called only via DrainRunningQueries");
 
                 var options = CreateStorageEnvironmentOptions(DocumentDatabase, Configuration);
@@ -4351,19 +4356,28 @@ namespace Raven.Server.Documents.Indexes
             return false;
         }
 
-        protected struct IndexQueryDoneRunning : IDisposable
+        protected class IndexQueryDoneRunning : IDisposable
         {
             private static readonly TimeSpan DefaultLockTimeout = TimeSpan.FromSeconds(3);
 
             private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
 
+            private static readonly CancellationToken CancelledToken;
+
+            static IndexQueryDoneRunning()
+            {
+                var cts = new CancellationTokenSource();
+                cts.Cancel();
+
+                CancelledToken = cts.Token;
+            }
+
             private readonly Index _parent;
-            private bool _hasLock;
+            private IDisposable _lock;
 
             public IndexQueryDoneRunning(Index parent)
             {
                 _parent = parent;
-                _hasLock = false;
             }
 
             public void HoldLock()
@@ -4372,18 +4386,51 @@ namespace Raven.Server.Documents.Indexes
                     ? ExtendedLockTimeout
                     : DefaultLockTimeout;
 
-                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
-                    ThrowLockTimeoutException();
+                if (_lock != null)
+                    ThrowLockAlreadyTaken();
 
-                _hasLock = true;
+                try
+                {
+                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(new CancellationTokenSource(timeout).Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    ThrowLockTimeoutException();
+                }
+            }
+
+            public async ValueTask HoldLockAsync()
+            {
+                var timeout = _parent._isReplacing
+                    ? ExtendedLockTimeout
+                    : DefaultLockTimeout;
+
+                if (_lock != null)
+                    ThrowLockAlreadyTaken();
+
+                try
+                {
+                    _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(new CancellationTokenSource(timeout).Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    ThrowLockTimeoutException();
+                }
             }
 
             public bool TryHoldLock()
             {
-                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(0) == false)
-                    return false;
+                if (_lock != null)
+                    ThrowLockAlreadyTaken();
 
-                _hasLock = true;
+                try
+                {
+                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(CancelledToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return false;
+                }
 
                 return true;
             }
@@ -4394,31 +4441,39 @@ namespace Raven.Server.Documents.Indexes
                     $"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");
             }
 
+            private void ThrowLockAlreadyTaken()
+            {
+                throw new InvalidOperationException(
+                    $"Read lock of index {_parent.Name} was already taken");
+            }
+
             public void ReleaseLock()
             {
-                _hasLock = false;
-                _parent._currentlyRunningQueriesLock.ExitReadLock();
+                _lock?.Dispose();
+                _lock = null;
             }
 
             public void Dispose()
             {
-                if (_hasLock)
-                    _parent._currentlyRunningQueriesLock.ExitReadLock();
+                ReleaseLock();
             }
         }
 
-        internal struct ExitWriteLock : IDisposable
+        internal class ExitWriteLock : IDisposable
         {
-            private readonly ReaderWriterLockSlim _rwls;
+            private readonly IDisposable _writeLock;
+            private readonly Index _parent;
 
-            public ExitWriteLock(ReaderWriterLockSlim rwls)
+            public ExitWriteLock(IDisposable writeLock, Index parent)
             {
-                _rwls = rwls;
+                _writeLock = writeLock;
+                _parent = parent;
             }
 
             public void Dispose()
             {
-                _rwls?.ExitWriteLock();
+                _writeLock.Dispose();
+                _parent._isRunningQueriesWriteLockTaken.Value = false;
             }
         }
 

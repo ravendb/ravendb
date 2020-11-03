@@ -90,8 +90,8 @@ namespace Raven.Client.Documents.Subscriptions
 
         public async ValueTask DisposeAsync(bool waitForSubscriptionTask)
         {
-            if (_disposed)
-                return;
+                if (_disposed)
+                    return;
 
             try
             {
@@ -226,16 +226,16 @@ namespace Raven.Client.Documents.Subscriptions
 
                 var databaseName = _store.GetDatabase(_dbName);
 
-                var parameters = new TcpNegotiateParameters
+                var parameters = new AsyncTcpNegotiateParameters
                 {
                     Database = databaseName,
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     Version = SubscriptionTcpVersion ?? TcpConnectionHeaderMessage.SubscriptionTcpVersion,
-                    ReadResponseAndGetVersionCallback = ReadServerResponseAndGetVersion,
+                    ReadResponseAndGetVersionCallbackAsync = ReadServerResponseAndGetVersionAsync,
                     DestinationNodeTag = CurrentNodeTag,
                     DestinationUrl = chosenUrl
                 };
-                _supportedFeatures = TcpNegotiation.NegotiateProtocolVersion(context, _stream, parameters);
+                _supportedFeatures = await TcpNegotiation.NegotiateProtocolVersionAsync(context, _stream, parameters).ConfigureAwait(false);
 
                 if (_supportedFeatures.ProtocolVersion <= 0)
                 {
@@ -245,7 +245,7 @@ namespace Raven.Client.Documents.Subscriptions
 
                 using (var optionsJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_options, context))
                 {
-                    optionsJson.WriteJsonTo(_stream);
+                    await optionsJson.WriteJsonToAsync(_stream, token).ConfigureAwait(false);
 
                     await _stream.FlushAsync(token).ConfigureAwait(false);
                 }
@@ -292,10 +292,10 @@ namespace Raven.Client.Documents.Subscriptions
             return tcpCommand.Result;
         }
 
-        private int ReadServerResponseAndGetVersion(JsonOperationContext context, BlittableJsonTextWriter writer, Stream stream, string url)
+        private async ValueTask<int> ReadServerResponseAndGetVersionAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, Stream stream, string destinationUrl)
         {
             //Reading reply from server
-            using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
+            using (var response = await context.ReadForMemoryAsync(_stream, "Subscription/tcp-header-response").ConfigureAwait(false))
             {
                 var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
                 switch (reply.Status)
@@ -311,14 +311,14 @@ namespace Raven.Client.Documents.Subscriptions
                             return reply.Version;
                         }
                         //Kindly request the server to drop the connection
-                        SendDropMessage(context, writer, reply);
+                        await SendDropMessageAsync(context, writer, reply).ConfigureAwait(false);
                         throw new InvalidOperationException($"Can't connect to database {_dbName} because: {reply.Message}");
                 }
                 return reply.Version;
             }
         }
 
-        private void SendDropMessage(JsonOperationContext context, BlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply)
+        private async ValueTask SendDropMessageAsync(JsonOperationContext context, AsyncBlittableJsonTextWriter writer, TcpConnectionHeaderResponse reply)
         {
             context.Write(writer, new DynamicJsonValue
             {
@@ -328,7 +328,8 @@ namespace Raven.Client.Documents.Subscriptions
                 [nameof(TcpConnectionHeaderMessage.Info)] =
                     $"Couldn't agree on subscription TCP version ours:{TcpConnectionHeaderMessage.SubscriptionTcpVersion} theirs:{reply.Version}"
             });
-            writer.Flush();
+
+            await writer.FlushAsync().ConfigureAwait(false);
         }
 
         private void AssertConnectionState(SubscriptionConnectionServerMessage connectionStatus)
@@ -485,7 +486,7 @@ namespace Raven.Client.Documents.Subscriptions
                             {
                                 if (tcpStreamCopy != null) //possibly prevent ObjectDisposedException
                                 {
-                                    await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context).ConfigureAwait(false);
+                                    await SendAckAsync(lastReceivedChangeVector, tcpStreamCopy, context, _processingCts.Token).ConfigureAwait(false);
                                 }
                             }
                             catch (ObjectDisposedException)
@@ -612,7 +613,7 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-        private async Task SendAckAsync(string lastReceivedChangeVector, Stream stream, JsonOperationContext context)
+        private async Task SendAckAsync(string lastReceivedChangeVector, Stream stream, JsonOperationContext context, CancellationToken token)
         {
             var message = new SubscriptionConnectionClientMessage
             {
@@ -622,9 +623,9 @@ namespace Raven.Client.Documents.Subscriptions
 
             using (var messageJson = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(message, context))
             {
-                messageJson.WriteJsonTo(stream);
+                await messageJson.WriteJsonToAsync(stream, token).ConfigureAwait(false);
 
-                await stream.FlushAsync().ConfigureAwait(false);
+                await stream.FlushAsync(token).ConfigureAwait(false);
             }
         }
 
@@ -823,11 +824,11 @@ namespace Raven.Client.Documents.Subscriptions
                 return _forTestingPurposes;
 
             return _forTestingPurposes = new TestingStuff();
-        }
+    }
 
         internal class TestingStuff
         {
             internal bool SimulateUnexpectedException;
-        }
+}
     }
 }

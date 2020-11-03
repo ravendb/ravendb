@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
     public class SecretKeyHandler : RequestHandler
     {
         [RavenAction("/admin/secrets", "GET", AuthorizationStatus.Operator)]
-        public Task GetKeys()
+        public async Task GetKeys()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
@@ -28,12 +28,11 @@ namespace Raven.Server.Documents.Handlers
                     ["Keys"] = new DynamicJsonArray(Server.ServerStore.GetSecretKeysNames(ctx))
                 };
 
-                using (var writer = new BlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
                 {
                     ctx.Write(writer, djv);
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/secrets/generate", "GET", AuthorizationStatus.Operator)]

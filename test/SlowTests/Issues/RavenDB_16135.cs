@@ -101,7 +101,7 @@ namespace SlowTests.Issues
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Post,
-                        Content = new BlittableJsonContent(stream => ctx.Write(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)))
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_request, ctx)).ConfigureAwait(false))
                     };
                 }
 

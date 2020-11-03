@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,26 +20,26 @@ namespace SlowTests.Issues
         {
         }
 
-        class JsonDeserialization : JsonDeserializationBase
+        private class JsonDeserialization : JsonDeserializationBase
         {
             public static readonly Func<BlittableJsonReaderObject, Container> Container = GenerateJsonDeserializationRoutine<Container>();
         }
-        
-        class Container
+
+        private class Container
         {
             public object A { get; set; }
             public BlittableJsonReaderObject B { get; set; }
             public Dictionary<string, object> C { get; set; }
             public Dictionary<string, BlittableJsonReaderObject> D { get; set; }
         }
-        
+
         [Fact]
         public void CanDeserializeToBlittableDictionary()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var str = @" {  ""A"" : {  ""P1"": true  }, ""B"": { ""P2"": false } , ""C"" : {  ""P1"": { ""aa"": false}  }, ""D"": { ""P2"": { ""aa"": false} } }";
-                var blittable = context.ReadForMemory(str, "test");
+                var blittable = context.Sync.ReadForMemory(str, "test");
                 var parsedObject = JsonDeserialization.Container(blittable);
 
                 Assert.IsType<BlittableJsonReaderObject>(parsedObject.A);
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
                 Assert.IsType<BlittableJsonReaderObject>(parsedObject.D["P2"]);
             }
         }
-        
+
         [Fact]
         public void CanRestoreSubscriptions()
         {
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
             {
                 store.Subscriptions.Create<User>(x => x.Name == "Marcin");
                 store.Subscriptions.Create<User>();
-                
+
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Snapshot,
@@ -94,9 +95,9 @@ namespace SlowTests.Issues
                     {
                         restoredStore.Initialize();
                         var subscriptions = restoredStore.Subscriptions.GetSubscriptions(0, 10);
-                        
+
                         Assert.Equal(2, subscriptions.Count);
-                        
+
                         foreach (var subscription in subscriptions)
                         {
                             Assert.NotNull(subscription.SubscriptionName);

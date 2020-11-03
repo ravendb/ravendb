@@ -8,6 +8,7 @@ namespace Sparrow.Json
     {
         private readonly JsonOperationContext _context;
         public readonly byte* Buffer;
+
         public readonly int UncompressedSize;
         public readonly int CompressedSize;
         public string String;
@@ -23,8 +24,10 @@ namespace Sparrow.Json
             {
                 case LazyCompressedStringValue lcsv:
                     return Equals(lcsv);
+
                 case LazyStringValue lsv:
                     return lsv.Equals(ToLazyStringValue());
+
                 case string str:
                     return str.Equals(ToString());
             }
@@ -82,21 +85,31 @@ namespace Sparrow.Json
 
         public byte* DecompressToTempBuffer(out AllocatedMemoryData allocatedData, JsonOperationContext externalContext = null)
         {
-            var sizeOfEscapePositions = GetSizeOfEscapePositions();
-            allocatedData = (externalContext ?? _context).GetMemory(UncompressedSize + sizeOfEscapePositions);
-            return DecompressToBuffer(allocatedData.Address, sizeOfEscapePositions);
+            allocatedData = DecompressToAllocatedMemoryDataInternal(externalContext, out _);
+            return allocatedData.Address;
         }
 
-        public AllocatedMemoryData DecompressToAllocatedMemoryData(JsonOperationContext externalContext)
+        public UnmanagedPointer DecompressToUnmanagedPointer(out AllocatedMemoryData allocatedData, JsonOperationContext externalContext = null)
+        {
+            allocatedData = DecompressToAllocatedMemoryDataInternal(externalContext, out _);
+            return new UnmanagedPointer(allocatedData.Address);
+        }
+
+        public AllocatedMemoryData DecompressToAllocatedMemoryData(JsonOperationContext externalContext = null)
+        {
+            return DecompressToAllocatedMemoryDataInternal(externalContext, out _);
+        }
+
+        private AllocatedMemoryData DecompressToAllocatedMemoryDataInternal(JsonOperationContext externalContext, out int size)
         {
             var sizeOfEscapePositions = GetSizeOfEscapePositions();
-            var allocatedBuffer = externalContext.GetMemory(UncompressedSize + sizeOfEscapePositions);
-            DecompressToBuffer(allocatedBuffer.Address, sizeOfEscapePositions);
+            var allocatedBuffer = (externalContext ?? _context).GetMemory(UncompressedSize + sizeOfEscapePositions);
+            DecompressToBuffer(allocatedBuffer.Address, sizeOfEscapePositions, out size);
 
             return allocatedBuffer;
         }
 
-        private byte* DecompressToBuffer(byte* tempBuffer, int sizeOfEscapePositions)
+        private void DecompressToBuffer(byte* tempBuffer, int sizeOfEscapePositions, out int size)
         {
             int uncompressedSize;
 
@@ -120,7 +133,7 @@ namespace Sparrow.Json
                 throw new FormatException("Wrong size detected on decompression");
 
             Memory.Copy(tempBuffer + uncompressedSize, Buffer + CompressedSize, sizeOfEscapePositions);
-            return tempBuffer;
+            size = uncompressedSize + sizeOfEscapePositions;
         }
 
         private int GetSizeOfEscapePositions()
@@ -141,10 +154,12 @@ namespace Sparrow.Json
         {
             return (string)this;
         }
+
         public string Substring(int startIndex)
         {
             return ToString().Substring(startIndex);
         }
+
         public string Substring(int startIndex, int length)
         {
             return ToString().Substring(startIndex, length);

@@ -109,7 +109,6 @@ namespace Raven.Server.Documents.Queries
                 writer.WriteEndArray();
 
                 writer.WriteEndObject();
-
             }
 
             writer.WriteEndArray();
@@ -121,6 +120,5 @@ namespace Raven.Server.Documents.Queries
             public string IndexName { get; set; }
             public List<ExecutingQueryInfo> RunningQueries { get; set; }
         }
-
     }
 }

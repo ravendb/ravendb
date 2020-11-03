@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Json;
 using Sparrow.Json;
@@ -35,11 +36,9 @@ namespace FastTests.Blittable
 
                 using (var inputJson = ctx.ReadObject(input, "input", BlittableJsonDocumentBuilder.UsageMode.CompressSmallStrings))
                 {
-
                 }
             }
         }
-
 
         [Fact]
         public void CanCompressSmallStrings()
@@ -72,20 +71,20 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void Dup()
+        public Task Dup()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            return AssertEqualAfterRoundTripAsync(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Name"] = "Ayende Rahien"
             },
                 "{\"Name\":\"Ayende Rahien\"}");
-
         }
+
         [Fact]
-        public void CanUseNestedObject()
+        public async Task CanUseNestedObject()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTripAsync(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Wife"] = new DynamicJsonValue
@@ -95,8 +94,7 @@ namespace FastTests.Blittable
             },
                 "{\"Name\":\"Oren Eini\",\"Wife\":{\"Name\":\"Rachel\"}}");
 
-
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTripAsync(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Dogs"] = new DynamicJsonArray
@@ -109,9 +107,9 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void CanGenerateJsonProperly_WithEscapePositions()
+        public Task CanGenerateJsonProperly_WithEscapePositions()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            return AssertEqualAfterRoundTripAsync(new DynamicJsonValue
             {
                 ["Name"] = "Oren\r\nEini"
             },
@@ -119,15 +117,15 @@ namespace FastTests.Blittable
         }
 
         [Fact]
-        public void CanGenerateJsonProperly()
+        public async Task CanGenerateJsonProperly()
         {
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTripAsync(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini"
             },
                 "{\"Name\":\"Oren Eini\"}");
 
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTripAsync(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Age"] = 34,
@@ -135,8 +133,7 @@ namespace FastTests.Blittable
             },
                 "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true}");
 
-
-            AssertEqualAfterRoundTrip(new DynamicJsonValue
+            await AssertEqualAfterRoundTripAsync(new DynamicJsonValue
             {
                 ["Name"] = "Oren Eini",
                 ["Age"] = 34,
@@ -147,19 +144,18 @@ namespace FastTests.Blittable
                 "{\"Name\":\"Oren Eini\",\"Age\":34,\"Married\":true,\"Null\":null,\"Pie\":3.14}");
         }
 
-        private static void AssertEqualAfterRoundTrip(DynamicJsonValue doc, string expected)
+        private static async Task AssertEqualAfterRoundTripAsync(DynamicJsonValue doc, string expected)
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 using (var writer = ctx.ReadObject(doc, "foo"))
                 {
                     var memoryStream = new MemoryStream();
-                    ctx.Write(memoryStream, writer);
+                    await ctx.WriteAsync(memoryStream, writer);
                     var actual = Encoding.UTF8.GetString(memoryStream.ToArray());
                     Assert.Equal(expected, actual);
                 }
             }
         }
     }
-
 }

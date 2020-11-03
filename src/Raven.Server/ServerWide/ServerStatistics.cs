@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.ServerWide
 {
@@ -28,6 +30,34 @@ namespace Raven.Server.ServerWide
         public DateTime? LastRequestTime;
 
         public DateTime? LastAuthorizedNonClusterAdminRequestTime;
+
+        public void WriteTo(AsyncBlittableJsonTextWriter writer)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(UpTime));
+            writer.WriteString(UpTime.ToString("c"));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(StartUpTime));
+            writer.WriteDateTime(StartUpTime, isUtc: true);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(LastRequestTime));
+            if (LastRequestTime.HasValue)
+                writer.WriteDateTime(LastRequestTime.Value, isUtc: true);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(LastAuthorizedNonClusterAdminRequestTime));
+            if (LastAuthorizedNonClusterAdminRequestTime.HasValue)
+                writer.WriteDateTime(LastAuthorizedNonClusterAdminRequestTime.Value, isUtc: true);
+            else
+                writer.WriteNull();
+
+            writer.WriteEndObject();
+        }
 
         public void WriteTo(BlittableJsonTextWriter writer)
         {
@@ -72,7 +102,7 @@ namespace Raven.Server.ServerWide
                     if (result == null)
                         return;
 
-                    using (var json = context.ReadForMemory(result.Reader.AsStream(), nameof(ServerStatistics)))
+                    using (var json = context.Sync.ReadForMemory(result.Reader.AsStream(), nameof(ServerStatistics)))
                     {
                         var stats = JsonDeserializationServer.ServerStatistics(json);
 
@@ -104,8 +134,8 @@ namespace Raven.Server.ServerWide
                         using (var writer = new BlittableJsonTextWriter(context, ms))
                         {
                             WriteTo(writer);
-
                             writer.Flush();
+
                             ms.Position = 0;
 
                             var tree = tx.InnerTransaction.CreateTree(nameof(ServerStatistics));

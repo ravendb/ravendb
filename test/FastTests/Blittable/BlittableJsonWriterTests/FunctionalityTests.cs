@@ -4,12 +4,14 @@ using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
@@ -30,11 +32,11 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         }
 
         [Fact]
-        public void FunctionalityTest()
+        public async Task FunctionalityTest()
         {
             var str = GenerateSimpleEntityForFunctionalityTest();
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = await blittableContext.ReadForDiskAsync(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicRavenJObject = JsonConvert.DeserializeObject<ExpandoObject>(str, new ExpandoObjectConverter());
                 dynamic dynamicBlittableJObject = new DynamicBlittableJson(employee);
@@ -49,7 +51,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(dynamicRavenJObject.Office.Street, dynamicRavenJObject.Office.Street);
                 Assert.Equal(dynamicRavenJObject.Office.City, dynamicRavenJObject.Office.City);
                 var ms = new MemoryStream();
-                blittableContext.Write(ms, employee);
+                await blittableContext.WriteAsync(ms, employee);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
@@ -59,7 +61,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = blittableContext.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 AssertComplexEmployee(str, employee, blittableContext);
             }
@@ -70,7 +72,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
             var str = "{\"Alias\":\"Jimmy\",\"Data\":[],\"Name\":\"Trolo\",\"SubData\":{\"SubArray\":[]}}";
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = blittableContext.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(employee);
                 Assert.Equal(dynamicObject.Alias, "Jimmy");
@@ -120,7 +122,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         [InlineData(10)]
         [InlineData(100)]
         [InlineData(1000)]
-        public void LongStringsTest(int repeatSize)
+        public async Task LongStringsTest(int repeatSize)
         {
             var originStr = string.Join("", Enumerable.Repeat(1, repeatSize).Select(x => "sample"));
             var sampleObject = new
@@ -139,7 +141,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             var str = sampleObject.ToJsonString();
 
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
-            using (var doc = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var doc = await blittableContext.ReadForDiskAsync(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 dynamic dynamicObject = new DynamicBlittableJson(doc);
                 Assert.Equal(sampleObject.Value, dynamicObject.Value);
@@ -154,13 +156,13 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.Equal(sampleObject.SomeObject.SomeArray[0], dynamicObject.SomeObject.SomeArray[0]);
                 Assert.Equal(sampleObject.SomeObject.SomeArray[1], dynamicObject.SomeObject.SomeArray[1]);
                 var ms = new MemoryStream();
-                blittableContext.Write(ms, doc);
+                await blittableContext.WriteAsync(ms, doc);
                 Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 
         [Fact]
-        public void BasicCopyToStream()
+        public async Task BasicCopyToStream()
         {
             var json = JsonConvert.SerializeObject(new
             {
@@ -176,17 +178,17 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             });
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
+            using (var r = await ctx.ReadForDiskAsync(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();
-                ctx.Write(ms, r);
+                await ctx.WriteAsync(ms, r);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
             }
         }
 
         [Fact]
-        public void UsingBooleans()
+        public async Task UsingBooleans()
         {
             var json = JsonConvert.SerializeObject(new
             {
@@ -195,15 +197,15 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             });
 
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
-            using (var r = ctx.Read(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
+            using (var r = await ctx.ReadForDiskAsync(new MemoryStream(Encoding.UTF8.GetBytes(json)), "doc1"))
             {
                 var ms = new MemoryStream();
-                ctx.Write(ms, r);
+                await ctx.WriteAsync(ms, r);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), json);
             }
         }
-        
+
         [Fact]
         public void UsingChars()
         {
@@ -218,7 +220,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             {
                 var json = context.ReadObject(djv, "json");
                 var result = deserialize.Invoke(json);
-                                
+
                 Assert.Equal('a', result.CharWithValue);
                 Assert.Equal(default(char), result.CharNoValue);
             }

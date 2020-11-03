@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Commands
                 var timeout = indexQuery.WaitForNonStaleResultsTimeout.Value;
                 if (timeout < RequestExecutor.GlobalHttpClientTimeout) // if it is greater than it will throw in RequestExecutor
                 {
-                    timeout =  RequestExecutor.GlobalHttpClientTimeout - timeout > AdditionalTimeToAddToTimeout 
+                    timeout = RequestExecutor.GlobalHttpClientTimeout - timeout > AdditionalTimeToAddToTimeout
                         ? timeout.Add(AdditionalTimeToAddToTimeout) : RequestExecutor.GlobalHttpClientTimeout; // giving the server an opportunity to finish the response
                 }
 
@@ -70,11 +70,11 @@ namespace Raven.Client.Documents.Commands
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(stream =>
+                Content = new BlittableJsonContent(async stream =>
                     {
                         // this is here to catch people closing the session before the ToListAsync() completes
                         _session.AssertNotDisposed();
-                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
                         }

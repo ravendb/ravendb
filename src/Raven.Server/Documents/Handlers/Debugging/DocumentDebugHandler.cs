@@ -8,12 +8,12 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class DocumentDebugHandler : DatabaseRequestHandler
-    {       
+    {
         [RavenAction("/databases/*/debug/documents/huge", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task HugeDocuments()
+        public async Task HugeDocuments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 writer.WriteStartObject();
@@ -52,8 +52,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
     }
 }
