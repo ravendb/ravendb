@@ -12,8 +12,9 @@ class additionalSourceSyntax extends dialogViewModelBase {
     }
 
     copySample(sampleTitle: string) {
-        let sampleArray = sampleTitle.startsWith("Csharp") ? additionalSourceSyntax.csharpSamples : additionalSourceSyntax.javascriptSamples;
-        const sampleText = sampleArray.find(x => x.title === sampleTitle).text;
+        const sampleText = [...additionalSourceSyntax.csharpSamples, ...additionalSourceSyntax.javascriptSamples]
+            .find(x => x.title === sampleTitle).text;
+
         copyToClipboard.copy(sampleText, "Sample has been copied to clipboard", this.htmlElement);
     }
 
@@ -65,33 +66,25 @@ map('People', function (person) { return {
         {
             title: "Csharp - Additional Source",
             text: additionalSourceSyntax.additionalSourceCsharpText,
-            html: ko.pureComputed(() => {
-                return Prism.highlight(additionalSourceSyntax.additionalSourceCsharpText, (Prism.languages as any).csharp);
-            })
+            html: Prism.highlight(additionalSourceSyntax.additionalSourceCsharpText, (Prism.languages as any).csharp)
         },
         {
             title: "Csharp - Usage in Map",
             text: additionalSourceSyntax.usageInMapCsharpText,
-            html: ko.pureComputed(() => {
-                return Prism.highlight(additionalSourceSyntax.usageInMapCsharpText, (Prism.languages as any).csharp);
-            })
+            html: Prism.highlight(additionalSourceSyntax.usageInMapCsharpText, (Prism.languages as any).csharp)
         }
     ];
-    
+
     static readonly javascriptSamples: Array<sampleCode> = [
         {
             title: "Javascript - Additional Source",
             text: additionalSourceSyntax.additionalSourceJavascriptText,
-            html: ko.pureComputed(() => {
-                return Prism.highlight(additionalSourceSyntax.additionalSourceJavascriptText, (Prism.languages as any).javascript);
-            })
+            html: Prism.highlight(additionalSourceSyntax.additionalSourceJavascriptText, (Prism.languages as any).javascript)
         },
         {
             title: "Javascript - Usage in Map",
             text: additionalSourceSyntax.usageInMapJavascriptText,
-            html: ko.pureComputed(() => {
-                return Prism.highlight(additionalSourceSyntax.usageInMapJavascriptText, (Prism.languages as any).javascript);
-            })
+            html: Prism.highlight(additionalSourceSyntax.usageInMapJavascriptText, (Prism.languages as any).javascript)
         }
     ];
 }
