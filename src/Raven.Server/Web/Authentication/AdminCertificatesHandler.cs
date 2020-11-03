@@ -241,8 +241,7 @@ namespace Raven.Server.Web.Authentication
                 try
                 {
                     var password = string.IsNullOrEmpty(certificate.Password) ? null : certificate.Password;
-                    var certificate2 = new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet);
-                    certificate2.Dispose();
+                    using var certificate2 = new X509Certificate2(certBytes, password, X509KeyStorageFlags.MachineKeySet);
                 }
                 catch (Exception e)
                 {
