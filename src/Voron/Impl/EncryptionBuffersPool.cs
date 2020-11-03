@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -19,7 +18,7 @@ namespace Voron.Impl
     public unsafe class EncryptionBuffersPool : ILowMemoryHandler
     {
         public static EncryptionBuffersPool Instance = new EncryptionBuffersPool();
-        private const int MaxNumberOfPagesToCache = 128; // 128 * 8K = 1 MB, beyond that, we'll not both 
+        private const int MaxNumberOfPagesToCache = 128; // 128 * 8K = 1 MB, beyond that, we'll not both
         private readonly MultipleUseFlag _isLowMemory = new MultipleUseFlag();
         private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
         private readonly PerCoreContainer<NativeAllocation>[] _items;
@@ -48,7 +47,8 @@ namespace Voron.Impl
 
         public byte* Get(int numberOfPages, out int size, out NativeMemory.ThreadStats thread)
         {
-            var numberOfPagesPowerOfTwo = Bits.PowerOf2(numberOfPages); ;
+            var numberOfPagesPowerOfTwo = Bits.PowerOf2(numberOfPages);
+
             size = numberOfPagesPowerOfTwo * Constants.Storage.PageSize;
 
             if (Disabled || numberOfPagesPowerOfTwo > MaxNumberOfPagesToCache)
@@ -79,7 +79,7 @@ namespace Voron.Impl
 
             Sodium.sodium_memzero(ptr, (UIntPtr)size);
 
-            if (Disabled || size / Constants.Storage.PageSize > MaxNumberOfPagesToCache || 
+            if (Disabled || size / Constants.Storage.PageSize > MaxNumberOfPagesToCache ||
                 (_isLowMemory.IsRaised() && generation < Generation))
             {
                 // - don't want to pool large buffers
@@ -115,12 +115,10 @@ namespace Voron.Impl
 
             foreach (var container in _items)
             {
-                while (container.TryPull(out var allocation))
+                foreach (var allocation in container.EnumerateAndClear())
                 {
-                    if (allocation.InUse.Raise() == false)
-                        continue;
-
-                    allocation.Dispose();
+                    if (allocation.InUse.Raise())
+                        allocation.Dispose();
                 }
             }
         }
@@ -140,7 +138,7 @@ namespace Voron.Impl
                 var totalStackSize = 0L;
                 var numberOfItems = 0;
 
-                foreach (var (allocation,_) in nativeAllocations)
+                foreach (var (allocation, _) in nativeAllocations)
                 {
                     if (allocation.InUse.IsRaised())
                     {
