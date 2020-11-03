@@ -29,27 +29,37 @@ namespace Raven.Client.Documents.Indexes
         {
         }
 
+        protected bool Equals(AdditionalAssembly other)
+        {
+            return string.Equals(AssemblyName, other.AssemblyName, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(AssemblyPath, other.AssemblyPath, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(PackageName, other.PackageName, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(PackageVersion, other.PackageVersion, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(PackageSourceUrl, other.PackageSourceUrl, StringComparison.OrdinalIgnoreCase)
+                   && Equals(Usings, other.Usings);
+        }
+
         public override bool Equals(object obj)
         {
-            return obj is AdditionalAssembly assembly &&
-                   AssemblyName == assembly.AssemblyName &&
-                   AssemblyPath == assembly.AssemblyPath &&
-                   PackageName == assembly.PackageName &&
-                   PackageVersion == assembly.PackageVersion &&
-                   PackageSourceUrl == assembly.PackageSourceUrl &&
-                   EqualityComparer<HashSet<string>>.Default.Equals(Usings, assembly.Usings);
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != this.GetType())
+                return false;
+            return Equals((AdditionalAssembly)obj);
         }
 
         public override int GetHashCode()
         {
-            int hashCode = -585367404;
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(AssemblyName);
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(AssemblyPath);
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(PackageName);
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(PackageVersion);
-            hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(PackageSourceUrl);
-            hashCode = hashCode * -1521134295 + EqualityComparer<HashSet<string>>.Default.GetHashCode(Usings);
-            return hashCode;
+            var hashCode = new HashCode();
+            hashCode.Add(AssemblyName, StringComparer.OrdinalIgnoreCase);
+            hashCode.Add(AssemblyPath, StringComparer.OrdinalIgnoreCase);
+            hashCode.Add(PackageName, StringComparer.OrdinalIgnoreCase);
+            hashCode.Add(PackageVersion, StringComparer.OrdinalIgnoreCase);
+            hashCode.Add(PackageSourceUrl, StringComparer.OrdinalIgnoreCase);
+            hashCode.Add(Usings);
+            return hashCode.ToHashCode();
         }
 
         public override string ToString()

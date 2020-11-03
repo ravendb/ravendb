@@ -94,4 +94,7 @@
     <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0-rc.2.20475.5" />
     <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
   </ItemGroup>
+  <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="1.1.0" />
+  </ItemGroup>
 </Project>
