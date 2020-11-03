@@ -736,9 +736,9 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription" | "Replication Hub" | "Replication Sink";
 
 interface sampleCode {
-    title: string,
-    text: string,
-    html: string | KnockoutComputed<string>;
+    title: string;
+    text: string;
+    html: string;
 }
 
 type OnlyStrings<T> = { [ P in keyof T]: T[P] extends string ? P : never }[keyof T & string];
