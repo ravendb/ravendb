@@ -120,6 +120,82 @@ namespace SlowTests.Server.Documents.Replication
         }
 
         [Fact]
+        public async Task ServerWideExternalReplication_WhenRename_ShouldNotCreateNewOne()
+        {
+            using var store = GetDocumentStore();
+            var putConfiguration = new ServerWideExternalReplication
+            {
+                Disabled = true,
+                TopologyDiscoveryUrls = new[] { store.Urls.First() },
+                Name = store.Database
+            };
+
+            var result = await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(putConfiguration));
+            var externalReplications = await store.Maintenance.Server.SendAsync(new GetServerWideExternalReplicationsOperation());
+            var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            
+            RavenTestHelper.AssertAll(
+                () => Assert.Equal(1, externalReplications.Length),
+                () => Assert.Equal(1, databaseRecord.ExternalReplications.Count));
+
+            // Changing name
+            var toEdit = externalReplications.First();
+            const string editSuffix = "Edited";
+            toEdit.Name += editSuffix;
+            var resultAfter = await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(externalReplications.First()));
+
+            var externalReplicationsAfter = await store.Maintenance.Server.SendAsync(new GetServerWideExternalReplicationsOperation());
+            var databaseRecordAfter = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                
+            RavenTestHelper.AssertAll(
+                () => Assert.Equal(1, externalReplicationsAfter.Length),
+                () => Assert.Equal(1, databaseRecordAfter.ExternalReplications.Count),
+                () => Assert.EndsWith(editSuffix, databaseRecordAfter.ExternalReplications.First().Name));
+            
+            using var store2 = GetDocumentStore();
+            var databaseRecord2After = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
+            RavenTestHelper.AssertAll(
+                () => Assert.Equal(1, databaseRecord2After.ExternalReplications.Count),
+                () => Assert.EndsWith(editSuffix, databaseRecord2After.ExternalReplications.First().Name));
+        }
+
+        [Fact]
+        public async Task ServerWideExternalReplication_WhenToggleState_ShouldWork()
+        {
+            using var store = GetDocumentStore();
+            var disabled = true;
+            var putConfiguration = new ServerWideExternalReplication
+            {
+                Disabled = disabled,
+                TopologyDiscoveryUrls = new[] { store.Urls.First() },
+                Name = store.Database
+            };
+
+            var result = await store.Maintenance.Server.SendAsync(new PutServerWideExternalReplicationOperation(putConfiguration));
+            await AssertDisabled(disabled);
+            
+            disabled = !disabled;
+            await store.Maintenance.Server.SendAsync(new ToggleServerWideTaskStateOperation(result.Name, OngoingTaskType.Replication, disabled));
+            await AssertDisabled(disabled);
+
+            disabled = !disabled;
+            await store.Maintenance.Server.SendAsync(new ToggleServerWideTaskStateOperation(result.Name, OngoingTaskType.Replication, disabled));
+            await AssertDisabled(disabled);
+            
+            async Task AssertDisabled(bool shouldBeDisabled)
+            {
+                var externalReplications = await store.Maintenance.Server.SendAsync(new GetServerWideExternalReplicationsOperation());
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                var assert = shouldBeDisabled ? (Action<bool>)Assert.True : Assert.False;
+                RavenTestHelper.AssertAll(
+                    () => assert(externalReplications.First().Disabled),
+                    () => assert(databaseRecord.ExternalReplications.First().Disabled));
+            }
+        }
+
+        
+        [Fact]
         public async Task ToggleDisableServerWideExternalReplicationFails()
         {
             using (var store = GetDocumentStore())

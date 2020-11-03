@@ -174,6 +174,41 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [Fact]
+        public async Task ServerWideBackup_WhenToggleState_ShouldWork()
+        {
+            using var store = GetDocumentStore();
+            var disabled = true;
+            var putConfiguration = new ServerWideBackupConfiguration
+            {
+                Disabled = disabled,
+                FullBackupFrequency = "0 2 * * 0",
+                IncrementalBackupFrequency = "0 2 * * 1"
+            };
+
+            var result = await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
+            await AssertDisabled(disabled);
+            
+            disabled = !disabled;
+            await store.Maintenance.Server.SendAsync(new ToggleServerWideTaskStateOperation(result.Name, OngoingTaskType.Backup, disabled));
+            await AssertDisabled(disabled);
+
+            disabled = !disabled;
+            await store.Maintenance.Server.SendAsync(new ToggleServerWideTaskStateOperation(result.Name, OngoingTaskType.Backup , disabled));
+            await AssertDisabled(disabled);
+            
+            async Task AssertDisabled(bool shouldBeDisabled)
+            {
+                var externalReplications = await store.Maintenance.Server.SendAsync(new GetServerWideBackupConfigurationsOperation());
+                var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+
+                var assert = shouldBeDisabled ? (Action<bool>)Assert.True : Assert.False;
+                RavenTestHelper.AssertAll(
+                    () => assert(externalReplications.First().Disabled),
+                    () => assert(databaseRecord.PeriodicBackups.First().Disabled));
+            }
+        }
+
+        [Fact]
         public async Task CreatePeriodicBackupFailsWhenUsingReservedName()
         {
             using (var store = GetDocumentStore())

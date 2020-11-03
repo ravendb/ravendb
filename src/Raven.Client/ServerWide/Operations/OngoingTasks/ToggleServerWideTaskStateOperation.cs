@@ -45,7 +45,7 @@ namespace Raven.Client.ServerWide.Operations.OngoingTasks
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/configuration/server-wide/task?type={_type}&name={Uri.EscapeDataString(_name)}&disable={_disable}";
+                url = $"{node.Url}/admin/configuration/server-wide/state?type={_type}&name={Uri.EscapeDataString(_name)}&disable={_disable}";
 
                 return new HttpRequestMessage
                 {
