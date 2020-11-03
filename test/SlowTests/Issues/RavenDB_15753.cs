@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                 })));
 
                 Assert.Contains("Cannot load NuGet package 'Some.Assembly.That.Does.Not.Exist'", e.Message);
-                Assert.Contains("Package does not exist", e.Message);
+                Assert.Contains("NuGet package 'Some.Assembly.That.Does.Not.Exist' version '4.3.1' from 'https://api.nuget.org/v3/index.json' does not exist", e.Message);
             }
         }
 

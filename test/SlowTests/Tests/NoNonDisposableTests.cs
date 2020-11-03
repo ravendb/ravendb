@@ -27,7 +27,7 @@ namespace SlowTests.Tests
         public void ShouldExist()
         {
             var types = from assembly in GetAssemblies(typeof(NoNonDisposableTests).Assembly)
-                        from test in assembly.GetTypes()
+                        from test in GetAssemblyTypes(assembly)
                         where test.GetMethods().Any(x => x.GetCustomAttributes(typeof(FactAttribute), true).Count() != 0 || x.GetCustomAttributes(typeof(TheoryAttribute), true).Count() != 0)
                         where typeof(IDisposable).IsAssignableFrom(test) == false
                         select test;
@@ -61,6 +61,18 @@ namespace SlowTests.Tests
                 }
                 foreach (var assembly in GetAssemblies(load))
                     yield return assembly;
+            }
+        }
+
+        private static Type[] GetAssemblyTypes(Assembly assemblyToScan)
+        {
+            try
+            {
+                return assemblyToScan.GetTypes();
+            }
+            catch
+            {
+                return Array.Empty<Type>();
             }
         }
     }
