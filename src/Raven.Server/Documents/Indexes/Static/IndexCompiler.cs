@@ -380,8 +380,6 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 try
                 {
-                    packageSourceUrl ??= "https://api.nuget.org/v3/index.json";
-
                     if (string.IsNullOrWhiteSpace(packageName))
                         throw new ArgumentException($"'{nameof(packageName)}' cannot be null or whitespace", nameof(packageName));
 
@@ -390,7 +388,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     var paths = AsyncHelpers.RunSync(() => MultiSourceNuGetFetcher.Instance.DownloadAsync(packageName, packageVersion, packageSourceUrl));
                     if (paths == null)
-                        throw new InvalidOperationException("Package does not exist.");
+                        throw new InvalidOperationException($"NuGet package '{packageName}' version '{packageName}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}' does not exist.");
 
                     var references = new List<MetadataReference>();
 
@@ -404,7 +402,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
                 catch (Exception e)
                 {
-                    throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl}'.", e);
+                    throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}'.", e);
                 }
             }
 
