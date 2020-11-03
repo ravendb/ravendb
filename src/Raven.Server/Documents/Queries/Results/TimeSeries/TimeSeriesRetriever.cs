@@ -98,7 +98,7 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             RangeGroup rangeSpec;
             if (groupByTimePeriod != null)
             {
-                rangeSpec = RangeGroup.ParseRangeFromString(groupByTimePeriod);
+                rangeSpec = RangeGroup.ParseRangeFromString(groupByTimePeriod, from);
             }
             else
             {

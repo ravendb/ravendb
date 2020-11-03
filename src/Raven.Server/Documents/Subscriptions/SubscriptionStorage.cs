@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 var name = GetSubscriptionNameById(serverStoreContext, id);
                 if (string.IsNullOrEmpty(name))
-                    throw new SubscriptionDoesNotExistException($"Subscription with id {id} was not found in server store");
+                    throw new SubscriptionDoesNotExistException($"Subscription with id '{id}' was not found in server store");
 
                 return GetSubscriptionFromServerStore(serverStoreContext, name);
             }
@@ -208,12 +208,12 @@ namespace Raven.Server.Documents.Subscriptions
                         }
                     }
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription with id {id} and name {name} can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
+                        $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
                         whoseTaskIsIt,
                         databaseTopologyAvailabilityExplanation, id);
                 }
                 if (subscription.Disabled)
-                    throw new SubscriptionClosedException($"The subscription with id {id} and name {name} is disabled and cannot be used until enabled");
+                    throw new SubscriptionClosedException($"The subscription with id '{id}' and name '{name}' is disabled and cannot be used until enabled");
 
                 return subscription;
             }
@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
 
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Subscription with id {subscriptionId} and name {subscriptionConnectionState.SubscriptionName} connection was dropped. Reason: {ex.Message}");
+                _logger.Info($"Subscription with id '{subscriptionId}' and name '{subscriptionConnectionState.SubscriptionName}' connection was dropped. Reason: {ex.Message}");
 
             return true;
         }
@@ -374,7 +374,7 @@ namespace Raven.Server.Documents.Subscriptions
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, name));
 
             if (subscriptionBlittable == null)
-                throw new SubscriptionDoesNotExistException($"Subscription with name {name} was not found in server store");
+                throw new SubscriptionDoesNotExistException($"Subscription with name '{name}' was not found in server store");
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
             var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);

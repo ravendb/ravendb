@@ -139,6 +139,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, PatchResult> PatchResult = GenerateJsonDeserializationRoutine<PatchResult>();
 
         public static readonly Func<BlittableJsonReaderObject, GetCertificatesResponse> GetCertificatesResponse = GenerateJsonDeserializationRoutine<GetCertificatesResponse>();
+        
+        public static readonly Func<BlittableJsonReaderObject, GetCertificatesMetadataResponse> GetCertificatesMetadataResponse = GenerateJsonDeserializationRoutine<GetCertificatesMetadataResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, GetClientCertificatesResponse> GetClientCertificatesResponse = GenerateJsonDeserializationRoutine<GetClientCertificatesResponse>();
 

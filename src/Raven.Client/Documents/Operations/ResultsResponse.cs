@@ -30,6 +30,10 @@ namespace Raven.Client.Documents.Operations
     {
     }
 
+    internal class GetCertificatesMetadataResponse : ResultsResponse<CertificateMetadata>
+    {
+    }
+    
     internal class GetClientCertificatesResponse : ResultsResponse<CertificateRawData>
     {
     }

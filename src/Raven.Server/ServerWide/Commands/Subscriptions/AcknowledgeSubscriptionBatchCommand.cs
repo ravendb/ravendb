@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
 
             if (existingValue == null)
-                throw new SubscriptionDoesNotExistException($"Subscription with name {subscriptionName} does not exist");
+                throw new SubscriptionDoesNotExistException($"Subscription with name '{subscriptionName}' does not exist");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
 
@@ -45,10 +45,10 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             var lastResponsibleNode = GetLastResponsibleNode(HasHighlyAvailableTasks, topology, NodeTag);
             var whoseTaskIsIt = topology.WhoseTaskIsIt(RachisState.Follower, subscription, lastResponsibleNode);
             if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(NodeTag))
-                throw new DatabaseDoesNotExistException($"Stopping subscription {subscriptionName} on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
+                throw new DatabaseDoesNotExistException($"Stopping subscription '{subscriptionName}' on node {NodeTag}, because database '{DatabaseName}' is being deleted.");
 
             if (whoseTaskIsIt != NodeTag)
-                throw new SubscriptionDoesNotBelongToNodeException($"Can't update subscription with name {subscriptionName} by node {NodeTag}, because it's not its task to update this subscription");
+                throw new SubscriptionDoesNotBelongToNodeException($"Can't update subscription with name '{subscriptionName}' by node {NodeTag}, because it's not its task to update this subscription");
 
             if (ChangeVector == nameof(Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange))
             {
@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             }
 
             if (LastKnownSubscriptionChangeVector != subscription.ChangeVectorForNextBatchStartingPoint)
-                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name {subscriptionName} due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
+                throw new SubscriptionChangeVectorUpdateConcurrencyException($"Can't acknowledge subscription with name '{subscriptionName}' due to inconsistency in change vector progress. Probably there was an admin intervention that changed the change vector value. Stored value: {subscription.ChangeVectorForNextBatchStartingPoint}, received value: {LastKnownSubscriptionChangeVector}");
 
             subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
             subscription.NodeTag = NodeTag;

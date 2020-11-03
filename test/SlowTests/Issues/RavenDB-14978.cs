@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Nito.AsyncEx;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Http;
 using Tests.Infrastructure;
 using Xunit;
@@ -18,14 +19,13 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public async Task Can_setup_write_load_balancing()
+        public async Task Can_setup_write_load_balancing_on_client()
         {
             var leader = await CreateRaftClusterAndGetLeader(3);
             var databaseName = GetDatabaseName();
 
             string context = "users/1";
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
             using var store = new DocumentStore
             {
                 Urls = new[] { leader.WebUrl },
@@ -38,21 +38,47 @@ namespace SlowTests.Issues
                 }
             }.Initialize();
 
-            var amre = new AsyncManualResetEvent();
+            var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
+            await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
 
-            var requestExecutor = store.GetRequestExecutor();
-            requestExecutor.ClientConfigurationChanged += (sender, _) => amre.Set();
+            Can_setup_write_load_balancing(store, ref context);
+        }
+
+        [Fact]
+        public async Task Can_setup_write_load_balancing_on_server()
+        {
+            var leader = await CreateRaftClusterAndGetLeader(3);
+            var databaseName = GetDatabaseName();
+            var context = "users/1";
+
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            using var store = new DocumentStore
+            {
+                Urls = new[] { leader.WebUrl },
+                Database = databaseName,
+                Conventions = new DocumentConventions
+                {
+                    LoadBalancerPerSessionContextSelector = db => context
+                }
+            }.Initialize();
+
+            var configuration = new ClientConfiguration
+            {
+                ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, 
+                LoadBalanceBehavior = LoadBalanceBehavior.UseSessionContext, 
+                Disabled = false
+            };
 
             var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
             await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
 
-            using (var s0 = store.OpenSession())
-            {
-                s0.Load<User>("test/1");
-            }
+            await store.Maintenance.SendAsync(new PutClientConfigurationOperation(configuration), cts.Token);
 
-            await amre.WaitAsync(cts.Token);
+            Can_setup_write_load_balancing(store, ref context);
+        }
 
+        private static void Can_setup_write_load_balancing(IDocumentStore store, ref string context)
+        {
             int s1Ctx = -1;
 
             using (var s1 = store.OpenSession())
@@ -61,7 +87,7 @@ namespace SlowTests.Issues
                 s1Ctx = sessionInfo.SessionId;
             }
 
-            int s2Ctx = -1;
+            var s2Ctx = -1;
             using (var s2 = store.OpenSession())
             {
                 var sessionInfo = s2.Advanced.SessionInfo;
@@ -72,7 +98,7 @@ namespace SlowTests.Issues
 
             context = "users/2";
 
-            int s3Ctx = -1;
+            var s3Ctx = -1;
             using (var s3 = store.OpenSession())
             {
                 var sessionInfo = s3.Advanced.SessionInfo;
@@ -81,7 +107,7 @@ namespace SlowTests.Issues
 
             Assert.NotEqual(s2Ctx, s3Ctx);
 
-            int s4Ctx = -1;
+            var s4Ctx = -1;
             using (var s4 = store.OpenSession())
             {
                 s4.Advanced.SessionInfo.SetContext("monkey");
@@ -91,10 +117,6 @@ namespace SlowTests.Issues
             }
 
             Assert.NotEqual(s4Ctx, s3Ctx);
-        }
-
-        internal class User
-        {
         }
     }
 }

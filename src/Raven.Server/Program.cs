@@ -98,6 +98,8 @@ namespace Raven.Server
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Logging to {configuration.Logs.Path} set to {configuration.Logs.Mode} level.");
+            
+            InitializeThreadPoolThreads(configuration);
 
             LatestVersionCheck.Instance.Initialize(configuration.Updates);
 
@@ -386,6 +388,25 @@ namespace Raven.Server
                 var msg = $"Error setting current directory: {AppContext.BaseDirectory}.";
                 Logger.Operations(msg, exception);
                 Console.WriteLine($"{msg} Exception: {exception}");
+            }
+        }
+
+        private static void InitializeThreadPoolThreads(RavenConfiguration configuration)
+        {
+            if (configuration.Server.ThreadPoolMinThreads != null)
+            {
+                ThreadPool.SetMinThreads(configuration.Server.ThreadPoolMinThreads.Value, configuration.Server.ThreadPoolMinThreads.Value);
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current value: {configuration.Server.ThreadPoolMinThreads}");
+            }
+
+            if (configuration.Server.ThreadPoolMaxThreads != null)
+            {
+                ThreadPool.SetMaxThreads(configuration.Server.ThreadPoolMaxThreads.Value, configuration.Server.ThreadPoolMaxThreads.Value);
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMaxThreads)}. Current value: '{configuration.Server.ThreadPoolMaxThreads}'");
             }
         }
 

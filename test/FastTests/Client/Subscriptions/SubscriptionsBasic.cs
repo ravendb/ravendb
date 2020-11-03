@@ -951,10 +951,10 @@ namespace FastTests.Client.Subscriptions
             {
                 var name = "Update";
                 var id = 322;
-                var idMsg = $"Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionDoesNotExistException: Subscription with id {id} was not found in server store";
+                var idMsg = $"Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionDoesNotExistException: Subscription with id '{id}' was not found in server store";
 
                 var argumentError = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Update(new SubscriptionUpdateOptions { Name = name }));
-                Assert.StartsWith($"Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionDoesNotExistException: Subscription with name {name} was not found in server store", argumentError.Message);
+                Assert.StartsWith($"Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionDoesNotExistException: Subscription with name '{name}' was not found in server store", argumentError.Message);
                 
                 argumentError = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Update(new SubscriptionUpdateOptions { Name = name, Id = id }) );
                 Assert.StartsWith(idMsg, argumentError.Message);
