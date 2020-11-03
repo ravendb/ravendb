@@ -14,20 +14,24 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
         private bool _initialized;
         private PathSetting _rootPath;
         private readonly ConcurrentDictionary<string, Lazy<NuGetFetcher>> _fetchers = new ConcurrentDictionary<string, Lazy<NuGetFetcher>>(StringComparer.OrdinalIgnoreCase);
+        public string DefaultPackageSourceUrl { get; private set; }
 
         private MultiSourceNuGetFetcher()
         {
         }
 
-        public void Initialize(PathSetting rootPath)
+        public void Initialize(PathSetting rootPath, string packageSourceUrl)
         {
             if (rootPath is null)
                 throw new ArgumentNullException(nameof(rootPath));
+            if (packageSourceUrl is null)
+                throw new ArgumentNullException(nameof(packageSourceUrl));
 
             if (_initialized)
                 throw new InvalidOperationException("NuGet fetcher was already initialized.");
 
             _rootPath = rootPath;
+            DefaultPackageSourceUrl = packageSourceUrl;
             _initialized = true;
         }
 
@@ -35,7 +39,7 @@ namespace Raven.Server.Documents.Indexes.Static.NuGet
         {
             AssertInitialized();
 
-            var fetcherLazy = _fetchers.GetOrAdd(packageSourceUrl, url => new Lazy<NuGetFetcher>(() => new NuGetFetcher(url, _rootPath.FullPath)));
+            var fetcherLazy = _fetchers.GetOrAdd(packageSourceUrl ?? DefaultPackageSourceUrl, url => new Lazy<NuGetFetcher>(() => new NuGetFetcher(url, _rootPath.FullPath)));
 
             NuGetFetcher fetcher;
             try

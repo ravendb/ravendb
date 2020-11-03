@@ -216,6 +216,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.NuGetPackagesPath", ConfigurationEntryScope.ServerWideOnly)]
         public PathSetting NuGetPackagesPath { get; set; }
 
+        [Description("Default NuGet source URL")]
+        [DefaultValue("https://api.nuget.org/v3/index.json")]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.NuGetPackageSourceUrl", ConfigurationEntryScope.ServerWideOnly)]
+        public string NuGetPackageSourceUrl { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

@@ -89,7 +89,7 @@ namespace FastTests
 
             var packagesPath = new PathSetting(RavenTestHelper.NewDataPath("NuGetPackages", 0, forceCreateDir: true));
             GlobalPathsToDelete.Add(packagesPath.FullPath);
-            MultiSourceNuGetFetcher.Instance.Initialize(packagesPath);
+            MultiSourceNuGetFetcher.Instance.Initialize(packagesPath, "https://api.nuget.org/v3/index.json");
 
 #if DEBUG2
             TaskScheduler.UnobservedTaskException += (sender, args) =>
