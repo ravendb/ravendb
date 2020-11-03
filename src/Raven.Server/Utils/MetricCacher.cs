@@ -24,8 +24,6 @@ namespace Raven.Server.Utils
 
                 public const string MemoryInfo = "MemoryInfo";
 
-                public const string IoWait = "IoWait";
-                
                 public const string MemoryInfoExtended = "MemoryInfoExtended";
 
                 public const string DiskSpaceInfo = "DiskSpaceInfo";

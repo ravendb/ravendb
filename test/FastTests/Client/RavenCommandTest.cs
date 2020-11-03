@@ -39,11 +39,22 @@ namespace FastTests.Client
                 "GetConnectionStringCommand", "PutConnectionStringCommand", "RemoveConnectionStringCommand", "GetClientConfigurationCommand",
                 "DeleteCompareExchangeValueCommand", "GetCompareExchangeValueCommand", "GetCompareExchangeValuesCommand", "PutCompareExchangeValueCommand",
                 "GetPeriodicBackupStatusCommand", "StartBackupCommand", "UpdatePeriodicBackupCommand", "GetAttachmentCommand", "PutAttachmentCommand",
+                "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand", "GetCertificatesMetadataCommand", "GetCertificateMetadataCommand",
+                "AddClusterNodeCommand", "CloseTcpConnectionCommand", "DatabaseHealthCheckCommand", "DeleteAttachmentCommand", "DeleteCertificateCommand",
+                "DeleteDocumentCommand", "DeleteIndexCommand", "DeleteServerWideBackupConfigurationCommand", "DeleteSorterCommand", "DeleteSubscriptionCommand",
+                "DemoteClusterNodeCommand", "DisableIndexCommand", "DisableIndexCommand", "DropSubscriptionConnectionCommand", "EditClientCertificateCommand",
+                "EnableIndexCommand", "ExportCommand", "HiLoReturnCommand", "ImportCommand", "KillOperationCommand", "PromoteClusterNodeCommand",
+                "PutClientCertificateCommand", "PutClientConfigurationCommand", "PutSecretKeyCommand", "PutSortersCommand", "RemoveClusterNodeCommand",
+                "ReorderDatabaseMembersCommand", "ReplaceClusterCertificateCommand", "ResetEtlCommand", "ResetIndexCommand", "SetDatabaseDynamicDistributionCommand",
+                "SetIndexLockCommand", "SetIndexPriorityCommand", "SetLogsConfigurationCommand", "StartIndexCommand", "StartIndexingCommand",
+                "StartTransactionsRecordingCommand", "StopIndexCommand", "StopIndexingCommand", "StopTransactionsRecordingCommand",
+                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand",
                 "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", "ConfigureTimeSeriesValue",
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
                 "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand",
+                "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand"
             }.OrderBy(t => t);
-            
+
             var commandBaseType = typeof(RavenCommand<>);
             var types = commandBaseType.Assembly.GetTypes();
 
@@ -74,12 +85,24 @@ namespace FastTests.Client
         private static void GetDerivedFromGeneric(Type[] types, Type type, List<Type> results)
         {
             var derivedTypes = types
-                .Where(t => t.BaseType != null && t.BaseType.IsGenericType &&
-                            t.BaseType.GetGenericTypeDefinition() == type).ToList();
+                .Where(t => IsDrivenFromGenericType(type, t)).ToList();
             results.AddRange(derivedTypes);
             foreach (var derivedType in derivedTypes)
             {
                 GetAllDerivedTypesRecursively(types, derivedType, results);
+            }
+        }
+
+        private static bool IsDrivenFromGenericType(Type baseType, Type type)
+        {
+            while (true)
+            {
+                if (type.BaseType == null || type.BaseType == typeof(object))
+                    return false;
+
+                if (type.BaseType.IsGenericType && type.BaseType.GetGenericTypeDefinition() == baseType)
+                    return true;
+                type = type.BaseType;
             }
         }
 

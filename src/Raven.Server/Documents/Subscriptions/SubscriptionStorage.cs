@@ -374,7 +374,7 @@ namespace Raven.Server.Documents.Subscriptions
             var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, name));
 
             if (subscriptionBlittable == null)
-                throw new SubscriptionDoesNotExistException($"Subscription with name {name} was not found in server store");
+                throw new SubscriptionDoesNotExistException($"Subscription with name \"{name}\" was not found in server store");
 
             var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
             var subscriptionJsonValue = new SubscriptionGeneralDataAndStats(subscriptionState);
