@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     var paths = AsyncHelpers.RunSync(() => MultiSourceNuGetFetcher.Instance.DownloadAsync(packageName, packageVersion, packageSourceUrl));
                     if (paths == null)
-                        throw new InvalidOperationException($"NuGet package '{packageName}' version '{packageName}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}' does not exist.");
+                        throw new InvalidOperationException($"NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}' does not exist.");
 
                     var references = new List<MetadataReference>();
 
