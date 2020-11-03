@@ -1,11 +1,18 @@
 using System.ComponentModel;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
+using Sparrow.Platform;
+using Sparrow.Utils;
 
 namespace Raven.Server.Config.Categories
 {
     public class ServerConfiguration : ConfigurationCategory
     {
+        public ServerConfiguration()
+        {
+            ThreadPoolMinThreads = (PlatformDetails.Is32Bits ? 2 : 4) * ProcessorInfo.ProcessorCount;
+        }
+
         [DefaultValue(30)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Server.MaxTimeForTaskToWaitForDatabaseToLoadInSec", ConfigurationEntryScope.ServerWideOnly)]
@@ -78,5 +85,15 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Server.CpuCredits.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CpuCreditsExecTimeout { get; set; }
+
+        [Description("EXPERT: Sets the minimum number of threads the thread pool creates on demand, as new requests are made, before switching to an algorithm for managing thread creation and destruction.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Server.ThreadPool.MinThreads", ConfigurationEntryScope.ServerWideOnly)]
+        public int? ThreadPoolMinThreads { get; set; }
+
+        [Description("EXPERT: Sets the number of requests to the thread pool that can be active concurrently. All requests above that number remain queued until thread pool threads become available.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.ThreadPool.MaxThreads", ConfigurationEntryScope.ServerWideOnly)]
+        public int? ThreadPoolMaxThreads { get; set; }
     }
 }
