@@ -4,55 +4,55 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
 {
-public class CertificateDefinition : CertificateMetadata
-{
-    public string Certificate;
-    public string Password;
-
-    public DynamicJsonValue ToJson(bool metadataOnly = false)
+    public class CertificateDefinition : CertificateMetadata
     {
-        var jsonValue = base.ToJson();
-        if (metadataOnly == false)
+        public string Certificate;
+        public string Password;
+
+        public DynamicJsonValue ToJson(bool metadataOnly = false)
         {
-            jsonValue[nameof(Certificate)] = Certificate;
+            var jsonValue = base.ToJson();
+            if (metadataOnly == false)
+            {
+                jsonValue[nameof(Certificate)] = Certificate;
+            }
+            return jsonValue;
         }
-        return jsonValue;
     }
-}
 
-public class CertificateMetadata
-{
-    public string Name;
-    public SecurityClearance SecurityClearance;
-    public string Thumbprint;
-    public DateTime? NotAfter;
-    public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
-    public List<string> CollectionSecondaryKeys = new List<string>();
-    public string CollectionPrimaryKey = string.Empty;
-    public string PublicKeyPinningHash;
-
-    public DynamicJsonValue ToJson()
+    public class CertificateMetadata
     {
-        var permissions = new DynamicJsonValue();
-        
-        if (Permissions != null)
-            foreach (var kvp in Permissions)
-                permissions[kvp.Key] = kvp.Value.ToString();
+        public string Name;
+        public SecurityClearance SecurityClearance;
+        public string Thumbprint;
+        public DateTime? NotAfter;
+        public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
+        public List<string> CollectionSecondaryKeys = new List<string>();
+        public string CollectionPrimaryKey = string.Empty;
+        public string PublicKeyPinningHash;
 
-        var jsonValue = new DynamicJsonValue
+        public DynamicJsonValue ToJson()
         {
-            [nameof(Name)] = Name,
-            [nameof(Thumbprint)] = Thumbprint,
-            [nameof(SecurityClearance)] = SecurityClearance,
-            [nameof(Permissions)] = permissions,
-            [nameof(NotAfter)] = NotAfter,
-            [nameof(CollectionSecondaryKeys)] = CollectionSecondaryKeys,
-            [nameof(CollectionPrimaryKey)] = CollectionPrimaryKey,
-            [nameof(PublicKeyPinningHash)] = PublicKeyPinningHash
-        };
-        return jsonValue;
+            var permissions = new DynamicJsonValue();
+        
+            if (Permissions != null)
+                foreach (var kvp in Permissions)
+                    permissions[kvp.Key] = kvp.Value.ToString();
+
+            var jsonValue = new DynamicJsonValue
+            {
+                [nameof(Name)] = Name,
+                [nameof(Thumbprint)] = Thumbprint,
+                [nameof(SecurityClearance)] = SecurityClearance,
+                [nameof(Permissions)] = permissions,
+                [nameof(NotAfter)] = NotAfter,
+                [nameof(CollectionSecondaryKeys)] = CollectionSecondaryKeys,
+                [nameof(CollectionPrimaryKey)] = CollectionPrimaryKey,
+                [nameof(PublicKeyPinningHash)] = PublicKeyPinningHash
+            };
+            return jsonValue;
+        }
     }
-}
 
     public enum DatabaseAccess
     {

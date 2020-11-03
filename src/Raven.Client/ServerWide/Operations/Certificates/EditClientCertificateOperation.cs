@@ -12,17 +12,26 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 {
     public class EditClientCertificateOperation : IServerOperation
     {
+        public class Parameters
+        {
+            public string Thumbprint;
+            public Dictionary<string, DatabaseAccess> Permissions;
+            public string Name;
+            public SecurityClearance Clearance;
+        }
+
         private readonly string _thumbprint;
         private readonly Dictionary<string, DatabaseAccess> _permissions;
         private readonly string _name;
         private readonly SecurityClearance _clearance;
 
-        public EditClientCertificateOperation(string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
+        public EditClientCertificateOperation(Parameters parameters)
         {
-            _name = name ?? throw new ArgumentNullException(nameof(name));
-            _thumbprint = thumbprint ?? throw new ArgumentNullException(nameof(thumbprint));
-            _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-            _clearance = clearance;
+            if(parameters == null) throw new ArgumentNullException(nameof(parameters));
+            _name = parameters.Name ?? throw new ArgumentNullException(nameof(parameters.Name));
+            _thumbprint = parameters.Thumbprint ?? throw new ArgumentNullException(nameof(parameters.Thumbprint));
+            _permissions = parameters.Permissions ?? throw new ArgumentNullException(nameof(parameters.Permissions));
+            _clearance = parameters.Clearance;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)

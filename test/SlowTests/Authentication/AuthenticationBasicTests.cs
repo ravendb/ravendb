@@ -427,7 +427,11 @@ namespace SlowTests.Authentication
             var certMetadata = certsMetadata.First();
             
             certMetadata.Permissions[store.Database] = DatabaseAccess.ReadWrite;
-            await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(certMetadata.Thumbprint, certMetadata.Name, certMetadata.Permissions, certMetadata.SecurityClearance));
+            var parameters = new EditClientCertificateOperation.Parameters
+            {
+                Thumbprint = certMetadata.Thumbprint, Name = certMetadata.Name, Permissions = certMetadata.Permissions, Clearance = certMetadata.SecurityClearance
+            };
+            await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(parameters));
 
             using (var testedStore = new DocumentStore
             {
