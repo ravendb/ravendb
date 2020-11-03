@@ -147,6 +147,8 @@ namespace Raven.Server
             CpuUsageCalculator.Init();
             MetricCacher.Initialize();
 
+            InitializeThreadPoolThreads();
+
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Server store started took {sp.ElapsedMilliseconds:#,#;;0} ms");
 
@@ -345,6 +347,25 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations("Could not start server", e);
                 throw;
+            }
+        }
+
+        private void InitializeThreadPoolThreads()
+        {
+            if (Configuration.Server.ThreadPoolMinThreads != null)
+            {
+                ThreadPool.SetMinThreads(Configuration.Server.ThreadPoolMinThreads.Value, Configuration.Server.ThreadPoolMinThreads.Value);
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current value: {Configuration.Server.ThreadPoolMinThreads}");
+            }
+
+            if (Configuration.Server.ThreadPoolMaxThreads != null)
+            {
+                ThreadPool.SetMaxThreads(Configuration.Server.ThreadPoolMaxThreads.Value, Configuration.Server.ThreadPoolMaxThreads.Value);
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMaxThreads)}. Current value: '{Configuration.Server.ThreadPoolMaxThreads}'");
             }
         }
 
