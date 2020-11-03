@@ -23,6 +23,7 @@ import eventsCollector = require("common/eventsCollector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import formatIndexCommand = require("commands/database/index/formatIndexCommand");
 import additionalSource = require("models/database/index/additionalSource");
+import additionalAssembly = require("models/database/index/additionalAssemblyModel");
 import index = require("models/database/index/index");
 import viewHelpers = require("common/helpers/view/viewHelpers");
 import mapIndexSyntax = require("viewmodels/database/indexes/mapIndexSyntax");
@@ -73,7 +74,8 @@ class editIndex extends viewModelBase {
             "shouldDropupMenu",
             "formatReduce",
             "removeReduce",
-            "addReduce");
+            "addReduce",
+            "removeAssembly");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -105,8 +107,8 @@ class editIndex extends viewModelBase {
             const source = this.selectedSourcePreview();
             if (source) {
                 return '<pre class="form-control sourcePreview">' + Prism.highlight(source.code(), (Prism.languages as any).csharp) + '</pre>';
-            } else { 
-                return `<div class="sourcePreview"><i class="icon-xl icon-empty-set text-muted"></i><h2 class="text-center">No Additional sources uploaded</h2></div>`;
+            } else {
+                return `<div class="sourcePreview text-muted"><i class="icon-xl icon-empty-set"></i><h2 class="text-center">No additional sources uploaded</h2></div>`;
             }
         });
     }
@@ -277,6 +279,16 @@ class editIndex extends viewModelBase {
            }
            return false;
         });
+
+        const hasAnyDirtyAdditionalAssembly = ko.pureComputed(() => {
+            let anyDirty = false;
+            indexDef.additionalAssemblies().forEach(assembly => {
+                if (assembly.dirtyFlag().isDirty()) {
+                    anyDirty = true;
+                }
+            });
+            return anyDirty;
+        });
         
         this.dirtyFlag = new ko.DirtyFlag([
             indexDef.name, 
@@ -290,10 +302,12 @@ class editIndex extends viewModelBase {
             indexDef.patternForReferencesToReduceOutputCollection,
             indexDef.collectionNameForReferenceDocuments,
             indexDef.additionalSources,
+            indexDef.additionalAssemblies,
             hasAnyDirtyField,
             hasAnyDirtyConfiguration,
             hasDefaultFieldOptions,
-            hasAnyDirtyDefaultFieldOptions
+            hasAnyDirtyDefaultFieldOptions,
+            hasAnyDirtyAdditionalAssembly,
         ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.isSaveEnabled = ko.pureComputed(() => {
@@ -496,11 +510,21 @@ class editIndex extends viewModelBase {
             }
         });
 
+        let additionalAssembliesTabInvalid = false;
+        editedIndex.additionalAssemblies().forEach(assembly => {
+            if (!this.isValid(assembly.validationGroup)) {
+                valid = false;
+                additionalAssembliesTabInvalid = true;
+            }
+        });
+
         // Navigate to invalid tab
         if (fieldsTabInvalid) {
             $('#tabsId a[href="#fields"]').tab('show');
         } else if (configurationTabInvalid) {
             $('#tabsId a[href="#configure"]').tab('show');
+        } else if (additionalAssembliesTabInvalid) {
+            $('#tabsId a[href="#additionalAssemblies"]').tab('show');
         }
         
         return valid;
@@ -568,6 +592,10 @@ class editIndex extends viewModelBase {
 
         indexDef.configuration().forEach((config) => {
             config.dirtyFlag().reset();
+        });
+
+        indexDef.additionalAssemblies().forEach((assembly) => {
+            assembly.dirtyFlag().reset();
         });
         
         this.dirtyFlag().reset();
@@ -692,6 +720,16 @@ class editIndex extends viewModelBase {
 
             return true;
         });
+    }
+    
+    addAssembly() {
+        eventsCollector.default.reportEvent("index", "add-assembly");
+        this.editedIndex().addAssembly();
+    }
+
+    removeAssembly(assemblyItem: additionalAssembly) {
+        eventsCollector.default.reportEvent("index", "remove-assembly");
+        this.editedIndex().removeAssembly(assemblyItem);
     }
 }
 
