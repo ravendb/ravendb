@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization;
 using Sparrow;
@@ -34,16 +36,16 @@ namespace Raven.Client.Http
             return Path.Combine(conventions.TopologyCacheLocation, $"{databaseName}.{topologyHash}.raven-database-topology");
         }
 
-        public static Topology TryLoad(string databaseName, string topologyHash, DocumentConventions conventions, JsonOperationContext context)
+        public static Task<Topology> TryLoadAsync(string databaseName, string topologyHash, DocumentConventions conventions, JsonOperationContext context)
         {
             if (conventions.DisableTopologyCache)
                 return null;
 
             var path = GetPath(databaseName, topologyHash, conventions);
-            return TryLoad(path, context);
+            return TryLoadAsync(path, context);
         }
 
-        private static Topology TryLoad(string path, JsonOperationContext context)
+        private static async Task<Topology> TryLoadAsync(string path, JsonOperationContext context)
         {
             try
             {
@@ -51,7 +53,7 @@ namespace Raven.Client.Http
                     return null;
 
                 using (var stream = SafeFileStream.Create(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var json = context.Read(stream, "raven-database-topology"))
+                using (var json = await context.ReadForMemoryAsync(stream, "raven-database-topology").ConfigureAwait(false))
                 {
                     return JsonDeserializationClient.Topology(json);
                 }
@@ -64,7 +66,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public static void TrySaving(string databaseName, string topologyHash, Topology topology, DocumentConventions conventions, JsonOperationContext context)
+        public static async Task TrySavingAsync(string databaseName, string topologyHash, Topology topology, DocumentConventions conventions, JsonOperationContext context, CancellationToken token)
         {
             try
             {
@@ -78,7 +80,7 @@ namespace Raven.Client.Http
                     return;
                 }
 
-                var existingTopology = TryLoad(path, context);
+                var existingTopology = await TryLoadAsync(path, context).ConfigureAwait(false);
                 if (existingTopology?.Etag >= topology.Etag)
                 {
                     if (_logger.IsInfoEnabled)
@@ -88,7 +90,7 @@ namespace Raven.Client.Http
                 }
 
                 using (var stream = SafeFileStream.Create(path, FileMode.Create, FileAccess.Write, FileShare.Read))
-                using (var writer = new BlittableJsonTextWriter(context, stream))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
                 {
                     writer.WriteStartObject();
 
@@ -121,7 +123,7 @@ namespace Raven.Client.Http
             }
         }
 
-        private static void WriteNode(BlittableJsonTextWriter writer, ServerNode node, JsonOperationContext context)
+        private static void WriteNode(AsyncBlittableJsonTextWriter writer, ServerNode node, JsonOperationContext context)
         {
             writer.WriteStartObject();
 

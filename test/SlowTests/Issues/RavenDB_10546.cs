@@ -160,10 +160,7 @@ namespace SlowTests.Issues
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Put,
-                        Content = new BlittableJsonContent(stream =>
-                        {
-                            ctx.Write(stream, _configuration);
-                        })
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false))
                     };
                 }
 
@@ -209,10 +206,7 @@ namespace SlowTests.Issues
                     return new HttpRequestMessage
                     {
                         Method = HttpMethod.Put,
-                        Content = new BlittableJsonContent(stream =>
-                        {
-                            ctx.Write(stream, _configuration);
-                        })
+                        Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _configuration).ConfigureAwait(false))
                     };
                 }
 

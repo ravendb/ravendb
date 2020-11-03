@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -8,7 +7,6 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Json;
@@ -48,7 +46,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var isReplicatedQueryString = GetStringQueryString("is-replicated", required: false);
                 if (isReplicatedQueryString != null && bool.TryParse(isReplicatedQueryString, out var result) && result)
                 {
-                    HandleLegacyIndexes();
+                    await HandleLegacyIndexesAsync();
                     return;
                 }
 
@@ -95,10 +93,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 if (TrafficWatchManager.HasRegisteredClients)
                     AddStringToHttpContext(indexes.ToString(), TrafficWatchChangeType.Index);
 
-
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
 
@@ -118,7 +115,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        private void HandleLegacyIndexes()
+        private async Task HandleLegacyIndexesAsync()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var stream = new ArrayStream(RequestBodyStream(), nameof(DatabaseItemType.Indexes)))
@@ -131,7 +128,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 };
 
                 var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time, options);
-                smuggler.Execute();
+                await smuggler.ExecuteAsync();
             }
         }
 
@@ -270,7 +267,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         [RavenAction("/databases/*/admin/indexes/dump", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public Task Dump()
+        public async Task Dump()
         {
             var name = GetStringQueryString("name");
             var path = GetStringQueryString("path");
@@ -278,13 +275,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (index == null)
             {
                 IndexDoesNotExistException.ThrowFor(name);
-                return null;//never hit
+                return; //never hit
             }
 
             var operationId = Database.Operations.GetNextOperationId();
             var token = CreateTimeLimitedQueryOperationToken();
 
-            Database.Operations.AddOperation(
+            _ = Database.Operations.AddOperation(
                 Database,
                 "Dump index " + name + " to " + path,
                 Operations.Operations.OperationType.DumpRawIndexData,
@@ -298,17 +295,16 @@ namespace Raven.Server.Documents.Handlers.Admin
                 }, operationId, token: token);
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }
-
-            return Task.CompletedTask;
         }
 
         public class DumpIndexResult : IOperationResult
         {
             public string Message { get; set; }
+
             public DynamicJsonValue ToJson()
             {
                 return new DynamicJsonValue(GetType())

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
@@ -18,11 +19,11 @@ namespace Raven.Server.Documents.Queries
         public long QueryId { get; }
 
         public bool IsStreaming { get; }
-        
+
         public OperationCancelToken Token { get; }
 
         public long DurationInMs => _stopwatch.ElapsedMilliseconds;
-        
+
         public TimeSpan Duration => _stopwatch.Elapsed;
 
         private readonly Stopwatch _stopwatch;
@@ -45,7 +46,7 @@ namespace Raven.Server.Documents.Queries
             writer.WritePropertyName(nameof(DurationInMs));
             writer.WriteDouble(DurationInMs);
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(Duration));
             writer.WriteString(Duration.ToString());
             writer.WriteComma();
@@ -65,7 +66,7 @@ namespace Raven.Server.Documents.Queries
             writer.WritePropertyName(nameof(QueryInfo));
             writer.WriteIndexQuery(context, QueryInfo);
             writer.WriteComma();
-            
+
             writer.WritePropertyName(nameof(IsStreaming));
             writer.WriteBool(IsStreaming);
 

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Auto;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.MapReduce.Auto
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return GroupByFields.TryGetValue(field, out value);
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);
 
@@ -80,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return indexDefinition;
         }
 
-        protected void PersistGroupByFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected void PersistGroupByFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName((nameof(GroupByFields)));
             writer.WriteStartArray();
@@ -159,7 +160,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 {
                     if (stream == null)
                         return null;
-                    using (var reader = context.ReadForDisk(stream, string.Empty))
+                    using (var reader = context.Sync.ReadForDisk(stream, string.Empty))
                     {
                         return LoadFromJson(reader);
                     }

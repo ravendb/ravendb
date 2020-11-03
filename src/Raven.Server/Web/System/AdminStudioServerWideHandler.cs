@@ -17,7 +17,7 @@ namespace Raven.Server.Web.System
     public class AdminStudioServerWideHandler : ServerRequestHandler
     {
         [RavenAction("/admin/server-wide/tasks", "GET", AuthorizationStatus.ClusterAdmin)]
-        public Task GetServerWideTasksForStudio()
+        public async Task GetServerWideTasksForStudio()
         {
             var taskName = GetStringQueryString("name", required: false);
             var typeAsString = GetStringQueryString("type", required: false);
@@ -28,7 +28,7 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var result = new ServerWideTasksResult();
 
@@ -36,8 +36,8 @@ namespace Raven.Server.Web.System
                 foreach (var blittable in blittables)
                 {
                     var configuration = JsonDeserializationCluster.ServerWideBackupConfiguration(blittable);
-                    
-                    if (taskName != null && type == OngoingTaskType.Backup && 
+
+                    if (taskName != null && type == OngoingTaskType.Backup &&
                         string.Equals(taskName, configuration.Name) == false)
                         continue;
 
@@ -76,9 +76,6 @@ namespace Raven.Server.Web.System
                 }
 
                 context.Write(writer, result.ToJson());
-                writer.Flush();
-
-                return Task.CompletedTask;
             }
         }
 
@@ -116,7 +113,7 @@ namespace Raven.Server.Web.System
 
                 public override DynamicJsonValue ToJson()
                 {
-                    var json =  base.ToJson();
+                    var json = base.ToJson();
                     json[nameof(ExcludedDatabases)] = ExcludedDatabases;
                     return json;
                 }

@@ -29,7 +29,7 @@ using Sparrow.Threading;
 
 namespace Raven.Client.Documents.BulkInsert
 {
-    public class BulkInsertOperation : IDisposable
+    public class BulkInsertOperation : IDisposable, IAsyncDisposable
     {
         private readonly CancellationToken _token;
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
@@ -339,7 +339,7 @@ namespace Raven.Client.Documents.BulkInsert
                     if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _currentWriter) == false)
                     {
                         using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
-                            json.WriteJsonTo(_currentWriter.BaseStream);
+                            await json.WriteJsonToAsync(_currentWriter.BaseStream, _token).ConfigureAwait(false);
                     }
 
                     _currentWriter.Write('}');
@@ -531,7 +531,7 @@ namespace Raven.Client.Documents.BulkInsert
 
         public void Dispose()
         {
-            AsyncHelpers.RunSync(DisposeAsync);
+            AsyncHelpers.RunSync(() => DisposeAsync().AsTask());
         }
 
         /// <summary>
@@ -544,9 +544,9 @@ namespace Raven.Client.Documents.BulkInsert
 
         private readonly DocumentConventions _conventions;
 
-        public Task DisposeAsync()
+        public async ValueTask DisposeAsync()
         {
-            return _disposeOnce.DisposeAsync();
+            await _disposeOnce.DisposeAsync().ConfigureAwait(false);
         }
 
         private string GetId(object entity)

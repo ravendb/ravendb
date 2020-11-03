@@ -2,8 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using Xunit.Abstractions;
-
 using Lucene.Net.Analysis;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
@@ -19,8 +17,10 @@ using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Server.Json.Sync;
 using Voron;
 using Xunit;
+using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace FastTests.Server.Documents.Indexing
@@ -170,17 +170,18 @@ namespace FastTests.Server.Documents.Indexing
         {
             Collections = new HashSet<string> { Constants.Documents.Collections.AllDocumentsCollection };
         }
+
         public override void Persist(TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             throw new NotImplementedException();
         }
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotImplementedException();
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotImplementedException();
         }

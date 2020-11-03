@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Handlers
     public class EtlHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task GetStats()
+        public async Task GetStats()
         {
             var etlStats = GetProcessesToReportOn().Select(x => new EtlTaskStats
             {
@@ -29,22 +29,17 @@ namespace Raven.Server.Documents.ETL.Handlers
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray(context, "Results", etlStats, (w, c, stats) =>
-                    {
-                        w.WriteObject(context.ReadObject(stats.ToJson(), "etl/stats"));
-                    });
+                    writer.WriteArray(context, "Results", etlStats, (w, c, stats) => w.WriteObject(context.ReadObject(stats.ToJson(), "etl/stats")));
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/etl/debug/stats", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetDebugStats()
+        public async Task GetDebugStats()
         {
             var debugStats = GetProcessesToReportOn().Select(x => new DynamicJsonValue()
             {
@@ -65,21 +60,17 @@ namespace Raven.Server.Documents.ETL.Handlers
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray(context, "Results", debugStats, (w, c, stats) =>
-                    {
-                        w.WriteObject(context.ReadObject(stats, "etl/debug/stats"));
-                    });
+                    writer.WriteArray(context, "Results", debugStats, (w, c, stats) => w.WriteObject(c.ReadObject(stats, "etl/debug/stats")));
                     writer.WriteEndObject();
                 }
             }
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/etl/performance", "GET", AuthorizationStatus.ValidUser)]
-        public Task Performance()
+        public async Task Performance()
         {
             var stats = GetProcessesToReportOn().Select(x => new EtlTaskPerformanceStats
             {
@@ -94,12 +85,10 @@ namespace Raven.Server.Documents.ETL.Handlers
             }).ToArray();
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteEtlTaskPerformanceStats(context, stats);
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/databases/*/etl/performance/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
@@ -131,10 +120,10 @@ namespace Raven.Server.Documents.ETL.Handlers
         }
 
         [RavenAction("/databases/*/etl/progress", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
-        public Task Progress()
+        public async Task Progress()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var performance = GetProcessesToReportOn().Select(x => new EtlTaskProgress
@@ -146,8 +135,6 @@ namespace Raven.Server.Documents.ETL.Handlers
 
                 writer.WriteEtlTaskProgress(context, performance);
             }
-
-            return Task.CompletedTask;
         }
 
         private Dictionary<string, List<EtlProcess>> GetProcessesToReportOn()

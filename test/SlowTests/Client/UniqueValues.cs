@@ -123,44 +123,44 @@ namespace SlowTests.Client
             Assert.True(res.Successful);
             Assert.Equal("Karmel", res2.Value.Name);
             Assert.True(res2.Successful);
-            
+
             var values = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test"));
             Assert.Equal(2, values.Count);
             Assert.Equal("Karmel", values["test"].Value.Name);
             Assert.Equal("Karmel", values["test2"].Value.Name);
         }
-        
+
         [Fact]
         public async Task CanRemoveUnique()
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            
+
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
             Assert.Equal("Karmel", res.Value);
             Assert.True(res.Successful);
-            
+
             res = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>("test", res.Index));
             Assert.True(res.Successful);
         }
-        
+
         [Fact]
         public async Task RemoveUniqueFailed()
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            
+
             var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("test", "Karmel", 0));
             Assert.Equal("Karmel", res.Value);
             Assert.True(res.Successful);
-            
+
             res = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<string>("test", 0));
             Assert.False(res.Successful);
-            
+
             var result = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<string>("test"));
             Assert.Equal("Karmel", result.Value);
         }
-        
+
         [Fact]
         public async Task ReturnCurrentValueWhenPuttingConcurrently()
         {
@@ -207,58 +207,56 @@ namespace SlowTests.Client
             Assert.True(res2.Successful);
             Assert.Equal("Karmel2", res2.Value.Name);
         }
-        
+
         [Fact]
         public async Task CanListValues()
         {
             DoNotReuseServer();
             var store = GetDocumentStore();
-            for (var  i = 0; i < 10; i++)
+            for (var i = 0; i < 10; i++)
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test" + i, new User
                 {
                     Name = "value" + i
                 }, 0));
             }
-            
+
             var result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("", 0, 3));
             Assert.Equal(new HashSet<string> { "test0", "test1", "test2" }, result.Keys.ToHashSet());
-            
+
             result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("", 1, 3));
             Assert.Equal(new HashSet<string> { "test1", "test2", "test3" }, result.Keys.ToHashSet());
-            
+
             result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("", 8, 5));
             Assert.Equal(new HashSet<string> { "test8", "test9" }, result.Keys.ToHashSet());
-            
-            
+
             // add some values at the beginning and at the end
-            for (var  i = 0; i < 2; i++)
+            for (var i = 0; i < 2; i++)
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("a" + i, new User
                 {
                     Name = "value" + i
                 }, 0));
             }
-            
-            for (var  i = 0; i < 2; i++)
+
+            for (var i = 0; i < 2; i++)
             {
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("z" + i, new User
                 {
                     Name = "value" + i
                 }, 0));
             }
-            
+
             // now query with prefix
-            
+
             result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test", 0, 3));
             Assert.Equal(new HashSet<string> { "test0", "test1", "test2" }, result.Keys.ToHashSet());
-            
+
             result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test", 1, 3));
             Assert.Equal(new HashSet<string> { "test1", "test2", "test3" }, result.Keys.ToHashSet());
-            
+
             result = await store.Operations.SendAsync(new GetCompareExchangeValuesOperation<User>("test", 8, 5));
             Assert.Equal(new HashSet<string> { "test8", "test9" }, result.Keys.ToHashSet());
-            
         }
 
         [Fact]
@@ -267,8 +265,8 @@ namespace SlowTests.Client
             DoNotReuseServer();
             var store = GetDocumentStore(caller: $"CmpExchangeTest1-{new Guid()}");
             var store2 = GetDocumentStore(caller: $"CmpExchangeTest2-{new Guid()}");
-            var user  = new User{Name = "Karmel"};
-            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test",user,0));
+            var user = new User { Name = "Karmel" };
+            var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", user, 0));
             var res2 = await store2.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("test", user, 0));
             Assert.Equal("Karmel", res.Value.Name);
             Assert.Equal("Karmel", res2.Value.Name);
@@ -491,6 +489,7 @@ namespace SlowTests.Client
                 Assert.Equal(0, val);
             }
         }
+
         [Fact]
         public async Task CanAddMetadataToIntCompareExchangeAndWaitForExpiration()
         {
@@ -552,10 +551,10 @@ namespace SlowTests.Client
             {
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 using (var bjro = ctx.ReadObject(dummyDump, "dump"))
-                using (var ms = new MemoryStream())
-                using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
+                await using (var ms = new MemoryStream())
+                await using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    bjro.WriteJsonTo(zipStream);
+                    await bjro.WriteJsonToAsync(zipStream);
                     zipStream.Flush();
                     ms.Position = 0;
 

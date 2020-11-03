@@ -13,6 +13,7 @@ namespace Raven.Server.Documents.Queries
 
             using (result)
                 GetWriter().AddResult(result);
+
             GetToken().Delay();
         }
 

@@ -59,7 +59,13 @@ namespace Raven.Server.Dashboard
                 if (_watchers.Count == 0)
                     return;
 
-                var databasesInfo = FetchDatabasesInfo(_serverStore, null, Cts).ToList();
+                var databasesInfo = new List<AbstractDashboardNotification>();
+
+                foreach (var item in FetchDatabasesInfo(_serverStore, null, Cts))
+                {
+                    databasesInfo.Add(item);
+                }
+
                 foreach (var watcher in _watchers)
                 {
                     foreach (var info in databasesInfo)
@@ -158,7 +164,6 @@ namespace Raven.Server.Dashboard
                         var documentsStorage = database.DocumentsStorage;
                         var indexStorage = database.IndexStore;
 
-
                         var trafficWatchItem = new TrafficWatchItem
                         {
                             Database = database.Name,
@@ -225,7 +230,7 @@ namespace Raven.Server.Dashboard
                     }
                 }
 
-                // 2. Fetch <system> info 
+                // 2. Fetch <system> info
                 if (isValidFor == null)
                 {
                     var currentSystemHash = serverStore._env.CurrentReadTransactionId;
@@ -240,7 +245,7 @@ namespace Raven.Server.Dashboard
                             MountPoints = new List<Client.ServerWide.Operations.MountPointUsage>()
                         };
 
-                        // Get new data 
+                        // Get new data
                         var systemEnv = new StorageEnvironmentWithType("<System>", StorageEnvironmentWithType.StorageEnvironmentType.System, serverStore._env);
                         var systemMountPoints = ServerStore.GetMountPointUsageDetailsFor(systemEnv, includeTempBuffers: true);
 
@@ -359,8 +364,10 @@ namespace Raven.Server.Dashboard
             DatabaseInfoItem databaseInfoItem)
         {
             DatabaseInfo databaseInfo = null;
-            if (serverStore.DatabaseInfoCache.TryGet(databaseName,
-                databaseInfoJson => databaseInfo = JsonDeserializationServer.DatabaseInfo(databaseInfoJson)) == false)
+            if (serverStore.DatabaseInfoCache.TryGet(databaseName, databaseInfoJson =>
+            {
+                databaseInfo = JsonDeserializationServer.DatabaseInfo(databaseInfoJson);
+            }) == false)
                 return;
 
             Debug.Assert(databaseInfo != null);

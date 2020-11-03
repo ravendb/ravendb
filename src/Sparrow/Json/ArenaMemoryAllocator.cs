@@ -122,11 +122,7 @@ namespace Sparrow.Json
                 var section = _freed[index];
                 _freed[index] = section->Previous;
 
-                allocation = new AllocatedMemoryData()
-                {
-                    Address = (byte*)section,
-                    SizeInBytes = section->SizeInBytes
-                };
+                allocation = new AllocatedMemoryData((byte*)section, section->SizeInBytes);
                 goto Return;
             }
 
@@ -135,11 +131,7 @@ namespace Sparrow.Json
                 GrowArena(size);
             }
 
-            allocation = new AllocatedMemoryData()
-            {
-                SizeInBytes = size,
-                Address = _ptrCurrent
-            };
+            allocation = new AllocatedMemoryData(_ptrCurrent, size);
 
             _ptrCurrent += size;
             _used += size;
@@ -422,8 +414,11 @@ namespace Sparrow.Json
         public JsonOperationContext Parent;
         public NativeMemory.ThreadStats AllocatingThread;
 
-        private MemoryManager<byte> _memoryManager;
-        public MemoryManager<byte> MemoryManager => _memoryManager ??= new UnmanagedMemoryManager(Address, SizeInBytes);
+        public AllocatedMemoryData(byte* address, int sizeInBytes)
+        {
+            SizeInBytes = sizeInBytes;
+            Address = address;
+        }
 
 #if MEM_GUARD_STACK || TRACK_ALLOCATED_MEMORY_DATA
         public string AllocatedBy = Environment.StackTrace;
@@ -431,10 +426,11 @@ namespace Sparrow.Json
 #endif
 
 #if !DEBUG
-        public byte* Address;
+        public readonly byte* Address;
 #else
         public bool IsLongLived;
         public bool IsReturned;
+
         private byte* _address;
 
         public byte* Address
@@ -449,7 +445,8 @@ namespace Sparrow.Json
 
                 return _address;
             }
-            set
+
+            private set
             {
                 if (IsLongLived == false &&
                     Parent != null &&
@@ -471,23 +468,25 @@ namespace Sparrow.Json
 
     public unsafe class UnmanagedMemoryManager : MemoryManager<byte>
     {
-        private readonly byte* _pointer;
+        private readonly byte* _address;
         private readonly int _length;
 
         public UnmanagedMemoryManager(byte* pointer, int length)
         {
-            _pointer = pointer;
+            _address = pointer;
             _length = length;
         }
 
-        public override Span<byte> GetSpan() => new Span<byte>(_pointer, _length);
+        public override Memory<byte> Memory => CreateMemory(_length);
+
+        public override Span<byte> GetSpan() => new Span<byte>(_address, _length);
 
         public override MemoryHandle Pin(int elementIndex = 0)
         {
             if (elementIndex < 0 || elementIndex >= _length)
                 throw new ArgumentOutOfRangeException(nameof(elementIndex));
 
-            return new MemoryHandle(_pointer + elementIndex);
+            return new MemoryHandle(_address + elementIndex);
         }
 
         public override void Unpin()

@@ -19,8 +19,9 @@ namespace Raven.Server.Utils.IoMetrics
 {
     public abstract class LiveIoStatsCollector<T> : IDisposable where T : JsonOperationContext
     {
-        // Dictionary to hold the ioFileItems written by server  
+        // Dictionary to hold the ioFileItems written by server
         private readonly ConcurrentDictionary<string, BlockingCollection<IoMeterBuffer.MeterItem>> _perEnvironmentsFilesMetrics; // Path+fileName is the key
+
         // Queue for Endpoint to read from
         public AsyncQueue<IOMetricsResponse> MetricsQueue { get; } = new AsyncQueue<IOMetricsResponse>();
 
@@ -66,11 +67,11 @@ namespace Raven.Server.Utils.IoMetrics
                 return true;
             }
 
-            // New info, Send data 
+            // New info, Send data
             ms.SetLength(0);
 
             using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ms))
             {
                 context.Write(writer, tuple.Item2.ToJson());
             }
@@ -89,7 +90,7 @@ namespace Raven.Server.Utils.IoMetrics
             var result = IoMetricsUtil.GetIoMetricsResponse(_environments, _performanceMetrics);
 
             _basePath = result.Environments[0].Path;
-            
+
             AddEnvironmentTypeToPathIfNeeded(result.Environments[0]);
 
             foreach (var environment in result.Environments)
@@ -236,12 +237,14 @@ namespace Raven.Server.Utils.IoMetrics
                 case StorageEnvironmentWithType.StorageEnvironmentType.Documents:
                     environment.Path = Path.Combine(_basePath, "Documents");
                     break;
+
                 case StorageEnvironmentWithType.StorageEnvironmentType.System:
                 case StorageEnvironmentWithType.StorageEnvironmentType.Configuration:
                 case StorageEnvironmentWithType.StorageEnvironmentType.Index:
                     // those envs already contain env type in path
                     Debug.Assert(environment.Path.Contains(environment.Type.ToString()), "environment.Path.Contains(environment.Type.ToString())");
                     break;
+
                 default:
                     throw new InvalidOperationException("Unknown type: " + environment.Type);
             }

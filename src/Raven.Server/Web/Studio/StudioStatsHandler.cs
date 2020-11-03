@@ -11,10 +11,10 @@ namespace Raven.Server.Web.Studio
     public class StudioStatsHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/studio/footer/stats", "GET", AuthorizationStatus.ValidUser)]
-        public Task FooterStats()
+        public async Task FooterStats()
         {
             using (var context = QueryOperationContext.Allocate(Database, needsServerContext: true))
-            using (var writer = new BlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context.Documents, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
@@ -38,8 +38,6 @@ namespace Raven.Server.Web.Studio
 
                 writer.WriteEndObject();
             }
-
-            return Task.CompletedTask;
         }
     }
 }

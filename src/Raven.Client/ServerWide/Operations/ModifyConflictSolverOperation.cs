@@ -52,14 +52,14 @@ namespace Raven.Client.ServerWide.Operations
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
                         var solver = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new ConflictSolver
                         {
                             ResolveByCollection = _solver.CollectionByScript,
                             ResolveToLatest = _solver.ResolveToLatest,
                         }, ctx);
-                        ctx.Write(stream, solver);
+                        await ctx.WriteAsync(stream, solver).ConfigureAwait(false);
                     })
                 };
 

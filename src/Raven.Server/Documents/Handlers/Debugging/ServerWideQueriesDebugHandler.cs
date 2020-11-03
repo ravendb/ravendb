@@ -14,13 +14,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/debug/queries/running/live", "GET", AuthorizationStatus.ValidUser)]
         public async Task RunningQueriesLive()
         {
-            if (TryGetAllowedDbs(null, out var allowedDbs, requireAdmin: false) == false)
+            var allowedDbs = await GetAllowedDbsAsync(null, requireAdmin: false);
+
+            if (allowedDbs.HasAccess == false)
                 return;
 
             HashSet<string> dbNames = null;
-            if (allowedDbs != null)
+            if (allowedDbs.AuthorizedDatabases != null)
             {
-                dbNames = allowedDbs.Keys.ToHashSet();
+                dbNames = allowedDbs.AuthorizedDatabases.Keys.ToHashSet();
             }
             
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

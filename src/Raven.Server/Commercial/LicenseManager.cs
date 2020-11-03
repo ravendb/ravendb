@@ -60,7 +60,7 @@ namespace Raven.Server.Commercial
         private DateTime? _lastPerformanceHint;
         private bool _eulaAcceptedButHasPendingRestart;
 
-        private readonly object _locker = new object();
+        private readonly SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
         private LicenseSupportInfo _lastKnownSupportInfo;
 
         public event Action LicenseChanged;
@@ -524,7 +524,7 @@ namespace Raven.Server.Commercial
             var leasedLicenseAsStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
-                var json = context.Read(leasedLicenseAsStream, "leased license info");
+                var json = await context.ReadForMemoryAsync(leasedLicenseAsStream, "leased license info");
                 var leasedLicense = JsonDeserializationServer.LeasedLicense(json);
 
                 if (onSuccess == null)
@@ -1505,7 +1505,7 @@ namespace Raven.Server.Commercial
                     var licenseSupportStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                     using (var context = JsonOperationContext.ShortTermSingleUse())
                     {
-                        var json = context.Read(licenseSupportStream, "license support info");
+                        var json = await context.ReadForMemoryAsync(licenseSupportStream, "license support info");
                         return _lastKnownSupportInfo = JsonDeserializationServer.LicenseSupportInfo(json);
                     }
                 }
@@ -1539,12 +1539,14 @@ namespace Raven.Server.Commercial
             };
         }
 
-        public void AcceptEula()
+        public async Task AcceptEulaAsync()
         {
             if (_eulaAcceptedButHasPendingRestart)
                 return;
 
-            lock (_locker)
+            await _locker.WaitAsync();
+
+            try
             {
                 if (_eulaAcceptedButHasPendingRestart)
                     return;
@@ -1557,7 +1559,7 @@ namespace Raven.Server.Commercial
 
                     using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
                     {
-                        settingsJson = context.ReadForMemory(fs, "settings-json");
+                        settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                         settingsJson.Modifications = new DynamicJsonValue(settingsJson);
                         settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Licensing.EulaAccepted)] = true;
                     }
@@ -1568,6 +1570,10 @@ namespace Raven.Server.Commercial
                     SetupManager.WriteSettingsJsonLocally(settingsPath, indentedJson);
                 }
                 _eulaAcceptedButHasPendingRestart = true;
+            }
+            finally
+            {
+                _locker.Release();
             }
         }
     }

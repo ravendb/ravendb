@@ -10,6 +10,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Voron;
 using Voron.Impl;
 
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.Indexes
 
         public abstract void Persist(TransactionOperationContext context, StorageEnvironmentOptions options);
 
-        protected abstract void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+        protected abstract void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer);
 
         public static readonly byte[] EncryptionContext = Encoding.UTF8.GetBytes("Indexes!");
 
@@ -58,7 +59,7 @@ namespace Raven.Server.Documents.Indexes
             return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
         }
 
-        public void Persist(JsonOperationContext context, BlittableJsonTextWriter writer)
+        public void Persist(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WriteStartObject();
 
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.Indexes
                     writer.WriteComma();
 
                 isFirst = false;
-                writer.WriteString((collection));
+                writer.WriteString(collection);
             }
 
             writer.WriteEndArray();
@@ -105,7 +106,7 @@ namespace Raven.Server.Documents.Indexes
 
         internal abstract void Reset();
 
-        protected abstract void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer);
+        protected abstract void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer);
 
         protected internal abstract IndexDefinition GetOrCreateIndexDefinitionInternal();
 
@@ -371,7 +372,7 @@ namespace Raven.Server.Documents.Indexes
         {
             var metadata = ReadMetadataFile(options);
 
-            var metadataJson = context.ReadForDisk(metadata, string.Empty);
+            var metadataJson = context.Sync.ReadForDisk(metadata, string.Empty);
 
             return metadataJson.TryGet("Name", out name);
         }

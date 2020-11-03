@@ -40,7 +40,7 @@ namespace EmbeddedTests
                 using (var ms = File.Create(fileName))
                 using (var s = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    bjro.WriteJsonTo(s);
+                    await bjro.WriteJsonToAsync(s);
                 }
 
                 using (var store = embedded.GetDocumentStore(new DatabaseOptions(databaseName)))
@@ -95,7 +95,7 @@ namespace EmbeddedTests
                 using (var ms = new MemoryStream())
                 using (var zipStream = new GZipStream(ms, CompressionMode.Compress))
                 {
-                    bjro.WriteJsonTo(zipStream);
+                    await bjro.WriteJsonToAsync(zipStream);
                     zipStream.Flush();
                     ms.Position = 0;
 

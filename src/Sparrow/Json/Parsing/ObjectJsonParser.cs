@@ -374,7 +374,7 @@ namespace Sparrow.Json.Parsing
 
                 if (current is BlittableJsonReaderObject.RawBlob bs)
                 {
-                    _state.StringBuffer = bs.Ptr;
+                    _state.StringBuffer = bs.Address;
                     _state.StringSize = bs.Length;
                     _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.Blob;

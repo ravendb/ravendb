@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
@@ -166,7 +167,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, string overrideQuery = null)
+        public static async Task<IndexQueryServerSide> CreateAsync(HttpContext httpContext, int start, int pageSize, JsonOperationContext context, RequestTimeTracker tracker, string overrideQuery = null)
         {
             IndexQueryServerSide result = null;
             try
@@ -195,7 +196,7 @@ namespace Raven.Server.Documents.Queries
                             case "parameters":
                                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(item.Value[0])))
                                 {
-                                    result.QueryParameters = context.Read(stream, "query parameters");
+                                    result.QueryParameters = await context.ReadForMemoryAsync(stream, "query parameters");
                                 }
                                 continue;
                             case "waitForNonStaleResults":

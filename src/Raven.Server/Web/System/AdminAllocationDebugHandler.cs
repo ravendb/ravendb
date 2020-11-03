@@ -28,12 +28,12 @@ namespace Raven.Server.Web.System
             }
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
 
                 var first = true;
-                foreach (var alloc in allocations.OrderByDescending(x=>x.Allocations))
+                foreach (var alloc in allocations.OrderByDescending(x => x.Allocations))
                 {
                     if (first == false)
                         writer.WriteComma();
@@ -60,14 +60,14 @@ namespace Raven.Server.Web.System
             public long NumberOfAllocations;
         }
 
-
         public sealed class Expensive_GcEventListener : EventListener
         {
             private const int GC_KEYWORD = 0x0000001;
-           
+
             private Dictionary<string, AllocationInfo> _allocations = new Dictionary<string, AllocationInfo>();
 
             public IReadOnlyCollection<AllocationInfo> Allocations => _allocations.Values;
+
             protected override void OnEventSourceCreated(EventSource eventSource)
             {
                 if (eventSource.Name.Equals("Microsoft-Windows-DotNETRuntime"))
@@ -75,6 +75,7 @@ namespace Raven.Server.Web.System
                     EnableEvents(eventSource, EventLevel.Verbose, (EventKeywords)GC_KEYWORD);
                 }
             }
+
             protected override void OnEventWritten(EventWrittenEventArgs eventData)
             {
                 switch (eventData.EventName)

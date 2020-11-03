@@ -58,6 +58,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server.Debugging;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Threading;
 using Voron;
 using DateTime = System.DateTime;
@@ -162,7 +163,7 @@ namespace Raven.Server
 
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
-                    options.AllowSynchronousIO = true;
+                    options.AllowSynchronousIO = false;
 
                     options.Limits.MaxRequestLineSize = (int)Configuration.Http.MaxRequestLineSize.GetValue(SizeUnit.Bytes);
                     options.Limits.MaxRequestBodySize = null; // no limit!
@@ -756,7 +757,7 @@ namespace Raven.Server
                     try
                     {
                         ms.Position = 0;
-                        var response = context.ReadForMemory(ms, "cpu-credits-from-script");
+                        var response = context.Sync.ReadForMemory(ms, "cpu-credits-from-script");
                         if (response.TryGet("Error", out string err))
                         {
                             throw new InvalidOperationException("Error from server: " + err);
@@ -1893,7 +1894,7 @@ namespace Raven.Server
                             if (_tcpLogger.IsInfoEnabled)
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
-                            SendErrorIfPossible(tcp, e);
+                            await SendErrorIfPossible(tcp, e);
                             try
                             {
                                 tcp?.Dispose();
@@ -1951,7 +1952,7 @@ namespace Raven.Server
                         "tcp-header",
                         BlittableJsonDocumentBuilder.UsageMode.None,
                         buffer,
-                        ServerStore.ServerShutdown,
+                        token: ServerStore.ServerShutdown,
                         // we don't want to allow external (and anonymous) users to send us unlimited data
                         // a maximum of 2 KB for the header is big enough to include any valid header that
                         // we can currently think of
@@ -2014,13 +2015,13 @@ namespace Raven.Server
                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                     }
 
-                    RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
+                    await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch,
                         supported);
                 }
 
                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err);
                 //At this stage the error is not relevant.
-                RespondToTcpConnection(stream, context, null,
+                await RespondToTcpConnection(stream, context, null,
                     authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed,
                     supported);
 
@@ -2131,7 +2132,7 @@ namespace Raven.Server
             }
         }
 
-        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
+        private static async ValueTask RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status, int version)
         {
             var message = new DynamicJsonValue
             {
@@ -2144,14 +2145,13 @@ namespace Raven.Server
                 message[nameof(TcpConnectionHeaderResponse.Message)] = error;
             }
 
-            using (var writer = new BlittableJsonTextWriter(context, stream))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
                 context.Write(writer, message);
-                writer.Flush();
             }
         }
 
-        private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
+        private async ValueTask SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
         {
             var tcpStream = tcp?.Stream;
             if (tcpStream == null)
@@ -2160,7 +2160,7 @@ namespace Raven.Server
             try
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
-                using (var errorWriter = new BlittableJsonTextWriter(context, tcpStream))
+                await using (var errorWriter = new AsyncBlittableJsonTextWriter(context, tcpStream))
                 {
                     context.Write(errorWriter, new DynamicJsonValue
                     {

@@ -3,6 +3,7 @@ using System.Text;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Indexes;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        const string Doc = @"{
+        private const string Doc = @"{
   ""Name"": ""0e5d5967-28e6-467d-a3f7-85488cea8a83"",
   ""Properties"": [
     {
@@ -38,6 +39,7 @@ namespace SlowTests.Issues
     ""@collection"": ""Documents""
   }
 }";
+
         [Fact]
         public void CanGetCorrectOutputWhenUsingDuplicateArray()
         {
@@ -72,7 +74,7 @@ namespace SlowTests.Issues
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
                 {
-                    var json = context.Read(new MemoryStream(Encoding.UTF8.GetBytes(Doc)), "users/1");
+                    var json = context.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(Doc)), "users/1");
 
                     var putCommand = new PutDocumentCommand("users/1", null, json);
 

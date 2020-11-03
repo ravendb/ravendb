@@ -12,32 +12,30 @@ namespace Raven.Server.Documents.Handlers.Debugging
     public class ProcStatsHandler : RequestHandler
     {
         [RavenAction("/admin/debug/cpu/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task CpuStats()
+        public async Task CpuStats()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var djv = CpuStatsInternal();
 
-                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
-                return Task.CompletedTask;
             }
         }
 
         [RavenAction("/admin/debug/proc/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
-        public Task ProcStats()
+        public async Task ProcStats()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var djv = ProcStatsInternal();
 
-                using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var write = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(write, djv);
                 }
-                return Task.CompletedTask;
             }
         }
 
@@ -54,7 +52,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["TotalProcessorTime"] = proc.TotalProcessorTime,
                     ["UserProcessorTime"] = proc.UserProcessorTime
                 };
-
 
                 djaCpu.Add(djvCpu);
 
@@ -140,7 +137,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 };
             }
         }
-        
+
         private DynamicJsonArray GetProcessThreadCollection(Process proc)
         {
             var dja = new DynamicJsonArray();
@@ -195,14 +192,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return dja;
         }
 
-
         private static void AddValue<T>(DynamicJsonValue djv, string key, Func<T> func)
         {
             try
             {
                 var result = func.Invoke();
                 djv[key] = result;
-
             }
             catch (Exception ex)
             {

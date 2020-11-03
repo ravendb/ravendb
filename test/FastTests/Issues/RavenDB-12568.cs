@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace FastTests.Issues
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)))
-                using (var blittableJson = context.Read(stringStream, "Reading of foo/bar"))
+                using (var blittableJson = context.Sync.ReadForDisk(stringStream, "Reading of foo/bar"))
                 {
                     Assert.Throws<RavenException>(() => requestExecutor.Execute(new PutDocumentCommand("foo/bar", null, blittableJson), context));
                 }

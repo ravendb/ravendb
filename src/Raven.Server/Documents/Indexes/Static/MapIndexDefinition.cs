@@ -7,6 +7,7 @@ using Raven.Server.Extensions;
 using Raven.Server.Json;
 
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Voron;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return result.ToArray();
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             var builder = IndexDefinition.ToJson();
             using (var json = context.ReadObject(builder, nameof(IndexDefinition), BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -59,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             writer.WritePropertyName(nameof(MapFields));
             writer.WriteStartArray();
@@ -118,7 +119,7 @@ namespace Raven.Server.Documents.Indexes.Static
             using (var tx = environment.ReadTransaction())
             {
                 using (var stream = GetIndexDefinitionStream(environment, tx))
-                using (var reader = context.ReadForDisk(stream, "index/def"))
+                using (var reader = context.Sync.ReadForDisk(stream, "index/def"))
                 {
                     var definition = ReadIndexDefinition(reader);
                     definition.Name = ReadName(reader);

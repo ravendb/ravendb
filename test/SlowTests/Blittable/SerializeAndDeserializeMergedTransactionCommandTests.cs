@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using FastTests;
 using FastTests.Voron.Util;
 using Newtonsoft.Json;
@@ -31,7 +32,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_PutResolvedConflictsCommand()
+        public async Task SerializeAndDeserialize_PutResolvedConflictsCommand()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var database = CreateDocumentDatabase())
@@ -63,7 +64,7 @@ namespace SlowTests.Blittable
                     blitCommand = writer.CreateReader();
                 }
 
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 //Deserialize
                 using (var reader = new BlittableJsonReader(context))
@@ -79,7 +80,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_MergedDeleteAttachmentCommand()
+        public async Task SerializeAndDeserialize_MergedDeleteAttachmentCommand()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -104,7 +105,7 @@ namespace SlowTests.Blittable
                     blitCommand = writer.CreateReader();
                 }
 
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 //Deserialize
                 AttachmentHandler.MergedDeleteAttachmentCommand actual;
@@ -122,7 +123,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_MergedPutAttachmentCommand()
+        public async Task SerializeAndDeserialize_MergedPutAttachmentCommand()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var database = CreateDocumentDatabase())
@@ -159,7 +160,7 @@ namespace SlowTests.Blittable
                     blitCommand = writer.CreateReader();
                 }
 
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
 
                 //Deserialize
                 AttachmentHandler.MergedPutAttachmentCommand actual;
@@ -183,7 +184,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_MergedPutCommandTest()
+        public async Task SerializeAndDeserialize_MergedPutCommandTest()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -204,7 +205,8 @@ namespace SlowTests.Blittable
 
                     blitCommand = writer.CreateReader();
                 }
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+
                 MergedPutCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
@@ -220,7 +222,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_PatchDocumentCommandTest()
+        public async Task SerializeAndDeserialize_PatchDocumentCommandTest()
         {
             using (var database = CreateDocumentDatabase())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -251,7 +253,7 @@ namespace SlowTests.Blittable
 
                     blitCommand = writer.CreateReader();
                 }
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
                 PatchDocumentCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
@@ -267,7 +269,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_DeleteDocumentCommandTest()
+        public async Task SerializeAndDeserialize_DeleteDocumentCommandTest()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -285,7 +287,8 @@ namespace SlowTests.Blittable
 
                     blitCommand = writer.CreateReader();
                 }
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+
                 DeleteDocumentCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
@@ -301,7 +304,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_MergedBatchCommandCommandTest()
+        public async Task SerializeAndDeserialize_MergedBatchCommandCommandTest()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -333,7 +336,8 @@ namespace SlowTests.Blittable
 
                     blitCommand = writer.CreateReader();
                 }
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+
                 BatchHandler.MergedBatchCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
@@ -349,7 +353,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_MergedBatchPutCommandTest()
+        public async Task SerializeAndDeserialize_MergedBatchPutCommandTest()
         {
             using (var database = CreateDocumentDatabase())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -379,7 +383,8 @@ namespace SlowTests.Blittable
 
                     blitCommand = writer.CreateReader();
                 }
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+
                 DatabaseDestination.MergedBatchPutCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {
@@ -400,7 +405,7 @@ namespace SlowTests.Blittable
         }
 
         [Fact]
-        public void SerializeAndDeserialize_MergedInsertBulkCommandTest()
+        public async Task SerializeAndDeserialize_MergedInsertBulkCommandTest()
         {
             using (var database = CreateDocumentDatabase())
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -435,7 +440,8 @@ namespace SlowTests.Blittable
 
                     blitCommand = writer.CreateReader();
                 }
-                var fromStream = SerializeTestHelper.SimulateSavingToFileAndLoading(context, blitCommand);
+                var fromStream = await SerializeTestHelper.SimulateSavingToFileAndLoadingAsync(context, blitCommand);
+
                 BulkInsertHandler.MergedInsertBulkCommand actual;
                 using (var reader = new BlittableJsonReader(context))
                 {

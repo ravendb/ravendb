@@ -283,7 +283,7 @@ namespace Raven.Server.ServerWide
                                         context.Reset();
                                         context.Renew();
 
-                                        var readTask = context.ReadFromWebSocket(ws, "ws from Leader", cts.Token);
+                                        var readTask = context.ReadFromWebSocketAsync(ws, "ws from Leader", cts.Token);
                                         using (var notification = readTask.Result)
                                         {
                                             if (notification == null)
@@ -2878,9 +2878,9 @@ namespace Raven.Server.ServerWide
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(stream =>
+                    Content = new BlittableJsonContent(async stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteObject(_command);
                         }

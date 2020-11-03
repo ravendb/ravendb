@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
 
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(s)))
                 {
-                    json = context.ReadForMemory(stream, "json");
+                    json = context.Sync.ReadForMemory(stream, "json");
 
                     Assert.True(json.TryGet("Value", out LazyNumberValue lnv));
 

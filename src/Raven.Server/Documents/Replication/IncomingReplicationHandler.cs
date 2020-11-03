@@ -29,6 +29,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
@@ -367,6 +368,7 @@ namespace Raven.Server.Documents.Replication
                         }
 
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
                 }
@@ -1088,7 +1090,7 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
                                         contentType, attachment.Base64Hash, attachment.ChangeVector);
-                                }
+                                    }
                                 break;
 
                             case AttachmentTombstoneReplicationItem attachmentTombstone:
@@ -1119,6 +1121,7 @@ namespace Raven.Server.Documents.Replication
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, id, revisionTombstone.Collection,
                                     rcvdChangeVector, revisionTombstone.LastModifiedTicks);
                                 break;
+
                             case CounterReplicationItem counter:
                                 var changed = database.DocumentsStorage.CountersStorage.PutCounters(context, counter.Id, counter.Collection, counter.ChangeVector,
                                     counter.Values);
@@ -1130,6 +1133,7 @@ namespace Raven.Server.Documents.Replication
                                 }
 
                                 break;
+
                             case TimeSeriesDeletedRangeItem deletedRange:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
 
@@ -1148,6 +1152,7 @@ namespace Raven.Server.Documents.Replication
                                     context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(removedChangeVector, rcvdChangeVector);
 
                                 break;
+
                             case TimeSeriesReplicationItem segment:
                                 tss = database.DocumentsStorage.TimeSeriesStorage;
                                 TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out docId, out _, out var baseline);
@@ -1165,6 +1170,7 @@ namespace Raven.Server.Documents.Replication
                                 context.LastDatabaseChangeVector = ChangeVectorUtils.MergeVectors(changeVector, segment.ChangeVector);
 
                                 break;
+
                             case DocumentReplicationItem doc:
                                 Debug.Assert(doc.Flags.Contain(DocumentFlags.Artificial) == false);
 
@@ -1264,6 +1270,7 @@ namespace Raven.Server.Documents.Replication
                                         }
 
                                         break;
+
                                     case ConflictStatus.Conflict:
                                         if (_replicationInfo.Logger.IsInfoEnabled)
                                             _replicationInfo.Logger.Info(
@@ -1290,15 +1297,18 @@ namespace Raven.Server.Documents.Replication
                                             goto case ConflictStatus.Update;
 
                                         break;
+
                                     case ConflictStatus.AlreadyMerged:
                                         // we have to do nothing here
                                         break;
+
                                     default:
                                         throw new ArgumentOutOfRangeException(nameof(conflictStatus),
                                             "Invalid ConflictStatus: " + conflictStatus);
                                 }
 
                                 break;
+
                             default:
                                 throw new ArgumentOutOfRangeException(item.GetType().ToString());
                         }

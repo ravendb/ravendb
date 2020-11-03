@@ -39,6 +39,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Platform;
 using Sparrow.Utils;
 using Size = Sparrow.Size;

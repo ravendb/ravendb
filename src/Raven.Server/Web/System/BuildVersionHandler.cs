@@ -16,6 +16,7 @@ using Raven.Server.ServerWide.BackgroundTasks;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Web.System
 {
@@ -28,8 +29,8 @@ namespace Raven.Server.Web.System
         private static byte[] GetVersionBuffer()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var stream = new MemoryStream())
             {
-                var stream = new MemoryStream();
                 using (var writer = new BlittableJsonTextWriter(context, stream))
                 {
                     context.Write(writer, new DynamicJsonValue
@@ -40,8 +41,8 @@ namespace Raven.Server.Web.System
                         [nameof(BuildNumber.FullVersion)] = ServerVersion.FullVersion
                     });
                 }
-                var versionBuffer = stream.ToArray();
-                return versionBuffer;
+
+                return stream.ToArray();
             }
         }
 
@@ -64,7 +65,7 @@ namespace Raven.Server.Web.System
                 _lastRunAt = SystemTime.UtcNow;
             }
 
-            WriteVersionUpdatesInfo();
+            await WriteVersionUpdatesInfo();
         }
 
         private static readonly TimeSpan LatestVersionCheckThrottlePeriod = TimeSpan.FromMinutes(3);
@@ -74,16 +75,16 @@ namespace Raven.Server.Web.System
             var lastRunAt = _lastRunAt;
             if (lastRunAt == null)
                 return false;
-            
+
             return SystemTime.UtcNow - lastRunAt.Value <= LatestVersionCheckThrottlePeriod;
         }
 
-        private void WriteVersionUpdatesInfo()
+        private async Task WriteVersionUpdatesInfo()
         {
             var versionUpdatesInfo = LatestVersionCheck.Instance.GetLastRetrievedVersionUpdatesInfo();
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -93,7 +94,6 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
-
         }
     }
 }

@@ -65,7 +65,7 @@ namespace Raven.Server.Web.System
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<AdminDatabasesHandler>("Server");
 
         [RavenAction("/admin/databases", "GET", AuthorizationStatus.Operator)]
-        public Task Get()
+        public async Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
@@ -79,7 +79,7 @@ namespace Raven.Server.Web.System
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                         HttpContext.Response.Headers["Database-Missing"] = name;
-                        using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
+                        await using (var writer = new AsyncBlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
                             context.Write(writer,
                                 new DynamicJsonValue
@@ -88,10 +88,9 @@ namespace Raven.Server.Web.System
                                     ["Message"] = "Database " + name + " wasn't found"
                                 });
                         }
-                        return Task.CompletedTask;
                     }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
                         writer.WriteDocumentPropertiesWithoutMetadata(context, new Document
@@ -105,8 +104,6 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         // add database to already existing database group
@@ -220,7 +217,7 @@ namespace Raven.Server.Web.System
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -228,7 +225,6 @@ namespace Raven.Server.Web.System
                             [nameof(DatabasePutResult.Name)] = name,
                             [nameof(DatabasePutResult.Topology)] = databaseRecord.Topology.ToJson()
                         });
-                        writer.Flush();
                     }
 
                     return;
@@ -253,7 +249,7 @@ namespace Raven.Server.Web.System
             {
                 var index = GetLongFromHeaders("ETag");
                 var replicationFactor = GetIntValueQueryString("replicationFactor", required: false) ?? 1;
-                var json = context.ReadForDisk(RequestBodyStream(), "Database Record");
+                var json = await context.ReadForDiskAsync(RequestBodyStream(), "Database Record");
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);
 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
@@ -336,7 +332,7 @@ namespace Raven.Server.Web.System
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -345,7 +341,6 @@ namespace Raven.Server.Web.System
                         [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
                         [nameof(DatabasePutResult.NodesAddedTo)] = nodeUrlsAddedTo
                     });
-                    writer.Flush();
                 }
             }
         }
@@ -618,11 +613,10 @@ namespace Raven.Server.Web.System
                 if (restorePoints.List.Count == 0)
                     throw new InvalidOperationException("Couldn't locate any backup files.");
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var blittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(restorePoints, context);
                     context.Write(writer, blittable);
-                    writer.Flush();
                 }
             }
         }
@@ -697,7 +691,7 @@ namespace Raven.Server.Web.System
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), cancelToken.Token),
                     id: operationId, token: cancelToken);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
@@ -810,7 +804,7 @@ namespace Raven.Server.Web.System
                     }
                 }
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
@@ -915,7 +909,7 @@ namespace Raven.Server.Web.System
                 var (index, _) = await ServerStore.ToggleDatabasesStateAsync(ToggleDatabasesStateCommand.Parameters.ToggleType.Databases, parameters.DatabaseNames, disable, $"{raftRequestId}");
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Status");
@@ -951,14 +945,13 @@ namespace Raven.Server.Web.System
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(DatabasePutResult.Name)] = name,
                         [nameof(DatabasePutResult.RaftCommandIndex)] = index
                     });
-                    writer.Flush();
                 }
             }
         }
@@ -1027,7 +1020,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
+            if (await CanAccessDatabaseAsync(name, requireAdmin: true) == false)
                 return;
 
             await ServerStore.EnsureNotPassiveAsync();
@@ -1047,7 +1040,7 @@ namespace Raven.Server.Web.System
                     if (conflictSolverConfig == null)
                         throw new InvalidOperationException($"Database record doesn't have {nameof(DatabaseRecord.ConflictSolverConfig)} property.");
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -1055,7 +1048,6 @@ namespace Raven.Server.Web.System
                             ["Key"] = name,
                             [nameof(DatabaseRecord.ConflictSolverConfig)] = conflictSolverConfig.ToJson()
                         });
-                        writer.Flush();
                     }
                 }
             }
@@ -1066,7 +1058,7 @@ namespace Raven.Server.Web.System
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var compactSettingsJson = context.ReadForDisk(RequestBodyStream(), string.Empty);
+                var compactSettingsJson = await context.ReadForDiskAsync(RequestBodyStream(), string.Empty);
 
                 var compactSettings = JsonDeserializationServer.CompactSettings(compactSettingsJson);
 
@@ -1154,7 +1146,7 @@ namespace Raven.Server.Web.System
                     }, token.Token),
                     id: operationId, token: token);
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
                 }
@@ -1175,7 +1167,7 @@ namespace Raven.Server.Web.System
             await ServerStore.EnsureNotPassiveAsync();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var json = context.ReadForDisk(RequestBodyStream(), "unused-databases-ids"))
+            using (var json = await context.ReadForDiskAsync(RequestBodyStream(), "unused-databases-ids"))
             {
                 var parameters = JsonDeserializationServer.Parameters.UnusedDatabaseParameters(json);
                 var command = new UpdateUnusedDatabaseIdsCommand(database, parameters.DatabaseIds, GetRaftRequestIdFromQuery());
@@ -1344,7 +1336,7 @@ namespace Raven.Server.Web.System
                                     var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, result: result, onProgress: onProgress,
                                         token: token.Token);
 
-                                    smuggler.Execute();
+                                    await smuggler.ExecuteAsync();
                                 }
                             }
                         }
@@ -1396,7 +1388,7 @@ namespace Raven.Server.Web.System
                 }, operationId, token: token);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
             }

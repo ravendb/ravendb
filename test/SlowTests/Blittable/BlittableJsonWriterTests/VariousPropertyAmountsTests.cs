@@ -1,8 +1,10 @@
 ﻿using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +32,6 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
             return sb.ToString();
         }
 
-
         [Theory]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
@@ -41,9 +42,8 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
             var str = GetJsonString(maxValue);
 
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = blittableContext.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
-
                 dynamic dynamicBlittableJObject = new DynamicBlittableJson(employee);
 
                 for (var i = 0; i < maxValue; i++)
@@ -59,15 +59,15 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
-        public void FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
+        public async Task FlatBoundarySizeFieldsAmountStreamRead(int maxValue)
         {
             var str = GetJsonString(maxValue);
 
             using (var blittableContext = JsonOperationContext.ShortTermSingleUse())
-            using (var employee = blittableContext.Read(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
+            using (var employee = blittableContext.Sync.ReadForDisk(new MemoryStream(Encoding.UTF8.GetBytes(str)), "doc1"))
             {
                 var ms = new MemoryStream();
-                blittableContext.Write(ms, employee);
+                await blittableContext.WriteAsync(ms, employee);
 
                 Assert.Equal(Encoding.UTF8.GetString(ms.ToArray()), str);
             }

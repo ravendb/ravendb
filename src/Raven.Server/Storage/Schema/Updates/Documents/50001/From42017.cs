@@ -615,7 +615,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     values.GetPropertyByIndex(i, ref prop);
                     builder.WritePropertyName(prop.Name);
                     if (prop.Value is BlittableJsonReaderObject.RawBlob blob)
-                        builder.WriteRawBlob(blob.Ptr, blob.Length);
+                        builder.WriteRawBlob(blob.Address, blob.Length);
                     else if (prop.Value is LazyStringValue lsv)
                         builder.WriteValue(lsv); // delete counter
                     else

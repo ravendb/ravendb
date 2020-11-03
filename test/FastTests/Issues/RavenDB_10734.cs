@@ -23,7 +23,7 @@ namespace FastTests.Issues
 
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 using (var stringStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(ComplexDocument)))
-                using (var blittableJson = context.Read(stringStream, "Reading of foo/bar"))
+                using (var blittableJson = await context.ReadForDiskAsync(stringStream, "Reading of foo/bar"))
                 {
                     requestExecutor.Execute(new PutDocumentCommand("foo/bar", null, blittableJson), context);
                 }

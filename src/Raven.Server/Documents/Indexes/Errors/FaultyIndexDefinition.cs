@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Indexes.Errors
 {
@@ -15,12 +16,12 @@ namespace Raven.Server.Documents.Indexes.Errors
             _definition = definition;
         }
 
-        protected override void PersistMapFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistMapFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }
 
-        protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
+        protected override void PersistFields(JsonOperationContext context, AbstractBlittableJsonTextWriter writer)
         {
             throw new NotSupportedException($"Definition of a faulty '{Name}' index does not support that");
         }

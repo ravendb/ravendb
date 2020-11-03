@@ -26,11 +26,13 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.ServerWide.Tcp.Sync;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Json.Sync;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -41,6 +43,7 @@ namespace Raven.Server.Documents.Replication
         public const string AlertTitle = "Replication";
 
         public event Action<OutgoingReplicationHandler> DocumentsSend;
+
         public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
         internal readonly DocumentDatabase _database;
@@ -70,7 +73,9 @@ namespace Raven.Server.Documents.Replication
         private InterruptibleRead _interruptibleRead;
 
         public event Action<OutgoingReplicationHandler, Exception> Failed;
+
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
+
         public event Action<OutgoingReplicationHandler> SuccessfulReplication;
 
         public ReplicationNode Destination;
@@ -81,8 +86,9 @@ namespace Raven.Server.Documents.Replication
         private readonly TcpConnectionInfo _connectionInfo;
 
         private readonly TcpConnectionOptions _tcpConnectionOptions;
+
         // In case this is an outgoing pull replication from the hub
-        // we need to associate this instance to the replication definition. 
+        // we need to associate this instance to the replication definition.
         public string PullReplicationDefinitionName;
 
         public OutgoingReplicationHandler(TcpConnectionOptions tcpConnectionOptions, ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external, TcpConnectionInfo connectionInfo)
@@ -93,7 +99,7 @@ namespace Raven.Server.Documents.Replication
             _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
             _tcpConnectionOptions = tcpConnectionOptions ??
-                                    new TcpConnectionOptions() {DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication,};
+                                    new TcpConnectionOptions() { DocumentDatabase = database, Operation = TcpConnectionHeaderMessage.OperationTypes.Replication, };
             _connectionInfo = connectionInfo;
             _database.Changes.OnDocumentChange += OnDocumentChange;
             _database.Changes.OnCounterChange += OnCounterChange;
@@ -445,7 +451,7 @@ namespace Raven.Server.Documents.Replication
 
                 OnSuccessfulReplication();
 
-                //if this returns false, this means either timeout or canceled token is activated                    
+                //if this returns false, this means either timeout or canceled token is activated
                 while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
                 {
                     //If we got cancelled we need to break right away
@@ -473,7 +479,7 @@ namespace Raven.Server.Documents.Replication
                             //Send a heartbeat first so we will get an updated CV of the destination
                             var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
                             SendHeartbeat(null);
-                            //If our previous CV is already merged to the destination wait a bit more 
+                            //If our previous CV is already merged to the destination wait a bit more
                             if (ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, currentChangeVector) ==
                                 ConflictStatus.AlreadyMerged)
                             {
@@ -481,7 +487,7 @@ namespace Raven.Server.Documents.Replication
                             }
 
                             // we have updates that we need to send to the other side
-                            // let's do that.. 
+                            // let's do that..
                             // this can happen if we got replication from another node
                             // that we need to send to it. Note that we typically
                             // will wait for the other node to send the data directly to
@@ -532,6 +538,7 @@ namespace Raven.Server.Documents.Replication
                         // it supplements (but does not extend) what we are willing to send out 
                         _destinationAcceptablePaths = response.Reply.AcceptablePaths;
                         break;
+
                     case ReplicationMessageReply.ReplyType.Error:
                         var exception = new InvalidOperationException(response.Reply.Exception);
                         if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)) ||
@@ -654,7 +661,7 @@ namespace Raven.Server.Documents.Replication
                 };
 
                 //This will either throw or return acceptable protocol version.
-                SupportedFeatures = TcpNegotiation.NegotiateProtocolVersion(documentsContext, _stream, parameters);
+                SupportedFeatures = TcpNegotiation.Sync.NegotiateProtocolVersion(documentsContext, _stream, parameters);
 
                 if (SupportedFeatures.ProtocolVersion <= 0)
                 {
@@ -690,6 +697,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     case TcpConnectionStatus.Ok:
                         return headerResponse.Version;
+
                     case TcpConnectionStatus.AuthorizationFailed:
                         throw new AuthorizationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMismatch:
@@ -876,12 +884,12 @@ namespace Raven.Server.Documents.Replication
                     {
                         if (update.DryRun(ctx))
                         {
-                            // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
-                            // is purely advisory. We just want to have the information up to date at some point, and we won't 
-                            // miss anything much if this isn't there.
-                            _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
-                        }
-                    }
+                    // we intentionally not waiting here, there is nothing that depends on the timing on this, since this
+                    // is purely advisory. We just want to have the information up to date at some point, and we won't
+                    // miss anything much if this isn't there.
+                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                }
+            }
                 }
             }
             _lastDestinationEtag = replicationBatchReply.CurrentEtag;
@@ -910,6 +918,7 @@ namespace Raven.Server.Documents.Replication
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
         private string _lastSentChangeVectorDuringHeartbeat;
+
         internal void SendHeartbeat(string changeVector)
         {
             AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
@@ -1034,6 +1043,7 @@ namespace Raven.Server.Documents.Replication
                     UpdateDestinationChangeVector(replicationBatchReply);
                     OnSuccessfulTwoWaysCommunication();
                     break;
+
                 case ReplicationMessageReply.ReplyType.MissingAttachments:
                     break;
             }
@@ -1047,6 +1057,7 @@ namespace Raven.Server.Documents.Replication
                             $"Received reply for replication batch from {Destination.FromString()}. New destination change vector is {LastAcceptedChangeVector}");
                     }
                     break;
+
                 case ReplicationMessageReply.ReplyType.Error:
                     if (_log.IsInfoEnabled)
                     {
@@ -1062,6 +1073,7 @@ namespace Raven.Server.Documents.Replication
                             $"Received reply for replication batch from {Destination.FromString()}. Destination is reporting missing attachments.");
                     }
                     break;
+
                 default:
                     throw new ArgumentOutOfRangeException(nameof(replicationBatchReply),
                         $"Received reply for replication batch with unrecognized type {replicationBatchReply.Type}" +
@@ -1155,18 +1167,21 @@ namespace Raven.Server.Documents.Replication
         }
 
         private void OnSuccessfulTwoWaysCommunication() => SuccessfulTwoWaysCommunication?.Invoke(this);
+
         private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
     }
 
     public interface IReportOutgoingReplicationPerformance
     {
         string DestinationFormatted { get; }
+
         OutgoingReplicationPerformanceStats[] GetReplicationPerformance();
     }
 
     public interface IReportIncomingReplicationPerformance
     {
         string DestinationFormatted { get; }
+
         IncomingReplicationPerformanceStats[] GetReplicationPerformance();
     }
 

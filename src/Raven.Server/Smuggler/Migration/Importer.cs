@@ -172,7 +172,7 @@ namespace Raven.Server.Smuggler.Migration
                 };
                 var smuggler = new Documents.DatabaseSmuggler(Parameters.Database, source, destination, Parameters.Database.Time, options, Parameters.Result, Parameters.OnProgress, Parameters.CancelToken.Token);
 
-                smuggler.Execute();
+                await smuggler.ExecuteAsync();
             }
         }
 

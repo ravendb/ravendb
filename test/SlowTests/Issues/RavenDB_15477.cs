@@ -6,6 +6,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Json;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
 
                 using (var ctx = JsonOperationContext.ShortTermSingleUse())
                 {
-                    using var bjro = ctx.ReadForMemory(result, "test");
+                    using var bjro = ctx.Sync.ReadForMemory(result, "test");
                     Assert.True(bjro.TryGetMember(nameof(DatabaseInfo.IndexingStatus), out var indexingStatus));
                     Assert.Null(indexingStatus);
                     var dbInfo = JsonDeserializationServer.DatabaseInfo(bjro);

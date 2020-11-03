@@ -97,9 +97,9 @@ namespace Raven.Server.Web
             if (_requestBodyStream != null)
                 return _requestBodyStream;
             _requestBodyStream = new StreamWithTimeout(GetDecompressedStream(HttpContext.Request.Body, HttpContext.Request.Headers));
-            
+
             _context.HttpContext.Response.RegisterForDispose(_requestBodyStream);
-            
+
             return _requestBodyStream;
         }
 
@@ -266,9 +266,9 @@ namespace Raven.Server.Web
                 return _responseStream;
 
             _responseStream = new StreamWithTimeout(HttpContext.Response.Body);
-            
+
             _context.HttpContext.Response.RegisterForDispose(_responseStream);
-            
+
             return _responseStream;
         }
 
@@ -572,7 +572,7 @@ namespace Raven.Server.Web
             }
         }
 
-        protected bool IsOperator()
+        protected async Task<bool> IsOperatorAsync()
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var status = feature?.Status;
@@ -589,7 +589,7 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    RequestRouter.UnlikelyFailAuthorization(HttpContext, null, feature,
+                    await RequestRouter.UnlikelyFailAuthorizationAsync(HttpContext, null, feature,
                         AuthorizationStatus.Operator);
                     return false;
                 case RavenServer.AuthenticationStatus.Operator:
@@ -601,10 +601,24 @@ namespace Raven.Server.Web
             }
         }
 
-        protected bool TryGetAllowedDbs(string dbName, out Dictionary<string, DatabaseAccess> dbs, bool requireAdmin)
+        public class AllowedDbs
+        {
+            public bool HasAccess { get; set; }
+
+            public Dictionary<string, DatabaseAccess> AuthorizedDatabases { get; set; }
+        }
+
+        protected async Task<bool> CanAccessDatabaseAsync(string dbName, bool requireAdmin)
+        {
+            var result = await GetAllowedDbsAsync(dbName, requireAdmin);
+
+            return result.HasAccess;
+        }
+
+        protected async Task<AllowedDbs> GetAllowedDbsAsync(string dbName, bool requireAdmin)
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            dbs = null;
+
             var status = feature?.Status;
             switch (status)
             {
@@ -616,25 +630,24 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.NotYetValid:
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
-                        return true;
+                        return new AllowedDbs { HasAccess = true};
 
-                    RequestRouter.UnlikelyFailAuthorization(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
-                    return false;
+                    await RequestRouter.UnlikelyFailAuthorizationAsync(HttpContext, dbName, null, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
+                    return new AllowedDbs { HasAccess = false };
                 case RavenServer.AuthenticationStatus.ClusterAdmin:
                 case RavenServer.AuthenticationStatus.Operator:
-                    return true;
+                    return new AllowedDbs { HasAccess = true };
                 case RavenServer.AuthenticationStatus.Allowed:
                     if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
                     {
-                        RequestRouter.UnlikelyFailAuthorization(HttpContext, dbName, feature, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
-                        return false;
+                        await RequestRouter.UnlikelyFailAuthorizationAsync(HttpContext, dbName, feature, requireAdmin ? AuthorizationStatus.DatabaseAdmin : AuthorizationStatus.ValidUser);
+                        return new AllowedDbs { HasAccess = false };
                     }
 
-                    dbs = feature.AuthorizedDatabases;
-                    return true;
+                    return new AllowedDbs { HasAccess = true, AuthorizedDatabases = feature.AuthorizedDatabases };
                 default:
                     ThrowInvalidAuthStatus(status);
-                    return false;
+                    return new AllowedDbs { HasAccess = false };
             }
         }
 

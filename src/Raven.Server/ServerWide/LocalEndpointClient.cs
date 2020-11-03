@@ -96,7 +96,7 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                return context.ReadForMemory(response.Body, $"read/local endpoint/{route.Path}");
+                return await context.ReadForMemoryAsync(response.Body, $"read/local endpoint/{route.Path}");
             }
             catch (InvalidStartOfObjectException e)
             {

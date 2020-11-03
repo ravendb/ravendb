@@ -2,6 +2,7 @@
 using System.Text;
 using FastTests;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
 
                 using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(data)))
                 {
-                    var json = context.Read(stream, "json");
+                    var json = context.Sync.ReadForDisk(stream, "json");
 
                     Assert.True(json.TryGet("Value", out LazyStringValue str));
                     Assert.NotNull(str);

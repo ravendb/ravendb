@@ -8,13 +8,13 @@ namespace Raven.Server.Web.Operations
     public class OperationsServerHandler : ServerRequestHandler
     {
         [RavenAction("/admin/operations/next-operation-id", "GET", AuthorizationStatus.Operator)]
-        public Task GetNextOperationId()
+        public async Task GetNextOperationId()
         {
             var nextId = ServerStore.Operations.GetNextOperationId();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Id");
@@ -22,8 +22,6 @@ namespace Raven.Server.Web.Operations
                     writer.WriteEndObject();
                 }
             }
-
-            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/operations/kill", "POST", AuthorizationStatus.Operator)]
@@ -37,7 +35,7 @@ namespace Raven.Server.Web.Operations
         }
 
         [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser)]
-        public Task State()
+        public async Task State()
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
@@ -45,32 +43,28 @@ namespace Raven.Server.Web.Operations
             if (operation == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
+                return;
             }
 
             if (operation.Database == null) // server level op
             {
-                if (IsOperator() == false)
-                    return Task.CompletedTask;
+                if (await IsOperatorAsync() == false)
+                    return;
             }
-            else if (TryGetAllowedDbs(operation.Database.Name, out var _, requireAdmin: false) == false)
+            else if (await CanAccessDatabaseAsync(operation.Database.Name, requireAdmin: false) == false)
             {
-                return Task.CompletedTask;
+                return;
             }
 
             var state = operation.State;
 
-
-
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, state.ToJson());
                 }
             }
-
-            return Task.CompletedTask;
         }
     }
 }
