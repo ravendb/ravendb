@@ -52,11 +52,11 @@ namespace FastTests.Client
                 "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", "ConfigureTimeSeriesValue",
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
                 "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand",
-                "GetServerWideExternalReplicationsCommand", "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand" 
-                "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand"
+                "GetServerWideExternalReplicationsCommand", "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand",
+                "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand",
+                "DeleteServerWideTaskCommand", "RegisterReplicationHubAccessCommand", "ToggleServerWideTaskStateCommand", "UnregisterReplicationHubAccessCommand"
             }.OrderBy(t => t);
 
-            
             var commandBaseType = typeof(RavenCommand<>);
             var types = commandBaseType.Assembly.GetTypes();
 
