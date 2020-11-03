@@ -2411,21 +2411,16 @@ namespace Raven.Client.Util
                     }
                     else
                     {
-                        writer.Write(alias);
+                        context.Visitor.Visit(alias);
                     }
 
                     writer.Write(")");
                 }
             }
 
-            internal static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName)
+            private static bool CanConvert(Expression expression, DocumentConventions conventions, out ParameterExpression alias, out MemberExpression innerMemberExpression)
             {
-                return CanConvert(expression, conventions, out aliasName, out _);
-            }
-
-            private static bool CanConvert(Expression expression, DocumentConventions conventions, out string aliasName, out MemberExpression innerMemberExpression)
-            {
-                aliasName = null;
+                alias = null;
                 innerMemberExpression = null;
 
                 if (!(expression is MemberExpression member) ||
@@ -2434,7 +2429,7 @@ namespace Raven.Client.Util
 
                 if (member.Expression is ParameterExpression parameter)
                 {
-                    aliasName = parameter.Name;
+                    alias = parameter;
                     return true;
                 }
 
@@ -2445,13 +2440,7 @@ namespace Raven.Client.Util
 
                 var p = GetParameter(innerMember)?.Name;
 
-                if (p != null && p.StartsWith(TransparentIdentifier))
-                {
-                    aliasName = innerMember.Member.Name;
-                    return true;
-                }
-
-                return false;
+                return p != null && p.StartsWith(TransparentIdentifier);
             }
         }
 
