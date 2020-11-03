@@ -648,6 +648,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                                 writer.WriteEndObject();
 
                                 break;
+                            case BlittableJsonReaderArray val:
+                                writer.WriteStartArray();
+                                foreach (var property in val)
+                                    WriteValue(writer, property);
+                                writer.WriteEndArray();
+                                break;
                             case null:
                                 writer.WriteNull();
                                 break;
