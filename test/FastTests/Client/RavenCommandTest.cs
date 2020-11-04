@@ -39,18 +39,18 @@ namespace FastTests.Client
                 "GetConnectionStringCommand", "PutConnectionStringCommand", "RemoveConnectionStringCommand", "GetClientConfigurationCommand",
                 "DeleteCompareExchangeValueCommand", "GetCompareExchangeValueCommand", "GetCompareExchangeValuesCommand", "PutCompareExchangeValueCommand",
                 "GetPeriodicBackupStatusCommand", "StartBackupCommand", "UpdatePeriodicBackupCommand", "GetAttachmentCommand", "PutAttachmentCommand",
-                "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand", "GetCertificatesMetadataCommand", "GetCertificateMetadataCommand",
+                "BulkInsertCommand", "ClusterWideBatchCommand", "GetCertificatesMetadataCommand", "GetCertificateMetadataCommand",
                 "AddClusterNodeCommand", "CloseTcpConnectionCommand", "DatabaseHealthCheckCommand", "DeleteAttachmentCommand", "DeleteCertificateCommand",
                 "DeleteDocumentCommand", "DeleteIndexCommand", "DeleteServerWideBackupConfigurationCommand", "DeleteSorterCommand", "DeleteSubscriptionCommand",
-                "DemoteClusterNodeCommand", "DisableIndexCommand", "DisableIndexCommand", "DropSubscriptionConnectionCommand", "EditClientCertificateCommand",
+                "DemoteClusterNodeCommand", "DisableIndexCommand", "DropSubscriptionConnectionCommand", "EditClientCertificateCommand",
                 "EnableIndexCommand", "ExportCommand", "HiLoReturnCommand", "ImportCommand", "KillOperationCommand", "PromoteClusterNodeCommand",
                 "PutClientCertificateCommand", "PutClientConfigurationCommand", "PutSecretKeyCommand", "PutSortersCommand", "RemoveClusterNodeCommand",
                 "ReorderDatabaseMembersCommand", "ReplaceClusterCertificateCommand", "ResetEtlCommand", "ResetIndexCommand", "SetDatabaseDynamicDistributionCommand",
                 "SetIndexLockCommand", "SetIndexPriorityCommand", "SetLogsConfigurationCommand", "StartIndexCommand", "StartIndexingCommand",
                 "StartTransactionsRecordingCommand", "StopIndexCommand", "StopIndexingCommand", "StopTransactionsRecordingCommand",
-                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand",
-                "BulkInsertCommand", "ClusterWideBatchCommand", "BatchCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", "ConfigureTimeSeriesValue",
+                "UpdateUnusedDatabasesCommand", "WaitForRaftIndexCommand", "ConfigureTimeSeriesCommand", "ConfigureTimeSeriesPolicyCommand", 
                 "UpdateSubscriptionCommand", "RemoveTimeSeriesPolicyCommand", "GetTimeSeriesStatisticsCommand", "GetTimeSeriesCommand", "GetMultipleTimeSeriesCommand",
+                "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand",
                 "GetAttachmentsCommand", "ConfigureTimeSeriesValueNamesCommand", "BackupCommand", "GetReplicationHubAccessCommand", "GetServerWideExternalReplicationCommand",
                 "GetServerWideExternalReplicationsCommand", "PutServerWideBackupConfigurationCommand", "PutServerWideExternalReplicationCommand", "ConditionalGetDocumentsCommand",
                 "DeleteIndexErrorsCommand", "TimeSeriesBatchCommand",
@@ -66,7 +66,7 @@ namespace FastTests.Client
             var actual = results.Select(r => r.Name).OrderBy(t => t);
             var didntCheck = actual.Except(expected).ToArray();
             Assert.False(didntCheck.Any(),
-                $"The follow `{nameof(RavenCommand)}`s was not added to checked list: {string.Join(", ", didntCheck.Select(n => $"'{n}'"))}{Environment.NewLine}" +
+                $"The following `{nameof(RavenCommand)}`s where not added to checked list: {string.Join(", ", didntCheck.Select(n => $"'{n}'"))}{Environment.NewLine}" +
                 $"You should check if the commands can run in `{nameof(ReadBalanceBehavior.FastestNode)}` mode (checked in RequestExecutor.ShouldExecuteOnAll) " +
                 $"and if it can so it can also run in parallel{Environment.NewLine}" +
                 $"For more information look at - https://issues.hibernatingrhinos.com/issue/RavenDB-14286");

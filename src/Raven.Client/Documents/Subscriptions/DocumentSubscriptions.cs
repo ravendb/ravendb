@@ -133,7 +133,8 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.InvokeSupport.Instance,
                         JavascriptConversionExtensions.NullCoalescingSupport.Instance,
                         JavascriptConversionExtensions.NestedConditionalSupport.Instance,
-                        JavascriptConversionExtensions.StringSupport.Instance
+                        JavascriptConversionExtensions.StringSupport.Instance,
+                        new JavascriptConversionExtensions.IdentityPropertySupport(conventions)
                     ));
 
                 criteria.Query = $"declare function predicate() {{ return {script} }}{Environment.NewLine}" +
