@@ -1798,6 +1798,11 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
+        public virtual HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection)
+        {
+            return HandleReferencesBase.InMemoryReferencesInfo.Default;
+        }
+
         public bool DoIndexingWork(IndexingStatsScope stats, CancellationToken cancellationToken)
         {
             _threadAllocations = NativeMemory.CurrentThreadStats;

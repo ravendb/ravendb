@@ -288,25 +288,23 @@ namespace SlowTests.Issues
                         await internalSession.SaveChangesAsync();
                     }
 
-                    for (var i = 0; i < 2; i++)
+                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
                     {
-                        // wait for the first batch to complete
+                        // wait for the batch to complete
                         Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
-
                         tcs = new TaskCompletionSource<object>();
 
                         var newItemsCount1 = await GetItemsCount(session, companyName1);
-                        Assert.True(newItemsCount1 > 0 && itemsCount1 != newItemsCount1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
 
                         var newItemsCount2 = await GetItemsCount(session, companyName2);
-                        Assert.True(newItemsCount2 > 0 && itemsCount2 != newItemsCount2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
 
                         itemsCount1 = newItemsCount1;
                         itemsCount2 = newItemsCount2;
                     }
                 }
 
-                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
                 await AssertCount(store, companyName1, 0);
                 await AssertCount(store, companyName2, _employeesCount);
                 

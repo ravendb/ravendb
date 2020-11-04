@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var lastDocEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(queryContext.Documents.Transaction.InnerTransaction, referencedCollection.Name);
                         var lastProcessedReferenceEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
-
+                        
                         var lastTombstoneEtag = queryContext.Documents.DocumentDatabase.DocumentsStorage.GetLastTombstoneEtag(queryContext.Documents.Transaction.InnerTransaction, referencedCollection.Name);
                         var lastProcessedTombstoneEtag = index._indexStorage.ReferencesForDocuments.ReadLastProcessedReferenceTombstoneEtag(indexContext.Transaction.InnerTransaction, collection, referencedCollection);
 
@@ -242,6 +242,12 @@ namespace Raven.Server.Documents.Indexes
                         *(long*)writePos = lastTombstoneEtag;
                         writePos += sizeof(long);
                         *(long*)writePos = lastProcessedTombstoneEtag;
+
+                        var referencesInfo = index.GetInMemoryReferencesState(collection);
+                        writePos += sizeof(long);
+                        *(long*)writePos = referencesInfo.ReferencedItemEtag;
+                        writePos += sizeof(long);
+                        *(long*)writePos = referencesInfo.ReferencedTombstoneEtag;
                     }
                 }
 
