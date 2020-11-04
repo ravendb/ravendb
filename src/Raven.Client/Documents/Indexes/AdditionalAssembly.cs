@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Indexes
                    && string.Equals(PackageName, other.PackageName, StringComparison.OrdinalIgnoreCase)
                    && string.Equals(PackageVersion, other.PackageVersion, StringComparison.OrdinalIgnoreCase)
                    && string.Equals(PackageSourceUrl, other.PackageSourceUrl, StringComparison.OrdinalIgnoreCase)
-                   && Equals(Usings, other.Usings);
+                   && (Usings != null && other.Usings != null && Usings.SetEquals(other.Usings));
         }
 
         public override bool Equals(object obj)
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Indexes
                 return false;
             if (ReferenceEquals(this, obj))
                 return true;
-            if (obj.GetType() != this.GetType())
+            if (obj.GetType() != GetType())
                 return false;
             return Equals((AdditionalAssembly)obj);
         }
@@ -58,7 +58,17 @@ namespace Raven.Client.Documents.Indexes
             hashCode.Add(PackageName, StringComparer.OrdinalIgnoreCase);
             hashCode.Add(PackageVersion, StringComparer.OrdinalIgnoreCase);
             hashCode.Add(PackageSourceUrl, StringComparer.OrdinalIgnoreCase);
-            hashCode.Add(Usings);
+
+            if (Usings != null)
+            {
+                foreach (var @using in Usings)
+                    hashCode.Add(@using);
+            }
+            else
+            {
+                hashCode.Add(Usings);
+            }
+
             return hashCode.ToHashCode();
         }
 
