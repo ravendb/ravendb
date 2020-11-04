@@ -317,12 +317,16 @@ function groupBy(lambda) {
     return reduce;
 }
 
-function createSpatialField(wkt) {    
-    return { $spatial: wkt }   
-}
 
-function createSpatialField(lat, lng) {    
-    return { $spatial: {Lng:lng, Lat:lat} }   
+// createSpatialField(wkt: string)
+// createSpatialField(lat: number, lng: number)
+
+function createSpatialField() {
+    if(arguments.length == 1) {
+        return { $spatial: arguments[0] }
+    }
+
+    return { $spatial: {Lng: arguments[1], Lat: arguments[0]} }
 }
 ";
 
