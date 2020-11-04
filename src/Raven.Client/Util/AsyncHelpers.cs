@@ -17,6 +17,8 @@ namespace Raven.Client.Util
 {
     public static class AsyncHelpers
     {
+        public static bool UseTaskAwaiterWhenNoSynchronizationContextIsAvailable = true;
+
         private struct ExclusiveSynchronizationContextResetBehavior : IResetSupport<ExclusiveSynchronizationContext>
         {
             public void Reset(ExclusiveSynchronizationContext value)
@@ -32,9 +34,9 @@ namespace Raven.Client.Util
             var oldContext = SynchronizationContext.Current;
 
             // Do we have an active synchronization context?
-            if (oldContext == null)
+            if (UseTaskAwaiterWhenNoSynchronizationContextIsAvailable && oldContext == null)
             {
-                // We can run synchronously without any issue.    
+                // We can run synchronously without any issue.
                 task().GetAwaiter().GetResult();
                 return;
             }
@@ -83,9 +85,9 @@ namespace Raven.Client.Util
             var oldContext = SynchronizationContext.Current;
 
             // Do we have an active synchronization context?
-            if (oldContext == null)
+            if (UseTaskAwaiterWhenNoSynchronizationContextIsAvailable && oldContext == null)
             {
-                // We can run synchronously without any issue.    
+                // We can run synchronously without any issue.
                 return task().GetAwaiter().GetResult();
             }
 
@@ -179,7 +181,7 @@ namespace Raven.Client.Util
                     if (_items.IsEmpty)
                         _workItemsWaiting.WaitOne();
 
-                    // Queue is no longer empty (unless someone won) therefore we are ready to process. 
+                    // Queue is no longer empty (unless someone won) therefore we are ready to process.
                     while (_items.TryDequeue(out var task))
                     {
                         // Execute the operation.
