@@ -11,7 +11,10 @@ namespace Raven.Server.Config.Categories
     {
         public ServerConfiguration()
         {
-            ThreadPoolMinThreads = (PlatformDetails.Is32Bits ? 2 : 4) * ProcessorInfo.ProcessorCount;
+            int minThreadPoolThreads = (PlatformDetails.Is32Bits ? 2 : 4) * ProcessorInfo.ProcessorCount;
+
+            ThreadPoolMinWorkerThreads = minThreadPoolThreads;
+            ThreadPoolMinCompletionPortThreads = minThreadPoolThreads;
         }
 
         [DefaultValue(30)]
@@ -87,15 +90,25 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Server.CpuCredits.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting CpuCreditsExecTimeout { get; set; }
 
-        [Description("EXPERT: Sets the minimum number of threads the thread pool creates on demand, as new requests are made, before switching to an algorithm for managing thread creation and destruction.")]
+        [Description("EXPERT: Sets the minimum number of worker threads the thread pool creates on demand, as new requests are made, before switching to an algorithm for managing thread creation and destruction.")]
         [DefaultValue(DefaultValueSetInConstructor)]
-        [ConfigurationEntry("Server.ThreadPool.MinThreads", ConfigurationEntryScope.ServerWideOnly)]
-        public int? ThreadPoolMinThreads { get; set; }
+        [ConfigurationEntry("Server.ThreadPool.MinWorkerThreads", ConfigurationEntryScope.ServerWideOnly)]
+        public int? ThreadPoolMinWorkerThreads { get; set; }
 
-        [Description("EXPERT: Sets the number of requests to the thread pool that can be active concurrently. All requests above that number remain queued until thread pool threads become available.")]
+        [Description("EXPERT: Sets the minimum number of asynchronous I/O threads the thread pool creates on demand, as new requests are made, before switching to an algorithm for managing thread creation and destruction.")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [ConfigurationEntry("Server.ThreadPool.MinCompletionPortThreads", ConfigurationEntryScope.ServerWideOnly)]
+        public int? ThreadPoolMinCompletionPortThreads { get; set; }
+
+        [Description("EXPERT: Sets the maximum number of worker threads in the thread pool.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Server.ThreadPool.MaxThreads", ConfigurationEntryScope.ServerWideOnly)]
-        public int? ThreadPoolMaxThreads { get; set; }
+        [ConfigurationEntry("Server.ThreadPool.MaxWorkerThreads", ConfigurationEntryScope.ServerWideOnly)]
+        public int? ThreadPoolMaxWorkerThreads { get; set; }
+
+        [Description("EXPERT: Sets the maximum number of asynchronous I/O threads in the thread pool.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Server.ThreadPool.MaxCompletionPortThreads", ConfigurationEntryScope.ServerWideOnly)]
+        public int? ThreadPoolMaxCompletionPortThreads { get; set; }
         
         [Description("EXPERT: Disable rvn admin-channel access.")]
         [DefaultValue(false)]

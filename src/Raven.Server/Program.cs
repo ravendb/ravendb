@@ -398,20 +398,31 @@ namespace Raven.Server
 
         private static void InitializeThreadPoolThreads(RavenConfiguration configuration)
         {
-            if (configuration.Server.ThreadPoolMinThreads != null)
+            if (configuration.Server.ThreadPoolMinWorkerThreads != null || configuration.Server.ThreadPoolMinCompletionPortThreads != null)
             {
-                ThreadPool.SetMinThreads(configuration.Server.ThreadPoolMinThreads.Value, configuration.Server.ThreadPoolMinThreads.Value);
+                ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
+                
+                int effectiveMinWorkerThreads = configuration.Server.ThreadPoolMinWorkerThreads ?? workerThreads;
+                int effectiveMinCompletionPortThreads = configuration.Server.ThreadPoolMinCompletionPortThreads ?? completionPortThreads;
+
+                ThreadPool.SetMinThreads(effectiveMinWorkerThreads, effectiveMinCompletionPortThreads);
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current value: {configuration.Server.ThreadPoolMinThreads}");
+                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMinThreads)}. Current values: workerThreads - {effectiveMinWorkerThreads}, completionPortThreads - {effectiveMinCompletionPortThreads}.");
             }
 
-            if (configuration.Server.ThreadPoolMaxThreads != null)
+            if (configuration.Server.ThreadPoolMaxWorkerThreads != null || configuration.Server.ThreadPoolMaxCompletionPortThreads != null)
             {
-                ThreadPool.SetMaxThreads(configuration.Server.ThreadPoolMaxThreads.Value, configuration.Server.ThreadPoolMaxThreads.Value);
+                ThreadPool.GetMaxThreads(out var workerThreads, out var completionPortThreads);
+
+                int effectiveMaxWorkerThreads = configuration.Server.ThreadPoolMaxWorkerThreads ?? workerThreads;
+                int effectiveMaxCompletionPortThreads = configuration.Server.ThreadPoolMaxCompletionPortThreads ?? completionPortThreads;
+
+                ThreadPool.SetMaxThreads(effectiveMaxWorkerThreads, effectiveMaxCompletionPortThreads);
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMaxThreads)}. Current value: '{configuration.Server.ThreadPoolMaxThreads}'");
+                    Logger.Info($"Thread Pool configuration was modified by calling {nameof(ThreadPool.SetMaxThreads)}. Current values: workerThreads - {effectiveMaxWorkerThreads}, completionPortThreads - {effectiveMaxCompletionPortThreads}.");
+
             }
         }
 

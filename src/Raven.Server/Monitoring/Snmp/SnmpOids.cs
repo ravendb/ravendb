@@ -82,13 +82,13 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Server low memory flag value")]
             public const string LowMemoryFlag = "1.6.2";
-            
+
             [Description("Server total swap size in MB")]
             public const string TotalSwapSize = "1.6.3";
-            
+
             [Description("Server total swap usage in MB")]
             public const string TotalSwapUsage = "1.6.4";
-            
+
             [Description("Server working set swap usage in MB")]
             public const string WorkingSetSwapUsage = "1.6.5";
 
@@ -157,6 +157,12 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Max number of backups that can run concurrently")]
             public const string ServerBackupsMax = "1.13.2";
+
+            [Description("Number of available worker threads in the thread pool")]
+            public const string ThreadPoolAvailableWorkerThreads = "1.14.1";
+
+            [Description("Number of available completion port threads in the thread pool")]
+            public const string ThreadPoolAvailableCompletionPortThreads = "1.14.2";
 
             public static DynamicJsonArray ToJson()
             {

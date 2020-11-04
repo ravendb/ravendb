@@ -3,12 +3,16 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Reflection;
+
+#if DEBUG
+
 using System.Text;
+
+#endif
+
 using System.Threading;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
-using Lextm.SharpSnmpLib.Messaging;
 using Lextm.SharpSnmpLib.Pipeline;
 using Lextm.SharpSnmpLib.Security;
 using Raven.Client;
@@ -203,9 +207,11 @@ namespace Raven.Server.Monitoring.Snmp
                     case SnmpAuthenticationProtocol.SHA1:
                         authenticationProvider = new SHA1AuthenticationProvider(new OctetString(authenticationPassword));
                         break;
+
                     case SnmpAuthenticationProtocol.MD5:
                         authenticationProvider = new MD5AuthenticationProvider(new OctetString(authenticationPassword));
                         break;
+
                     default:
                         throw new InvalidOperationException($"Unknown authentication protocol '{server.Configuration.Monitoring.Snmp.AuthenticationProtocol}'.");
                 }
@@ -218,12 +224,15 @@ namespace Raven.Server.Monitoring.Snmp
                     case SnmpPrivacyProtocol.None:
                         privacyProvider = new DefaultPrivacyProvider(authenticationProvider);
                         break;
+
                     case SnmpPrivacyProtocol.DES:
                         privacyProvider = new BouncyCastleDESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
                         break;
+
                     case SnmpPrivacyProtocol.AES:
                         privacyProvider = new BouncyCastleAESPrivacyProvider(new OctetString(privacyPassword), authenticationProvider);
                         break;
+
                     default:
                         throw new InvalidOperationException($"Unknown privacy protocol '{server.Configuration.Monitoring.Snmp.AuthenticationProtocol}'.");
                 }
@@ -259,9 +268,9 @@ namespace Raven.Server.Monitoring.Snmp
 
         private static Func<int[], int, int, bool> GetIsInTime(MonitoringConfiguration monitoringConfiguration)
         {
-                return monitoringConfiguration.Snmp.DisableTimeWindowChecks
-                    ? (currentTimeData, pastReboots, pastTime) => true
-                    : (Func<int[], int, int, bool>)null;
+            return monitoringConfiguration.Snmp.DisableTimeWindowChecks
+                ? (currentTimeData, pastReboots, pastTime) => true
+                : (Func<int[], int, int, bool>)null;
         }
 
         private static (HashSet<SnmpVersion> Versions, string HandlerVersion) GetVersions(RavenServer server)
@@ -284,9 +293,11 @@ namespace Raven.Server.Monitoring.Snmp
                     case SnmpVersion.V2C:
                         protocols.Add("V2");
                         break;
+
                     case SnmpVersion.V3:
                         protocols.Add("V3");
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -307,9 +318,11 @@ namespace Raven.Server.Monitoring.Snmp
                             new OctetString(server.Configuration.Monitoring.Snmp.Community),
                             new OctetString(server.Configuration.Monitoring.Snmp.Community)));
                         break;
+
                     case SnmpVersion.V3:
                         providers.Add(new Version3MembershipProvider());
                         break;
+
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
@@ -392,6 +405,9 @@ namespace Raven.Server.Monitoring.Snmp
 
             store.Add(new ServerBackupsCurrent(server.ServerStore));
             store.Add(new ServerBackupsMax(server.ServerStore));
+
+            store.Add(new ThreadPoolAvailableWorkerThreads());
+            store.Add(new ThreadPoolAvailableCompletionPortThreads());
 
             return store;
         }
