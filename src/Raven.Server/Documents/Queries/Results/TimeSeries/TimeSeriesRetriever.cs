@@ -81,12 +81,12 @@ namespace Raven.Server.Documents.Queries.Results.TimeSeries
             _source = GetSourceAndId();
             resultType = ResultType.None;
 
+            _collection = GetCollection(documentId);
+
             _stats = _context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_context, documentId, _source);
             if (_stats.Count == 0)
                 return Enumerable.Empty<DynamicJsonValue>();
             
-            _collection = GetCollection(documentId);
-
             var offset = GetOffset(timeSeriesFunction.Offset, declaredFunction.Name);
             var (from, to) = GetFromAndTo(declaredFunction, documentId, args, timeSeriesFunction, offset);
 
