@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
 using Sparrow.Json;
@@ -113,6 +114,8 @@ namespace Raven.Client.Documents.Operations.TimeSeries
 
         public string[] GetNames(string collection, string timeSeries)
         {
+            Debug.Assert(collection != null && timeSeries != null, "Missing collection/timeseries name");
+
             if (NamedValues == null)
                 return null;
 
