@@ -15,24 +15,22 @@
                 <div data-bind="foreach: ravenEtlConnectionStringsNames">
                     <div class="panel padding padding-sm flex-horizontal destination-item"
                          data-bind="css: { 'active': $root.editedRavenEtlConnectionString() && $data === $root.editedRavenEtlConnectionString().connectionStringName() }">
-                        <div class="flex-grow text-elipsis">
-                            <a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data }">
-                                <h4 class="text-elipsis">
-                                    <span data-bind="text: $data"></span>
-                                </h4>
-                            </a>
-                        </div>
+                        <a href="#" class="connection-string-title flex-grow text-elipsis" click: $parent.onEditRavenEtl, attr: { title: $data }">
+                            <h4 class="text-elipsis">
+                                <span data-bind="text: $data"></span>
+                            </h4>
+                        </a>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditRavenEtl, attr: { title: $root.isServerWide($data)() ? 'View connection string' : 'Edit connection string' }">
                                 <span data-bind="if: $root.isServerWide($data)"><i class="icon-preview"></i></span>
                                 <span data-bind="if: !$root.isServerWide($data)()"><i class="icon-edit" data-bind=""></i></span>
                             </button>
                             <span class="has-disable-reason" data-placement="right"
-                                  data-bind="if: !$root.isServerWide($data)(), attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'RavenEtl') ? 'Connection string is being used by an ongoing task !' : '' }">
+                                    data-bind="if: !$root.isServerWide($data)(), attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'RavenEtl') ? 'Connection string is being used by an ongoing task !' : '' }">
                                 <button class="btn btn-danger"
                                         data-bind="click: $parent.confirmDelete.bind($parent, $data,'Raven'), disable: $root.isConnectionStringInUse($data, 'RavenEtl'),
-                                                   attr: { 'title': !$root.isConnectionStringInUse($data, 'RavenEtl') ? 'Remove connection string' : '' }">
-                                        <i class="icon-trash"></i>
+                                                attr: { 'title': !$root.isConnectionStringInUse($data, 'RavenEtl') ? 'Remove connection string' : '' }">
+                                    <i class="icon-trash"></i>
                                 </button>
                             </span>
                         </div>
@@ -51,11 +49,11 @@
                 <div data-bind="foreach: sqlEtlConnectionStringsNames">
                     <div class="panel padding padding-sm flex-horizontal destination-item" 
                          data-bind="css: { 'active': $root.editedSqlEtlConnectionString() && $data === $root.editedSqlEtlConnectionString().connectionStringName() }">
-                        <div class="flex-grow text-elipsis">
-                            <a href="#" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data }">
-                                <h4 class="text-elipsis"><span data-bind="text: $data"></span></h4>
-                            </a>
-                        </div>
+                        <a href="#" class="connection-string-title flex-grow text-elipsis" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data }">
+                            <h4 class="text-elipsis">
+                                <span data-bind="text: $data"></span>
+                            </h4>
+                        </a>
                         <div class="actions">
                             <button class="btn btn-default" data-bind="click: $parent.onEditSqlEtl" title="Edit connection string"><i class="icon-edit"></i></button>
                             <span class="has-disable-reason" data-placement="right" data-bind="attr: { 'data-original-title': $root.isConnectionStringInUse($data, 'SqlEtl') ? 'Connection string is being used by an ongoing task !' : '' }">
