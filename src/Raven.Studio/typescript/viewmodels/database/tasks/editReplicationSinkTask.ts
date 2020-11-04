@@ -60,7 +60,7 @@ class editReplicationSinkTask extends viewModelBase {
                 const deferred = $.Deferred<canActivateResultDto>();
 
                 if (this.canDefineCertificates) {
-                    new getCertificatesCommand()
+                    new getCertificatesCommand(false, false)
                         .execute()
                         .done(certificatesInfo => {
                             const serverCertificate = certificatesInfo.Certificates.find(cert => cert.Name === this.serverCertificateName);
