@@ -341,6 +341,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return workers.ToArray();
         }
 
+        public override HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection)
+        {
+            if (_handleReferences == null)
+                return HandleReferencesBase.InMemoryReferencesInfo.Default;
+
+            return _handleReferences.GetReferencesInfo(collection);
+        }
+
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
             StaticIndexHelper.HandleReferencesDelete(_handleReferences, _handleCompareExchangeReferences, tombstone, collection, writer, indexContext, stats);
@@ -417,7 +425,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             var length = minLength;
 
             if (_handleReferences != null)
-                length += sizeof(long) * 4 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+                length += sizeof(long) * 6 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             if (_handleCompareExchangeReferences != null)
                 length += sizeof(long) * 4 * _compiled.CollectionsWithCompareExchangeReferences.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Workers
 {
@@ -10,9 +11,18 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             private readonly Dictionary<string, ReferenceState> _lastIdPerCollectionForTombstones = new Dictionary<string, ReferenceState>();
 
-            public Reference For(HandleReferencesBase.ActionType actionType, string collection)
+            public Reference For(ActionType actionType, string collection)
             {
                 return new Reference(GetDictionary(actionType), collection);
+            }
+
+            public InMemoryReferencesInfo GetReferencesInfo(string collection)
+            {
+                return new InMemoryReferencesInfo
+                {
+                    ReferencedItemEtag = new Reference(GetDictionary(ActionType.Document), collection).GetLastIndexedParentEtag(),
+                    ReferencedTombstoneEtag = new Reference(GetDictionary(ActionType.Tombstone), collection).GetLastIndexedParentEtag(),
+                };
             }
 
             public void Clear(ActionType actionType)
@@ -21,9 +31,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                 dictionary.Clear();
             }
 
-            private Dictionary<string, ReferenceState> GetDictionary(HandleReferencesBase.ActionType actionType)
+            private Dictionary<string, ReferenceState> GetDictionary(ActionType actionType)
             {
-                return actionType == HandleReferencesBase.ActionType.Document
+                return actionType == ActionType.Document
                     ? _lastIdPerCollectionForDocuments
                     : _lastIdPerCollectionForTombstones;
             }
@@ -33,6 +43,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 public string ReferencedItemId;
                 public string NextItemId;
                 public long ReferencedItemEtag;
+                public long LastIndexedParentEtag;
             }
 
             public class Reference
@@ -46,13 +57,20 @@ namespace Raven.Server.Documents.Indexes.Workers
                     _collection = collection;
                 }
 
-                public void Set(HandleReferencesBase.Reference reference, string itemId)
+                public void Set(HandleReferencesBase.Reference reference, string itemId, long lastIndexedParentEtag, TransactionOperationContext indexContext)
                 {
-                    _dictionary[_collection] = new ReferenceState
+                    var referencedItemId = (string)reference.Key;
+
+                    indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
                     {
-                        ReferencedItemId = reference.Key,
-                        ReferencedItemEtag = reference.Etag,
-                        NextItemId = itemId
+                        // we update this only after the transaction was commited
+                        _dictionary[_collection] = new ReferenceState
+                        {
+                            ReferencedItemId = referencedItemId,
+                            ReferencedItemEtag = reference.Etag,
+                            NextItemId = itemId,
+                            LastIndexedParentEtag = lastIndexedParentEtag
+                        };
                     };
                 }
 
@@ -61,15 +79,18 @@ namespace Raven.Server.Documents.Indexes.Workers
                     if (_dictionary.TryGetValue(_collection, out var state) == false)
                         return null;
 
-                    var lastProcessedItemId = reference.Key == state.ReferencedItemId && reference.Etag == state.ReferencedItemEtag
-                        ? state.NextItemId
-                        : null;
+                    if (reference.Key == state.ReferencedItemId && reference.Etag == state.ReferencedItemEtag)
+                        return state.NextItemId;
 
-                    // - we resume from the same point we stopped before
-                    // - the document has changed since, cannot continue from the same point
-                    // either way we need to remove it
-                    _dictionary.Remove(_collection);
-                    return lastProcessedItemId;
+                    return null;
+                }
+
+                public long GetLastIndexedParentEtag()
+                {
+                    if (_dictionary.TryGetValue(_collection, out var state) == false)
+                        return 0;
+
+                    return state.LastIndexedParentEtag;
                 }
 
                 public void Clear(bool earlyExit)

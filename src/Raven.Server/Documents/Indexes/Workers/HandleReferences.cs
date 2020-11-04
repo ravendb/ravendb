@@ -193,9 +193,9 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     hasChanges = true;
 
                                     var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedDocument, lastIndexedEtag, indexed, reference);
-
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
+                                        long lastIndexedParentEtag = 0;
                                         while (itemsEnumerator.MoveNext(queryContext.Documents, out IEnumerable mapResults, out var etag))
                                         {
                                             token.ThrowIfCancellationRequested();
@@ -205,11 +205,12 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             if (CanContinueReferenceBatch() == false)
                                             {
-                                                reference.Set(referencedDocument, current.Id);
+                                                reference.Set(referencedDocument, current.Id, lastIndexedParentEtag, indexContext);
                                                 earlyExit = true;
                                                 break;
                                             }
 
+                                            lastIndexedParentEtag = current.Etag;
                                             totalProcessedCount++;
                                             collectionStats.RecordMapReferenceAttempt();
                                             stats.RecordDocumentSize(current.Size);
@@ -371,6 +372,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                 });
         }
 
+        public InMemoryReferencesInfo GetReferencesInfo(string collection)
+        {
+            return _referencesState.GetReferencesInfo(collection);
+        }
+
         protected abstract IndexItem GetItem(DocumentsOperationContext databaseContext, Slice key);
 
         public abstract void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats);
@@ -386,6 +392,14 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             Document,
             Tombstone
+        }
+
+        public class InMemoryReferencesInfo
+        {
+            public static InMemoryReferencesInfo Default = new InMemoryReferencesInfo();
+
+            public long ReferencedItemEtag;
+            public long ReferencedTombstoneEtag;
         }
     }
 }
