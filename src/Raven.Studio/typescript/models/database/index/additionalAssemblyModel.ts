@@ -46,25 +46,6 @@ class additionalAssemblyModel {
             }
         });
         
-        this.assemblySource.subscribe((newSource) => {
-            this.usings([]);
-            
-            switch (newSource) {
-                case "Server Runtime":
-                    this.clearPathFields();
-                    this.clearNuGetFields();
-                    break;
-                case "Path":
-                    this.clearServerRuntimeFields();
-                    this.clearNuGetFields();
-                    break;
-                case "NuGet":
-                    this.clearServerRuntimeFields();
-                    this.clearPathFields();
-                    break;
-            }
-        })
-        
         this.dirtyFlag = new ko.DirtyFlag([
             this.assemblySource,
             this.assemblyName,
@@ -74,21 +55,6 @@ class additionalAssemblyModel {
             this.packageSourceUrl,
             this.usings
         ], false, jsonUtil.newLineNormalizingHashFunction);
-    }
-    
-    private clearServerRuntimeFields() {
-        this.assemblyName(null);
-    }
-
-    private clearPathFields() {
-        this.assemblyPath(null);
-    }
-
-    private clearNuGetFields() {
-        this.packageName(null);
-        this.packageVersion(null);
-        this.packageSourceUrl(null);
-        this.useDefaultPackageSourceUrl(true);
     }
     
     private initValidation() {
@@ -140,16 +106,15 @@ class additionalAssemblyModel {
         this.assemblySource(sourceType);
     }
 
-    addNamespaceToUsingsWithBlink() {
-        const namespaceToAdd = this.namespaceText();
-
-        if (!this.usings().find(x => x === namespaceToAdd))
-        {
-            this.usings.unshift(namespaceToAdd);
+    addNamespaceToUsings(namespace: string) {
+        if (!this.usings().find(x => x === namespace)) {
+            this.usings.unshift(namespace);
             this.namespaceText(null);
-            $(".usings .collection-list li").first().addClass("blink-style");
+            return true;
         }
-    }
+        
+        return false;
+    }    
 
     removeNamespaceFromUsings(namespace: string) {
         const namespaceToRemove = this.usings().find(x => x === namespace);
@@ -168,14 +133,32 @@ class additionalAssemblyModel {
     }
     
     toDto(): Raven.Client.Documents.Indexes.AdditionalAssembly {
-        return {
-            AssemblyName: this.assemblyName(),
-            AssemblyPath: this.assemblyPath(),
-            PackageName: this.packageName(),
-            PackageVersion: this.packageVersion(),
-            PackageSourceUrl: this.packageSourceUrl(),
-            Usings: this.usings()
-        };
+        let result: Partial<Raven.Client.Documents.Indexes.AdditionalAssembly>;
+        
+        switch (this.assemblySource()) {
+            case "Server Runtime":
+                result = {
+                    AssemblyName: this.assemblyName(),
+                    Usings: this.usings()
+                };
+                break;
+            case "Path":
+                result = {
+                    AssemblyPath: this.assemblyPath(),
+                    Usings: this.usings()
+                };
+                break;
+            case "NuGet":
+                result = {
+                    PackageName: this.packageName(),
+                    PackageVersion: this.packageVersion(),
+                    PackageSourceUrl: this.packageSourceUrl(),
+                    Usings: this.usings()
+                };
+                break;
+        }
+        
+        return result as Raven.Client.Documents.Indexes.AdditionalAssembly;
     }
 }
 
