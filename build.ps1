@@ -195,10 +195,10 @@ Foreach ($target in $targets) {
     CleanDir $specOutDir
 
     BuildServer $SERVER_SRC_DIR $specOutDir $target $Debug
-    BuildTool rvn $RVN_SRC_DIR $specOutDir $target $Debug
-    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $Debug
-    BuildTool migrator $MIGRATOR_SRC_DIR $specOutDir $target $Debug
-    BuildTool debug $DEBUG_SRC_DIR $specOutDir $target $Debug
+    BuildTool rvn $RVN_SRC_DIR $specOutDir $target $Debug $true
+    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $Debug $false
+    BuildTool migrator $MIGRATOR_SRC_DIR $specOutDir $target $Debug $true
+    BuildTool debug $DEBUG_SRC_DIR $specOutDir $target $Debug $true
 
     $specOutDirs = @{
         "Main" = $specOutDir;

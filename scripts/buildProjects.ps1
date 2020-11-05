@@ -34,9 +34,7 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
     $commandArgs += '/p:SourceLinkCreate=true'
     
     if ($target) {
-        #if ($target.Runtime.StartsWith("win-")) { #https://github.com/dotnet/runtime/issues/42772
-            $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
-        #}
+        $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
     }
 
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
@@ -122,7 +120,7 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio 
     return $true
 }
 
-function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
+function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug, $trim ) {
     write-host "Building $toolName for $($target.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
@@ -139,12 +137,10 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
         $commandArgs += "/p:Platform=$($target.Arch)"
     }
 
-    $commandArgs += '/p:SourceLinkCreate=true'
+    $commandArgs += "/p:SourceLinkCreate=true"
     
     if ($target) {
-        #if ($target.Runtime.StartsWith("win-")) { #https://github.com/dotnet/runtime/issues/42772
-            $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
-        #}
+        $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
     }
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
