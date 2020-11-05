@@ -192,7 +192,7 @@ namespace RachisTests
         }
 
         [Fact]
-        public async Task MakeSureAllNodesAreRoundRobined()
+        public async Task MakeSureSubscriptionProcessedAfterDisposingTheResponsibleNodes()
         {
             const int clusterSize = 5;
             var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize, shouldRunInMemory: false));
@@ -205,13 +205,8 @@ namespace RachisTests
                 DeleteDatabaseOnDispose = false
             }))
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
+                var namesList = new List<string>{ "E", "G", "R" };
                 var databaseName = store.Database;
-
                 var subsId = store.Subscriptions.Create<User>();
                 using var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
                 {
@@ -220,15 +215,25 @@ namespace RachisTests
                 );
 
                 HashSet<string> redirects = new HashSet<string>();
-
+                var mre = new ManualResetEvent(false);
+                subsWorker.AfterAcknowledgment += batch =>
+                {
+                    mre.Set();
+                    return Task.CompletedTask;
+                };
                 subsWorker.OnSubscriptionConnectionRetry += ex =>
                 {
                     redirects.Add(subsWorker.CurrentNodeTag);
                 };
-                var task = subsWorker.Run(x => { });
 
-                var sp = Stopwatch.StartNew();
+                var processedItems = new List<string>();
+                var task = subsWorker.Run(x =>
+                {
+                    foreach (var item in x.Items)
+                        processedItems.Add(item.Result.Name);
 
+                    mre.Set();
+                });
                 List<string> toggledNodes = new List<string>();
                 var toggleCount = Math.Round(clusterSize * 0.51);
                 for (int i = 0; i < toggleCount; i++)
@@ -248,17 +253,28 @@ namespace RachisTests
                     var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == responsibleNode);
                     var node = cluster.Nodes[nodeIndex];
 
+                    if (i != 0) mre.Reset();
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User()
+                        {
+                            Name = namesList[i]
+                        });
+                        session.SaveChanges();
+                    }
+                    Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)), "no ack");
+
                     var res = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
                     Assert.Equal(responsibleNode, res.NodeTag);
                     await Task.Delay(5000);
                 }
-                while (clusterSize != redirects.Count)
-                {
-                    await Task.Delay(1000);
-                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(2), $"sp.Elapsed < TimeSpan.FromMinutes(1), redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}, offline: {string.Join(", ", toggledNodes)}");
-                }
 
-                Assert.Equal(clusterSize, redirects.Count);
+                Assert.True(redirects.Count >= toggleCount, $"redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}, offline: {string.Join(", ", toggledNodes)}");
+                Assert.Equal(namesList.Count, processedItems.Count);
+                for (int i = 0; i < namesList.Count; i++)
+                {
+                  Assert.Equal(namesList[i], processedItems[i]);
+                }
             }
         }
 
