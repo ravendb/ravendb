@@ -57,8 +57,8 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var index = new Index();
-                await new Index().ExecuteAsync(store);
+                var index = new DocumentsIndex();
+                await new DocumentsIndex().ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, companyName1, _employeesCount);
@@ -122,8 +122,8 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var index = new Index();
-                await new Index().ExecuteAsync(store);
+                var index = new DocumentsIndex();
+                await new DocumentsIndex().ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
                 await AssertCount(store, companyName1, _employeesCount);
@@ -194,7 +194,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var index = new Index();
+                var index = new DocumentsIndex();
                 await index.ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
@@ -257,7 +257,7 @@ namespace SlowTests.Issues
                     }
                 }
 
-                var index = new Index();
+                var index = new DocumentsIndex();
                 await index.ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
@@ -315,7 +315,108 @@ namespace SlowTests.Issues
 
                 static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
                 {
-                    return await session.Query<Index.Result, Index>()
+                    return await session.Query<DocumentsIndex.Result, DocumentsIndex>()
+                        .Where(x => x.CompanyName == companyName).CountAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanIndexReferencedCompareExchangeWithQuery()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
+            {
+                const string companyName1 = "Hibernating Rhinos";
+                const string companyName2 = "HR";
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = companyName1 });
+                    await session.SaveChangesAsync();
+                }
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (var i = 0; i < _employeesCount; i++)
+                    {
+                        await bulk.StoreAsync(new Employee
+                        {
+                            CompanyId = _commonName
+                        });
+                    }
+                }
+
+                var index = new DocumentsWithCompareExchangeIndex();
+                await index.ExecuteAsync(store);
+
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+                await AssertDocumentsWithCompareExchangeCount(store, companyName1, _employeesCount);
+                await AssertDocumentsWithCompareExchangeCount(store, companyName2, 0);
+
+                var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
+
+                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
+                    }
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var itemsCount1 = await GetItemsCount(session, companyName1);
+                    Assert.Equal(_employeesCount, itemsCount1);
+
+                    var itemsCount2 = await GetItemsCount(session, companyName2);
+                    Assert.Equal(0, itemsCount2);
+
+                    using (var internalSession = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var company = await internalSession.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
+                        company.Value.Name = companyName2;
+                        await internalSession.SaveChangesAsync();
+                    }
+
+                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
+                    {
+                        // wait for the batch to complete
+                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+                        tcs = new TaskCompletionSource<object>();
+
+                        var newItemsCount1 = await GetItemsCount(session, companyName1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
+
+                        var newItemsCount2 = await GetItemsCount(session, companyName2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
+
+                        itemsCount1 = newItemsCount1;
+                        itemsCount2 = newItemsCount2;
+                    }
+                }
+
+                await AssertDocumentsWithCompareExchangeCount(store, companyName1, 0);
+                await AssertDocumentsWithCompareExchangeCount(store, companyName2, _employeesCount);
+
+                Assert.True(batchCount > 1);
+
+                static async Task AssertDocumentsWithCompareExchangeCount(DocumentStore store, string companyName, int expectedCount)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var itemsCount = await GetItemsCount(session, companyName);
+                        Assert.Equal(expectedCount, itemsCount);
+                    }
+                }
+
+                static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
+                {
+                    return await session.Query<DocumentsWithCompareExchangeIndex.Result, DocumentsWithCompareExchangeIndex>()
                         .Where(x => x.CompanyName == companyName).CountAsync();
                 }
             }
@@ -427,6 +528,114 @@ namespace SlowTests.Issues
                 static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
                 {
                     return await session.Query<TimeSeriesIndex.Result, TimeSeriesIndex>()
+                        .Where(x => x.CompanyName == companyName).CountAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanIndexTimeSeriesReferencedCompareExchangeWithQuery()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
+            {
+                const string companyName1 = "Hibernating Rhinos";
+                const string companyName2 = "HR";
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = companyName1 });
+                    await session.SaveChangesAsync();
+                }
+
+                using (var bulk = store.BulkInsert())
+                {
+                    var baseDate = DateTime.UtcNow;
+
+                    for (var i = 0; i < _employeesCount; i++)
+                    {
+                        var employee = new Employee();
+                        await bulk.StoreAsync(employee);
+
+                        using (var ts = bulk.TimeSeriesFor(employee.Id, _commonName))
+                        {
+                            await ts.AppendAsync(baseDate, 1, _commonName);
+                        }
+                    }
+                }
+
+                var index = new TimeSeriesWithCompareExchangeIndex();
+                await index.ExecuteAsync(store);
+
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+
+                await AssertTimeSeriesCount(store, companyName1, _employeesCount);
+                await AssertTimeSeriesCount(store, companyName2, 0);
+
+                var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
+
+                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
+                    }
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = 50;
+
+                    var itemsCount1 = await GetItemsCount(session, companyName1);
+                    Assert.Equal(_employeesCount, itemsCount1);
+
+                    var itemsCount2 = await GetItemsCount(session, companyName2);
+                    Assert.Equal(0, itemsCount2);
+
+                    using (var internalSession = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var company = await internalSession.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
+                        company.Value.Name = companyName2;
+                        await internalSession.SaveChangesAsync();
+                    }
+
+                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
+                    {
+                        // wait for the batch to complete
+                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+                        tcs = new TaskCompletionSource<object>();
+
+                        var newItemsCount1 = await GetItemsCount(session, companyName1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
+                        var newItemsCount2 = await GetItemsCount(session, companyName2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
+
+                        itemsCount1 = newItemsCount1;
+                        itemsCount2 = newItemsCount2;
+                    }
+                }
+
+                await AssertTimeSeriesCount(store, companyName1, 0);
+                await AssertTimeSeriesCount(store, companyName2, _employeesCount);
+
+                Assert.True(batchCount > 1);
+
+                static async Task AssertTimeSeriesCount(DocumentStore store, string companyName, int expectedCount)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var itemsCount = await GetItemsCount(session, companyName);
+                        Assert.Equal(expectedCount, itemsCount);
+                    }
+                }
+
+                static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
+                {
+                    return await session.Query<TimeSeriesWithCompareExchangeIndex.Result, TimeSeriesWithCompareExchangeIndex>()
                         .Where(x => x.CompanyName == companyName).CountAsync();
                 }
             }
@@ -649,6 +858,108 @@ namespace SlowTests.Issues
         }
 
         [Fact]
+        public async Task CanIndexCountersReferencedCompareExchangeWithQuery()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
+            {
+                const string companyName1 = "Hibernating Rhinos";
+                const string companyName2 = "HR";
+
+                using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    session.Advanced.ClusterTransaction.CreateCompareExchangeValue(_commonName, new Company { Name = companyName1 });
+                    await session.SaveChangesAsync();
+                }
+
+                using (var bulk = store.BulkInsert())
+                {
+                    for (var i = 0; i < _employeesCount; i++)
+                    {
+                        var employee = new Employee();
+                        await bulk.StoreAsync(employee);
+                        await bulk.CountersFor(employee.Id).IncrementAsync(_commonName);
+                    }
+                }
+
+                var index = new CountersWithCompareExchangeIndex();
+                await index.ExecuteAsync(store);
+
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+
+                await AssertCountersCount(store, companyName1, _employeesCount);
+                await AssertCountersCount(store, companyName2, 0);
+
+                var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
+
+                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
+                    }
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = 50;
+
+                    var itemsCount1 = await GetItemsCount(session, companyName1);
+                    Assert.Equal(_employeesCount, itemsCount1);
+
+                    var itemsCount2 = await GetItemsCount(session, companyName2);
+                    Assert.Equal(0, itemsCount2);
+
+                    using (var internalSession = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                    {
+                        var company = await internalSession.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<Company>(_commonName);
+                        company.Value.Name = companyName2;
+                        await internalSession.SaveChangesAsync();
+                    }
+
+                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
+                    {
+                        // wait for the batch to complete
+                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+                        tcs = new TaskCompletionSource<object>();
+
+                        var newItemsCount1 = await GetItemsCount(session, companyName1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
+                        var newItemsCount2 = await GetItemsCount(session, companyName2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
+
+                        itemsCount1 = newItemsCount1;
+                        itemsCount2 = newItemsCount2;
+                    }
+                }
+
+                await AssertCountersCount(store, companyName1, 0);
+                await AssertCountersCount(store, companyName2, _employeesCount);
+
+                Assert.True(batchCount > 1);
+
+                static async Task AssertCountersCount(DocumentStore store, string companyName, int expectedCount)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var itemsCount = await GetItemsCount(session, companyName);
+                        Assert.Equal(expectedCount, itemsCount);
+                    }
+                }
+
+                static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
+                {
+                    return await session.Query<CountersWithCompareExchangeIndex.Result, CountersWithCompareExchangeIndex>()
+                        .Where(x => x.CompanyName == companyName).CountAsync();
+                }
+            }
+        }
+
+        [Fact]
         public async Task CanIndexReferencedDocumentByCountersMapReduceChangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -759,7 +1070,7 @@ namespace SlowTests.Issues
         {
             using (var session = store.OpenAsyncSession())
             {
-                var itemsCount = await session.Query<Index.Result, Index>()
+                var itemsCount = await session.Query<DocumentsIndex.Result, DocumentsIndex>()
                     .Where(x => x.CompanyName == companyName).CountAsync();
 
                 Assert.Equal(expectedCount, itemsCount);
@@ -780,20 +1091,38 @@ namespace SlowTests.Issues
             public string CompanyId { get; set; }
         }
 
-        private class Index : AbstractIndexCreationTask<Employee>
+        private class DocumentsIndex : AbstractIndexCreationTask<Employee>
         {
             public class Result
             {
                 public string CompanyName { get; set; }
             }
 
-            public Index()
+            public DocumentsIndex()
             {
                 Map = employees =>
                     from employee in employees
                     select new Result
                     {
                         CompanyName = LoadDocument<Company>(employee.CompanyId).Name
+                    };
+            }
+        }
+
+        private class DocumentsWithCompareExchangeIndex : AbstractIndexCreationTask<Employee>
+        {
+            public class Result
+            {
+                public string CompanyName { get; set; }
+            }
+
+            public DocumentsWithCompareExchangeIndex()
+            {
+                Map = employees =>
+                    from employee in employees
+                    select new Result
+                    {
+                        CompanyName = LoadCompareExchangeValue<Company>(employee.CompanyId).Name
                     };
             }
         }
@@ -850,6 +1179,27 @@ namespace SlowTests.Issues
             }
         }
 
+        private class TimeSeriesWithCompareExchangeIndex : AbstractTimeSeriesIndexCreationTask<Employee>
+        {
+            public class Result
+            {
+                public string CompanyName { get; set; }
+            }
+
+            public TimeSeriesWithCompareExchangeIndex()
+            {
+                AddMap(
+                    _commonName,
+                    timeSeries =>
+                        from ts in timeSeries
+                        from entry in ts.Entries
+                        select new Result
+                        {
+                            CompanyName = LoadCompareExchangeValue<Company>(entry.Tag).Name
+                        });
+            }
+        }
+
         private class CountersIndex : AbstractCountersIndexCreationTask<Employee>
         {
             public class Result
@@ -894,6 +1244,26 @@ namespace SlowTests.Issues
                         DocumentId = g.Key,
                         CompanyName = g.Select(x => x.CompanyName).FirstOrDefault()
                     };
+            }
+        }
+
+        private class CountersWithCompareExchangeIndex : AbstractCountersIndexCreationTask<Employee>
+        {
+            public class Result
+            {
+                public string CompanyName { get; set; }
+            }
+
+            public CountersWithCompareExchangeIndex()
+            {
+                AddMap(
+                    _commonName,
+                    counters =>
+                        from counter in counters
+                        select new Result
+                        {
+                            CompanyName = LoadCompareExchangeValue<Company>(counter.Name).Name
+                        });
             }
         }
     }
