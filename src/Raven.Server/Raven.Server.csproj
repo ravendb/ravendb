@@ -3,7 +3,7 @@
     <Description>Raven.Server is the database server for RavenDB</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net5.0</TargetFramework>
-    <RuntimeFrameworkVersion></RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>5.0.0</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -116,7 +116,7 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="CsvHelper" Version="15.0.8" />
+    <PackageReference Include="CsvHelper" Version="15.0.9" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
     <PackageReference Include="JetBrains.Annotations" Version="2020.1.0">
       <PrivateAssets>All</PrivateAssets>
@@ -130,11 +130,11 @@
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.0.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.8.0-5.final" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.8.0-5.final" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="5.0.0-rc.2.20475.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0-rc.2.20475.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0-rc.2.20475.5" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="5.0.0-rc.2.20475.5" />
-    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0-rc.2.20475.5" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="MySql.Data" Version="8.0.22" />
     <PackageReference Include="NCrontab.Advanced" Version="1.3.28" />
     <PackageReference Include="Npgsql" Version="4.1.5" />
@@ -147,11 +147,11 @@
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.11">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.Collections.Immutable" Version="5.0.0-rc.2.20475.5" />
+    <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
-    <PackageReference Include="System.Reflection.Metadata" Version="5.0.0-rc.2.20475.5" />
-    <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0-rc.2.20475.5" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="5.0.0-rc.2.20475.5" />
+    <PackageReference Include="System.Reflection.Metadata" Version="5.0.0" />
+    <PackageReference Include="System.Security.Cryptography.Cng" Version="5.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="Properties\Settings\settings_posix.json">

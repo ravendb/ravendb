@@ -34,9 +34,9 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
     $commandArgs += '/p:SourceLinkCreate=true'
     
     if ($target) {
-        if ($target.Runtime.StartsWith("win-")) { #https://github.com/dotnet/runtime/issues/42772
+        #if ($target.Runtime.StartsWith("win-")) { #https://github.com/dotnet/runtime/issues/42772
             $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
-        }
+        #}
     }
 
     write-host -ForegroundColor Cyan "Publish server: $command $commandArgs"
@@ -142,9 +142,9 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug ) {
     $commandArgs += '/p:SourceLinkCreate=true'
     
     if ($target) {
-        if ($target.Runtime.StartsWith("win-")) { #https://github.com/dotnet/runtime/issues/42772
-            $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=true'
-        }
+        #if ($target.Runtime.StartsWith("win-")) { #https://github.com/dotnet/runtime/issues/42772
+            $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
+        #}
     }
 
     write-host -ForegroundColor Cyan "Publish ${toolName}: $command $commandArgs"
