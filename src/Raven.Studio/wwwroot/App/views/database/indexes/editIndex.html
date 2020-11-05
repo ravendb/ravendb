@@ -1,229 +1,229 @@
 <div data-bind="if: !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
     <div class="flex-window edit-index">
-        <div class="toolbar">
+        <form class="flex-form" autocomplete="off" data-bind="submit: save">
+            <div class="toolbar">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
+                            <div class="input-group-addon">Index name</div>
+                            <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus" />
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-horizontal">
+                    <div class="btn-group flex-grow">
+                        <button class="btn btn-primary" data-bind="enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
+                        <a data-bind="attr: { href: indexesUrl }" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
+                        <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
+                    </div>
+                    <div class="btn-group">
+                        <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i><span>Copy C#</span></a>
+                        <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
+                        <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
+                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex, attr: { title: 'Delete index: ' + editedIndex().name() }"><i class="icon-trash"></i><span>Delete</span></button>
+                    </div>
+                </div>
+            </div>
             <div class="row">
-                <div class="col-lg-6">
-                    <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
-                        <div class="input-group-addon">Index name</div>
-                        <input class="form-control" data-bind="textInput: editedIndex().name, enable: canEditIndexName, hasFocus: indexNameHasFocus" />
-                    </div>
+                <div class="col-sm-2">
+                    <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background">Maps</h2>
+                    <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
                 </div>
-            </div>
-            <div class="flex-horizontal">
-                <div class="btn-group flex-grow">
-                    <button class="btn btn-primary" data-bind="click: save, enable: isSaveEnabled(), css: { 'btn-spinner': saveInProgress }"><i class="icon-save"></i><span>Save</span></button>
-                    <a data-bind="attr: { href: indexesUrl }" class="btn btn-default"><i class="icon-cancel"></i> <span>Cancel</span></a>
-                    <button class="btn btn-default" data-bind="click: cloneIndex, visible: isEditingExistingIndex"><i class="icon-clone"></i><span>Clone</span></button>
-                </div>
-                <div class="btn-group">
-                    <a data-bind="click: getCSharpCode, visible: isEditingExistingIndex" class="btn" title="Copy the index c# code"><i class="icon-code"></i><span>Copy C#</span></a>
-                    <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i><span>Query</span></a>
-                    <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i><span>Terms</span></a>
-                    <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex, attr: { title: 'Delete index: ' + editedIndex().name() }"><i class="icon-trash"></i><span>Delete</span></button>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-sm-2">
-                <h2 id="map-title" class="margin-bottom margin-bottom-xs on-base-background">Maps</h2>
-                <a href="#" data-bind="click: mapIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
-            </div>
-            <div class="col-sm-10">
-                <div data-bind="foreach: editedIndex().maps">
-                    <div class="clearfix">
-                        <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                            <button type="button" class="btn btn-default" data-bind="click: _.partial($root.formatIndex, $index())"><i class="icon-indent"></i><span>Format</span></button>
-                            <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1"
-                                    title="Remove this map from the index">
-                                <i class="icon-trash"></i> <span>Delete</span>
-                            </button>
+                <div class="col-sm-10">
+                    <div data-bind="foreach: editedIndex().maps">
+                        <div class="clearfix">
+                            <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
+                                <button type="button" class="btn btn-default" data-bind="click: _.partial($root.formatIndex, $index())"><i class="icon-indent"></i><span>Format</span></button>
+                                <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1"
+                                        title="Remove this map from the index">
+                                    <i class="icon-trash"></i> <span>Delete</span>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- TODO: add ace props:
+                        readOnly: $parent.isSideBySideIndex(),
+                        -->
+                        <div class="margin-bottom">
+                            <pre class="form-control map"
+                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
+    
+                            <div data-bind="validationElement: map">
+                                <div class="help-block" data-bind="validationMessage: map"></div>
+                            </div>
                         </div>
                     </div>
-                    <!-- TODO: add ace props:
-                    readOnly: $parent.isSideBySideIndex(),
-                    -->
                     <div class="margin-bottom">
-                        <pre class="form-control map"
-                             data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
-
-                        <div data-bind="validationElement: map">
-                            <div class="help-block" data-bind="validationMessage: map"></div>
-                        </div>
+                        <button class="btn btn-info" data-bind="click: addMap">
+                            <i class="icon-plus"></i><span>Add map</span>
+                        </button>
                     </div>
-                </div>
-                <div class="margin-bottom">
-                    <button class="btn btn-info" data-bind="click: addMap">
-                        <i class="icon-plus"></i><span>Add map</span>
-                    </button>
                 </div>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-sm-2">
-                <h2 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background">Reduce</h2>
-                <a href="#" data-bind="click: mapReduceIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
-            </div>
-            <div class="col-sm-10" data-bind="with: editedIndex()">
-                <div data-bind="if: hasReduce">
-                    <div class="clearfix">
-                        <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                            <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce"><i class="icon-indent"></i><span>Format</span></button>
-                            <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce" title="Remove the Reduce function from the index">
-                                <i class="icon-trash"></i> <span>Delete</span>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- TODO add ace props:
-                    readOnly: $parent.isSideBySideIndex(),
-                    -->
-                    <div class="margin-bottom">
-                        <pre class="form-control map"
-                             data-bind="aceEditor: { code: reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: reduce"></pre>
-
-                        <div data-bind="validationElement: reduce">
-                            <div class="help-block" data-bind="validationMessage: reduce"></div>
-                        </div>
-                    </div>
+            <div class="row">
+                <div class="col-sm-2">
+                    <h2 id="reduce-title" class="margin-bottom margin-bottom-xs on-base-background">Reduce</h2>
+                    <a href="#" data-bind="click: mapReduceIndexSyntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
                 </div>
-                <div class="margin-bottom" data-bind="visible: !hasReduce()">
-                    <button class="btn btn-info" data-bind="click: $root.addReduce">
-                        <i class="icon-plus"></i><span>Add Reduction</span>
-                    </button>
-                </div>
-                <div class="panel padding" data-bind="visible: hasReduce()">
-                    <div class="row">
-                        <div class="col-lg-4">
-                            <div class="toggle margin-left">
-                                <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection" />
-                                <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
-                                    <small><i id="reduce-output-info" class="icon-info text-info"></i></small>
-                                </label>
+                <div class="col-sm-10" data-bind="with: editedIndex()">
+                    <div data-bind="if: hasReduce">
+                        <div class="clearfix">
+                            <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
+                                <button type="button" class="btn btn-default" data-bind="click: $root.formatReduce"><i class="icon-indent"></i><span>Format</span></button>
+                                <button type="button" class="btn btn-danger" data-bind="click: $root.removeReduce" title="Remove the Reduce function from the index">
+                                    <i class="icon-trash"></i> <span>Delete</span>
+                                </button>
                             </div>
                         </div>
-                        <div class="col-lg-7 margin-left">
-                            <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
-                                <input type="text" class="form-control" placeholder="Enter Name for the Reduce Results Collection"
-                                       data-bind="textInput: reduceOutputCollectionName" autocomplete="off" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row" data-bind="collapse: outputReduceToCollection()">
-                        <div class="col-lg-5">
-                            <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
-                                <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection" />
-                                <label class="control-label"><strong>Create References to Results Collection </strong>
-                                    <small><i id="reference-docs-info" class="icon-info text-info"></i></small>
-                                </label>
+                        <!-- TODO add ace props:
+                        readOnly: $parent.isSideBySideIndex(),
+                        -->
+                        <div class="margin-bottom">
+                            <pre class="form-control map"
+                                 data-bind="aceEditor: { code: reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: reduce"></pre>
+    
+                            <div data-bind="validationElement: reduce">
+                                <div class="help-block" data-bind="validationMessage: reduce"></div>
                             </div>
                         </div>
                     </div>
-                    <div data-bind="collapse: createReferencesToResultsCollection() && outputReduceToCollection()">
-                        <div class="row" data-bind="validationElement: patternForReferencesToReduceOutputCollection">
-                            <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
-                                <label for="referencePattern" class="control-label margin-top margin-top-sm">Reference Documents ID Pattern <i class="required"></i> 
-                                    <small><i id="reference-docs-pattern-info" class="icon-info text-info"></i></small>
-                                </label>
+                    <div class="margin-bottom" data-bind="visible: !hasReduce()">
+                        <button class="btn btn-info" data-bind="click: $root.addReduce">
+                            <i class="icon-plus"></i><span>Add Reduction</span>
+                        </button>
+                    </div>
+                    <div class="panel padding" data-bind="visible: hasReduce()">
+                        <div class="row">
+                            <div class="col-lg-4">
+                                <div class="toggle margin-left">
+                                    <input id="toggleOutputToCollection" type="checkbox" data-bind="checked: outputReduceToCollection" />
+                                    <label for="toggleOutputToCollection" class="control-label"><strong>Output Reduce Results to Collection </strong>
+                                        <small><i id="reduce-output-info" class="icon-info text-info"></i></small>
+                                    </label>
+                                </div>
                             </div>
                             <div class="col-lg-7 margin-left">
-                                <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID" id="referencePattern"
-                                       data-bind="textInput: patternForReferencesToReduceOutputCollection" autocomplete="off" />
+                                <div data-bind="visible: outputReduceToCollection, validationElement: reduceOutputCollectionName">
+                                    <input type="text" class="form-control" placeholder="Enter Name for the Reduce Results Collection"
+                                           data-bind="textInput: reduceOutputCollectionName" />
+                                </div>
                             </div>
                         </div>
-                        <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
-                            <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
-                                <label for="referenceCollectionName" class="control-label margin-top margin-top-sm">Reference Documents Collection Name 
-                                    <small><i id="reference-docs-collection-name-info" class="icon-info text-info"></i></small>
-                                </label>
+                        <div class="row" data-bind="collapse: outputReduceToCollection()">
+                            <div class="col-lg-5">
+                                <div class="toggle margin-top margin-top-sm margin-left margin-left-lg">
+                                    <input id="togglePatternForReferences" type="checkbox" data-bind="checked: createReferencesToResultsCollection" />
+                                    <label class="control-label"><strong>Create References to Results Collection </strong>
+                                        <small><i id="reference-docs-info" class="icon-info text-info"></i></small>
+                                    </label>
+                                </div>
                             </div>
-                            <div class="col-lg-7 margin-left">
-                            <input type="text" class="form-control" placeholder="Enter Name for the Reference Documents Collection (Optional)" id="referenceCollectionName"
-                                   data-bind="textInput: collectionNameForReferenceDocuments" autocomplete="off" />
+                        </div>
+                        <div data-bind="collapse: createReferencesToResultsCollection() && outputReduceToCollection()">
+                            <div class="row" data-bind="validationElement: patternForReferencesToReduceOutputCollection">
+                                <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
+                                    <label for="referencePattern" class="control-label margin-top margin-top-sm">Reference Documents ID Pattern <i class="required"></i>
+                                        <small><i id="reference-docs-pattern-info" class="icon-info text-info"></i></small>
+                                    </label>
+                                </div>
+                                <div class="col-lg-7 margin-left">
+                                    <input type="text" class="form-control" placeholder="Enter Pattern for the Reference Documents ID" id="referencePattern"
+                                           data-bind="textInput: patternForReferencesToReduceOutputCollection" />
+                                </div>
+                            </div>
+                            <div class="row" data-bind="validationElement: collectionNameForReferenceDocuments">
+                                <div class="col-lg-offset-1 col-lg-3 no-padding-right no-padding-left">
+                                    <label for="referenceCollectionName" class="control-label margin-top margin-top-sm">Reference Documents Collection Name
+                                        <small><i id="reference-docs-collection-name-info" class="icon-info text-info"></i></small>
+                                    </label>
+                                </div>
+                                <div class="col-lg-7 margin-left">
+                                    <input type="text" class="form-control" placeholder="Enter Name for the Reference Documents Collection (Optional)" id="referenceCollectionName"
+                                           data-bind="textInput: collectionNameForReferenceDocuments" />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="tabs margin-top margin-top-lg">
-            <ul class="nav nav-tabs" role="tablist" id="tabsId">
-                <li role="presentation" class="active" id="fieldsTab">
-                    <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
-                        <i class="icon-admin-logs"></i><span>Fields</span>
-                    </a>
-                </li>
-                <li role="presentation" id="configurationTab">
-                    <a href="#configure" aria-controls="configure" role="tab" data-toggle="tab">
-                        <i class="icon-settings"></i><span>Configuration</span>
-                    </a>
-                </li>
-                <li role="presentation" id="additionalAssembliesTab">
-                    <a href="#additionalAssemblies" aria-controls="additionalAssemblies" role="tab" data-toggle="tab">
-                        <i class="icon-plus"></i>
-                        <span>Additional Assemblies</span>
-                    </a>
-                </li>
-                <li role="presentation" id="additionalSourcesTab">
-                    <a href="#additionalSources" aria-controls="additionalSources" role="tab" data-toggle="tab">
-                        <i class="icon-chash"></i>
-                        <span>Additional Sources</span> 
-                        <span class="label label-primary margin-left margin-left-sm" data-bind="text: editedIndex().additionalSources().length || undefined"></span>
-                    </a>
-                </li>
-            </ul>
-            <div class="tab-content">
-                <div role="tabpanel" class="tab-pane fade in active" id="fields">
-                    <div class="margin-bottom flex-horizontal">
-                        <button class="btn btn-default" data-bind="click: addField"><i class="icon-plus"></i><span>Add field</span></button>
-                        <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions()"><i class="icon-plus"></i><span>Add default field options</span></button>
-                        <span class="has-error margin-left margin-left-sm" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
-                            <span class="help-block"><i class="icon-warning"></i> Fields contain duplicate names</span>
-                        </span>
-                    </div>
-                    <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
-                        <div data-bind="template: { name: 'field-template'}"></div>
-                    </div>
-                    <div data-bind="foreach: editedIndex().fields">
-                        <div class="panel">
-                            <hr>
+            <div class="tabs margin-top margin-top-lg">
+                <ul class="nav nav-tabs" role="tablist" id="tabsId">
+                    <li role="presentation" class="active" id="fieldsTab">
+                        <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
+                            <i class="icon-admin-logs"></i><span>Fields</span>
+                        </a>
+                    </li>
+                    <li role="presentation" id="configurationTab">
+                        <a href="#configure" aria-controls="configure" role="tab" data-toggle="tab">
+                            <i class="icon-settings"></i><span>Configuration</span>
+                        </a>
+                    </li>
+                    <li role="presentation" id="additionalAssembliesTab">
+                        <a href="#additionalAssemblies" aria-controls="additionalAssemblies" role="tab" data-toggle="tab">
+                            <i class="icon-plus"></i>
+                            <span>Additional Assemblies</span>
+                        </a>
+                    </li>
+                    <li role="presentation" id="additionalSourcesTab">
+                        <a href="#additionalSources" aria-controls="additionalSources" role="tab" data-toggle="tab">
+                            <i class="icon-chash"></i>
+                            <span>Additional Sources</span>
+                            <span class="label label-primary margin-left margin-left-sm" data-bind="text: editedIndex().additionalSources().length || undefined"></span>
+                        </a>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane fade in active" id="fields">
+                        <div class="margin-bottom flex-horizontal">
+                            <button class="btn btn-default" data-bind="click: addField"><i class="icon-plus"></i><span>Add field</span></button>
+                            <button class="btn btn-info" data-bind="click: addDefaultField, enable: !editedIndex().defaultFieldOptions()"><i class="icon-plus"></i><span>Add default field options</span></button>
+                            <span class="has-error margin-left margin-left-sm" data-bind="visible: editedIndex().hasDuplicateFieldsNames()">
+                                <span class="help-block"><i class="icon-warning"></i> Fields contain duplicate names</span>
+                            </span>
+                        </div>
+                        <div class="panel panel-info" data-bind="with: editedIndex().defaultFieldOptions">
                             <div data-bind="template: { name: 'field-template'}"></div>
                         </div>
+                        <div data-bind="foreach: editedIndex().fields">
+                            <div class="panel">
+                                <hr>
+                                <div data-bind="template: { name: 'field-template'}"></div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div role="tabpanel" class="tab-pane fade" id="configure">
-                    <div class="row">
-                        <div class="col-sm-2 text-right-sm"><label class="control-label">Customized options</label></div>
-                        <div class="col-sm-10">
-                            <div class="form-horizontal">
-                                <div data-bind="foreach: editedIndex().configuration">
-                                    <div class="form-group">
-                                        <!--<label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>-->
-                                        <div class="col-xs-12 col-sm-7 col-lg-8" data-bind="css: {  }, validationElement: key">
-                                            <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" autocomplete="off" />
-                                            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
-                                                <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
-                                                    <a role="menuitem" tabindex="-1" href="#">
-                                                        <span data-bind="text: $data"></span>
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                        <div class="col-xs-9 col-sm-3" data-bind="validationElement: value">
-                                            <input class="form-control" placeholder="Value" data-bind="textInput: value" />
-                                        </div>
-                                        <div class="col-xs-3 col-sm-2 col-lg-1">
-                                            <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)"><i class="icon-trash"></i></button>
+                    <div role="tabpanel" class="tab-pane fade" id="configure">
+                        <div class="row">
+                            <div class="col-sm-2 text-right-sm"><label class="control-label">Customized options</label></div>
+                            <div class="col-sm-10">
+                                <div class="form-horizontal">
+                                    <div data-bind="foreach: editedIndex().configuration">
+                                        <div class="form-group">
+                                            <!--<label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>-->
+                                            <div class="col-xs-12 col-sm-7 col-lg-8" data-bind="css: {  }, validationElement: key">
+                                                <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" />
+                                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
+                                                    <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
+                                                        <a role="menuitem" tabindex="-1" href="#">
+                                                            <span data-bind="text: $data"></span>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-xs-9 col-sm-3" data-bind="validationElement: value">
+                                                <input class="form-control" placeholder="Value" data-bind="textInput: value" />
+                                            </div>
+                                            <div class="col-xs-3 col-sm-2 col-lg-1">
+                                                <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)"><i class="icon-trash"></i></button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add a customized option</span></button>
+                                    <div>
+                                        <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add a customized option</span></button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
-                    <div class="flex-form">
+                    <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
                         <div class="row margin-left margin-bottom margin-bottom-lg">
                             <button type="button" data-bind="click: addAssembly" class="btn btn-info margin-left"><i class="icon-plus"></i> <span>Add Assembly</span></button>
                             <a href="#" data-bind="click: additionalSourceSyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a>
@@ -250,26 +250,26 @@
                                     <div class="form-group" data-bind="visible: assemblySource() === 'Server Runtime'">
                                         <label class="control-label">Assembly Name <i class="required"></i></label>
                                         <div class="flex-grow" data-bind="validationElement: assemblyName">
-                                            <input type="text" autocomplete="off" class="form-control" placeholder="Enter assembly name" data-bind="textInput: assemblyName" />
+                                            <input type="text" class="form-control" placeholder="Enter assembly name" data-bind="textInput: assemblyName" />
                                         </div>
                                     </div>
                                     <div class="form-group" data-bind="visible: assemblySource() === 'Path'">
                                         <label class="control-label">Assembly Path <i class="required"></i></label>
                                         <div class="flex-grow" data-bind="validationElement: assemblyPath">
-                                            <input type="text" autocomplete="off" class="form-control" placeholder="Enter path to assembly" data-bind="textInput: assemblyPath" />
+                                            <input type="text" class="form-control" placeholder="Enter path to assembly" data-bind="textInput: assemblyPath" />
                                         </div>
                                     </div>
                                     <div data-bind="visible: assemblySource() === 'NuGet'">
                                         <div class="form-group">
                                             <label class="control-label">Package Name <i class="required"></i></label>
                                             <div class="flex-grow" data-bind="validationElement: packageName">
-                                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter package name" data-bind="textInput: packageName" />
+                                                <input type="text" class="form-control" placeholder="Enter package name" data-bind="textInput: packageName" />
                                             </div>
                                         </div>
                                         <div class="form-group">
                                             <label class="control-label">Package Version <i class="required"></i></label>
                                             <div class="flex-grow" data-bind="validationElement: packageVersion">
-                                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter package version" data-bind="textInput: packageVersion" />
+                                                <input type="text" class="form-control" placeholder="Enter package version" data-bind="textInput: packageVersion" />
                                             </div>
                                         </div>
                                         <div class="form-group">
@@ -282,7 +282,7 @@
                                         <div data-bind="collapse: !useDefaultPackageSourceUrl()">
                                             <div class="form-group">
                                                 <label class="control-label">Package Source URL</label>
-                                                <input type="text" autocomplete="off" class="form-control" placeholder="Enter package source URL" data-bind="textInput: packageSourceUrl" />
+                                                <input type="text" class="form-control" placeholder="Enter package source URL" data-bind="textInput: packageSourceUrl" />
                                             </div>
                                         </div>
                                     </div>
@@ -291,10 +291,10 @@
                                         <div class="usings flex-grow">
                                             <div class="flex-horizontal">
                                                 <div class="flex-grow">
-                                                    <input type="text" autocomplete="off" class="form-control flex-grow" placeholder="Enter a namespace (i.e. System.Net)" data-bind="textInput: namespaceText" />
+                                                    <input type="text" class="form-control flex-grow" placeholder="Enter a namespace (i.e. System.Net)" data-bind="textInput: namespaceText" />
                                                 </div>
                                                 <button class="btn btn-info"
-                                                        data-bind="click: addNamespaceToUsingsWithBlink, enable: namespaceText">
+                                                        data-bind="click:  _.partial($root.addNamespaceToAssemblyWithBlink, $data), enable: namespaceText">
                                                     <i class="icon-plus"></i><span>Add Namespace</span>
                                                 </button>
                                             </div>
@@ -320,33 +320,33 @@
                             <div class="text-muted"><i class="icon-xl icon-empty-set"></i><h2 class="text-center">No additional assemblies added</h2></div>
                         </div>
                     </div>
-                </div>
-                <div role="tabpanel" class="tab-pane fade" id="additionalSources">
-                    <div class="flex-horizontal">
-                        <input type="file" accept=".cs,.js" id="additionalSourceFilePicker" class="hidden" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" />
-                        <div>
-                            <label for="additionalSourceFilePicker" class="btn btn-primary">
-                                <i class="icon-upload"></i><span>Upload Source File</span>
-                            </label>
+                    <div role="tabpanel" class="tab-pane fade" id="additionalSources">
+                        <div class="flex-horizontal">
+                            <input type="file" accept=".cs,.js" id="additionalSourceFilePicker" class="hidden" data-bind="event: { change: _.partial(fileSelected, $element) }" tabindex="-1" />
+                            <div>
+                                <label for="additionalSourceFilePicker" class="btn btn-primary">
+                                    <i class="icon-upload"></i><span>Upload Source File</span>
+                                </label>
+                            </div>
+                            <div>
+                                <a href="#" data-bind="click: additionalSourceSyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a>
+                            </div>
                         </div>
-                        <div>
-                            <a href="#" data-bind="click: additionalSourceSyntaxHelp" class="margin-left margin-left-sm"><small>Syntax <i class="icon-help"></i></small></a> 
-                        </div>
-                    </div>
-                    <div class="flex-horizontal flex-stretch-items margin-top">
-                        <ul class="item-list flex-noshrink" data-bind="foreach: editedIndex().additionalSources">
-                            <li class="item" data-bind="css: { active: $data === $root.selectedSourcePreview() }">
-                                <a href="#" data-bind="click: $root.previewAdditionalSource, text: name" class="column-name"></a>
-                                <a title="Download this file" class="download" data-bind="click: $root.downloadAdditionalSource" href="#"><i class="icon-export"></i></a>
-                                <a title="Remove this entry" class="remove" data-bind="click: $root.deleteAdditionalSource" href="#"><i class="icon-trash"></i></a>
-                            </li>
-                        </ul>
-                        <div class="flex-grow margin-left" data-bind="html: $root.additionalSourcePreviewHtml">
+                        <div class="flex-horizontal flex-stretch-items margin-top">
+                            <ul class="item-list flex-noshrink" data-bind="foreach: editedIndex().additionalSources">
+                                <li class="item" data-bind="css: { active: $data === $root.selectedSourcePreview() }">
+                                    <a href="#" data-bind="click: $root.previewAdditionalSource, text: name" class="column-name"></a>
+                                    <a title="Download this file" class="download" data-bind="click: $root.downloadAdditionalSource" href="#"><i class="icon-export"></i></a>
+                                    <a title="Remove this entry" class="remove" data-bind="click: $root.deleteAdditionalSource" href="#"><i class="icon-trash"></i></a>
+                                </li>
+                            </ul>
+                            <div class="flex-grow margin-left" data-bind="html: $root.additionalSourcePreviewHtml">
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
     <div class="backdrop"></div>
 </div>
@@ -456,7 +456,7 @@
             <div class="col-xs-8 col-sm-6 col-xl-3 margin-bottom">
                 <h3 data-bind="visible: isDefaultOptions()">Default field options</h3>
                 <div class="form-group" data-bind="if: !isDefaultOptions(), validationElement: name">
-                    <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }" />
+                    <input class="form-control" placeholder="Field name" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }" />
                     <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#fieldName' + $index(), foreach: $root.createFieldNameAutocompleter($data)">
                         <li role="presentation" data-bind="click: $parent.name.bind($parent, $data)">
                             <a role="menuitem" tabindex="-1" href="#">
@@ -645,7 +645,7 @@
                         <div class="properties-item">
                             <span class="properties-label">Indexing</span>
                             <div class="btn-group properties-value">
-                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" 
+                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
                                         data-bind="attr: { title: effectiveIndexing() === 'Search (implied)' ? 'Indexing is not defined. Search is implied since an analyzer is defined' : effectiveIndexing() }">
                                     <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
                                 </button>
@@ -663,7 +663,7 @@
                             <span class="properties-label">Analyzer</span>
                             <div class="btn-group properties-value">
                                 <div class="has-disable-reason" data-bind="attr: { 'data-original-title': disabledAnalyzerText }" data-placement="top">
-                                    <input class="form-control" autocomplete="off"
+                                    <input class="form-control"
                                            data-bind="textInput: analyzer, disable: !!disabledAnalyzerText(),
                                                       attr: { id: 'analyzerName' + (isDefaultFieldOptions() ? '' : $index()), placeholder: analyzerPlaceHolder }" />
                                     <ul class="dropdown-menu" role="menu"

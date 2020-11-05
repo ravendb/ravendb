@@ -75,7 +75,8 @@ class editIndex extends viewModelBase {
             "formatReduce",
             "removeReduce",
             "addReduce",
-            "removeAssembly");
+            "removeAssembly",
+            "addNamespaceToAssemblyWithBlink");
 
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -730,6 +731,14 @@ class editIndex extends viewModelBase {
     removeAssembly(assemblyItem: additionalAssembly) {
         eventsCollector.default.reportEvent("index", "remove-assembly");
         this.editedIndex().removeAssembly(assemblyItem);
+    }
+
+    addNamespaceToAssemblyWithBlink(assemblyItemToUpdate: additionalAssembly) {
+        const namespaceToAdd = assemblyItemToUpdate.namespaceText();
+        
+        if (assemblyItemToUpdate.addNamespaceToUsings(namespaceToAdd)) {
+            $(".usings .collection-list li").first().addClass("blink-style");
+        }
     }
 }
 
