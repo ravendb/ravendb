@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
@@ -16,13 +17,13 @@ namespace SlowTests.Issues
 {
     public class RavenDB_15754 : RavenTestBase
     {
+        private const int _employeesCount = 20_000;
+        private const string _managedAllocationsBatchLimit = "16";
+        private const string _commonName = "Companies";
+
         public RavenDB_15754(ITestOutputHelper output) : base(output)
         {
         }
-
-        private const int _employeesCount = 20_000;
-        private const string _managedAllocationsBatchLimit = "16";
-        private const string _timeSeriesName = "Companies";
 
         [Fact]
         public async Task CanIndexReferencedDocumentChange()
@@ -349,7 +350,7 @@ namespace SlowTests.Issues
                             var employee = new Employee();
                             await bulk.StoreAsync(employee);
 
-                            using (var ts = bulk.TimeSeriesFor(employee.Id, _timeSeriesName))
+                            using (var ts = bulk.TimeSeriesFor(employee.Id, _commonName))
                             {
                                 await ts.AppendAsync(baseDate, 1, company.Id);
                             }
@@ -361,7 +362,7 @@ namespace SlowTests.Issues
                 await index.ExecuteAsync(store);
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
-                WaitForUserToContinueTheTest(store);
+
                 await AssertTimeSeriesCount(store, companyName1, _employeesCount);
                 await AssertTimeSeriesCount(store, companyName2, 0);
 
@@ -400,8 +401,7 @@ namespace SlowTests.Issues
 
                         var newItemsCount1 = await GetItemsCount(session, companyName1);
                         Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
-                        if (newItemsCount1 == 0)
-                            WaitForUserToContinueTheTest(store);
+
                         var newItemsCount2 = await GetItemsCount(session, companyName2);
                         Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
 
@@ -427,6 +427,329 @@ namespace SlowTests.Issues
                 static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
                 {
                     return await session.Query<TimeSeriesIndex.Result, TimeSeriesIndex>()
+                        .Where(x => x.CompanyName == companyName).CountAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanIndexReferencedDocumentByTimeSeriesMapReduceChangeWithQuery()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
+            {
+                const string companyName1 = "Hibernating Rhinos";
+                const string companyName2 = "HR";
+                var company = new Company
+                {
+                    Name = companyName1
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+
+                    using (var bulk = store.BulkInsert())
+                    {
+                        var baseDate = DateTime.UtcNow;
+
+                        for (var i = 0; i < _employeesCount; i++)
+                        {
+                            var employee = new Employee();
+                            await bulk.StoreAsync(employee);
+
+                            using (var ts = bulk.TimeSeriesFor(employee.Id, _commonName))
+                            {
+                                await ts.AppendAsync(baseDate, 1, company.Id);
+                            }
+                        }
+                    }
+                }
+
+                var index = new TimeSeriesMapReduceIndex();
+                await index.ExecuteAsync(store);
+
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+
+                await AssertTimeSeriesCount(store, companyName1, _employeesCount);
+                await AssertTimeSeriesCount(store, companyName2, 0);
+
+                var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
+
+                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
+                    }
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var itemsCount1 = await GetItemsCount(session, companyName1);
+                    Assert.Equal(_employeesCount, itemsCount1);
+
+                    var itemsCount2 = await GetItemsCount(session, companyName2);
+                    Assert.Equal(0, itemsCount2);
+
+                    using (var internalSession = store.OpenAsyncSession())
+                    {
+                        company.Name = companyName2;
+                        await internalSession.StoreAsync(company, company.Id);
+                        await internalSession.SaveChangesAsync();
+                    }
+
+                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
+                    {
+                        // wait for the batch to complete
+                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+                        tcs = new TaskCompletionSource<object>();
+
+                        var newItemsCount1 = await GetItemsCount(session, companyName1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
+
+                        var newItemsCount2 = await GetItemsCount(session, companyName2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
+
+                        itemsCount1 = newItemsCount1;
+                        itemsCount2 = newItemsCount2;
+                    }
+                }
+
+                await AssertTimeSeriesCount(store, companyName1, 0);
+                await AssertTimeSeriesCount(store, companyName2, _employeesCount);
+
+                Assert.True(batchCount > 1);
+
+                static async Task AssertTimeSeriesCount(DocumentStore store, string companyName, int expectedCount)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var itemsCount = await GetItemsCount(session, companyName);
+                        Assert.Equal(expectedCount, itemsCount);
+                    }
+                }
+
+                static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
+                {
+                    return await session.Query<TimeSeriesMapReduceIndex.Result, TimeSeriesMapReduceIndex>()
+                        .Where(x => x.CompanyName == companyName).CountAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanIndexReferencedDocumentByCountersChangeWithQuery()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
+            {
+                const string companyName1 = "Hibernating Rhinos";
+                const string companyName2 = "HR";
+                var company = new Company
+                {
+                    Id = _commonName,
+                    Name = companyName1
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+
+                    using (var bulk = store.BulkInsert())
+                    {
+                        for (var i = 0; i < _employeesCount; i++)
+                        {
+                            var employee = new Employee();
+                            await bulk.StoreAsync(employee);
+                            await bulk.CountersFor(employee.Id).IncrementAsync(_commonName);
+                        }
+                    }
+                }
+
+                var index = new CountersIndex();
+                await index.ExecuteAsync(store);
+
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+
+                await AssertCountersCount(store, companyName1, _employeesCount);
+                await AssertCountersCount(store, companyName2, 0);
+
+                var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
+
+                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
+                    }
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var itemsCount1 = await GetItemsCount(session, companyName1);
+                    Assert.Equal(_employeesCount, itemsCount1);
+
+                    var itemsCount2 = await GetItemsCount(session, companyName2);
+                    Assert.Equal(0, itemsCount2);
+
+                    using (var internalSession = store.OpenAsyncSession())
+                    {
+                        company.Name = companyName2;
+                        await internalSession.StoreAsync(company, company.Id);
+                        await internalSession.SaveChangesAsync();
+                    }
+
+                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
+                    {
+                        // wait for the batch to complete
+                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+                        tcs = new TaskCompletionSource<object>();
+
+                        var newItemsCount1 = await GetItemsCount(session, companyName1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
+                        var newItemsCount2 = await GetItemsCount(session, companyName2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
+
+                        itemsCount1 = newItemsCount1;
+                        itemsCount2 = newItemsCount2;
+                    }
+                }
+
+                await AssertCountersCount(store, companyName1, 0);
+                await AssertCountersCount(store, companyName2, _employeesCount);
+
+                Assert.True(batchCount > 1);
+
+                static async Task AssertCountersCount(DocumentStore store, string companyName, int expectedCount)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var itemsCount = await GetItemsCount(session, companyName);
+                        Assert.Equal(expectedCount, itemsCount);
+                    }
+                }
+
+                static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
+                {
+                    return await session.Query<CountersIndex.Result, CountersIndex>()
+                        .Where(x => x.CompanyName == companyName).CountAsync();
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanIndexReferencedDocumentByCountersMapReduceChangeWithQuery()
+        {
+            using (var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = x => x.Settings[RavenConfiguration.GetKey(x => x.Indexing.ManagedAllocationsBatchLimit)] = _managedAllocationsBatchLimit
+            }))
+            {
+                const string companyName1 = "Hibernating Rhinos";
+                const string companyName2 = "HR";
+                var company = new Company
+                {
+                    Id = _commonName,
+                    Name = companyName1
+                };
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(company);
+                    await session.SaveChangesAsync();
+
+                    using (var bulk = store.BulkInsert())
+                    {
+                        for (var i = 0; i < _employeesCount; i++)
+                        {
+                            var employee = new Employee();
+                            await bulk.StoreAsync(employee);
+                            await bulk.CountersFor(employee.Id).IncrementAsync(_commonName);
+                        }
+                    }
+                }
+
+                var index = new MapReduceCountersIndex();
+                await index.ExecuteAsync(store);
+
+                WaitForIndexing(store, timeout: TimeSpan.FromMinutes(3));
+
+                await AssertCountersCount(store, companyName1, _employeesCount);
+                await AssertCountersCount(store, companyName2, 0);
+
+                var batchCount = 0;
+                var tcs = new TaskCompletionSource<object>();
+
+                store.Changes().ForIndex(index.IndexName).Subscribe(x =>
+                {
+                    if (x.Type == IndexChangeTypes.BatchCompleted)
+                    {
+                        if (Interlocked.Increment(ref batchCount) > 1)
+                            tcs.SetResult(null);
+                    }
+                });
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.MaxNumberOfRequestsPerSession = 50;
+
+                    var itemsCount1 = await GetItemsCount(session, companyName1);
+                    Assert.Equal(_employeesCount, itemsCount1);
+
+                    var itemsCount2 = await GetItemsCount(session, companyName2);
+                    Assert.Equal(0, itemsCount2);
+
+                    using (var internalSession = store.OpenAsyncSession())
+                    {
+                        company.Name = companyName2;
+                        await internalSession.StoreAsync(company, company.Id);
+                        await internalSession.SaveChangesAsync();
+                    }
+
+                    while (itemsCount1 > 0 || itemsCount2 != _employeesCount)
+                    {
+                        // wait for the batch to complete
+                        Assert.True(await Task.WhenAny(tcs.Task, Task.Delay(10_000)) == tcs.Task);
+                        tcs = new TaskCompletionSource<object>();
+
+                        var newItemsCount1 = await GetItemsCount(session, companyName1);
+                        Assert.True(newItemsCount1 == 0 || (newItemsCount1 > 0 && itemsCount1 != newItemsCount1));
+                        var newItemsCount2 = await GetItemsCount(session, companyName2);
+                        Assert.True(newItemsCount2 == _employeesCount || (newItemsCount2 > 0 && itemsCount2 != newItemsCount2));
+
+                        itemsCount1 = newItemsCount1;
+                        itemsCount2 = newItemsCount2;
+                    }
+                }
+
+                await AssertCountersCount(store, companyName1, 0);
+                await AssertCountersCount(store, companyName2, _employeesCount);
+
+                Assert.True(batchCount > 1);
+
+                static async Task AssertCountersCount(DocumentStore store, string companyName, int expectedCount)
+                {
+                    using (var session = store.OpenAsyncSession())
+                    {
+                        var itemsCount = await GetItemsCount(session, companyName);
+                        Assert.Equal(expectedCount, itemsCount);
+                    }
+                }
+
+                static async Task<int> GetItemsCount(IAsyncDocumentSession session, string companyName)
+                {
+                    return await session.Query<MapReduceCountersIndex.Result, MapReduceCountersIndex>()
                         .Where(x => x.CompanyName == companyName).CountAsync();
                 }
             }
@@ -485,13 +808,92 @@ namespace SlowTests.Issues
             public TimeSeriesIndex()
             {
                 AddMap(
-                    _timeSeriesName,
+                    _commonName,
                     timeSeries => from ts in timeSeries
                         from entry in ts.Entries
                         select new Result
                         {
                             CompanyName = LoadDocument<Company>(entry.Tag).Name
                         });
+            }
+        }
+
+        private class TimeSeriesMapReduceIndex : AbstractTimeSeriesIndexCreationTask<Employee, TimeSeriesMapReduceIndex.Result>
+        {
+            public class Result
+            {
+                public string DocumentId { get; set; }
+
+                public string CompanyName { get; set; }
+            }
+
+            public TimeSeriesMapReduceIndex()
+            {
+                AddMap(
+                    _commonName,
+                    timeSeries => from ts in timeSeries
+                        from entry in ts.Entries
+                        select new Result
+                        {
+                            DocumentId = ts.DocumentId,
+                            CompanyName = LoadDocument<Company>(entry.Tag).Name
+                        });
+
+
+                Reduce = results => from r in results
+                    group r by r.DocumentId into g
+                    select new Result
+                    {
+                        DocumentId = g.Key,
+                        CompanyName = g.Select(x => x.CompanyName).FirstOrDefault()
+                    };
+            }
+        }
+
+        private class CountersIndex : AbstractCountersIndexCreationTask<Employee>
+        {
+            public class Result
+            {
+                public string CompanyName { get; set; }
+            }
+
+            public CountersIndex()
+            {
+                AddMap(_commonName, 
+                    counters => from counter in counters
+                    select new Result
+                    {
+                        CompanyName = LoadDocument<Company>(counter.Name).Name
+                    });
+            }
+        }
+
+        private class MapReduceCountersIndex : AbstractCountersIndexCreationTask<Employee, MapReduceCountersIndex.Result>
+        {
+            public class Result
+            {
+                public string DocumentId { get; set; }
+
+                public string CompanyName { get; set; }
+            }
+
+            public MapReduceCountersIndex()
+            {
+                AddMap(_commonName,
+                    counters => from counter in counters
+                        select new Result
+                        {
+                            DocumentId = counter.DocumentId,
+                            CompanyName = LoadDocument<Company>(counter.Name).Name
+                        });
+
+                Reduce = results => from r in results
+                    group r by r.DocumentId into g
+                    select new Result
+                    {
+                        DocumentId = g.Key,
+                        CompanyName = g.Select(x => x.CompanyName).FirstOrDefault()
+                    };
             }
         }
     }
