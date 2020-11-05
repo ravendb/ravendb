@@ -20,8 +20,8 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 return new InMemoryReferencesInfo
                 {
-                    ReferencedItemEtag = new Reference(GetDictionary(ActionType.Document), collection).GetLastIndexedParentEtag(),
-                    ReferencedTombstoneEtag = new Reference(GetDictionary(ActionType.Tombstone), collection).GetLastIndexedParentEtag(),
+                    ParentItemEtag = new Reference(GetDictionary(ActionType.Document), collection).GetLastIndexedParentEtag(),
+                    ParentTombstoneEtag = new Reference(GetDictionary(ActionType.Tombstone), collection).GetLastIndexedParentEtag(),
                 };
             }
 
@@ -93,12 +93,16 @@ namespace Raven.Server.Documents.Indexes.Workers
                     return state.LastIndexedParentEtag;
                 }
 
-                public void Clear(bool earlyExit)
+                public void Clear(bool earlyExit, TransactionOperationContext indexContext)
                 {
                     if (earlyExit)
                         return;
 
-                    _dictionary.Remove(_collection);
+                    indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+                    {
+                        // we update this only after the transaction was commited
+                        _dictionary.Remove(_collection);
+                    };
                 }
             }
         }

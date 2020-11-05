@@ -245,9 +245,9 @@ namespace Raven.Server.Documents.Indexes
 
                         var referencesInfo = index.GetInMemoryReferencesState(collection);
                         writePos += sizeof(long);
-                        *(long*)writePos = referencesInfo.ReferencedItemEtag;
+                        *(long*)writePos = referencesInfo.ParentItemEtag;
                         writePos += sizeof(long);
-                        *(long*)writePos = referencesInfo.ReferencedTombstoneEtag;
+                        *(long*)writePos = referencesInfo.ParentTombstoneEtag;
                     }
                 }
 

@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             if (CanContinueReferenceBatch() == false)
                                             {
-                                                reference.Set(referencedDocument, current.Id, lastIndexedParentEtag, indexContext);
+                                                reference.Set(referencedDocument, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
                                                 earlyExit = true;
                                                 break;
                                             }
@@ -302,7 +302,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 throw new NotSupportedException();
                         }
 
-                        reference.Clear(earlyExit);
+                        reference.Clear(earlyExit, indexContext);
                     }
                 }
             }
@@ -398,8 +398,8 @@ namespace Raven.Server.Documents.Indexes.Workers
         {
             public static InMemoryReferencesInfo Default = new InMemoryReferencesInfo();
 
-            public long ReferencedItemEtag;
-            public long ReferencedTombstoneEtag;
+            public long ParentItemEtag;
+            public long ParentTombstoneEtag;
         }
     }
 }
