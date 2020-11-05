@@ -75,12 +75,10 @@ namespace Raven.Server.Documents.Indexes.Static
             return workers.ToArray();
         }
 
-        public override HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection)
+        public override HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection, bool isCompareExchange)
         {
-            if (_handleReferences == null)
-                return HandleReferencesBase.InMemoryReferencesInfo.Default;
-
-            return _handleReferences.GetReferencesInfo(collection);
+            var references = isCompareExchange ? (HandleReferencesBase)_handleCompareExchangeReferences : _handleReferences;
+            return references == null ? HandleReferencesBase.InMemoryReferencesInfo.Default : references.GetReferencesInfo(collection);
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
@@ -130,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 length += sizeof(long) * 6 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             if (_handleCompareExchangeReferences != null)
-                length += sizeof(long) * 4 * _compiled.CollectionsWithCompareExchangeReferences.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+                length += sizeof(long) * 6 * _compiled.CollectionsWithCompareExchangeReferences.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
 
             var indexEtagBytes = stackalloc byte[length];
 

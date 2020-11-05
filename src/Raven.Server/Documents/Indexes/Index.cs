@@ -1798,7 +1798,7 @@ namespace Raven.Server.Documents.Indexes
             return null;
         }
 
-        public virtual HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection)
+        public virtual HandleReferencesBase.InMemoryReferencesInfo GetInMemoryReferencesState(string collection, bool isCompareExchange)
         {
             return HandleReferencesBase.InMemoryReferencesInfo.Default;
         }
