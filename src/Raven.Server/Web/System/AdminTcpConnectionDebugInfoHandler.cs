@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
@@ -14,8 +15,8 @@ namespace Raven.Server.Web.System
         public Task Statistics()
         {
             var properties = IPGlobalProperties.GetIPGlobalProperties();
-            var ipv4Stats = properties.GetTcpIPv4Statistics();
-            var ipv6Stats = properties.GetTcpIPv6Statistics();
+            var ipv4Stats = GetTcpStatisticsSafely(() => properties.GetTcpIPv4Statistics());
+            var ipv6Stats = GetTcpStatisticsSafely(() => properties.GetTcpIPv6Statistics());
 
             var djv = new DynamicJsonValue
             {
@@ -53,6 +54,18 @@ namespace Raven.Server.Web.System
                 result[nameof(stats.SegmentsSent)] = stats.SegmentsSent;
 
                 return result;
+            }
+
+            static TcpStatistics GetTcpStatisticsSafely(Func<TcpStatistics> func)
+            {
+                try
+                {
+                    return func();
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    return null;
+                }
             }
         }
 
