@@ -98,14 +98,14 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                 _index.HandleDelete(tombstone, collection, indexWriter, indexContext, collectionStats);
 
-                                if (_index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag,
+                                    totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
+
+                                if (canContinueBatch != Index.CanContinueBatchResult.True)
                                 {
-                                    keepRunning = false;
+                                    keepRunning = canContinueBatch == Index.CanContinueBatchResult.RenewTransaction;
                                     break;
                                 }
-
-                                if (MapItems.MaybeRenewTransaction(queryContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
-                                    break;
                             }
 
                             if (hasChanges == false)
