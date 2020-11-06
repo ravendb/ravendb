@@ -256,9 +256,11 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                             bool CanContinueReferenceBatch()
                             {
-                                if (_index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                var canContinueBatch = _index.CanContinueBatch(stats, queryContext, indexContext, indexWriter, 
+                                    lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
+                                if (canContinueBatch != Index.CanContinueBatchResult.True)
                                 {
-                                    keepRunning = false;
+                                    keepRunning = canContinueBatch == Index.CanContinueBatchResult.RenewTransaction;
                                     return false;
                                 }
 
@@ -267,9 +269,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     keepRunning = false;
                                     return false;
                                 }
-
-                                if (MapItems.MaybeRenewTransaction(queryContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
-                                    return false;
 
                                 return true;
                             }

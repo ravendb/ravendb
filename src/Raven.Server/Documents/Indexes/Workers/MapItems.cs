@@ -124,9 +124,11 @@ namespace Raven.Server.Documents.Indexes.Workers
                                                                                 $"Exception: {e}");
                                     }
 
-                                    if (_index.CanContinueBatch(collectionStats, queryContext, indexContext, indexWriter, lastEtag, lastCollectionEtag, totalProcessedCount) == false)
+                                    var canContinueBatch = _index.CanContinueBatch(collectionStats, queryContext, indexContext, indexWriter, 
+                                        lastEtag, lastCollectionEtag, totalProcessedCount, sw, ref maxTimeForDocumentTransactionToRemainOpen);
+                                    if (canContinueBatch != Index.CanContinueBatchResult.True)
                                     {
-                                        keepRunning = false;
+                                        keepRunning = canContinueBatch == Index.CanContinueBatchResult.RenewTransaction;
                                         break;
                                     }
 
@@ -135,9 +137,6 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         keepRunning = false;
                                         break;
                                     }
-
-                                    if (MaybeRenewTransaction(queryContext, sw, _configuration, ref maxTimeForDocumentTransactionToRemainOpen))
-                                        break;
                                 }
                             }
                         }
@@ -167,27 +166,6 @@ namespace Raven.Server.Documents.Indexes.Workers
             }
 
             return moreWorkFound;
-        }
-
-        public static bool MaybeRenewTransaction(
-            QueryOperationContext queryContext, Stopwatch sw,
-            IndexingConfiguration configuration,
-            ref TimeSpan maxTimeForDocumentTransactionToRemainOpen)
-        {
-            if (sw.Elapsed > maxTimeForDocumentTransactionToRemainOpen)
-            {
-                if (queryContext.Documents.ShouldRenewTransactionsToAllowFlushing())
-                    return true;
-
-                // if we haven't had writes in the meantime, there is no point
-                // in replacing the database transaction, and it will probably cost more
-                // let us check again later to see if we need to
-                maxTimeForDocumentTransactionToRemainOpen =
-                    maxTimeForDocumentTransactionToRemainOpen.Add(
-                        configuration.MaxTimeForDocumentTransactionToRemainOpen.AsTimeSpan);
-            }
-
-            return false;
         }
 
         protected abstract IEnumerable<IndexItem> GetItemsEnumerator(QueryOperationContext queryContext, string collection, long lastEtag, long pageSize);
