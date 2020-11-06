@@ -157,10 +157,10 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             var length = minLength;
 
             if (_handleReferences != null)
-                length += sizeof(long) * 6 * (Collections.Count * _referencedCollections.Count); // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+                length += GetReferencesLength(Collections, _referencedCollections);
 
             if (_handleCompareExchangeReferences != null)
-                length += sizeof(long) * 6 * _compiled.CollectionsWithCompareExchangeReferences.Count; // last referenced collection etags (document + tombstone) and last processed reference collection etags (document + tombstone)
+                length += GetCompareExchangeReferencesLength(_compiled);
 
             var indexEtagBytes = stackalloc byte[length];
 

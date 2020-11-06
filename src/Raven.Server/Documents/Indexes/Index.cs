@@ -3355,6 +3355,22 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        protected int GetReferencesLength(HashSet<string> collections, HashSet<string> referencedCollections)
+        {
+            // last referenced collection etags (document + tombstone)
+            // last processed reference collection etags (document + tombstone)
+            // last processed in memory (early exit batch) etags (document + tombstone)
+            return sizeof(long) * 6 * (collections.Count * referencedCollections.Count);
+        }
+
+        protected static int GetCompareExchangeReferencesLength(AbstractStaticIndexBase compiled)
+        {
+            // last referenced collection etags (document + tombstone)
+            // last processed reference collection etags (document + tombstone)
+            // last processed in memory (early exit batch) etags (document + tombstone)
+            return sizeof(long) * 6 * compiled.CollectionsWithCompareExchangeReferences.Count;
+        }
+
         protected static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(QueryOperationContext queryContext,
             QueryMetadata q, int length, byte* indexEtagBytes)
         {
