@@ -164,6 +164,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of available completion port threads in the thread pool")]
             public const string ThreadPoolAvailableCompletionPortThreads = "1.14.2";
 
+            [Description("Number of active TCP connections")]
+            public const string TcpActiveConnections = "1.15.1";
+
             public static DynamicJsonArray ToJson()
             {
                 var array = new DynamicJsonArray();
