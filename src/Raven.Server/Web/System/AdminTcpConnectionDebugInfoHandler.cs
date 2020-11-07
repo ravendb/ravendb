@@ -34,10 +34,10 @@ namespace Raven.Server.Web.System
 
             static DynamicJsonValue ToDynamic(TcpStatistics stats)
             {
-                var result = new DynamicJsonValue();
                 if (stats == null)
-                    return result;
+                    return null;
 
+                var result = new DynamicJsonValue();
                 result[nameof(stats.ConnectionsAccepted)] = stats.ConnectionsAccepted;
                 result[nameof(stats.ConnectionsInitiated)] = stats.ConnectionsInitiated;
                 result[nameof(stats.CumulativeConnections)] = stats.CumulativeConnections;
