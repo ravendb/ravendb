@@ -189,14 +189,14 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        public void FetchFields(BlittableJsonReaderObject data, Dictionary<LazyStringValue, FieldType> fields)
+        public unsafe void FetchFields(BlittableJsonReaderObject data, Dictionary<LazyStringValue, FieldType> fields)
         {
             var prop = new BlittableJsonReaderObject.PropertyDetails();
             using (var buffers = data.GetPropertiesByInsertionOrder())
             {
-                for (var i = 0; i < buffers.Properties.Count; i++)
+                for (var i = 0; i < buffers.Size; i++)
                 {
-                    data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     var type = GetFieldType(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
                     if (fields.TryGetValue(prop.Name, out var token))
                     {

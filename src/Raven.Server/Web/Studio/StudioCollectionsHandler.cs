@@ -120,7 +120,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private void WriteDocument(BlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
+        private unsafe void WriteDocument(BlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
         {
             writer.WriteStartObject();
 
@@ -136,9 +136,9 @@ namespace Raven.Server.Web.Studio
 
             using (var buffers = document.Data.GetPropertiesByInsertionOrder())
             {
-                for (int i = 0; i < buffers.Properties.Count; i++)
+                for (int i = 0; i < buffers.Size; i++)
                 {
-                    document.Data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    document.Data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     var sendFull = fullPropertiesToSend.Contains(prop.Name);
                     if (sendFull || propertiesPreviewToSend.Contains(prop.Name))
                     {
@@ -271,15 +271,15 @@ namespace Raven.Server.Web.Studio
             return columns;
         }
 
-        public static void FetchColumnNames(BlittableJsonReaderObject data, HashSet<LazyStringValue> columns)
+        public unsafe static void FetchColumnNames(BlittableJsonReaderObject data, HashSet<LazyStringValue> columns)
         {
             using (var buffers = data.GetPropertiesByInsertionOrder())
             {
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-                for (var i = 0; i < buffers.Properties.Count; i++)
+                for (var i = 0; i < buffers.Size; i++)
                 {
-                    data.GetPropertyByIndex(buffers.Properties.Array[i + buffers.Properties.Offset], ref prop);
+                    data.GetPropertyByIndex(buffers.Properties[i], ref prop);
                     var propName = prop.Name;
                     if (columns.Contains(propName) == false)
                     {

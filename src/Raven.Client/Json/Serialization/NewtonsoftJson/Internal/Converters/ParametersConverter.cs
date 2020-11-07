@@ -8,7 +8,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal sealed class ParametersConverter : RavenJsonConverter
+    internal sealed class ParametersConverter : JsonConverter
     {
         public static readonly ParametersConverter Instance = new ParametersConverter();
 

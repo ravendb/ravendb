@@ -6,41 +6,40 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal sealed class JsonDateTimeISO8601Converter : RavenJsonConverter
+    internal sealed class JsonDateTimeISO8601Converter : JsonConverter
     {
         public static readonly JsonDateTimeISO8601Converter Instance = new JsonDateTimeISO8601Converter();
-
+        
         private JsonDateTimeISO8601Converter()
         {
         }
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
-            if (value is DateTime)
+            switch (value)
             {
-                var dateTime = (DateTime)value;
-                if (dateTime.Kind == DateTimeKind.Unspecified)
-                    dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
-                writer.WriteValue(dateTime.GetDefaultRavenFormat());
+                case DateTime dateTime:
+                {
+                    if (dateTime.Kind == DateTimeKind.Unspecified)
+                        dateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Local);
+                    writer.WriteValue(dateTime.GetDefaultRavenFormat());
+                    break;
+                }
+                case DateTimeOffset dateTimeOffset:
+                    writer.WriteValue(dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
+                    break;
+                default:
+                    throw new ArgumentException($"Not idea how to process argument: '{value}'");
             }
-            else if (value is DateTimeOffset)
-            {
-                var dateTimeOffset = (DateTimeOffset)value;
-                writer.WriteValue(dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
-            }
-            else
-                throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
         }
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var s = reader.Value as string;
-            if (s != null)
+            if (reader.Value is string s)
             {
                 if (objectType == typeof(DateTime) || objectType == typeof(DateTime?))
                 {
-                    DateTime time;
-                    if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
+                    if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime time))
                     {
                         if (s.EndsWith("+00:00"))
                             return time.ToUniversalTime();
@@ -49,12 +48,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                 }
                 if (objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))
                 {
-                    DateTimeOffset time;
-                    if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out time))
+                    if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset time))
                         return time;
                 }
             }
-            return DeferReadToNextConverter(reader, objectType, serializer, existingValue);
+            return JsonLuceneDateTimeConverter.Instance.ReadJson(reader, objectType, existingValue,serializer);
         }
 
         public override bool CanConvert(Type objectType)

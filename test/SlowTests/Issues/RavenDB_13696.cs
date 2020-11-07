@@ -77,14 +77,13 @@ namespace SlowTests.Issues
             }
         }
 
-        private static void ValidateProperties(List<string> properties, BlittableJsonReaderObject json)
+        private unsafe static void ValidateProperties(List<string> properties, BlittableJsonReaderObject json)
         {
             var propDetails = new BlittableJsonReaderObject.PropertyDetails();
             var propertiesByInsertionOrder = json.GetPropertiesByInsertionOrder();
             for (var i = 0; i < properties.Count; i++)
             {
-                var propIndex = propertiesByInsertionOrder.Properties[i];
-                json.GetPropertyByIndex(propIndex, ref propDetails);
+                json.GetPropertyByIndex(propertiesByInsertionOrder.Properties[i], ref propDetails);
 
                 if (propDetails.Name == Constants.Documents.Metadata.Key)
                     continue;
