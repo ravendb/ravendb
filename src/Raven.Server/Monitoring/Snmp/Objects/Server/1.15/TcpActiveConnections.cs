@@ -1,6 +1,5 @@
-using System;
-using System.Net.NetworkInformation;
 using Lextm.SharpSnmpLib;
+using Sparrow.Server.Extensions;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
@@ -13,26 +12,14 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
 
         protected override Gauge32 GetData()
         {
-            var properties = IPGlobalProperties.GetIPGlobalProperties();
-            var ipv4Stats = GetTcpStatisticsSafely(() => properties.GetTcpIPv4Statistics());
-            var ipv6Stats = GetTcpStatisticsSafely(() => properties.GetTcpIPv6Statistics());
+            var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
+            var ipv4Stats = properties.GetTcpIPv4StatisticsSafely();
+            var ipv6Stats = properties.GetTcpIPv6StatisticsSafely();
 
-            var currentIpv4Connections = ipv4Stats?.CurrentConnections ?? 0;
-            var currentIpv6Connections = ipv6Stats?.CurrentConnections ?? 0;
+            var currentIpv4Connections = ipv4Stats.GetCurrentConnectionsSafely() ?? 0;
+            var currentIpv6Connections = ipv6Stats.GetCurrentConnectionsSafely() ?? 0;
 
             return new Gauge32(currentIpv4Connections + currentIpv6Connections);
-        }
-
-        private static TcpStatistics GetTcpStatisticsSafely(Func<TcpStatistics> func)
-        {
-            try
-            {
-                return func();
-            }
-            catch (PlatformNotSupportedException)
-            {
-                return null;
-            }
         }
     }
 }

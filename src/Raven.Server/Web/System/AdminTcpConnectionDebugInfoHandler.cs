@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Extensions;
 
 namespace Raven.Server.Web.System
 {
@@ -14,9 +14,9 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/debug/info/tcp/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task Statistics()
         {
-            var properties = IPGlobalProperties.GetIPGlobalProperties();
-            var ipv4Stats = GetTcpStatisticsSafely(() => properties.GetTcpIPv4Statistics());
-            var ipv6Stats = GetTcpStatisticsSafely(() => properties.GetTcpIPv6Statistics());
+            var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
+            var ipv4Stats = properties.GetTcpIPv4StatisticsSafely();
+            var ipv6Stats = properties.GetTcpIPv6StatisticsSafely();
 
             var djv = new DynamicJsonValue
             {
@@ -38,42 +38,30 @@ namespace Raven.Server.Web.System
                     return null;
 
                 var result = new DynamicJsonValue();
-                result[nameof(stats.ConnectionsAccepted)] = stats.ConnectionsAccepted;
-                result[nameof(stats.ConnectionsInitiated)] = stats.ConnectionsInitiated;
-                result[nameof(stats.CumulativeConnections)] = stats.CumulativeConnections;
-                result[nameof(stats.CurrentConnections)] = stats.CurrentConnections;
-                result[nameof(stats.ErrorsReceived)] = stats.ErrorsReceived;
-                result[nameof(stats.FailedConnectionAttempts)] = stats.FailedConnectionAttempts;
-                result[nameof(stats.MaximumConnections)] = stats.MaximumConnections;
-                result[nameof(stats.MaximumTransmissionTimeout)] = stats.MaximumTransmissionTimeout;
-                result[nameof(stats.MinimumTransmissionTimeout)] = stats.MinimumTransmissionTimeout;
-                result[nameof(stats.ResetConnections)] = stats.ResetConnections;
-                result[nameof(stats.ResetsSent)] = stats.ResetsSent;
-                result[nameof(stats.SegmentsReceived)] = stats.SegmentsReceived;
-                result[nameof(stats.SegmentsResent)] = stats.SegmentsResent;
-                result[nameof(stats.SegmentsSent)] = stats.SegmentsSent;
+                result[nameof(stats.ConnectionsAccepted)] = stats.GetConnectionsAcceptedSafely();
+                result[nameof(stats.ConnectionsInitiated)] = stats.GetConnectionsInitiatedSafely();
+                result[nameof(stats.CumulativeConnections)] = stats.GetCumulativeConnectionsSafely();
+                result[nameof(stats.CurrentConnections)] = stats.GetCurrentConnectionsSafely();
+                result[nameof(stats.ErrorsReceived)] = stats.GetErrorsReceivedSafely();
+                result[nameof(stats.FailedConnectionAttempts)] = stats.GetFailedConnectionAttemptsSafely();
+                result[nameof(stats.MaximumConnections)] = stats.GetMaximumConnectionsSafely();
+                result[nameof(stats.MaximumTransmissionTimeout)] = stats.GetMaximumTransmissionTimeoutSafely();
+                result[nameof(stats.MinimumTransmissionTimeout)] = stats.GetMinimumTransmissionTimeoutSafely();
+                result[nameof(stats.ResetConnections)] = stats.GetResetConnectionsSafely();
+                result[nameof(stats.ResetsSent)] = stats.GetResetsSentSafely();
+                result[nameof(stats.SegmentsReceived)] = stats.GetSegmentsReceivedSafely();
+                result[nameof(stats.SegmentsResent)] = stats.GetSegmentsResentSafely();
+                result[nameof(stats.SegmentsSent)] = stats.GetSegmentsSentSafely();
 
                 return result;
-            }
-
-            static TcpStatistics GetTcpStatisticsSafely(Func<TcpStatistics> func)
-            {
-                try
-                {
-                    return func();
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    return null;
-                }
             }
         }
 
         [RavenAction("/admin/debug/info/tcp/active-connections", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task ActiveConnections()
         {
-            var properties = IPGlobalProperties.GetIPGlobalProperties();
-            var connections = properties.GetActiveTcpConnections();
+            var properties = TcpExtensions.GetIPGlobalPropertiesSafely();
+            var connections = properties.GetActiveTcpConnectionsSafely();
 
             var djv = new DynamicJsonValue
             {
@@ -91,9 +79,10 @@ namespace Raven.Server.Web.System
 
             static DynamicJsonValue ToDynamic(TcpConnectionInformation[] connections)
             {
-                var result = new DynamicJsonValue();
                 if (connections == null || connections.Length == 0)
-                    return result;
+                    return null;
+
+                var result = new DynamicJsonValue();
 
                 foreach (var g in connections.GroupBy(x => x.State))
                     result[g.Key.ToString()] = ToDynamicArray(g);
