@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
@@ -20,6 +21,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         private JsonEnumerableConverter _jsonEnumerableConverter;
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
+        private CachingJsonConverter _cachedConverter, _cachedConverterWriteOnly;
 
         public DocumentConventions Conventions { get; private set; }
 
@@ -174,6 +176,17 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
 
         private void PostJsonSerializerInitiation(NewtonsoftJsonJsonSerializer jsonSerializer)
         {
+            if (_cachedConverter == null)
+            {
+                InitializeConverters(jsonSerializer);
+            }
+            jsonSerializer.Converters.Clear();
+            jsonSerializer.Converters.Add(_cachedConverter);
+            jsonSerializer.Converters.Add(_cachedConverterWriteOnly);
+        }
+
+        private void InitializeConverters(NewtonsoftJsonJsonSerializer jsonSerializer)
+        {
             if (Conventions.SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
 
@@ -185,6 +198,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             jsonSerializer.Converters.Add(JsonIMetadataDictionaryConverter.Instance);
             jsonSerializer.Converters.Add(SizeConverter.Instance);
             jsonSerializer.Converters.Add(_jsonEnumerableConverter);
+
+            _cachedConverter = new CachingJsonConverter(jsonSerializer.Converters.Where(x=>x.CanRead && x.CanWrite).ToArray(), true, true);
+            _cachedConverterWriteOnly = new CachingJsonConverter(jsonSerializer.Converters.Where(x=>x.CanRead  == false && x.CanWrite).ToArray(), false, true);
         }
     }
 }

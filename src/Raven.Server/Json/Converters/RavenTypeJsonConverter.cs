@@ -6,7 +6,7 @@ using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 
 namespace Raven.Server.Json.Converters
 {
-    internal abstract class RavenTypeJsonConverter<T> : RavenJsonConverter
+    internal abstract class RavenTypeJsonConverter<T> : JsonConverter
     {
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
