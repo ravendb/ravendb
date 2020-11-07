@@ -383,14 +383,10 @@ namespace FastTests.Client
                     var changes = session.Advanced.WhatChanged();
                     Assert.True(changes.Count == 1);
                     Assert.True(changes[docID].Length == 7);
-                    Assert.True(changes[docID][0].Change == DocumentsChanges.ChangeType.RemovedField);
-                    Assert.True(changes[docID][0].FieldName == "Test-A");
-                    Assert.True(changes[docID][1].Change == DocumentsChanges.ChangeType.RemovedField);
-                    Assert.True(changes[docID][1].FieldName == "Test-C");
-                    Assert.True(changes[docID][5].Change == DocumentsChanges.ChangeType.NewField);
-                    Assert.True(changes[docID][5].FieldName == "Test-B");
-                    Assert.True(changes[docID][6].Change == DocumentsChanges.ChangeType.NewField);
-                    Assert.True(changes[docID][6].FieldName == "Test-D");
+                    Assert.True(changes[docID].Single(x=>x.FieldName == "Test-A").Change == DocumentsChanges.ChangeType.RemovedField);
+                    Assert.True(changes[docID].Single(x=>x.FieldName == "Test-C").Change == DocumentsChanges.ChangeType.RemovedField);
+                    Assert.True(changes[docID].Single(x=>x.FieldName == "Test-B").Change == DocumentsChanges.ChangeType.NewField);
+                    Assert.True(changes[docID].Single(x=>x.FieldName == "Test-D").Change == DocumentsChanges.ChangeType.NewField);
                 }
 
                 using (var session = store.OpenSession())
@@ -403,11 +399,10 @@ namespace FastTests.Client
                     meta["Test-B"] = new[] { "b", "b", "b" };
 
                     var changes = session.Advanced.WhatChanged();
+                    Array.Sort(changes[docID], (x, y) => x.FieldName.CompareTo(y.FieldName));
                     Assert.True(changes.Count == 1);
-                    Assert.True(changes[docID][0].Change == DocumentsChanges.ChangeType.RemovedField);
-                    Assert.True(changes[docID][0].FieldName == "Test-A");
-                    Assert.True(changes[docID][4].Change == DocumentsChanges.ChangeType.NewField);
-                    Assert.True(changes[docID][4].FieldName == "Test-B");
+                    Assert.True(changes[docID].Single(x=>x.FieldName == "Test-A").Change == DocumentsChanges.ChangeType.RemovedField);
+                    Assert.True(changes[docID].Single(x=>x.FieldName == "Test-B").Change == DocumentsChanges.ChangeType.NewField);
                 }
             }
         }

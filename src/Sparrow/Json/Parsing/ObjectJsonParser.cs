@@ -301,9 +301,9 @@ namespace Sparrow.Json.Parsing
                     var modifications = bjro.Modifications;
                     modifications.SourceIndex++;
                     var propDetails = new BlittableJsonReaderObject.PropertyDetails();
-                    if (modifications.SourceIndex < modifications.SourceProperties.Properties.Count)
+                    if (modifications.SourceIndex < modifications.SourceProperties.Size)
                     {
-                        var propIndex = modifications.SourceProperties.Properties.Array[modifications.SourceIndex + modifications.SourceProperties.Properties.Offset];
+                        var propIndex = modifications.SourceProperties.Properties[modifications.SourceIndex];
                         if (modifications.Removals != null && modifications.Removals.Contains(propIndex))
                         {
                             continue;

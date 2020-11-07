@@ -45,8 +45,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         /// <returns>The object value.</returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            var input = reader.Value as string;
-            if (input != null && LuceneDateTimePattern.IsMatch(input))
+            if (reader.Value is string input && LuceneDateTimePattern.IsMatch(input))
             {
                 var stringToDate = DateTools.StringToDate(input);
                 if (objectType == typeof(DateTimeOffset) || objectType == typeof(DateTimeOffset?))

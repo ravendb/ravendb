@@ -850,36 +850,34 @@ namespace Sparrow.Json
 
         public struct InsertionOrderProperties : IDisposable
         {
-            internal int[] PropertiesBuffer;
-            internal int[] Offsets;
+            internal int* Properties;
+            internal int* Offsets;
+            internal int Size;
 
-            public int Used;
+            private readonly JsonOperationContext _context;
+            private AllocatedMemoryData _allocation;
 
-            public ArraySegment<int> Properties;
-
-            public InsertionOrderProperties(int size)
+            public InsertionOrderProperties(JsonOperationContext context, int size)
             {
-                var actual = Bits.PowerOf2(size);
-                PropertiesBuffer = ArrayPool<int>.Shared.Rent(actual);
-                Offsets = ArrayPool<int>.Shared.Rent(actual);
-                Used = size;
-                Properties = new ArraySegment<int>(PropertiesBuffer, 0, Used);
+                _context = context;
+                if (size == 0)
+                {
+                    Size = 0;
+                    _allocation = null;
+                    Offsets = Properties = null;
+                    return;
+                }
+                _allocation = context.GetMemory(size * 2 * sizeof(int));
+                Properties =  (int*)_allocation.Address;
+                Offsets = Properties + size;
+                Size = size;
             }
 
             public void Dispose()
             {
-                if (PropertiesBuffer != null)
-                {
-                    ArrayPool<int>.Shared.Return(PropertiesBuffer);
-                    PropertiesBuffer = null;
-                }
-                if (Offsets != null)
-                {
-                    ArrayPool<int>.Shared.Return(Offsets);
-                    Offsets = null;
-                }
-                Properties = default;
-                Used = 0;
+                if (_allocation == null) return;
+                _context.ReturnMemory(_allocation);
+                _allocation = null;
             }
         }
 
@@ -890,19 +888,20 @@ namespace Sparrow.Json
             if (_metadataPtr == null)
                 ThrowObjectDisposed();
 
-            var buffers = new InsertionOrderProperties(_propCount);
+            var buffers = new InsertionOrderProperties(_context, _propCount);
+            if (_propCount == 0)
+                return buffers;
 
             var metadataSize = _currentOffsetSize + _currentPropertyIdSize + sizeof(byte);
             for (int i = 0; i < _propCount; i++)
             {
                 var propertyIntPtr = _metadataPtr + i * metadataSize;
                 buffers.Offsets[i] = ReadNumber(propertyIntPtr, _currentOffsetSize);
-                buffers.PropertiesBuffer[i] = i;
+                buffers.Properties[i] = i;
             }
 
             Sorter<int, int, NumericDescendingComparer> sorter;
-            sorter.Sort(buffers.Offsets, buffers.PropertiesBuffer, 0, _propCount);
-            buffers.Used = _propCount;
+            sorter.Sort(new Span<int>(buffers.Offsets, buffers.Size), new Span<int>(buffers.Properties, buffers.Size), 0, _propCount);
 
             return buffers;
         }
@@ -1287,9 +1286,9 @@ namespace Sparrow.Json
             using (var insertionOrder = GetPropertiesByInsertionOrder())
             {
                 var prop = new PropertyDetails();
-                for (var i = 0; i < insertionOrder.Used; i++)
+                for (var i = 0; i < insertionOrder.Size; i++)
                 {
-                    var propIndex = insertionOrder.PropertiesBuffer[i];
+                    var propIndex = insertionOrder.Properties[i];
                     GetPropertyByIndex(propIndex, ref prop);
                     writer.WritePropertyName(prop.Name);
                     writer.WriteValue(ProcessTokenTypeFlags(prop.Token), prop.Value);

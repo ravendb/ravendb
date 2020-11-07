@@ -20,7 +20,7 @@ namespace SlowTests.Issues
             public string AgentDutyCode { get; set; }
         }
         [Fact]
-        public void PropertySortOrderSustained()
+        public unsafe void PropertySortOrderSustained()
         {
             using (var store = GetDocumentStore())
             {
@@ -45,14 +45,11 @@ namespace SlowTests.Issues
 
                 var expectedOrder = new[] { "Username", "Password", "OrganizationId", "AgentDutyCode" };
 
-                var propertyNames = res.GetPropertyNames();
-                WaitForUserToContinueTheTest(store);
                 for (var i = 0; i < expectedOrder.Length; i++)
                 {
-                    var matchingPropertyId = propertiesByInsertionOrder.Properties.Array[i + propertiesByInsertionOrder.Properties.Offset];
                     BlittableJsonReaderObject.PropertyDetails propDetails = new BlittableJsonReaderObject.PropertyDetails();
 
-                    res.GetPropertyByIndex(matchingPropertyId, ref propDetails);
+                    res.GetPropertyByIndex(propertiesByInsertionOrder.Properties[i], ref propDetails);
 
                     Assert.Equal(expectedOrder[i], propDetails.Name.ToString());
                 }

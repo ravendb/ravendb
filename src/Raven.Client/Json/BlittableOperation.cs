@@ -40,7 +40,7 @@ namespace Raven.Client.Json
             return true;
         }
 
-        private static bool CompareBlittable(string fieldPath, string id, BlittableJsonReaderObject originalBlittable,
+        private unsafe static bool CompareBlittable(string fieldPath, string id, BlittableJsonReaderObject originalBlittable,
             BlittableJsonReaderObject newBlittable, IDictionary<string, DocumentsChanges[]> changes,
             List<DocumentsChanges> docChanges)
         {
@@ -49,9 +49,13 @@ namespace Raven.Client.Json
 
             var newBlittableProps = newBlittable.GetPropertyNames();
             var oldBlittableProps = originalBlittable.GetPropertyNames();
-            var newFields = newBlittableProps.Except(oldBlittableProps);
-            var removedFields = oldBlittableProps.Except(newBlittableProps);
+            var newFields = new HashSet<string>(newBlittableProps);
+            newFields.ExceptWith(oldBlittableProps);
+            var removedFields = new HashSet<string>(oldBlittableProps);
+            removedFields.ExceptWith(newBlittableProps);
 
+            using var orderedProperties = newBlittable.GetPropertiesByInsertionOrder();
+            
             foreach (var field in removedFields)
             {
                 if (changes == null)
@@ -62,9 +66,9 @@ namespace Raven.Client.Json
             var newProp = new BlittableJsonReaderObject.PropertyDetails();
             var oldProp = new BlittableJsonReaderObject.PropertyDetails();
 
-            for (int i = 0; i < newBlittable.Count; i++)
+            for (int i = 0; i < orderedProperties.Size; i++)
             {
-                newBlittable.GetPropertyByIndex(i, ref newProp);
+                newBlittable.GetPropertyByIndex(orderedProperties.Properties[i], ref newProp);
 
                 if (newProp.Name.Equals(LastModified) ||
                     newProp.Name.Equals(Collection) ||
@@ -192,7 +196,7 @@ namespace Raven.Client.Json
 
             var position = 0;
             var changed = false;
-            while (position < oldArray.Length && position < newArray.Length)
+            while (position < oldArray.Length && position < newArray.Length && (changed == false || changes != null))
             {
                 switch (oldArray[position])
                 {

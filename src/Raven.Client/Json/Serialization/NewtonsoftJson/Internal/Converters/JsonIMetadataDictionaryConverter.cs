@@ -4,7 +4,7 @@ using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal sealed class JsonIMetadataDictionaryConverter : RavenJsonConverter
+    internal sealed class JsonIMetadataDictionaryConverter : JsonConverter
     {
         public static readonly JsonIMetadataDictionaryConverter Instance = new JsonIMetadataDictionaryConverter();
 

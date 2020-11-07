@@ -9,12 +9,10 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
 {
-    internal sealed class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
+    internal sealed class JsonDictionaryDateTimeKeysConverter : JsonConverter
     {
         private readonly MethodInfo _genericWriteJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod(nameof(GenericWriteJson));
         private readonly MethodInfo _genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod(nameof(GenericReadJson));
-
-        private static readonly ConcurrentDictionary<Type, bool> _cache = new ConcurrentDictionary<Type, bool>();
 
         public static readonly JsonDictionaryDateTimeKeysConverter Instance = new JsonDictionaryDateTimeKeysConverter();
 
@@ -51,7 +49,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                         : dateTimeOffset.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
                 }
                 else
-                    throw new ArgumentException(string.Format("Not idea how to process argument: '{0}'", value));
+                    throw new ArgumentException($"Not idea how to process argument: '{value}'");
 
                 serializer.Serialize(writer, kvp.Value);
             }
@@ -71,14 +69,12 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                     throw new InvalidOperationException("Expected PropertyName, Got " + reader.TokenType);
 
                 object key;
-                var s = reader.Value as string;
-                if (s != null)
+                if (reader.Value is string s)
                 {
                     if (typeof(TKey) == typeof(DateTime) || typeof(TKey) == typeof(DateTime?))
                     {
-                        DateTime time;
                         if (DateTime.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                                                   DateTimeStyles.RoundtripKind, out time))
+                                                   DateTimeStyles.RoundtripKind, out DateTime time))
                         {
                             key = time.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(time, DateTimeKind.Local) : time;
                         }
@@ -89,9 +85,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                     }
                     else if (typeof(TKey) == typeof(DateTimeOffset) || typeof(TKey) == typeof(DateTimeOffset?))
                     {
-                        DateTimeOffset time;
                         if (DateTimeOffset.TryParseExact(s, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                                                         DateTimeStyles.RoundtripKind, out time))
+                                                         DateTimeStyles.RoundtripKind, out DateTimeOffset time))
                         {
                             key = time;
                         }
@@ -107,7 +102,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
                 }
                 else
                 {
-                    key = DeferReadToNextConverter(reader, typeof(TKey), serializer, existingValue);
+                    key = reader.Value;
                 }
                 reader.Read();// read the value
                 result[(TKey)key] = (TValue)serializer.Deserialize(reader, typeof(TValue));
@@ -122,11 +117,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters
         }
 
         public override bool CanConvert(Type objectType)
-        {
-            return _cache.GetOrAdd(objectType, CanConvertInternal);
-        }
-
-        private bool CanConvertInternal(Type objectType)
         {
             if (objectType.IsGenericType == false)
                 return false;
