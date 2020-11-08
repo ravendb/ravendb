@@ -353,6 +353,18 @@ namespace Raven.Server.Documents.Replication
         {
             var supportedVersions =
                 TcpConnectionHeaderMessage.GetSupportedFeaturesFor(TcpConnectionHeaderMessage.OperationTypes.Replication, tcpConnectionOptions.ProtocolVersion);
+
+            ReplicationInitialRequest initialRequest = null;
+            if (supportedVersions.Replication.PullReplication)
+            {
+                using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                using (var readerObject = context.ParseToMemory(tcpConnectionOptions.Stream, "initial-replication-message",
+                    BlittableJsonDocumentBuilder.UsageMode.None, buffer))
+                {
+                    initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
+                }
+            }
+
             string[] allowedPaths = default;
             string pullDefinitionName = null;
             switch (header.AuthorizeInfo?.AuthorizeAs)
@@ -382,7 +394,7 @@ namespace Raven.Server.Documents.Replication
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
                             if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.HubToSink) == false)
                                 throw new InvalidOperationException($"Replication hub {header.AuthorizeInfo.AuthorizationFor} does not support Pull Replication");
-                            CreatePullReplicationAsHub(tcpConnectionOptions, buffer, supportedVersions, pullReplicationDefinition, header);
+                            CreatePullReplicationAsHub(tcpConnectionOptions, initialRequest, supportedVersions, pullReplicationDefinition, header);
                             return;
                         case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
                             if (pullReplicationDefinition.Mode.HasFlag(PullReplicationMode.SinkToHub) == false)
@@ -413,18 +425,10 @@ namespace Raven.Server.Documents.Replication
             CreateIncomingInstance(tcpConnectionOptions, allowedPaths, pullDefinitionName, buffer);
         }
 
-        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, JsonOperationContext.MemoryBuffer buffer,
+        private void CreatePullReplicationAsHub(TcpConnectionOptions tcpConnectionOptions, ReplicationInitialRequest initialRequest,
                         TcpConnectionHeaderMessage.SupportedFeatures supportedVersions,
                         PullReplicationDefinition pullReplicationDefinition, TcpConnectionHeaderMessage header)
         {
-            ReplicationInitialRequest initialRequest;
-            using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (var readerObject = context.ParseToMemory(tcpConnectionOptions.Stream, "initial-replication-message",
-                BlittableJsonDocumentBuilder.UsageMode.None, buffer))
-            {
-                initialRequest = JsonDeserializationServer.ReplicationInitialRequest(readerObject);
-            }
-
             if (string.Equals(initialRequest.PullReplicationDefinitionName, pullReplicationDefinition.Name, StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException(
                     $"PullReplicationDefinitionName '{initialRequest.PullReplicationDefinitionName}' does not match the pull replication definition name: {pullReplicationDefinition.Name}");
