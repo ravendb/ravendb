@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
 
@@ -163,6 +166,10 @@ namespace Raven.Client.Documents.Queries
             {
                 _buffer.WriteByte(0);
             }
+            else if (value is DateTime dt)
+            {
+                Write(dt.ToString("o"));
+            }
             else if (value is DateTimeOffset dto)
             {
                 Write(dto.ToString("o"));
@@ -181,25 +188,22 @@ namespace Raven.Client.Documents.Queries
                     Write("empty-enumerator");
                 }
             }
+            else if (value is Enum enm)
+            {
+                Write(enm.ToString());
+            }
             else
             {
-                Write(value.ToString());
-            }
-        }
-
-
-        public void Write(Dictionary<string, string> qp)
-        {
-            if (qp == null)
-            {
-                Write("null-dic<string,string>");
-                return;
-            }
-            Write(qp.Count);
-            foreach (var kvp in qp)
-            {
-                Write(kvp.Key);
-                Write(kvp.Value);
+                bool hadValues = false;
+                foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(value.GetType(), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                {
+                    WriteParameterValue(memberInfo.GetValue(value));
+                    hadValues = true;
+                }
+                if (hadValues == false)
+                {
+                    Write("empty-object");
+                }
             }
         }
     }
