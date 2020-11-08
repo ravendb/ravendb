@@ -885,7 +885,7 @@ namespace Raven.Server.ServerWide
             if (state.From == RachisState.Passive || state.To == RachisState.Passive ||
                 state.From == RachisState.Candidate || state.To == RachisState.Candidate)
             {
-                TaskExecutor.Execute(async _ =>
+                ThreadPool.QueueUserWorkItem(async _ =>
                 {
                     await RefreshOutgoingTasksAsync();
                 }, null);
