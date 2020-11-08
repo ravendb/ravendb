@@ -115,6 +115,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var indexQuery = await GetIndexQuery(queryContext.Documents, method, tracker);
             indexQuery.Diagnostics = diagnostics ? new List<string>() : null;
+            indexQuery.AddTimeSeriesNames = GetBoolValueQueryString("addTimeSeriesNames", false) ?? false;
 
             queryContext.WithQuery(indexQuery.Metadata);
 
