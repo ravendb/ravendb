@@ -100,8 +100,11 @@ class indexDefinition {
         this.configuration(this.parseConfiguration(dto.Configuration));
 
         this.additionalSources(_.map(dto.AdditionalSources, (code, name) => additionalSource.create(name, code)));
-        this.additionalAssemblies(dto.AdditionalAssemblies.map(assembly => new additionalAssembly(assembly)));
-
+        
+        if (dto.AdditionalAssemblies) {
+            this.additionalAssemblies(dto.AdditionalAssemblies.map(assembly => new additionalAssembly(assembly)));
+        }
+        
         this.hasDuplicateFieldsNames = ko.pureComputed(() => {
             return _.uniqBy(this.fields(), field => field.name()).length !== this.fields().length;
         });
