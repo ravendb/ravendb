@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries
 
         public string ClientVersion;
 
-        public bool IsFromStudio;
+        public bool AddTimeSeriesNames;
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
@@ -124,8 +124,6 @@ namespace Raven.Server.Documents.Queries
 
                 if (result.Metadata.HasFacet && httpContext.Request.Headers.TryGetValue(Constants.Headers.ClientVersion, out var clientVersion))
                     result.ClientVersion = clientVersion;
-
-                result.IsFromStudio = httpContext.Request.IsFromStudio();
 
                 AssertPaging(result);
 
@@ -234,8 +232,6 @@ namespace Raven.Server.Documents.Queries
 
                 if (tracker != null)
                     tracker.Query = result.Query;
-
-                result.IsFromStudio = httpContext.Request.IsFromStudio();
 
                 AssertPaging(result);
 
