@@ -249,10 +249,7 @@ namespace Raven.Server.Utils
                         return false;
 
                     if (_parent._lowMemoryFlag.IsRaised())
-                    {
-                        SetWorkForThread(null, null, null);
                         return false;
-                    }
 
                     _parent._pool.Enqueue(this);
                 }
