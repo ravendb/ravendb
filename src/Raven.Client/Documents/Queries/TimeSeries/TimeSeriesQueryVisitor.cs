@@ -94,6 +94,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 timePeriod = constantExpression.Value.ToString();
             }
 
+            else if (JavascriptConversionExtensions.IsWrappedConstantExpression(expression))
+            {
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
+                timePeriod = value.ToString();
+            }
+
             else if (expression is LambdaExpression lambda)
             {
                 timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.GroupBy));
