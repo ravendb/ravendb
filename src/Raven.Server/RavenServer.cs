@@ -606,7 +606,11 @@ namespace Raven.Server
                 catch (Exception e)
                 {
                     if (duringStartup)
+                    {
                         startupRetriesSw.Restart();
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations("During startup, failed to sync CPU credits. Retrying in 1 minute.", e);
+                    }
 
                     // If it's the first time, or if we logged the last error more than 15 minutes ago
                     if (err == null || err.Elapsed.TotalMinutes > 15)
