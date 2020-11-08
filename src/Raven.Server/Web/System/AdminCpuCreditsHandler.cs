@@ -31,23 +31,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/cpu-credits/sync", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task SyncCpuCredits()
         {
-            try
-            {
-                Server.UpdateCpuCreditsFromExec();
-
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException("Got an error while trying to sync the cpu credits from exec.", e);
-            }
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var json = Server.CpuCreditsBalance.ToJson();
-                writer.WriteObject(context.ReadObject(json, "cpu/credits"));
-            }
-
+            Server.ForceSyncCpuCredits();
             return Task.CompletedTask;
         }
 
