@@ -138,72 +138,94 @@ namespace Raven.Client.Documents.Queries
 
         private void WriteParameterValue(object value)
         {
-            if (value is string s)
+            switch (value)
             {
-                Write(s);
-            }
-            else if (value is long l)
-            {
-                Write(l);
-            }
-            else if (value is int i)
-            {
-                Write(i);
-            }
-            else if (value is bool b)
-            {
-                Write(b);
-            }
-            else if (value is double d)
-            {
-                Write(d.ToString("R"));
-            }
-            else if (value is float f)
-            {
-                Write(f.ToString("R"));
-            }
-            else if (value == null)
-            {
-                _buffer.WriteByte(0);
-            }
-            else if (value is DateTime dt)
-            {
-                Write(dt.ToString("o"));
-            }
-            else if (value is DateTimeOffset dto)
-            {
-                Write(dto.ToString("o"));
-            }
-            else if (value is IEnumerable e)
-            {
-                bool hadValues = false;
-                var enumerator = e.GetEnumerator();
-                while (enumerator.MoveNext())
-                {
-                    WriteParameterValue(enumerator.Current);
-                    hadValues = true;
-                }
-                if (hadValues == false)
-                {
-                    Write("empty-enumerator");
-                }
-            }
-            else if (value is Enum enm)
-            {
-                Write(enm.ToString());
-            }
-            else
-            {
-                bool hadValues = false;
-                foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(value.GetType(), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
-                {
-                    WriteParameterValue(memberInfo.GetValue(value));
-                    hadValues = true;
-                }
-                if (hadValues == false)
-                {
-                    Write("empty-object");
-                }
+                case string s:
+                    Write(s);
+                    break;
+
+                case long l:
+                    Write(l);
+                    break;
+
+                case int i:
+                    Write(i);
+                    break;
+
+                case bool b:
+                    Write(b);
+                    break;
+
+                case double d:
+                    Write(d.ToString("R"));
+                    break;
+
+                case float f:
+                    Write(f.ToString("R"));
+                    break;
+
+                case decimal dec:
+                    Write(dec.ToString("G"));
+                    break;
+
+                case null:
+                    _buffer.WriteByte(0);
+                    break;
+
+                case DateTime dt:
+                    Write(dt.ToString("o"));
+                    break;
+
+                case DateTimeOffset dto:
+                    Write(dto.ToString("o"));
+                    break;
+
+                case TimeSpan ts:
+                    Write(ts.ToString("c"));
+                    break;
+
+                case Guid guid:
+                    Write(guid.ToString());
+                    break;
+
+                case byte bt:
+                    _buffer.WriteByte(bt);
+                    break;
+
+                case Enum enm:
+                    Write(enm.ToString());
+                    break;
+
+                case IEnumerable e:
+                    bool hadEnumerableValues = false;
+                    var enumerator = e.GetEnumerator();
+                    while (enumerator.MoveNext())
+                    {
+                        WriteParameterValue(enumerator.Current);
+                        hadEnumerableValues = true;
+                    }
+                    if (hadEnumerableValues == false)
+                    {
+                        Write("empty-enumerator");
+                    }
+
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unknown parameter value type for hash calculation. Value type: {value.GetType()}. Value: {value}");
+
+                    bool hasObjectValues = false;
+                    foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(value.GetType(), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                    {
+                        WriteParameterValue(memberInfo.GetValue(value));
+                        hasObjectValues = true;
+                    }
+                    if (hasObjectValues == false)
+                    {
+                        Write("empty-object");
+                    }
+
+                    break;
             }
         }
     }
