@@ -600,6 +600,7 @@ namespace Raven.Server
                         CpuCreditsBalance.ForceSync = 0;
 
                         duringStartup = false;
+                        startupRetriesSw = null;
                     }
                 }
                 catch (Exception e)
