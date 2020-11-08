@@ -207,13 +207,16 @@ namespace Raven.Server.Documents.Replication
                 using (context.GetMemoryBuffer(out _buffer))
                 {
                     var supportedFeatures = NegotiateReplicationVersion(authorizationInfo);
-                    if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.HubToSink) == PullReplicationMode.HubToSink)
+                    if (supportedFeatures.Replication.PullReplication)
                     {
-                        if( supportedFeatures.Replication.PullReplication == false)
-                            throw new InvalidOperationException("Other side does not support pull replication " + Destination);
                         SendPreliminaryData();
-                        InitiatePullReplicationAsSink(supportedFeatures, certificate);
-                        return;
+                        if (Destination is PullReplicationAsSink sink && (sink.Mode & PullReplicationMode.HubToSink) == PullReplicationMode.HubToSink)
+                        {
+                            if(supportedFeatures.Replication.PullReplication == false)
+                                throw new InvalidOperationException("Other side does not support pull replication " + Destination);
+                            InitiatePullReplicationAsSink(supportedFeatures, certificate);
+                            return;
+                        }
                     }
 
                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
