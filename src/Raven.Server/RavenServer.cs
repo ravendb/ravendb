@@ -513,14 +513,37 @@ namespace Raven.Server
             var sw = Stopwatch.StartNew();
             Stopwatch err = null;
 
+            int currentRetry = 0;
             try
             {
-                UpdateCpuCreditsFromExec();
+                // This is the first sync after a restart, so we want to retry until we get a valid result. Next sync is in 30 minutes.
+                while (true)
+                {
+                    try
+                    {
+                        UpdateCpuCreditsFromExec();
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        currentRetry++;
+
+                        // If we weren't able to sync at startup, we'll assume we have enough credits and let RavenDB perform in the meantime.
+                        // We don't want RavenDB to (false) throttle unless it knows for sure that it doesn't have credits.
+                        CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.MaxCredits;
+                        
+                        if (currentRetry > 5)
+                        {
+                            throw;
+                        }
+                    }
+                    Task.Delay(TimeSpan.FromMinutes(1));
+                }
             }
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations("During CPU credits monitoring, failed to sync the remaining credits.", e);
+                    Logger.Operations($"Failed to start syncing CPU credits with {currentRetry} retries.", e);
             }
 
             while (ServerStore.ServerShutdown.IsCancellationRequested == false)
@@ -638,7 +661,7 @@ namespace Raven.Server
             }
         }
 
-        internal double UpdateCpuCreditsFromExec()
+        public double UpdateCpuCreditsFromExec()
         {
             var response = GetCpuCreditsFromExec();
 
