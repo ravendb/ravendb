@@ -322,7 +322,9 @@ namespace Raven.Server
                     CpuCreditsBalance.FailoverThreshold =
                         // default to disabled
                         Configuration.Server.CpuCreditsExhaustionFailoverThreshold ?? -1;
-                    CpuCreditsBalance.RemainingCpuCredits = Math.Max(CpuCreditsBalance.BackgroundTasksThreshold, CpuCreditsBalance.FailoverThreshold) + 1;
+
+                    // Until we know differently, we don't want to falsely restrict ourselves.
+                    CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.MaxCredits;
 
                     _cpuCreditsMonitoring = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
                     {
@@ -434,6 +436,11 @@ namespace Raven.Server
             _externalCertificateValidator?.ClearCache();
         }
 
+        public void ForceSyncCpuCredits()
+        {
+            CpuCreditsBalance.ForceSync = 1;
+        }
+
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
 
         public class CpuCreditsState : IDynamicJson
@@ -444,12 +451,19 @@ namespace Raven.Server
             public double BackgroundTasksThreshold;
             public double FailoverThreshold;
             private double _remainingCpuCredits;
+            private  int _forceSync;
             public DateTime LastSyncTime;
 
             public double RemainingCpuCredits
             {
                 get => Interlocked.CompareExchange(ref _remainingCpuCredits, 0, 0); //atomic read of double
                 set => Interlocked.Exchange(ref _remainingCpuCredits, value);
+            }
+
+            public int ForceSync
+            {
+                get => Interlocked.CompareExchange(ref _forceSync, 0, 0);
+                set => Interlocked.Exchange(ref _forceSync, value);
             }
 
             public double BackgroundTasksThresholdReleaseValue;
@@ -502,6 +516,7 @@ namespace Raven.Server
 
         private void StartMonitoringCpuCredits()
         {
+            var duringStartup = true;
             CpuCreditsBalance.Used = true;
             CpuCreditsBalance.BackgroundTasksThresholdReleaseValue = CpuCreditsBalance.BackgroundTasksThreshold * 1.25;
             CpuCreditsBalance.FailoverThresholdReleaseValue = CpuCreditsBalance.FailoverThreshold * 1.25;
@@ -511,39 +526,17 @@ namespace Raven.Server
             AlertRaised backgroundTasksAlert = null, failoverAlert = null;
 
             var sw = Stopwatch.StartNew();
+            var startupRetriesSw = Stopwatch.StartNew();
             Stopwatch err = null;
 
-            int currentRetry = 0;
             try
             {
-                // This is the first sync after a restart, so we want to retry until we get a valid result. Next sync is in 30 minutes.
-                while (true)
-                {
-                    try
-                    {
-                        UpdateCpuCreditsFromExec();
-                        break;
-                    }
-                    catch (Exception ex)
-                    {
-                        currentRetry++;
-
-                        // If we weren't able to sync at startup, we'll assume we have enough credits and let RavenDB perform in the meantime.
-                        // We don't want RavenDB to (false) throttle unless it knows for sure that it doesn't have credits.
-                        CpuCreditsBalance.RemainingCpuCredits = CpuCreditsBalance.MaxCredits;
-                        
-                        if (currentRetry > 5)
-                        {
-                            throw;
-                        }
-                    }
-                    Task.Delay(TimeSpan.FromMinutes(1));
-                }
+                UpdateCpuCreditsFromExec();
             }
             catch (Exception e)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to start syncing CPU credits with {currentRetry} retries.", e);
+                    Logger.Operations("During CPU credits monitoring, failed to sync the remaining credits.", e);
             }
 
             while (ServerStore.ServerShutdown.IsCancellationRequested == false)
@@ -592,17 +585,29 @@ namespace Raven.Server
                         Logger.Operations("Unhandled exception occured during cpu credit monitoring", e);
                 }
 
+                // During startup and until we get a valid result, we retry once a minute
+                // After that we retry every sync interval (from configuration) or if ForceSyncCpuCredits() is called
                 try
                 {
-                    if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds)
+                    if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds 
+                        || CpuCreditsBalance.ForceSync == 1
+                        || (duringStartup && startupRetriesSw.Elapsed.TotalSeconds >= TimeSpan.FromMinutes(1).TotalSeconds)) // Time to wait between retries = 1 minute
                     {
                         sw.Restart();
 
                         UpdateCpuCreditsFromExec();
+
+                        CpuCreditsBalance.ForceSync = 0;
+
+                        duringStartup = false;
                     }
                 }
                 catch (Exception e)
                 {
+                    if (duringStartup)
+                        startupRetriesSw.Restart();
+
+                    // If it's the first time, or if we logged the last error more than 15 minutes ago
                     if (err == null || err.Elapsed.TotalMinutes > 15)
                     {
                         if (Logger.IsOperationsEnabled)
@@ -661,7 +666,7 @@ namespace Raven.Server
             }
         }
 
-        public double UpdateCpuCreditsFromExec()
+        internal double UpdateCpuCreditsFromExec()
         {
             var response = GetCpuCreditsFromExec();
 
