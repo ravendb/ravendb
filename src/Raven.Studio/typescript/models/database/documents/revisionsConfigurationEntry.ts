@@ -57,12 +57,14 @@ class revisionsConfigurationEntry {
             const retentionTimeHumane = generalUtils.formatTimeSpan(this.minimumRevisionAgeToKeep() * 1000, true);
             
             const agePart = this.limitRevisionsByAge() && this.minimumRevisionAgeToKeep.isValid() && this.minimumRevisionAgeToKeep() !== 0 ?
-                `Revisions are going to be removed on next revision creation or document deletion once they exceed retention time of <strong>${retentionTimeHumane}</strong>` : "";
+                `Revisions are going to be removed on next revision creation or document deletion once they exceed retention time of <strong>${retentionTimeHumane}</strong>.` : "";
             
             const countPart = this.limitRevisions() && this.minimumRevisionsToKeep.isValid() ? 
-                `At least <strong>${this.minimumRevisionsToKeep()}</strong> revisions are going to be kept` : "";
+                `At least <strong>${this.minimumRevisionsToKeep()}</strong> revisions are going to be kept.` : "";
             
-            return agePart + countPart;
+            const breakPart = agePart && countPart ? "<br>" : "";
+            
+            return agePart + breakPart + countPart;
         });
 
         this.limitRevisions.subscribe(() => {
@@ -75,10 +77,10 @@ class revisionsConfigurationEntry {
         
         this.name = ko.pureComputed(() => {
             if (this.isDefault()) {
-                return "Default";
+                return "Document Defaults";
             } 
             if (this.isConflicts()) {
-                return "Conflicts";
+                return "Conflicting Document Defaults";
             }
             
             return this.collection();

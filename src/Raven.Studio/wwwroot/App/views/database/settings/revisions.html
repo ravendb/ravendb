@@ -1,4 +1,4 @@
-<form role="form" class="revisions flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" novalidate>
+<form role="form" class="revisions flex-vertical absolute-fill content-margin" data-bind="submit: saveChanges" novalidate autocomplete="off">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-8">
             <div class="flex-header flex-horizontal">
@@ -47,42 +47,46 @@
                     </button>
                 </div>
             </div>
-            <div class="scroll flex-grow">                
-                <div data-bind="with: defaultConfiguration">
+            <div class="scroll flex-grow margin-top margin-top-lg">
+                <div class="hr-title margin-top">
+                    <h5 class="no-text-transform">
+                        <i class="icon-default"></i>
+                        <span>Defaults</span>
+                    </h5><hr>
+                </div>
+                <div data-bind="with: defaultDocumentConfiguration" class="margin-top">
                     <div class="panel panel-info panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
-                <div class="hr-title">
-                    <h5 class="no-text-transform">
-                        <i class="icon-conflicts"></i>
-                        <span>Conflicts</span>
-                    </h5><hr>
-                </div>
-                <div data-bind="with: conflictsConfiguration">
-                    <div class="panel panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
+                <div data-bind="with: defaultConflictConfiguration">
+                    <div class="panel panel-state panel-info revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
-                <div class="hr-title">
+                <div class="hr-title margin-top">
                     <h5 class="no-text-transform">
                         <i class="icon-folder"></i>
-                        <span>Collections Definitions</span>
+                        <span>Collections</span>
                     </h5><hr>
                 </div>
+                <div class="margin-top margin-top-lg text-muted text-center" data-bind="visible: perCollectionConfigurations().length === 0">
+                        <i class="icon-lg icon-empty-set"></i>
+                        <h3>No collection specific configuration has been defined.</h3>
+                </div>
                 <div data-bind="foreach: perCollectionConfigurations">
-                    <div class="panel panel-state revisions-item" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
+                    <div class="panel panel-state revisions-item panel-hover" data-bind="css: { active: $data === $root.currentBackingItem() }, template: { name: 'revisions-config-item-template' }">
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-sm-12 col-lg-4">
             <div class="flex-header">
-                <span class="has-disable-reason" data-bind="attr: { 'data-original-title': defaultConfiguration() ? 'Default configuration was already created' : '' }">
-                            <button class="btn btn-info" data-bind="click: createDefaultConfiguration, disable: defaultConfiguration()">
-                                <i class="icon-settings"></i>
-                                <span>Create a default configuration</span>
-                            </button>
-                        </span>
-                <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration">
+                <span class="has-disable-reason" data-bind="attr: { 'data-original-title': defaultDocumentConfiguration() ? 'Default document configuration has been created' : '' }">
+                    <button class="btn btn-info" data-bind="click: createDefaultConfiguration, disable: defaultDocumentConfiguration()" title="Create a default revision configuration for all (non-conflicting) documents">
+                        <i class="icon-settings"></i>
+                        <span>Create document defaults</span>
+                    </button>
+                </span>
+                <button class="btn btn-default" data-bind="click: addCollectionSpecificConfiguration" title="Create a revision configuration for a specific collection">
                     <i class="icon-plus"></i>
                     <span>Add a collection specific configuration</span>
                 </button>
@@ -95,8 +99,7 @@
             <div data-bind="with: currentlyEditedItem">
                 <div class="panel padding edit-panel">
                     <div class="flex-horizontal">
-                        <h3 data-bind="text: isDefault() ? 'Default collection' : (isConflicts() ? 'Conflicts' : 'Collection')" class="margin-right"></h3>
-
+                        <h3 data-bind="text: isDefault() ? 'Default Document Revisions' : (isConflicts() ? 'Default Conflict Revisions' : 'Collection')" class="margin-right"></h3>
                         <div class="dropdown btn-group flex-grow" data-bind="validationElement: collection, visible: canChangeName">
                             <input class="form-control dropdown-toggle" placeholder="Select collection" data-toggle="dropdown" data-bind="textInput: collection, attr: { id: 'collectionNameInput' }" />
                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
@@ -136,7 +139,7 @@
                         <input type="text" class="form-control" data-bind="durationPicker: minimumRevisionAgeToKeep, durationPickerOptions: { showDays: true, showSeconds: true }" />
                     </div>
                     <div class="bg-info padding padding-sm small flex-horizontal margin-top" data-bind="visible: humaneRetentionDescription">
-                        <div><i class="icon-info"></i></div>
+                        <div class="flex-start"><i class="icon-info"></i></div>
                         <div data-bind="html: humaneRetentionDescription"></div>
                     </div>
                     <div class="text-right margin-top">
@@ -156,11 +159,10 @@
             <input type="checkbox" class="styled" data-bind="checked: $root.selectedItems, checkedValue: $data">
             <label></label>
         </div>
-        <div class="name flex-horizontal">
-            <h3 data-bind="attr: { title: name }" class="flex-grow">
+        <div class="name flex-horizontal flex-grow">
+            <h3 data-bind="attr: { title: name }">
                 <span data-bind="text: name"></span>
             </h3>
-            <i class="icon-info text-info conflicts-collection-info" data-placement="bottom" data-bind="visible: isConflicts"></i>
         </div>
         <div class="flex-grow">
             <ul class="properties">
@@ -171,14 +173,18 @@
         </div>
         <div class="actions-container">
             <div class="actions">
-                <button class="btn btn-default" data-bind="visible: !disabled(), click: $root.disableConfiguration">
+                <i class="icon-info text-info margin-right margin-right-sm conflict-defaults-info" data-placement="left" data-bind="visible: isConflicts()"></i>
+                <i class="icon-info text-info margin-right margin-right-sm document-defaults-info" data-placement="left" data-bind="visible: isDefault()"></i>
+                <button class="btn btn-default" data-bind="visible: !disabled(), click: $root.disableConfiguration" title="click to disable this revision configuration">
                     <i class="icon-stop"></i><span>Disable</span>
                 </button>
-                <button class="btn btn-success" data-bind="visible: disabled, click: $root.enableConfiguration">
+                <button class="btn btn-success" data-bind="visible: disabled, click: $root.enableConfiguration" title="click to enable this revision configuration">
                     <i class="icon-play"></i><span>Enable</span>
                 </button>
-                <button class="btn btn-default" data-bind="click: $root.editItem" title="Edit revisions configuration"><i class="icon-edit"></i></button>
-                <button class="btn btn-danger" data-bind="click: $root.deleteItem, style: { visibility: isConflicts() ? 'hidden' : 'visible' }" title="Delete revisions configuration"><i class="icon-trash"></i></button>
+                <button class="btn btn-default" data-bind="click: $root.editItem" title="Edit this revision configuration">
+                    <i class="icon-edit"></i>
+                </button>
+                <button class="btn btn-danger" data-bind="click: $root.deleteItem, style: { visibility: isConflicts() ? 'hidden' : 'visible' }" title="Delete this revision configuration"><i class="icon-trash"></i></button>
             </div>
         </div>
     </div>

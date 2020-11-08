@@ -12,14 +12,15 @@ import getRevisionsConfigurationCommand = require("commands/database/documents/g
 import getRevisionsForConflictsConfigurationCommand = require("commands/database/documents/getRevisionsForConflictsConfigurationCommand");
 import enforceRevisionsConfigurationCommand = require("commands/database/settings/enforceRevisionsConfigurationCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
+import popoverUtils = require("common/popoverUtils");
 
 class revisions extends viewModelBase {
 
-    defaultConfiguration = ko.observable<revisionsConfigurationEntry>();
+    defaultDocumentConfiguration = ko.observable<revisionsConfigurationEntry>();
+    defaultConflictConfiguration = ko.observable<revisionsConfigurationEntry>();
+    
     perCollectionConfigurations = ko.observableArray<revisionsConfigurationEntry>([]);
 
-    conflictsConfiguration = ko.observable<revisionsConfigurationEntry>();
-    
     isSaveEnabled: KnockoutComputed<boolean>;
     collections = collectionsTracker.default.collections;
     selectionState: KnockoutComputed<checkbox>;
@@ -49,7 +50,7 @@ class revisions extends viewModelBase {
     private initObservables() {
         this.selectionState = ko.pureComputed<checkbox>(() => {
             const selectedCount = this.selectedItems().length;
-            const totalCount = this.perCollectionConfigurations().length + (this.defaultConfiguration() ? 1 : 0);
+            const totalCount = this.perCollectionConfigurations().length + (this.defaultDocumentConfiguration() ? 1 : 0);
             if (totalCount && selectedCount === totalCount)
                 return "checked";
             if (selectedCount > 0)
@@ -87,7 +88,7 @@ class revisions extends viewModelBase {
         super.activate(args);
         this.updateHelpLink("1UZ5WL");
 
-        this.dirtyFlag = new ko.DirtyFlag([this.perCollectionConfigurations, this.defaultConfiguration, this.conflictsConfiguration]);
+        this.dirtyFlag = new ko.DirtyFlag([this.perCollectionConfigurations, this.defaultDocumentConfiguration, this.defaultConflictConfiguration]);
         this.isSaveEnabled = ko.pureComputed<boolean>(() => {
             const dirty = this.dirtyFlag().isDirty();
             const saving = this.spinners.save();
@@ -114,7 +115,7 @@ class revisions extends viewModelBase {
     onRevisionsConfigurationLoaded(data: Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration) {
         if (data) {
             if (data.Default) {
-                this.defaultConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.DefaultConfiguration, data.Default));
+                this.defaultDocumentConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.DefaultConfiguration, data.Default));
             }
 
             if (data.Collections) {
@@ -124,14 +125,14 @@ class revisions extends viewModelBase {
             }
             this.dirtyFlag().reset();
         } else {
-            this.defaultConfiguration(null);
+            this.defaultDocumentConfiguration(null);
             this.perCollectionConfigurations([]);
         }
     }
 
     onRevisionsForConflictsConfigurationLoaded(data: Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration) {
         if (data) {
-            this.conflictsConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.ConflictsConfiguration, data));
+            this.defaultConflictConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.ConflictsConfiguration, data));
             
             this.dirtyFlag().reset();
         } else {
@@ -141,7 +142,7 @@ class revisions extends viewModelBase {
                 MinimumRevisionsToKeep: undefined,
                 MinimumRevisionAgeToKeep: "45.00:00:00"
             };
-            this.conflictsConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.ConflictsConfiguration, dto));
+            this.defaultConflictConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.ConflictsConfiguration, dto));
         }
     }
 
@@ -181,7 +182,7 @@ class revisions extends viewModelBase {
         eventsCollector.default.reportEvent("revisions", "remove");
 
         if (entry.isDefault()) {
-            this.defaultConfiguration(null);
+            this.defaultDocumentConfiguration(null);
         } else {
             this.perCollectionConfigurations.remove(entry);
         }
@@ -195,7 +196,8 @@ class revisions extends viewModelBase {
         }
 
         if (itemToSave.isDefault()) {
-            this.defaultConfiguration(itemToSave);
+            this.defaultDocumentConfiguration(itemToSave);
+            this.initTooltips();
         } else if (isEdit) {
             this.currentBackingItem().copyFrom(itemToSave);
         } else {
@@ -215,7 +217,7 @@ class revisions extends viewModelBase {
         });
 
         return {
-            Default: this.defaultConfiguration() ? this.defaultConfiguration().toDto() : null,
+            Default: this.defaultDocumentConfiguration() ? this.defaultDocumentConfiguration().toDto() : null,
             Collections: collectionsDto
         }
     }
@@ -239,7 +241,7 @@ class revisions extends viewModelBase {
 
         const db = this.activeDatabase();
         
-        const revisionsForConflictsDto = this.conflictsConfiguration().toDto();
+        const revisionsForConflictsDto = this.defaultConflictConfiguration().toDto();
         const conflictsTask = new saveRevisionsForConflictsConfigurationCommand(db, revisionsForConflictsDto)
             .execute();
 
@@ -265,11 +267,18 @@ class revisions extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        $(".conflicts-collection-info").tooltip({
-            title: "Revisions configuration for conflicted documents. By default revision for each conflicting item is created. Revision is also created after conflict resolution.",
-            container: "body"
-        });
-        
+        popoverUtils.longWithHover($(".conflict-defaults-info"),
+            {
+                content: `<ul class="margin-top margin-top-xs">
+                              <li><small>This is the default revision configuration for <strong>conflicting documents only</strong>.</small></li>
+                              <li><small>When enabled, a revision is created for each conflicting item.</small></li>
+                              <li><small>A revision is also created for the conflict resolution document.</small></li>
+                              <li><small>When a collection specific configuration is defined, it <strong>overrides</strong> these defaults.</li>
+                          </ul>`,
+                html: true
+            });
+
+        this.initTooltips();
         this.setupDisableReasons();
     }
 
@@ -283,7 +292,7 @@ class revisions extends viewModelBase {
         this.selectedItems.remove(entry);
 
         if (entry.isDefault()) {
-            this.defaultConfiguration(null);
+            this.defaultDocumentConfiguration(null);
         } else {
             this.perCollectionConfigurations.remove(entry);
         }
@@ -320,8 +329,8 @@ class revisions extends viewModelBase {
             this.selectedItems([]);
         } else {
             const selectedItems = this.perCollectionConfigurations().slice();
-            if (this.defaultConfiguration()) {
-                selectedItems.push(this.defaultConfiguration());
+            if (this.defaultDocumentConfiguration()) {
+                selectedItems.push(this.defaultDocumentConfiguration());
             }
 
             this.selectedItems(selectedItems);
@@ -348,6 +357,18 @@ class revisions extends viewModelBase {
                             notificationCenter.instance.openDetailsForOperationById(db, operationId);
                         });
                 }
+            });
+    }
+    
+    private initTooltips() {
+        popoverUtils.longWithHover($(".document-defaults-info"),
+            {
+                content: `<ul class="margin-top margin-top-xs">
+                              <li><small>This is the default revision configuration for all <strong>non-conflicting documents</strong>.</small></li>
+                              <li><small>When enabled, a revision is created for all non-conflicting documents.</small></li>
+                              <li><small>When a collection specific configuration is defined, it <strong>overrides</strong> these defaults.</li>
+                          </ul>`,
+                html: true
             });
     }
 }
