@@ -78,9 +78,8 @@ namespace Raven.Server.Rachis
 
         public abstract Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate);
 
-        public virtual Task OnSnapshotInstalledAsync(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public virtual void OnSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
         {
-            return Task.CompletedTask;
         }
     }
 }

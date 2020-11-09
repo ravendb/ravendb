@@ -468,7 +468,7 @@ namespace Raven.Server.Rachis
             {
                 KeepAliveAndExecuteAction(() =>
                 {
-                    _engine.SnapshotInstalledAsync(snapshot.LastIncludedIndex, requestFullSnapshot, cts.Token);
+                    _engine.SnapshotInstalled(snapshot.LastIncludedIndex, requestFullSnapshot, cts.Token);
                 }, cts, "SnapshotInstalledAsync");
             }
 
