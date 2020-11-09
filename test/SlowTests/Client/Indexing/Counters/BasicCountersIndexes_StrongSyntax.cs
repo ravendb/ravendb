@@ -1,11 +1,17 @@
-﻿using System.Linq;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -789,13 +795,13 @@ namespace SlowTests.Client.Indexing.Counters
 
                 store.Maintenance.Send(new StopIndexingOperation());
 
-                var timeSeriesIndex = new AverageHeartRate_WithLoad();
-                var indexName = timeSeriesIndex.IndexName;
-                var indexDefinition = timeSeriesIndex.CreateIndexDefinition();
+                var countersIndex = new AverageHeartRate_WithLoad();
+                var indexName = countersIndex.IndexName;
+                var indexDefinition = countersIndex.CreateIndexDefinition();
                 RavenTestHelper.AssertEqualRespectingNewLines("counters.Users.HeartRate.Select(counter => new {\r\n    counter = counter,\r\n    user = this.LoadDocument(counter.DocumentId, \"Users\")\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    address = this.LoadDocument(this0.user.AddressId, \"Addresses\")\r\n}).Select(this1 => new {\r\n    HeartBeat = ((double) this1.this0.counter.Value),\r\n    Count = 1,\r\n    City = this1.address.City\r\n})", indexDefinition.Maps.First());
                 RavenTestHelper.AssertEqualRespectingNewLines("results.GroupBy(r => r.City).Select(g => new {\r\n    g = g,\r\n    sumHeartBeat = Enumerable.Sum(g, x => ((double) x.HeartBeat))\r\n}).Select(this0 => new {\r\n    this0 = this0,\r\n    sumCount = Enumerable.Sum(this0.g, x0 => ((long) x0.Count))\r\n}).Select(this1 => new {\r\n    HeartBeat = this1.this0.sumHeartBeat / ((double) this1.sumCount),\r\n    City = this1.this0.g.Key,\r\n    Count = this1.sumCount\r\n})", indexDefinition.Reduce);
 
-                timeSeriesIndex.Execute(store);
+                countersIndex.Execute(store);
 
                 var staleness = store.Maintenance.Send(new GetIndexStalenessOperation(indexName));
                 Assert.True(staleness.IsStale);
@@ -1334,6 +1340,141 @@ namespace SlowTests.Client.Indexing.Counters
                     Assert.Equal(0, counts.CollectionTableCount);
                 }
             }
+        }
+        
+        private class CounterIndexForMultipleCounterGroups : AbstractMultiMapCountersIndexCreationTask
+        {
+            public const int N = 100;
+
+            public CounterIndexForMultipleCounterGroups()
+            {
+                for (var i = 0; i < N; i++)
+                {
+                    AddMap<User>(
+                        $"Counter{i}",
+                        counters => 
+                            from counter in counters
+                            select new { Value = counter.Value });    
+                }
+            }
+        }
+
+        private class CounterMapReduceIndexForMultipleCounterGroups : AbstractMultiMapCountersIndexCreationTask<CounterMapReduceIndexForMultipleCounterGroups.Result>
+        {
+            private const int N = 100;
+            
+            public class Result
+            {
+                public double Value { get; set; }
+                public int Count { get; set; }
+            }
+
+            public CounterMapReduceIndexForMultipleCounterGroups()
+            {
+                for (var i = 0; i < N; i++)
+                {
+                    AddMap<User>(
+                        $"Counter{i}",
+                        counters => 
+                            from counter in counters
+                            select new { Value = counter.Value, Count = 1 });    
+                }
+                
+                Reduce = results =>
+                    from result in results
+                    group result by new {result.Value}
+                    into g
+                    select new
+                    {
+                        Value = g.Key, 
+                        Count = g.Sum(r => r.Count)
+                    };
+            }
+        }
+        
+        public static IEnumerable<object[]> ProgressTestIndexes =>
+            new[]
+            {
+                new object[] {new CounterIndexForMultipleCounterGroups()}, 
+                new object[] {new CounterMapReduceIndexForMultipleCounterGroups()},
+            };
+        
+        [Theory]
+        [MemberData(nameof(ProgressTestIndexes))]
+        public async Task CounterIndexProgress_WhenMapMultipleCounterGroups_ShouldDisplayNumberOfCounterGroups1(AbstractCountersIndexCreationTask index)
+        {
+            using var store = GetDocumentStore();
+
+            await index.ExecuteAsync(store);
+
+            var user = new User();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user);
+                for (var i = 0; i < CounterIndexForMultipleCounterGroups.N; i++)
+                {
+                    session.CountersFor(user.Id).Increment($"Counter{i}", 1);
+                }
+                await session.SaveChangesAsync();
+                
+                //To make all counter ETags greater then document ETag
+                for (var i = 0; i < CounterIndexForMultipleCounterGroups.N; i++)
+                {
+                    session.CountersFor(user.Id).Increment($"Counter{i}", 1);
+                }
+                await session.SaveChangesAsync();
+            }
+            WaitForIndexing(store);
+
+            await store.Maintenance.SendAsync(new StopIndexingOperation());
+            using (var session = store.OpenAsyncSession())
+            {
+                for (var i = 0; i < CounterIndexForMultipleCounterGroups.N; i++)
+                {
+                    session.CountersFor(user.Id).Increment($"Counter{i}", 1);
+                }
+                await session.SaveChangesAsync();
+                
+                var progress = await GetProgressAsync(store);
+                Assert.True(progress.NumberOfItemsToProcess > 1);
+                Assert.True(progress.TotalNumberOfItems > 1);
+            }
+
+            await store.Maintenance.SendAsync(new StartIndexingOperation());
+            WaitForIndexing(store);
+            await store.Maintenance.SendAsync(new StopIndexingOperation());
+            using (var session = store.OpenAsyncSession())
+            {
+                for (var i = 0; i < CounterIndexForMultipleCounterGroups.N; i++)
+                {
+                    session.CountersFor(user.Id).Delete($"Counter{i}");
+                }
+                await session.SaveChangesAsync();
+                
+                var progress = await GetProgressAsync(store);
+                Assert.True(progress.NumberOfItemsToProcess > 1);
+                Assert.True(progress.TotalNumberOfItems > 1);
+            }
+        }
+
+        private static async Task<IndexProgress.CollectionStats> GetProgressAsync(IDocumentStore store)
+        {
+            using var context = JsonOperationContext.ShortTermSingleUse();
+            var client = store.GetRequestExecutor(store.Database).HttpClient;
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"{store.Urls[0]}/databases/{store.Database}/indexes/progress")
+            };
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            var indexesProgress = JsonConvert.DeserializeObject<IndexesProgress>(content);
+            if (indexesProgress.Results.Count > 0 && indexesProgress.Results[0].Collections.ContainsKey("Users"))
+            {
+                return indexesProgress.Results[0].Collections["Users"];
+            }
+            return null;
         }
     }
 }

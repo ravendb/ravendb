@@ -2014,6 +2014,29 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        public long GetNumberOfTimeSeriesSegmentsToProcess(DocumentsOperationContext context, string collection, in long afterEtag, out long totalCount)
+        {
+            var collectionName = _documentsStorage.GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collectionName);
+
+            if (table == null)
+            {
+                totalCount = 0;
+                return 0;
+            }
+
+            var indexDef = TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice];
+
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, out totalCount);
+        }
+
+        
         [Conditional("DEBUG")]
         private static void EnsureStatsAndDataIntegrity(DocumentsOperationContext context, string docId, string name, TimeSeriesValuesSegment segment)
         {
