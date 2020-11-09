@@ -90,9 +90,9 @@ namespace Raven.Server.Rachis
             return StateMachine.ShouldSnapshot(slice, type);
         }
 
-        public override Task SnapshotInstalledAsync(long lastIncludedIndex, bool fullSnapshot, CancellationToken token)
+        public override void SnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token)
         {
-            return StateMachine.OnSnapshotInstalledAsync(lastIncludedIndex, fullSnapshot, _serverStore, token);
+            StateMachine.OnSnapshotInstalled(lastIncludedIndex, fullSnapshot, _serverStore, token);
         }
 
         public override Task<RachisConnection> ConnectToPeer(string url, string tag, X509Certificate2 certificate)
@@ -2013,7 +2013,7 @@ namespace Raven.Server.Rachis
 
         public abstract long Apply(TransactionOperationContext context, long uptoInclusive, Leader leader, Stopwatch duration);
 
-        public abstract Task SnapshotInstalledAsync(long lastIncludedIndex, bool fullSnapshot, CancellationToken token);
+        public abstract void SnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, CancellationToken token);
 
         private readonly AsyncManualResetEvent _leadershipTimeChanged = new AsyncManualResetEvent();
         private int _heartbeatWaitersCounter;
