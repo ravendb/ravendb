@@ -200,7 +200,7 @@ select last()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.UtcNow.EnsureMilliseconds();
+                var baseline = RavenTestHelper.UtcToday;
                 using (var session = store.OpenSession())
                 {
 
