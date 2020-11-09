@@ -3888,7 +3888,7 @@ namespace Raven.Server.ServerWide
 
         public const string SnapshotInstalled = "SnapshotInstalled";
 
-        public override Task OnSnapshotInstalledAsync(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
+        public override void OnSnapshotInstalled(long lastIncludedIndex, bool fullSnapshot, ServerStore serverStore, CancellationToken token)
         {
             using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenWriteTransaction())
@@ -3934,7 +3934,6 @@ namespace Raven.Server.ServerWide
             token.ThrowIfCancellationRequested();
 
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
-            return Task.CompletedTask;
         }
 
         protected override RachisVersionValidation InitializeValidator()

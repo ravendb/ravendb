@@ -16,7 +16,7 @@ namespace Raven.Server.Storage.Schema
 
             public const int ConfigurationVersion = 50_000;
 
-            public const int DocumentsVersion = 50_001;
+            public const int DocumentsVersion = 50_002;
 
             public const int IndexVersion = 50_000;
         }
