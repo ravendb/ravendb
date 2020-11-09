@@ -2571,10 +2571,12 @@ namespace Raven.Server
                     }
                 });
                 ea.Execute(() => ServerMaintenanceTimer?.Dispose());
-                ea.Execute(() => AfterDisposal?.Invoke());
                 ea.Execute(() => _clusterMaintenanceWorker?.Dispose());
                 ea.Execute(() => _cpuCreditsMonitoring?.Join(int.MaxValue));
                 ea.Execute(() => CpuUsageCalculator.Dispose());
+
+                // this should be last
+                ea.Execute(() => AfterDisposal?.Invoke());
 
                 ea.ThrowIfNeeded();
             }

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -105,6 +106,7 @@ namespace RachisTests
             const int DocsBatchSize = 10;
             var cluster = await CreateRaftCluster(clusterSize, shouldRunInMemory: false);
 
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             using (var cdeArray = new CountdownsArray(subscriptionsChainSize, SubscriptionsCount))
             using (var store = GetDocumentStore(new Options
             {
@@ -113,23 +115,20 @@ namespace RachisTests
                 ModifyDocumentStore = s => s.Conventions.ReadBalanceBehavior = Raven.Client.Http.ReadBalanceBehavior.RoundRobin
             }))
             {
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
-                    session.Store(new User());
-                    session.SaveChanges();
+                    await session.StoreAsync(new User(), cts.Token);
+                    await session.SaveChangesAsync(cts.Token);
                 }
                 var databaseName = store.Database;
 
                 var workerTasks = new List<Task>();
                 for (var i = 0; i < SubscriptionsCount; i++)
                 {
-                    await GenerateWaitingSubscriptions(cdeArray.GetArray(), store, i, workerTasks);
+                    await GenerateWaitingSubscriptions(cdeArray.GetArray(), store, i, workerTasks, cts.Token);
                 }
 
-                var task = Task.Run(async () =>
-                {
-                    await ContinuouslyGenerateDocs(DocsBatchSize, store);
-                });
+                _ = Task.Run(async () => await ContinuouslyGenerateDocs(DocsBatchSize, store, cts.Token), cts.Token);
 
                 var dbNodesCountToToggle = Math.Max(Math.Min(dBGroupSize - 1, dBGroupSize / 2 + 1), 1);
                 var nodesToToggle = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).Take(dbNodesCountToToggle).ToList();
@@ -137,8 +136,10 @@ namespace RachisTests
                 _toggled = true;
                 foreach (var node in nodesToToggle)
                 {
+                    cts.Token.ThrowIfCancellationRequested();
+
                     var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == node);
-                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, nodeIndex, shouldTrapRevivedNodesIntoCandidate);
+                    await ToggleClusterNodeOnAndOffAndWaitForRehab(databaseName, cluster, nodeIndex, shouldTrapRevivedNodesIntoCandidate, cts.Token);
                 }
                 _toggled = false;
 
@@ -146,12 +147,12 @@ namespace RachisTests
 
                 foreach (var cde in cdeArray.GetArray())
                 {
-                    await KeepDroppingSubscriptionsAndWaitingForCDE(databaseName, SubscriptionsCount, cluster, cde);
+                    await KeepDroppingSubscriptionsAndWaitingForCDE(databaseName, SubscriptionsCount, cluster, cde, cts.Token);
                 }
 
                 foreach (var curNode in cluster.Nodes)
                 {
-                    await AssertNoSubscriptionLeftAlive(databaseName, SubscriptionsCount, curNode);
+                    await AssertNoSubscriptionLeftAlive(databaseName, SubscriptionsCount, curNode, cts.Token);
                 }
 
                 await Task.WhenAll(workerTasks);
@@ -192,7 +193,7 @@ namespace RachisTests
         }
 
         [Fact]
-        public async Task MakeSureAllNodesAreRoundRobined()
+        public async Task MakeSureSubscriptionProcessedAfterDisposingTheResponsibleNodes()
         {
             const int clusterSize = 5;
             var cluster = AsyncHelpers.RunSync(() => CreateRaftCluster(clusterSize, shouldRunInMemory: false));
@@ -205,13 +206,8 @@ namespace RachisTests
                 DeleteDatabaseOnDispose = false
             }))
             {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User());
-                    session.SaveChanges();
-                }
+                var namesList = new List<string>{ "E", "G", "R" };
                 var databaseName = store.Database;
-
                 var subsId = store.Subscriptions.Create<User>();
                 using var subsWorker = store.Subscriptions.GetSubscriptionWorker<User>(new Raven.Client.Documents.Subscriptions.SubscriptionWorkerOptions(subsId)
                 {
@@ -220,15 +216,25 @@ namespace RachisTests
                 );
 
                 HashSet<string> redirects = new HashSet<string>();
-
+                var mre = new ManualResetEvent(false);
+                subsWorker.AfterAcknowledgment += batch =>
+                {
+                    mre.Set();
+                    return Task.CompletedTask;
+                };
                 subsWorker.OnSubscriptionConnectionRetry += ex =>
                 {
                     redirects.Add(subsWorker.CurrentNodeTag);
                 };
-                var task = subsWorker.Run(x => { });
 
-                var sp = Stopwatch.StartNew();
+                var processedItems = new List<string>();
+                var task = subsWorker.Run(x =>
+                {
+                    foreach (var item in x.Items)
+                        processedItems.Add(item.Result.Name);
 
+                    mre.Set();
+                });
                 List<string> toggledNodes = new List<string>();
                 var toggleCount = Math.Round(clusterSize * 0.51);
                 for (int i = 0; i < toggleCount; i++)
@@ -248,17 +254,28 @@ namespace RachisTests
                     var nodeIndex = cluster.Nodes.FindIndex(x => x.ServerStore.NodeTag == responsibleNode);
                     var node = cluster.Nodes[nodeIndex];
 
+                    if (i != 0) mre.Reset();
+                    using (var session = store.OpenSession())
+                    {
+                        session.Store(new User()
+                        {
+                            Name = namesList[i]
+                        });
+                        session.SaveChanges();
+                    }
+                    Assert.True(mre.WaitOne(TimeSpan.FromSeconds(15)), "no ack");
+
                     var res = await DisposeServerAndWaitForFinishOfDisposalAsync(node);
                     Assert.Equal(responsibleNode, res.NodeTag);
                     await Task.Delay(5000);
                 }
-                while (clusterSize != redirects.Count)
-                {
-                    await Task.Delay(1000);
-                    Assert.True(sp.Elapsed < TimeSpan.FromMinutes(2), $"sp.Elapsed < TimeSpan.FromMinutes(1), redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}, offline: {string.Join(", ", toggledNodes)}");
-                }
 
-                Assert.Equal(clusterSize, redirects.Count);
+                Assert.True(redirects.Count >= toggleCount, $"redirects count : {redirects.Count}, leaderNodeTag: {cluster.Leader.ServerStore.NodeTag}, missing: {string.Join(", ", cluster.Nodes.Select(x => x.ServerStore.NodeTag).Except(redirects))}, offline: {string.Join(", ", toggledNodes)}");
+                Assert.Equal(namesList.Count, processedItems.Count);
+                for (int i = 0; i < namesList.Count; i++)
+                {
+                  Assert.Equal(namesList[i], processedItems[i]);
+                }
             }
         }
 
@@ -307,11 +324,11 @@ namespace RachisTests
             }
         }
 
-        private static async Task AssertNoSubscriptionLeftAlive(string dbName, int SubscriptionsCount, Raven.Server.RavenServer curNode)
+        private static async Task AssertNoSubscriptionLeftAlive(string dbName, int SubscriptionsCount, Raven.Server.RavenServer curNode, CancellationToken token)
         {
             if (false == curNode.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var resourceTask))
                 return;
-            var db = await resourceTask;
+            var db = await resourceTask.WithCancellation(token);
 
             for (var k = 0; k < SubscriptionsCount; k++)
             {
@@ -328,30 +345,30 @@ namespace RachisTests
             }
         }
 
-        private async Task GenerateWaitingSubscriptions(CountdownEvent[] cdes, DocumentStore store, int index, List<Task> workerTasks)
+        private async Task GenerateWaitingSubscriptions(CountdownEvent[] cdes, DocumentStore store, int index, List<Task> workerTasks, CancellationToken token)
         {
             var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
             {
                 Query = "from Users",
                 Name = "Subscription" + index
-            });
+            }, token: token);
             foreach (var cde in cdes)
             {
-                workerTasks.Add(GenerateSubscriptionThatSignalsToCDEUponCompletion(cde, store, subsId));
-                await Task.Delay(1000);
+                workerTasks.Add(GenerateSubscriptionThatSignalsToCDEUponCompletion(cde, store, subsId, token));
+                await Task.Delay(1000, token);
             }
         }
 
         private List<(SubscriptionWorker<dynamic>, Exception)> _testInfo = new List<(SubscriptionWorker<dynamic>, Exception)>();
         private List<(SubscriptionWorker<dynamic>, Exception)> _testInfoOnRetry = new List<(SubscriptionWorker<dynamic>, Exception)>();
 
-        private Task GenerateSubscriptionThatSignalsToCDEUponCompletion(CountdownEvent mainSubscribersCompletionCDE, DocumentStore store, string subsId)
+        private Task GenerateSubscriptionThatSignalsToCDEUponCompletion(CountdownEvent mainSubscribersCompletionCDE, DocumentStore store, string subsId, CancellationToken token)
         {
             var subsWorker = store.Subscriptions.GetSubscriptionWorker(new SubscriptionWorkerOptions(subsId)
             {
                 Strategy = SubscriptionOpeningStrategy.WaitForFree
             });
-            var t = subsWorker.Run(s => { }).ContinueWith(res =>
+            var t = subsWorker.Run(s => { }, token).ContinueWith(res =>
                  {
                      mainSubscribersCompletionCDE.Signal();
                      if (res.Exception == null)
@@ -376,40 +393,42 @@ namespace RachisTests
             return t;
         }
 
-        private async Task ToggleClusterNodeOnAndOffAndWaitForRehab(string databaseName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, int index, bool shouldTrapRevivedNodesIntoCandidate)
+        private async Task ToggleClusterNodeOnAndOffAndWaitForRehab(string databaseName, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, int index, bool shouldTrapRevivedNodesIntoCandidate, CancellationToken token)
         {
             var node = cluster.Nodes[index];
 
             node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
-            await Task.Delay(5000);
+            await Task.Delay(5000, token);
             node = await ToggleServer(node, shouldTrapRevivedNodesIntoCandidate);
             cluster.Nodes[index] = node;
 
             await WaitForRehab(databaseName, index, cluster);
         }
 
-        private async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store)
+        private async Task ContinuouslyGenerateDocs(int DocsBatchSize, DocumentStore store, CancellationToken token)
         {
             while (false == store.WasDisposed)
             {
+                token.ThrowIfCancellationRequested();
+
                 if (_toggled)
                 {
-                    await Task.Delay(200);
+                    await Task.Delay(200, token);
                     continue;
                 }
 
-                await ContinuouslyGenerateDocsInternal(DocsBatchSize, store);
+                await ContinuouslyGenerateDocsInternal(DocsBatchSize, store, token);
             }
         }
 
-        internal static async Task ContinuouslyGenerateDocsInternal(int DocsBatchSize, DocumentStore store)
+        internal static async Task ContinuouslyGenerateDocsInternal(int DocsBatchSize, DocumentStore store, CancellationToken token)
         {
             try
             {
                 var ids = new List<string>();
-                using (var session = store.OpenSession(new SessionOptions
+                using (var session = store.OpenAsyncSession(new SessionOptions
                 {
                     TransactionMode = TransactionMode.ClusterWide
                 }))
@@ -420,34 +439,34 @@ namespace RachisTests
                         {
                             Name = "ClusteredJohnny" + k
                         };
-                        session.Store(entity);
+                        await session.StoreAsync(entity, token);
                         ids.Add(session.Advanced.GetDocumentId(entity));
                     }
-                    session.SaveChanges();
+                    await session.SaveChangesAsync(token);
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     for (var k = 0; k < DocsBatchSize; k++)
                     {
-                        session.Store(new User
+                        await session.StoreAsync(new User
                         {
                             Name = "Johnny" + k
-                        });
+                        }, token);
                     }
-                    session.SaveChanges();
+                    await session.SaveChangesAsync(token);
                 }
 
-                using (var session = store.OpenSession())
+                using (var session = store.OpenAsyncSession())
                 {
                     for (var k = 0; k < DocsBatchSize; k++)
                     {
-                        var user = session.Load<User>(ids[k]);
+                        var user = await session.LoadAsync<User>(ids[k]);
                         user.Age++;
                     }
-                    session.SaveChanges();
+                    await session.SaveChangesAsync(token);
                 }
-                await Task.Delay(16);
+                await Task.Delay(16, token);
             }
             catch (AllTopologyNodesDownException)
             {
@@ -463,7 +482,7 @@ namespace RachisTests
             }
         }
 
-        private static async Task KeepDroppingSubscriptionsAndWaitingForCDE(string databaseName, int SubscriptionsCount, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, CountdownEvent mainSubscribersCDE)
+        private static async Task KeepDroppingSubscriptionsAndWaitingForCDE(string databaseName, int SubscriptionsCount, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, CountdownEvent mainSubscribersCDE, CancellationToken token)
         {
             var mainTcs = new TaskCompletionSource<bool>();
 
@@ -475,7 +494,7 @@ namespace RachisTests
 
             for (int i = 0; i < 20; i++)
             {
-                await DropSubscriptions(databaseName, SubscriptionsCount, cluster);
+                await DropSubscriptions(databaseName, SubscriptionsCount, cluster, token);
 
                 if (await mainTcs.Task.WaitAsync(1000))
                     break;
@@ -556,14 +575,14 @@ namespace RachisTests
             }
         }
 
-        private static async Task DropSubscriptions(string databaseName, int SubscriptionsCount, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster)
+        private static async Task DropSubscriptions(string databaseName, int SubscriptionsCount, (List<Raven.Server.RavenServer> Nodes, Raven.Server.RavenServer Leader) cluster, CancellationToken token)
         {
             foreach (var curNode in cluster.Nodes)
             {
                 Raven.Server.Documents.DocumentDatabase db = null;
                 try
                 {
-                    db = await curNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+                    db = await curNode.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).WithCancellation(token);
                 }
                 catch (DatabaseNotRelevantException)
                 {
@@ -613,7 +632,7 @@ namespace RachisTests
                     RunInMemory = false,
                     CustomSettings = settings,
                     DataDirectory = dataDirectory
-                });
+                }, caller: $"{node.DebugTag}-{nameof(ToggleServer)}");
 
                 Assert.True(node.ServerStore.Engine.CurrentState != RachisState.Passive, "node.ServerStore.Engine.CurrentState != RachisState.Passive");
             }

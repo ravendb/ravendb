@@ -4,13 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -26,7 +24,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -427,30 +424,22 @@ namespace Tests.Infrastructure
 
         protected static (string DataDirectory, string Url, string NodeTag) DisposeServerAndWaitForFinishOfDisposal(RavenServer serverToDispose)
         {
-            var mre = new ManualResetEventSlim();
             var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;
             var url = serverToDispose.WebUrl;
             var nodeTag = serverToDispose.ServerStore.NodeTag;
 
-            serverToDispose.AfterDisposal += () => mre.Set();
-            serverToDispose.Dispose();
-
-            Assert.True(mre.Wait(TimeSpan.FromMinutes(1)), $"Could not dispose server: {url}");
+            DisposeServer(serverToDispose);
 
             return (dataDirectory, url, nodeTag);
         }
 
         protected static async Task<(string DataDirectory, string Url, string NodeTag)> DisposeServerAndWaitForFinishOfDisposalAsync(RavenServer serverToDispose)
         {
-            var mre = new AsyncManualResetEvent();
             var dataDirectory = serverToDispose.Configuration.Core.DataDirectory.FullPath;
             var url = serverToDispose.WebUrl;
             var nodeTag = serverToDispose.ServerStore.NodeTag;
 
-            serverToDispose.AfterDisposal += () => mre.Set();
-            serverToDispose.Dispose();
-
-            Assert.True(await mre.WaitAsync(TimeSpan.FromMinutes(1)), $"Could not dispose server: {url}");
+            await DisposeServerAsync(serverToDispose);
 
             return (dataDirectory, url, nodeTag);
         }

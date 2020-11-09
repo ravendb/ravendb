@@ -3616,7 +3616,6 @@ namespace Raven.Server.ServerWide
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
                 {
                     var (key, oldDatabaseRecord) = GetCurrentItem(context, result.Value);
-                    long? oldTaskId = null;
 
                     var externalReplication = JsonDeserializationCluster.ExternalReplication(serverWideBlittable);
                     var databaseName = key.Substring(dbKey.Length);

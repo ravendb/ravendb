@@ -130,6 +130,12 @@ namespace Raven.Client.Documents.Queries.TimeSeries
                 }
             }
 
+            else if (JavascriptConversionExtensions.IsWrappedConstantExpression(expression))
+            {
+                LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
+                timePeriod = value.ToString();
+            }
+
             else if (expression is LambdaExpression lambda)
             {
                 if (!(lambda.Body is MethodCallExpression methodCall))
