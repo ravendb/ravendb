@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly DocumentsOperationContext _context;
 
         private Dictionary<string, Document> _loadedDocuments;
-        private readonly bool _isFromStudio;
+        private readonly bool _addTimeSeriesNames;
 
         private string _source;
         private string _collection;
@@ -52,12 +52,12 @@ namespace Raven.Server.Documents.Queries.Results
         };
 
         public TimeSeriesRetriever(DocumentsOperationContext context, BlittableJsonReaderObject queryParameters, Dictionary<string, Document> loadedDocuments,
-            bool isFromStudio)
+            bool addTimeSeriesNames)
         {
             _context = context;
             _queryParameters = queryParameters;
             _loadedDocuments = loadedDocuments;
-            _isFromStudio = isFromStudio;
+            _addTimeSeriesNames = addTimeSeriesNames;
 
             _valuesDictionary = new Dictionary<ValueExpression, object>();
             _argumentValuesDictionary = new Dictionary<FieldExpression, object>();
@@ -796,7 +796,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private void AddNamesIfNeeded(DynamicJsonValue result)
         {
-            if (_isFromStudio == false) 
+            if (_addTimeSeriesNames == false) 
                 return;
 
             var metadata = (DynamicJsonValue)(result[Constants.Documents.Metadata.Key] ?? (result[Constants.Documents.Metadata.Key] = new DynamicJsonValue()));
