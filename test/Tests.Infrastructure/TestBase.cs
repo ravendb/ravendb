@@ -28,6 +28,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server;
 using Sparrow.Server.Platform;
 using Sparrow.Threading;
 using Sparrow.Utils;
@@ -420,7 +421,7 @@ namespace FastTests
                         Console.WriteLine($"Could not retrieve list of non-deleted databases. Exception: {e}");
                     }
 
-                    copyGlobalServer.Dispose();
+                    DisposeServer(copyGlobalServer);
 
                     GC.Collect(2);
                     GC.WaitForPendingFinalizers();
@@ -445,7 +446,10 @@ namespace FastTests
         public void UseNewLocalServer(IDictionary<string, string> customSettings = null, bool? runInMemory = null, string customConfigPath = null, [CallerMemberName] string caller = null)
         {
             if (_localServer != _globalServer && _globalServer != null)
-                _localServer?.Dispose();
+            {
+                DisposeServer(_localServer);
+                _localServer = null;
+            }
 
             var co = new ServerCreationOptions
             {
@@ -731,7 +735,7 @@ namespace FastTests
 
                 exceptionAggregator.Execute(() =>
                 {
-                    _localServer.Dispose();
+                    DisposeServer(_localServer);
                     _localServer = null;
                 });
             }
@@ -743,7 +747,7 @@ namespace FastTests
                 if (i == 0)
                     DownloadAndSaveDebugPackage(shouldSaveDebugPackage, serverForDisposal, exceptionAggregator, Context);
 
-                exceptionAggregator.Execute(() => serverForDisposal.Dispose());
+                exceptionAggregator.Execute(() => DisposeServer(serverForDisposal));
             }
 
             ServersForDisposal = null;
@@ -773,6 +777,50 @@ namespace FastTests
         public Task DisposeAsync()
         {
             return Task.CompletedTask;
+        }
+
+        protected static void DisposeServer(RavenServer server, int timeoutInMs = 60_000)
+        {
+            if (server == null)
+                return;
+
+            if (server.Disposed)
+                return;
+
+            var url = server.WebUrl;
+            var debugTag = server.DebugTag;
+            var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
+
+            using (var mre = new ManualResetEventSlim())
+            {
+                server.AfterDisposal += () => mre.Set();
+                var task = Task.Run(() => server.Dispose());
+
+                Assert.True(mre.Wait(timeout), $"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+                task.GetAwaiter().GetResult();
+            }
+        }
+
+        protected static async Task DisposeServerAsync(RavenServer server, int timeoutInMs = 60_000)
+        {
+            if (server == null)
+                return;
+
+            if (server.Disposed)
+                return;
+
+            var url = server.WebUrl;
+            var debugTag = server.DebugTag;
+            var timeout = TimeSpan.FromMilliseconds(timeoutInMs);
+
+            using (var mre = new AsyncManualResetEvent())
+            {
+                server.AfterDisposal += () => mre.Set();
+                var task = Task.Run(() => server.Dispose());
+
+                Assert.True(await mre.WaitAsync(timeout), $"Could not dispose server with URL '{url}' and DebugTag: '{debugTag}' in '{timeout}'.");
+                await task;
+            }
         }
     }
 }

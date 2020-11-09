@@ -818,8 +818,8 @@ namespace Raven.Server.Documents.Queries.Results
                 _timeSeriesRetriever ??= new TimeSeriesRetriever(_includeDocumentsCommand.Context, _query.QueryParameters, _loadedDocuments);
                 var result = _timeSeriesRetriever.InvokeTimeSeriesFunction(func, documentId, args, out var type);
                 if (_query.IsStream)
-                    return _timeSeriesRetriever.PrepareForStreaming(result, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.IsFromStudio);
-                return _timeSeriesRetriever.MaterializeResults(result, type, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.IsFromStudio);
+                    return _timeSeriesRetriever.PrepareForStreaming(result, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.AddTimeSeriesNames);
+                return _timeSeriesRetriever.MaterializeResults(result, type, FieldsToFetch.SingleBodyOrMethodWithNoAlias, _query.AddTimeSeriesNames);
             }
 
             var key = new QueryKey(query.DeclaredFunctions);

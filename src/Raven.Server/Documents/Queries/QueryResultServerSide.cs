@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries
 
         public void RegisterTimeSeriesFields(IndexQueryServerSide query, FieldsToFetch fields)
         {
-            if (query.IsFromStudio == false || fields.AnyTimeSeries == false)
+            if (query.AddTimeSeriesNames == false || fields.AnyTimeSeries == false)
                 return;
 
             foreach (var field in fields.Fields)
