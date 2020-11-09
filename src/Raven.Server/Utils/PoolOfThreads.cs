@@ -161,10 +161,13 @@ namespace Raven.Server.Utils
                 _action = action;
                 _state = state;
                 _name = name;
-                _workIsDone = new LongRunningWork(new ManualResetEvent(false), name);
 
+                Debug.Assert(_workIsDone == null, "_workIsDone must be null here");
+                var workIsDone = new LongRunningWork(new ManualResetEvent(false), name);
+
+                _workIsDone = workIsDone;
                 _waitForWork.Set();
-                return _workIsDone;
+                return workIsDone;
             }
 
             public void Run()
