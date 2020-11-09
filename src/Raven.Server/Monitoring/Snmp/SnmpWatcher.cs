@@ -409,6 +409,8 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ThreadPoolAvailableWorkerThreads());
             store.Add(new ThreadPoolAvailableCompletionPortThreads());
 
+            store.Add(new TcpActiveConnections());
+
             return store;
         }
 

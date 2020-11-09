@@ -17,6 +17,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         private readonly LoadOperation _loadOperation;
         private string[] _ids;
         private string[] _includes;
+        private List<string> _alreadyInSession = new List<string>();
 
         public LazyLoadOperation(
             InMemoryDocumentSessionOperations session,
@@ -28,11 +29,23 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
-            var idsToCheckOnServer = _ids.Where(id => _session.IsLoadedOrDeleted(id) == false);
-
             var queryBuilder = new StringBuilder("?");
             _includes.ApplyIfNotNull(include => queryBuilder.AppendFormat("&include={0}", include));
-            var hasItems = idsToCheckOnServer.ApplyIfNotNull(id => queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
+
+            bool hasItems = false;
+            foreach (var id in _ids)
+            {
+                if (_session.IsLoadedOrDeleted(id))
+                {
+                    _alreadyInSession.Add(id);
+                }
+                else
+                {
+                    hasItems = true;
+                    queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id));
+                }
+            }
+            
 
             if (hasItems == false)
             {
@@ -97,9 +110,18 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         private void HandleResponse(GetDocumentsResult loadResult)
         {
+            if (_alreadyInSession.Count != 0)
+            {
+                // push this to the session
+                new LoadOperation(_session)
+                    .ByIds(_alreadyInSession)
+                    .GetDocuments<T>();
+            }
             _loadOperation.SetResult(loadResult);
             if (RequiresRetry == false)
+            {
                 Result = _loadOperation.GetDocuments<T>();
+            }
         }
     }
 }
