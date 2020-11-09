@@ -24,7 +24,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         [Fact]
-        public async Task TimeSeriesCollectionQueryFromStudioWithNamedValues_ShouldNotThrowOnDocumentsWithoutTimeSeries()
+        public async Task TimeSeriesCollectionQueryWithNamedValues_ShouldNotThrowOnDocumentsWithoutTimeSeries()
         {
             using (var store = GetDocumentStore())
             {
@@ -73,10 +73,11 @@ namespace SlowTests.Client.TimeSeries.Issues
                     using (re.ContextPool.AllocateOperationContext(out var ctx))
                     {
                         var request = queryCommand.CreateRequest(ctx, serverNode, out var url);
+                        
+                        // add special header so that 'TimeSeriesNamedValues' will be part of the results
+                        url += "&addTimeSeriesNames=true";
+                        
                         request.RequestUri = new UriBuilder(url).Uri;
-
-                        // add studio header so that 'TimeSeriesNamedValues' will be part of the results
-                        request.Headers.Add(Constants.Headers.StudioVersion, "foobar");
 
                         var response = await re.HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, CancellationToken.None);
                         await queryCommand.ProcessResponse(ctx, re.Cache, response, url);
