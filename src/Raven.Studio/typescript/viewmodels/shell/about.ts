@@ -12,6 +12,7 @@ import getLicenseConfigurationSettingsCommand = require("commands/licensing/getL
 class about extends viewModelBase {
 
     accessManager = accessManager.default.aboutView;
+    
     licenseCssClass = license.licenseCssClass;
     supportCssClass = license.supportCssClass;
     
@@ -113,6 +114,12 @@ class about extends viewModelBase {
         const expiredClass = licenseStatus.Expired ? "text-danger" : "";
         const duration = generalUtils.formatDurationByDate(expiration, true);
         return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
+    });
+
+
+    isCloud = ko.pureComputed(() => {
+        const licenseStatus = license.licenseStatus();
+        return licenseStatus && licenseStatus.IsCloud;
     });
 
     licenseType = ko.pureComputed(() => {
@@ -281,7 +288,7 @@ class about extends viewModelBase {
 
     activate(args: any) {
         super.activate(args, { shell: true });
-        return $.when<any>(this.getLicenseConfigurationSettings(), this.pullLatestVersionInfo());
+        return $.when<any>(this.getLicenseConfigurationSettings(), this.pullLatestVersionInfo(), license.fetchLicenseStatus());
     }
 }
 

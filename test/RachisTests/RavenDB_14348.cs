@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,17 +16,20 @@ namespace RachisTests
         [Fact]
         public async Task ShouldWork()
         {
+            using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
             using (var store = GetDocumentStore())
             {
-                var task = Task.Run(async () =>
+                _ = Task.Run(async () =>
                 {
                     while (false == store.WasDisposed)
                     {
-                        await SubscriptionFailoverWithWaitingChains.ContinuouslyGenerateDocsInternal(10, store);
-                    }
-                });
+                        cts.Token.ThrowIfCancellationRequested();
 
-                await Task.Delay(5555);
+                        await SubscriptionFailoverWithWaitingChains.ContinuouslyGenerateDocsInternal(10, store, cts.Token);
+                    }
+                }, cts.Token);
+
+                await Task.Delay(5555, cts.Token);
             }
         }
     }

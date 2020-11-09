@@ -206,16 +206,20 @@
             </div>
             <div data-bind="attr: { class: supportTableCssClass() + ' support-properties flex-grow' }">
                 <div class="top-row community">
-                    <h4>Community</h4>
+                    <h4 data-bind="text: isCloud() ? 'Free' : 'Community'"></h4>
                     <strong>Essential support<br/> to get started</strong>
                 </div>
-                <div class="top-row professional">
+                <div class="top-row professional" data-bind="visible: !isCloud()">
                     <h4>Professional</h4>
                     <strong>Priority support<br /> for professional<br /> projects</strong>
                 </div>
-                <div class="top-row production">
+                <div class="top-row production" data-bind="visible: !isCloud()">
                     <h4>Production</h4>
                     <strong>Top-tier support<br /> for enterprise and<br /> mission-critical<br /> projects</strong>
+                </div>
+                <div class="top-row grid-span-2 production" data-bind="visible: isCloud">
+                    <h4>Cloud Support</h4>
+                    <strong>Top support for<br /> all your cloud projects</strong>
                 </div>
                 <div class="community">
                     <i class="icon-group"></i>
@@ -231,19 +235,25 @@
                     Email &amp; Phone support
                 </div>
                 <div class="community"></div>
-                <div class="professional">
+                <div class="professional" data-bind="visible: !isCloud()">
                     <i class="icon-clock"></i>
                     Next day SLA<br />
                     <small class="text-muted">Sun-Thu | 8:00-18:00<br /> GMT+2</small>
                 </div>
-                <div class="production">
+                <div class="production" data-bind="css: { 'grid-span-2' : isCloud }">
                     <i class="icon-clock"></i>
                     2 hour SLA<br />
-                    <small class="text-muted">We're there for you <br />24/7</small>
+                    <small class="text-muted">We're here for you <br />24/7</small>
                 </div>
-                <div class="community"><a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block"><i class="icon-newtab"></i> <span>ACCESS</span></a></div>
+                <div class="community">
+                    <a href="https://groups.google.com/forum/#!forum/ravendb" target="_blank" class="btn btn-info btn-block">
+                        <i class="icon-newtab"></i> <span>ACCESS</span>
+                    </a>
+                </div>
                 <div class="grid-span-2 professional production" data-bind="visible: canUpgradeSupport">
-                    <a href="http://ravendb.net/support" target="_blank" class="btn btn-success btn-block"><i class="icon-umbrella"></i> <span>UPGRADE</span></a>
+                    <a target="_blank" class="btn btn-success btn-block" data-bind="attr: { href: isCloud() ? 'https://cloud.ravendb.net/pricing#support-options' : 'http://ravendb.net/support' }">
+                        <i class="icon-umbrella"></i> <span>UPGRADE</span>
+                    </a>
                 </div>
             </div>
             <div class="padding" data-bind="visible: !hasLicense()">

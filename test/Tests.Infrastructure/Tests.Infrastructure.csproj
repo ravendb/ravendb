@@ -25,6 +25,7 @@
     <PackageReference Include="MongoDB.Driver" Version="2.11.0" />
     <PackageReference Include="MongoDB.Driver" Version="2.11.2" />
     <PackageReference Include="MongoDB.Driver" Version="2.11.3" />
+    <PackageReference Include="MongoDB.Driver" Version="2.11.4" />
     <PackageReference Include="xunit" Version="2.4.1" />
     <PackageReference Include="xunit.runner.utility" Version="2.4.1" />
     <PackageReference Include="XunitLogger" Version="4.0.991" />
