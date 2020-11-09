@@ -43,6 +43,8 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
+                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
                     var res = Facet(session, 1, 3, out var stats);
