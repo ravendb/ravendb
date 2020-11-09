@@ -1138,24 +1138,24 @@ namespace Raven.Server.Json
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedDocumentEtag));
-                    writer.WriteInteger(kvp.Value.LastProcessedDocumentEtag);
+                    writer.WritePropertyName(nameof(kvp.Value.LastProcessedItemEtag));
+                    writer.WriteInteger(kvp.Value.LastProcessedItemEtag);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.LastProcessedTombstoneEtag));
                     writer.WriteInteger(kvp.Value.LastProcessedTombstoneEtag);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(kvp.Value.NumberOfDocumentsToProcess));
-                    writer.WriteInteger(kvp.Value.NumberOfDocumentsToProcess);
+                    writer.WritePropertyName(nameof(kvp.Value.NumberOfItemsToProcess));
+                    writer.WriteInteger(kvp.Value.NumberOfItemsToProcess);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.NumberOfTombstonesToProcess));
                     writer.WriteInteger(kvp.Value.NumberOfTombstonesToProcess);
                     writer.WriteComma();
 
-                    writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfDocuments));
-                    writer.WriteInteger(kvp.Value.TotalNumberOfDocuments);
+                    writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfItems));
+                    writer.WriteInteger(kvp.Value.TotalNumberOfItems);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.TotalNumberOfTombstones));

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
+using Newtonsoft.Json;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
@@ -10,6 +12,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.Indexing.Counters;
+using Sparrow.Json;
 using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
@@ -1659,6 +1662,128 @@ namespace SlowTests.Client.Indexing.TimeSeries
                     Assert.True(results.All(x => x.Date.Kind == DateTimeKind.Utc));
                 }
             }
+        }
+
+        private class ProgressTestTimeSeriesIndex : AbstractMultiMapTimeSeriesIndexCreationTask
+        {
+            public ProgressTestTimeSeriesIndex()
+            {
+                AddMap<User>(
+                    $"TimeSeries",
+                    timeSeriesSegments => 
+                        from seriesSegment in timeSeriesSegments
+                        select new { Value = seriesSegment.Entries.Average(e => e.Value) });   
+            }
+        }
+
+        private class ProgressTestTimeSeriesMapReduceIndex : AbstractTimeSeriesIndexCreationTask<User, ProgressTestTimeSeriesMapReduceIndex.Result>
+        {
+            public class Result
+            {
+                public double Max { get; set; }
+                public bool IsBig { get; set; }
+            }
+            public ProgressTestTimeSeriesMapReduceIndex()
+            {
+                AddMap($"TimeSeries",
+                    timeSeriesSegments => 
+                        from timeSeriesSegment in timeSeriesSegments
+                        let max = timeSeriesSegment.Entries.Max(e => e.Value)
+                        select new
+                        {
+                            Max = max,
+                            IsBig = max > 20 
+                        });
+
+                Reduce = results =>
+                    from result in results
+                    group result by new {result.IsBig}
+                    into g
+                    select new {IsBig = g.Key, Max = g.Max(r => r.Max)};
+            }
+        }
+
+
+        public static IEnumerable<object[]> ProgressTestIndexes =>
+            new[]
+            {
+                new object[] {new ProgressTestTimeSeriesIndex()}, 
+                new object[] {new ProgressTestTimeSeriesMapReduceIndex()},
+            };
+        
+        [Theory]
+        [MemberData(nameof(ProgressTestIndexes))]
+        public async Task TimeSeriesIndexProgress_WhenMapMultipleSegment_ShouldDisplayNumberOfSegmentToMap(AbstractTimeSeriesIndexCreationTask index)
+        {
+            const int numberOfTimeSeries = 500 * 1000;
+            
+            using var store = GetDocumentStore();
+
+            await index.ExecuteAsync(store);
+
+            var user = new User();
+            var baseTime = new DateTime(2020, 11, 8);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user);
+
+                for (var i = 0; i < numberOfTimeSeries; i++)
+                {
+                    session.TimeSeriesFor(user.Id, "TimeSeries").Append(baseTime.AddMilliseconds(i), 12);
+                }
+                await session.SaveChangesAsync();
+            }
+            WaitForIndexing(store);
+
+            await store.Maintenance.SendAsync(new StopIndexingOperation());
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user);
+                var start = new DateTime(2020, 11, 9);
+                for (var i = 0; i < numberOfTimeSeries; i++)
+                {
+                    session.TimeSeriesFor(user.Id, "TimeSeries").Append(start.AddMilliseconds(i), 12);
+                }
+                await session.SaveChangesAsync();
+                
+                var progress = await GetProgressAsync(store);
+                Assert.True(progress.NumberOfItemsToProcess > 1);
+                Assert.True(progress.TotalNumberOfItems > 1);
+            }
+            
+            await store.Maintenance.SendAsync(new StartIndexingOperation());
+            WaitForIndexing(store);
+            await store.Maintenance.SendAsync(new StopIndexingOperation());
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(user);
+                session.TimeSeriesFor(user.Id, "TimeSeries").Delete(baseTime, baseTime.AddMilliseconds(numberOfTimeSeries));
+                await session.SaveChangesAsync();
+                
+                var progress = await GetProgressAsync(store);
+                Assert.True(progress.NumberOfItemsToProcess > 1);
+                Assert.True(progress.TotalNumberOfItems > 1);
+            }
+        }
+
+        private static async Task<IndexProgress.CollectionStats> GetProgressAsync(IDocumentStore store)
+        {
+            using var context = JsonOperationContext.ShortTermSingleUse();
+            var client = store.GetRequestExecutor(store.Database).HttpClient;
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Get,
+                RequestUri = new Uri($"{store.Urls[0]}/databases/{store.Database}/indexes/progress")
+            };
+            var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var content = await response.Content.ReadAsStringAsync();
+            var indexesProgress = JsonConvert.DeserializeObject<IndexesProgress>(content);
+            if (indexesProgress.Results.Count > 0 && indexesProgress.Results[0].Collections.ContainsKey("Users"))
+            {
+                return indexesProgress.Results[0].Collections["Users"];
+            }
+            return null;
         }
     }
 }
