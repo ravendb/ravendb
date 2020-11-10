@@ -438,7 +438,7 @@ namespace Raven.Server
 
         public void ForceSyncCpuCredits()
         {
-            CpuCreditsBalance.ForceSync = 1;
+            CpuCreditsBalance.ForceSync = true;
         }
 
         public readonly CpuCreditsState CpuCreditsBalance = new CpuCreditsState();
@@ -451,7 +451,6 @@ namespace Raven.Server
             public double BackgroundTasksThreshold;
             public double FailoverThreshold;
             private double _remainingCpuCredits;
-            private  int _forceSync;
             public DateTime LastSyncTime;
 
             public double RemainingCpuCredits
@@ -460,11 +459,7 @@ namespace Raven.Server
                 set => Interlocked.Exchange(ref _remainingCpuCredits, value);
             }
 
-            public int ForceSync
-            {
-                get => Interlocked.CompareExchange(ref _forceSync, 0, 0);
-                set => Interlocked.Exchange(ref _forceSync, value);
-            }
+            public bool ForceSync { get; set; }
 
             public double BackgroundTasksThresholdReleaseValue;
             public double FailoverThresholdReleaseValue;
@@ -590,15 +585,14 @@ namespace Raven.Server
                 try
                 {
                     if (sw.Elapsed.TotalSeconds >= (int)Configuration.Server.CpuCreditsExecSyncInterval.AsTimeSpan.TotalSeconds 
-                        || CpuCreditsBalance.ForceSync == 1
+                        || CpuCreditsBalance.ForceSync
                         || (duringStartup && startupRetriesSw.Elapsed.TotalSeconds >= TimeSpan.FromMinutes(1).TotalSeconds)) // Time to wait between retries = 1 minute
                     {
                         sw.Restart();
 
                         UpdateCpuCreditsFromExec();
 
-                        CpuCreditsBalance.ForceSync = 0;
-
+                        CpuCreditsBalance.ForceSync = false;
                         duringStartup = false;
                         startupRetriesSw = null;
                     }
