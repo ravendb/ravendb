@@ -648,7 +648,7 @@ namespace Raven.Server.Documents.Replication
 
         private void DisposeConnections(List<IDisposable> instancesToDispose)
         {
-            TaskExecutor.Execute(toDispose =>
+            ThreadPool.QueueUserWorkItem(toDispose =>
             {
                 Parallel.ForEach((List<IDisposable>)toDispose, instance =>
                 {
@@ -842,7 +842,7 @@ namespace Raven.Server.Documents.Replication
                 finally
                 {
                     var record = rawRecord.MaterializedRecord;
-                    TaskExecutor.Execute(_ => _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record), null);
+                    ThreadPool.QueueUserWorkItem(_ => _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record), null);
                 }
             }
         }

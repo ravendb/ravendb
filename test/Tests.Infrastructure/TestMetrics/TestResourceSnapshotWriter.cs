@@ -3,17 +3,15 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using CsvHelper;
-using Raven.Server.Utils;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.LowMemory;
 using Xunit.Abstractions;
 
-namespace Tests.Infrastructure
+namespace Tests.Infrastructure.TestMetrics
 {
     public class TestResourceSnapshotWriter : IDisposable
     {
-        private readonly ICpuUsageCalculator _cpuUsageCalculator;
         private readonly TestResourcesAnalyzerMetricCacher _metricCacher;
         private readonly CsvWriter _csvWriter;
         private readonly object _syncObject = new object();
@@ -22,8 +20,8 @@ namespace Tests.Infrastructure
         {
             lock (_syncObject)
             {
-                _cpuUsageCalculator = CpuHelper.GetOSCpuUsageCalculator();
-                _metricCacher = new TestResourcesAnalyzerMetricCacher(_cpuUsageCalculator);
+                var cpuUsageCalculator = CpuHelper.GetOSCpuUsageCalculator();
+                _metricCacher = new TestResourcesAnalyzerMetricCacher(cpuUsageCalculator);
 
                 filename ??= $"TestResources_{DateTime.UtcNow:dd_MM_yyyy_HH_mm_ss}.csv";
                 
@@ -77,9 +75,10 @@ namespace Tests.Infrastructure
         {
             var timeStamp = DateTime.UtcNow;
             var assemblyName = GetAssemblyShortName(assemblyInfo);
-            var cpuUsage = _metricCacher.GetValue(MetricCacher.Keys.Server.CpuUsage, _cpuUsageCalculator.Calculate);
-
-            var memoryInfo = _metricCacher.GetValue<MemoryInfoResult>(MetricCacher.Keys.Server.MemoryInfoExtended);
+            
+            var cpuUsage = _metricCacher.GetCpuUsage();
+            var memoryInfo = _metricCacher.GetMemoryInfoExtended();
+            var tcpConnections = TcpStatisticsProvider.GetConnections();
 
             var snapshot = new TestResourceSnapshot
             {
@@ -97,7 +96,9 @@ namespace Tests.Infrastructure
                 AvailableMemoryInMb = memoryInfo.AvailableMemory.GetValue(SizeUnit.Megabytes),
                 CurrentCommitChargeInMb = memoryInfo.CurrentCommitCharge.GetValue(SizeUnit.Megabytes),
                 SharedCleanMemoryInMb = memoryInfo.SharedCleanMemory.GetValue(SizeUnit.Megabytes),
-                TotalScratchDirtyMemory = memoryInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Megabytes)
+                TotalScratchDirtyMemory = memoryInfo.TotalScratchDirtyMemory.GetValue(SizeUnit.Megabytes),
+                CurrentIpv4Connections = tcpConnections.CurrentIpv4,
+                CurrentIpv6Connections = tcpConnections.CurrentIpv6
             };
 
             return snapshot;
@@ -146,6 +147,10 @@ namespace Tests.Infrastructure
             public long TotalDirtyMemory { get; set; }
             
             public bool IsHighDirty { get; set; }
+            
+            public long CurrentIpv4Connections { get; set; }
+            
+            public long CurrentIpv6Connections { get; set; }
         }
 
         public void Dispose()
