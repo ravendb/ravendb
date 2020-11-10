@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Tests.Infrastructure.TestMetrics;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 

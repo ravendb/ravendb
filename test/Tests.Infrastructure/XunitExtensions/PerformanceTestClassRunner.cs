@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
+using Tests.Infrastructure.TestMetrics;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
