@@ -55,7 +55,7 @@ class about extends viewModelBase {
     latestVersionWhatsNewUrl = ko.pureComputed(() => 
         `https://ravendb.net/whats-new?buildNumber=${ about.latestVersion().BuildNumber }`);
 
-    maxClusterSize  = ko.pureComputed(() => {
+    maxClusterSize = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return licenseStatus ? licenseStatus.MaxClusterSize : 1;
     });
@@ -116,12 +116,17 @@ class about extends viewModelBase {
         return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
     });
 
-
     isCloud = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return licenseStatus && licenseStatus.IsCloud;
     });
 
+    automaticRenewText = ko.pureComputed(() => {
+        return this.isCloud() ? "Cloud licenses are automatically renewed" : "";
+    });
+    
+    readonly noPrivilegesText = "you have insufficient privileges. Only a Cluster Admin can do this.";
+    
     licenseType = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return !licenseStatus ? "None" : licenseStatus.Type;
@@ -194,7 +199,7 @@ class about extends viewModelBase {
     
     canRenewLicense = ko.pureComputed(() => {
         return this.accessManager.canRenewLicense &&
-               (this.licenseType() === 'Developer' ||  this.licenseType() === 'Community');
+               (this.licenseType() === 'Developer' || this.licenseType() === 'Community');
     });
 
     canForceUpdate = ko.pureComputed(() => {
