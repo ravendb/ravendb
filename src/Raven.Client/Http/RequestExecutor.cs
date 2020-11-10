@@ -507,9 +507,10 @@ namespace Raven.Client.Http
         public void Execute<TResult>(
             RavenCommand<TResult> command,
             JsonOperationContext context,
-            SessionInfo sessionInfo = null)
+            SessionInfo sessionInfo = null,
+            CancellationToken token = default)
         {
-            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo, CancellationToken.None));
+            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo, token));
         }
 
         public Task ExecuteAsync<TResult>(

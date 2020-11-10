@@ -1318,9 +1318,11 @@ namespace Raven.Server.Documents.Replication
                         }
                     case InternalReplication internalNode:
                         {
-                            using (var cts = new CancellationTokenSource(_server.Engine.TcpConnectionTimeout))
+                            using (var cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown))
                             {
-                                return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(), "Replication",
+                                cts.CancelAfter(_server.Engine.TcpConnectionTimeout);
+                                return ReplicationUtils.GetTcpInfo(internalNode.Url, internalNode.Database, Database.DbId.ToString(), Database.ReadLastEtag(),
+                                    "Replication",
                                     certificate, cts.Token);
                             }
                         }
@@ -1331,6 +1333,9 @@ namespace Raven.Server.Documents.Replication
             }
             catch (Exception e)
             {
+                if (Database.DatabaseShutdown.IsCancellationRequested)
+                    return null;
+
                 // will try to fetch it again later
                 if (_log.IsInfoEnabled)
                 {
@@ -1419,7 +1424,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx);
+                        requestExecutor.Execute(cmd, ctx, token: Database.DatabaseShutdown);
                     }
                     catch (Exception e)
                     {
@@ -1447,7 +1452,7 @@ namespace Raven.Server.Documents.Replication
 
                     try
                     {
-                        requestExecutor.Execute(cmd, ctx);
+                        requestExecutor.Execute(cmd, ctx, token: Database.DatabaseShutdown);
                     }
                     finally
                     {
@@ -1470,7 +1475,7 @@ namespace Raven.Server.Documents.Replication
                 var cmd = new GetTcpInfoCommand(ExternalReplicationTag, database, Database.DbId.ToString(), Database.ReadLastEtag());
                 try
                 {
-                    requestExecutor.Execute(cmd, ctx);
+                    requestExecutor.Execute(cmd, ctx, token: Database.DatabaseShutdown);
                 }
                 finally
                 {
