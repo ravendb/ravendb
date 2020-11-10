@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using Tests.Infrastructure.TestMetrics;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 
