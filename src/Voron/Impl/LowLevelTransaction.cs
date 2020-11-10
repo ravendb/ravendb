@@ -582,7 +582,8 @@ namespace Voron.Impl
         private void ThrowObjectDisposed()
         {
             if (_disposed.HasFlag(TxState.Disposed))
-                ThrowObjectDisposed();
+                throw new ObjectDisposedException("Transaction is already disposed");
+
             if (_disposed.HasFlag(TxState.Errored))
                 throw new InvalidDataException("The transaction is in error state, and cannot be used further");
 
