@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
@@ -59,18 +58,11 @@ namespace Raven.Server.Web.Studio
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var canConfigLicense = true;
-                var authentication = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-                if (authentication != null && authentication.Status != RavenServer.AuthenticationStatus.ClusterAdmin)
-                {
-                    canConfigLicense = false;
-                }
-                
                 var djv = new DynamicJsonValue
                 {
-                    [nameof(LicenseConfiguration.CanRenew)] = ServerStore.Configuration.Licensing.CanRenew && canConfigLicense,
-                    [nameof(LicenseConfiguration.CanActivate)] = ServerStore.Configuration.Licensing.CanActivate && canConfigLicense,
-                    [nameof(LicenseConfiguration.CanForceUpdate)] = ServerStore.Configuration.Licensing.CanForceUpdate && canConfigLicense
+                    [nameof(LicenseConfiguration.CanRenew)] = ServerStore.Configuration.Licensing.CanRenew,
+                    [nameof(LicenseConfiguration.CanActivate)] = ServerStore.Configuration.Licensing.CanActivate,
+                    [nameof(LicenseConfiguration.CanForceUpdate)] = ServerStore.Configuration.Licensing.CanForceUpdate
                 };
                 
                 context.Write(writer, djv);
