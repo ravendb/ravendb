@@ -465,6 +465,14 @@ namespace Raven.Client.Documents.Queries.TimeSeries
             throw new InvalidOperationException($"Invalid '{method}' argument: '{argument}'");
         }
 
+        private static bool IsQuoted(string s)
+        {
+            if (s.Length < 2)
+                return false;
+
+            return (s[0] == '\'' || s[0] == '\"') && s[0] == s[s.Length - 1];
+        }
+
         private static void ThrowFailedToEvaluateArgument(Expression argument, bool groupBy, Exception e = null)
         {
             throw new InvalidOperationException($"Failed to evaluate time-series {(groupBy ? "group by clause" : "name")} from argument '{argument}' ", e);
