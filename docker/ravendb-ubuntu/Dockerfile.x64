@@ -1,8 +1,8 @@
-FROM mcr.microsoft.com/dotnet/core/runtime-deps:3.1-bionic
+FROM mcr.microsoft.com/dotnet/runtime-deps:5.0-focal
 
 RUN apt-get update \
     && apt-get install -y \
-    && apt-get install --no-install-recommends bzip2 libunwind8 libcurl3 jq -y
+    && apt-get install --no-install-recommends bzip2 jq -y
 
 ENV RAVEN_ARGS='' RAVEN_SETTINGS='' RAVEN_Setup_Mode='Initial' RAVEN_DataDir='RavenData' RAVEN_ServerUrl_Tcp='38888' RAVEN_AUTO_INSTALL_CA='true' RAVEN_IN_DOCKER='true'
 
