@@ -752,7 +752,7 @@ namespace Raven.Client.Documents.Session.Loaders
 
         public int GetHashCode(AbstractTimeSeriesRange obj)
         {
-            return obj.Name.GetHashCode();
+            return obj.Name.ToLowerInvariant().GetHashCode();
         }
     }
 }
