@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RuntimeFrameworkVersion>3.1.9</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>3.1.10</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>BenchmarkTests</AssemblyName>
     <PackageId>BenchmarkTests</PackageId>
