@@ -36,9 +36,8 @@
                                        data-bind="checked: includeArtificialDocuments" />
                                 <label for="toggleArtificial">Include Artificial Documents</label>
                             </div>
-                            <div class="toggle" data-toggle="tooltip" data-placement="top"
-                                 data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled for this database' }">
-                                <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions" />
+                            <div class="toggle">
+                                <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
                                 <label for="toggleRevisions">Include Revisions</label>
                             </div>
                             <div class="toggle">
@@ -159,7 +158,7 @@
                             </div>
                         </div>
                         <div data-bind="with: model.databaseModel">
-                            <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>    
+                            <div data-bind="compose: 'database/tasks/smugglerDatabaseRecord.html'"></div>
                         </div>
                     </div>
                     <div class="form-group">

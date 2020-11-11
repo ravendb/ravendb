@@ -16,7 +16,6 @@ class exportDatabaseModel {
     includeRevisionDocuments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
     
-    revisionsAreConfigured: KnockoutComputed<boolean>;
     encryptOutput = ko.observable<boolean>(false);
     
     databaseModel = new smugglerDatabaseRecord();
@@ -140,15 +139,15 @@ class exportDatabaseModel {
     
     private initValidation() {
         this.exportDefinitionHasIncludes = ko.pureComputed(() => {
-            return this.includeDatabaseRecord() 
-                || this.includeAttachments() 
-                || this.includeConflicts() 
+            return this.includeDatabaseRecord()
+                || this.includeAttachments()
+                || this.includeConflicts()
                 || this.includeIndexes()
-                || this.includeIdentities() 
+                || this.includeIdentities()
                 || this.includeSubscriptions()
-                || this.includeCompareExchange() 
-                || this.includeCounters() 
-                || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) 
+                || this.includeCompareExchange()
+                || this.includeCounters()
+                || this.includeRevisionDocuments()
                 || this.includeDocuments();
         });
 
@@ -179,7 +178,7 @@ class exportDatabaseModel {
         this.encryptionValidationGroup = ko.validatedObservable({
             savedKeyConfirmation: this.savedKeyConfirmation,
             encryptionKey: this.encryptionKey
-        })        
+        })
     }
 }
 
