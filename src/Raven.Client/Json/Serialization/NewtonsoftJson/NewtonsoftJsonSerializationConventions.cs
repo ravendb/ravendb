@@ -21,7 +21,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         private JsonEnumerableConverter _jsonEnumerableConverter;
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
-        private CachingJsonConverter _cachedConverter, _cachedConverterWriteOnly;
+        private CachingJsonConverter _cachedConverterSerializer, _cachedConverterDeserializer;
 
         public DocumentConventions Conventions { get; private set; }
 
@@ -127,7 +127,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             var jsonSerializer = CreateInitialSerializer();
             CustomizeJsonSerializer(jsonSerializer);
             CustomizeJsonDeserializer(jsonSerializer);
-            PostJsonSerializerInitiation(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer, true, ref _cachedConverterDeserializer);
 
             jsonSerializer.ApplyOptions(options);
 
@@ -138,7 +138,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         {
             var jsonSerializer = CreateInitialSerializer();
             CustomizeJsonSerializer(jsonSerializer);
-            PostJsonSerializerInitiation(jsonSerializer);
+            PostJsonSerializerInitiation(jsonSerializer, false, ref _cachedConverterSerializer);
 
             jsonSerializer.ApplyOptions(options);
 
@@ -174,18 +174,17 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             };
         }
 
-        private void PostJsonSerializerInitiation(NewtonsoftJsonJsonSerializer jsonSerializer)
+        private void PostJsonSerializerInitiation(NewtonsoftJsonJsonSerializer jsonSerializer, bool canRead, ref CachingJsonConverter cache)
         {
-            if (_cachedConverter == null)
+            if (cache == null)
             {
-                InitializeConverters(jsonSerializer);
+                cache = InitializeConverters(jsonSerializer, canRead);
             }
             jsonSerializer.Converters.Clear();
-            jsonSerializer.Converters.Add(_cachedConverter);
-            jsonSerializer.Converters.Add(_cachedConverterWriteOnly);
+            jsonSerializer.Converters.Add(cache);
         }
 
-        private void InitializeConverters(NewtonsoftJsonJsonSerializer jsonSerializer)
+        private CachingJsonConverter InitializeConverters(NewtonsoftJsonJsonSerializer jsonSerializer, bool canRead)
         {
             if (Conventions.SaveEnumsAsIntegers == false)
                 jsonSerializer.Converters.Add(new StringEnumConverter());
@@ -199,8 +198,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
             jsonSerializer.Converters.Add(SizeConverter.Instance);
             jsonSerializer.Converters.Add(_jsonEnumerableConverter);
 
-            _cachedConverter = new CachingJsonConverter(jsonSerializer.Converters.Where(x=>x.CanRead && x.CanWrite).ToArray(), true, true);
-            _cachedConverterWriteOnly = new CachingJsonConverter(jsonSerializer.Converters.Where(x=>x.CanRead  == false && x.CanWrite).ToArray(), false, true);
+            var converters = canRead ? 
+                jsonSerializer.Converters.Where(x => x.CanRead).ToArray() : 
+                jsonSerializer.Converters.ToArray();
+
+            return new CachingJsonConverter(converters, canRead, true);
         }
     }
 }
