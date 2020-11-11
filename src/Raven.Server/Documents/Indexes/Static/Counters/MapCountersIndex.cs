@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Indexes.Static.Counters
             _mre.Set();
         }
         
-        protected override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
+        internal override void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
         {
             progressStats.NumberOfItemsToProcess +=
                 DocumentDatabase.DocumentsStorage.CountersStorage.GetNumberOfCounterGroupsToProcess(
