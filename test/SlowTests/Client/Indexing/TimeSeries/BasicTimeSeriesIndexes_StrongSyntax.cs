@@ -1715,6 +1715,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
         [MemberData(nameof(ProgressTestIndexes))]
         public async Task TimeSeriesIndexProgress_WhenMapMultipleSegment_ShouldDisplayNumberOfSegmentToMap(AbstractTimeSeriesIndexCreationTask index)
         {
+            const string timeSeries = "TimeSeries";
             const int numberOfTimeSeries = 500 * 1000;
             
             using var store = GetDocumentStore();
@@ -1722,27 +1723,23 @@ namespace SlowTests.Client.Indexing.TimeSeries
             await index.ExecuteAsync(store);
 
             var user = new User();
-            var baseTime = new DateTime(2020, 11, 8);
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(user);
-
-                for (var i = 0; i < numberOfTimeSeries; i++)
-                {
-                    session.TimeSeriesFor(user.Id, "TimeSeries").Append(baseTime.AddMilliseconds(i), 12);
-                }
+                var time = new DateTime(2020, 11, 8);
+                session.TimeSeriesFor(user.Id, timeSeries).Append(time, 12);
                 await session.SaveChangesAsync();
             }
             WaitForIndexing(store);
 
             await store.Maintenance.SendAsync(new StopIndexingOperation());
+            var baseTime = new DateTime(2020, 11, 9);
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(user);
-                var start = new DateTime(2020, 11, 9);
                 for (var i = 0; i < numberOfTimeSeries; i++)
                 {
-                    session.TimeSeriesFor(user.Id, "TimeSeries").Append(start.AddMilliseconds(i), 12);
+                    session.TimeSeriesFor(user.Id, timeSeries).Append(baseTime.AddMilliseconds(i), 12);
                 }
                 await session.SaveChangesAsync();
                 
@@ -1757,7 +1754,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(user);
-                session.TimeSeriesFor(user.Id, "TimeSeries").Delete(baseTime, baseTime.AddMilliseconds(numberOfTimeSeries));
+                session.TimeSeriesFor(user.Id, timeSeries).Delete(baseTime, baseTime.AddMilliseconds(numberOfTimeSeries));
                 await session.SaveChangesAsync();
                 
                 var progress = await GetProgressAsync(store);
