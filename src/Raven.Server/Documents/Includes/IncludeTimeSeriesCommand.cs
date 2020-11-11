@@ -125,31 +125,16 @@ namespace Raven.Server.Documents.Includes
                             if (stats.Count == 0)
                                 continue;
 
-                            if (stats.Count <= cr.Count)
+                            switch (cr.Type)
                             {
-                                switch (cr.Type)
-                                {
-                                    case TimeSeriesRangeType.Last:
-                                        result = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref start, ref pageSize);
-                                        break;
-                                    default:
-                                        throw new NotSupportedException($"Not supported time series range type '{cr.Type}'.");
-                                }
-                            }
-                            else
-                            {
-                                switch (cr.Type)
-                                {
-                                    case TimeSeriesRangeType.Last:
-                                        //TODO: what if start point is bigger than int max value
-                                        var longStart = stats.Count - cr.Count;
-                                        Debug.Assert(longStart < int.MaxValue, "longStart < int.MaxValue");
-                                        var s = (int)longStart;
-                                        result = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize);
-                                        break;
-                                    default:
-                                        throw new NotSupportedException($"Not supported time series range type '{cr.Type}'.");
-                                }
+                                case TimeSeriesRangeType.Last:
+                                    //TODO: what if start point is bigger than int max value
+                                    var s = stats.Count <= cr.Count ? 0 : (int)(stats.Count - cr.Count);
+                                    Debug.Assert(s < int.MaxValue, "s < int.MaxValue");
+                                    result = TimeSeriesHandler.GetTimeSeriesRange(_context, docId, cr.Name, stats.Start, DateTime.MaxValue, ref s, ref pageSize);
+                                    break;
+                                default:
+                                    throw new NotSupportedException($"Not supported time series range type '{cr.Type}'.");
                             }
                         }
                         break;

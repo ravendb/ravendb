@@ -447,30 +447,29 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName(name);
 
                 writer.WriteStartArray();
+
+                (long Count, DateTime Start, DateTime End) stats = default;
+                if (documentId != null)
                 {
-                    (long Count, DateTime Start, DateTime End) stats = default;
-                    if (documentId != null)
+                    Debug.Assert(context != null);
+                    stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                }
+
+                for (var i = 0; i < ranges.Count; i++)
+                {
+                    long? totalCount = null;
+
+                    if (i > 0)
+                        writer.WriteComma();
+
+                    if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
                     {
-                        Debug.Assert(context != null);
-                        stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                        totalCount = stats.Count;
                     }
 
-                    for (var i = 0; i < ranges.Count; i++)
-                    {
-                        long? totalCount = null;
+                    WriteRange(writer, ranges[i], totalCount);
 
-                        if (i > 0)
-                            writer.WriteComma();
-
-                        if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
-                        {
-                            totalCount = stats.Count;
-                        }
-
-                        WriteRange(writer, ranges[i], totalCount);
-
-                        await writer.MaybeOuterFlushAsync();
-                    }
+                    await writer.MaybeOuterFlushAsync();
                 }
                 writer.WriteEndArray();
             }
@@ -499,28 +498,27 @@ namespace Raven.Server.Documents.Handlers
                 writer.WritePropertyName(name);
 
                 writer.WriteStartArray();
+
+                (long Count, DateTime Start, DateTime End) stats = default;
+                if (documentId != null)
                 {
-                    (long Count, DateTime Start, DateTime End) stats = default;
-                    if (documentId != null)
+                    Debug.Assert(context != null);
+                    stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                }
+
+                for (var i = 0; i < ranges.Count; i++)
+                {
+                    long? totalCount = null;
+
+                    if (i > 0)
+                        writer.WriteComma();
+
+                    if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
                     {
-                        Debug.Assert(context != null);
-                        stats = context.DocumentDatabase.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(context, documentId, name);
+                        totalCount = stats.Count;
                     }
 
-                    for (var i = 0; i < ranges.Count; i++)
-                    {
-                        long? totalCount = null;
-
-                        if (i > 0)
-                            writer.WriteComma();
-
-                        if (stats != default && ranges[i].From <= stats.Start && ranges[i].To >= stats.End)
-                        {
-                            totalCount = stats.Count;
-                        }
-
-                        WriteRange(writer, ranges[i], totalCount);
-                    }
+                    WriteRange(writer, ranges[i], totalCount);
                 }
                 writer.WriteEndArray();
             }
