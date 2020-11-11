@@ -4,6 +4,8 @@ class accessManager {
 
     static default = new accessManager();
     
+    static clientCertificateThumbprint = ko.observable<string>();
+    
     securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>();
 
     private allLevels = ko.pureComputed(() => true);

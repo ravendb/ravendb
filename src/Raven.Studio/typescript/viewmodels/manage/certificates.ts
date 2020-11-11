@@ -40,12 +40,16 @@ class certificates extends viewModelBase {
     
     model = ko.observable<certificateModel>();
     showDatabasesSelector: KnockoutComputed<boolean>;
-    canExportClusterCertificates: KnockoutComputed<boolean>;
+    canDownloadClusterCertificates: KnockoutComputed<boolean>;
     canReplaceClusterCertificate: KnockoutComputed<boolean>;
     certificates = ko.observableArray<unifiedCertificateDefinition>();
+    
     serverCertificateThumbprint = ko.observable<string>();
+    clientCertificateThumbprint = ko.observable<string>();
+    
     serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
     serverCertificateRenewalDate = ko.observable<string>();
+    
     wellKnownAdminCerts = ko.observableArray<string>([]);
     wellKnownAdminCertsVisible = ko.observable<boolean>(false);
     
@@ -77,6 +81,7 @@ class certificates extends viewModelBase {
         this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", 
             "deletePermission", "addNewPermission", "fileSelected", "copyThumbprint",
             "useDatabase", "deleteCertificate", "renewServerCertificate", "canBeAutomaticallyRenewed");
+        
         this.initObservables();
         this.initValidation();
         
@@ -104,13 +109,20 @@ class certificates extends viewModelBase {
         super.compositionComplete();
         
         this.addNotification(changesContext.default.serverNotifications().watchAllAlerts(alert => this.onAlert(alert)));
-
-        $(".js-export-certificates").tooltip({
-            container: "body",
-            placement: "right"
-        });
         
-        this.model.subscribe(model  => {
+        popoverUtils.longWithHover($("#download-certificates"),
+            {
+                content: `<ul class="margin-top margin-top-xs padding padding-xs margin-left margin-bottom margin-bottom-xs">
+                              <li><small>Download the server certificate(s) of the cluster into a .pfx file.</small></li>
+                              <li><small>Only the <strong>public key</strong> is download.</small></li>
+                              <li><small>These certificates can be used during a manual cluster setup,<br>
+                                         when registering server certificates to be trusted on other nodes.</small>
+                              </li>
+                          </ul>`,
+                html: true
+            });
+        
+        this.model.subscribe(model => {
             if (model) {
                 this.initPopover();
             }
@@ -153,13 +165,19 @@ class certificates extends viewModelBase {
                 content: () => {
                     switch (this.model().mode()) {
                         case "replace":
-                            return 'Certificate file cannot be password protected.';
+                            return `<small>Certificate file cannot be password protected.</small>`;
                         case "upload":
-                            return 'Select .pfx store file with single or multiple certificates. All of them will be imported under a single name.';
+                            return `<ul class="margin-top margin-top-xs padding padding-xs margin-left margin-bottom margin-bottom-xs">
+                                        <li><small>Select a <strong>.pfx file</strong> with single or multiple certificates.</small></li>
+                                        <li><small>All certificates will be imported under a single name.</small></li>
+                                    </ul>`;
                     }
                 },
+                html: true,
                 placement: "top"
             });
+
+        $('.certificates [data-toggle="tooltip"]').tooltip();
     }
     
     private initObservables() {
@@ -171,7 +189,7 @@ class certificates extends viewModelBase {
             return this.model().securityClearance() === "ValidUser";
         });
         
-        this.canExportClusterCertificates = ko.pureComputed(() => {
+        this.canDownloadClusterCertificates = ko.pureComputed(() => {
             const certs = this.certificates();
             return _.some(certs, x => x.SecurityClearance === "ClusterNode");
         });
@@ -186,7 +204,7 @@ class certificates extends viewModelBase {
         this.newPermissionDatabaseName.extend({
             required: true
         });
-    }    
+    }
     
     private fetchRenewalDate() {
         return new getServerCertificateRenewalDateCommand()
@@ -217,8 +235,11 @@ class certificates extends viewModelBase {
     }
     
     enterEditCertificateMode(itemToEdit: unifiedCertificateDefinition) {
-        this.model(certificateModel.fromDto(itemToEdit));
-        this.model().validationGroup.errors.showAllMessages(false);
+        if (!_.includes(itemToEdit.Thumbprints, this.serverCertificateThumbprint())) {
+            // allow to edit only if not server certificate
+            this.model(certificateModel.fromDto(itemToEdit));
+            this.model().validationGroup.errors.showAllMessages(false);
+        }
     }
 
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
@@ -236,9 +257,9 @@ class certificates extends viewModelBase {
             });
     }
 
-    exportClusterCertificates() {
-        eventsCollector.default.reportEvent("certificates", "export-certs");
-        const targetFrame = $("form#certificates_export_form");
+    downloadClusterCertificates() {
+        eventsCollector.default.reportEvent("certificates", "download-cluster-certificates");
+        const targetFrame = $("form#certificates_download_form");
         targetFrame.attr("action", this.exportCertificateUrl);
         targetFrame.submit();
     }
@@ -317,7 +338,7 @@ class certificates extends viewModelBase {
 
                                 notificationCenter.instance.monitorOperation(null, operationId)
                                     .done(() => {
-                                        messagePublisher.reportSuccess("Client certificate was generated.");
+                                        messagePublisher.reportSuccess("Client certificate was generated and downloaded successfully.");
                                     })
                                     .fail(() => {
                                         notificationCenter.instance.openDetailsForOperationById(null, operationId);
@@ -383,6 +404,7 @@ class certificates extends viewModelBase {
                 });
                 
                 this.serverCertificateThumbprint(certificatesInfo.LoadedServerCert);
+                this.clientCertificateThumbprint(accessManager.clientCertificateThumbprint());
                 
                 secondaryCertificates.forEach(cert => {
                     const thumbprint = cert.CollectionPrimaryKey;
@@ -391,8 +413,17 @@ class certificates extends viewModelBase {
                 });
                 
                 mergedCertificates = _.sortBy(mergedCertificates, x => x.Name.toLocaleLowerCase());
-                this.updateCache(mergedCertificates);
-                this.certificates(mergedCertificates);
+                
+                // place the server certificate and client certificate first in list
+                let serverCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.serverCertificateThumbprint()));
+                let clientCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
+                let orderedCertificates = mergedCertificates.filter(x => x !== serverCert && x !== clientCert);
+                orderedCertificates.unshift(clientCert);
+                orderedCertificates.unshift(serverCert);
+                
+                this.updateCache(orderedCertificates);
+                this.certificates(orderedCertificates);
+                
                 this.wellKnownAdminCerts(certificatesInfo.WellKnownAdminCerts || []);
                 this.filterCertificates();
             });
@@ -411,11 +442,11 @@ class certificates extends viewModelBase {
                 cert.expirationClass = "text-danger"
             } else if (date.isAfter(nowPlusMonth)) {
                 cert.expirationText = dateFormatted;
-                cert.expirationIcon =  "icon-clock";
+                cert.expirationIcon = "icon-clock";
                 cert.expirationClass = "";
             } else {
                 cert.expirationText = dateFormatted;
-                cert.expirationIcon =  "icon-warning";
+                cert.expirationIcon = "icon-warning";
                 cert.expirationClass = "text-warning";
             }
         });

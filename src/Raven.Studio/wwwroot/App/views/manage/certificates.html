@@ -91,15 +91,15 @@
                     </button>
                     <ul class="dropdown-menu">
                         <li>
-                            <a href="#" class="js-export-certificates" data-bind="click: exportClusterCertificates, enable: canExportClusterCertificates" title="Export the server certificate(s) of the cluster without their private key into .pfx file. These certificates can be used during a manual cluster setup, when you need to register server certificates to be trusted on other nodes.">
-                                <i class="icon-export"></i>
-                                <span>Export cluster certificates</span>
+                            <a href="#" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replace the cluster certificate">
+                                <i class="icon-replace"></i>
+                                <span>Replace cluster certificate</span>
                             </a>
                         </li>
                         <li>
-                            <a href="#" data-bind="click: replaceClusterCertificate, enable: canReplaceClusterCertificate" title="Replaces cluster node certificate">
-                                <i class="icon-replace"></i>
-                                <span>Replace cluster certificate</span>
+                            <a href="#" id="download-certificates" data-bind="click: downloadClusterCertificates, enable: canDownloadClusterCertificates">
+                                <i class="icon-export"></i>
+                                <span>Download cluster certificates</span>
                             </a>
                         </li>
                     </ul>
@@ -141,7 +141,8 @@
                     <div class="panel certificate-item" data-bind="visible: Visible">
                         <div class="padding flex-horizontal">
                             <div class="certificate-name">
-                                <a href="#" title="Certificate name" class="flex-horizontal" data-bind="click: _.partial($root.enterEditCertificateMode, $data)">
+                                <a title="Certificate name" class="flex-horizontal"
+                                   data-bind="click: _.partial($root.enterEditCertificateMode, $data), attr: { 'href': !_.includes(Thumbprints, $root.serverCertificateThumbprint()) ? '#' : undefined }">
                                     <div>
                                         <i class="icon-certificate"></i>
                                     </div>
@@ -149,8 +150,10 @@
                                         <h3 class="no-margin" data-bind="text: Name || '<empty name>'"></h3>
                                     </div>
                                     <div title="This certificate is currently used by the server for incoming HTTPS connections" class="label label-info"
-                                         data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">
-                                        server certificate
+                                         data-bind="visible: _.includes(Thumbprints, $root.serverCertificateThumbprint())">server certificate
+                                    </div>
+                                    <div title="This is the client certificate currently used by the browser" class="label label-success"
+                                         data-bind="visible: _.includes(Thumbprints, $root.clientCertificateThumbprint())">client certificate
                                     </div>
                                 </a>
                                 <div class="thumbprint" title="Certificate thumbprint" data-bind="text: Thumbprints.join(', ')">
@@ -220,13 +223,13 @@
                         <div class="bg-info padding padding-sm margin-bottom" data-bind="visible: mode() === 'replace'">
                             <small>
                                 Replace the cluster certificate without shutting down the servers.
-                                The update will happen when all nodes of the cluster confirm the replacement or when
+                                The update will happen when all nodes of the cluster confirm the replacement, or when
                                 there are 3 days left for expiration.
-                                <Br />
-                                <Br />
+                                <br>
+                                <br>
                                 Please verify that the new certificate contains
                                 all of the following cluster domain names in the CN or ASN properties of the certificate:
-                                <ul data-bind="foreach: $root.domainsForServerCertificate">
+                                <ul data-bind="foreach: $root.domainsForServerCertificate" class="margin-top margin-top-xs">
                                     <li data-bind="text: $data"></li>
                                 </ul>
                             </small>
@@ -257,14 +260,14 @@
                             </div>
                             <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'replace', validationElement: certificateAsBase64">
                                 <label class="control-label certificate-file-label">
-                                    Certificate File
+                                    Certificate File 
                                     <small data-bind="visible: mode() === 'upload' || mode() === 'replace'"><i class="icon-info text-info"></i></small>
                                 </label>
                                 <div class="input-group file-input" data-bind="validationElement: $root.importedFileName">
                                     <input type="file" tabindex="-1" name="importFile" id="importFile" accept="" data-bind="event: { change: _.partial($root.fileSelected, $element) }">
-                                    <span class="static-name form-control" data-bind="text: $root.importedFileName() || 'Select .pfx file...'"></span>
+                                    <span class="static-name form-control" data-bind="text: $root.importedFileName() || 'Upload .pfx file...'"></span>
                                     <span class="input-group-btn">
-                                        <label for="importFile" class="btn btn-default">
+                                        <label for="importFile" class="btn btn-default" title="Browse for .pfx file">
                                             <i class="icon-document"></i>
                                             <span>Browse</span>
                                         </label>
@@ -272,7 +275,7 @@
                                     <p class="help-block" data-bind="validationMessage: $root.importedFileName"></p>
                                 </div>
                             </div>
-                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate'  || mode() === 'replace'">
+                            <div class="form-group" data-bind="visible: mode() === 'upload' || mode() === 'generate' || mode() === 'replace'">
                                 <label class="control-label">
                                     Certificate Passphrase
                                 </label>
@@ -313,11 +316,12 @@
                                     <label for="replaceImmediately">Replace immediately</label>
                                 </div>
                                 <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: replaceImmediately()">
-                                    <div>
+                                    <div class="flex-start">
                                         <i class="icon-info"></i>
                                     </div>
                                     <div class="small">
-                                        If 'Replace immediately' is specified, RavenDB will replace the certificate by force, even if some nodes are not responding. In that case, you will have to manually replace the certificate in those nodes. Use with care.
+                                        If 'Replace immediately' is specified, RavenDB will replace the certificate by force, even if some nodes are not responding. 
+                                        In that case, you will have to manually replace the certificate in those nodes.<br>Use with care.
                                     </div>
                                 </div>
                             </div>
@@ -330,7 +334,7 @@
                                             <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                                    id="databaseNameInput"
                                                    data-bind="textInput: $root.newPermissionDatabaseName"
-                                                   placeholder="Select a database">
+                                                   placeholder="Select (or enter) a database">
                                             <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                             <ul class="dropdown-menu" data-bind="foreach: $root.createDatabaseNameAutocompleter(), autoComplete: '#databaseNameInput'">
                                                 <li data-bind="click: _.partial($root.useDatabase, $data)">
@@ -366,11 +370,11 @@
                                     </li>
                                 </ul>
                                 <div class="bg-info padding padding-sm flex-horizontal" data-bind="visible: !$root.showDatabasesSelector()">
-                                    <div>
+                                    <div class="flex-start">
                                         <i class="icon-info"></i>
                                     </div>
                                     <div class="small">
-                                        With the user role set to <strong data-bind="text: securityClearanceLabel"></strong>, the user of this certificate is going to have access to all databases.
+                                        With security clearance set to <strong data-bind="text: securityClearanceLabel"></strong>, the user of this certificate will have access to all databases.
                                     </div>
                                 </div>
                             </div>
@@ -381,7 +385,7 @@
                                         <i class="icon-cancel"></i>
                                         <span>Cancel</span>
                                     </button>
-                                    <button class="btn btn-success" type="submit"
+                                    <button class="btn btn-success" type="submit" data-placement="bottom" data-toggle="tooltip" title="The generated certificate will be downloaded in your browser" data-animation="true"
                                             data-bind="visible: mode() === 'generate', disable: $root.spinners.processing, css: { 'btn-spinner' : $root.spinners.processing }">
                                         <i class="icon-magic-wand"></i>
                                         <span>Generate</span>
@@ -415,6 +419,6 @@
     <input name="Options" data-bind="textInput: generateCertPayload" />
 </form>
 
-<form id="certificates_export_form" target="certificate_download_iframe" style="display: none"></form>
+<form id="certificates_download_form" target="certificate_download_iframe" style="display: none"></form>
 
 <iframe name="certificate_download_iframe" style="display: none"></iframe>
