@@ -83,7 +83,7 @@ class editExternalReplicationTask extends viewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
-                this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));                
+                this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));
             });
     }
 
@@ -97,16 +97,6 @@ class editExternalReplicationTask extends viewModelBase {
         });
         
         const model = this.editedExternalReplication();
-        
-        this.dirtyFlag = new ko.DirtyFlag([
-                model.taskName,
-                model.manualChooseMentor,
-                model.mentorNode,
-                model.connectionStringName,
-                model.delayReplicationTime,
-                model.showDelayReplication,
-                this.createNewConnectionString
-            ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         
@@ -129,6 +119,17 @@ class editExternalReplicationTask extends viewModelBase {
         // Discard test connection result when needed
         this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
         this.newConnectionString().inputUrl().discoveryUrlName.subscribe(() => this.testConnectionResult(null));
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            model.taskName,
+            model.manualChooseMentor,
+            model.mentorNode,
+            model.connectionStringName,
+            model.delayReplicationTime,
+            model.showDelayReplication,
+            this.createNewConnectionString,
+            this.newConnectionString().dirtyFlag().isDirty
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     compositionComplete() {
@@ -198,7 +199,7 @@ class editExternalReplicationTask extends viewModelBase {
                     this.goToOngoingTasksView();
                 })
                 .always(() => this.spinners.save(false));
-        });  
+        });
     }
    
     cancelOperation() {
