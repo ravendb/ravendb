@@ -217,6 +217,7 @@ class shell extends viewModelBase {
                     // "https"
                     if (certificate) {
                         this.accessManager.securityClearance(certificate.SecurityClearance);
+                        accessManager.clientCertificateThumbprint(certificate.Thumbprint);
                     } else {
                         this.accessManager.securityClearance("ValidUser");
                     }
@@ -258,13 +259,12 @@ class shell extends viewModelBase {
 
         if (this.clientCertificate() && this.clientCertificate().Name) {
             
-            const dbAccess = certificateModel.resolveDatabasesAccess(this.clientCertificate())
-                .map(x => `<div>${x}</div>`)
-                .join("");
-            
+            const dbAccess = certificateModel.resolveDatabasesAccess(this.clientCertificate());
+            const allowedDatabases = dbAccess ? dbAccess.map(x => `<div>${x}</div>`).join("") : "Access to all databases is denied";
+
             popoverUtils.longWithHover($(".js-client-cert"),
-            {
-                content: `<dl class="dl-horizontal margin-none client-certificate-info">
+                {
+                    content: `<dl class="dl-horizontal margin-none client-certificate-info">
                             <dt>Client Certificate</dt>
                             <dd><strong>${this.clientCertificate().Name}</strong></dd>
                             <dt>Thumbprint</dt>
@@ -272,11 +272,11 @@ class shell extends viewModelBase {
                             <dt><span>Security Clearance</span></dt>
                             <dd><strong>${certificateModel.clearanceLabelFor(this.clientCertificate().SecurityClearance)}</strong></dd>
                             <dt><span>Access to databases:</span></dt>
-                            <dd><strong>${dbAccess}</strong></dd>
+                            <dd><strong>${allowedDatabases}</strong></dd>
                           </dl>`
-                ,
-                placement: 'top'
-            });    
+                    ,
+                    placement: 'top'
+                });
         }
         
         sys.error = (e: any) => {
