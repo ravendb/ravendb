@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -38,44 +39,40 @@ namespace Raven.Server.Documents.Indexes.Static
 
         internal const string IndexNamePrefix = "Index_";
 
-        private static readonly Lazy<(string Path, AssemblyName AssemblyName, MetadataReference Reference)[]> KnownManagedDlls = new Lazy<(string, AssemblyName, MetadataReference)[]>(DiscoverManagedDlls);
+        private static readonly Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>> AdditionalAssemblies = new Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>>(DiscoverAdditionalAssemblies);
 
         static IndexCompiler()
         {
             AssemblyLoadContext.Default.Resolving += (ctx, name) =>
             {
-                if (KnownManagedDlls.IsValueCreated == false)
-                    return null; // this also handles the case of failure
+                if (AdditionalAssemblies.IsValueCreated && AdditionalAssemblies.Value.TryGetValue(name.FullName, out var assembly))
+                    return assembly.Assembly;
 
-                foreach (var item in KnownManagedDlls.Value)
-                {
-                    if (name.FullName == item.AssemblyName.FullName)
-                        return Assembly.LoadFile(item.Path);
-                }
                 return null;
             };
         }
 
-        private static (string Path, AssemblyName AssemblyName, MetadataReference Reference)[] DiscoverManagedDlls()
+        private static ConcurrentDictionary<string, AdditionalAssemblyServerSide> DiscoverAdditionalAssemblies()
         {
-            var path = AppContext.BaseDirectory;
-            var results = new List<(string, AssemblyName, MetadataReference)>();
+            var results = new ConcurrentDictionary<string, AdditionalAssemblyServerSide>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var dll in Directory.GetFiles(path, "*.dll"))
+            foreach (var path in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
             {
-                AssemblyName name;
                 try
                 {
-                    name = AssemblyLoadContext.GetAssemblyName(dll);
+                    var name = AssemblyLoadContext.GetAssemblyName(path);
+                    var assembly = Assembly.LoadFile(path);
+                    var reference = CreateMetadataReferenceFromAssembly(assembly);
+
+                    results.TryAdd(name.FullName, new AdditionalAssemblyServerSide(name, assembly, reference, AdditionalAssemblyType.BaseDirectory));
                 }
-                catch (Exception)
+                catch
                 {
-                    continue; // we have unmanaged dlls (libsodium) here
+                    // we have unmanaged dlls (libsodium) here
                 }
-                var reference = MetadataReference.CreateFromFile(dll);
-                results.Add((dll, name, reference));
             }
-            return results.ToArray();
+
+            return results;
         }
 
         private static readonly string IndexesStaticNamespace = "Raven.Server.Documents.Indexes.Static";
@@ -310,13 +307,18 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static MetadataReference[] GetReferences(IndexDefinition definition)
         {
-            var knownManageRefs = KnownManagedDlls.Value;
+            var additionalAssemblies = AdditionalAssemblies.Value;
             var newReferences = new List<MetadataReference>();
             for (var i = 0; i < References.Length; i++)
                 newReferences.Add(References[i]);
 
-            for (int i = 0; i < knownManageRefs.Length; i++)
-                newReferences.Add(knownManageRefs[i].Reference);
+            foreach (var additionalAssembly in AdditionalAssemblies.Value.Values)
+            {
+                if (additionalAssembly.AssemblyType != AdditionalAssemblyType.BaseDirectory)
+                    continue;
+
+                newReferences.Add(additionalAssembly.AssemblyMetadataReference);
+            }
 
             if (definition.AdditionalAssemblies != null)
             {
@@ -355,7 +357,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     var assemblyName = new AssemblyName(name);
                     var assembly = Assembly.Load(assemblyName);
-                    return CreateMetadataReferenceFromAssembly(assembly);
+                    return RegisterAssembly(assembly);
                 }
                 catch (Exception e)
                 {
@@ -368,7 +370,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 try
                 {
                     var assembly = LoadAssembly(path);
-                    return CreateMetadataReferenceFromAssembly(assembly);
+                    return RegisterAssembly(assembly);
                 }
                 catch (Exception e)
                 {
@@ -395,7 +397,7 @@ namespace Raven.Server.Documents.Indexes.Static
                     foreach (var path in paths)
                     {
                         var assembly = LoadAssembly(path);
-                        references.Add(CreateMetadataReferenceFromAssembly(assembly));
+                        references.Add(RegisterAssembly(assembly));
                     }
 
                     return references;
@@ -404,6 +406,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 {
                     throw new IndexCompilationException($"Cannot load NuGet package '{packageName}' version '{packageVersion}' from '{packageSourceUrl ?? MultiSourceNuGetFetcher.Instance.DefaultPackageSourceUrl}'.", e);
                 }
+            }
+
+            static MetadataReference RegisterAssembly(Assembly assembly)
+            {
+                return AdditionalAssemblies.Value.GetOrAdd(assembly.FullName, _ => new AdditionalAssemblyServerSide(assembly.GetName(), assembly, CreateMetadataReferenceFromAssembly(assembly), AdditionalAssemblyType.Package)).AssemblyMetadataReference;
             }
 
             static Assembly LoadAssembly(string path)
@@ -876,6 +883,28 @@ namespace Raven.Server.Documents.Indexes.Static
             public bool HasCreateField { get; set; }
 
             public bool HasBoost { get; set; }
+        }
+
+        private class AdditionalAssemblyServerSide
+        {
+            public AdditionalAssemblyServerSide(AssemblyName name, Assembly assembly, MetadataReference reference, AdditionalAssemblyType type)
+            {
+                AssemblyName = name ?? throw new ArgumentNullException(nameof(name));
+                Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
+                AssemblyMetadataReference = reference ?? throw new ArgumentNullException(nameof(reference));
+                AssemblyType = type;
+            }
+
+            public AssemblyName AssemblyName { get; }
+            public Assembly Assembly { get; }
+            public MetadataReference AssemblyMetadataReference { get; }
+            public AdditionalAssemblyType AssemblyType { get; }
+        }
+
+        public enum AdditionalAssemblyType
+        {
+            BaseDirectory,
+            Package
         }
     }
 }
