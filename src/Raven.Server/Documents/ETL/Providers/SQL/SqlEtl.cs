@@ -80,18 +80,23 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             var count = 0;
 
-            using (var writer = new RelationalDatabaseWriter(this, Database))
+            var lazyWriter = new Lazy<RelationalDatabaseWriter>(() => new RelationalDatabaseWriter(this, Database));
+
+            foreach (var table in records)
             {
-                foreach (var table in records)
-                {
-                    var stats = writer.Write(table, null, CancellationToken);
+                var writer = lazyWriter.Value;
 
-                    LogStats(stats, table);
+                var stats = writer.Write(table, null, CancellationToken);
 
-                    count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
-                }
+                LogStats(stats, table);
 
-                writer.Commit();
+                count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
+            }
+
+            if (lazyWriter.IsValueCreated)
+            {
+                lazyWriter.Value.Commit();
+                lazyWriter.Value.Dispose();
             }
 
             return count;
