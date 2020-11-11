@@ -2210,7 +2210,7 @@ namespace Raven.Server.Documents.Indexes
             _indexStorage.Rename(name);
         }
 
-        public virtual IndexProgress GetProgress(QueryOperationContext queryContext, bool? isStale = null)
+        internal virtual IndexProgress GetProgress(QueryOperationContext queryContext, bool? isStale = null)
         {
             using (CurrentlyInUse(out var valid))
             {
@@ -2326,7 +2326,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
+        internal virtual void UpdateProgressStats(QueryOperationContext queryContext, IndexProgress.CollectionStats progressStats, string collectionName)
         {
             progressStats.NumberOfItemsToProcess +=
                 DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(
@@ -2351,12 +2351,12 @@ namespace Raven.Server.Documents.Indexes
             return Collections;
         }
 
-        public IndexProgress.CollectionStats GetStats(string collection)
+        internal IndexProgress.CollectionStats GetStats(string collection)
         {
             return _inMemoryIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
         }
 
-        public IndexProgress.CollectionStats GetReferencesStats(string collection)
+        internal IndexProgress.CollectionStats GetReferencesStats(string collection)
         {
             return _inMemoryReferencesIndexProgress.GetOrAdd(collection, _ => new IndexProgress.CollectionStats());
         }

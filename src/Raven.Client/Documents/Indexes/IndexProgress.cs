@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public class IndexProgress
+    internal class IndexProgress
     {
         public string Name { get; set; }
 
@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Indexes
         }
     }
 
-    public class IndexesProgress
+    internal class IndexesProgress
     {
         public List<IndexProgress> Results { get; set; }
     }
