@@ -17,7 +17,7 @@ namespace SlowTests.Bugs
         [Fact]
         public void Can_read_date_time_offset_from_lucene_query()
         {
-            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
+            var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateDeserializer();
 
             using (var reader = new JsonTextReader(new StringReader(@"{""Item"": ""20090402193554412""}")))
             {
