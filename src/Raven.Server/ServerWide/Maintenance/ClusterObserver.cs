@@ -1363,6 +1363,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     return false;
                 }
 
+                if (mentorIndexStats.State != IndexState.Disabled && currentIndexStats.State == IndexState.Disabled)
+                {
+                    reason = $"Index '{mentorIndex.Key}' is in state '{currentIndexStats.State}'";
+                    return false;
+                }
+
                 if (currentIndexStats.IsStale == false)
                     continue;
 
