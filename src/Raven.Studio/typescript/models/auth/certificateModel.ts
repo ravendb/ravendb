@@ -93,7 +93,7 @@ class certificateModel {
                 if (access.length) {
                     return _.sortBy(access, x => x.toLowerCase());
                 }
-                return null;
+                return [];
         }
     }
 

@@ -105,7 +105,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="scroll flex-grow">
+            <div class="scroll flex-grow margin-top margin-top-sm">
                 <div class="panel panel-info certificate-item" data-bind="visible: wellKnownAdminCertsVisible">
                     <div class="padding flex-horizontal">
                         <div class="certificate-name">
@@ -194,7 +194,7 @@
                                         <div class="flex-horizontal flex-wrap" data-bind="foreach: $root.resolveDatabasesAccess($data)">
                                             <strong data-bind="text: $data"></strong>
                                         </div>
-                                        <strong class="flex-horizontal flex-wrap text-danger" data-bind="visible: $root.resolveDatabasesAccess($data) === null">
+                                        <strong class="flex-horizontal flex-wrap text-danger" data-bind="visible: !$root.resolveDatabasesAccess($data).length">
                                             None
                                         </strong>
                                     </div>
