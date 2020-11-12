@@ -137,6 +137,7 @@ namespace Raven.Server.Documents.Replication
                 InvalidConflictWhenThereIsNone(conflict.Id);
 
             conflictedDocs.Add(conflict.Clone());
+            conflictedDocs = conflictedDocs.OrderBy(x => x.Doc?.GetHashCode()).ToList();
 
             if (_conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,

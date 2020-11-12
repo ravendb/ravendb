@@ -69,6 +69,7 @@ namespace FastTests.Blittable
                 using (var blittable1 = ctx.ReadObject(json1, "foo"))
                 using (var blittable2 = ctx.ReadObject(json2, "foo"))
                 {
+                    Assert.Equal(blittable1.GetHashCode(), blittable2.GetHashCode());
                     Assert.Equal(blittable1, blittable2);
                 }
             }
@@ -130,6 +131,7 @@ namespace FastTests.Blittable
                 using (var blittable1 = ctx.ReadObject(json1, "foo"))
                 using (var blittable2 = ctx.ReadObject(json2, "foo"))
                 {
+                    Assert.Equal(blittable1.GetHashCode(), blittable2.GetHashCode());
                     Assert.Equal(blittable1, blittable2);
                 }
             }
@@ -164,6 +166,8 @@ namespace FastTests.Blittable
                 using (var blittable1 = ctx.ReadObject(json1, "foo"))
                 using (var blittable2 = ctx.ReadObject(json2, "foo"))
                 {
+                    Assert.NotEqual(blittable1.GetHashCode(), blittable2.GetHashCode());
+
                     blittable1.TryGet("Address", out BlittableJsonReaderObject ob1);
                     blittable2.TryGet("Address", out BlittableJsonReaderObject ob2);
 
@@ -223,11 +227,13 @@ namespace FastTests.Blittable
                 using (var blittable1 = ctx.ReadObject(json1, "foo"))
                 using (var blittable2 = ctx.ReadObject(json2, "foo"))
                 {
+                    Assert.Equal(blittable1.GetHashCode(), blittable2.GetHashCode());
                     Assert.True(blittable1.Equals(blittable2));
 
                     blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
                     blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
 
+                    Assert.Equal(ob1.GetHashCode(), ob2.GetHashCode());
                     Assert.True(ob1.Equals(ob2));
                 }
             }
@@ -287,11 +293,13 @@ namespace FastTests.Blittable
                 using (var blittable1 = ctx.ReadObject(json1, "foo"))
                 using (var blittable2 = ctx.ReadObject(json2, "foo"))
                 {
+                    Assert.Equal(blittable1.GetHashCode(), blittable2.GetHashCode());
                     Assert.True(blittable1.Equals(blittable2));
 
                     blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
                     blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
 
+                    Assert.Equal(ob1.GetHashCode(), ob2.GetHashCode());
                     Assert.True(ob1.Equals(ob2));
                 }
             }
@@ -351,11 +359,13 @@ namespace FastTests.Blittable
                 using (var blittable1 = ctx.ReadObject(json1, "foo"))
                 using (var blittable2 = ctx.ReadObject(json2, "foo"))
                 {
+                    Assert.NotEqual(blittable1.GetHashCode(), blittable2.GetHashCode());
                     Assert.False(blittable1.Equals(blittable2));
 
                     blittable1.TryGet("Office", out BlittableJsonReaderObject ob1);
                     blittable2.TryGet("Office", out BlittableJsonReaderObject ob2);
 
+                    Assert.NotEqual(ob1.GetHashCode(), ob2.GetHashCode());
                     Assert.False(ob1.Equals(ob2));
                 }
             }
