@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -85,9 +86,16 @@ namespace Raven.Server.Documents.Replication
                         conflicts.Add(local);
 
                     var resolved = _conflictResolver.ResolveToLatest(conflicts);
-                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflictedDoc);
-
-                    return;
+                    try
+                    {
+                        _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflictedDoc, localDocumentTuple.Document);
+                        return;
+                    }
+                    catch (AttachmentConflictException e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info($"{nameof(AttachmentConflictException)} occurred on attachment of document '{e.DocId}'. Please resolve manually.", e);
+                    }
                 }
 
                 _database.DocumentsStorage.ConflictsStorage.AddConflict(documentsContext, id, lastModifiedTicks, doc, changeVector, collection, flags);
@@ -117,9 +125,10 @@ namespace Raven.Server.Documents.Replication
 
             var conflictedDocs = new List<DocumentConflict>(documentsContext.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(documentsContext, conflict.Id));
 
+            DocumentsStorage.DocumentOrTombstone relevantLocalDoc = default;
             if (conflictedDocs.Count == 0)
             {
-                var relevantLocalDoc = documentsContext.DocumentDatabase.DocumentsStorage
+                relevantLocalDoc = documentsContext.DocumentDatabase.DocumentsStorage
                     .GetDocumentOrTombstone(
                         documentsContext,
                         conflict.Id);
@@ -145,7 +154,18 @@ namespace Raven.Server.Documents.Replication
                 conflictedDocs,
                 documentsContext.GetLazyString(collection), out var resolved))
             {
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflict);
+                try
+                {
+                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflict, relevantLocalDoc.Document);
+                }
+                catch (AttachmentConflictException e)
+                {
+                    if (_log.IsInfoEnabled)
+                        _log.Info($"{nameof(AttachmentConflictException)} occurred on attachment of document '{e.DocId}'. Please resolve manually.", e);
+
+                    return false;
+                }
+
                 return true;
             }
 

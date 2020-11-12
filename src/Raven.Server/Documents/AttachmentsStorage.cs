@@ -956,7 +956,6 @@ namespace Raven.Server.Documents
                     AttachmentDoesNotExistException.ThrowFor(docId, name);
 
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerNewName, out Slice newNamePtr))
-                using (var cv = context.GetLazyString(attachment.ChangeVector))
                 using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerNewName.Content.Ptr, lowerNewName.Size, base64Hash, lowerContentType.Content.Ptr,
                     lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice newKeySlice))
                 {
@@ -980,30 +979,43 @@ namespace Raven.Server.Documents
             };
         }
 
-        public string ResolveAttachmentName(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType)
+        public bool DeleteAttachment(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType, AttachmentType attachmentType)
         {
-            const string prefix = "RESOLVED";
-            var count = 0;
-            string newName = $"{prefix}_#{count}_{name}";
+            var docId = lowerId.ToString();
+            if (string.IsNullOrWhiteSpace(docId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(lowerId));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
+            if (string.IsNullOrWhiteSpace(hash))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(hash));
+            if (string.IsNullOrWhiteSpace(contentType))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(contentType));
+            if (attachmentType != AttachmentType.Document)
+                throw new ArgumentException($"{nameof(DeleteAttachmentDirect)} only supported for documents attachment.", nameof(attachmentType));
+            if (context.Transaction == null)
+                throw new ArgumentException($"Context must be set with a valid transaction before calling {nameof(DeleteAttachmentDirect)}", nameof(context));
 
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
-            using (Slice.From(context.Allocator, hash, out Slice base64Hash))
+            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
+            using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
-                while (true)
-                {
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerName, out Slice namePtr))
-                    using (GetAttachmentPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, changeVector: null, out Slice partialKeySlice))
-                    {
-                        if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out _) == false)
-                            break;
+                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
+                    return false;
 
-                        newName = $"{prefix}_#{++count}_{name}";
-                    }
-                }
+                var attachment = TableValueToAttachment(context, ref tvr);
+                if (attachment == null)
+                    AttachmentDoesNotExistException.ThrowFor(docId, name);
+
+                var tombstoneEtag = _documentsStorage.GenerateNextEtag();
+                var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
+                context.LastDatabaseChangeVector = changeVector;
+                DeleteAttachmentDirect(context, keySlice, isPartialKey: false, name, attachment.ChangeVector, changeVector, _documentDatabase.Time.GetUtcNow().Ticks);
             }
 
-            return newName;
+            return true;
         }
 
         public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true)

@@ -1,7 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Exceptions.Documents.Attachments;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
@@ -242,9 +248,15 @@ namespace Raven.Server.Documents.Replication
         public void PutResolvedDocument(
            DocumentsOperationContext context,
            DocumentConflict resolved,
-           DocumentConflict incoming = null)
+           DocumentConflict incoming = null,
+           Document local = null)
         {
             SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
+            if (resolved.Doc != null)
+            {
+                // check for attachments with duplicate name
+                ResolveAttachmentsConflicts(context, resolved.LowerId, resolved, incoming, local);
+            }
 
             // Resolved document should generate a new change vector, since it was changed locally. 
             // In a cluster this may cause a ping-pong replication which will be settled down by the fact that a conflict with identical content doesn't increase the local etag
@@ -399,6 +411,125 @@ namespace Raven.Server.Documents.Replication
             latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
 
             return latestDoc;
+        }
+
+        private void ResolveAttachmentsConflicts(DocumentsOperationContext context, LazyStringValue lowerIdString, DocumentConflict resolved, DocumentConflict conflict, Document local)
+        {
+            using var scope = Slice.External(context.Allocator, lowerIdString, out var lowerId);
+            if (resolved.Doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false
+                || metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                return;
+
+            var currentDocumentAttachments = (from BlittableJsonReaderObject bjro in attachments select JsonDeserializationClient.AttachmentName(bjro)).ToList();
+            var storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, lowerId);
+
+            var oldAttachmentsMetadata = ExtractOldAttachmentsMetdataIfNeeded(attachments.Length, new List<BlittableJsonReaderObject> { local.Data, conflict.Doc });
+            var attachmentsToRemove = oldAttachmentsMetadata?.Select(x => x.Name).ToList();
+
+            foreach (var currentAttachment in currentDocumentAttachments)
+            {
+                var count = CountInAttachmentsList(currentAttachment.Name, storageAttachmentsDetails);
+                switch (count)
+                {
+                    case 1:
+                        RemoveFromAttachmentsToRemoveListIfNeeded(currentAttachment.Name);
+                        continue;
+                    case 0:
+                        // attachment exists in metadata, does not exist in storage (renamed/added in conflict resolution)
+                        // try to find attachments in attachment storage with both same hash and content type
+                        var matches = storageAttachmentsDetails.Where(x => x.Hash == currentAttachment.Hash && x.ContentType == currentAttachment.ContentType).ToList();
+                        if (matches.Count == 0)
+                        {
+                            // attachment is in the metadata but doesn't exist in the attachments storage
+                            throw new AttachmentConflictException($"Attachment '{currentAttachment.Name}' was found in '{nameof(DocumentFlags.Resolved)}' document '{lowerId}' metadata, but was not found in the attachments storage using the following: Hash: '{currentAttachment.Hash}', ContentType: '{currentAttachment.ContentType}'.", lowerId.ToString());
+                        }
+
+                        foreach (var match in matches)
+                        {
+                            // find which name of the matched attachments doesn't exist in the current metadata
+                            if (CountInAttachmentsList(match.Name, currentDocumentAttachments) == 0)
+                            {
+                                if (_database.DocumentsStorage.AttachmentsStorage.RenameAttachment(context, lowerId, match.Name, match.Hash, match.ContentType, AttachmentType.Document, currentAttachment.Name) == null)
+                                    throw new AttachmentConflictException($"Could not rename attachment '{match.Name}' to '{currentAttachment.Name}' in attachments storage of document '{lowerId}', attachment has the following: Hash: '{currentAttachment.Hash}', ContentType: '{currentAttachment.ContentType}'.", lowerId.ToString());
+                                
+                                RemoveFromAttachmentsToRemoveListIfNeeded(match.Name);
+                                break;
+                            }
+                        }
+
+                        break;
+                    case 2:
+                        // there are attachments with duplicate names in storage
+                        var duplicates = storageAttachmentsDetails.Where(x => x.Name == currentAttachment.Name && (x.Hash != currentAttachment.Hash || x.ContentType != currentAttachment.ContentType)).ToList();
+
+                        foreach (var duplicate in duplicates)
+                        {
+                            if (_database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, lowerId, duplicate.Name, duplicate.Hash, duplicate.ContentType, AttachmentType.Document) == false)
+                                throw new AttachmentConflictException($"Could not remove duplicate attachment '{duplicate.Name}' with hash: '{duplicate.Hash}' and ContentType: '{duplicate.ContentType}' of resolved document '{lowerId}' attachment '{currentAttachment.Name}' with the following: Hash: '{currentAttachment.Hash}', ContentType: '{currentAttachment.ContentType}'.", lowerId.ToString());
+                        }
+
+                        RemoveFromAttachmentsToRemoveListIfNeeded(currentAttachment.Name);
+                        break;
+                    default:
+                        throw new InvalidDataException($"Attachment count for resolved document '{lowerId}' is '{count}', supported values are 0, 1, 2.");
+                }
+            }
+
+            if (oldAttachmentsMetadata == null) 
+                return;
+
+            foreach (var attachment in oldAttachmentsMetadata)
+            {
+                if (attachmentsToRemove.Contains(attachment.Name))
+                {
+                    if (_database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType, AttachmentType.Document) == false)
+                        throw new AttachmentConflictException($"Could not delete removed attachment '{attachment.Name}' with hash: '{attachment.Hash}' and ContentType: '{attachment.ContentType}' of resolved document '{lowerId}'.", lowerId.ToString());
+                }
+            }
+
+            static int CountInAttachmentsList(string name, IEnumerable<AttachmentName> storageAttachmentsDetails)
+            {
+                int count = 0;
+                foreach (var item in storageAttachmentsDetails)
+                {
+                    if (item.Name != name)
+                        continue;
+
+                    if (++count != 2)
+                        continue;
+
+                    break;
+                }
+
+                return count;
+            }
+
+            static List<AttachmentName> ExtractOldAttachmentsMetdataIfNeeded(int resolvedAttachmentsLength, List<BlittableJsonReaderObject> blittables)
+            {
+                List<AttachmentName> localDocumentAttachments = null;
+
+                foreach (var blittable in blittables)
+                {
+                    if (blittable == null || blittable.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldDocumentMetadata) == false ||
+                        oldDocumentMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments) == false)
+                        continue;
+
+                    if (resolvedAttachmentsLength < oldAttachments.Length)
+                    {
+                        localDocumentAttachments ??= new List<AttachmentName>();
+                        // deleted attachment in resolved document
+                        localDocumentAttachments.AddRange((from BlittableJsonReaderObject bjro in oldAttachments select JsonDeserializationClient.AttachmentName(bjro)));
+                    }
+                }
+
+                return localDocumentAttachments;
+            }
+
+            void RemoveFromAttachmentsToRemoveListIfNeeded(string name)
+            {
+                if (oldAttachmentsMetadata != null && attachmentsToRemove.Contains(name))
+                    attachmentsToRemove.Remove(name);
+            }
         }
     }
 
