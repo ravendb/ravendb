@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.Loader;
@@ -110,7 +111,8 @@ namespace Raven.Server.Documents.Indexes.Static
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("netstandard"))),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("System.Collections"))),
             CreateMetadataReferenceFromAssembly(typeof(Regex).Assembly),
-            CreateMetadataReferenceFromAssembly(typeof(Uri).Assembly)
+            CreateMetadataReferenceFromAssembly(typeof(Uri).Assembly),
+            CreateMetadataReferenceFromAssembly(typeof(IPAddress).Assembly)
         };
 
         private unsafe static MetadataReference CreateMetadataReferenceFromAssembly(Assembly assembly)
