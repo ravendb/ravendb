@@ -57,6 +57,7 @@ namespace Raven.Server.Web.Studio
                         throw new ArgumentException("'Map' field is mandatory, but wasn't specified");
 
                     json.TryGet(nameof(IndexDefinition.AdditionalSources), out BlittableJsonReaderObject additionalSourcesJson);
+                    json.TryGet(nameof(IndexDefinition.AdditionalAssemblies), out BlittableJsonReaderArray additionalAssembliesArray);
 
                     var indexDefinition = new IndexDefinition
                     {
@@ -65,7 +66,8 @@ namespace Raven.Server.Web.Studio
                         {
                             map
                         },
-                        AdditionalSources = ConvertToAdditionalSources(additionalSourcesJson)
+                        AdditionalSources = ConvertToAdditionalSources(additionalSourcesJson),
+                        AdditionalAssemblies = ConvertToAdditionalAssemblies(additionalAssembliesArray)
                     };
 
                     try
@@ -91,7 +93,6 @@ namespace Raven.Server.Web.Studio
                         }
                     }
                 }
-
             }
         }
 
@@ -111,6 +112,58 @@ namespace Raven.Server.Web.Studio
             }
 
             return result;
+        }
+
+        private static HashSet<AdditionalAssembly> ConvertToAdditionalAssemblies(BlittableJsonReaderArray jsonArray)
+        {
+            if (jsonArray == null || jsonArray.Length == 0)
+                return null;
+
+            var result = new HashSet<AdditionalAssembly>();
+           
+            foreach (BlittableJsonReaderObject assemblyJson in jsonArray)
+            {
+                var assembly = GetAssembly(assemblyJson);
+                if (assembly != null)
+                {
+                    result.Add(assembly);
+                }
+            }
+
+            return result;
+        }
+
+        private static AdditionalAssembly GetAssembly(BlittableJsonReaderObject json)
+        {
+            json.TryGet(nameof(AdditionalAssembly.AssemblyName), out string assemblyName);
+            json.TryGet(nameof(AdditionalAssembly.AssemblyPath), out string assemblyPath);
+            json.TryGet(nameof(AdditionalAssembly.PackageName), out string packageName);
+            json.TryGet(nameof(AdditionalAssembly.PackageVersion), out string packageVersion);
+            json.TryGet(nameof(AdditionalAssembly.PackageSourceUrl), out string packageSourceUrl);
+                
+            json.TryGet(nameof(AdditionalAssembly.Usings), out BlittableJsonReaderArray usingsArray);
+            var usings = new HashSet<string>();
+            foreach (var item in usingsArray)
+            {
+                usings.Add(item.ToString());
+            }
+
+            if (string.IsNullOrWhiteSpace(assemblyName) == false)
+            {
+                return AdditionalAssembly.FromRuntime(assemblyName, usings);
+            }
+
+            if (string.IsNullOrWhiteSpace(assemblyPath) == false)
+            {
+                return AdditionalAssembly.FromPath(assemblyPath, usings);
+            }
+
+            if (string.IsNullOrWhiteSpace(packageName) == false && string.IsNullOrWhiteSpace(packageVersion) == false)
+            {
+                return AdditionalAssembly.FromNuGet(packageName, packageVersion, packageSourceUrl, usings);
+            }
+            
+            return null;
         }
     }
 }
