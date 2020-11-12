@@ -78,6 +78,7 @@
                             <div class="content">
                                 <small data-bind="text: expiresText"></small>
                                 <strong data-bind="html: formattedExpiration"></strong>
+                                <small data-bind="text: automaticRenewText"></small>
                             </div>
                         </div>
                     </div>
@@ -89,7 +90,6 @@
                             <strong data-bind="text: licenseId"></strong>
                         </div>
                     </div>
-
                     <div class="big-label">
                         <div class="content text-center">
                             <small>License To</small>
@@ -130,16 +130,13 @@
                     <div class="name">Immediate</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasExternalReplication') }"></i></div>
                     <div class="name">Delayed</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDelayedExternalReplication') }"></i></div>
                     <h4>Pull Replication</h4>
-
                     <div class="name">Hub</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsHub') }"></i></div>
                     <div class="name">Sink</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsSink') }"></i></div>
-
                     <h4>Backups</h4>
                     <div class="name">Local</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Cloud & Remote</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasCloudBackups') }"></i></div>
                     <div class="name">Snapshot backups</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnapshotBackups') }"></i></div>
                     <div class="name">Encrypted backups</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasEncryptedBackups') }"></i></div>
-
                     <h4>ETL</h4>
                     <div class="name">SQL ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSqlEtl') }"></i></div>
                     <div class="name">RavenDB ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasRavenEtl') }"></i></div>
@@ -154,8 +151,8 @@
                     <!-- ko if: !registered() -->
                     <button class="btn btn-primary flex-grow" 
                             data-bind="click: register, 
-                                       enable: isActivateLicenseEnabled,
-                                       attr: { title: isActivateLicenseEnabled() ? 'Register a new license' : 'Registering new license is disabled in the server configuration' }"> 
+                                       enable: isRegisterLicenseEnabled,
+                                       attr: { title: registerTooltip }">
                             <span>REGISTER LICENSE</span>
                     </button>
                     <!-- /ko -->
@@ -163,8 +160,8 @@
                     <button class="btn btn-primary flex-grow"
                             data-bind="click: register, 
                                        visible: accessManager.canReplaceLicense,
-                                       enable: isActivateLicenseEnabled,
-                                       attr: { title: isActivateLicenseEnabled() ? 'Replace current license with another license' : 'Replacing license is disabled in the server configuration' }">
+                                       enable: isReplaceLicenseEnabled,
+                                       attr: { title: replaceTooltip }">
                             <i class="icon-replace"></i><span>REPLACE LICENSE</span>
                     </button>
                     <button class="btn btn-info flex-grow"
@@ -172,7 +169,7 @@
                                        visible: canForceUpdate, 
                                        disable: spinners.forceLicenseUpdate() || !isForceUpdateEnabled(),
                                        css: { 'btn-spinner': spinners.forceLicenseUpdate },
-                                       attr: { title: isForceUpdateEnabled() ? 'Apply the license that was set for you' : 'Force license update is disabled in the server configuration' }">
+                                       attr: { title: forceUpdateTooltip }">
                             <i class="icon-force"></i><span>FORCE UPDATE</span>
                     </button>
                     <button class="btn btn-info flex-grow"
@@ -180,7 +177,7 @@
                                        visible: canRenewLicense, 
                                        disable: spinners.renewLicense() || !isRenewLicenseEnabled(),
                                        css: { 'btn-spinner': spinners.renewLicense },
-                                       attr: { title: isRenewLicenseEnabled() ? 'Renew license, expiration date will be extended' : 'Renew is disabled in the server configuration' }">
+                                       attr: { title: renewTooltip }">
                             <i class="icon-reset"></i><span>RENEW LICENSE</span>
                     </button>
                     <!-- /ko -->

@@ -14,7 +14,6 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
-import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import defaultAceCompleter = require("common/defaultAceCompleter");
 import setupEncryptionKey = require("viewmodels/resources/setupEncryptionKey");
 import viewHelpers = require("common/helpers/view/viewHelpers");
@@ -29,12 +28,10 @@ class exportDatabase extends viewModelBase {
 
     showAdvancedOptions = ko.observable(false);
     showTransformScript = ko.observable(false);
-    canExportDocumentRevisions = ko.pureComputed(() => !!collectionsTracker.default.revisionsBin());
 
     collections = ko.observableArray<string>();
     filter = ko.observable<string>("");
     filteredCollections: KnockoutComputed<Array<string>>;
-    hasRevisionsConfiguration: KnockoutComputed<boolean>;
 
     exportCommand: KnockoutComputed<string>;
 
@@ -85,7 +82,6 @@ class exportDatabase extends viewModelBase {
         super.compositionComplete();
 
         $('[data-toggle="tooltip"]').tooltip();
-        this.model.includeRevisionDocuments(this.canExportDocumentRevisions());
 
         this.encryptionSection().syncQrCode();
 
@@ -129,15 +125,6 @@ class exportDatabase extends viewModelBase {
             return collections.filter(x => x.toLowerCase().includes(filterLowerCase));
         });
 
-        this.hasRevisionsConfiguration = ko.pureComputed(() => {
-            const db = this.activeDatabase();
-            if (!db) {
-                return false;
-            }
-
-            return db.hasRevisionsConfiguration();
-        });
-
         this.exportCommand = ko.pureComputed<string>(() => {
             const db = this.activeDatabase();
             if (!db) {
@@ -154,10 +141,6 @@ class exportDatabase extends viewModelBase {
 
             return 'curl -o "' + fileName + '.ravendbdump" --data "DownloadOptions=' + encodeURIComponent(json) + '" ' +
                 appUrl.forServer() + appUrl.forDatabaseQuery(db) + endpoints.databases.smuggler.smugglerExport;
-        });
-
-        this.model.revisionsAreConfigured = ko.pureComputed(() => {
-            return this.activeDatabase() && this.activeDatabase().hasRevisionsConfiguration();
         });
     }
 

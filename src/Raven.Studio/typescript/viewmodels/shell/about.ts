@@ -55,7 +55,7 @@ class about extends viewModelBase {
     latestVersionWhatsNewUrl = ko.pureComputed(() => 
         `https://ravendb.net/whats-new?buildNumber=${ about.latestVersion().BuildNumber }`);
 
-    maxClusterSize  = ko.pureComputed(() => {
+    maxClusterSize = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return licenseStatus ? licenseStatus.MaxClusterSize : 1;
     });
@@ -116,12 +116,15 @@ class about extends viewModelBase {
         return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
     });
 
-
     isCloud = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return licenseStatus && licenseStatus.IsCloud;
     });
 
+    automaticRenewText = ko.pureComputed(() => {
+        return this.isCloud() ? "Cloud licenses are automatically renewed" : "";
+    });
+    
     licenseType = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return !licenseStatus ? "None" : licenseStatus.Type;
@@ -193,14 +196,11 @@ class about extends viewModelBase {
     });
     
     canRenewLicense = ko.pureComputed(() => {
-        return this.accessManager.canRenewLicense &&
-               (this.licenseType() === 'Developer' ||  this.licenseType() === 'Community');
+        return this.licenseType() === 'Developer' || this.licenseType() === 'Community';
     });
 
     canForceUpdate = ko.pureComputed(() => {
-        return this.accessManager.canForceUpdate  &&
-               this.licenseType() !== 'Developer' &&
-               this.licenseType() !== 'Community';
+        return this.licenseType() !== 'Developer' && this.licenseType() !== 'Community';
     });
     
     licenseAttribute(name: keyof Raven.Server.Commercial.LicenseStatus) {
@@ -213,21 +213,75 @@ class about extends viewModelBase {
         });
     }
 
-    isRenewLicenseEnabled = ko.observable<boolean>(false);
-    isActivateLicenseEnabled = ko.observable<boolean>(false);
-    isForceUpdateEnabled = ko.observable<boolean>(false);
+    isRegisterLicenseEnabled = ko.observable<boolean>(false);
+    registerTooltip = ko.observable<string>();
+    
+    isReplaceLicenseEnabled = ko.observable<boolean>(false);
+    replaceTooltip = ko.observable<string>();
 
+    isForceUpdateEnabled = ko.observable<boolean>(false);
+    forceUpdateTooltip = ko.observable<string>();
+    
+    isRenewLicenseEnabled = ko.observable<boolean>(false);
+    renewTooltip = ko.observable<string>();
+    
     register() {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
 
+    readonly noPrivilegesText = " You have insufficient privileges. Only a Cluster Admin can do this.";
+    
     private getLicenseConfigurationSettings() {
         return new getLicenseConfigurationSettingsCommand()
             .execute()
             .done((result: Raven.Server.Config.Categories.LicenseConfiguration) => {
-                this.isActivateLicenseEnabled(result.CanActivate);
-                this.isRenewLicenseEnabled(result.CanRenew);
-                this.isForceUpdateEnabled(result.CanForceUpdate);
+                const access = this.accessManager;
+                
+                const canRegister = result.CanActivate && access.canRegisterLicense();
+                this.isRegisterLicenseEnabled(canRegister);
+                let registerMsg = canRegister ? "Click to register a new license" : "";
+                if (!result.CanActivate) {
+                    registerMsg = "Registering new license is disabled in the server configuration";
+                }
+                if (!access.canRegisterLicense()) {
+                     registerMsg += this.noPrivilegesText;
+                }
+                this.registerTooltip(registerMsg);
+                
+                const canReplace = result.CanActivate && access.canReplaceLicense();
+                this.isReplaceLicenseEnabled(canReplace);
+                let replaceMsg = canReplace ? "Click to replace the current license with another license" : "";
+                if (!result.CanActivate) {
+                    replaceMsg = "Replacing license is disabled in the server configuration";
+                }
+                if (!access.canReplaceLicense()) {
+                    replaceMsg += this.noPrivilegesText;
+                }
+                this.replaceTooltip(replaceMsg);
+                
+                const canForceUpdate = result.CanForceUpdate && access.canForceUpdate();
+                this.isForceUpdateEnabled(canForceUpdate);
+                let forceUpdateMsg = canForceUpdate ? "Click to apply the license that was set for you" : "";
+
+                if (!result.CanForceUpdate) {
+                    forceUpdateMsg = "Force license update is disabled in the server configuration."
+                }
+                if (!access.canForceUpdate()) {
+                    forceUpdateMsg += this.noPrivilegesText;
+                }
+                this.forceUpdateTooltip(forceUpdateMsg);
+
+                const canRenew = result.CanRenew && access.canRenewLicense();
+                this.isRenewLicenseEnabled(canRenew);
+                let renewMsg = canRenew ? "Click to renew license. Expiration date will be extended" : "";
+
+                if (!result.CanRenew) {
+                    renewMsg = "Renew is disabled in the server configuration."
+                }
+                if (!access.canRenewLicense()) {
+                    renewMsg += this.noPrivilegesText;
+                }
+                this.renewTooltip(renewMsg);
             });
     }
     

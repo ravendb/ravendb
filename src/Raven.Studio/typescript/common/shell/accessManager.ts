@@ -47,7 +47,7 @@ class accessManager {
         canReplaceLicense: this.clusterAdminOrClusterNode, 
         canForceUpdate: this.clusterAdminOrClusterNode,
         canRenewLicense: this.clusterAdminOrClusterNode,
-        canUpgrade: this.clusterAdminOrClusterNode
+        canRegisterLicense: this.clusterAdminOrClusterNode
     };
     
     databasesView = {
