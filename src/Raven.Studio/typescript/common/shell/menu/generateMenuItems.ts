@@ -38,9 +38,9 @@ function generateActiveDatabaseMenuItems() {
     const appUrls = appUrl.forCurrentDatabase();
     return [
         getDocumentsMenuItem(appUrls),
-        getIndexesMenuItem(appUrls),
-        getSettingsMenuItem(appUrls),
+        getIndexesMenuItem(appUrls),        
         getTasksMenuItem(appUrls),
+        getSettingsMenuItem(appUrls),
         getStatsMenuItem(appUrls),
         
         new separatorMenuItem('Server'),

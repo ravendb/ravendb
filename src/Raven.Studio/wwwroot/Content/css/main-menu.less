@@ -60,9 +60,9 @@
     }
 
     h3 {
-        padding-left: 15px;
-        margin-top: @grid-gutter-width/2;
-        margin-bottom: @grid-gutter-width/2;
+        padding-left: 40px;
+        margin-top: @gutter-xs;
+        margin-bottom: @gutter-xs;
         color: @text-muted;
         font-size: 11px;
         text-transform: uppercase;
@@ -205,11 +205,9 @@
                 &.separator {
                     flex-grow: 1;
                     position: relative;
-
-                    h3 {
-                        position: absolute;
-                        bottom: 0;
-                    }
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: flex-end;
                 }
 
                 & > a {
@@ -235,9 +233,9 @@
                 }
 
                 &:hover {
-                   & > a {
+                    & > a {
                         background-color: @main-menu-hover !important;
-                   }
+                    }
                 }
             }
         }
@@ -365,6 +363,7 @@
                             transition: opacity 0s .35s, background-color .1s;
                         }
                     }
+
                     // HOVER ON SUBMENU
                     .level-1:not(:hover) {
                         transform: translateX(calc(100% - @gutter));
