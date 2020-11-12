@@ -244,9 +244,8 @@ class editIndex extends viewModelBase {
 
         const additionalSourcesDto = {} as dictionary<string>;
         this.editedIndex().additionalSources().forEach(x => additionalSourcesDto[x.name()] = x.code());
-
-        const additionalAssembliesDto: Array<Raven.Client.Documents.Indexes.AdditionalAssembly> = [];
-        this.editedIndex().additionalAssemblies().forEach(x => additionalAssembliesDto.push(x.toDto()));
+        
+        const additionalAssembliesDto = this.editedIndex().additionalAssemblies().map(x => x.toDto());
 
         new getIndexFieldsFromMapCommand(this.activeDatabase(), map, additionalSourcesDto, additionalAssembliesDto)
             .execute()
