@@ -235,11 +235,8 @@ class certificates extends viewModelBase {
     }
     
     enterEditCertificateMode(itemToEdit: unifiedCertificateDefinition) {
-        if (!_.includes(itemToEdit.Thumbprints, this.serverCertificateThumbprint())) {
-            // allow to edit only if not server certificate
-            this.model(certificateModel.fromDto(itemToEdit));
-            this.model().validationGroup.errors.showAllMessages(false);
-        }
+        this.model(certificateModel.fromDto(itemToEdit));
+        this.model().validationGroup.errors.showAllMessages(false);
     }
 
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
@@ -415,9 +412,9 @@ class certificates extends viewModelBase {
                 mergedCertificates = _.sortBy(mergedCertificates, x => x.Name.toLocaleLowerCase());
                 
                 // place the server certificate and client certificate first in list
-                let serverCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.serverCertificateThumbprint()));
-                let clientCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
-                let orderedCertificates = mergedCertificates.filter(x => x !== serverCert && x !== clientCert);
+                const serverCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.serverCertificateThumbprint()));
+                const clientCert = mergedCertificates.find(x => _.includes(x.Thumbprints, this.clientCertificateThumbprint()));
+                const orderedCertificates = mergedCertificates.filter(x => x !== serverCert && x !== clientCert);
                 orderedCertificates.unshift(clientCert);
                 orderedCertificates.unshift(serverCert);
                 

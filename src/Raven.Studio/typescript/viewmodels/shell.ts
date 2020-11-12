@@ -260,7 +260,7 @@ class shell extends viewModelBase {
         if (this.clientCertificate() && this.clientCertificate().Name) {
             
             const dbAccess = certificateModel.resolveDatabasesAccess(this.clientCertificate());
-            const allowedDatabases = dbAccess ? dbAccess.map(x => `<div>${x}</div>`).join("") : "Access to all databases is denied";
+            const allowedDatabases = dbAccess.length ? dbAccess.map(x => `<div>${x}</div>`).join("") : "Access to all databases is denied";
 
             popoverUtils.longWithHover($(".js-client-cert"),
                 {
