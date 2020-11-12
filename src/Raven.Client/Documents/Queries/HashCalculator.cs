@@ -292,15 +292,19 @@ namespace Raven.Client.Documents.Queries
 
                 default:
 
-                    bool hasObjectValues = false;
-                    foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(value.GetType(), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                    var valueType = value.GetType();
+                    if (valueType.IsPrimitive == false)
                     {
-                        WriteParameterValue(memberInfo.GetValue(value), level - 1);
-                        hasObjectValues = true;
-                    }
-                    if (hasObjectValues == false)
-                    {
-                        Write("empty-object");
+                        bool hasObjectValues = false;
+                        foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(valueType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                        {
+                            WriteParameterValue(memberInfo.GetValue(value), level - 1);
+                            hasObjectValues = true;
+                        }
+                        if (hasObjectValues == false)
+                        {
+                            Write("empty-object");
+                        }
                     }
 
                     Write(value.ToString());
