@@ -419,7 +419,7 @@ namespace SlowTests.Client.TimeSeries.Replication
             using (var storeA = GetDocumentStore())
             using (var storeB = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.EnsureUtc();
 
                 var fullSegment = 329;
 
