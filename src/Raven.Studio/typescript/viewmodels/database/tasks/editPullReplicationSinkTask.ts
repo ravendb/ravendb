@@ -96,7 +96,7 @@ class editPullReplicationSinkTask extends viewModelBase {
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = (<any>Object).values(result.RavenConnectionStrings);
-                this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));                
+                this.ravenEtlConnectionStringsDetails(_.sortBy(connectionStrings, x => x.Name.toUpperCase()));
             });
     }
 
@@ -121,20 +121,9 @@ class editPullReplicationSinkTask extends viewModelBase {
         });
         
         const model = this.editedReplication();
-        
-        this.dirtyFlag = new ko.DirtyFlag([
-                model.taskName,
-                model.manualChooseMentor,
-                model.mentorNode,
-                model.connectionStringName,
-                model.hubDefinitionName,
-                model.certificate,
-                this.createNewConnectionString
-            ], false, jsonUtil.newLineNormalizingHashFunction);
 
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
-
 
         const connectionStringName = this.editedReplication().connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.ravenEtlConnectionStringsDetails()
@@ -157,6 +146,17 @@ class editPullReplicationSinkTask extends viewModelBase {
         const readDebounced = _.debounce(() => this.tryReadCertificate(), 1500);
         
         model.certificatePassphrase.subscribe(() => readDebounced());
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            model.taskName,
+            model.manualChooseMentor,
+            model.mentorNode,
+            model.connectionStringName,
+            model.hubDefinitionName,
+            model.certificate,
+            this.createNewConnectionString,
+            this.newConnectionString().dirtyFlag().isDirty
+        ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
     compositionComplete() {
@@ -231,7 +231,7 @@ class editPullReplicationSinkTask extends viewModelBase {
                     this.goToOngoingTasksView();
                 })
                 .always(() => this.spinners.save(false));
-        });  
+        });
     }
    
     cancelOperation() {
@@ -318,8 +318,6 @@ class editPullReplicationSinkTask extends viewModelBase {
             this.importedFileName(undefined);
         }
     }
-    
-   
 }
 
 export = editPullReplicationSinkTask;

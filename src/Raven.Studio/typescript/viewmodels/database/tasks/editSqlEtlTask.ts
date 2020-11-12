@@ -251,8 +251,8 @@ class editSqlEtlTask extends viewModelBase {
             this.isAddingNewSqlEtlTask(true);
             this.editedSqlEtl(ongoingTaskSqlEtlEditModel.empty());
             
-            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());          
-            this.editedSqlTableSandbox(ongoingTaskSqlEtlTableModel.empty());  
+            this.editedTransformationScriptSandbox(ongoingTaskSqlEtlTransformationModel.empty());
+            this.editedSqlTableSandbox(ongoingTaskSqlEtlTableModel.empty());
             
             deferred.resolve();
         }
@@ -306,8 +306,6 @@ class editSqlEtlTask extends viewModelBase {
         
         this.showEditSqlTableArea = ko.pureComputed(() => !!this.editedSqlTableSandbox());
         this.showEditTransformationArea = ko.pureComputed(() => !!this.editedTransformationScriptSandbox());
-        
-        this.initDirtyFlag();
 
         this.newConnectionString(connectionStringSqlEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.sqlEtlConnectionStringsNames().find(x => x.toLocaleLowerCase() === name.toLocaleLowerCase()));
@@ -381,6 +379,8 @@ class editSqlEtlTask extends viewModelBase {
             
             return transformationValidationGroup && connectionStringValid;
         }, dtoProvider, connectionStringProvider);
+
+        this.initDirtyFlag();
         
         this.test.initObservables();
     }
@@ -421,10 +421,10 @@ class editSqlEtlTask extends viewModelBase {
             editedSqlTableFlag,
             scriptsCount,
             tablesCount,
-            hasAnyDirtyTransformationScript,            
+            hasAnyDirtyTransformationScript,
             hasAnyDirtySqlTable,
-            this.createNewConnectionString
-
+            this.createNewConnectionString,
+            this.newConnectionString().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
     
@@ -449,15 +449,15 @@ class editSqlEtlTask extends viewModelBase {
             // Existing connection string
             getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), this.editedSqlEtl().connectionStringName())
                 .execute()
-                .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {                       
+                .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                        new connectionStringSqlEtlModel(result.SqlConnectionStrings[this.editedSqlEtl().connectionStringName()], true, [])
                             .testConnection(this.activeDatabase())
                             .done((testResult) => this.testConnectionResult(testResult))
                             .always(() => {
                                 this.spinners.test(false);
                             });
-                });                        
-        }    
+                });
+        }
     }
 
     saveSqlEtl() {
@@ -466,7 +466,7 @@ class editSqlEtlTask extends viewModelBase {
         
         // 1. Validate *edited sql table*
         if (this.showEditSqlTableArea()) {
-            if (!this.isValid(this.editedSqlTableSandbox().validationGroup)) {                
+            if (!this.isValid(this.editedSqlTableSandbox().validationGroup)) {
                 hasAnyErrors = true;
             } else {
                 this.saveEditedSqlTable();
@@ -476,16 +476,16 @@ class editSqlEtlTask extends viewModelBase {
         // 2. Validate *edited transformation script*
         if (this.showEditTransformationArea()) {
             if (!this.isValid(this.editedTransformationScriptSandbox().validationGroup)) {
-                hasAnyErrors = true;  
+                hasAnyErrors = true;
             } else {
                 this.saveEditedTransformation();
             }
         }
         
-        // 3. Validate *new connection string* (if relevant..)         
+        // 3. Validate *new connection string* (if relevant..)
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
-                hasAnyErrors = true;  
+                hasAnyErrors = true;
             }  else {
                 // Use the new connection string
                 this.editedSqlEtl().connectionStringName(this.newConnectionString().connectionStringName());
@@ -504,7 +504,7 @@ class editSqlEtlTask extends viewModelBase {
                 
         // 5. All is well, Save connection string (if relevant..) 
         let savingNewStringAction = $.Deferred<void>();
-        if (this.createNewConnectionString()) {          
+        if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.activeDatabase())
                 .done(() => {
@@ -532,9 +532,9 @@ class editSqlEtlTask extends viewModelBase {
                 .done(() => {
                     this.dirtyFlag().reset();
                     this.goToOngoingTasksView();
-                 })    
+                 })
                 .always(() => this.spinners.save(false));
-        });      
+        });
     }
 
     cancelOperation() {
@@ -582,7 +582,7 @@ class editSqlEtlTask extends viewModelBase {
             }
             
             if (!hasErrors) {
-                this.enableTestArea(true);    
+                this.enableTestArea(true);
             }
         } else {
             this.enableTestArea(false);
@@ -606,7 +606,7 @@ class editSqlEtlTask extends viewModelBase {
         this.editedTransformationScriptSandbox(null);
         this.transformationScriptSelectedForEdit(null);
         this.enableTestArea(false);
-    }    
+    }
     
     saveEditedTransformation() {
         this.enableTestArea(false);
@@ -641,7 +641,7 @@ class editSqlEtlTask extends viewModelBase {
             return script.name().startsWith(editSqlEtlTask.scriptNamePrefix);
         });
 
-        const maxNumber =  _.max(scriptsWithPrefix
+        const maxNumber = _.max(scriptsWithPrefix
             .map(x => x.name().substr(editSqlEtlTask.scriptNamePrefix.length))
             .map(x => _.toInteger(x))) || 0;
 
@@ -698,11 +698,11 @@ class editSqlEtlTask extends viewModelBase {
     cancelEditedSqlTable() {
         this.editedSqlTableSandbox(null);
         this.sqlTableSelectedForEdit(null);
-    }   
+    }
        
     saveEditedSqlTable() {
         const sqlTableToSave = this.editedSqlTableSandbox();
-        const newSqlTable = new ongoingTaskSqlEtlTableModel(sqlTableToSave.toDto(), false);      
+        const newSqlTable = new ongoingTaskSqlEtlTableModel(sqlTableToSave.toDto(), false);
         const overwriteAction = $.Deferred<boolean>();
 
         if (!this.isValid(sqlTableToSave.validationGroup)) {
@@ -711,7 +711,7 @@ class editSqlEtlTask extends viewModelBase {
 
         const existingSqlTable = this.editedSqlEtl().sqlTables().find(x => x.tableName() === newSqlTable.tableName());
         
-        if (existingSqlTable && (sqlTableToSave.isNew() || existingSqlTable.tableName() !== this.sqlTableSelectedForEdit().tableName()))        
+        if (existingSqlTable && (sqlTableToSave.isNew() || existingSqlTable.tableName() !== this.sqlTableSelectedForEdit().tableName()))
         {
             // Table name exists - offer to overwrite
             this.confirmationMessage(`Table ${generalUtils.escapeHtml(existingSqlTable.tableName())} already exists in SQL Tables list`,
@@ -739,7 +739,7 @@ class editSqlEtlTask extends viewModelBase {
                 const sqlTableToUpdate = this.editedSqlEtl().sqlTables().find(x => x.tableName() === this.sqlTableSelectedForEdit().tableName());
                 this.overwriteExistingSqlTable(sqlTableToUpdate, newSqlTable);
                 overwriteAction.resolve(true);
-            }           
+            }
         } 
 
         overwriteAction.done(() => {
@@ -753,8 +753,8 @@ class editSqlEtlTask extends viewModelBase {
             newItem.dirtyFlag().forceDirty();
         }
         
-        this.editedSqlEtl().sqlTables.replace(oldItem,  newItem);        
-    }    
+        this.editedSqlEtl().sqlTables.replace(oldItem, newItem);
+    }
     
     deleteSqlTable(sqlTableModel: ongoingTaskSqlEtlTableModel) {
         this.editedSqlEtl().sqlTables.remove(x => sqlTableModel.tableName() === x.tableName());
@@ -763,7 +763,7 @@ class editSqlEtlTask extends viewModelBase {
             this.editedSqlTableSandbox(null);
             this.sqlTableSelectedForEdit(null);
         }
-    }    
+    }
     
     editSqlTable(sqlTableModel: ongoingTaskSqlEtlTableModel) {
         this.sqlTableSelectedForEdit(sqlTableModel);

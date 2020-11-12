@@ -6,11 +6,10 @@ import testClusterNodeConnectionCommand = require("commands/database/cluster/tes
 import jsonUtil = require("common/jsonUtil");
 import discoveryUrl = require("models/database/settings/discoveryUrl");
 
-
 class connectionStringRavenEtlModel extends connectionStringModel { 
 
     database = ko.observable<string>();
-    topologyDiscoveryUrls = ko.observableArray<discoveryUrl>([]);    
+    topologyDiscoveryUrls = ko.observableArray<discoveryUrl>([]);
     inputUrl = ko.observable<discoveryUrl>(new discoveryUrl(""));
     selectedUrlToTest = ko.observable<string>();
 
@@ -37,7 +36,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
             return anyDirty;
         });
         
-        this.dirtyFlag = new ko.DirtyFlag([           
+        this.dirtyFlag = new ko.DirtyFlag([
             this.database,
             this.connectionStringName,
             urlsCount,
@@ -110,7 +109,7 @@ class connectionStringRavenEtlModel extends connectionStringModel {
         }
     }
 
-    testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {       
+    testConnection(urlToTest: string) : JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         return new testClusterNodeConnectionCommand(urlToTest, this.database(), false)
             .execute();
     }
