@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.EnsureUtc();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
@@ -68,7 +69,7 @@ select out()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.EnsureUtc();
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User(), "users/ayende");
