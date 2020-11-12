@@ -34,6 +34,11 @@ namespace Raven.Client.Documents.Queries
         {
             _buffer.Write((byte*)&l, sizeof(long));
         }
+        
+        public void Write(ulong ul)
+        {
+            _buffer.Write((byte*)&ul, sizeof(ulong));
+        }
 
         public void Write(long? l)
         {
@@ -63,7 +68,22 @@ namespace Raven.Client.Documents.Queries
         {
             _buffer.Write((byte*)&i, sizeof(int));
         }
-
+        
+        public void Write(uint ui)
+        {
+            _buffer.Write((byte*)&ui, sizeof(uint));
+        }
+        
+        public void Write(short sh)
+        {
+            _buffer.Write((byte*)&sh, sizeof(short));
+        }
+        
+        public void Write(ushort ush)
+        {
+            _buffer.Write((byte*)&ush, sizeof(ushort));
+        }
+        
         public void Write(bool b)
         {
             _buffer.WriteByte(b ? (byte)1 : (byte)2);
@@ -76,7 +96,17 @@ namespace Raven.Client.Documents.Queries
             else
                 Write("null-bool");
         }
+        
+        public void Write(sbyte sby)
+        {
+            _buffer.Write((byte*)&sby, sizeof(sbyte));
+        }
 
+        public void Write(char ch)
+        {
+            _buffer.Write((byte*)&ch, sizeof(char));
+        }
+        
         public void Write(string s)
         {
             if (s == null)
@@ -143,15 +173,35 @@ namespace Raven.Client.Documents.Queries
                 case string s:
                     Write(s);
                     break;
+                
+                case char ch:
+                    Write(ch);
+                    break;
 
                 case long l:
                     Write(l);
                     break;
 
+                case ulong ul:
+                    Write(ul);
+                    break;
+                
                 case int i:
                     Write(i);
                     break;
+                
+                case uint ui:
+                    Write(ui);
+                    break;
 
+                case short sh:
+                    Write(sh);
+                    break;
+                
+                case ushort ush:
+                    Write(ush);
+                    break;
+                
                 case bool b:
                     Write(b);
                     break;
@@ -190,6 +240,10 @@ namespace Raven.Client.Documents.Queries
 
                 case byte bt:
                     _buffer.WriteByte(bt);
+                    break;
+                
+                case sbyte sbt:
+                    Write(sbt);
                     break;
 
                 case Enum enm:
