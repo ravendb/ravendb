@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Text.RegularExpressions;
@@ -19,18 +18,16 @@ namespace FastTests.Client
         public RequestExecutorTests(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [LicenseRequiredTheory]
         [InlineData(0, 1, "OnBeforeRequest", "OnAfterRequests")]
-        [InlineData(1, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest", "OnAfterRequests")]
-        [InlineData(2, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest")]
         public async Task OnBeforeAfterAndFailRequest(int failCount, int clusterSize, params string[] expected)
         {
             var actual = new ConcurrentQueue<string>();
             var sessionActual = new ConcurrentQueue<string>();
 
             var urlRegex = new Regex("/databases/[^/]+/docs");
-            
+
             var (_, leader) = await CreateRaftCluster(clusterSize);
             using var store = GetDocumentStore(new Options
             {
@@ -44,7 +41,7 @@ namespace FastTests.Client
                             return;
                         sessionActual.Enqueue("OnBeforeRequest");
                     };
-            
+
                     s.OnSucceedRequest += (sender, args) =>
                     {
                         if (urlRegex.IsMatch(args.Url) == false)
@@ -58,9 +55,9 @@ namespace FastTests.Client
                             return;
                         sessionActual.Enqueue("OnFailedRequest");
                     };
-                } 
+                }
             });
-            
+
             var requestExecutor = store.GetRequestExecutor();
             requestExecutor.OnBeforeRequest += (sender, args) =>
             {
@@ -68,7 +65,7 @@ namespace FastTests.Client
                     return;
                 actual.Enqueue("OnBeforeRequest");
             };
-            
+
             requestExecutor.OnSucceedRequest += (sender, args) =>
             {
                 if (urlRegex.IsMatch(args.Url) == false)
@@ -82,7 +79,7 @@ namespace FastTests.Client
                     return;
                 actual.Enqueue("OnFailedRequest");
             };
-            
+
             using var dis = requestExecutor.ContextPool.AllocateOperationContext(out var context);
             var documentJson = EntityToBlittable.ConvertCommandToBlittable(new User(), context);
             var command = new FirstFailCommand("User/1", null, documentJson, failCount);
@@ -98,22 +95,22 @@ namespace FastTests.Client
             Assert.Equal(expected, actual);
             Assert.Equal(expected, sessionActual);
         }
-        
+
         private class FirstFailCommand : PutDocumentCommand
         {
             private int _timeToFail;
-            
+
             public override bool IsReadRequest { get; }
 
-            public FirstFailCommand(string id, string changeVector, BlittableJsonReaderObject document, int timeToFail) 
+            public FirstFailCommand(string id, string changeVector, BlittableJsonReaderObject document, int timeToFail)
                 : base(id, changeVector, document)
             {
                 _timeToFail = timeToFail;
             }
-            
+
             public override async Task<HttpResponseMessage> SendAsync(HttpClient client, HttpRequestMessage request, CancellationToken token)
             {
-                if (Interlocked.Decrement(ref _timeToFail) < 0) 
+                if (Interlocked.Decrement(ref _timeToFail) < 0)
                     return await base.SendAsync(client, request, token);
 
                 throw new HttpRequestException();
