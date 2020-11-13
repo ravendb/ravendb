@@ -3355,24 +3355,41 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected int GetReferencesLength(HashSet<string> collections, HashSet<string> referencedCollections)
+        public unsafe long CalculateIndexEtagWithReferences(
+            HandleReferences handleReferences, HandleReferences handleCompareExchangeReferences,
+            QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale,
+            HashSet<string> referencedCollections, AbstractStaticIndexBase compiled)
         {
-            // last referenced collection etags (document + tombstone)
-            // last processed reference collection etags (document + tombstone)
-            // last processed in memory (early exit batch) etags (document + tombstone)
-            return sizeof(long) * 6 * (collections.Count * referencedCollections.Count);
+            var minLength = MinimumSizeForCalculateIndexEtagLength(query);
+            var length = minLength;
+
+            if (handleReferences != null)
+            {
+                // last referenced collection etags (document + tombstone)
+                // last processed reference collection etags (document + tombstone)
+                // last processed in memory (early exit batch) etags (document + tombstone)
+                length += sizeof(long) * 6 * Collections.Count * referencedCollections.Count;
+            }
+
+            if (handleCompareExchangeReferences != null)
+            {
+                // last referenced collection etags (document + tombstone)
+                // last processed reference collection etags (document + tombstone)
+                // last processed in memory (early exit batch) etags (document + tombstone)
+                length += sizeof(long) * 6 * compiled.CollectionsWithCompareExchangeReferences.Count;
+            }
+
+            var indexEtagBytes = stackalloc byte[length];
+
+            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
+            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, query, length, indexEtagBytes);
+
+            var writePos = indexEtagBytes + minLength;
+
+            return StaticIndexHelper.CalculateIndexEtag(this, compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
         }
 
-        protected static int GetCompareExchangeReferencesLength(AbstractStaticIndexBase compiled)
-        {
-            // last referenced collection etags (document + tombstone)
-            // last processed reference collection etags (document + tombstone)
-            // last processed in memory (early exit batch) etags (document + tombstone)
-            return sizeof(long) * 6 * compiled.CollectionsWithCompareExchangeReferences.Count;
-        }
-
-        protected static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(QueryOperationContext queryContext,
-            QueryMetadata q, int length, byte* indexEtagBytes)
+        private static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(QueryOperationContext queryContext, QueryMetadata q, int length, byte* indexEtagBytes)
         {
             if (q == null)
                 return;
@@ -3422,7 +3439,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected int MinimumSizeForCalculateIndexEtagLength(QueryMetadata q)
+        private int MinimumSizeForCalculateIndexEtagLength(QueryMetadata q)
         {
             var length = sizeof(long) * 4 * Collections.Count + // last document etag, last tombstone etag and last mapped etags per collection
                          sizeof(int) + // definition hash
@@ -3444,7 +3461,7 @@ namespace Raven.Server.Documents.Indexes
             return length;
         }
 
-        protected unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale, IndexState indexState,
+        private unsafe void CalculateIndexEtagInternal(byte* indexEtagBytes, bool isStale, IndexState indexState,
             QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
             foreach (var collection in Collections)
