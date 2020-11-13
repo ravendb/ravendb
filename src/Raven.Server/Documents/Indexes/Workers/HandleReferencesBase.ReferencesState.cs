@@ -11,17 +11,18 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             private readonly Dictionary<string, ReferenceState> _lastIdPerCollectionForTombstones = new Dictionary<string, ReferenceState>();
 
-            public Reference For(ActionType actionType, string collection)
+            public ReferenceState For(ActionType actionType, string collection)
             {
-                return new Reference(GetDictionary(actionType), collection);
+                var dictionary = GetDictionary(actionType);
+                return dictionary.TryGetValue(collection, out var referenceState) ? referenceState : null;
             }
 
             public InMemoryReferencesInfo GetReferencesInfo(string collection)
             {
                 return new InMemoryReferencesInfo
                 {
-                    ParentItemEtag = new Reference(GetDictionary(ActionType.Document), collection).GetLastIndexedParentEtag(),
-                    ParentTombstoneEtag = new Reference(GetDictionary(ActionType.Tombstone), collection).GetLastIndexedParentEtag(),
+                    ParentItemEtag = For(ActionType.Document, collection)?.GetLastIndexedParentEtag() ?? 0,
+                    ParentTombstoneEtag = For(ActionType.Tombstone, collection)?.GetLastIndexedParentEtag() ?? 0,
                 };
             }
 
@@ -29,6 +30,34 @@ namespace Raven.Server.Documents.Indexes.Workers
             {
                 var dictionary = GetDictionary(actionType);
                 dictionary.Clear();
+            }
+
+            public void Set(ActionType actionType, string collection, Reference reference, string itemId, long lastIndexedParentEtag, TransactionOperationContext indexContext)
+            {
+                var dictionary = GetDictionary(actionType);
+                var referencedItemId = (string)reference.Key;
+
+                indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+                {
+                    // we update this only after the transaction was committed
+                    dictionary[collection] = new ReferenceState(referencedItemId, reference.Etag, itemId, lastIndexedParentEtag);
+                };
+            }
+
+            public void Clear(bool earlyExit, ActionType actionType, string collection, TransactionOperationContext indexContext)
+            {
+                if (earlyExit)
+                    return;
+
+                var dictionary = GetDictionary(actionType);
+                if (dictionary.Count == 0)
+                    return;
+
+                indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
+                {
+                    // we update this only after the transaction was committed
+                    dictionary.Remove(collection);
+                };
             }
 
             private Dictionary<string, ReferenceState> GetDictionary(ActionType actionType)
@@ -40,69 +69,30 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             public class ReferenceState
             {
-                public string ReferencedItemId;
-                public string NextItemId;
-                public long ReferencedItemEtag;
-                public long LastIndexedParentEtag;
-            }
+                private readonly string _referencedItemId;
+                private readonly string _nextItemId;
+                private readonly long _referencedItemEtag;
+                private readonly long _lastIndexedParentEtag;
 
-            public class Reference
-            {
-                private readonly Dictionary<string, ReferenceState> _dictionary;
-                private readonly string _collection;
-
-                public Reference(Dictionary<string, ReferenceState> dictionary, string collection)
+                public ReferenceState(string referencedItemId, long referenceEtag, string itemId, long lastIndexedParentEtag)
                 {
-                    _dictionary = dictionary;
-                    _collection = collection;
+                    _referencedItemId = referencedItemId;
+                    _referencedItemEtag = referenceEtag;
+                    _nextItemId = itemId;
+                    _lastIndexedParentEtag = lastIndexedParentEtag;
                 }
 
-                public void Set(HandleReferencesBase.Reference reference, string itemId, long lastIndexedParentEtag, TransactionOperationContext indexContext)
+                public string GetLastProcessedItemId(Reference referencedDocument)
                 {
-                    var referencedItemId = (string)reference.Key;
-
-                    indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
-                    {
-                        // we update this only after the transaction was commited
-                        _dictionary[_collection] = new ReferenceState
-                        {
-                            ReferencedItemId = referencedItemId,
-                            ReferencedItemEtag = reference.Etag,
-                            NextItemId = itemId,
-                            LastIndexedParentEtag = lastIndexedParentEtag
-                        };
-                    };
-                }
-
-                public string GetLastProcessedItemId(HandleReferencesBase.Reference reference)
-                {
-                    if (_dictionary.TryGetValue(_collection, out var state) == false)
-                        return null;
-
-                    if (reference.Key == state.ReferencedItemId && reference.Etag == state.ReferencedItemEtag)
-                        return state.NextItemId;
+                    if (referencedDocument.Key == _referencedItemId && referencedDocument.Etag == _referencedItemEtag)
+                        return _nextItemId;
 
                     return null;
                 }
 
                 public long GetLastIndexedParentEtag()
                 {
-                    if (_dictionary.TryGetValue(_collection, out var state) == false)
-                        return 0;
-
-                    return state.LastIndexedParentEtag;
-                }
-
-                public void Clear(bool earlyExit, TransactionOperationContext indexContext)
-                {
-                    if (earlyExit)
-                        return;
-
-                    indexContext.Transaction.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += _ =>
-                    {
-                        // we update this only after the transaction was commited
-                        _dictionary.Remove(_collection);
-                    };
+                    return _lastIndexedParentEtag;
                 }
             }
         }

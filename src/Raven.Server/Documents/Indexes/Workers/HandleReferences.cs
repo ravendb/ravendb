@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                 if (lastIndexedEtag == 0) // we haven't indexed yet, so we are skipping references for now
                     continue;
 
-                var reference = _referencesState.For(actionType, collection);
+                var referenceState = _referencesState.For(actionType, collection);
                 foreach (var referencedCollection in referencedCollections)
                 {
                     var inMemoryStats = _index.GetReferencesStats(referencedCollection.Name);
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 {
                                     hasChanges = true;
 
-                                    var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedDocument, lastIndexedEtag, indexed, reference);
+                                    var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedDocument, lastIndexedEtag, indexed, referenceState);
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
                                         long lastIndexedParentEtag = 0;
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             if (CanContinueReferenceBatch() == false)
                                             {
-                                                reference.Set(referencedDocument, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
+                                                _referencesState.Set(actionType, collection, referencedDocument, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
                                                 earlyExit = true;
                                                 break;
                                             }
@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                 throw new NotSupportedException();
                         }
 
-                        reference.Clear(earlyExit, indexContext);
+                        _referencesState.Clear(earlyExit, actionType, collection, indexContext);
                     }
                 }
             }
@@ -313,9 +313,9 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            string collection, Reference referencedDocument, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.Reference reference)
+            string collection, Reference referencedDocument, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
         {
-            var lastProcessedItemId = reference.GetLastProcessedItemId(referencedDocument);
+            var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedDocument);
             foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction, lastProcessedItemId))
             {
                 var item = GetItem(queryContext.Documents, key);

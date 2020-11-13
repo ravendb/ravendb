@@ -413,29 +413,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return (staticEntries, dynamicEntries);
         }
 
-        protected override unsafe long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            QueryMetadata query, bool isStale)
+        protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)
         {
             if (_handleReferences == null && _handleCompareExchangeReferences == null)
                 return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
 
-            var minLength = MinimumSizeForCalculateIndexEtagLength(query);
-            var length = minLength;
-
-            if (_handleReferences != null)
-                length += GetReferencesLength(Collections, _referencedCollections);
-
-            if (_handleCompareExchangeReferences != null)
-                length += GetCompareExchangeReferencesLength(_compiled);
-
-            var indexEtagBytes = stackalloc byte[length];
-
-            CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, query, length, indexEtagBytes);
-
-            var writePos = indexEtagBytes + minLength;
-
-            return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext);
+            return CalculateIndexEtagWithReferences(
+                _handleReferences, _handleCompareExchangeReferences, queryContext,
+                indexContext, query, isStale, _referencedCollections, _compiled);
         }
 
         protected override IndexingState GetIndexingStateInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)

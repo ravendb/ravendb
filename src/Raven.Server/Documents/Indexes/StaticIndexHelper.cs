@@ -44,30 +44,6 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(MapIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
-        {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(MapCountersIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
-        {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(MapTimeSeriesIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
-        {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe long CalculateIndexEtag(MapReduceIndex index, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
-        {
-            return CalculateIndexEtag(index, index._compiled, length, indexEtagBytes, writePos, queryContext, indexContext);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool IsStaleDueToReferences(Index index, AbstractStaticIndexBase compiled, QueryOperationContext queryContext, TransactionOperationContext indexContext, long? referenceCutoff, long? compareExchangeReferenceCutoff, List<string> stalenessReasons)
         {
             foreach (var collection in index.Collections)
@@ -221,7 +197,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe long CalculateIndexEtag(Index index, AbstractStaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
+        public static unsafe long CalculateIndexEtag(Index index, AbstractStaticIndexBase compiled, int length, byte* indexEtagBytes, byte* writePos, QueryOperationContext queryContext, TransactionOperationContext indexContext)
         {
             foreach (var collection in index.Collections)
             {
