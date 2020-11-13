@@ -49,15 +49,45 @@ function GetRavenArchiveFileName ( $version, $target, $packageSuffix ) {
     return $name
 }
 
+function CopyNativeBinariesRequiredForDebugging($buildOutputDir, $targetDir) {
+    # When .NET does not require it anymore we can skip this copy step
+    # https://github.com/dotnet/designs/blob/main/accepted/2020/single-file/design.md#host-builds
+    Write-Host "Copy native binaries for debugging on POSIX."
+
+    $nativeBinaries = @(
+        [io.path]::combine($buildOutputDir, "libmscordaccore.so"),
+        [io.path]::combine($buildOutputDir, "createdump")
+    );
+
+    foreach ($asset in $nativeBinaries) {
+        if (!(Test-Path $asset)) {
+            throw "Native binary file $asset does not exist."
+        }
+
+        $dst = [io.path]::combine($targetDir, $(Get-Item $asset).Name)
+        write-host "Copy $asset -> $dst"
+        Copy-Item $asset $dst
+    }
+
+}
+
 function LayoutServerPackage ( $packageDir, $projectDir, $packOpts ) {
     $target = $packOpts.Target
     CopyStudioPackageToServerOutputDirectory $packOpts
+
+    if ($target.IsUnix) {
+        # TODO get 'net5.0' from somewhere
+        $buildDir = [io.path]::Combine($projectDir, "src", "Raven.Server", "bin", "Release", "net5.0", $target.Runtime)
+        CopyNativeBinariesRequiredForDebugging $buildDir "$($packOpts.OutDirs.Server)"
+    }
+
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CopyServerStartScript $projectDir $packageDir $packOpts
     CopyServerServiceScripts $projectDir $packageDir $packOpts
     CopyServerToolsToServerOutputDirectory $packOpts.OutDirs
     CopyServerReadmeFile $target $packageDir
+    
     AddRuntimeTxt $projectDir $packageDir
     LayoutServerDirectory $projectDir $($packOpts.OutDirs.Server) $packageDir $target
 }
