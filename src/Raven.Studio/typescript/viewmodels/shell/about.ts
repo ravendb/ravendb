@@ -229,8 +229,6 @@ class about extends viewModelBase {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
 
-    readonly noPrivilegesText = " You have insufficient privileges. Only a Cluster Admin can do this.";
-    
     private getLicenseConfigurationSettings() {
         return new getLicenseConfigurationSettingsCommand()
             .execute()
@@ -239,50 +237,46 @@ class about extends viewModelBase {
                 
                 const canRegister = result.CanActivate && access.canRegisterLicense();
                 this.isRegisterLicenseEnabled(canRegister);
-                let registerMsg = canRegister ? "Click to register a new license" : "";
-                if (!result.CanActivate) {
-                    registerMsg = "Registering new license is disabled in the server configuration";
-                }
-                if (!access.canRegisterLicense()) {
-                     registerMsg += this.noPrivilegesText;
-                }
+                
+                const registerMsg = this.getTooltipContent(result.CanActivate, access.canRegisterLicense(),
+                    "register a new license", "Registering new license");
                 this.registerTooltip(registerMsg);
                 
                 const canReplace = result.CanActivate && access.canReplaceLicense();
                 this.isReplaceLicenseEnabled(canReplace);
-                let replaceMsg = canReplace ? "Click to replace the current license with another license" : "";
-                if (!result.CanActivate) {
-                    replaceMsg = "Replacing license is disabled in the server configuration";
-                }
-                if (!access.canReplaceLicense()) {
-                    replaceMsg += this.noPrivilegesText;
-                }
+
+                const replaceMsg = this.getTooltipContent(result.CanActivate, access.canReplaceLicense(),
+                    "replace the current license with another license", "Replacing license");
                 this.replaceTooltip(replaceMsg);
                 
                 const canForceUpdate = result.CanForceUpdate && access.canForceUpdate();
                 this.isForceUpdateEnabled(canForceUpdate);
-                let forceUpdateMsg = canForceUpdate ? "Click to apply the license that was set for you" : "";
 
-                if (!result.CanForceUpdate) {
-                    forceUpdateMsg = "Force license update is disabled in the server configuration."
-                }
-                if (!access.canForceUpdate()) {
-                    forceUpdateMsg += this.noPrivilegesText;
-                }
+                const forceUpdateMsg = this.getTooltipContent(result.CanForceUpdate, access.canForceUpdate(),
+                    "apply the license that was set for you", "Force license update");
                 this.forceUpdateTooltip(forceUpdateMsg);
 
                 const canRenew = result.CanRenew && access.canRenewLicense();
                 this.isRenewLicenseEnabled(canRenew);
-                let renewMsg = canRenew ? "Click to renew license. Expiration date will be extended" : "";
 
-                if (!result.CanRenew) {
-                    renewMsg = "Renew is disabled in the server configuration."
-                }
-                if (!access.canRenewLicense()) {
-                    renewMsg += this.noPrivilegesText;
-                }
+                const renewMsg = this.getTooltipContent(result.CanRenew, access.canRenewLicense(),
+                    "renew license. Expiration date will be extended", "Renew");
                 this.renewTooltip(renewMsg);
             });
+    }
+    
+    private getTooltipContent(operationEnabledInConfiguration: boolean, hasPrivileges: boolean, operationAction: string, operationTitle: string) {
+        let msg = operationEnabledInConfiguration && hasPrivileges ? `Click to ${operationAction}` : "";
+
+        if (!operationEnabledInConfiguration) {
+            msg = `${operationTitle} is disabled in the server configuration.`;
+        }
+        
+        if (!hasPrivileges) {
+            msg += " You have insufficient privileges. Only a Cluster Admin can do this.";
+        }
+        
+        return msg;
     }
     
     private pullLatestVersionInfo() {
