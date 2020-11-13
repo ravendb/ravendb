@@ -36,6 +36,11 @@ namespace Raven.Client.Documents.Queries
             _buffer.Write((byte*)&l, sizeof(long));
         }
 
+        public void Write(ulong ul)
+        {
+            _buffer.Write((byte*)&ul, sizeof(ulong));
+        }
+
         public void Write(long? l)
         {
             if (l != null)
@@ -65,6 +70,21 @@ namespace Raven.Client.Documents.Queries
             _buffer.Write((byte*)&i, sizeof(int));
         }
 
+        public void Write(uint ui)
+        {
+            _buffer.Write((byte*)&ui, sizeof(uint));
+        }
+
+        public void Write(short sh)
+        {
+            _buffer.Write((byte*)&sh, sizeof(short));
+        }
+
+        public void Write(ushort ush)
+        {
+            _buffer.Write((byte*)&ush, sizeof(ushort));
+        }
+
         public void Write(bool b)
         {
             _buffer.WriteByte(b ? (byte)1 : (byte)2);
@@ -76,6 +96,16 @@ namespace Raven.Client.Documents.Queries
                 _buffer.WriteByte(b.Value ? (byte)1 : (byte)2);
             else
                 Write("null-bool");
+        }
+
+        public void Write(sbyte sby)
+        {
+            _buffer.Write((byte*)&sby, sizeof(sbyte));
+        }
+
+        public void Write(char ch)
+        {
+            _buffer.Write((byte*)&ch, sizeof(char));
         }
 
         public void Write(string s)
@@ -133,24 +163,54 @@ namespace Raven.Client.Documents.Queries
             foreach (var kvp in qp)
             {
                 Write(kvp.Key);
-                WriteParameterValue(kvp.Value);
+                WriteParameterValue(kvp.Value, 100);
             }
         }
 
-        private void WriteParameterValue(object value)
+        private void WriteParameterValue(object value, int level)
         {
+            if (level <= 0)
+            {
+                if (value is null)
+                    _buffer.WriteByte(0);
+                else
+                    Write(value.ToString());
+
+                return;
+            }
+
             switch (value)
             {
                 case string s:
                     Write(s);
                     break;
 
+                case char ch:
+                    Write(ch);
+                    break;
+
                 case long l:
                     Write(l);
                     break;
 
+                case ulong ul:
+                    Write(ul);
+                    break;
+
                 case int i:
                     Write(i);
+                    break;
+
+                case uint ui:
+                    Write(ui);
+                    break;
+
+                case short sh:
+                    Write(sh);
+                    break;
+
+                case ushort ush:
+                    Write(ush);
                     break;
 
                 case bool b:
@@ -193,6 +253,10 @@ namespace Raven.Client.Documents.Queries
                     _buffer.WriteByte(bt);
                     break;
 
+                case sbyte sbt:
+                    Write(sbt);
+                    break;
+
                 case Enum enm:
                     Write(enm.ToString());
                     break;
@@ -202,8 +266,8 @@ namespace Raven.Client.Documents.Queries
                     var dictionaryEnumerator = dict.GetEnumerator();
                     while (dictionaryEnumerator.MoveNext())
                     {
-                        WriteParameterValue(dictionaryEnumerator.Key);
-                        WriteParameterValue(dictionaryEnumerator.Value);
+                        WriteParameterValue(dictionaryEnumerator.Key, level - 1);
+                        WriteParameterValue(dictionaryEnumerator.Value, level - 1);
                         hadDictionaryValues = true;
                     }
                     if (hadDictionaryValues == false)
@@ -217,7 +281,7 @@ namespace Raven.Client.Documents.Queries
                     var enumerator = e.GetEnumerator();
                     while (enumerator.MoveNext())
                     {
-                        WriteParameterValue(enumerator.Current);
+                        WriteParameterValue(enumerator.Current, level - 1);
                         hadEnumerableValues = true;
                     }
                     if (hadEnumerableValues == false)
@@ -229,15 +293,19 @@ namespace Raven.Client.Documents.Queries
 
                 default:
 
-                    bool hasObjectValues = false;
-                    foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(value.GetType(), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                    var valueType = value.GetType();
+                    if (valueType.IsPrimitive == false)
                     {
-                        WriteParameterValue(memberInfo.GetValue(value));
-                        hasObjectValues = true;
-                    }
-                    if (hasObjectValues == false)
-                    {
-                        Write("empty-object");
+                        bool hasObjectValues = false;
+                        foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(valueType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+                        {
+                            WriteParameterValue(memberInfo.GetValue(value), level - 1);
+                            hasObjectValues = true;
+                        }
+                        if (hasObjectValues == false)
+                        {
+                            Write("empty-object");
+                        }
                     }
 
                     Write(value.ToString());
