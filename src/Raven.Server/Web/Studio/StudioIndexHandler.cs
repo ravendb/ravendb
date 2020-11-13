@@ -141,11 +141,15 @@ namespace Raven.Server.Web.Studio
             json.TryGet(nameof(AdditionalAssembly.PackageVersion), out string packageVersion);
             json.TryGet(nameof(AdditionalAssembly.PackageSourceUrl), out string packageSourceUrl);
                 
-            json.TryGet(nameof(AdditionalAssembly.Usings), out BlittableJsonReaderArray usingsArray);
             var usings = new HashSet<string>();
-            foreach (var item in usingsArray)
+            json.TryGet(nameof(AdditionalAssembly.Usings), out BlittableJsonReaderArray usingsArray);
+            
+            if (usingsArray != null)
             {
-                usings.Add(item.ToString());
+                foreach (var item in usingsArray)
+                {
+                    usings.Add(item.ToString());
+                }
             }
 
             if (string.IsNullOrWhiteSpace(assemblyName) == false)
