@@ -55,6 +55,22 @@
                 </div>
             </div>
         </div>
+        <div data-bind="visible: passiveNode">
+            <div class="bg-info text-info flex-horizontal padding">
+                <div class="flex-start"><i class="icon-info"></i></div>
+                <div>The running server is in a <strong>Passive State</strong>, it is not part of a cluster yet.<br>
+                     In order to work, it is required that the server is part of a cluster.<br><br>
+                    Either one of the following can be done to <strong>Bootstrap a Cluster</strong>:<br>
+                     <ul>
+                         <li>Create a new database</li>
+                         <li>Register a license (if not registered yet)</li>
+                         <li>Bootstrap the cluster on the <a target="_blank" data-bind="attr: { href: clusterViewUrl }">Cluster View</a><br>
+                             (or add another node, resulting in both nodes being part of the cluster)</li>
+                     </ul>
+                     <span>Your license information will be visible once that is done.</span>
+                </div>
+            </div>
+        </div>
         <div class="margin-top">
             <small>Copyright © 2009 - 2020 Hibernating Rhinos. All rights reserved.</small>
         </div>

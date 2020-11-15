@@ -8,10 +8,15 @@ import accessManager = require("common/shell/accessManager");
 import forceLicenseUpdateCommand = require("commands/licensing/forceLicenseUpdateCommand");
 import getLatestVersionInfoCommand = require("commands/version/getLatestVersionInfoCommand");
 import getLicenseConfigurationSettingsCommand = require("commands/licensing/getLicenseConfigurationSettingsCommand");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import appUrl = require("common/appUrl");
 
 class about extends viewModelBase {
 
     accessManager = accessManager.default.aboutView;
+    
+    clusterViewUrl = appUrl.forCluster();
+    passiveNode = ko.pureComputed(() => clusterTopologyManager.default.nodesCount() === 0);
     
     licenseCssClass = license.licenseCssClass;
     supportCssClass = license.supportCssClass;
