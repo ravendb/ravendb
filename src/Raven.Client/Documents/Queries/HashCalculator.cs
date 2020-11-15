@@ -260,6 +260,10 @@ namespace Raven.Client.Documents.Queries
                     Write(enm.ToString());
                     break;
 
+                case Type t:
+                    Write(t.AssemblyQualifiedName);
+                    break;
+
                 case IDictionary dict:
                     bool hadDictionaryValues = false;
                     var dictionaryEnumerator = dict.GetEnumerator();
