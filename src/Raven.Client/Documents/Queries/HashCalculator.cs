@@ -261,6 +261,10 @@ namespace Raven.Client.Documents.Queries
                     Write(enm.ToString());
                     break;
 
+                case Type t:
+                    Write(t.AssemblyQualifiedName);
+                    break;
+
                 case IDictionary dict:
                     bool hadDictionaryValues = false;
                     var dictionaryEnumerator = dict.GetEnumerator();
@@ -299,7 +303,10 @@ namespace Raven.Client.Documents.Queries
                         bool hasObjectValues = false;
                         foreach (var memberInfo in ReflectionUtil.GetPropertiesAndFieldsFor(valueType, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
                         {
-                            WriteParameterValue(memberInfo.GetValue(value), level - 1);
+                            if (TryGetMemberValue(memberInfo, value, out var memberValue) == false)
+                                continue;
+
+                            WriteParameterValue(memberValue, level - 1);
                             hasObjectValues = true;
                         }
                         if (hasObjectValues == false)
@@ -311,6 +318,20 @@ namespace Raven.Client.Documents.Queries
                     Write(value.ToString());
 
                     break;
+            }
+
+            static bool TryGetMemberValue(MemberInfo memberInfo, object value, out object memberValue)
+            {
+                try
+                {
+                    memberValue = memberInfo.GetValue(value);
+                    return true;
+                }
+                catch
+                {
+                    memberValue = null;
+                    return false;
+                }
             }
         }
     }
