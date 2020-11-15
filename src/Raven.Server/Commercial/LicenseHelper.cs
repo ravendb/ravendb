@@ -225,6 +225,9 @@ namespace Raven.Server.Commercial
         // returns true when this setting exists in settings.json
         private bool TryUpdatingSettingsJson(License newLicense, RSAParameters rsaParameters)
         {
+            if (File.Exists(_serverStore.Configuration.ConfigPath) == false)
+                return false;
+
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 BlittableJsonReaderObject settingsJson;
