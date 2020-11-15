@@ -504,13 +504,20 @@ namespace Raven.Client.Http
             }
         }
 
+        internal void Execute<TResult>(
+            RavenCommand<TResult> command,
+            JsonOperationContext context,
+            CancellationToken token)
+        {
+            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo: null, token));
+        }
+
         public void Execute<TResult>(
             RavenCommand<TResult> command,
             JsonOperationContext context,
-            SessionInfo sessionInfo = null,
-            CancellationToken token = default)
+            SessionInfo sessionInfo = null)
         {
-            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo, token));
+            AsyncHelpers.RunSync(() => ExecuteAsync(command, context, sessionInfo, CancellationToken.None));
         }
 
         public Task ExecuteAsync<TResult>(
