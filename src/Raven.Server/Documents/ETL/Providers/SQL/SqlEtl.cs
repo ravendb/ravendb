@@ -14,6 +14,7 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL
 {
@@ -80,23 +81,23 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             var count = 0;
 
-            var lazyWriter = new Lazy<RelationalDatabaseWriter>(() => new RelationalDatabaseWriter(this, Database));
-
-            foreach (var table in records)
+            using (var lazyWriter = new DisposableLazy<RelationalDatabaseWriter>(() => new RelationalDatabaseWriter(this, Database)))
             {
-                var writer = lazyWriter.Value;
+                foreach (var table in records)
+                {
+                    var writer = lazyWriter.Value;
 
-                var stats = writer.Write(table, null, CancellationToken);
+                    var stats = writer.Write(table, null, CancellationToken);
 
-                LogStats(stats, table);
+                    LogStats(stats, table);
 
-                count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
-            }
+                    count += stats.DeletedRecordsCount + stats.InsertedRecordsCount;
+                }
 
-            if (lazyWriter.IsValueCreated)
-            {
-                lazyWriter.Value.Commit();
-                lazyWriter.Value.Dispose();
+                if (lazyWriter.IsValueCreated)
+                {
+                    lazyWriter.Value.Commit();
+                }
             }
 
             return count;
