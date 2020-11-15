@@ -10,6 +10,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -439,6 +440,89 @@ namespace SlowTests.Server.Replication
                         u => u.Name.Equals("Karmel2"),
                         TimeSpan.FromSeconds(30)));
                 }
+            }
+        }
+
+        [Fact]
+        public async Task RavenDB_15855()
+        {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            var clusterSize = 3;
+            var hub = await CreateRaftClusterAndGetLeader(clusterSize);
+            var minion = await CreateRaftClusterAndGetLeader(clusterSize);
+
+            var hubDB = GetDatabaseName();
+            var minionDB = GetDatabaseName();
+
+            var dstTopology = await CreateDatabaseInCluster(minionDB, clusterSize, minion.WebUrl);
+            var srcTopology = await CreateDatabaseInCluster(hubDB, clusterSize, hub.WebUrl);
+
+            using (var hubStore = new DocumentStore
+            {
+                Urls = new[] { hub.WebUrl },
+                Database = hubDB
+            }.Initialize())
+            using (var minionStore = new DocumentStore
+            {
+                Urls = new[] { minion.WebUrl },
+                Database = minionDB
+            }.Initialize())
+            {
+                using (var session = hubStore.OpenSession())
+                {
+                    session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(10), replicas: clusterSize - 1);
+                    session.Store(new User
+                    {
+                        Name = "Karmel"
+                    }, "users/1");
+                    session.SaveChanges();
+                }
+
+                var name = $"pull-replication {GetDatabaseName()}";
+                await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition(name)
+                {
+                    MentorNode = "A"
+                }));
+
+                var pullReplication = new PullReplicationAsSink(hubDB, $"ConnectionString-{hubDB}", name)
+                {
+                    MentorNode = "B", // this is the node were the data will be replicated to.
+                };
+                await AddWatcherToReplicationTopology((DocumentStore)minionStore, pullReplication, new[] { hub.WebUrl });
+
+                using (var dstSession = minionStore.OpenSession())
+                {
+                    Assert.True(await WaitForDocumentInClusterAsync<User>(
+                        dstSession as DocumentSession,
+                        "users/1",
+                        u => u.Name.Equals("Karmel"),
+                        TimeSpan.FromSeconds(30)));
+                }
+
+                var minionUrl = minion.ServerStore.GetClusterTopology().GetUrlFromTag("B");
+                var minionServer = Servers.Single(s => s.WebUrl == minionUrl);
+                var handler = await InstantiateOutgoingTaskHandler(minionDB, minionServer);
+                Assert.True(WaitForValue(
+                    () => ((OngoingTaskPullReplicationAsSink)handler.GetOngoingTasksInternal().OngoingTasksList.Single(t => t is OngoingTaskPullReplicationAsSink)).DestinationUrl != null,
+                    true));
+
+                var mentorUrl = hub.ServerStore.GetClusterTopology().GetUrlFromTag("A");
+                var mentor = Servers.Single(s => s.WebUrl == mentorUrl);
+                var mentorDatabase = await mentor.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(hubDB);
+
+                var connections = await WaitForValueAsync(() => mentorDatabase.ReplicationLoader.OutgoingConnections.Count(), 3);
+                Assert.Equal(3, connections);
+
+                minionServer.CpuCreditsBalance.BackgroundTasksAlertRaised.Raise();
+
+                Assert.Equal(1,
+                    await WaitForValueAsync(async () => (await minionStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(minionDB))).Topology.Rehabs.Count,
+                        1));
+
+                EnsureReplicating((DocumentStore)hubStore, (DocumentStore)minionStore);
+
+                connections = await WaitForValueAsync(() => mentorDatabase.ReplicationLoader.OutgoingConnections.Count(), 3);
+                Assert.Equal(3, connections);
             }
         }
 
