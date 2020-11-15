@@ -7,7 +7,6 @@ using System.Linq.Expressions;
 using System.Text;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
-using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Extensions;
 
@@ -89,25 +88,18 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         {
             string timePeriod;
 
-            if (expression is ConstantExpression constantExpression)
+            switch (expression)
             {
-                timePeriod = constantExpression.Value.ToString();
-            }
-
-            else if (JavascriptConversionExtensions.IsWrappedConstantExpression(expression))
-            {
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(expression, out var value);
-                timePeriod = value.ToString();
-            }
-
-            else if (expression is LambdaExpression lambda)
-            {
-                timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.GroupBy));
-            }
-
-            else
-            {
-                timePeriod = expression.ToString();
+                case ConstantExpression constantExpression:
+                    timePeriod = constantExpression.Value.ToString();
+                    break;
+                case LambdaExpression lambda:
+                    timePeriod = GetTimePeriod(lambda, nameof(ITimeSeriesQueryable.GroupBy));
+                    break;
+                default:
+                    timePeriod = TryGetValueFromArgument(expression, groupByArgument: true);
+                    break;
+                
             }
 
             _groupBy = $" group by '{timePeriod}'";
@@ -263,23 +255,32 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private string GetNameFromArgument(Expression argument)
         {
-            if (argument is ConstantExpression constantExpression)
-                 return constantExpression.Value.ToString();
-
-            if (JavascriptConversionExtensions.IsWrappedConstantExpression(argument))
+            switch (argument)
             {
-                LinqPathProvider.GetValueFromExpressionWithoutConversion(argument, out var value);
+                case ConstantExpression constantExpression:
+                    return constantExpression.Value.ToString();
+                case ParameterExpression p:
+                    Parameters ??= new List<string>();
+                    Parameters.Add(p.Name);
+                    return p.Name;
+                default:
+                    return TryGetValueFromArgument(argument, groupByArgument: false);
+            }
+        }
+
+        private static string TryGetValueFromArgument(Expression argument, bool groupByArgument)
+        {
+            try
+            {
+                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(argument, out object value) == false)
+                    throw new NotSupportedException("Unsupported node type: " + argument.NodeType);
                 return value.ToString();
             }
-
-            if (argument is ParameterExpression p)
+            catch (Exception e)
             {
-                Parameters ??= new List<string>();
-                Parameters.Add(p.Name);
-                return p.Name;
+                ThrowFailedToEvaluateArgument(argument, groupByArgument, e);
+                return null;
             }
-
-            throw new InvalidOperationException("Invalid TimeSeries argument " + argument);
         }
 
         private void Between(MethodCallExpression mce)
@@ -462,6 +463,11 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private static void ThrowInvalidMethodArgument(Expression argument, string method)
         {
             throw new InvalidOperationException($"Invalid '{method}' argument: '{argument}'");
+        }
+
+        private static void ThrowFailedToEvaluateArgument(Expression argument, bool groupBy, Exception e = null)
+        {
+            throw new InvalidOperationException($"Failed to evaluate time-series {(groupBy ? "group by clause" : "name")} from argument '{argument}' ", e);
         }
     }
 
