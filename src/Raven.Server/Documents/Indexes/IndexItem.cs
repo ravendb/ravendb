@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.Indexes
 
         public readonly IndexItemType ItemType;
 
+        public bool Referenced;
+
         protected IndexItem(LazyStringValue id, LazyStringValue lowerId, LazyStringValue sourceDocumentId, LazyStringValue lowerSourceDocumentId, long etag, DateTime lastModified, string indexingKey, int size, object item, bool empty, IndexItemType itemType)
         {
             Id = id;

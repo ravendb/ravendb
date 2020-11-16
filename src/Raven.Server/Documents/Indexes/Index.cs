@@ -146,7 +146,10 @@ namespace Raven.Server.Documents.Indexes
         private readonly ManualResetEventSlim _logsAppliedEvent = new ManualResetEventSlim();
 
         private DateTime? _lastQueryingTime;
+
         public DateTime? LastIndexingTime { get; private set; }
+
+        public long LastDatabaseEtagOnIndexCreation { get; private set; }
 
         public Stopwatch TimeSpentIndexing = new Stopwatch();
 
@@ -678,6 +681,10 @@ namespace Raven.Server.Documents.Indexes
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
                 OnInitialization();
+
+                LastDatabaseEtagOnIndexCreation = _environment.IsNew 
+                    ? LastDatabaseEtag.Save(DocumentDatabase, this) 
+                    : LastDatabaseEtag.Get(_contextPool);
 
                 if (LastIndexingTime != null)
                     _didWork = true;

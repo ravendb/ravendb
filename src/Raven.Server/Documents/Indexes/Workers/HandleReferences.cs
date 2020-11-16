@@ -341,6 +341,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     continue;
                 }
 
+                item.Referenced = true;
                 yield return item;
             }
         }
