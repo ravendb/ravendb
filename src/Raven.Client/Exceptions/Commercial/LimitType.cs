@@ -24,7 +24,7 @@ namespace Raven.Client.Exceptions.Commercial
 
         [Description("Encryption")]
         Encryption,
-        
+
         [Description("Documents Compression")]
         DocumentsCompression,
 
@@ -59,6 +59,9 @@ namespace Raven.Client.Exceptions.Commercial
         TimeSeriesRollupsAndRetention,
 
         [Description("Encrypted Backup")]
-        EncryptedBackup
+        EncryptedBackup,
+
+        [Description("Additional Assemblies from NuGet")]
+        AdditionalAssembliesFromNuGet
     }
 }

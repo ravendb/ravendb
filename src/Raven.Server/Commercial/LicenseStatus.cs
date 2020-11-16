@@ -130,6 +130,8 @@ namespace Raven.Server.Commercial
 
         public bool HasTimeSeriesRollupsAndRetention => GetValue<bool>("timeSeriesRollupsAndRetention");
 
+        public bool HasAdditionalAssembliesFromNuGet => GetValue<bool>("additionalAssembliesNuget");
+
         public bool IsIsv => GetValue<bool>("redist");
 
         public bool IsCloud => GetValue<bool>("cloud");
@@ -184,6 +186,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasPullReplicationAsHub)] = HasPullReplicationAsHub,
                 [nameof(HasPullReplicationAsSink)] = HasPullReplicationAsSink,
                 [nameof(HasTimeSeriesRollupsAndRetention)] = HasTimeSeriesRollupsAndRetention,
+                [nameof(HasAdditionalAssembliesFromNuGet)] = HasAdditionalAssembliesFromNuGet,
                 [nameof(IsIsv)] = IsIsv,
                 [nameof(IsCloud)] = IsCloud,
                 [nameof(CanAutoRenewLetsEncryptCertificate)] = CanAutoRenewLetsEncryptCertificate

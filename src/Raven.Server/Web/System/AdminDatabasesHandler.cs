@@ -27,6 +27,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
+using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
@@ -326,6 +327,15 @@ namespace Raven.Server.Web.System
                 if (databaseRecord.Encrypted && databaseRecord.Topology?.DynamicNodesDistribution == true)
                 {
                     throw new InvalidOperationException($"Cannot enable '{nameof(DatabaseTopology.DynamicNodesDistribution)}' for encrypted database: " + databaseRecord.DatabaseName);
+                }
+
+                if (databaseRecord.Indexes != null && databaseRecord.Indexes.Count > 0)
+                {
+                    foreach (var kvp in databaseRecord.Indexes)
+                    {
+                        var indexDefinition = kvp.Value;
+                        Server.ServerStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(indexDefinition);
+                    }
                 }
 
                 if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(databaseRecord.DatabaseName) == false)
