@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Indexes.Workers
@@ -10,6 +11,10 @@ namespace Raven.Server.Documents.Indexes.Workers
             private readonly Dictionary<string, ReferenceState> _lastIdPerCollectionForDocuments = new Dictionary<string, ReferenceState>();
 
             private readonly Dictionary<string, ReferenceState> _lastIdPerCollectionForTombstones = new Dictionary<string, ReferenceState>();
+
+#if DEBUG
+            private readonly HashSet<(ActionType, string)> _setCollections = new HashSet<(ActionType, string)>();
+#endif
 
             public ReferenceState For(ActionType actionType, string collection)
             {
@@ -41,7 +46,19 @@ namespace Raven.Server.Documents.Indexes.Workers
                 {
                     // we update this only after the transaction was committed
                     dictionary[collection] = new ReferenceState(referencedItemId, reference.Etag, itemId, lastIndexedParentEtag);
+
+#if DEBUG
+                    if (_setCollections.Add((actionType, collection)) == false)
+                        throw new InvalidOperationException($"Double set of collection {collection} of action type {actionType}");
+#endif
                 };
+
+#if DEBUG
+                indexContext.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+                {
+                    _setCollections.Remove((actionType, collection));
+                };
+#endif
             }
 
             public void Clear(bool earlyExit, ActionType actionType, string collection, TransactionOperationContext indexContext)
