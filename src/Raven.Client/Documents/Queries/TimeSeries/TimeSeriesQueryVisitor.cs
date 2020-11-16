@@ -255,17 +255,23 @@ namespace Raven.Client.Documents.Queries.TimeSeries
 
         private string GetNameFromArgument(Expression argument)
         {
+            string name;
             switch (argument)
             {
                 case ConstantExpression constantExpression:
-                    return constantExpression.Value.ToString();
+                    name = constantExpression.Value.ToString();
+                    break;
                 case ParameterExpression p:
                     Parameters ??= new List<string>();
                     Parameters.Add(p.Name);
-                    return p.Name;
+                    name = p.Name;
+                    break;
                 default:
-                    return TryGetValueFromArgument(argument, groupByArgument: false);
+                    name = TryGetValueFromArgument(argument, groupByArgument: false);
+                    break;
             }
+
+            return QueryFieldUtil.EscapeIfNecessary(name);
         }
 
         private static string TryGetValueFromArgument(Expression argument, bool groupByArgument)
@@ -463,14 +469,6 @@ namespace Raven.Client.Documents.Queries.TimeSeries
         private static void ThrowInvalidMethodArgument(Expression argument, string method)
         {
             throw new InvalidOperationException($"Invalid '{method}' argument: '{argument}'");
-        }
-
-        private static bool IsQuoted(string s)
-        {
-            if (s.Length < 2)
-                return false;
-
-            return (s[0] == '\'' || s[0] == '\"') && s[0] == s[s.Length - 1];
         }
 
         private static void ThrowFailedToEvaluateArgument(Expression argument, bool groupBy, Exception e = null)
