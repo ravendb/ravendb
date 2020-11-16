@@ -20,6 +20,7 @@ $TARGET_SPECS = (
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
         "TargetId" = "linux-x64";
+        "NativeBinExtension" = "so";
     },
     @{
         "Name"      = "macos-x64";
@@ -27,20 +28,23 @@ $TARGET_SPECS = (
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
         "TargetId" = "macos";
+        "NativeBinExtension" = "dylib";
     },
     @{
         "Name"      = "raspberry-pi";
         "Runtime"   = "linux-arm";
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
-        "TargetId" = "rpi"
+        "TargetId" = "rpi";
+        "NativeBinExtension" = "so";
     },
     @{
         "Name"      = "linux-arm64";
         "Runtime"   = "linux-arm64";
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
-        "TargetId" = "linux-arm64"
+        "TargetId" = "linux-arm64";
+        "NativeBinExtension" = "so";
     }
 );
 
