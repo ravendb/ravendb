@@ -265,7 +265,7 @@ namespace Raven.Server.Rachis
                         _promotables.TryRemove(ambassador.Key, out _);
                     }
                     Interlocked.Increment(ref _previousPeersWereDisposed);
-                    System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+                    ThreadPool.QueueUserWorkItem(_ =>
                     {
                         foreach (var ambassador in old)
                         {

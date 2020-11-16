@@ -1764,7 +1764,7 @@ namespace Raven.Server.Rachis
             if (currentlyTheLeader == null)
                 return;
 
-            TaskExecutor.Execute(_ =>
+            ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
                 {

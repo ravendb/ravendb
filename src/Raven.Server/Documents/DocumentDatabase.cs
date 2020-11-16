@@ -342,7 +342,7 @@ namespace Raven.Server.Documents
 
                 _serverStore.StorageSpaceMonitor.Subscribe(this);
 
-                TaskExecutor.Execute(_ =>
+                ThreadPool.QueueUserWorkItem( _ =>
                 {
                     try
                     {

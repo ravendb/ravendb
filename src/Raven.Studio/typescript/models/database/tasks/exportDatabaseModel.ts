@@ -16,7 +16,6 @@ class exportDatabaseModel {
     includeRevisionDocuments = ko.observable(true);
     includeSubscriptions = ko.observable(true);
     
-    revisionsAreConfigured: KnockoutComputed<boolean>;
     encryptOutput = ko.observable<boolean>(false);
     
     databaseModel = new smugglerDatabaseRecord();
@@ -184,8 +183,8 @@ class exportDatabaseModel {
                 || this.includeSubscriptions()
                 || this.includeCompareExchange() 
                 || this.includeCounters() 
+                || this.includeRevisionDocuments()
                 || this.includeTimeSeries()
-                || (this.includeRevisionDocuments() && this.revisionsAreConfigured()) 
                 || this.includeDocuments()
                 || this.includeArtificialDocuments();
         });

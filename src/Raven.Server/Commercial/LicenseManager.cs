@@ -147,6 +147,9 @@ namespace Raven.Server.Commercial
 
         public async Task PutMyNodeInfoAsync()
         {
+            if (_serverStore.IsPassive())
+                return;
+
             if (await _licenseLimitsSemaphore.WaitAsync(0) == false)
                 return;
 
