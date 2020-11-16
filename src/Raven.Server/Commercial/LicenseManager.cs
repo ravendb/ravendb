@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL;
@@ -63,6 +64,7 @@ namespace Raven.Server.Commercial
         private LicenseSupportInfo _lastKnownSupportInfo;
 
         public event Action LicenseChanged;
+
         public event Action OnBeforeInitialize;
 
         public static readonly OsInfo OsInfo = OsInfoExtensions.GetOsInfo();
@@ -879,6 +881,7 @@ namespace Raven.Server.Commercial
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
             var dynamicNodesDistributionCount = 0;
+            var additionalAssembliesFromNuGetCount = 0;
 
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -917,6 +920,9 @@ namespace Raven.Server.Commercial
                     if (HasRavenEtl(databaseRecord.RavenEtls,
                         databaseRecord.RavenConnectionStrings))
                         ravenEtlCount++;
+
+                    if (HasAdditionalAssembliesFromNuGet(databaseRecord.Indexes))
+                        additionalAssembliesFromNuGetCount++;
 
                     if (databaseRecord.SqlEtls != null &&
                         databaseRecord.SqlEtls.Count > 0)
@@ -968,6 +974,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(timeSeriesRollupsAndRetentionCount, "time series rollups and retention");
                 throw GenerateLicenseLimit(LimitType.TimeSeriesRollupsAndRetention, message);
+            }
+
+            if (additionalAssembliesFromNuGetCount > 0 && newLicenseStatus.HasAdditionalAssembliesFromNuGet == false)
+            {
+                var message = GenerateDetails(additionalAssembliesFromNuGetCount, "additional assemblies from NuGet");
+                throw GenerateLicenseLimit(LimitType.AdditionalAssembliesFromNuGet, message);
             }
 
             if (ravenEtlCount > 0 && newLicenseStatus.HasRavenEtl == false)
@@ -1050,6 +1062,40 @@ namespace Raven.Server.Commercial
             return configuration.Collections.Any(x => x.Value != null && x.Value.Disabled == false);
         }
 
+        private static bool HasAdditionalAssembliesFromNuGet(Dictionary<string, IndexDefinition> indexes)
+        {
+            if (indexes == null || indexes.Count == 0)
+                return false;
+
+            foreach (var kvp in indexes)
+            {
+                if (HasAdditionalAssembliesFromNuGet(kvp.Value))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasAdditionalAssembliesFromNuGet(IndexDefinition indexDefinition)
+        {
+            if (indexDefinition == null)
+                return false;
+
+            var additionalAssemblies = indexDefinition.AdditionalAssemblies;
+            if (additionalAssemblies == null || additionalAssemblies.Count == 0)
+                return false;
+
+            foreach (var additionalAssembly in additionalAssemblies)
+            {
+                if (string.IsNullOrEmpty(additionalAssembly.PackageName))
+                    continue;
+
+                return true;
+            }
+
+            return false;
+        }
+
         private static (bool HasSnapshotBackup, bool HasCloudBackup, bool HasEncryptedBackup) GetBackupTypes(
             IEnumerable<PeriodicBackupConfiguration> periodicBackups)
         {
@@ -1095,6 +1141,21 @@ namespace Raven.Server.Commercial
                 var message = $"Your current license allows up to {maxClusterSize} nodes in a cluster";
                 throw GenerateLicenseLimit(LimitType.ClusterSize, message);
             }
+        }
+
+        public void AssertCanAddAdditionalAssembliesFromNuGet(IndexDefinition indexDefinition)
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasAdditionalAssembliesFromNuGet)
+                return;
+
+            if (HasAdditionalAssembliesFromNuGet(indexDefinition) == false)
+                return;
+
+            const string details = "Your current license doesn't include the additional assemblies from NuGet feature";
+            throw GenerateLicenseLimit(LimitType.AdditionalAssembliesFromNuGet, details);
         }
 
         public void AssertCanAddPeriodicBackup(BackupConfiguration configuration)
@@ -1313,14 +1374,19 @@ namespace Raven.Server.Commercial
             {
                 case PeriodicBackupConfiguration _:
                     return lower == false ? "Backup" : "backup";
+
                 case SubscriptionState _:
                     return lower == false ? "Subscription" : "subscription";
+
                 case RavenEtlConfiguration _:
                     return "Raven ETL";
+
                 case SqlEtlConfiguration _:
                     return "SQL ETL";
+
                 case ExternalReplication _:
                     return lower == false ? "External Replication" : "external replication";
+
                 default:
                     return string.Empty;
             }

@@ -732,6 +732,7 @@ namespace Raven.Server.Documents.Indexes
         private void ValidateStaticIndex(IndexDefinition definition)
         {
             ValidateIndexName(definition.Name, isStatic: true);
+            _serverStore.LicenseManager.AssertCanAddAdditionalAssembliesFromNuGet(definition);
 
             var safeFileSystemIndexName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(definition.Name);
 
