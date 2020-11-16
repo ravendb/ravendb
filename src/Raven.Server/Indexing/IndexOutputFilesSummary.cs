@@ -1,6 +1,4 @@
 ﻿using System.Runtime.CompilerServices;
-using Raven.Server.Documents.Indexes;
-using Voron.Debugging;
 
 namespace Raven.Server.Indexing
 {

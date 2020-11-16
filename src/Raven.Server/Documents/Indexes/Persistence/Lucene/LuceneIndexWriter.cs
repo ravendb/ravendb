@@ -159,8 +159,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _indexWriter.UseCompoundFile = false;
             _indexWriter.SetMergePolicy(new LogByteSizeMergePolicy(_indexWriter)
             {
-                MaxMergeMB = _index.Configuration.MaximumSegmentMergeSize.Value.GetValue(SizeUnit.Megabytes),
-                MergeFactor = _index.Configuration.SegmentsMergeFactor
+                MaxMergeMB = _index.Configuration.MaximumSizePerSegment.GetValue(SizeUnit.Megabytes),
+                MergeFactor = _index.Configuration.MergeFactor,
+                LargeSegmentSizeMB = _index.Configuration.LargeSegmentSizeToMerge.GetValue(SizeUnit.Megabytes),
+                NumberOfLargeSegmentsToMergeInASingleBatch = _index.Configuration.NumberOfLargeSegmentsToMergeInASingleBatch
             });
 
             if (_indexReaderWarmer != null)
