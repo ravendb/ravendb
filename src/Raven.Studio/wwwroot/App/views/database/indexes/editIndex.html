@@ -150,24 +150,31 @@
                     <li role="presentation" class="active" id="fieldsTab">
                         <a href="#fields" aria-controls="fields" role="tab" data-toggle="tab">
                             <i class="icon-admin-logs"></i><span>Fields</span>
+                            <span class="label label-primary margin-left margin-left-sm"
+                                  data-bind="text: editedIndex().numberOfFields() + !!editedIndex().defaultFieldOptions() || undefined"></span>
                         </a>
                     </li>
                     <li role="presentation" id="configurationTab">
                         <a href="#configure" aria-controls="configure" role="tab" data-toggle="tab">
                             <i class="icon-settings"></i><span>Configuration</span>
+                            <span class="label label-primary margin-left margin-left-sm"
+                                  data-bind="text: editedIndex().numberOfConfigurationFields() || undefined"></span>
                         </a>
                     </li>
                     <li role="presentation" id="additionalAssembliesTab">
                         <a href="#additionalAssemblies" aria-controls="additionalAssemblies" role="tab" data-toggle="tab">
                             <i class="icon-additional-assemblies"></i>
                             <span>Additional Assemblies</span>
+                            <span class="label label-primary margin-left margin-left-sm"
+                                  data-bind="text: editedIndex().additionalAssemblies().length || undefined"></span>
                         </a>
                     </li>
                     <li role="presentation" id="additionalSourcesTab">
                         <a href="#additionalSources" aria-controls="additionalSources" role="tab" data-toggle="tab">
                             <i class="icon-additional-sources"></i>
                             <span>Additional Sources</span>
-                            <span class="label label-primary margin-left margin-left-sm" data-bind="text: editedIndex().additionalSources().length || undefined"></span>
+                            <span class="label label-primary margin-left margin-left-sm"
+                                  data-bind="text: editedIndex().additionalSources().length || undefined"></span>
                         </a>
                     </li>
                 </ul>
