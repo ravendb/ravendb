@@ -21,8 +21,6 @@ namespace FastTests.Client
 
         [LicenseRequiredTheory]
         [InlineData(0, 1, "OnBeforeRequest", "OnAfterRequests")]
-        [InlineData(1, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest", "OnAfterRequests")]
-        [InlineData(2, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest")]
         public async Task OnBeforeAfterAndFailRequest(int failCount, int clusterSize, params string[] expected)
         {
             var actual = new ConcurrentQueue<string>();

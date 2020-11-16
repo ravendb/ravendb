@@ -343,11 +343,31 @@ class revisions extends viewModelBase {
 
     enforceConfiguration() {
         const db = this.activeDatabase();
+        
+        const collectionNameItems = _.reduce(this.perCollectionConfigurations(), 
+            (result: string, revisionConfiguration) => { return result += `<li>${generalUtils.escapeHtml(revisionConfiguration.collection())}</li>`; }, "");
+        
+        const text1 = collectionNameItems.length > 0 ?
+            `The following collections have a revision configuration defined:<br><ul>${collectionNameItems}</ul>` : "";
 
-        this.confirmationMessage("Enforce Revisions Configuration",
-            "<small>Clicking '<strong>Enforce</strong>' will enforce the current revisions configuration on <strong>all</strong> existing revisions in the database per collection.<br><br>" +
-            "<strong>Note</strong>: Revisions might be removed depending on the current configuration rules.</small>",
-            { buttons: ["Cancel", "Enforce Revisions Configuration"], html: true })
+        const text2 =
+            `<div class="margin-top margin-top-lg margin-bottom margin-bottom-lg">
+                 Clicking <strong>Enforce</strong> will enforce the current revision configuration definitions<br>
+                 <strong>on all existing revisions</strong> in the database per collection.<br>
+                 Revisions might be removed depending on the current configuration rules.
+             </div>`;
+
+        const text3 =
+            `<div class="bg-warning text-warning padding padding-sm flex-horizontal">
+                 <small class="flex-start margin-right"><i class="icon-warning"></i></small>
+                 <small>
+                     For collections without a specific revision configuration:<br>
+                     If a Default Configuration is defined & enabled, it will be applied.<br>
+                     If a Default Configuration is not defined, or if disabled, <strong>all revisions will be deleted</strong>.
+                 </small>
+             </div>`;
+        
+        this.confirmationMessage("Enforce Revision Configuration", text1 + text2 + text3, { buttons: ["Cancel", "Enforce Revision Configuration"], html: true })
             .done (result => {
                 if (result.can) {
                     new enforceRevisionsConfigurationCommand(db)

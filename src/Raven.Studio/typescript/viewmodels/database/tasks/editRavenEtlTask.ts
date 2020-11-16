@@ -210,7 +210,7 @@ class editRavenEtlTask extends viewModelBase {
 
         if (args.taskId) {
             // 1. Editing an Existing task
-            this.isAddingNewRavenEtlTask(false);            
+            this.isAddingNewRavenEtlTask(false);
             
             getOngoingTaskInfoCommand.forRavenEtl(this.activeDatabase(), args.taskId)
                 .execute()
@@ -257,7 +257,7 @@ class editRavenEtlTask extends viewModelBase {
             });
     }
 
-    private initObservables() {     
+    private initObservables() {
         this.shortErrorText = ko.pureComputed(() => {
             const result = this.testConnectionResult();
             if (!result || result.Success) {
@@ -265,11 +265,6 @@ class editRavenEtlTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
-
-        this.dirtyFlag = new ko.DirtyFlag([           
-            this.createNewConnectionString,
-            this.editedRavenEtl().dirtyFlag().isDirty
-        ], false, jsonUtil.newLineNormalizingHashFunction);
         
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
@@ -314,6 +309,12 @@ class editRavenEtlTask extends viewModelBase {
             return this.isValid(this.editedRavenEtl().editedTransformationScriptSandbox().validationGroup);
         }, dtoProvider);
 
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.createNewConnectionString,
+            this.newConnectionString().dirtyFlag().isDirty,
+            this.editedRavenEtl().dirtyFlag().isDirty
+        ], false, jsonUtil.newLineNormalizingHashFunction);
+        
         this.test.initObservables();
     }
 
@@ -332,13 +333,13 @@ class editRavenEtlTask extends viewModelBase {
             .done(result => this.testConnectionResult(result))
             .always(() => {
                 this.spinners.test(false);
-                this.newConnectionString().selectedUrlToTest(null);                
+                this.newConnectionString().selectedUrlToTest(null);
             });
     }
 
     saveRavenEtl() {
         let hasAnyErrors = false;
-        this.spinners.save(true);        
+        this.spinners.save(true);
         let editedEtl = this.editedRavenEtl();
 
         // 0. Save discovery URL if user forgot to hit 'add url' button
@@ -357,17 +358,17 @@ class editRavenEtlTask extends viewModelBase {
             }
         }
         
-        // 2. Validate *new connection string* (if relevant..)       
+        // 2. Validate *new connection string* (if relevant..)
         if (this.createNewConnectionString()) {
             if (!this.isValid(this.newConnectionString().validationGroup)) {
                 hasAnyErrors = true;
             } else {
                 // Use the new connection string
-                editedEtl.connectionStringName(this.newConnectionString().connectionStringName());               
+                editedEtl.connectionStringName(this.newConnectionString().connectionStringName());
             }
-        }      
+        }
 
-        // 3. Validate *general form*               
+        // 3. Validate *general form*
         if (!this.isValid(editedEtl.validationGroup)) {
             hasAnyErrors = true;
         }
@@ -382,7 +383,7 @@ class editRavenEtlTask extends viewModelBase {
         if (this.createNewConnectionString()) {
             this.newConnectionString()
                 .saveConnectionString(this.activeDatabase())
-                .done(() => {                   
+                .done(() => {
                     savingNewStringAction.resolve();
                 })
                 .fail(() => {
@@ -453,7 +454,7 @@ class editRavenEtlTask extends viewModelBase {
             return script.name().startsWith(editRavenEtlTask.scriptNamePrefix);
         });
         
-        const maxNumber =  _.max(scriptsWithPrefix
+        const maxNumber = _.max(scriptsWithPrefix
             .map(x => x.name().substr(editRavenEtlTask.scriptNamePrefix.length))
             .map(x => _.toInteger(x))) || 0;
         
@@ -470,7 +471,7 @@ class editRavenEtlTask extends viewModelBase {
 
     createCollectionNameAutocompleter(usedCollections: KnockoutObservableArray<string>, collectionText: KnockoutObservable<string>) {
         return ko.pureComputed(() => {
-            let result;            
+            let result;
             const key = collectionText();
 
             const options = this.collections().filter(x => !x.isAllDocuments).map(x => x.name);
@@ -480,7 +481,7 @@ class editRavenEtlTask extends viewModelBase {
             const filteredOptions = _.difference(options, usedOptions);
 
             if (key) {
-                result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));               
+                result = filteredOptions.filter(x => x.toLowerCase().includes(key.toLowerCase()));
             } else {
                 result = filteredOptions;
             }
@@ -503,7 +504,7 @@ class editRavenEtlTask extends viewModelBase {
     }
 
     toggleTestArea() {
-        if (!this.enableTestArea()) {             
+        if (!this.enableTestArea()) {
             this.enableTestArea(true);
         } else {
             this.enableTestArea(false);
@@ -512,7 +513,7 @@ class editRavenEtlTask extends viewModelBase {
     
     toggleAdvancedArea() {
         this.showAdvancedOptions.toggle();
-    }    
+    }
 }
 
 export = editRavenEtlTask;
