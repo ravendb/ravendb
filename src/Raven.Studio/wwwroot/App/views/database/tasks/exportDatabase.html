@@ -38,9 +38,8 @@
                                            data-bind="checked: includeTimeSeries" />
                                     <label for="toggleTimeSeries">Include Time Series</label>
                                 </div>
-                                <div class="toggle" data-toggle="tooltip" data-placement="top"
-                                     data-bind="attr: { title: $root.hasRevisionsConfiguration() ? '' : 'Document Revisions are not enabled for this database' }">
-                                    <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions" />
+                            <div class="toggle">
+                                <input id="toggleRevisions" type="checkbox" data-bind="checked: includeRevisionDocuments" />
                                     <label for="toggleRevisions">Include Revisions</label>
                                 </div>
                             </div>

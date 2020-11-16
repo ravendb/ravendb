@@ -293,7 +293,15 @@ namespace Voron.Impl.Paging
             if (pageNumber > NumberOfAllocatedPages || pageNumber < 0)
                 goto InvalidPageNumber;
 
-            var state = pagerState ?? _pagerState;
+            var state = pagerState;
+
+            if (state == null)
+            {
+                state = _pagerState;
+
+                if (state == null)
+                    goto AlreadyDisposed;
+            }
 
             tx?.EnsurePagerStateReference(state);
 

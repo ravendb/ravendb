@@ -55,7 +55,7 @@ class about extends viewModelBase {
     latestVersionWhatsNewUrl = ko.pureComputed(() => 
         `https://ravendb.net/whats-new?buildNumber=${ about.latestVersion().BuildNumber }`);
 
-    maxClusterSize  = ko.pureComputed(() => {
+    maxClusterSize = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return licenseStatus ? licenseStatus.MaxClusterSize : 1;
     });
@@ -116,12 +116,15 @@ class about extends viewModelBase {
         return `${expiration.format(dateFormat)} <br /><Small class="${expiredClass}">(${duration} ago)</Small>`;
     });
 
-
     isCloud = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return licenseStatus && licenseStatus.IsCloud;
     });
 
+    automaticRenewText = ko.pureComputed(() => {
+        return this.isCloud() ? "Cloud licenses are automatically renewed" : "";
+    });
+    
     licenseType = ko.pureComputed(() => {
         const licenseStatus = license.licenseStatus();
         return !licenseStatus ? "None" : licenseStatus.Type;
@@ -193,14 +196,11 @@ class about extends viewModelBase {
     });
     
     canRenewLicense = ko.pureComputed(() => {
-        return this.accessManager.canRenewLicense &&
-               (this.licenseType() === 'Developer' ||  this.licenseType() === 'Community');
+        return this.licenseType() === 'Developer' || this.licenseType() === 'Community';
     });
 
     canForceUpdate = ko.pureComputed(() => {
-        return this.accessManager.canForceUpdate  &&
-               this.licenseType() !== 'Developer' &&
-               this.licenseType() !== 'Community';
+        return this.licenseType() !== 'Developer' && this.licenseType() !== 'Community';
     });
     
     licenseAttribute(name: keyof Raven.Server.Commercial.LicenseStatus) {
@@ -213,10 +213,18 @@ class about extends viewModelBase {
         });
     }
 
-    isRenewLicenseEnabled = ko.observable<boolean>(false);
-    isActivateLicenseEnabled = ko.observable<boolean>(false);
-    isForceUpdateEnabled = ko.observable<boolean>(false);
+    isRegisterLicenseEnabled = ko.observable<boolean>(false);
+    registerTooltip = ko.observable<string>();
+    
+    isReplaceLicenseEnabled = ko.observable<boolean>(false);
+    replaceTooltip = ko.observable<string>();
 
+    isForceUpdateEnabled = ko.observable<boolean>(false);
+    forceUpdateTooltip = ko.observable<string>();
+    
+    isRenewLicenseEnabled = ko.observable<boolean>(false);
+    renewTooltip = ko.observable<string>();
+    
     register() {
         registration.showRegistrationDialog(license.licenseStatus(), false, true);
     }
@@ -225,10 +233,50 @@ class about extends viewModelBase {
         return new getLicenseConfigurationSettingsCommand()
             .execute()
             .done((result: Raven.Server.Config.Categories.LicenseConfiguration) => {
-                this.isActivateLicenseEnabled(result.CanActivate);
-                this.isRenewLicenseEnabled(result.CanRenew);
-                this.isForceUpdateEnabled(result.CanForceUpdate);
+                const access = this.accessManager;
+                
+                const canRegister = result.CanActivate && access.canRegisterLicense();
+                this.isRegisterLicenseEnabled(canRegister);
+                
+                const registerMsg = this.getTooltipContent(result.CanActivate, access.canRegisterLicense(),
+                    "register a new license", "Registering new license");
+                this.registerTooltip(registerMsg);
+                
+                const canReplace = result.CanActivate && access.canReplaceLicense();
+                this.isReplaceLicenseEnabled(canReplace);
+
+                const replaceMsg = this.getTooltipContent(result.CanActivate, access.canReplaceLicense(),
+                    "replace the current license with another license", "Replacing license");
+                this.replaceTooltip(replaceMsg);
+                
+                const canForceUpdate = result.CanForceUpdate && access.canForceUpdate();
+                this.isForceUpdateEnabled(canForceUpdate);
+
+                const forceUpdateMsg = this.getTooltipContent(result.CanForceUpdate, access.canForceUpdate(),
+                    "apply the license that was set for you", "Force license update");
+                this.forceUpdateTooltip(forceUpdateMsg);
+
+                const canRenew = result.CanRenew && access.canRenewLicense();
+                this.isRenewLicenseEnabled(canRenew);
+
+                const renewMsg = this.getTooltipContent(result.CanRenew, access.canRenewLicense(),
+                    "renew license. Expiration date will be extended", "Renew");
+                this.renewTooltip(renewMsg);
             });
+    }
+    
+    private getTooltipContent(operationEnabledInConfiguration: boolean, hasPrivileges: boolean, operationAction: string, operationTitle: string) {
+        let msg = operationEnabledInConfiguration && hasPrivileges ? `Click to ${operationAction}` : "";
+
+        if (!operationEnabledInConfiguration) {
+            msg = `${operationTitle} is disabled in the server configuration.`;
+        }
+        
+        if (!hasPrivileges) {
+            msg += " You have insufficient privileges. Only a Cluster Admin can do this.";
+        }
+        
+        return msg;
     }
     
     private pullLatestVersionInfo() {

@@ -187,6 +187,7 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 if (_enum?.MoveNext() == true)
                     return _enum.Current;
                 _enum?.Dispose();
+                _enum = null;
                 _docs.Dispose();
                 return NO_MORE_DOCS;
             }

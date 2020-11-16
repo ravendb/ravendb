@@ -28,8 +28,9 @@ class connectionStringSqlEtlModel extends connectionStringModel {
         this.update(dto);
         this.initValidation();
         
-        this.dirtyFlag = new ko.DirtyFlag([           
+        this.dirtyFlag = new ko.DirtyFlag([
             this.connectionString,
+            this.factoryName,
             this.connectionStringName
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }

@@ -415,6 +415,23 @@ namespace Raven.Server.Documents.Replication
 
             try
             {
+                DatabaseTopology topology;
+                Dictionary<string, RavenConnectionString> ravenConnectionStrings;
+
+                using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var raw = _server.Cluster.ReadRawDatabaseRecord(ctx, Database.Name);
+                    if (raw == null)
+                    {
+                        _reconnectQueue.Clear();
+                        return;
+                    }
+
+                    topology = raw.Topology;
+                    ravenConnectionStrings = raw.RavenConnectionStrings;
+                }
+
                 foreach (var failure in _reconnectQueue)
                 {
                     try
@@ -430,6 +447,12 @@ namespace Raven.Server.Documents.Replication
                             _reconnectQueue.Add(failure);
                             continue;
                         }
+
+                        if (failure.External && 
+                            IsMyTask(ravenConnectionStrings, topology, failure.Node as ExternalReplicationBase) == false)
+                            // no longer my task
+                            continue;
+
 
                         AddAndStartOutgoingReplication(failure.Node, failure.External);
                     }
@@ -527,7 +550,7 @@ namespace Raven.Server.Documents.Replication
             {
                 if (connection.Key is ExternalReplication external)
                 {
-                    if (ValidateConnectionString(newRecord, external, out var connectionString))
+                    if (ValidateConnectionString(newRecord.RavenConnectionStrings, external, out var connectionString))
                     {
                         external.ConnectionString = connectionString;
                     }
@@ -648,7 +671,7 @@ namespace Raven.Server.Documents.Replication
 
         private void DisposeConnections(List<IDisposable> instancesToDispose)
         {
-            TaskExecutor.Execute(toDispose =>
+            ThreadPool.QueueUserWorkItem(toDispose =>
             {
                 Parallel.ForEach((List<IDisposable>)toDispose, instance =>
                 {
@@ -679,22 +702,23 @@ namespace Raven.Server.Documents.Replication
         }
 
         private (List<ExternalReplicationBase> AddedDestinations, List<ExternalReplicationBase> RemovedDestiantions) FindExternalReplicationChanges(
-            HashSet<ExternalReplicationBase> current,
+            DatabaseRecord databaseRecord, HashSet<ExternalReplicationBase> current,
             List<ExternalReplicationBase> newDestinations)
         {
-            if (newDestinations == null)
-                newDestinations = new List<ExternalReplicationBase>();
-
             var outgoingHandlers = OutgoingHandlers.ToList();
 
             var addedDestinations = new List<ExternalReplicationBase>();
             var removedDestinations = current.ToList();
             foreach (var newDestination in newDestinations.ToArray())
             {
+                if (IsMyTask(databaseRecord.RavenConnectionStrings, databaseRecord.Topology, newDestination) == false)
+                    continue;
+
                 if (newDestination.Disabled)
                     continue;
 
                 removedDestinations.Remove(newDestination);
+
                 if (current.TryGetValue(newDestination, out var actual))
                 {
                     // if we update the delay we don't want to break the replication (the hash code will be the same),
@@ -705,16 +729,21 @@ namespace Raven.Server.Documents.Replication
                     if (handler == null)
                         continue;
 
-                    if (handler.Destination is ExternalReplication ex &&
-                        actual is ExternalReplication actualEx &&
-                        newDestination is ExternalReplication newDestinationEx)
+                    if (handler.Destination is ExternalReplicationBase erb)
                     {
-                        if (ex.DelayReplicationFor != actualEx.DelayReplicationFor)
-                            handler.NextReplicateTicks = 0;
+                        erb.MentorNode = newDestination.MentorNode;
 
-                        ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
-                        ex.MentorNode = newDestination.MentorNode;
+                        if (handler.Destination is ExternalReplication ex &&
+                            actual is ExternalReplication actualEx &&
+                            newDestination is ExternalReplication newDestinationEx)
+                        {
+                            if (ex.DelayReplicationFor != actualEx.DelayReplicationFor)
+                                handler.NextReplicateTicks = 0;
+
+                            ex.DelayReplicationFor = newDestinationEx.DelayReplicationFor;
+                        }
                     }
+                    
                     continue;
                 }
 
@@ -729,12 +758,13 @@ namespace Raven.Server.Documents.Replication
             var externalReplications = newRecord.ExternalReplications.Concat<ExternalReplicationBase>(newRecord.SinkPullReplications).ToList();
             SetExternalReplicationProperties(newRecord, externalReplications);
 
-            var changes = FindExternalReplicationChanges(_externalDestinations, externalReplications);
+            var changes = FindExternalReplicationChanges(newRecord, _externalDestinations, externalReplications);
 
             DropOutgoingConnections(changes.RemovedDestiantions, instancesToDispose);
             DropIncomingConnections(changes.RemovedDestiantions, instancesToDispose);
 
             var newDestinations = GetMyNewDestinations(newRecord, changes.AddedDestinations);
+
             if (newDestinations.Count > 0)
             {
                 Task.Run(() =>
@@ -763,7 +793,7 @@ namespace Raven.Server.Documents.Replication
         {
             foreach (var externalReplication in externalReplications)
             {
-                if (ValidateConnectionString(newRecord, externalReplication, out var connectionString) == false)
+                if (ValidateConnectionString(newRecord.RavenConnectionStrings, externalReplication, out var connectionString) == false)
                 {
                     continue;
                 }
@@ -775,15 +805,17 @@ namespace Raven.Server.Documents.Replication
 
         private List<ExternalReplicationBase> GetMyNewDestinations(DatabaseRecord newRecord, List<ExternalReplicationBase> added)
         {
-            return added.Where(configuration =>
-            {
-                if (ValidateConnectionString(newRecord, configuration, out _) == false)
-                    return false;
+            return added.Where(configuration => IsMyTask(newRecord.RavenConnectionStrings, newRecord.Topology, configuration)).ToList();
+        }
 
-                var taskStatus = GetExternalReplicationState(_server, Database.Name, configuration.TaskId);
-                var whoseTaskIsIt = Database.WhoseTaskIsIt(newRecord.Topology, configuration, taskStatus);
-                return whoseTaskIsIt == _server.NodeTag;
-            }).ToList();
+        private bool IsMyTask(Dictionary<string, RavenConnectionString> connectionStrings, DatabaseTopology topology, ExternalReplicationBase task)
+        {
+            if (ValidateConnectionString(connectionStrings, task, out _) == false)
+                return false;
+
+            var taskStatus = GetExternalReplicationState(_server, Database.Name, task.TaskId);
+            var whoseTaskIsIt = Database.WhoseTaskIsIt(topology, task, taskStatus);
+            return whoseTaskIsIt == _server.NodeTag;
         }
 
         public static ExternalReplicationState GetExternalReplicationState(ServerStore server, string database, long taskId)
@@ -842,12 +874,12 @@ namespace Raven.Server.Documents.Replication
                 finally
                 {
                     var record = rawRecord.MaterializedRecord;
-                    TaskExecutor.Execute(_ => _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record), null);
+                    ThreadPool.QueueUserWorkItem(_ => _server.DatabasesLandlord.DeleteDatabase(Database.Name, deletionInProgress[_server.NodeTag], record), null);
                 }
             }
         }
 
-        private bool ValidateConnectionString(DatabaseRecord newRecord, ExternalReplicationBase externalReplication, out RavenConnectionString connectionString)
+        private bool ValidateConnectionString(Dictionary<string, RavenConnectionString> ravenConnectionStrings, ExternalReplicationBase externalReplication, out RavenConnectionString connectionString)
         {
             connectionString = null;
             if (string.IsNullOrEmpty(externalReplication.ConnectionStringName))
@@ -869,7 +901,7 @@ namespace Raven.Server.Documents.Replication
                 return false;
             }
 
-            if (newRecord.RavenConnectionStrings.TryGetValue(externalReplication.ConnectionStringName, out connectionString) == false)
+            if (ravenConnectionStrings.TryGetValue(externalReplication.ConnectionStringName, out connectionString) == false)
             {
                 var msg = $"Could not find connection string with name {externalReplication.ConnectionStringName} " +
                           $"for the external replication task '{externalReplication.Name}' to '{externalReplication.Database}'.";
