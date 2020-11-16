@@ -107,6 +107,7 @@
                     <div class="name">Number of databases</div><div class="value"><i class="icon-infinity"></i></div>
                     <div class="name">Single database size</div><div class="value"><i class="icon-infinity"></i></div>
                     <div class="name">Management Studio (GUI)</div><div class="value"><i class="icon-checkmark"></i></div>
+                    
                     <h4>Clustering</h4>
                     <div class="name">Max cluster size</div><div class="value">
                                                                  <strong data-bind="text: maxClusterSize, visible: maxClusterSize() > 0"></strong>
@@ -116,9 +117,14 @@
                     <div class="name">Max cluster memory usage</div><div class="value"><strong data-bind="text: maxMemory() + ' GB RAM'"></strong></div>
                     <div class="name">Highly available tasks</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasHighlyAvailableTasks') }"></i></div>
                     <div class="name">Dynamic database distribution</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDynamicNodesDistribution') }"></i></div>
+
+                    <h4>Indexes</h4>
+                    <div class="name">Additional Assemblies from NuGet</div><div class="value"><i data-bind="attr: { class: licenseAttribute('AdditionalAssembliesFromNuGet') }"></i></div>
+                    
                     <h4>Monitoring</h4>
                     <div class="name">Server Dashboard</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">SNMP</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSnmpMonitoring') }"></i></div>
+                    
                     <h4>Extensions</h4>
                     <div class="name">Document Revisions</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Document Expiration</div><div class="value"><i class="icon-checkmark"></i></div>
@@ -131,8 +137,8 @@
                     <h4>External Replication</h4>
                     <div class="name">Immediate</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasExternalReplication') }"></i></div>
                     <div class="name">Delayed</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasDelayedExternalReplication') }"></i></div>
+                    
                     <h4>Pull Replication</h4>
-
                     <div class="name">Hub</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsHub') }"></i></div>
                     <div class="name">Sink</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasPullReplicationAsSink') }"></i></div>
 
@@ -145,6 +151,7 @@
                     <h4>ETL</h4>
                     <div class="name">SQL ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasSqlEtl') }"></i></div>
                     <div class="name">RavenDB ETL</div><div class="value"><i data-bind="attr: { class: licenseAttribute('HasRavenEtl') }"></i></div>
+                    
                     <h4>Security</h4>
                     <div class="name">Certificates</div><div class="value"><i class="icon-checkmark"></i></div>
                     <div class="name">Encryption in transit</div><div class="value"><strong>TLS 1.2 & X.509</strong></div>
