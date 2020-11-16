@@ -16,7 +16,7 @@ class about extends viewModelBase {
     accessManager = accessManager.default.aboutView;
     
     clusterViewUrl = appUrl.forCluster();
-    passiveNode = ko.pureComputed(() => clusterTopologyManager.default.nodesCount() === 0);
+    passiveNode = ko.pureComputed(() => clusterTopologyManager.default.topology().isPassive());
     
     licenseCssClass = license.licenseCssClass;
     supportCssClass = license.supportCssClass;
