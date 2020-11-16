@@ -1379,6 +1379,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue; // skip the check for faulty indexes
                 }
 
+                if (currentIndexStats.State == IndexState.Disabled)
+                    continue;
+
                 var lastIndexEtag = currentIndexStats.LastIndexedEtag;
                 if (lastPrevEtag > lastIndexEtag)
                 {
