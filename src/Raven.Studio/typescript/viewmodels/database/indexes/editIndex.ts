@@ -109,7 +109,10 @@ class editIndex extends viewModelBase {
             if (source) {
                 return '<pre class="form-control sourcePreview">' + Prism.highlight(source.code(), (Prism.languages as any).csharp) + '</pre>';
             } else {
-                return `<div class="sourcePreview text-muted"><i class="icon-xl icon-empty-set"></i><h2 class="text-center">No additional sources uploaded</h2></div>`;
+                return `<div class="sourcePreview text-center text-muted margin-top">
+                            <i class="icon-lg icon-empty-set"></i>
+                            <h2 class="margin-top margin-top-sm">No additional sources uploaded</h2>
+                        </div>`;
             }
         });
     }
