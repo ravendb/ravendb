@@ -544,6 +544,27 @@ namespace Raven.Server.Documents
             return attachments;
         }
 
+        public List<AttachmentDetails> GetAttachmentDetailsForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
+        {
+            var attachments = new List<AttachmentDetails>();
+            using (GetAttachmentPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
+            {
+                foreach (var attachment in GetAttachmentsForDocument(context, prefixSlice))
+                {
+                    attachments.Add(new AttachmentDetails
+                    {
+                        Name = attachment.Name,
+                        Hash = attachment.Base64Hash.ToString(),
+                        ContentType = attachment.ContentType,
+                        Size = attachment.Size,
+                        ChangeVector = attachment.ChangeVector,
+                        DocumentId = lowerDocumentId.ToString()
+                    });
+                }
+            }
+            return attachments;
+        }
+
         public (long AttachmentCount, long StreamsCount) GetNumberOfAttachments(DocumentsOperationContext context)
         {
             // We count in also revision attachments
@@ -909,6 +930,124 @@ namespace Raven.Server.Documents
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector);
 
             return result;
+        }
+
+        public AttachmentDetails RenameAttachment(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType, AttachmentType attachmentType, string newName)
+        {
+            var docId = lowerId.ToString();
+            if (string.IsNullOrWhiteSpace(docId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(lowerId));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
+            if (string.IsNullOrWhiteSpace(hash))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(hash));
+            if (string.IsNullOrWhiteSpace(contentType))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(contentType));
+            if (string.IsNullOrWhiteSpace(newName))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(newName));
+            if (attachmentType != AttachmentType.Document)
+                throw new ArgumentException($"{nameof(RenameAttachment)} only supported for documents attachment.", nameof(attachmentType));
+            if (context.Transaction == null)
+                throw new ArgumentException($"Context must be set with a valid transaction before calling {nameof(RenameAttachment)}", nameof(context));
+
+            Attachment attachment;
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
+            using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
+                    return null;
+
+                attachment = TableValueToAttachment(context, ref tvr);
+                if (attachment == null)
+                    AttachmentDoesNotExistException.ThrowFor(docId, name);
+
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerNewName, out Slice newNamePtr))
+                using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerNewName.Content.Ptr, lowerNewName.Size, base64Hash, lowerContentType.Content.Ptr,
+                    lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice newKeySlice))
+                {
+                    PutDirect(context, newKeySlice, newNamePtr, contentTypePtr, base64Hash, attachment.ChangeVector);
+
+                    var tombstoneEtag = _documentsStorage.GenerateNextEtag();
+                    var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
+                    context.LastDatabaseChangeVector = changeVector;
+                    DeleteAttachmentDirect(context, keySlice, isPartialKey: false, name, attachment.ChangeVector, changeVector, _documentDatabase.Time.GetUtcNow().Ticks);
+                }
+            }
+
+            return new AttachmentDetails
+            {
+                ChangeVector = attachment.ChangeVector,
+                ContentType = contentType,
+                Name = newName,
+                DocumentId = docId,
+                Hash = hash,
+                Size = attachment.Size
+            };
+        }
+
+        public string ResolveAttachmentName(DocumentsOperationContext context, Slice lowerId, string name)
+        {
+            const string prefix = "RESOLVED";
+            var count = 0;
+            string newName = $"{prefix}_#{count}_{name}";
+
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            while (true)
+            {
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerName, out _))
+                using (GetAttachmentPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, changeVector: null, out Slice partialKeySlice))
+                {
+                    if (table.SeekOnePrimaryKeyPrefix(partialKeySlice, out _) == false)
+                        break;
+
+                    newName = $"{prefix}_#{++count}_{name}";
+                }
+            }
+
+            return newName;
+        }
+
+        public bool DeleteAttachment(DocumentsOperationContext context, Slice lowerId, string name, string hash, string contentType, AttachmentType attachmentType)
+        {
+            var docId = lowerId.ToString();
+            if (string.IsNullOrWhiteSpace(docId))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(lowerId));
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(name));
+            if (string.IsNullOrWhiteSpace(hash))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(hash));
+            if (string.IsNullOrWhiteSpace(contentType))
+                throw new ArgumentException("Argument cannot be null or whitespace.", nameof(contentType));
+            if (attachmentType != AttachmentType.Document)
+                throw new ArgumentException($"{nameof(DeleteAttachmentDirect)} only supported for documents attachment.", nameof(attachmentType));
+            if (context.Transaction == null)
+                throw new ArgumentException($"Context must be set with a valid transaction before calling {nameof(DeleteAttachmentDirect)}", nameof(context));
+
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
+            using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
+            using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash, lowerContentType.Content.Ptr,
+                lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
+                    return false;
+
+                var attachment = TableValueToAttachment(context, ref tvr);
+                if (attachment == null)
+                    AttachmentDoesNotExistException.ThrowFor(docId, name);
+
+                var tombstoneEtag = _documentsStorage.GenerateNextEtag();
+                var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
+                context.LastDatabaseChangeVector = changeVector;
+                DeleteAttachmentDirect(context, keySlice, isPartialKey: false, name, attachment.ChangeVector, changeVector, _documentDatabase.Time.GetUtcNow().Ticks);
+            }
+
+            return true;
         }
 
         public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, bool updateDocument = true)
