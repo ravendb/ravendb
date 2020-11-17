@@ -1446,6 +1446,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Grisha" }, "users/1");
+                    session.Advanced.WaitForReplicationAfterSaveChanges(replicas: 1);
                     await session.SaveChangesAsync();
                 }
 
