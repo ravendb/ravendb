@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.ServerWide.Context;
@@ -137,6 +138,7 @@ namespace Raven.Server.Documents.Replication
                 InvalidConflictWhenThereIsNone(conflict.Id);
 
             conflictedDocs.Add(conflict.Clone());
+            conflictedDocs = conflictedDocs.OrderByDescending(x => x.ChangeVector.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k).GetEnumerableHashCode()).ToList();
 
             if (_conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,

@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
+using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
@@ -260,6 +264,8 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
+            ResolveAttachmentsConflicts(context, resolved);
+
             if (ReferenceEquals(incoming?.Doc, resolved.Doc))
             {
                 // when saving the incoming document as revision, we might have made modifications to the document.
@@ -399,6 +405,57 @@ namespace Raven.Server.Documents.Replication
             latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
 
             return latestDoc;
+        }
+
+        private void ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved)
+        {
+            using var scope = Slice.External(context.Allocator, resolved.LowerId, out var lowerId);
+            var storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, lowerId);
+            List<AttachmentName> resolvedAttachmentsMetadata = null;
+            bool resolveToLatest = ScriptConflictResolversCache.TryGetValue(resolved.Collection, out ScriptResolver scriptResolver) == false || scriptResolver == null;
+
+            foreach (var group in storageAttachmentsDetails.GroupBy(x => x.Name))
+            {
+                if (group.Count() == 1)
+                    continue;
+
+                resolvedAttachmentsMetadata ??= GetAttachmentsFromMetadata(resolved.Doc);
+                var found = false;
+
+                foreach (var attachment in group)
+                {
+                    if (found == false && resolvedAttachmentsMetadata.Any(x => x.Name == attachment.Name && x.Hash == attachment.Hash && x.ContentType == attachment.ContentType))
+                    {
+                        found = true;
+                        continue;
+                    }
+
+                    if (resolveToLatest)
+                    {
+                        // delete
+                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType,
+                            AttachmentType.Document);
+                    }
+                    else
+                    {
+                        // rename
+                        var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, attachment.Name);
+                        _database.DocumentsStorage.AttachmentsStorage.RenameAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType, AttachmentType.Document, newName);
+                    }
+                }
+            }
+
+            List<AttachmentName> GetAttachmentsFromMetadata(BlittableJsonReaderObject bjro)
+            {
+                var list = new List<AttachmentName>();
+                if (bjro != null && resolved.Doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject resolvedMetadata) &&
+                    resolvedMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray resolvedArray))
+                {
+                    list = (from BlittableJsonReaderObject att in resolvedArray select JsonDeserializationClient.AttachmentName(att)).ToList();
+                }
+
+                return list;
+            }
         }
     }
 

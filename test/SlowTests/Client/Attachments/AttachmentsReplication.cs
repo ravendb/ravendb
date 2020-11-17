@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -14,11 +15,13 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
@@ -1374,5 +1377,897 @@ namespace SlowTests.Client.Attachments
                 tasks.ForEach(t => t.Wait());
             }
         }
-    }
+        [Fact]
+        public async Task AttachmentWithDifferentStreamAndSameNameShouldBeResolvedToLatestAfterConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task SameAttachmentWithDuplicateNameShouldBeNotChangeAfterConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task AttachmentWithSameStreamSameNameAndDifferentContentTypeShouldBeResolvedToLatestAfterConflict()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
+                    }
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                }
+
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ResolvedToLatestOnAttachmentConflictShouldRemoveDuplicateAttachment()
+        {
+            using (var store1 = GetDocumentStore())
+            using (var store2 = GetDocumentStore())
+            {
+                var cvs = new List<(string, string)>();
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
+                    }
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                }
+
+                var externalList1 = await SetupReplicationAsync(store1, store2);
+                var externalList2 = await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+                }
+
+                var db1 = await GetDocumentDatabaseInstanceFor(store1);
+                var db2 = await GetDocumentDatabaseInstanceFor(store2);
+                var replicationConnection1 = db1.ReplicationLoader.OutgoingHandlers.First();
+                var replicationConnection2 = db2.ReplicationLoader.OutgoingHandlers.First();
+
+                var external1 = new ExternalReplication(store1.Database, $"ConnectionString-{store2.Identifier}")
+                {
+                    TaskId = externalList1.First().TaskId,
+                    Disabled = true
+                };
+                var external2 = new ExternalReplication(store2.Database, $"ConnectionString-{store1.Identifier}")
+                {
+                    TaskId = externalList2.First().TaskId,
+                    Disabled = true
+                };
+                var res1 = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external1));
+                Assert.Equal(externalList1.First().TaskId, res1.TaskId);
+                var res2 = await store2.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external2));
+                Assert.Equal(externalList2.First().TaskId, res2.TaskId);
+
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res1.RaftCommandIndex);
+                await db2.ServerStore.Cluster.WaitForIndexNotification(res1.RaftCommandIndex);
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res2.RaftCommandIndex);
+                await db2.ServerStore.Cluster.WaitForIndexNotification(res2.RaftCommandIndex);
+
+                Assert.True(await WaitForValueAsync(() => replicationConnection1.IsConnectionDisposed, true));
+                Assert.True(await WaitForValueAsync(() => replicationConnection2.IsConnectionDisposed, true));
+
+                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                {
+                    await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
+                }
+                using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 5 }))
+                {
+                    await store2.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a1/jpeg"));
+                }
+                external1.Disabled = false;
+                external2.Disabled = false;
+
+                var res3 = await store1.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external1));
+                Assert.Equal(externalList1.First().TaskId, res3.TaskId);
+                var res4 = await store2.Maintenance.SendAsync(new UpdateExternalReplicationOperation(external2));
+                Assert.Equal(externalList2.First().TaskId, res4.TaskId);
+
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res3.RaftCommandIndex);
+                await db2.ServerStore.Cluster.WaitForIndexNotification(res3.RaftCommandIndex);
+                await db1.ServerStore.Cluster.WaitForIndexNotification(res4.RaftCommandIndex);
+                await db2.ServerStore.Cluster.WaitForIndexNotification(res4.RaftCommandIndex);
+
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("XiUNwy+pPQdTVBunU26rVydiLOd3Iqgtz4lkmZVfSs4=", attachments[0].Hash);
+                    Assert.Equal("a1/jpeg", attachments[0].ContentType);
+                    Assert.Equal(4, attachments[0].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal("EGOR", user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(1, attachments.Length);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("XiUNwy+pPQdTVBunU26rVydiLOd3Iqgtz4lkmZVfSs4=", attachments[0].Hash);
+                    Assert.Equal("a1/jpeg", attachments[0].ContentType);
+                    Assert.Equal(4, attachments[0].Size);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAllMissingAttachmentsAndMergeWithOtherAttachmentsOnResolvedDocument()
+        {
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"docs[0]['@metadata']['@attachments'][0]['Name'] = 'newName';
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"docs[0]['@metadata']['@attachments'][0]['Name'] = 'newName';
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            {
+                var cvs = new List<(string, string)>();
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGR", cv));
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGOR", cv));
+                }
+
+                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#1_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "RESOLVED_#1_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                var name = orderedDocsByEtag.First().Item1;
+                var expectedName = name + "_RESOLVED";
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(2, attachments.Length);
+
+                    Assert.Equal("RESOLVED_#0_a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+
+                    Assert.Equal("RESOLVED_#1_a1", attachments[1].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
+                    Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                    Assert.Equal(4, attachments[1].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(2, attachments.Length);
+
+                    Assert.Equal("RESOLVED_#0_a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(3, attachments[0].Size);
+
+                    Assert.Equal("RESOLVED_#1_a1", attachments[1].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
+                    Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                    Assert.Equal(4, attachments[1].Size);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ScriptResolver_ShouldNotRenameAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument()
+        {
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"docs[0]['@metadata']['@attachments'][0]['Name'] = 'newName';
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"docs[0]['@metadata']['@attachments'][0]['Name'] = 'newName';
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            {
+                var cvs = new List<(string, string)>();
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                        a1.Position = 0;
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a10", a1, "a2/jpeg"));
+                    }
+
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGOR", cv));
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGR", cv));
+                }
+
+                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#1_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "RESOLVED_#1_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                var name = orderedDocsByEtag.First().Item1;
+                var expectedName = name + "_RESOLVED";
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(3, attachments.Length);
+
+                    Assert.Equal("a10", attachments[0].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(4, attachments[0].Size);
+
+                    Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                    Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                    Assert.Equal(3, attachments[1].Size);
+
+                    Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
+                    Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                    Assert.Equal(4, attachments[2].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(3, attachments.Length);
+
+                    Assert.Equal("a10", attachments[0].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(4, attachments[0].Size);
+
+                    Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                    Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                    Assert.Equal(3, attachments[1].Size);
+
+                    Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
+                    Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                    Assert.Equal(4, attachments[2].Size);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ScriptResolver_ShouldNotRemoveAttachment_ShouldRenameAndMergeAllMissingAttachmentsOnResolvedDocument()
+        {
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"docs[0]['@metadata']['@attachments'].pop();
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"docs[0]['@metadata']['@attachments'].pop();
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            {
+                var cvs = new List<(string, string, string)>();
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                        a1.Position = 0;
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a10", a1, "a2/jpeg"));
+                    }
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGR", cv, "KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I="));
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGOR", cv, "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="));
+                }
+
+                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                var name = orderedDocsByEtag.First().Item1;
+                var expectedName = name + "_RESOLVED";
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(3, attachments.Length);
+                    if (name == "EGOR")
+                    {
+                        Assert.Equal("a10", attachments[0].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                        Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                        Assert.Equal(4, attachments[0].Size);
+
+                        Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                        Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                        Assert.Equal(3, attachments[1].Size);
+
+                        Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
+                        Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                        Assert.Equal(4, attachments[2].Size);
+                    }
+                    else
+                    {
+                        Assert.Equal("a1", attachments[0].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                        Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                        Assert.Equal(4, attachments[0].Size);
+
+                        Assert.Equal("a10", attachments[1].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
+                        Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                        Assert.Equal(4, attachments[1].Size);
+
+                        Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[2].Hash);
+                        Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                        Assert.Equal(3, attachments[2].Size);
+                    }
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(3, attachments.Length);
+
+                    if (name == "EGOR")
+                    {
+                        Assert.Equal("a10", attachments[0].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                        Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                        Assert.Equal(4, attachments[0].Size);
+
+                        Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                        Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                        Assert.Equal(3, attachments[1].Size);
+
+                        Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
+                        Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                        Assert.Equal(4, attachments[2].Size);
+                    }
+                    else
+                    {
+                        Assert.Equal("a1", attachments[0].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                        Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                        Assert.Equal(4, attachments[0].Size);
+
+                        Assert.Equal("a10", attachments[1].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
+                        Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                        Assert.Equal(4, attachments[1].Size);
+
+                        Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[2].Hash);
+                        Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                        Assert.Equal(3, attachments[2].Size);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task ScriptResolver_ShouldNotAddAttachment_ShouldRenameAndMergeDuplicateAttachments()
+        {
+            using (var store1 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"var attachment = {Name:'newnewnew', Hash:'322+228skHmEGRg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=', Size:50, ContentType:'image/gif'};
+                                               docs[0]['@metadata']['@attachments'].push(attachment);
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            using (var store2 = GetDocumentStore(options: new Options
+            {
+                ModifyDatabaseRecord = record =>
+                {
+                    record.ConflictSolverConfig = new ConflictSolver
+                    {
+                        ResolveToLatest = false,
+                        ResolveByCollection = new Dictionary<string, ScriptResolver>()
+                        {
+                            {
+                                "Users", new ScriptResolver()
+                                {
+                                    Script = @"var attachment = {Name:'newnewnew', Hash:'322+228skHmEGRg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=', Size:50, ContentType:'image/gif'};
+                                               docs[0]['@metadata']['@attachments'].push(attachment);
+                                               docs[0].Name = docs[0].Name + '_RESOLVED';
+                                               return docs[0];
+                                               "
+                                }
+                            }
+                        }
+                    };
+                }
+            }))
+            {
+                var cvs = new List<(string, string, string)>();
+                using (var session = store1.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
+                    {
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                        a1.Position = 0;
+                        await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a10", a1, "a2/jpeg"));
+                    }
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGOR", cv, "KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I="));
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    await session.SaveChangesAsync();
+
+                    using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
+                    {
+                        store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
+                    }
+                    var u = await session.LoadAsync<User>("users/1");
+                    var cv = session.Advanced.GetChangeVectorFor(u);
+                    cvs.Add(("EGR", cv, "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="));
+                }
+
+                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                await SetupReplicationAsync(store1, store2);
+                await SetupReplicationAsync(store2, store1);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForMarker(store1, store2);
+
+                var name = orderedDocsByEtag.First().Item1;
+                var expectedName = name + "_RESOLVED";
+                using (var session = store1.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(3, attachments.Length);
+
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal(orderedDocsByEtag.First().Item3, attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(orderedDocsByEtag.First().Item1.Length, attachments[0].Size);
+
+                    Assert.Equal("a10", attachments[1].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
+                    Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                    Assert.Equal(4, attachments[1].Size);
+
+                    Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
+                    Assert.Equal(orderedDocsByEtag.Last().Item3, attachments[2].Hash);
+                    Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                    Assert.Equal(orderedDocsByEtag.Last().Item1.Length, attachments[2].Size);
+                }
+
+                using (var session = store2.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.Equal(expectedName, user.Name);
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    Assert.Equal(3, attachments.Length);
+
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal(orderedDocsByEtag.First().Item3, attachments[0].Hash);
+                    Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                    Assert.Equal(orderedDocsByEtag.First().Item1.Length, attachments[0].Size);
+
+                    Assert.Equal("a10", attachments[1].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
+                    Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                    Assert.Equal(4, attachments[1].Size);
+
+                    Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
+                    Assert.Equal(orderedDocsByEtag.Last().Item3, attachments[2].Hash);
+                    Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                    Assert.Equal(orderedDocsByEtag.Last().Item1.Length, attachments[2].Size);
+                }
+            }
+        }    }
 }
