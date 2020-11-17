@@ -5,7 +5,9 @@ abstract class serverWideConfigurationModel {
     taskId = ko.observable<number>();
     taskName = ko.observable<string>();
     disabled = ko.observable<boolean>();
+    
     mentorNode = ko.observable<string>();
+    manualChooseMentor = ko.observable<boolean>(false);
     
     excludeInfo = ko.observable<serverWideExcludeModel>();
 
@@ -14,8 +16,16 @@ abstract class serverWideConfigurationModel {
         this.taskName(taskName);
         this.mentorNode(mentorNode);
         this.disabled(disabled);
+
+        this.manualChooseMentor(!!mentorNode);
         
         this.excludeInfo(new serverWideExcludeModel(excludedDatabases));
+
+        this.mentorNode.extend({
+            required: {
+                onlyIf: () => this.manualChooseMentor()
+            }
+        });
     }
 }
 

@@ -7,6 +7,9 @@ import eventsCollector = require("common/eventsCollector");
 import saveServerWideExternalReplicationCommand = require("commands/resources/serverWide/saveServerWideExternalReplicationCommand");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import generalUtils = require("common/generalUtils");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class editServerWideExternalReplication extends viewModelBase {
     
@@ -17,6 +20,8 @@ class editServerWideExternalReplication extends viewModelBase {
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+
+    possibleMentors = ko.observableArray<string>([]);
 
     spinners = {
         test: ko.observable<boolean>(false),
@@ -75,10 +80,17 @@ class editServerWideExternalReplication extends viewModelBase {
         super.compositionComplete();
         
         $('.edit-server-wide-replication [data-toggle="tooltip"]').tooltip();
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
+            });
     }
    
     private initObservables() {
         this.connectionStringForTest(connectionStringRavenEtlModel.empty());
+
+        this.possibleMentors(clusterTopologyManager.default.topology().nodes().map(x => x.tag()));
         
         this.editedTask().connectionString().topologyDiscoveryUrls.subscribe((urlList) => {
            if (!urlList.length) {

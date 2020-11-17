@@ -37,19 +37,19 @@
                         </div>
                         <div class="form-group">
                             <label class="control-label">&nbsp;</label>
-                            <div class="toggle" data-placement="right" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
-                                <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
-                                <label for="toggle3">Choose preferred mentor node manually</label>
+                            <div class="toggle responsible-node">
+                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <label for="responsibleNode">Set preferred responsible node</label>
                             </div>
                         </div>
                         <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
                             <div class="form-group">
                                 <div>
-                                    <label class="control-label">Preferred mentor</label>
+                                    <label class="control-label">Responsible Node</label>
                                 </div>
                                 <div class="flex-grow">
                                     <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                        <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred mentor'"></span>
+                                        <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred responsible node'"></span>
                                         <span class="caret"></span>
                                     </button>
                                     <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">

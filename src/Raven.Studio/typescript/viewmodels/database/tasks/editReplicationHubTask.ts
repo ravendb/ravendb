@@ -25,6 +25,7 @@ import deleteReplicationHubAccessConfigCommand = require("commands/database/task
 import genUtils = require("common/generalUtils");
 import certificateUtils = require("common/certificateUtils");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class editReplicationHubTask extends viewModelBase {
 
@@ -141,6 +142,11 @@ class editReplicationHubTask extends viewModelBase {
                             "<span>Note: This parameter cannot be modified after saving this configuration.</span></small>" +
                         "</li>" +
                     "</ul>"
+            });
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
             });
     }
     

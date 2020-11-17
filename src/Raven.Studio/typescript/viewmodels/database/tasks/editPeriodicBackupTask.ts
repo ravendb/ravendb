@@ -9,7 +9,7 @@ import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import cronEditor = require("viewmodels/common/cronEditor");
-import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import manualBackupConfiguration = require("models/database/tasks/periodicBackup/manualBackupConfiguration");
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
@@ -128,37 +128,42 @@ class editPeriodicBackupTask extends viewModelBase {
         
         popoverUtils.longWithHover($(".backup-info"),
             {
-                content: backupCommonContent.generalBackupInfo
+                content: tasksCommonContent.generalBackupInfo
             });
 
         popoverUtils.longWithHover($(".backup-age-info"),
             {
-                content: backupCommonContent.backupAgeInfo
+                content: tasksCommonContent.backupAgeInfo
             });
 
         popoverUtils.longWithHover($(".bucket-info"),
             {
-                content: backupCommonContent.textForPopover("Bucket")
+                content: tasksCommonContent.textForPopover("Bucket")
             });
 
         popoverUtils.longWithHover($(".bucket-gcs-info"),
             {
-                content: backupCommonContent.textForPopoverGCS("Bucket")
+                content: tasksCommonContent.textForPopoverGCS("Bucket")
             });
 
         popoverUtils.longWithHover($(".storage-container-info"),
             {
-                content: backupCommonContent.textForPopover("Storage container")
+                content: tasksCommonContent.textForPopover("Storage container")
             });
 
         popoverUtils.longWithHover($(".vault-info"),
             {
-                content: backupCommonContent.textForPopover("Vault")
+                content: tasksCommonContent.textForPopover("Vault")
             });
 
         popoverUtils.longWithHover($(".ftp-host-info"),
             {
-                content: backupCommonContent.ftpHostInfo
+                content: tasksCommonContent.ftpHostInfo
+            });
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
             });
     }
 

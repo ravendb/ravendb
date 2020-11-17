@@ -10,6 +10,8 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import getPossibleMentorsCommand = require("commands/database/tasks/getPossibleMentorsCommand");
 import connectionStringRavenEtlModel = require("models/database/settings/connectionStringRavenEtlModel");
 import jsonUtil = require("common/jsonUtil");
+import popoverUtils = require("common/popoverUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class editExternalReplicationTask extends viewModelBase {
 
@@ -137,6 +139,11 @@ class editExternalReplicationTask extends viewModelBase {
         document.getElementById('taskName').focus();
         
         $('.edit-replication-task [data-toggle="tooltip"]').tooltip();
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
+            });
     }
 
     saveExternalReplication() {
