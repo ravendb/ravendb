@@ -950,7 +950,7 @@ namespace FastTests.Client.Subscriptions
             using (var store = GetDocumentStore())
             {
                 var name = "Update";
-                var id = 322;
+                var id = int.MaxValue;
                 var idMsg = $"Raven.Client.Exceptions.Documents.Subscriptions.SubscriptionDoesNotExistException: Subscription with id '{id}' was not found in server store";
 
                 var argumentError = Assert.Throws<SubscriptionDoesNotExistException>(() => store.Subscriptions.Update(new SubscriptionUpdateOptions { Name = name }));
