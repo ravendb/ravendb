@@ -471,7 +471,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var backupStatus = store.Maintenance.Send(operation);
                 var backupOperationId = backupStatus.Status.LastOperationId;
 
-                var backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+                OperationState backupOperation = null;
+                var status = WaitForValue(() =>
+                {
+                    backupOperation = store.Maintenance.Send(new GetOperationStateOperation(backupOperationId.Value));
+                    return backupOperation.Status;
+                }, OperationStatus.Completed);
+                Assert.Equal(OperationStatus.Completed, status);
 
                 var backupResult = backupOperation.Result as BackupResult;
                 Assert.True(backupResult.Counters.Processed);
