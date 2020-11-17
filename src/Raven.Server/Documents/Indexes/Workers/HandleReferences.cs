@@ -188,11 +188,17 @@ namespace Raven.Server.Documents.Indexes.Workers
                                         throw new NotSupportedException();
                                 }
 
-                                foreach (var referencedDocument in references)
+                                foreach (var referencedItem in references)
                                 {
                                     hasChanges = true;
 
-                                    var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedDocument, lastIndexedEtag, indexed, referenceState);
+                                    if (ItemsAndReferencesAreUsingSameEtagPool && _index._indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItem.Etag))
+                                    {
+                                        // the referenced document will be indexed in the map step
+                                        continue;
+                                    }
+
+                                    var items = GetItemsFromCollectionThatReference(queryContext, indexContext, collection, referencedItem, lastIndexedEtag, indexed, referenceState);
                                     using (var itemsEnumerator = _index.GetMapEnumerator(items, collection, indexContext, collectionStats, _index.Type))
                                     {
                                         long lastIndexedParentEtag = 0;
@@ -205,7 +211,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                             if (CanContinueReferenceBatch() == false)
                                             {
-                                                _referencesState.Set(actionType, collection, referencedDocument, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
+                                                _referencesState.Set(actionType, collection, referencedItem, current.LowerSourceDocumentId ?? current.Id, lastIndexedParentEtag, indexContext);
                                                 earlyExit = true;
                                                 break;
                                             }
@@ -243,7 +249,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                                     if (earlyExit)
                                         break;
 
-                                    lastEtag = referencedDocument.Etag;
+                                    lastEtag = referencedItem.Etag;
                                     inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
 
                                     if (CanContinueReferenceBatch() == false)
@@ -313,10 +319,10 @@ namespace Raven.Server.Documents.Indexes.Workers
         }
 
         private IEnumerable<IndexItem> GetItemsFromCollectionThatReference(QueryOperationContext queryContext, TransactionOperationContext indexContext,
-            string collection, Reference referencedDocument, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
+            string collection, Reference referencedItem, long lastIndexedEtag, HashSet<string> indexed, ReferencesState.ReferenceState referenceState)
         {
-            var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedDocument);
-            foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedDocument.Key, indexContext.Transaction, lastProcessedItemId))
+            var lastProcessedItemId = referenceState?.GetLastProcessedItemId(referencedItem);
+            foreach (var key in _referencesStorage.GetItemKeysFromCollectionThatReference(collection, referencedItem.Key, indexContext.Transaction, lastProcessedItemId))
             {
                 var item = GetItem(queryContext.Documents, key);
                 if (item == null)
@@ -334,14 +340,13 @@ namespace Raven.Server.Documents.Indexes.Workers
                     continue;
                 }
 
-                if (ItemsAndReferencesAreUsingSameEtagPool && item.Etag > referencedDocument.Etag)
+                if (ItemsAndReferencesAreUsingSameEtagPool && item.Etag > referencedItem.Etag)
                 {
-                    //If the map worker already mapped this "doc" version it must be with this version of "referencedDocument" and if the map worker didn't mapped the "doc" so it will process it later
+                    //if the map worker already mapped this "doc" version it must be with this version of "referencedItem" and if the map worker didn't mapped the "doc" so it will process it later
                     item.Dispose();
                     continue;
                 }
 
-                item.Referenced = true;
                 yield return item;
             }
         }

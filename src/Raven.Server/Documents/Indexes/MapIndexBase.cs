@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Indexes
                 mustDelete = _filters.Add(indexItem.LowerId) == false;
             }
 
-            if ((LastDatabaseEtagOnIndexCreation < indexItem.Etag || indexItem.Referenced) && mustDelete)
+            if (indexItem.SkipLuceneDelete == false && mustDelete)
                 writer.Delete(indexItem.LowerId, stats);
 
             var numberOfOutputs = 0;

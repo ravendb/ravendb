@@ -104,6 +104,7 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     try
                                     {
+                                        current.SkipLuceneDelete = _indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(current.Etag);
                                         var numberOfResults = _index.HandleMap(current, mapResults,
                                             indexWriter, indexContext, collectionStats);
 
