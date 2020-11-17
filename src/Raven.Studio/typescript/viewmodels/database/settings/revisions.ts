@@ -344,9 +344,10 @@ class revisions extends viewModelBase {
     enforceConfiguration() {
         const db = this.activeDatabase();
         
-        const collectionNameItems = _.reduce(this.perCollectionConfigurations(), 
-            (result: string, revisionConfiguration) => { return result += `<li>${generalUtils.escapeHtml(revisionConfiguration.collection())}</li>`; }, "");
-        
+        const collectionNameItems = this.perCollectionConfigurations()
+            .map(x => `<li>${generalUtils.escapeHtml(x.collection())}</li>`)
+            .join("");
+
         const text1 = collectionNameItems.length > 0 ?
             `The following collections have a revision configuration defined:<br><ul>${collectionNameItems}</ul>` : "";
 
@@ -361,9 +362,19 @@ class revisions extends viewModelBase {
             `<div class="bg-warning text-warning padding padding-sm flex-horizontal">
                  <small class="flex-start margin-right"><i class="icon-warning"></i></small>
                  <small>
-                     For collections without a specific revision configuration:<br>
-                     If a Default Configuration is defined & enabled, it will be applied.<br>
-                     If a Default Configuration is not defined, or if disabled, <strong>all revisions will be deleted</strong>.
+                     For collections without a specific revision configuration:<br><br>
+                     <ul class="no-padding-left">
+                         <li>
+                             Non-conflicting documents:<br>
+                             If Document Defaults are defined & enabled, it will be applied.<br>
+                             If not defined, or if disabled, <strong>all non-conflicting document revisions will be deleted</strong>.
+                         </li><br>
+                         <li>
+                             Conflicting documents:<br>
+                             If Conflicting Document Defaults are enabled, it will be applied to conflicting document revisions.
+                             If disabled, <strong>all conflicting document revisions will be deleted</strong>.
+                         </li>
+                     </ul>
                  </small>
              </div>`;
         
