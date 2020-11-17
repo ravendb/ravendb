@@ -314,7 +314,7 @@ class indexDefinition {
         if (this.defaultFieldOptions()) {
             field.parent(this.defaultFieldOptions());
         }
-        this.fields.push(field);
+        this.fields.unshift(field);
     }
 
     addDefaultField() {
@@ -329,7 +329,7 @@ class indexDefinition {
     }
 
     addConfigurationOption() {
-        this.configuration.push(configurationItem.empty());
+        this.configuration.unshift(configurationItem.empty());
     }
 
     removeConfigurationOption(item: configurationItem) {

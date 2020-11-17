@@ -196,38 +196,48 @@
                                 <div data-bind="template: { name: 'field-template'}"></div>
                             </div>
                         </div>
+                        <div class="text-center text-muted" data-bind="visible: !editedIndex().numberOfFields() && !editedIndex().defaultFieldOptions()">
+                            <i class="icon-lg icon-empty-set"></i>
+                            <h2 class="margin-top margin-top-sm">No fields added</h2>
+                        </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="configure">
-                        <div class="row">
-                            <div class="col-sm-2 text-right-sm"><label class="control-label">Customized options</label></div>
-                            <div class="col-sm-10">
-                                <div class="form-horizontal">
-                                    <div data-bind="foreach: editedIndex().configuration">
-                                        <div class="form-group">
-                                            <!--<label class="col-sm-2 control-label" data-bind="visible: $index() === 0">Customized options</label>-->
-                                            <div class="col-xs-12 col-sm-7 col-lg-8" data-bind="css: {  }, validationElement: key">
-                                                <input class="form-control" placeholder="Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" />
-                                                <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
-                                                    <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
-                                                        <a role="menuitem" tabindex="-1" href="#">
-                                                            <span data-bind="text: $data"></span>
-                                                        </a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                            <div class="col-xs-9 col-sm-3" data-bind="validationElement: value">
-                                                <input class="form-control" placeholder="Value" data-bind="textInput: value" />
-                                            </div>
-                                            <div class="col-xs-3 col-sm-2 col-lg-1">
-                                                <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)"><i class="icon-trash"></i></button>
-                                            </div>
+                        <div class="row margin-left margin-bottom margin-bottom-lg">
+                            <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info margin-left">
+                                <i class="icon-plus"></i>
+                                <span>Add customized indexing configuration</span>
+                            </button>
+                        </div>
+                        <hr data-bind="visible: editedIndex().numberOfConfigurationFields()">
+                        <div data-bind="foreach: editedIndex().configuration">
+                            <div class="row">
+                                <div class="col-lg-8" data-bind="validationElement: key">
+                                    <div class="form-group">
+                                        <div data-bind="validationElement: key" class="flex-grow margin-left margin-left-lg">
+                                            <input class="form-control" placeholder="Indexing Configuration Key" data-bind="textInput: key, attr: { id: 'configOption' + $index(), title: key }" />
+                                            <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#configOption' + $index(), foreach: $root.createConfigurationOptionAutocompleter($data)">
+                                                <li role="presentation" data-bind="click: $parent.key.bind($parent, $data)">
+                                                    <a role="menuitem" tabindex="-1" href="#">
+                                                        <span data-bind="text: $data"></span>
+                                                    </a>
+                                                </li>
+                                            </ul>
                                         </div>
                                     </div>
-                                    <div>
-                                        <button type="button" data-bind="click: addConfigurationOption" class="btn btn-info"><i class="icon-plus"></i> <span>Add a customized option</span></button>
-                                    </div>
+                                </div>
+                                <div class="col-lg-3" data-bind="validationElement: value">
+                                    <input class="form-control" placeholder="Value" data-bind="textInput: value" />
+                                </div>
+                                <div class="col-lg-1 text-center no-padding-right">
+                                    <button class="btn btn-danger" data-bind="click: _.partial($parent.removeConfigurationOption, $data)" title="Remove this customized configuration">
+                                        <i class="icon-trash"></i>
+                                    </button>
                                 </div>
                             </div>
+                        </div>
+                        <div class="text-center text-muted" data-bind="visible: !editedIndex().numberOfConfigurationFields()">
+                            <i class="icon-lg icon-empty-set"></i>
+                            <h2 class="margin-top margin-top-sm">No customized indexing configuration added</h2>
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="additionalAssemblies">
@@ -301,7 +311,7 @@
                                                     <input type="text" class="form-control flex-grow" placeholder="Enter a namespace (i.e. System.Net)" data-bind="textInput: namespaceText" />
                                                 </div>
                                                 <button class="btn btn-info"
-                                                        data-bind="click:  _.partial($root.addNamespaceToAssemblyWithBlink, $data), enable: namespaceText">
+                                                        data-bind="click: _.partial($root.addNamespaceToAssemblyWithBlink, $data), enable: namespaceText">
                                                     <i class="icon-plus"></i><span>Add Namespace</span>
                                                 </button>
                                             </div>
@@ -323,8 +333,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div data-bind="visible: !editedIndex().additionalAssemblies().length">
-                            <div class="text-muted"><i class="icon-xl icon-empty-set"></i><h2 class="text-center">No additional assemblies added</h2></div>
+                        <div class="text-center text-muted" data-bind="visible: !editedIndex().additionalAssemblies().length">
+                            <i class="icon-lg icon-empty-set"></i>
+                            <h2 class="margin-top margin-top-sm">No additional assemblies added</h2>
                         </div>
                     </div>
                     <div role="tabpanel" class="tab-pane fade" id="additionalSources">
