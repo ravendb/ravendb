@@ -149,8 +149,6 @@ namespace Raven.Server.Documents.Indexes
 
         public DateTime? LastIndexingTime { get; private set; }
 
-        public long LastDatabaseEtagOnIndexCreation { get; private set; }
-
         public Stopwatch TimeSpentIndexing = new Stopwatch();
 
         public readonly HashSet<string> Collections;
@@ -681,10 +679,6 @@ namespace Raven.Server.Documents.Indexes
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
                 OnInitialization();
-
-                LastDatabaseEtagOnIndexCreation = _environment.IsNew 
-                    ? LastDatabaseEtag.Save(DocumentDatabase, this) 
-                    : LastDatabaseEtag.Get(_contextPool);
 
                 if (LastIndexingTime != null)
                     _didWork = true;

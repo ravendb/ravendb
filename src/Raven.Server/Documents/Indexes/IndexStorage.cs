@@ -55,6 +55,8 @@ namespace Raven.Server.Documents.Indexes
 
         private StorageEnvironment _environment;
 
+        private long _lastDatabaseEtagOnIndexCreation;
+
         public const int MaxNumberOfKeptErrors = 500;
 
         internal bool SimulateCorruption = false;
@@ -128,10 +130,40 @@ namespace Raven.Server.Documents.Indexes
                 tx.InnerTransaction.CreateTree(IndexSchema.References);
                 tx.InnerTransaction.CreateTree(IndexSchema.ReferencesForCompareExchange);
 
+                _lastDatabaseEtagOnIndexCreation = InitializeLastDatabaseEtagOnIndexCreation(context);
+
                 _index.Definition.Persist(context, _environment.Options);
 
                 tx.Commit();
             }
+        }
+
+        private long InitializeLastDatabaseEtagOnIndexCreation(TransactionOperationContext indexContext)
+        {
+            const string key = "LastEtag";
+
+            if (_environment.IsNew == false)
+            {
+                var tree = indexContext.Transaction.InnerTransaction.ReadTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
+                var result = tree?.Read(key);
+                return result?.Reader.ReadLittleEndianInt64() ?? 0;
+            }
+
+            using (var queryContext = QueryOperationContext.Allocate(DocumentDatabase, _index))
+            using (queryContext.OpenReadTransaction())
+            using (Slice.From(indexContext.Allocator, key, out var slice))
+            {
+                var lastDocumentEtag = DocumentsStorage.ReadLastEtag(queryContext.Documents.Transaction.InnerTransaction);
+                var tree = indexContext.Transaction.InnerTransaction.CreateTree(IndexSchema.LastDocumentEtagOnIndexCreationTree);
+                tree.Add(slice, lastDocumentEtag);
+
+                return lastDocumentEtag;
+            }
+        }
+
+        public bool LowerThanLastDatabaseEtagOnIndexCreation(long currentEtag)
+        {
+            return _lastDatabaseEtagOnIndexCreation >= currentEtag;
         }
 
         public void WriteDefinition(IndexDefinitionBase indexDefinition, TimeSpan? timeout = null)
@@ -890,6 +922,8 @@ namespace Raven.Server.Documents.Indexes
             public const string References = "References";
 
             public const string ReferencesForCompareExchange = "ReferencesForCompareExchange";
+            
+            public const string LastDocumentEtagOnIndexCreationTree = "LastDocumentEtagOnIndexCreation";
 
             public static readonly Slice TypeSlice;
 
