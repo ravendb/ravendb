@@ -451,11 +451,11 @@
                                                             <div class="property-value" data-bind="text: badgeText"></div>
                                                         </div>
                                                         <div class="property-item">
-                                                            <div class="property-name">Destination Database:</div>
+                                                            <div class="property-name">Sink Database:</div>
                                                             <div class="property-value" data-bind="text: destinationDB" title="Destination database"></div>
                                                         </div>
                                                         <div class="property-item">
-                                                            <div class="property-name">Actual Destination URL:</div>
+                                                            <div class="property-name">Actual Sink URL:</div>
                                                             <div class="property-value" title="Actual Destination Url"><a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a></div>
                                                         </div>
                                                     </div>
@@ -512,11 +512,11 @@
                                         </div>
                                         <div class="property-item" data-bind="template: { name: 'connection-string' }"></div>
                                         <div class="property-item" data-bind="visible: connectionStringDefined">
-                                            <div class="property-name">Destination Database:</div>
+                                            <div class="property-name">Hub Database:</div>
                                             <div class="property-value" data-bind="text:  destinationDB" title="Destination database"></div>
                                         </div>
                                         <div class="property-item">
-                                            <div class="property-name">Actual Destination URL</div>
+                                            <div class="property-name">Actual Hub URL</div>
                                             <div class="property-value" title="Actual Destination Url">
                                                 <a target="_blank" data-bind="attr: { href: destinationURL() === 'N/A' ? null : destinationURL }, text: destinationURL()"></a>
                                             </div>
