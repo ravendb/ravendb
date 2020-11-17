@@ -43,6 +43,8 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
             this.taskName,
             this.delayTime,
             this.showDelayTime,
+            this.manualChooseMentor,
+            this.mentorNode,
             this.excludeInfo().dirtyFlag().isDirty,
             this.connectionString().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
@@ -58,6 +60,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
         
         this.validationGroup = ko.validatedObservable({
             delayTime: this.delayTime,
+            mentorNode: this.mentorNode,
             databasesToExclude: this.excludeInfo().databasesToExclude,
             topologyDiscoveryUrls: this.connectionString().topologyDiscoveryUrls
         });
@@ -70,7 +73,7 @@ class serverWideExternalReplicationEditModel extends serverWideConfigurationMode
             DelayReplicationFor: this.showDelayTime() ? generalUtils.formatAsTimeSpan(this.delayTime() * 1000) : null,
             TopologyDiscoveryUrls: this.connectionString().topologyDiscoveryUrls().map(x => x.discoveryUrlName()),
             ExcludedDatabases: this.excludeInfo().toDto(),
-            MentorNode: this.mentorNode(),
+            MentorNode: this.manualChooseMentor() ? this.mentorNode() : undefined,
             Disabled: this.disabled()
         };
     }

@@ -10,8 +10,9 @@ import eventsCollector = require("common/eventsCollector");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 import cronEditor = require("viewmodels/common/cronEditor");
 import saveServerWideBackupCommand = require("commands/resources/serverWide/saveServerWideBackupCommand");
-import backupCommonContent = require("models/database/tasks/periodicBackup/backupCommonContent");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
+import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class editServerWideBackup extends viewModelBase {
     
@@ -22,6 +23,8 @@ class editServerWideBackup extends viewModelBase {
     incrementalBackupCronEditor = ko.observable<cronEditor>();
 
     isAddingNewBackupTask = ko.observable<boolean>(true);
+    
+    possibleMentors = ko.observableArray<string>([]);
 
     spinners = {
         save: ko.observable<boolean>(false)
@@ -37,6 +40,7 @@ class editServerWideBackup extends viewModelBase {
 
         const database = activeDatabaseTracker.default.database();
         const dbName = ko.observable<string>(database ? database.name : null);
+        this.possibleMentors(clusterTopologyManager.default.topology().nodes().map(x => x.tag()));
         
         const backupLoader = () => {
             const deferred = $.Deferred<void>();
@@ -118,42 +122,47 @@ class editServerWideBackup extends viewModelBase {
 
         popoverUtils.longWithHover($(".backup-info"),
             {
-                content: backupCommonContent.generalBackupInfo
+                content: tasksCommonContent.generalBackupInfo
             });
 
         popoverUtils.longWithHover($(".backup-age-info"),
             {
-                content: backupCommonContent.backupAgeInfo
+                content: tasksCommonContent.backupAgeInfo
             });
 
         popoverUtils.longWithHover($(".bucket-info"),
             {
-                content: backupCommonContent.textForPopover("Bucket") 
+                content: tasksCommonContent.textForPopover("Bucket") 
             });
 
         popoverUtils.longWithHover($(".bucket-gcs-info"),
             {
-                content: backupCommonContent.textForPopoverGCS("Bucket")
+                content: tasksCommonContent.textForPopoverGCS("Bucket")
             });
 
         popoverUtils.longWithHover($(".storage-container-info"),
             {
-                content: backupCommonContent.textForPopover("Storage container") 
+                content: tasksCommonContent.textForPopover("Storage container") 
             });
 
         popoverUtils.longWithHover($(".vault-info"),
             {
-                content: backupCommonContent.textForPopover("Vault") 
+                content: tasksCommonContent.textForPopover("Vault") 
             });
 
         popoverUtils.longWithHover($(".ftp-host-info"),
             {
-                content: backupCommonContent.ftpHostInfo
+                content: tasksCommonContent.ftpHostInfo
             });
 
         popoverUtils.longWithHover($(".serverwide-snapshot-encryption-info"),
             {
-                content: backupCommonContent.serverwideSnapshotEncryptionInfo
+                content: tasksCommonContent.serverwideSnapshotEncryptionInfo
+            });
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
             });
     }
 

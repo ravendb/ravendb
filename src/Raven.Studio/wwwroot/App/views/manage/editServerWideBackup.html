@@ -46,12 +46,41 @@
                     </div>
                 </div>
             </div>
-            <div data-bind="with: excludeInfo">
+            <div class="row margin-bottom margin-bottom-sm">
+                <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4">
+                    <div class="toggle">
+                        <div class="responsible-node">
+                            <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor">
+                            <label for="responsibleNode">Set preferred responsible node</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
                 <div class="row margin-bottom">
+                    <label class="control-label col-sm-4 col-lg-2">Responsible Node</label>
+                    <div class="col-sm-4">
+                        <div class="dropdown btn-block margin-bottom margin-bottom-sm">
+                            <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
+                                <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred responsible node'"></span>
+                                <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
+                                <li><a href="#" data-bind="text: 'Node ' + $data, click: $parent.mentorNode.bind($parent.mentorNode, $data)"></a></li>
+                            </ul>
+                            <span class="help-block" data-bind="validationMessage: mentorNode"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="with: excludeInfo">
+                <div class="row margin-bottom margin-bottom-xs">
                     <div class="col-sm-offset-4 col-lg-offset-2 col-sm-4">
-                        <div class="toggle" data-placement="left" data-toggle="tooltip" title="Select databases to exclude from the server-wide backup" data-animation="true">
-                            <input id="excludeDatabase" type="checkbox" data-bind="checked: exclude">
-                            <label for="excludeDatabase">Exclude databases</label>
+                        <div class="toggle">
+                            <div data-placement="right" data-toggle="tooltip" title="Select databases to exclude from the server-wide backup" data-animation="true">
+                                <input id="excludeDatabase" type="checkbox" data-bind="checked: exclude">
+                                <label for="excludeDatabase">Exclude databases</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -230,7 +259,6 @@
         </div>
         <div class="padding bg-danger small" data-bind="visible: !Success">
             Connection test failed: <span data-bind="text: $parent.fullErrorDetailsVisible() ? Error : $parent.shortErrorText()"></span>
-
             <div>
                 <a href="#" data-bind="click: $parent.fullErrorDetailsVisible.toggle.bind($parent.fullErrorDetailsVisible), text: $parent.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
             </div>

@@ -19,6 +19,7 @@ import popoverUtils = require("common/popoverUtils");
 import prefixPathModel = require("models/database/tasks/prefixPathModel");
 import endpoints = require("endpoints");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class editReplicationSinkTask extends viewModelBase {
 
@@ -229,6 +230,11 @@ class editReplicationSinkTask extends viewModelBase {
                     "<li><small>Download the cluster's server certificate(s) as a *.pfx file.</small></li>" +
                     "<li><small>Only public keys are downloaded.</small></li>" +
                     "</ul>"
+            });
+
+        popoverUtils.longWithHover($(".responsible-node"),
+            {
+                content: tasksCommonContent.responsibleNodeInfo
             });
     }
 

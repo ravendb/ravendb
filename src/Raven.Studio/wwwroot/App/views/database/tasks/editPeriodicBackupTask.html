@@ -53,19 +53,21 @@
             <div data-bind="if: backupOperation === 'periodic'">
                 <div class="row margin-bottom">
                     <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
-                        <div class="toggle" data-placement="top" data-toggle="tooltip" title="Mentor node is responsible for the ongoing task" data-animation="true">
-                            <input id="toggle3" type="checkbox" data-bind="checked: manualChooseMentor">
-                            <label for="toggle3">Choose your preferred mentor node manually</label>
+                        <div class="toggle">
+                            <div class="responsible-node">
+                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor">
+                                <label for="responsibleNode">Set preferred responsible node</label>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div data-bind="validationElement: mentorNode, collapse: manualChooseMentor">
                     <div class="row margin-bottom">
-                        <label class="control-label col-sm-4 col-lg-2">Preferred mentor</label>
+                        <label class="control-label col-sm-4 col-lg-2">Responsible Node</label>
                         <div class="col-sm-4">
                             <div class="dropdown btn-block">
                                 <button class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown">
-                                    <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred mentor'"></span>
+                                    <span data-bind="text: mentorNode() ? 'Node ' + mentorNode() : 'Select preferred responsible node'"></span>
                                     <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" data-bind="foreach: $root.possibleMentors">
