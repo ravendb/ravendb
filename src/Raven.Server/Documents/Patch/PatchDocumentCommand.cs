@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -188,19 +189,19 @@ namespace Raven.Server.Documents.Patch
                             }
                         }
 
-                        var flags = DocumentFlags.None;
+                        var documentFlags = originalDocument?.Flags ?? default;
                         if (run.DocumentTimeSeriesToUpdate != null)
                         {
                             foreach (var kvp in run.DocumentTimeSeriesToUpdate)
                             {
                                 var docId = kvp.Key;
-                                var tsToAdd = kvp.Value;
+                                var tsToAdd = kvp.Value.TimeSeriesToAdd;
+                                var tsToRemove = kvp.Value.TimeSeriesToRemove;
 
                                 if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
                                 {
                                     Debug.Assert(originalDocument != null);
-
-                                    var newData = _database.DocumentsStorage.TimeSeriesStorage.ModifyDocumentMetadata(context, docId, tsToAdd, out flags, data: result.ModifiedDocument);
+                                    var newData = TimeSeriesStorage.ModifyDocumentMetadata(_externalContext ?? context, docId, tsToAdd, tsToRemove, data : result.ModifiedDocument , ref documentFlags);
                                     if (newData == null)
                                         continue;
 
@@ -209,9 +210,12 @@ namespace Raven.Server.Documents.Patch
                                 }
                                 else if (_isTest == false)
                                 {
-                                    var newData = _database.DocumentsStorage.TimeSeriesStorage.ModifyDocumentMetadata(context, docId, tsToAdd, out flags);
+                                    var docToUpdate = _database.DocumentsStorage.Get(context, docId);
+                                    var flags = docToUpdate?.Flags ?? default;
+                                    var newData = TimeSeriesStorage.ModifyDocumentMetadata(context, docId, tsToAdd, tsToRemove, data : docToUpdate?.Data, ref flags);
                                     if (newData == null)
                                         continue;
+
                                     _database.DocumentsStorage.Put(context, docId, null, newData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
                                 }
                             }
@@ -222,7 +226,7 @@ namespace Raven.Server.Documents.Patch
                         if (originalDoc == null)
                         {
                             if (_isTest == false || run.PutOrDeleteCalled)
-                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, flags: flags, nonPersistentFlags: nonPersistentFlags);
+                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, flags: documentFlags, nonPersistentFlags: nonPersistentFlags);
 
                             result.Status = PatchStatus.Created;
                         }
@@ -244,8 +248,7 @@ namespace Raven.Server.Documents.Patch
                                 Debug.Assert(originalDocument != null);
                                 if (_isTest == false || run.PutOrDeleteCalled)
                                 {
-                                    var documentFlags = originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction);
-                                    documentFlags |= flags;
+                                    documentFlags = documentFlags.Strip(DocumentFlags.FromClusterTransaction);
 
                                     putResult = _database.DocumentsStorage.Put(
                                         context,

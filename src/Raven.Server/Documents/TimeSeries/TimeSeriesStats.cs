@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (TryHandleDeadSegment() == false)
                     {
                         // this ts was completely deleted
-                        TimeSeriesStorage.RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+                        //TimeSeriesStorage.RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
                         start = end = default;
                     }
                 }

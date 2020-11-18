@@ -1874,7 +1874,7 @@ namespace Raven.Server.Documents
                 metadata.TryGet(Constants.Documents.Metadata.Counters, out metadataCounters);
             }
 
-            var counters = GetCountersForDocument(metadataCounters, countersToAdd, countersToRemove, out var hadModifications);
+            var counters = UpdateNamesList(metadataCounters, countersToAdd, countersToRemove, out var hadModifications);
             if (hadModifications == false)
                 return null;
 
@@ -1910,35 +1910,35 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static SortedSet<string> GetCountersForDocument(BlittableJsonReaderArray metadataCounters, SortedSet<string> countersToAdd,
-            HashSet<string> countersToRemove, out bool modified)
+        internal static SortedSet<string> UpdateNamesList(BlittableJsonReaderArray existingNames, SortedSet<string> namesToAdd,
+            HashSet<string> namesToRemove, out bool modified)
         {
             modified = false;
-            if (metadataCounters == null)
+            if (existingNames == null)
             {
                 modified = true;
-                return countersToAdd;
+                return namesToAdd;
             }
 
-            foreach (var counter in metadataCounters)
+            foreach (var name in existingNames)
             {
-                var str = counter.ToString();
-                if (countersToRemove?.Contains(str) == true)
+                var str = name.ToString();
+                if (namesToRemove?.Contains(str) == true)
                 {
                     modified = true;
                     continue;
                 }
 
-                countersToAdd.Add(str);
+                namesToAdd.Add(str);
             }
 
             if (modified == false)
             {
-                // if no counter was removed, we can be sure that there are no modification when the counter's count in the metadata is equal to the count of countersToAdd
-                modified = countersToAdd.Count != metadataCounters.Length;
+                // if no name was removed, we can be sure that there are no modification when the names count in metadata is equal to the count of namesToAdd
+                modified = namesToAdd.Count != existingNames.Length;
             }
 
-            return countersToAdd;
+            return namesToAdd;
         }
 
         public static void ConvertFromBlobToNumbers(JsonOperationContext context, CounterGroupDetail counterGroupDetail)
