@@ -206,6 +206,15 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.UnusedDatabaseIds), out BlittableJsonReaderArray unusedDatabaseIds) &&
+                    unusedDatabaseIds != null)
+                {
+                    foreach (LazyStringValue id in unusedDatabaseIds)
+                    {
+                        databaseRecord.UnusedDatabaseIds.Add(id);
+                    }
+                }
+                
                 if (reader.TryGet(nameof(databaseRecord.ExternalReplications), out BlittableJsonReaderArray externalReplications) &&
                     externalReplications != null)
                 {

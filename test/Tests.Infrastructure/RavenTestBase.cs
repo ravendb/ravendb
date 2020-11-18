@@ -618,25 +618,41 @@ namespace FastTests
             throw new TimeoutException(msg);
         }
 
+        protected async Task<T> AssertWaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        {
+            var ret = await WaitForValueAsync(act, expectedVal, timeout, interval);
+            Assert.Equal(expectedVal, ret);
+            return ret;
+        }
+        
+        protected async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
+        {
+            var ret = await WaitForNotNullAsync(act, timeout, interval);
+            Assert.NotNull(ret);
+            return ret;
+        }
+        
+        protected async Task<T> WaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class =>
+            await WaitForPredicateAsync(a => a != null, act, timeout, interval);
+        
         protected async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100)
+        {
+            return await WaitForPredicateAsync(t => t.Equals(expectedVal), act, timeout, interval);
+        }
+        
+        private static async Task<T> WaitForPredicateAsync<T>(Predicate<T> predicate, Func<Task<T>> act, int timeout = 15000, int interval = 100)
         {
             if (Debugger.IsAttached)
                 timeout *= 100;
 
             var sw = Stopwatch.StartNew();
-            do
+            while (true)
             {
                 try
                 {
                     var currentVal = await act();
-                    if (expectedVal.Equals(currentVal))
-                    {
+                    if (predicate(currentVal) || sw.ElapsedMilliseconds > timeout)
                         return currentVal;
-                    }
-                    if (sw.ElapsedMilliseconds > timeout)
-                    {
-                        return currentVal;
-                    }
                 }
                 catch
                 {
@@ -646,9 +662,9 @@ namespace FastTests
                     }
                 }
                 await Task.Delay(interval);
-            } while (true);
+            }
         }
-
+        
         protected async Task<T> WaitForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000)
         {
             if (Debugger.IsAttached)
