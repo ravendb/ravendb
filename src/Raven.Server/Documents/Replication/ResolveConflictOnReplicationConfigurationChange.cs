@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     using (context.OpenReadTransaction())
                     {
-                        var resolvedConflicts = new List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)>();
+                        var resolvedConflicts = new List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResolvedToLatest)>();
 
                         var hadConflicts = false;
 
@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Replication
                                     resolvedConflict: out resolved))
                                 {
                                     resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
-                                    resolvedConflicts.Add((resolved, maxConflictEtag));
+                                    resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: false));
 
                                     //stats.AddResolvedBy(collection + " Script", conflictList.Count);
                                     continue;
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 resolved = ResolveToLatest(conflicts);
                                 resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
-                                resolvedConflicts.Add((resolved, maxConflictEtag));
+                                resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: true));
 
                                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                             }
@@ -132,11 +132,11 @@ namespace Raven.Server.Documents.Replication
         internal class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ConflictsStorage _conflictsStorage;
-            private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> _resolvedConflicts;
+            private readonly List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool resovedToLatest)> _resolvedConflicts;
             private readonly ResolveConflictOnReplicationConfigurationChange _resolver;
             public bool RequiresRetry;
 
-            public PutResolvedConflictsCommand(ConflictsStorage conflictsStorage, List<(DocumentConflict, long)> resolvedConflicts, ResolveConflictOnReplicationConfigurationChange resolver)
+            public PutResolvedConflictsCommand(ConflictsStorage conflictsStorage, List<(DocumentConflict, long, bool)> resolvedConflicts, ResolveConflictOnReplicationConfigurationChange resolver)
             {
                 _conflictsStorage = conflictsStorage;
                 _resolvedConflicts = resolvedConflicts;
@@ -161,7 +161,7 @@ namespace Raven.Server.Documents.Replication
                         RequiresRetry = true;
                     }
 
-                    _resolver.PutResolvedDocument(context, item.ResolvedConflict);
+                    _resolver.PutResolvedDocument(context, item.ResolvedConflict, item.resovedToLatest);
                 }
 
                 return count;
@@ -246,6 +246,7 @@ namespace Raven.Server.Documents.Replication
         public void PutResolvedDocument(
            DocumentsOperationContext context,
            DocumentConflict resolved,
+           bool resolvedToLatest,
            DocumentConflict incoming = null)
         {
             SaveConflictedDocumentsAsRevisions(context, resolved.Id, incoming);
@@ -264,7 +265,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            ResolveAttachmentsConflicts(context, resolved);
+            ResolveAttachmentsConflicts(context, resolved, resolvedToLatest);
 
             if (ReferenceEquals(incoming?.Doc, resolved.Doc))
             {
@@ -407,12 +408,11 @@ namespace Raven.Server.Documents.Replication
             return latestDoc;
         }
 
-        private void ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved)
+        private void ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved, bool resolvedToLatest)
         {
             using var scope = Slice.External(context.Allocator, resolved.LowerId, out var lowerId);
             var storageAttachmentsDetails = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context, lowerId);
             List<AttachmentName> resolvedAttachmentsMetadata = null;
-            bool resolveToLatest = ScriptConflictResolversCache.TryGetValue(resolved.Collection, out ScriptResolver scriptResolver) == false || scriptResolver == null;
 
             foreach (var group in storageAttachmentsDetails.GroupBy(x => x.Name))
             {
@@ -430,38 +430,42 @@ namespace Raven.Server.Documents.Replication
                         continue;
                     }
 
-                    if (resolveToLatest)
+                    if (resolvedToLatest)
                     {
-                        // delete
-                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType,
-                            AttachmentType.Document);
+                        // delete duplicates
+                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType, AttachmentType.Document);
                     }
                     else
                     {
-                        // rename
+                        if (found == false)
+                        {
+                            // keep one duplicate with original name
+                            found = true;
+                            continue;
+                        }
+                        // rename duplicates
                         var newName = _database.DocumentsStorage.AttachmentsStorage.ResolveAttachmentName(context, lowerId, attachment.Name);
                         _database.DocumentsStorage.AttachmentsStorage.RenameAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType, AttachmentType.Document, newName);
                     }
                 }
             }
 
-            List<AttachmentName> GetAttachmentsFromMetadata(BlittableJsonReaderObject bjro)
+            static List<AttachmentName> GetAttachmentsFromMetadata(BlittableJsonReaderObject bjro)
             {
-                var list = new List<AttachmentName>();
-                if (bjro != null && resolved.Doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject resolvedMetadata) &&
-                    resolvedMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray resolvedArray))
+                if (bjro != null && bjro.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsArray))
                 {
-                    list = (from BlittableJsonReaderObject att in resolvedArray select JsonDeserializationClient.AttachmentName(att)).ToList();
+                    return (from BlittableJsonReaderObject attachment in attachmentsArray select JsonDeserializationClient.AttachmentName(attachment)).ToList();
                 }
 
-                return list;
+                return new List<AttachmentName>();
             }
         }
     }
 
     internal class PutResolvedConflictsCommandDto : TransactionOperationsMerger.IReplayableCommandDto<ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand>
     {
-        public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag)> ResolvedConflicts;
+        public List<(DocumentConflict ResolvedConflict, long MaxConflictEtag, bool ResolvedToLatests)> ResolvedConflicts;
 
         public ResolveConflictOnReplicationConfigurationChange.PutResolvedConflictsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {

@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 return null;
 
             if (_logger.IsOperationsEnabled)
-                _logger.Info($"Next {(nextBackup.IsFull ? "full" : "incremental")} " +
+                _logger.Operations($"Next {(nextBackup.IsFull ? "full" : "incremental")} " +
                              $"backup is in {nextBackup.TimeSpan.TotalMinutes} minutes");
 
             var isValidTimeSpanForTimer = nextBackup.TimeSpan < MaxTimerTimeout;

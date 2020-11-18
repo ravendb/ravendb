@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Replication
                         conflicts.Add(local);
 
                     var resolved = _conflictResolver.ResolveToLatest(conflicts);
-                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflictedDoc);
+                    _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: true, conflictedDoc);
 
                     return;
                 }
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Replication
                 InvalidConflictWhenThereIsNone(conflict.Id);
 
             conflictedDocs.Add(conflict.Clone());
-            conflictedDocs = conflictedDocs.OrderByDescending(x => x.ChangeVector.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k).GetEnumerableHashCode()).ToList();
+            conflictedDocs.Sort((x, y) => string.Compare(x.ChangeVector, y.ChangeVector, StringComparison.Ordinal));
 
             if (_conflictResolver.TryResolveConflictByScriptInternal(
                 documentsContext,
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Replication
                 conflictedDocs,
                 documentsContext.GetLazyString(collection), out var resolved))
             {
-                _conflictResolver.PutResolvedDocument(documentsContext, resolved, conflict);
+                _conflictResolver.PutResolvedDocument(documentsContext, resolved, resolvedToLatest: false, conflict);
                 return true;
             }
 
