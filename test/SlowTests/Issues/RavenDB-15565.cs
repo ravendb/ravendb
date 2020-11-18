@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -66,10 +63,14 @@ namespace SlowTests.Issues
 
                 session.SaveChanges();
             }
+
             new Index().Execute(store);
             WaitForIndexing(store);
+
             IndexStats stats = store.Maintenance.Send(new GetIndexStatisticsOperation("index"));
-            Assert.Equal(5, stats.MapReferenceAttempts);
+            Assert.Equal(3, stats.EntriesCount);
+            Assert.Equal(3, stats.MapAttempts);
+            Assert.Equal(0, stats.MapReferenceAttempts);
         }
     }
 }
