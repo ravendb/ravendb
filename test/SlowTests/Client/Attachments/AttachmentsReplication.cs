@@ -1564,7 +1564,6 @@ namespace SlowTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                var cvs = new List<(string, string)>();
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "EGR" }, "users/1");
@@ -1746,21 +1745,24 @@ namespace SlowTests.Client.Attachments
                 var cvs = new List<(string, string)>();
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    var u = new User { Name = "EGR" };
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
                     {
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
                     }
-                    var u = await session.LoadAsync<User>("users/1");
+
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGR", cv));
                 }
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    var u = new User {Name = "EGOR"};
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -1768,12 +1770,13 @@ namespace SlowTests.Client.Attachments
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
                     }
 
-                    var u = await session.LoadAsync<User>("users/1");
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGOR", cv));
                 }
 
-                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#1_a1", Debugger.IsAttached ? 60000 : 15000);
@@ -1789,12 +1792,12 @@ namespace SlowTests.Client.Attachments
                     var attachments = session.Advanced.Attachments.GetNames(user);
                     Assert.Equal(2, attachments.Length);
 
-                    Assert.Equal("RESOLVED_#0_a1", attachments[0].Name);
+                    Assert.Equal("a1", attachments[0].Name);
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
                     Assert.Equal("a2/jpeg", attachments[0].ContentType);
                     Assert.Equal(3, attachments[0].Size);
 
-                    Assert.Equal("RESOLVED_#1_a1", attachments[1].Name);
+                    Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
                     Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
                     Assert.Equal("a2/jpeg", attachments[1].ContentType);
                     Assert.Equal(4, attachments[1].Size);
@@ -1807,12 +1810,12 @@ namespace SlowTests.Client.Attachments
                     var attachments = session.Advanced.Attachments.GetNames(user);
                     Assert.Equal(2, attachments.Length);
 
-                    Assert.Equal("RESOLVED_#0_a1", attachments[0].Name);
+                    Assert.Equal("a1", attachments[0].Name);
                     Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
                     Assert.Equal("a2/jpeg", attachments[0].ContentType);
                     Assert.Equal(3, attachments[0].Size);
 
-                    Assert.Equal("RESOLVED_#1_a1", attachments[1].Name);
+                    Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
                     Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
                     Assert.Equal("a2/jpeg", attachments[1].ContentType);
                     Assert.Equal(4, attachments[1].Size);
@@ -1871,7 +1874,8 @@ namespace SlowTests.Client.Attachments
                 var cvs = new List<(string, string)>();
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    var u = new User { Name = "EGOR" };
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
@@ -1881,14 +1885,15 @@ namespace SlowTests.Client.Attachments
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a10", a1, "a2/jpeg"));
                     }
 
-                    var u = await session.LoadAsync<User>("users/1");
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGOR", cv));
                 }
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    var u = new User { Name = "EGR" };
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
@@ -1896,12 +1901,13 @@ namespace SlowTests.Client.Attachments
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
                     }
 
-                    var u = await session.LoadAsync<User>("users/1");
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGR", cv));
                 }
 
-                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#1_a1", Debugger.IsAttached ? 60000 : 15000);
@@ -1917,17 +1923,17 @@ namespace SlowTests.Client.Attachments
                     var attachments = session.Advanced.Attachments.GetNames(user);
                     Assert.Equal(3, attachments.Length);
 
-                    Assert.Equal("a10", attachments[0].Name);
-                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
                     Assert.Equal("a2/jpeg", attachments[0].ContentType);
-                    Assert.Equal(4, attachments[0].Size);
+                    Assert.Equal(3, attachments[0].Size);
 
-                    Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
-                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                    Assert.Equal("a10", attachments[1].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
                     Assert.Equal("a2/jpeg", attachments[1].ContentType);
-                    Assert.Equal(3, attachments[1].Size);
+                    Assert.Equal(4, attachments[1].Size);
 
-                    Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
+                    Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
                     Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
                     Assert.Equal("a2/jpeg", attachments[2].ContentType);
                     Assert.Equal(4, attachments[2].Size);
@@ -1940,17 +1946,17 @@ namespace SlowTests.Client.Attachments
                     var attachments = session.Advanced.Attachments.GetNames(user);
                     Assert.Equal(3, attachments.Length);
 
-                    Assert.Equal("a10", attachments[0].Name);
-                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                    Assert.Equal("a1", attachments[0].Name);
+                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
                     Assert.Equal("a2/jpeg", attachments[0].ContentType);
-                    Assert.Equal(4, attachments[0].Size);
+                    Assert.Equal(3, attachments[0].Size);
 
-                    Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
-                    Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                    Assert.Equal("a10", attachments[1].Name);
+                    Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
                     Assert.Equal("a2/jpeg", attachments[1].ContentType);
-                    Assert.Equal(3, attachments[1].Size);
+                    Assert.Equal(4, attachments[1].Size);
 
-                    Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
+                    Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
                     Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
                     Assert.Equal("a2/jpeg", attachments[2].ContentType);
                     Assert.Equal(4, attachments[2].Size);
@@ -2009,7 +2015,8 @@ namespace SlowTests.Client.Attachments
                 var cvs = new List<(string, string, string)>();
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    var u = new User {Name = "EGR"};
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
@@ -2018,26 +2025,30 @@ namespace SlowTests.Client.Attachments
                         a1.Position = 0;
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a10", a1, "a2/jpeg"));
                     }
-                    var u = await session.LoadAsync<User>("users/1");
+
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGR", cv, "KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I="));
                 }
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    var u = new User {Name = "EGOR"};
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
                     }
-                    var u = await session.LoadAsync<User>("users/1");
+
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGOR", cv, "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="));
                 }
 
-                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
@@ -2054,27 +2065,10 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(3, attachments.Length);
                     if (name == "EGOR")
                     {
-                        Assert.Equal("a10", attachments[0].Name);
-                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
-                        Assert.Equal("a2/jpeg", attachments[0].ContentType);
-                        Assert.Equal(4, attachments[0].Size);
-
-                        Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
-                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
-                        Assert.Equal("a2/jpeg", attachments[1].ContentType);
-                        Assert.Equal(3, attachments[1].Size);
-
-                        Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
-                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
-                        Assert.Equal("a2/jpeg", attachments[2].ContentType);
-                        Assert.Equal(4, attachments[2].Size);
-                    }
-                    else
-                    {
                         Assert.Equal("a1", attachments[0].Name);
-                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
                         Assert.Equal("a2/jpeg", attachments[0].ContentType);
-                        Assert.Equal(4, attachments[0].Size);
+                        Assert.Equal(3, attachments[0].Size);
 
                         Assert.Equal("a10", attachments[1].Name);
                         Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
@@ -2082,9 +2076,26 @@ namespace SlowTests.Client.Attachments
                         Assert.Equal(4, attachments[1].Size);
 
                         Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
-                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[2].Hash);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
                         Assert.Equal("a2/jpeg", attachments[2].ContentType);
-                        Assert.Equal(3, attachments[2].Size);
+                        Assert.Equal(4, attachments[2].Size);
+                    }
+                    else
+                    {
+                        Assert.Equal("a1", attachments[0].Name);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
+                        Assert.Equal("a2/jpeg", attachments[0].ContentType);
+                        Assert.Equal(3, attachments[0].Size);
+
+                        Assert.Equal("a10", attachments[1].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
+                        Assert.Equal("a2/jpeg", attachments[1].ContentType);
+                        Assert.Equal(4, attachments[1].Size);
+
+                        Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
+                        Assert.Equal("a2/jpeg", attachments[2].ContentType);
+                        Assert.Equal(4, attachments[2].Size);
                     }
                 }
 
@@ -2097,17 +2108,17 @@ namespace SlowTests.Client.Attachments
 
                     if (name == "EGOR")
                     {
-                        Assert.Equal("a10", attachments[0].Name);
-                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[0].Hash);
+                        Assert.Equal("a1", attachments[0].Name);
+                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[0].Hash);
                         Assert.Equal("a2/jpeg", attachments[0].ContentType);
-                        Assert.Equal(4, attachments[0].Size);
+                        Assert.Equal(3, attachments[0].Size);
 
-                        Assert.Equal("RESOLVED_#0_a1", attachments[1].Name);
-                        Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachments[1].Hash);
+                        Assert.Equal("a10", attachments[1].Name);
+                        Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[1].Hash);
                         Assert.Equal("a2/jpeg", attachments[1].ContentType);
-                        Assert.Equal(3, attachments[1].Size);
+                        Assert.Equal(4, attachments[1].Size);
 
-                        Assert.Equal("RESOLVED_#1_a1", attachments[2].Name);
+                        Assert.Equal("RESOLVED_#0_a1", attachments[2].Name);
                         Assert.Equal("KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I=", attachments[2].Hash);
                         Assert.Equal("a2/jpeg", attachments[2].ContentType);
                         Assert.Equal(4, attachments[2].Size);
@@ -2186,7 +2197,8 @@ namespace SlowTests.Client.Attachments
                 var cvs = new List<(string, string, string)>();
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGOR" }, "users/1");
+                    var u = new User { Name = "EGOR" };
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
@@ -2195,26 +2207,30 @@ namespace SlowTests.Client.Attachments
                         a1.Position = 0;
                         await store1.Operations.SendAsync(new PutAttachmentOperation("users/1", "a10", a1, "a2/jpeg"));
                     }
-                    var u = await session.LoadAsync<User>("users/1");
+
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGOR", cv, "KFF+TN9skHmMGpg7A3J8p3Q8IaOIBnJCnM/FvRXqX3I="));
                 }
 
                 using (var session = store2.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "EGR" }, "users/1");
+                    var u = new User {Name = "EGR"};
+                    await session.StoreAsync(u, "users/1");
                     await session.SaveChangesAsync();
 
                     using (var a1 = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
                         store2.Operations.Send(new PutAttachmentOperation("users/1", "a1", a1, "a2/jpeg"));
                     }
-                    var u = await session.LoadAsync<User>("users/1");
+
+                    await session.Advanced.RefreshAsync(u);
                     var cv = session.Advanced.GetChangeVectorFor(u);
                     cvs.Add(("EGR", cv, "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo="));
                 }
 
-                var orderedDocsByEtag = cvs.OrderByDescending(x => Raven.Client.Extensions.EnumerableExtension.GetEnumerableHashCode(x.Item2.ToChangeVectorList().Select(cv => cv.GetHashCode()).OrderByDescending(k => k))).ToList();
+                cvs.Sort((x, y) => string.Compare(x.Item2, y.Item2, StringComparison.Ordinal));
+                var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
                 WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);

@@ -958,12 +958,8 @@ namespace Raven.Server.Documents
                 lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
-                    return null;
-
+                table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr);
                 attachment = TableValueToAttachment(context, ref tvr);
-                if (attachment == null)
-                    AttachmentDoesNotExistException.ThrowFor(docId, name);
 
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, newName, out Slice lowerNewName, out Slice newNamePtr))
                 using (GetAttachmentKey(context, lowerId.Content.Ptr, lowerId.Size, lowerNewName.Content.Ptr, lowerNewName.Size, base64Hash, lowerContentType.Content.Ptr,
@@ -1034,12 +1030,8 @@ namespace Raven.Server.Documents
                 lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
-                    return false;
-
+                table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr);
                 var attachment = TableValueToAttachment(context, ref tvr);
-                if (attachment == null)
-                    AttachmentDoesNotExistException.ThrowFor(docId, name);
 
                 var tombstoneEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);

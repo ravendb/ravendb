@@ -2,6 +2,7 @@
 using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
@@ -28,6 +29,8 @@ namespace Raven.Server.Documents.Replication
             if (self == null)
                 return null;
 
+            self = self.OrderBy(x => x.DbId, StringComparer.OrdinalIgnoreCase).ToArray();
+
             var sb = new StringBuilder();
             for (int i = 0; i < self.Length; i++)
             {
@@ -40,17 +43,7 @@ namespace Raven.Server.Documents.Replication
 
         public static string SerializeVector(this List<ChangeVectorEntry> self)
         {
-            if (self == null)
-                return null;
-
-            var sb = new StringBuilder();
-            for (int i = 0; i < self.Count; i++)
-            {
-                if (i != 0)
-                    sb.Append(", ");
-                self[i].Append(sb);
-            }
-            return sb.ToString();
+            return SerializeVector(self.ToArray());
         }
 
         public static void ToBase26(StringBuilder sb, int tag)
