@@ -293,7 +293,7 @@ namespace Raven.Server.Documents.TimeSeries
             return changeVector;
         }
 
-        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null)
+        public string DeleteTimestampRange(DocumentsOperationContext context, DeletionRangeRequest deletionRangeRequest, string remoteChangeVector = null, bool updateMetadata = true)
         {
             deletionRangeRequest.From = EnsureMillisecondsPrecision(deletionRangeRequest.From);
             deletionRangeRequest.To = EnsureMillisecondsPrecision(deletionRangeRequest.To);
@@ -441,7 +441,12 @@ namespace Raven.Server.Documents.TimeSeries
 
                         if (segmentChanged)
                         {
-                            holder.AppendExistingSegment(newSegment);
+                            var count = holder.AppendExistingSegment(newSegment);
+                            if (count == 0 && updateMetadata)
+                            {
+                                // entire ts was deleted
+                                RemoveTimeSeriesNameFromMetadata(context, slicer.DocId, slicer.Name);
+                            }
                             changeVector = holder.ChangeVector;
                         }
 
@@ -911,7 +916,7 @@ namespace Raven.Server.Documents.TimeSeries
                 _tss.Stats.UpdateCountOfExistingStats(_context, SliceHolder, _collection, -ReadOnlySegment.NumberOfLiveEntries);
             }
 
-            public void AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
+            public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
             {
                 (_currentChangeVector, _currentEtag) = _tss.GenerateChangeVector(_context);
 
@@ -923,7 +928,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                 var modifiedEntries = Math.Abs(newValueSegment.NumberOfLiveEntries - ReadOnlySegment.NumberOfLiveEntries);
                 ReduceCountBeforeAppend();
-                _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, modifiedEntries);
+                var count = _tss.Stats.UpdateStats(_context, SliceHolder, _collection, newValueSegment, BaselineDate, modifiedEntries);
 
                 using (Table.Allocate(out var tvb))
                 using (Slice.From(_context.Allocator, _currentChangeVector, out var cv))
@@ -939,6 +944,8 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 EnsureStatsAndDataIntegrity(_context, _docId, _name, newValueSegment);
+
+                return count;
             }
 
             public void AppendDeadSegment(TimeSeriesValuesSegment newValueSegment)
@@ -1170,8 +1177,8 @@ namespace Raven.Server.Documents.TimeSeries
             string name,
             IEnumerable<SingleResult> toAppend,
             string changeVectorFromReplication = null,
-            bool verifyName = true
-            )
+            bool verifyName = true,
+            bool addNewNameToMetadata = true)
         {
             if (context.Transaction == null)
             {
@@ -1251,7 +1258,7 @@ namespace Raven.Server.Documents.TimeSeries
                 }
             }
 
-            if (newSeries)
+            if (newSeries && addNewNameToMetadata)
             {
                 AddTimeSeriesNameToMetadata(context, documentId, name);
             }
@@ -1597,26 +1604,60 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName)
         {
-            var tss = _documentDatabase.DocumentsStorage.TimeSeriesStorage;
-            if (tss.Stats.GetStats(ctx, docId, tsName).Count == 0)
+            if (Stats.GetStats(ctx, docId, tsName).Count == 0)
                 return;
 
-            // if the document is in conflict, that's fine
-            // we will recreate '@timeseries' in metadata when the conflict is resolved
-            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false); 
-            if (doc == null)
+            var newDocumentData = ModifyDocumentMetadata(ctx, docId, new List<string> { tsName }, out var flags);
+            if (newDocumentData == null)
                 return;
 
-            tsName = GetOriginalName(ctx, docId, tsName);
+            _documentDatabase.DocumentsStorage.Put(ctx, docId, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+        }
 
-            var data = doc.Data;
-            BlittableJsonReaderArray tsNames = null;
-            if (doc.TryGetMetadata(out var metadata))
+        internal BlittableJsonReaderObject ModifyDocumentMetadata(DocumentsOperationContext ctx, string docId, List<string> namesToAdd, out DocumentFlags flags, BlittableJsonReaderObject data = null)
+        {
+            flags = default;
+            Document doc = null;
+            BlittableJsonReaderArray existingTsNames = null;
+            BlittableJsonReaderObject metadata = null;
+
+            if (namesToAdd == null)
+                throw new ArgumentException(nameof(namesToAdd));
+
+            if (namesToAdd.Count == 0)
+                return null;
+
+            for (var index = 0; index < namesToAdd.Count; index++)
             {
-                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out tsNames);
+                var name = namesToAdd[index];
+
+                if (index == 0)
+                {
+                    if (data == null)
+                    {
+                        // if the document is in conflict, that's fine
+                        // we will recreate '@timeseries' in metadata when the conflict is resolved
+                        doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false);
+                        data = doc?.Data;
+                        if (data == null)
+                            return null;
+
+                    }
+
+                    if (data.TryGet(Constants.Documents.Metadata.Key, out metadata) && 
+                        metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out existingTsNames))
+                        break;
+                    
+                }
+
+                // existingTsNames == null
+
+                namesToAdd[index] = GetOriginalName(ctx, docId, name);
             }
 
-            if (tsNames == null)
+            Debug.Assert(data != null);
+
+            if (existingTsNames == null)
             {
                 if (metadata == null)
                 {
@@ -1624,7 +1665,7 @@ namespace Raven.Server.Documents.TimeSeries
                     {
                         [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Documents.Metadata.TimeSeries] = new[] {tsName}
+                            [Constants.Documents.Metadata.TimeSeries] = namesToAdd
                         }
                     };
                 }
@@ -1632,26 +1673,37 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata)
                     {
-                        [Constants.Documents.Metadata.TimeSeries] = new[] { tsName }
+                        [Constants.Documents.Metadata.TimeSeries] = namesToAdd
                     };
                 }
             }
             else
             {
-                var tsNamesList = new List<string>(tsNames.Length + 1);
-                for (var i = 0; i < tsNames.Length; i++)
+                var tsNamesList = new List<string>(existingTsNames.Length + namesToAdd.Count);
+                for (var i = 0; i < existingTsNames.Length; i++)
                 {
-                    var val = tsNames.GetStringByIndex(i);
+                    var val = existingTsNames.GetStringByIndex(i);
                     if (val == null)
                         continue;
+
                     tsNamesList.Add(val);
                 }
 
-                var location = tsNames.BinarySearch(tsName, StringComparison.OrdinalIgnoreCase);
-                if (location >= 0)
-                    return;
+                var modified = false;
 
-                tsNamesList.Insert(~location, tsName);
+                foreach (var nameToAdd in namesToAdd)
+                {
+                    var name = GetOriginalName(ctx, docId, nameToAdd);
+                    var location = tsNamesList.BinarySearch(name, StringComparer.OrdinalIgnoreCase);
+                    if (location >= 0)
+                        continue;
+
+                    modified = true;
+                    tsNamesList.Insert(~location, name);
+                }
+
+                if (modified == false)
+                    return null;
 
                 metadata.Modifications = new DynamicJsonValue(metadata)
                 {
@@ -1659,13 +1711,14 @@ namespace Raven.Server.Documents.TimeSeries
                 };
             }
 
-            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+            if (doc != null)
+                flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+    
             flags |= DocumentFlags.HasTimeSeries;
 
             using (data)
             {
-                var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                return ctx.ReadObject(data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
         }
 

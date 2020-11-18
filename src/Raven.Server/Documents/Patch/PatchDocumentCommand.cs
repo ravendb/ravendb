@@ -188,12 +188,41 @@ namespace Raven.Server.Documents.Patch
                             }
                         }
 
+                        var flags = DocumentFlags.None;
+                        if (run.DocumentTimeSeriesToUpdate != null)
+                        {
+                            foreach (var kvp in run.DocumentTimeSeriesToUpdate)
+                            {
+                                var docId = kvp.Key;
+                                var tsToAdd = kvp.Value;
+
+                                if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    Debug.Assert(originalDocument != null);
+
+                                    var newData = _database.DocumentsStorage.TimeSeriesStorage.ModifyDocumentMetadata(context, docId, tsToAdd, out flags, data: result.ModifiedDocument);
+                                    if (newData == null)
+                                        continue;
+
+                                    result.ModifiedDocument = newData;
+                                    nonPersistentFlags |= NonPersistentDocumentFlags.ByTimeSeriesUpdate;
+                                }
+                                else if (_isTest == false)
+                                {
+                                    var newData = _database.DocumentsStorage.TimeSeriesStorage.ModifyDocumentMetadata(context, docId, tsToAdd, out flags);
+                                    if (newData == null)
+                                        continue;
+                                    _database.DocumentsStorage.Put(context, docId, null, newData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+                                }
+                            }
+                        }
+
                         DocumentsStorage.PutOperationResults? putResult = null;
 
                         if (originalDoc == null)
                         {
                             if (_isTest == false || run.PutOrDeleteCalled)
-                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, nonPersistentFlags: nonPersistentFlags);
+                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, flags: flags, nonPersistentFlags: nonPersistentFlags);
 
                             result.Status = PatchStatus.Created;
                         }
@@ -215,6 +244,9 @@ namespace Raven.Server.Documents.Patch
                                 Debug.Assert(originalDocument != null);
                                 if (_isTest == false || run.PutOrDeleteCalled)
                                 {
+                                    var documentFlags = originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                                    documentFlags |= flags;
+
                                     putResult = _database.DocumentsStorage.Put(
                                         context,
                                         id,
@@ -222,7 +254,7 @@ namespace Raven.Server.Documents.Patch
                                         result.ModifiedDocument,
                                         lastModifiedTicks: null,
                                         changeVector: null,
-                                        originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction),
+                                        documentFlags,
                                         nonPersistentFlags);
                                 }
 
