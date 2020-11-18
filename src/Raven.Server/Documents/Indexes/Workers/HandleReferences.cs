@@ -194,7 +194,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     if (ItemsAndReferencesAreUsingSameEtagPool && _index._indexStorage.LowerThanLastDatabaseEtagOnIndexCreation(referencedItem.Etag))
                                     {
-                                        // the referenced document will be indexed in the map step
+                                        // the referenced item will be indexed in the map step
+                                        lastEtag = referencedItem.Etag;
+                                        inMemoryStats.UpdateLastEtag(lastEtag, actionType == ActionType.Tombstone);
                                         continue;
                                     }
 
