@@ -12,6 +12,7 @@ param(
     [switch]$JustStudio,
     [switch]$JustNuget,
     [switch]$Debug,
+    [switch]$NoBundling,
     [switch]$DryRunVersionBump = $false,
     [switch]$DryRunSign = $false,
     [switch]$Help)
@@ -19,6 +20,7 @@ param(
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+. '.\scripts\env.ps1'
 . '.\scripts\checkLastExitCode.ps1'
 . '.\scripts\checkPrerequisites.ps1'
 . '.\scripts\restore.ps1'
@@ -147,6 +149,7 @@ SetSchemaInfoInTeamCity $PROJECT_DIR
 ValidateClientDependencies $CLIENT_SRC_DIR $SPARROW_SRC_DIR
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
+InitGlobals $Debug $NoBundling
 DownloadDependencies
 
 if ($JustStudio -eq $False) {
@@ -169,7 +172,7 @@ if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
 $IsPosix = $IsWindows -eq $False
 if (($JustStudio -eq $False) -and ($IsPosix -eq $False)) {
     $studioZipPath = [io.path]::combine($STUDIO_OUT_DIR, "Raven.Studio.zip")
-    BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath $Debug
+    BuildEmbeddedNuget $PROJECT_DIR $OUT_DIR $SERVER_SRC_DIR $studioZipPath
     $embeddedDir = [io.path]::combine($OUT_DIR, "RavenDB.Embedded")
     if ($target.Name -eq "windows-x64") {
         Validate-AssemblyVersion $(Join-Path -Path $embeddedDir -ChildPath "lib/netstandard2.0/Raven.Embedded.dll" ) $versionObj
@@ -194,11 +197,11 @@ Foreach ($target in $targets) {
     $specOutDir = [io.path]::combine($OUT_DIR, $target.Name)
     CleanDir $specOutDir
 
-    BuildServer $SERVER_SRC_DIR $specOutDir $target $Debug
-    BuildTool rvn $RVN_SRC_DIR $specOutDir $target $Debug $true
-    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $Debug $false
-    BuildTool migrator $MIGRATOR_SRC_DIR $specOutDir $target $Debug $true
-    BuildTool debug $DEBUG_SRC_DIR $specOutDir $target $Debug $true
+    BuildServer $SERVER_SRC_DIR $specOutDir $target
+    BuildTool rvn $RVN_SRC_DIR $specOutDir $target $true
+    BuildTool drtools $DRTOOL_SRC_DIR $specOutDir $target $false
+    BuildTool migrator $MIGRATOR_SRC_DIR $specOutDir $target $true
+    BuildTool debug $DEBUG_SRC_DIR $specOutDir $target $true
 
     $specOutDirs = @{
         "Main" = $specOutDir;

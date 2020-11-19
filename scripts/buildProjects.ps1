@@ -1,4 +1,5 @@
-function BuildServer ( $srcDir, $outDir, $target, $debug) {
+
+function BuildServer ( $srcDir, $outDir, $target) {
 
     if ($target) {
         write-host "Building Server for $($target.Name)..."
@@ -13,7 +14,7 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
     $quotedOutput = '"' + $output + '"'
     $commandArgs += @( "--output", $quotedOutput )
 
-    $configuration = if ($debug) { 'Debug' } else { 'Release' }
+    $configuration = if ($global:isPublishConfigurationDebug) { 'Debug' } else { 'Release' }
     $commandArgs += @( "--configuration", $configuration )
     
     if ($target) {
@@ -33,7 +34,7 @@ function BuildServer ( $srcDir, $outDir, $target, $debug) {
 
     $commandArgs += '/p:SourceLinkCreate=true'
     
-    if ($target) {
+    if ($target -and $global:isPublishBundlingEnabled) {
         $commandArgs += '/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true'
     }
 
@@ -120,7 +121,7 @@ function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio 
     return $true
 }
 
-function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug, $trim ) {
+function BuildTool ( $toolName, $srcDir, $outDir, $target, $trim ) {
     write-host "Building $toolName for $($target.Name)..."
     $command = "dotnet" 
     $commandArgs = @( "publish" )
@@ -139,7 +140,7 @@ function BuildTool ( $toolName, $srcDir, $outDir, $target, $debug, $trim ) {
 
     $commandArgs += "/p:SourceLinkCreate=true"
     
-    if ($target) {
+    if ($target -and $global:isPublishBundlingEnabled) {
         $commandArgs += "/p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true /p:PublishTrimmed=$trim"
     }
 
