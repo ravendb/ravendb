@@ -419,7 +419,7 @@ namespace Raven.Server.Documents.Replication
                 if (group.Count() == 1)
                     continue;
 
-                resolvedAttachmentsMetadata ??= GetAttachmentsFromMetadata(resolved.Doc);
+                resolvedAttachmentsMetadata ??= AttachmentsStorage.GetAttachmentsFromDocumentMetadata(resolved.Doc).Select(attachment => JsonDeserializationClient.AttachmentName(attachment)).ToList();
                 var found = false;
 
                 foreach (var attachment in group)
@@ -448,17 +448,6 @@ namespace Raven.Server.Documents.Replication
                         _database.DocumentsStorage.AttachmentsStorage.RenameAttachment(context, lowerId, attachment.Name, attachment.Hash, attachment.ContentType, AttachmentType.Document, newName);
                     }
                 }
-            }
-
-            static List<AttachmentName> GetAttachmentsFromMetadata(BlittableJsonReaderObject bjro)
-            {
-                if (bjro != null && bjro.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachmentsArray))
-                {
-                    return (from BlittableJsonReaderObject attachment in attachmentsArray select JsonDeserializationClient.AttachmentName(attachment)).ToList();
-                }
-
-                return new List<AttachmentName>();
             }
         }
     }
