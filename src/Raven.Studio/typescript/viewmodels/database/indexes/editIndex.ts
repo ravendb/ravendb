@@ -30,6 +30,7 @@ import mapIndexSyntax = require("viewmodels/database/indexes/mapIndexSyntax");
 import fileDownloader = require("common/fileDownloader");
 import mapReduceIndexSyntax = require("viewmodels/database/indexes/mapReduceIndexSyntax");
 import additionalSourceSyntax = require("viewmodels/database/indexes/additionalSourceSyntax");
+import additionalAssemblySyntax = require("viewmodels/database/indexes/additionalAssemblySyntax");
 import fileImporter = require("common/fileImporter");
 import popoverUtils = require("common/popoverUtils");
 
@@ -106,14 +107,19 @@ class editIndex extends viewModelBase {
         
         this.additionalSourcePreviewHtml = ko.pureComputed(() => {
             const source = this.selectedSourcePreview();
+            
             if (source) {
                 return '<pre class="form-control sourcePreview">' + Prism.highlight(source.code(), (Prism.languages as any).csharp) + '</pre>';
-            } else {
-                return `<div class="sourcePreview text-center text-muted margin-top">
-                            <i class="icon-lg icon-empty-set"></i>
-                            <h2 class="margin-top margin-top-sm">No additional sources uploaded</h2>
-                        </div>`;
             }
+            
+            const hasAdditionalSources = this.editedIndex().additionalSources().length > 0;
+            const text = hasAdditionalSources ? "Click source file to view" : "No additional sources uploaded";
+            const icon = hasAdditionalSources ? "" : `<i class="icon-lg icon-empty-set"></i>`
+
+            return `<div class="sourcePreview text-center text-muted margin-top">
+                        ${icon}
+                        <h2 class="margin-top margin-top-sm">${text}</h2>
+                    </div>`;
         });
     }
 
@@ -344,6 +350,11 @@ class editIndex extends viewModelBase {
 
     additionalSourceSyntaxHelp() {
         const viewmodel = new additionalSourceSyntax();
+        app.showBootstrapDialog(viewmodel);
+    }
+
+    additionalAssemblySyntaxHelp() {
+        const viewmodel = new additionalAssemblySyntax();
         app.showBootstrapDialog(viewmodel);
     }
 

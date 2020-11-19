@@ -1,0 +1,20 @@
+<div class="modal-dialog modal-lg" role="document" id="additionalAssymblySyntaxDialog">
+    <div class="modal-content">
+        <div class="modal-body">
+            <div data-bind="compose: 'database/indexes/additionalTabsCommonText.html'"></div>
+            <h3 class="margin-top">
+                <strong>C# </strong>Example
+            </h3>
+            <div>
+                To use:<br>
+                <ol>
+                    <li><small>Add the <strong>DocumentFormat.OpenXml</strong> NuGet package in the Additional Assemblies Tab.</small></li>
+                    <li><small>Upload the source file in the Additional Sources Tab.</small></li>
+                </ol>
+            </div>
+            <div data-bind="foreach: $data.constructor.csharpSamples">
+                <pre class="copy-area"><a href="#" class="copy-button pull-right" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
+            </div>
+        </div>
+    </div>
+</div>
