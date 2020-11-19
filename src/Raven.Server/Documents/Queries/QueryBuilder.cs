@@ -394,7 +394,7 @@ namespace Raven.Server.Documents.Queries
                     matches.Add(LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact || tuple.Type == ValueTokenType.Parameter));
                 }
 
-                return new TermsMatchQuery(fieldName, matches);
+                return new InQuery(fieldName, matches);
             }
             if (expression is TrueExpression)
             {
