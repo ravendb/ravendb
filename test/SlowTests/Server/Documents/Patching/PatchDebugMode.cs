@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Sparrow;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
@@ -373,16 +374,12 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        // Currently, this test fails with error such as:
-        // Document cars/1 has change vector A:19-ziwfdiHh0U6lu1OcX6YOvQ,
-        // but Put was called with change vector A:7-ziwfdiHh0U6lu1OcX6YOvQ. Optimistic concurrency violation
-        //
-        [Fact(Skip = "RavenDB_15376")]
+        [Fact]
         public void DebugResultsWhenModifyingData()
         {
             using (var store = GetDocumentStore())
             {
-                var baseline = DateTime.Today;
+                var baseline = DateTime.Today.EnsureUtc();
                 
                 using (var session = store.OpenSession())
                 {
@@ -414,7 +411,7 @@ namespace SlowTests.Server.Documents.Patching
                           }
                     }, patchIfMissing: null);
 
-                    var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
+                    var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, returnDebugInformation: true, test: true);
                     store.Commands().Execute(cmd);
                     
                     Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
@@ -493,11 +490,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        // Currently, this test fails with error such as:
-        // Document cars/1 has change vector A:19-ziwfdiHh0U6lu1OcX6YOvQ,
-        // but Put was called with change vector A:7-ziwfdiHh0U6lu1OcX6YOvQ. Optimistic concurrency violation
-        //
-        [Fact(Skip = "RavenDB_15376")]
+        [Fact]
         public void DebugResultsWhenDeletingData()
         {
             using (var store = GetDocumentStore())
@@ -540,7 +533,7 @@ namespace SlowTests.Server.Documents.Patching
                           }
                     }, patchIfMissing: null);
                   
-                    var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, true, true);
+                    var cmd = operation.GetCommand(store, store.Conventions, context, reqEx.Cache, returnDebugInformation: true, test: true);
                     store.Commands().Execute(cmd);
                     
                     Assert.True(cmd.Result.Debug.TryGet("Actions", out BlittableJsonReaderObject actions), "<Actions> section not found");
