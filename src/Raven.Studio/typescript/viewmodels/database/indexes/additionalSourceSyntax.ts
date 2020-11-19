@@ -29,10 +29,11 @@ public static class PeopleUtil
 }`;
 
     static readonly usageInMapCsharpText =
-`// *Usage in Map statement* 
+`// *Usage in the index Map statement* 
 docs.People.Select(person => new {
     Name = person.Name,
     _ = this.CreateField("Email", 
+            // use method from source file
             PeopleUtil.CalculatePersonEmail(person.Name), 
             stored: true)
 })
@@ -52,10 +53,11 @@ function calculatePersonEmail(name)
 `;
 
     static readonly usageInMapJavascriptText =
-`// *Usage in Map statement* 
+`// *Usage in the index Map statement* 
 map('People', function (person) { return {
        Name: person.Name, 
        _: { $name:'Email',
+            // use method from source file
             $value: calculatePersonEmail(person.Name),
             $options:{ store: true }
         }
