@@ -1030,7 +1030,9 @@ namespace Raven.Server.Documents
                 lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr);
+                if (table.SeekOnePrimaryKeyPrefix(keySlice, out TableValueReader tvr) == false)
+                    return false;
+
                 var attachment = TableValueToAttachment(context, ref tvr);
 
                 var tombstoneEtag = _documentsStorage.GenerateNextEtag();
@@ -1351,6 +1353,18 @@ namespace Raven.Server.Documents
                     metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
                 {
                     Debug.Assert(false, $"Found {Constants.Documents.Metadata.Attachments}({attachments.Length}) in metadata but {DocumentFlags.HasAttachments} flag is missing.");
+                }
+            }
+        }
+
+        public static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
+        {
+            if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+            {
+                foreach (BlittableJsonReaderObject attachment in attachments)
+                {
+                    yield return attachment;
                 }
             }
         }

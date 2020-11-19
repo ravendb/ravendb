@@ -29,8 +29,7 @@ namespace Raven.Server.Documents.Replication
             if (self == null)
                 return null;
 
-            self = self.OrderBy(x => x.DbId, StringComparer.OrdinalIgnoreCase).ToArray();
-
+            Array.Sort(self, (x, y) => string.CompareOrdinal(x.DbId, y.DbId));
             var sb = new StringBuilder();
             for (int i = 0; i < self.Length; i++)
             {
@@ -43,7 +42,18 @@ namespace Raven.Server.Documents.Replication
 
         public static string SerializeVector(this List<ChangeVectorEntry> self)
         {
-            return SerializeVector(self.ToArray());
+            if (self == null)
+                return null;
+
+            self.Sort((x, y) => string.CompareOrdinal(x.DbId, y.DbId));
+            var sb = new StringBuilder();
+            for (int i = 0; i < self.Count; i++)
+            {
+                if (i != 0)
+                    sb.Append(", ");
+                self[i].Append(sb);
+            }
+            return sb.ToString();
         }
 
         public static void ToBase26(StringBuilder sb, int tag)

@@ -1489,7 +1489,7 @@ namespace Raven.Server.Documents.Replication
 
             public void AssertAttachmentsFromReplication(DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
             {
-                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
@@ -1518,7 +1518,7 @@ namespace Raven.Server.Documents.Replication
 
             private IEnumerable<(string Name, string Hash)> GetAttachmentsNameAndHash(BlittableJsonReaderObject document)
             {
-                foreach (var attachment in GetAttachmentsFromDocumentMetadata(document))
+                foreach (var attachment in AttachmentsStorage.GetAttachmentsFromDocumentMetadata(document))
                 {
                     attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name);
                     attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash);
@@ -1526,18 +1526,6 @@ namespace Raven.Server.Documents.Replication
                     yield return (Name: name, Hash: hash);
                 }
             }
-
-            private static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
-            {
-                if (document.TryGet(Raven.Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                    metadata.TryGet(Raven.Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
-                {
-                    foreach (BlittableJsonReaderObject attachment in attachments)
-                    {
-                        yield return attachment;
-                        }
-                    }
-                }
 
             public override TransactionOperationsMerger.IReplayableCommandDto<TransactionOperationsMerger.MergedTransactionCommand> ToDto(JsonOperationContext context)
             {
