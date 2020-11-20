@@ -264,6 +264,33 @@ namespace Raven.Server.Documents.Queries
                         }
                     case OperatorType.And:
                         {
+                            // translate ((Foo >= $p1) and (Foo <= $p2)) to a more efficient between query
+                            if (@where.Left is BinaryExpression lbe && lbe.IsRangeOperation  && 
+                               @where.Right is BinaryExpression rbe && rbe.IsRangeOperation && lbe.Left.Equals(rbe.Left) && 
+                               lbe.Right is ValueExpression leftVal && rbe.Right is ValueExpression rightVal)
+                            {
+                                BetweenExpression bq = null;
+                                if (lbe.IsGreaterThan && rbe.IsLessThan)
+                                {
+                                    bq = new BetweenExpression(lbe.Left, leftVal, rightVal)
+                                    {
+                                        MinInclusive = lbe.Operator == OperatorType.GreaterThanEqual,
+                                        MaxInclusive = rbe.Operator == OperatorType.LessThanEqual,
+                                    };
+                                }
+
+                                if (lbe.IsLessThan && rbe.IsGreaterThan)
+                                {
+                                    bq = new BetweenExpression(lbe.Left, rightVal, leftVal)
+                                    {
+                                        MinInclusive = rbe.Operator == OperatorType.GreaterThanEqual,
+                                        MaxInclusive = lbe.Operator == OperatorType.LessThanEqual
+                                    };
+                                }
+                                if(bq != null)
+                                    return TranslateBetweenQuery(query, metadata, index, parameters, exact, bq, secondary);
+                            }
+
                             var left = ToLuceneQuery(serverContext, documentsContext, query, @where.Left, metadata, index, parameters, analyzer,
                                 factories, exact, secondary: secondary);
                             var right = ToLuceneQuery(serverContext, documentsContext, query, @where.Right, metadata, index, parameters, analyzer,
@@ -328,13 +355,7 @@ namespace Raven.Server.Documents.Queries
             }
             if (expression is BetweenExpression be)
             {
-                var betweenQuery = TranslateBetweenQuery(query, metadata, index, parameters, exact, be);
-                if(secondary && betweenQuery is TermRangeQuery q)
-                {
-                    q.RewriteMethod = _secondaryBetweenRewriteMethod;
-                }
-
-                return betweenQuery;
+                return TranslateBetweenQuery(query, metadata, index, parameters, exact, be, secondary);
             }
             if (expression is InExpression ie)
             {
@@ -423,7 +444,7 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Unable to understand query", query.QueryText, parameters);
         }
 
-        private static Lucene.Net.Search.Query TranslateBetweenQuery(Query query, QueryMetadata metadata, Index index, BlittableJsonReaderObject parameters, bool exact, BetweenExpression be)
+        private static Lucene.Net.Search.Query TranslateBetweenQuery(Query query, QueryMetadata metadata, Index index, BlittableJsonReaderObject parameters, bool exact, BetweenExpression be, bool secondary)
         {
             var fieldName = ExtractIndexFieldName(query, parameters, be.Source, metadata);
             var (valueFirst, valueFirstType) = GetValue(query, metadata, parameters, be.Min);
@@ -431,6 +452,7 @@ namespace Raven.Server.Documents.Queries
 
             var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
 
+            Lucene.Net.Search.Query betweenQuery;
             switch (fieldType)
             {
                 case LuceneFieldType.String:
@@ -446,18 +468,28 @@ namespace Raven.Server.Documents.Queries
 
                     var valueFirstAsString = GetValueAsString(valueFirst);
                     var valueSecondAsString = GetValueAsString(valueSecond);
-                    return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, valueSecondAsString, exact);
+                    betweenQuery = LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, be.MinInclusive, valueSecondAsString, be.MaxInclusive, exact);
+                    break;
                 case LuceneFieldType.Long:
                     var valueFirstAsLong = (long)valueFirst;
                     var valueSecondAsLong = (long)valueSecond;
-                    return LuceneQueryHelper.Between(luceneFieldName, valueFirstAsLong, valueSecondAsLong);
+                    betweenQuery =  LuceneQueryHelper.Between(luceneFieldName, valueFirstAsLong, be.MinInclusive, valueSecondAsLong, be.MaxInclusive);
+                    break;
                 case LuceneFieldType.Double:
                     var valueFirstAsDouble = (double)valueFirst;
                     var valueSecondAsDouble = (double)valueSecond;
-                    return LuceneQueryHelper.Between(luceneFieldName, valueFirstAsDouble, valueSecondAsDouble);
+                    betweenQuery = LuceneQueryHelper.Between(luceneFieldName, valueFirstAsDouble, be.MinInclusive, valueSecondAsDouble, be.MaxInclusive);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
             }
+
+            if (secondary && betweenQuery is TermRangeQuery q)
+            {
+                q.RewriteMethod = _secondaryBetweenRewriteMethod;
+            }
+
+            return betweenQuery;
         }
 
         private static bool TryUseTime(Index index, string fieldName, object valueFirst, object valueSecond, bool exact, out long ticksFirst, out long ticksSecond)

@@ -9,6 +9,31 @@ namespace Raven.Server.Documents.Queries.AST
         public QueryExpression Right;
         public bool Parenthesis;
 
+        public bool IsRangeOperation => Operator switch
+        {
+            OperatorType.GreaterThan => true,
+            OperatorType.GreaterThanEqual => true,
+            OperatorType.LessThan => true,
+            OperatorType.LessThanEqual => true,
+            _ => false,
+        };
+        public bool IsGreaterThan => Operator switch
+        {
+            OperatorType.GreaterThan => true,
+            OperatorType.GreaterThanEqual => true,
+            OperatorType.LessThan => true,
+            OperatorType.LessThanEqual => true,
+            _ => false,
+        };
+
+        public bool IsLessThan => Operator switch
+        {
+            OperatorType.LessThan => true,
+            OperatorType.LessThanEqual => true,
+            _ => false,
+        };
+
+
         public BinaryExpression(QueryExpression left, QueryExpression right, OperatorType op)
         {
             Left = left;
