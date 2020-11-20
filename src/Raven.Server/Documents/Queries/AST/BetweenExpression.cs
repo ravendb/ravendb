@@ -5,6 +5,8 @@ namespace Raven.Server.Documents.Queries.AST
         public QueryExpression Source;
         public ValueExpression Max;
         public ValueExpression Min;
+        public bool MinInclusive = true;
+        public bool MaxInclusive = true;
 
         public BetweenExpression(QueryExpression source, ValueExpression min, ValueExpression max)
         {

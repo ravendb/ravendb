@@ -122,19 +122,19 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, true, double.MaxValue, true);
         }
 
-        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, string toValue, bool exact)
+        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, bool fromInclusive, string toValue, bool toInclusive, bool exact)
         {
-            return CreateRange(fieldName, fromValue, termType, true, toValue, termType, true, exact);
+            return CreateRange(fieldName, fromValue, termType, fromInclusive, toValue, termType, toInclusive, exact);
         }
 
-        public static Query Between(string fieldName, long fromValue, long toValue)
+        public static Query Between(string fieldName, long fromValue, bool fromInclusive, long toValue, bool toInclusive)
         {
-            return CreateRange(fieldName, fromValue, true, toValue, true);
+            return CreateRange(fieldName, fromValue, fromInclusive, toValue, toInclusive);
         }
 
-        public static Query Between(string fieldName, double fromValue, double toValue)
+        public static Query Between(string fieldName, double fromValue, bool fromInclusive, double toValue, bool toInclusive)
         {
-            return CreateRange(fieldName, fromValue, true, toValue, true);
+            return CreateRange(fieldName, fromValue, fromInclusive, toValue, toInclusive);
         }
 
         public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null, bool exact = false)
