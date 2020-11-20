@@ -326,6 +326,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             return new Term(fieldName, analyzedTermString);
         }
 
+
         private static Query CreateRange(string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax, bool exact)
         {
             var minTermIsNullOrStar = minValueType == LuceneTermType.Null || minValue.Equals(Asterisk);
@@ -343,22 +344,9 @@ This edge-case has a very slim chance of happening, but still we should not igno
 
         private static Query CreateRange(string fieldName, double minValue, bool inclusiveMin, double maxValue, bool inclusiveMax)
         {
-            return NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
-        }
-
-        private static Occur PrefixToOccurrence(LucenePrefixOperator prefix, Occur defaultOccurrence)
-        {
-            switch (prefix)
-            {
-                case LucenePrefixOperator.None:
-                    return defaultOccurrence;
-                case LucenePrefixOperator.Plus:
-                    return Occur.MUST;
-                case LucenePrefixOperator.Minus:
-                    return Occur.MUST_NOT;
-                default:
-                    throw new ArgumentOutOfRangeException("Unknown query prefix " + prefix);
-            }
+            var query = NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
+            
+            return query;
         }
     }
 }
