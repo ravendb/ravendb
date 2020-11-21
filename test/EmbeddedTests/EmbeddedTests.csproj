@@ -23,9 +23,6 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Remove="Data\testing.ravendbdump" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
   </ItemGroup>
@@ -48,6 +45,7 @@
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.4.0-beta.1.build10000" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Data\MyCustomAnalyzers.dll" />
     <EmbeddedResource Include="Data\testing.ravendbdump" />
   </ItemGroup>
 </Project>
