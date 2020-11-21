@@ -26,12 +26,15 @@ using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.Counters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.TimeSeries;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexCompiler
     {
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Server", typeof(IndexCompiler).FullName);
+
         internal static readonly bool EnableDebugging = false; // for debugging purposes (mind https://issues.hibernatingrhinos.com/issue/RavenDB-6960)
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
@@ -42,12 +45,19 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static readonly Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>> AdditionalAssemblies = new Lazy<ConcurrentDictionary<string, AdditionalAssemblyServerSide>>(DiscoverAdditionalAssemblies);
 
+        private static readonly Assembly LuceneAssembly = typeof(Lucene.Net.Documents.Document).Assembly;
+
+        private static readonly AssemblyName LuceneAssemblyName = LuceneAssembly.GetName();
+
         static IndexCompiler()
         {
             AssemblyLoadContext.Default.Resolving += (ctx, name) =>
             {
-                if (AdditionalAssemblies.IsValueCreated && AdditionalAssemblies.Value.TryGetValue(name.FullName, out var assembly))
+                if (AdditionalAssemblies.IsValueCreated && AdditionalAssemblies.Value.TryGetValue(name.Name, out var assembly))
                     return assembly.Assembly;
+
+                if (name.Name == LuceneAssemblyName.Name)
+                    return LuceneAssembly;
 
                 return null;
             };
@@ -59,17 +69,24 @@ namespace Raven.Server.Documents.Indexes.Static
 
             foreach (var path in Directory.GetFiles(AppContext.BaseDirectory, "*.dll"))
             {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Attempting to load additional assembly from '{path}'.");
+
                 try
                 {
                     var name = AssemblyLoadContext.GetAssemblyName(path);
                     var assembly = Assembly.LoadFile(path);
                     var reference = CreateMetadataReferenceFromAssembly(assembly);
 
-                    results.TryAdd(name.FullName, new AdditionalAssemblyServerSide(name, assembly, reference, AdditionalAssemblyType.BaseDirectory));
+                    results.TryAdd(name.Name, new AdditionalAssemblyServerSide(name, assembly, reference, AdditionalAssemblyType.BaseDirectory));
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Loaded additional assembly from '{path}' and registered it under '{name.Name}'.");
                 }
-                catch
+                catch (Exception e)
                 {
-                    // we have unmanaged dlls (libsodium) here
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations($"Could not load additional assembly from '{path}'.", e);
                 }
             }
 
@@ -104,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Static
             CreateMetadataReferenceFromAssembly(typeof(Enumerable).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(IndexCompiler).Assembly),
             CreateMetadataReferenceFromAssembly(typeof(BoostedValue).Assembly),
-            CreateMetadataReferenceFromAssembly(typeof(Lucene.Net.Documents.Document).Assembly),
+            CreateMetadataReferenceFromAssembly(LuceneAssembly),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("System.Runtime"))),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("Microsoft.CSharp"))),
             CreateMetadataReferenceFromAssembly(Assembly.Load(new AssemblyName("mscorlib"))),
