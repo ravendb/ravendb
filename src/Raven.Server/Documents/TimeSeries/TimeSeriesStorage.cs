@@ -479,29 +479,66 @@ namespace Raven.Server.Documents.TimeSeries
             var baseline = new DateTime(ticks);
             return baseline;
         }
-
         public static void RemoveTimeSeriesNameFromMetadata(DocumentsOperationContext ctx, string docId, string tsName)
         {
             var storage = ctx.DocumentDatabase.DocumentsStorage;
-            var tss = storage.TimeSeriesStorage;
 
-            if (tss.Stats.GetStats(ctx, docId, tsName).Count > 0)
-                return;
-
-            var doc = storage.Get(ctx, docId, throwOnConflict: false);
+            var doc = storage.Get(ctx, docId);
             if (doc == null)
                 return;
 
-            var flags = doc.Flags;
-            var newData = ModifyDocumentMetadata(ctx, docId, namesToAdd: null, 
-                namesToRemove: new HashSet<string>(StringComparer.OrdinalIgnoreCase){ tsName }, 
-                doc.Data, ref flags);
-
-            if (newData == null)
+            var tss = storage.TimeSeriesStorage;
+            if (tss.Stats.GetStats(ctx, docId, tsName).Count > 0)
                 return;
 
-            storage.Put(ctx, docId, null, newData, flags: flags,
-                nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+            var data = doc.Data;
+            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+
+            BlittableJsonReaderArray tsNames = null;
+            if (doc.TryGetMetadata(out var metadata))
+            {
+                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out tsNames);
+            }
+
+            if (metadata == null || tsNames == null)
+                return;
+
+            var tsNamesList = new List<string>(tsNames.Length + 1);
+            for (var i = 0; i < tsNames.Length; i++)
+            {
+                var val = tsNames.GetStringByIndex(i);
+                if (val == null)
+                    continue;
+                tsNamesList.Add(val);
+            }
+
+            var location = tsNames.BinarySearch(tsName, StringComparison.OrdinalIgnoreCase);
+            if (location < 0)
+                return;
+
+            tsNamesList.RemoveAt(location);
+
+            data.Modifications = new DynamicJsonValue(data);
+            metadata.Modifications = new DynamicJsonValue(metadata);
+
+            if (tsNamesList.Count == 0)
+            {
+                metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
+                flags = flags.Strip(DocumentFlags.HasTimeSeries);
+            }
+            else
+            {
+                metadata.Modifications[Constants.Documents.Metadata.TimeSeries] = tsNamesList;
+            }
+
+            data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+
+            using (data)
+            {
+                var newDocumentData = ctx.ReadObject(doc.Data, doc.Id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                storage.Put(ctx, doc.Id, null, newDocumentData, flags: flags,
+                    nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
+            }
         }
 
         private static TimeSeriesValuesSegment TableValueToSegment(ref TableValueReader segmentValueReader, out DateTime baseline)
@@ -1566,66 +1603,34 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void AddTimeSeriesNameToMetadata(DocumentsOperationContext ctx, string docId, string tsName)
         {
-            if (Stats.GetStats(ctx, docId, tsName).Count == 0)
+            var tss = _documentDatabase.DocumentsStorage.TimeSeriesStorage;
+            if (tss.Stats.GetStats(ctx, docId, tsName).Count == 0)
                 return;
 
             // if the document is in conflict, that's fine
             // we will recreate '@timeseries' in metadata when the conflict is resolved
-            var doc = ctx.DocumentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false);
+            var doc = _documentDatabase.DocumentsStorage.Get(ctx, docId, throwOnConflict: false);
             if (doc == null)
                 return;
 
             tsName = GetOriginalName(ctx, docId, tsName);
 
-            var flags = doc.Flags;
-            var newDocumentData = ModifyDocumentMetadata(ctx, docId, 
-                namesToAdd: new SortedSet<string>(StringComparer.OrdinalIgnoreCase) { tsName }, 
-                namesToRemove: null, doc.Data, ref flags);
-
-            if (newDocumentData == null)
-                return;
-
-            _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, expectedChangeVector: null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
-        }
-
-        internal static BlittableJsonReaderObject ModifyDocumentMetadata(JsonOperationContext ctx, string docId, SortedSet<string> namesToAdd, HashSet<string> namesToRemove, BlittableJsonReaderObject data, ref DocumentFlags flags)
-        {
-            if (data == null || (namesToAdd?.Count ?? 0) == 0 && (namesToRemove?.Count ?? 0) == 0)
-                return null;
-
-            BlittableJsonReaderArray existingTsNames = null;
-            if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+            var data = doc.Data;
+            BlittableJsonReaderArray tsNames = null;
+            if (doc.TryGetMetadata(out var metadata))
             {
-                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out existingTsNames);
+                metadata.TryGet(Constants.Documents.Metadata.TimeSeries, out tsNames);
             }
 
-            var tsNames = CountersStorage.UpdateNamesList(existingTsNames, namesToAdd ?? new SortedSet<string>(StringComparer.OrdinalIgnoreCase), 
-                namesToRemove, out bool modified);
-
-            if (modified == false)
-                return null;
-
-            flags = flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
-
-            if (tsNames.Count == 0)
+            if (tsNames == null)
             {
-                flags = flags.Strip(DocumentFlags.HasTimeSeries);
-                if (metadata != null)
-                {
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.TimeSeries);
-                }
-            }
-            else
-            {
-                flags |= DocumentFlags.HasTimeSeries;
                 if (metadata == null)
                 {
-                    data.Modifications = new DynamicJsonValue
+                    data.Modifications = new DynamicJsonValue(data)
                     {
                         [Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Documents.Metadata.TimeSeries] = new DynamicJsonArray(tsNames)
+                            [Constants.Documents.Metadata.TimeSeries] = new[] { tsName }
                         }
                     };
                 }
@@ -1633,14 +1638,40 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata)
                     {
-                        [Constants.Documents.Metadata.TimeSeries] = new DynamicJsonArray(tsNames)
+                        [Constants.Documents.Metadata.TimeSeries] = new[] { tsName }
                     };
                 }
             }
-            
+            else
+            {
+                var tsNamesList = new List<string>(tsNames.Length + 1);
+                for (var i = 0; i < tsNames.Length; i++)
+                {
+                    var val = tsNames.GetStringByIndex(i);
+                    if (val == null)
+                        continue;
+                    tsNamesList.Add(val);
+                }
+
+                var location = tsNames.BinarySearch(tsName, StringComparison.OrdinalIgnoreCase);
+                if (location >= 0)
+                    return;
+
+                tsNamesList.Insert(~location, tsName);
+
+                metadata.Modifications = new DynamicJsonValue(metadata)
+                {
+                    [Constants.Documents.Metadata.TimeSeries] = tsNamesList
+                };
+            }
+
+            var flags = doc.Flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.Resolved);
+            flags |= DocumentFlags.HasTimeSeries;
+
             using (data)
             {
-                return ctx.ReadObject(data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                var newDocumentData = ctx.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                _documentDatabase.DocumentsStorage.Put(ctx, doc.Id, null, newDocumentData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
             }
         }
 

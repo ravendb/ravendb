@@ -176,8 +176,8 @@ namespace Raven.Server.Documents.Patch
             public string OriginalDocumentId;
             public bool RefreshOriginalDocument;
             private readonly ConcurrentLruRegexCache _regexCache = new ConcurrentLruRegexCache(1024);
-            public Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)> DocumentCountersToUpdate;
-            public Dictionary<string, (SortedSet<string> TimeSeriesToAdd, HashSet<string> TimeSeriesToRemove)> DocumentTimeSeriesToUpdate;
+            public HashSet<string> DocumentCountersToUpdate;
+            public HashSet<string> DocumentTimeSeriesToUpdate;
             public JavaScriptUtils JavaScriptUtils;
 
             private const string _timeSeriesSignature = "timeseries(doc, name)";
@@ -441,22 +441,8 @@ namespace Raven.Server.Documents.Patch
 
                     if (newSeries)
                     {
-                        DocumentTimeSeriesToUpdate ??= new Dictionary<string, (SortedSet<string> TimeSeriesToAdd, HashSet<string> TimeSeriesToRemove)>(StringComparer.OrdinalIgnoreCase);
-                        
-                        if (DocumentTimeSeriesToUpdate.TryGetValue(id, out var tuple) == false)
-                        {
-                            tuple.TimeSeriesToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-                            DocumentTimeSeriesToUpdate[id] = tuple;
-                        }
-                        else if (tuple.TimeSeriesToAdd == null)
-                        {
-                            tuple.TimeSeriesToAdd = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-                        }
-
-                        timeSeries = tss.GetOriginalName(_docsCtx, id, timeSeries);
-
-                        tuple.TimeSeriesToAdd.Add(timeSeries);
-                        tuple.TimeSeriesToRemove?.Remove(timeSeries);
+                        DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        DocumentTimeSeriesToUpdate.Add(id);
                     }
 
                     var toAppend = new SingleResult
@@ -539,20 +525,8 @@ namespace Raven.Server.Documents.Patch
                 count = _database.DocumentsStorage.TimeSeriesStorage.Stats.GetStats(_docsCtx, id, timeSeries).Count;
                 if (count == 0)
                 {
-                    DocumentTimeSeriesToUpdate ??= new Dictionary<string, (SortedSet<string> TimeSeriesToAdd, HashSet<string> TimeSeriesToRemove)>();
-
-                    if (DocumentTimeSeriesToUpdate.TryGetValue(id, out var tuple) == false)
-                    {
-                        tuple.TimeSeriesToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        DocumentTimeSeriesToUpdate[id] = tuple;
-                    }
-                    else if (tuple.TimeSeriesToRemove == null)
-                    {
-                        tuple.TimeSeriesToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    }
-
-                    tuple.TimeSeriesToRemove.Add(timeSeries);
-                    tuple.TimeSeriesToAdd?.Remove(timeSeries);
+                    DocumentTimeSeriesToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    DocumentTimeSeriesToUpdate.Add(id);
                 }
 
                 if (DebugMode) 
@@ -1223,15 +1197,8 @@ namespace Raven.Server.Documents.Patch
 
                 if (exists == false)
                 {
-                    if (DocumentCountersToUpdate == null)
-                        DocumentCountersToUpdate = new Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)>();
-                    if (DocumentCountersToUpdate.TryGetValue(id, out var tuple) == false)
-                        tuple = (new SortedSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-                    tuple.CountersToAdd.Add(name);
-                    tuple.CountersToRemove?.Remove(name);
-
-                    DocumentCountersToUpdate[id] = tuple;
+                    DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    DocumentCountersToUpdate.Add(id);
                 }
                 
                 if (DebugMode)
@@ -1295,15 +1262,8 @@ namespace Raven.Server.Documents.Patch
                 var name = args[1].AsString();
                 _database.DocumentsStorage.CountersStorage.DeleteCounter(_docsCtx, id, CollectionName.GetCollectionName(docBlittable), name);
 
-                if (DocumentCountersToUpdate == null)
-                    DocumentCountersToUpdate = new Dictionary<string, (SortedSet<string> CountersToAdd, HashSet<string> CountersToRemove)>();
-                if (DocumentCountersToUpdate.TryGetValue(id, out var tuple) == false)
-                    tuple = (new SortedSet<string>(StringComparer.OrdinalIgnoreCase), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-
-                tuple.CountersToRemove.Add(name);
-                tuple.CountersToAdd?.Remove(name);
-
-                DocumentCountersToUpdate[id] = tuple;
+                DocumentCountersToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                DocumentCountersToUpdate.Add(id);
 
                 if (DebugMode)
                 {

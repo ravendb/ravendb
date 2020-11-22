@@ -158,98 +158,40 @@ namespace Raven.Server.Documents.Patch
                             UpdateOriginalDocument();
                         }
 
-                        var nonPersistentFlags = NonPersistentDocumentFlags.None;
-                        if (run.DocumentCountersToUpdate != null)
-                        {
-                            foreach (var kvp in run.DocumentCountersToUpdate)
-                            {
-                                var docId = kvp.Key;
-                                var countersToAdd = kvp.Value.CountersToAdd;
-                                var countersToRemove = kvp.Value.CountersToRemove;
-
-                                if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    Debug.Assert(originalDocument != null);
-
-                                    var newData = CountersStorage.ApplyCounterUpdatesToMetadata(_externalContext ?? context, result.ModifiedDocument, docId,
-                                        countersToAdd, countersToRemove, ref originalDocument.Flags);
-                                    if (newData != null)
-                                    {
-                                        result.ModifiedDocument = newData;
-                                        nonPersistentFlags |= NonPersistentDocumentFlags.ByCountersUpdate;
-                                    }
-                                }
-                                else if (_isTest == false)
-                                {
-                                    var docToUpdate = _database.DocumentsStorage.Get(context, docId);
-
-                                    _database.DocumentsStorage.CountersStorage.UpdateDocumentCounters(context, docToUpdate, docId, countersToAdd, countersToRemove,
-                                        NonPersistentDocumentFlags.ByCountersUpdate);
-                                }
-                            }
-                        }
-
-                        var documentFlags = originalDocument?.Flags ?? default;
-                        if (run.DocumentTimeSeriesToUpdate != null)
-                        {
-                            foreach (var kvp in run.DocumentTimeSeriesToUpdate)
-                            {
-                                var docId = kvp.Key;
-                                var tsToAdd = kvp.Value.TimeSeriesToAdd;
-                                var tsToRemove = kvp.Value.TimeSeriesToRemove;
-
-                                if (docId.Equals(id, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    Debug.Assert(originalDocument != null);
-                                    var newData = TimeSeriesStorage.ModifyDocumentMetadata(_externalContext ?? context, docId, tsToAdd, tsToRemove, data : result.ModifiedDocument , ref documentFlags);
-                                    if (newData == null)
-                                        continue;
-
-                                    result.ModifiedDocument = newData;
-                                    nonPersistentFlags |= NonPersistentDocumentFlags.ByTimeSeriesUpdate;
-                                }
-                                else if (_isTest == false)
-                                {
-                                    var docToUpdate = _database.DocumentsStorage.Get(context, docId);
-                                    var flags = docToUpdate?.Flags ?? default;
-                                    var newData = TimeSeriesStorage.ModifyDocumentMetadata(context, docId, tsToAdd, tsToRemove, data : docToUpdate?.Data, ref flags);
-                                    if (newData == null)
-                                        continue;
-
-                                    _database.DocumentsStorage.Put(context, docId, null, newData, flags: flags, nonPersistentFlags: NonPersistentDocumentFlags.ByTimeSeriesUpdate);
-                                }
-                            }
-                        }
+                        var nonPersistentFlags = HandleMetadataUpdates(context, id, run);
 
                         DocumentsStorage.PutOperationResults? putResult = null;
-
                         if (originalDoc == null)
                         {
                             if (_isTest == false || run.PutOrDeleteCalled)
-                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, flags: documentFlags, nonPersistentFlags: nonPersistentFlags);
+                                putResult = _database.DocumentsStorage.Put(context, id, null, result.ModifiedDocument, nonPersistentFlags: nonPersistentFlags);
 
                             result.Status = PatchStatus.Created;
                         }
                         else
                         {
-                            DocumentCompareResult compareResult;
-                            try
+                            DocumentCompareResult compareResult = default;
+                            bool shouldUpdateMetadata = nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.ResolveCountersConflict) ||
+                                    nonPersistentFlags.HasFlag(NonPersistentDocumentFlags.ResolveTimeSeriesConflict);
+
+                            if (shouldUpdateMetadata == false)
                             {
-                                compareResult = DocumentCompare.IsEqualTo(originalDoc, result.ModifiedDocument,
-                                    DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification);
-                            }
-                            catch (InvalidOperationException ioe)
-                            {
-                                throw new InvalidOperationException($"Could not patch document '{id}'.", ioe);
+                                try
+                                {
+                                    compareResult = DocumentCompare.IsEqualTo(originalDoc, result.ModifiedDocument,
+                                        DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification);
+                                }
+                                catch (InvalidOperationException ioe)
+                                {
+                                    throw new InvalidOperationException($"Could not patch document '{id}'.", ioe);
+                                }
                             }
 
-                            if (compareResult != DocumentCompareResult.Equal)
+                            if (shouldUpdateMetadata || compareResult != DocumentCompareResult.Equal)
                             {
                                 Debug.Assert(originalDocument != null);
                                 if (_isTest == false || run.PutOrDeleteCalled)
                                 {
-                                    documentFlags = documentFlags.Strip(DocumentFlags.FromClusterTransaction);
-
                                     putResult = _database.DocumentsStorage.Put(
                                         context,
                                         id,
@@ -257,7 +199,7 @@ namespace Raven.Server.Documents.Patch
                                         result.ModifiedDocument,
                                         lastModifiedTicks: null,
                                         changeVector: null,
-                                        documentFlags,
+                                        originalDocument.Flags.Strip(DocumentFlags.FromClusterTransaction),
                                         nonPersistentFlags);
                                 }
 
@@ -311,6 +253,43 @@ namespace Raven.Server.Documents.Patch
                     return null;
                 }
             }
+        }
+
+        private NonPersistentDocumentFlags HandleMetadataUpdates(DocumentsOperationContext context, string id, ScriptRunner.SingleRun run)
+        {
+            var nonPersistentFlags = AddResolveFlagOrUpdateRelatedDocuments(context, id, run.DocumentCountersToUpdate, resolveFlag: NonPersistentDocumentFlags.ResolveCountersConflict);
+            nonPersistentFlags |= AddResolveFlagOrUpdateRelatedDocuments(context, id, run.DocumentTimeSeriesToUpdate, resolveFlag: NonPersistentDocumentFlags.ResolveTimeSeriesConflict);
+
+            return nonPersistentFlags;
+        }
+
+        private NonPersistentDocumentFlags AddResolveFlagOrUpdateRelatedDocuments(DocumentsOperationContext context, string documentId, IEnumerable<string> documentsToUpdate,
+            NonPersistentDocumentFlags resolveFlag)
+        {
+            var nonPersistentFlags = NonPersistentDocumentFlags.None;
+            if (documentsToUpdate == null)
+                return nonPersistentFlags;
+
+            foreach (var id in documentsToUpdate)
+            {
+                if (id.Equals(documentId, StringComparison.OrdinalIgnoreCase))
+                {
+                    nonPersistentFlags |= resolveFlag;
+                    continue;
+                }
+
+                if (_isTest == false)
+                {
+                    var docToUpdate = _database.DocumentsStorage.Get(context, id);
+                    if (docToUpdate == null)
+                        continue;
+
+                    var flags = docToUpdate.Flags.Strip(DocumentFlags.FromClusterTransaction);
+                    _database.DocumentsStorage.Put(context, docToUpdate.Id, null, docToUpdate.Data, flags: flags, nonPersistentFlags: resolveFlag);
+                }
+            }
+
+            return nonPersistentFlags;
         }
 
         protected string HandleReply(string id, PatchResult patchResult, DynamicJsonArray reply, HashSet<string> modifiedCollections)
