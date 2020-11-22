@@ -9,7 +9,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
-using User = FastTests.Graph.User;
 
 namespace SlowTests.Client.TimeSeries.Issues
 {
