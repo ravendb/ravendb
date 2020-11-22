@@ -26,6 +26,7 @@ import database = require("models/resources/database");
 import eventsCollector = require("common/eventsCollector");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 import compactDatabaseDialog = require("viewmodels/resources/compactDatabaseDialog");
+import notificationCenter = require("common/notifications/notificationCenter");
 
 class databases extends viewModelBase {
     
@@ -67,13 +68,15 @@ class databases extends viewModelBase {
         database.createEnvironmentColorComputed("label", source);
    
     databaseToCompact: string;
+
+    notificationCenter = notificationCenter.instance;
     
     constructor() {
         super();
 
         this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", 
             "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo",
-            "compactDatabase", "databasePanelClicked");
+            "compactDatabase", "databasePanelClicked", "openNotificationCenter");
 
         this.initObservables();
     }
@@ -311,11 +314,14 @@ class databases extends viewModelBase {
         $('.databases [data-toggle="size-tooltip"]').tooltip({
             container: "body",
             html: true,
+            placement: "right",
             title: function () {
                 const $data = ko.dataFor(this) as databaseInfo;
-                return `Data: <strong>${self.formatBytes($data.totalSize())}</strong><br />
-                Temp: <strong>${self.formatBytes($data.totalTempBuffersSize())}</strong><br />
-                Total: <strong>${self.formatBytes($data.totalSize() + $data.totalTempBuffersSize())}</strong>`
+                return `<div class="text-left padding padding-sm">
+                    Data: <strong>${self.formatBytes($data.totalSize())}</strong><br />
+                    Temp: <strong>${self.formatBytes($data.totalTempBuffersSize())}</strong><br />
+                    Total: <strong>${self.formatBytes($data.totalSize() + $data.totalTempBuffersSize())}</strong>
+                </div>`
             }
         });
     }
@@ -407,7 +413,11 @@ class databases extends viewModelBase {
 
     indexesUrl(dbInfo: databaseInfo): string {
         return appUrl.forIndexes(dbInfo);
-    } 
+    }
+
+    ongoingTasksUrl(dbInfo: databaseInfo): string {
+        return appUrl.forOngoingTasks(dbInfo);
+    }
 
     periodicBackupUrl(dbInfo: databaseInfo): string {
         return appUrl.forEditPeriodicBackupTask(dbInfo);
@@ -644,6 +654,14 @@ class databases extends viewModelBase {
             const nodeTag = this.clusterManager.localNodeTag();
             return this.databases().getByName(dbName).isLocal(nodeTag);
         });
+    }
+    
+    openNotificationCenter(dbInfo: databaseInfo) {
+        if (!this.activeDatabase() || this.activeDatabase().name !== dbInfo.name) {
+            this.activateDatabase(dbInfo);
+        }
+       
+        this.notificationCenter.showNotifications.toggle();
     }
 }
 
